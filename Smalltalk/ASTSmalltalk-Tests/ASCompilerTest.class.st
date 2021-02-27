@@ -6,6 +6,9 @@ Class {
 
 { #category : #tests }
 ASCompilerTest >> testSimple1 [
-	self assert: (ASCompiler new compileMethod: ASCompileTestClass1>>#simple1) equals: (ASMethodNode with: {}).
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#simple1.
+	self assert: method arguments equals: #().
+	self assert: method selector equals: #simple1.
 
 ]

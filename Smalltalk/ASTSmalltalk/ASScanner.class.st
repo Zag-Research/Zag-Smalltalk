@@ -7,69 +7,88 @@ Class {
 	#name : #ASScanner,
 	#superclass : #Object,
 	#instVars : [
-		'result'
+		'aStream',
+		'peek'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
 
 { #category : #conversion }
 ASScanner >> asArray [
-	^ result contents
+	^ Array streamContents: [: s |
+		[ self atEnd ] whileFalse: [
+			s << self next
+		]
+	]
+]
+
+{ #category : #conversion }
+ASScanner >> atEnd [
+	^ self peek isNil
 ]
 
 { #category : #scanning }
-ASScanner >> identifierFrom: aStream [ 
-	result << (String streamContents: [: s | | char |
+ASScanner >> binaryIdentifier [ 
+	^ (String streamContents: [: s | | char |
 			[
 				s << aStream next.
 				char := aStream peek.
-				char = $_ or: [ char isLetter or: [ char isDigit ] ] ] whileTrue
+				aStream atEnd not and: [ '=<>+-*/\!@%&|~?' includes: char ]] whileTrue
 		]) asASIdentifier
 ]
 
-{ #category : #initialization }
-ASScanner >> initialize [
-	super initialize.
-	result := WriteStream on: (Array new).
+{ #category : #scanning }
+ASScanner >> identifier [ 
+	^ (String streamContents: [: s | | char |
+			[
+				s << aStream next.
+				char := aStream peek.
+				aStream atEnd not and: [ char = $_ or: [ char isLetter or: [ char isDigit ]]]] whileTrue
+		]) asASIdentifier
+]
+
+{ #category : #scanning }
+ASScanner >> next [
+	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
 { #category : #scanning }
-ASScanner >> numberFrom: aStream [ 
-	result << (String streamContents: [: s |
+ASScanner >> number [ 
+	^ (String streamContents: [: s |
 			[
 				s << aStream next.
-				aStream peek isDigit
+				aStream atEnd not and: [aStream peek isDigit]
 			] whileTrue
-		]) asNumber
+		]) asNumber asASLiteral
+]
+
+{ #category : #scanning }
+ASScanner >> peek [
+	peek ifNotNil: [ ^ peek ].
+	aStream atEnd ifTrue: [ ^ nil ].
+	^ peek := self token
 ]
 
 { #category : #scanning }
 ASScanner >> scanCode: aStringOrStream [
-	| aStream |
 	aStream := aStringOrStream readStream.
-	[aStream atEnd] whileFalse: [
-		self tokenFrom: aStream
-	]
+
 ]
 
 { #category : #scanning }
 ASScanner >> token [
-	self shouldBeImplemented.
-]
 
-{ #category : #scanning }
-ASScanner >> tokenFrom: aStream [ 
 	| char |
-	[' 	
-' includes: aStream peek] whileTrue: [ aStream next ].
+	[ aStream atEnd ifTrue: [ ^ nil ].
+		aStream peek isSeparator ] whileTrue: [ aStream next ].
 	char := aStream peek.
-	('^.[]{}():|' includes: char) ifTrue: [ result << aStream next. ^ self ].
-	aStream atEnd ifTrue: [ ^ self ].
-	char isLetter ifTrue: [ ^ self identifierFrom: aStream ].
-	char isDigit ifTrue: [ ^ self numberFrom: aStream ].
-	char = $" ifTrue: [ ^ self commentFrom: aStream ].
-	char = $# ifTrue: [ ^ self symbolFrom: aStream ].
-	char = $' ifTrue: [ ^ self stringFrom: aStream ].
-	^ self error: 'Unexpected input: ',char asString
+	('^.[]{}():|' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	char isLetter ifTrue: [ ^ self identifier ].
+	char isDigit ifTrue: [ ^ self number ].
+	char = $" ifTrue: [ ^ self comment ].
+	char = $# ifTrue: [ ^ self symbol ].
+	char = $' ifTrue: [ ^ self string ].
+	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
+	^ self error: 'Illegal character:',char asString
 ]
