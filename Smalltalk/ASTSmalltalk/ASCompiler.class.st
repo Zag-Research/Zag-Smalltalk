@@ -2,7 +2,7 @@
 I compile Smalltalk source from a Tonel file into a class with methods expressed as ASTs
 "
 Class {
-	#name : #ASCompile,
+	#name : #ASCompiler,
 	#superclass : #Object,
 	#instVars : [
 		'class'
@@ -11,12 +11,12 @@ Class {
 }
 
 { #category : #compilation }
-ASCompile >> compileCode: sourceCode [
-	^ self compileSource: (ASScanner new scanCode: sourceCode)
+ASCompiler >> compileCode: sourceCode [
+	^ self compileSource: (ASScanner new scanCode: sourceCode readStream;stream)
 ]
 
 { #category : #compilation }
-ASCompile >> compileMethod: aMethod [
+ASCompiler >> compileMethod: aMethod [
 	class := aMethod methodClass.
 	^ self compileCode: aMethod sourceCode
 ]
