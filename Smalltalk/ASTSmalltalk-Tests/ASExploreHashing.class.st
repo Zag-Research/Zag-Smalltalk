@@ -14,10 +14,8 @@ ASExploreHashing >> crtTable: n [
 " unfortunately, if the universe of keys is more than about the first 15 primes, and the table includes more than a very few keys, you quickly move to BigInt calculations "
 " another e.g. if the keys are the first 1000 primes and more than 5 keys, it's BigInt "
 " ASExploreHashing new crtTable: 6 "
-	| keys m M b C p |
-	keys := Set new.
-	[ keys add: (primes first: 1000) atRandom. keys size < n] whileTrue.
-	m := keys asSortedCollection asArray.
+	| m M b C p |
+	m := self keys: n from: primes.
 	M := Array new: n withAll: 1.
 	p := 1.
 	m withIndexDo: [: mi : j | p:=p*mi. 1 to: n do: [: i | i~=j ifTrue: [ M at: i put: (M at: i)*mi ]]].
@@ -49,17 +47,86 @@ ASExploreHashing >> initialize [
 	super initialize.
 	" 62816 distinct method names of 90813 different symbols "
 	primes := Integer primesUpTo: 800000.
-	universe := 1999 to: 65000.
+	universe := 1 to: 90813.
 
 ]
 
 { #category : #exploring }
-ASExploreHashing >> minTable: n [
-" ASExploreHashing new minTable: 64 "
-	| table filled size index keys |
+ASExploreHashing >> keys: n from: aCollection [
+	| keys |
 	keys := Set new.
-	[ keys add: universe atRandom. keys size < n] whileTrue.
-	keys := keys asArray.
+	[ keys add: aCollection atRandom. keys size < n] whileTrue.
+	^ keys asArray.
+
+]
+
+{ #category : #exploring }
+ASExploreHashing >> min2Table: n [
+" (2 to: 35) collect: [:e| ASExploreHashing new min2Table: e] "
+	| table filled size index keys size2 |
+	keys := self keys: n from: universe.
+	size := n.
+	[
+		size := size + (size//3).
+		filled := 0.
+		table := Array new: size.
+		size2 := size//2.
+		keys do: [: r |
+			index := r\\size2*2+1.
+			(table at: index) ifNil: [
+				filled := filled+1 .
+				table at: index put: r
+			] ifNotNil: [
+				(table at: index+1) ifNil: [
+					filled := filled+1 .
+					table at: index+1 put: r
+			]].
+		].
+		filled=n
+	] whileFalse.
+	^ n->(size/n) asFloat
+]
+
+{ #category : #exploring }
+ASExploreHashing >> min4Table: n [
+" (4 to: 35) collect: [:e| ASExploreHashing new min4Table: e] "
+	| table filled size index keys size4 |
+	keys := self keys: n from: universe.
+	size := n.
+	[
+		size := size + (size//3).
+		filled := 0.
+		table := Array new: size.
+		size4 := size//4.
+		keys do: [: r |
+			index := r\\size4*4+1.
+			(table at: index) ifNil: [
+				filled := filled+1 .
+				table at: index put: r
+			] ifNotNil: [
+				(table at: index+1) ifNil: [
+					filled := filled+1 .
+					table at: index+1 put: r
+			] ifNotNil: [
+				(table at: index+2) ifNil: [
+					filled := filled+1 .
+					table at: index+2 put: r
+			] ifNotNil: [
+				(table at: index+3) ifNil: [
+					filled := filled+1 .
+					table at: index+3 put: r
+			]]]].
+		].
+		filled=n
+	] whileFalse.
+	^ n->(size/n) asFloat
+]
+
+{ #category : #exploring }
+ASExploreHashing >> minTable: n [
+" #(4 8 16 32 64 128 256) collect: [:e| ASExploreHashing new minTable: e] "
+	| table filled size index keys |
+	keys := self keys: n from: universe.
 	size := n - 1.
 	[
 		size := size + 1.
@@ -72,18 +139,29 @@ ASExploreHashing >> minTable: n [
 		].
 		filled=n
 	] whileFalse.
-	^ n->size
+	^ n->(size/n) asFloat
 ]
 
 { #category : #exploring }
-ASExploreHashing >> tryTable: n [
-" ASExploreHashing new tryTable: 32 "
-	| table r |
-	table := Array new: n.
-	1 to: n do: [: i |
-		r := universe atRandom.
-		(table at: r\\n) ifNotNil: [ ^ r->table ].
-		table at: r\\n put: r.
-	].
-	^ 1
+ASExploreHashing >> twoLevelTable: n [
+	" Returns an array of n, followed by the size table to have no collisions,
+      the size for worst-case 2 collisions, 3, etc. "
+" #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new twoLevelTable: e ] "
+	| table size index keys count result max |
+	keys := self keys: n from: universe.
+	result := OrderedCollection with: n.
+	size := n.
+	[
+		table := Array new: size withAll: 0.
+		keys do: [: r |
+			index := r\\size+1.
+			count := table at: index.
+			table at: index put: count+1
+		].
+		max := table max + 1.
+		max-result size timesRepeat: [ result add: 0 ].
+		(result at: max) = 0 ifTrue: [ result at: max put: size].
+		max > 2
+	] whileTrue: [ size := size + (size//3) ].
+	^ result asArray
 ]

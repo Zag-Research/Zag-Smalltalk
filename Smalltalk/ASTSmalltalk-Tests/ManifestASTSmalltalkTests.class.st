@@ -14,7 +14,7 @@ ManifestASTSmalltalkTests class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive
 
 { #category : #'code-critics' }
 ManifestASTSmalltalkTests class >> ruleLongMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:45.328717-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:45.328717-05:00') #(#(#RGMethodDefinition #(#ASExploreHashing #min4Table: #false)) #'2021-03-01T08:53:00.023992-05:00') )
 ]
 
 { #category : #'code-critics' }
