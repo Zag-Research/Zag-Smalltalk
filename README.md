@@ -9,4 +9,4 @@ Interpreter runs directly on the ASTs
 
 Memory structure and some of execution principles modelled on OpenSmalltalk VM
 
-[[Abstract|More information in the Documentation]]
+[More information in the Documentation](Documentation/Abstract.md)
