@@ -1,6 +1,6 @@
 # Description of AST Smalltalk
 ### Abstract
-AST-Smalltalk is a principle-based Smalltalk VM. "Principled" means that the only 3 operations are: message send, assignment, and return. There is no special-casing of methods like `ifTrue:ifFalse` or `whileTrue:`, although of course some methods are implemeted by primitive methods.
+AST-Smalltalk is a principle-based Smalltalk VM. "Principled" means that the only 3 operations are: message send, assignment, and return. There is no special-casing of methods like `ifTrue:ifFalse` or `whileTrue:`, although of course some methods are implemented by primitive methods.
 
 The research question is, "Can this be made fast enough to be competitive?"
 
