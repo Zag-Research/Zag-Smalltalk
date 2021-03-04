@@ -8,3 +8,5 @@ Methods are re-constituted from the AST for edit windows.
 Interpreter runs directly on the ASTs
 
 Memory structure and some of execution principles modelled on OpenSmalltalk VM
+
+[More information in the Documentation](Documentation/Abstract.md)
