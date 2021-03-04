@@ -143,14 +143,50 @@ ASExploreHashing >> minTable: n [
 ]
 
 { #category : #exploring }
+ASExploreHashing >> twoLevelPower2Counts: n [
+	" Returns an array of n, followed by the size table to have no collisions,
+      the size for worst-case 2 collisions, 3, etc. "
+	" #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new twoLevelCounts: e ] "
+	| table size index keys count result bag |
+	keys := self keys: n from: universe.
+	result := OrderedCollection with: n.
+	size := (n*5/3) asLargerPowerOfTwo.
+	table := Array new: size withAll: 0.
+	keys do: [: r |
+		index := r\\size+1.
+		count := table at: index.
+		table at: index put: count+1
+	].
+	bag := Bag new.
+	(table reject: #isZero) do: [: c | bag add: c].
+	^ n->size->bag valuesAndCounts
+]
+
+{ #category : #exploring }
+ASExploreHashing >> twoLevelPower2Table: n [
+	" Returns an array of n, followed by the size table to have no collisions,
+      the size for worst-case 2 collisions, 3, etc. "
+" #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new twoLevelPower2Table: e ] "
+	^ self twoLevelTable: n base: n asLargerPowerOfTwo scale: 2
+]
+
+{ #category : #exploring }
 ASExploreHashing >> twoLevelTable: n [
+	" Returns an array of n, followed by the size table to have no collisions,
+      the size for worst-case 2 collisions, 3, etc. "
+" #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new twoLevelTable: e ] "
+	^ self twoLevelTable: n base: n scale: 4/3
+]
+
+{ #category : #exploring }
+ASExploreHashing >> twoLevelTable: n base: base scale: scale [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "
 " #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new twoLevelTable: e ] "
 	| table size index keys count result max |
 	keys := self keys: n from: universe.
 	result := OrderedCollection with: n.
-	size := n.
+	size := base.
 	[
 		table := Array new: size withAll: 0.
 		keys do: [: r |
@@ -162,6 +198,6 @@ ASExploreHashing >> twoLevelTable: n [
 		max-result size timesRepeat: [ result add: 0 ].
 		(result at: max) = 0 ifTrue: [ result at: max put: size].
 		max > 2
-	] whileTrue: [ size := size + (size//3) ].
+	] whileTrue: [ size := (size*scale) asInteger ].
 	^ result asArray
 ]
