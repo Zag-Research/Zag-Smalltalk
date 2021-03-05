@@ -5,6 +5,9 @@ Class {
 		'universe',
 		'primes'
 	],
+	#classVars : [
+		'Something'
+	],
 	#category : #'ASTSmalltalk-Tests-Explore'
 }
 

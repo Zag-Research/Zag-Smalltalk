@@ -77,6 +77,26 @@ ASScanner >> scanCode: aStringOrStream [
 ]
 
 { #category : #scanning }
+ASScanner >> string [
+	aStream next.
+	^ (String streamContents: [: s | | char |
+			[
+				char := aStream next.
+				char ~= $' or: [
+					aStream peek = $' and: [aStream next.true]].
+			] whileTrue: [ s << char ]
+		]) asASString
+]
+
+{ #category : #scanning }
+ASScanner >> symbol [
+	aStream next.
+	aStream peek = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
+	aStream peek = $' ifTrue: [ ^ self string asASSymbol].
+	^ self identifier asASSymbol
+]
+
+{ #category : #scanning }
 ASScanner >> token [
 
 	| char |

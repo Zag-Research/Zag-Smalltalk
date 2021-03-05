@@ -1,5 +1,5 @@
 Class {
-	#name : #ASSyntax,
-	#superclass : #ASToken,
+	#name : #ASSymbol,
+	#superclass : #ASString,
 	#category : #'ASTSmalltalk-Tokens'
 }
