@@ -16,6 +16,19 @@ Another goal is be be as compatible as possible with [Pharo](https://pharo.org) 
 
 ## [Optimization opportunities](Optimizations.md) are described here.
 ## The [Just In Time compiler](JIT.md) is described here.
+<!--
+| Start | Fibonacci |
+|-------|-----------|
+|     1 |      1 |
+|     1 |      1 |
+|       |         |
+|       |         |
+|       |         |
+|       |         |
+|       |         |
+|       |         |
+<!-- TBLFM: @4$>..@>$>=(@-1+@-2) -->
+<!-- TBLFM: @4$1..@>$1=(@-1+1) -->
 
 <!--
 ```chart
@@ -24,9 +37,8 @@ Another goal is be be as compatible as possible with [Pharo](https://pharo.org) 
     series: [[12, 5, 8, 8 , 5], [5, 8, 7, 9, 12]]
 ```
 
-abc|def|ghi
----|---|---
-qweqwe|dasdasd|
-
+|abc|def|ghi|
+|---|---|---|
+|qweqwe|dasdasdvxcv dfgd fdf d|wedwecsdf|
 [SOmething](https://github.com/liamcain/obsidian-periodic-notes)
 -->
