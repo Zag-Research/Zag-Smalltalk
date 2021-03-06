@@ -10,10 +10,23 @@ Another goal is be be as compatible as possible with [Pharo](https://pharo.org) 
 
 ## The [AST class structure](AST_Classes.md) is described here.
 
-## The [interpreter](Interpreter.md) is described here.
+## The [interpreter](Interpreter.md) is described here, including message dispatch.
 
-## The [method dispatch](Method_dispatch) is described here.
-
-## The [memory structure and garbage collector](Memory_structure-Garbage_collector) are described here.
+## The [memory structure and garbage collector](Memory_structure-Garbage_collector.md) are described here.
 
 ## [Optimization opportunities](Optimizations.md) are described here.
+## The [Just In Time compiler](JIT.md) is described here.
+
+<!--
+```chart
+    type: bar
+    labels: [Monday, Tuesday, Wednesday, Thursday, Friday]
+    series: [[12, 5, 8, 8 , 5], [5, 8, 7, 9, 12]]
+```
+
+abc|def|ghi
+---|---|---
+qweqwe|dasdasd|
+
+[SOmething](https://github.com/liamcain/obsidian-periodic-notes)
+-->

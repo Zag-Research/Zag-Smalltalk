@@ -1,13 +1,13 @@
 ## The Interpreter
 
-Ideally the interpreter (and [the JIT](Jit.md)) are defined within [AST Classes](AST_Classes.md). The trick is to get enough bootstrap in place that the interpreter can run.
+Ideally the interpreter (and [the JIT](JIT.md)) are defined within [AST Classes](AST_Classes.md). The trick is to get enough bootstrap in place that the interpreter can run.
 
 ### Method dispatch
 One of the defining aspects of object-oriented programming is that methods are customized to the object (or class). This requires dispatching to various code, dependent on the class of the object^[This is for class-based OOP like Smalltalk, Java, C++, Python, Ruby, etc.; for the much less common prototype-based OOP like Javascript or Self, there is still dispatch, but based on the object, not its class.]. Since this happens so frequently, optimizing the message dispatch is critical to performance.
 
 #### Classic Smalltalk dispatch
 Logically, Smalltalk message dispatch follows these steps:
- 1. set C to the class of the target (or its superclass if it's a `super` send)
+ 1. set C to the class of the target (or the current class's superclass if it's a `super` send)
  2. look up the selector symbol in C's `methodDict`
  3. if found, the value of the lookup is the method code - call it
  4. if not found and C has a superclass, set C to the superclass and continue at 2
