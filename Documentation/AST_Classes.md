@@ -65,15 +65,22 @@ ObjectNode : ... instvars
 #### `linearize: stream`
 This is used to turn the tree structure into a sequence of objects to reflect efficient execution. For example the compiler would convert:
 ```smalltalk
-instVar1 := self message1: localVar with: 42;message2: instVar2
+instVar1 := self message1: localVar with: 42; message2: instVar2
 ```
 into:
 ```mermaid
-graph TD
-asn[/:= 1\]-->s1([Self])
-asn-->m1[[message1:with:]]-->|receiver|s2([Self])
-m1-->|arg1|of2[Offset 1]-->l2([Local])
+graph LR
+asn[/:=\]-->|target|y3{{#instVar1}}
+asn-->|expression|m1[[message1:with:]]-->|receiver|s2([Self])
+m1-->|arg1|y1{{#localVar}}
 m1-->|arg2|li{{Literal 42}}
 m1-->|cascade|m2[[message2:]]
-m2-->|arg1|of3[Offset 2]-->s3([Self])
+m2-->|arg1|y2{{#instVar2}}
+```
+
+This gets linearized into:
+```mermaid
+graph LR
+s2([Self])-->d1[/dup\]-->l2([Local])-->of2[Offset 1]-->li{{Literal 42}}-->m1[[message1:with:]]-->d2[/drop\]
+s3([Self])-->of3[Offset 2]-->m2[[message2:]]-->s1([Self])-->asn[/:= 1\]
 ```
