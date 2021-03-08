@@ -26,3 +26,36 @@ Even if we somehow knew the class of the object, the tables would still be exces
 
 #### Our approach
 We build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods.
+
+| Hash table for a class                   |                                      |
+| ---------------------------------------- | ------------------------------------ |
+| Pointer to the class                     |                                      |
+| `value` method pointer                   |                                      |
+| hash table mask (2^n-1)*8                |                                      |
+| hash entry 0 - points to 2nd level below | `<--` object has pointer to here     |
+| hash entry 1 - ditto                     |                                      |
+| ...                                      |                                      |
+| hash entry 2^n-1 - ditto                     |                                      |
+| symbol hash                              | `<--` pointed to by one of the above |
+| method address                           |                                      |
+| symbol hash                              |                                      |
+| method address                           |                                      |
+| symbol hash                              | `<--` pointed to by one of the above |
+| method address                           |                                      |
+| symbol hash                              |                                      |
+| ...                                      |                                      |
+| 0                                        |  designates end of table                                     |
+| 1                                        |                                      |
+
+The sequence to look up a method is:
+1. get the symbol hash value - the offset from the start of the symbol table
+2. bit-and it with the hash table mask
+3. offset into the table to get a pointer to the 2nd level table
+4. the 2nd level table is a sequence of symbol hash value/method address pairs
+5. scan linearly through the 2nd level table looking for a match
+	1. if found, use the next word as an address for the method code
+	2. if 0, then this symbol isn't in the table, fire off a DNU
+
+Although we're doing a linear scan for the second level, the size of the first-level table will mean that only very rarely will we have to search beyond 2 entries. There will be zero entries in the original table, but they may be filled in over time. This will mean that DNUs may have to search a little longed in some circumstances, but the cost of this search will be swamped by the other requirements of a DNU.
+
+The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
