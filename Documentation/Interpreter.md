@@ -59,3 +59,5 @@ The sequence to look up a method is:
 Although we're doing a linear scan for the second level, the size of the first-level table will mean that only very rarely will we have to search beyond 2 entries. There will be zero entries in the original table, but they may be filled in over time. This will mean that DNUs may have to search a little longed in some circumstances, but the cost of this search will be swamped by the other requirements of a DNU.
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
+
+### Rust structure
