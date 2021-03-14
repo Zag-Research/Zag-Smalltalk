@@ -45,6 +45,35 @@ ASExploreHashing >> crtTable: n [
 	^ C "->(m collect: [: mi | C\\mi ])"
 ]
 
+{ #category : #exploring }
+ASExploreHashing >> directPower2Table: n [
+	" Returns an array of n, followed by the size table to have no collisions,
+      the size for worst-case 2 collisions, 3, etc. "
+	" #(4 8 16 32 33 34 35 36 37 38 39 64 81 100 121 144 169 256) collect: [:e| ASExploreHashing new directPower2Table: e ] "
+	| table size keys overflow stored extra |
+	extra := 3.
+	keys := self keys: n from: universe.
+	overflow := OrderedCollection new.
+	size := (n*5//3) asLargerPowerOfTwo.
+	table := Array new: size+extra.
+	keys do: [: r |
+		(table at: r\\size+1) ifNil: [
+			table at: r\\size+1 put: r.
+	]].
+	keys do: [: r |
+		stored := false.
+		r\\size+1 to: r\\size+extra+1 do: [: index |
+			stored ifFalse: [
+				(table at: index) = r ifTrue: [ stored := true ] ifFalse: [
+					(table at: index) ifNil: [
+						table at: index put: r.
+						stored := true
+		]]]].
+		stored ifFalse: [ overflow add: r ]
+	].
+	^ n->size->overflow size
+]
+
 { #category : #initialization }
 ASExploreHashing >> initialize [
 	super initialize.
