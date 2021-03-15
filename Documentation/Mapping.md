@@ -36,3 +36,39 @@ So this leaves us with the following encoding based on the **S**ign+**M**antissa
 
 So, interpreted as an i64, any value that is less than or equal to the generated NaN value is a double. Else, if bit 50 is set, it's an integer and subtracting the integer 0 encoding will give the value. Else it's a pointer and subtracting the +inf encoding will give the value^[note that we don't encode 0 or 1 as pointer values].
 
+### Object in Memory
+For now, at least, we are following the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap:
+
+First we have the object format tag:
+
+0. zero-sized objects (UndefinedObject True False et al)
+1. non-indexable objects with inst vars (Point et al) 
+2. indexable objects with no inst vars (Array et al)
+3. indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+4. weak indexable objects with inst vars (WeakArray et al)
+5. weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+
+- 6-8 unused
+-  (?) 64-bit indexable 
+- 10-11 32-bit indexable
+- 12-15 16-bit indexable 
+- 16-23 byte indexable 
+- 24-31 compiled method
+
+This is the first field in the header-word for an object:
+
+| Bits | What         | Characteristics                                          |
+| ---- | ------------ | -------------------------------------------------------- |
+| 1    | isForward    | if set, rest of long-word is address of forwarded object |
+| 1    | isMarked     |                                                          |
+| 1    | isRemembered |                                                          |
+| 5    | format       | (on a byte boundary)  (see above)                        |
+| 1    | isGrey       |                                                          |
+| 1    | unused       |                                                          |
+| 22   | identityHash | (on a word boundary)                                     |
+| 8    | numSlots     | (on a byte boundary)                                     |
+| 1    | isPinned     |                                                          |
+| 1    | isImmutable  |                                                          |
+| 22   | classIndex   | (on a word boundary) : LSB                               |
+
+If numSlots is 255, then there is a second 8-byte header word.
