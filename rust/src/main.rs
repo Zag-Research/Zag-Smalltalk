@@ -4,7 +4,6 @@
 // https://stackoverflow.com/questions/48795329/what-is-the-difference-between-fromfrom-and-as-in-rust
 
 #![allow(warnings)] 
-extern crate mmap;
 
 // Classes: 0: Object, 1: UndefinedObject, 2: Boolean, 3: True, 4: False, 5: SmallInteger, 6: Symbol, 7: Class, 8: Metaclass, 9: Behavior
 

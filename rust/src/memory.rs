@@ -31,8 +31,22 @@ impl Object {
         unsafe{self.f}
     }
     #[inline]
-    pub fn as_ptr(&self) -> * mut HeapObject {
-        ((unsafe{self.i})-nan_value+1) as * mut HeapObject
+    pub fn as_ptr(&self) -> & mut HeapObject {
+        unsafe{& mut *((self.i-nan_value+1) as * mut HeapObject)}
+    }
+}
+impl Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // The `f` value implements the `Write` trait, which is what the
+        // write! macro is expecting. Note that this formatting ignores the
+        // various flags provided to format strings.
+        if self.is_int() {
+            write!(f, "{}", self.as_i64())
+        } else if self.is_double() {
+            write!(f, "{:e}", self.as_f64())
+        } else {
+            write!(f, "{:?}", self.as_ptr())
+        }
     }
 }
 impl From<i64> for Object {
@@ -55,23 +69,9 @@ impl From<* const HeapObject> for Object {
         Object {i:(o as i64)+nan_value-1}
     }
 }
-impl Debug for Object {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // The `f` value implements the `Write` trait, which is what the
-        // write! macro is expecting. Note that this formatting ignores the
-        // various flags provided to format strings.
-        if self.is_int() {
-            write!(f, "{}", self.as_i64())
-        } else if self.is_double() {
-            write!(f, "{:e}", self.as_f64())
-        } else {
-            write!(f, "{:p}", self.as_ptr())
-        }
-    }
-}
 
 #[cfg(test)]
-mod tests {
+mod testsObject {
     use super::*;
     #[test]
     fn convert_object() {
@@ -80,39 +80,72 @@ mod tests {
         assert_eq!(Object::from(-1).as_i64(),-1);
         assert_eq!(Object::from(1).as_i64(),1);
         assert_eq!(Object::from(2.0_f64).as_f64(),2.0_f64);
-        let temp3 = Object::from(2.0_f64);
         assert_eq!(Object::from(&nilObject).as_ptr() as * const HeapObject,&nilObject as * const HeapObject);
     }
 }
 
 union HeapHeader {
-    all : i64,
+    i : isize,
+    u : usize,
     bytes : [u8;8],  // x86_64: 0 is lsb 7 is msb
     words : [u32;2], // x86_64: 0 is low word, 1 is high
+}
+impl HeapHeader {
+    fn class(&self) -> usize {
+        (unsafe{self.u})&(1<<22)-1
+    }
+    fn hash(&self) -> usize {
+        (unsafe{self.u})>>32 & (1<<22)-1
+    }
+    fn size(&self) -> usize {
+        (unsafe{self.u})>>24 & 255
+    }
+    fn size_set(&mut self,new:usize) {
+        unsafe{self.bytes[3]=new as u8}
+    }
+    fn format(&self) -> usize {
+        (unsafe{self.u})>>56 & 31
+    }
+    fn immutable(&self) -> bool {
+        (unsafe{self.u})>>22 != 0
+    }
+    fn forwarded(&self) -> bool {
+        (unsafe{self.i})<0
+    }
 }
 impl Debug for HeapHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // The `f` value implements the `Write` trait, which is what the
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
-        write!(f, "HH")
+        write!(f, "cl:{} hs:{} sz:{} fm:{}:-",self.class(),self.hash(),self.size(),self.format())
     }
 }
-
-#[derive(Debug)]
+macro_rules! headerfield {
+    (class = $e:expr) => {$e};
+    (immutable) => {1<<22};
+    (pinned) => {1<<23};
+    (size = $e:expr) => {($e)<<24};
+    (hash = $e:expr) => {($e)<<32};
+    (unused) => {1<<54};
+    (grey) => {1<<55};
+    (format = $e:expr) => {($e)<<56};
+    (remembered) => {1<<61};
+    (marked) => {1<<62};
+    (forward) => {1<<63};
+}
+macro_rules! header {
+    ($($i:ident $( = $e:expr)?),+) => {HeapHeader{u:0 $(| (headerfield!($i $( = $e)? )))+}}
+}
+static hh : HeapHeader = header!(class=3,hash=1,immutable);
 pub struct HeapObject {
     header : HeapHeader,
     fields : [Object;0], // typically many more than 1, but will be accessed as unsafe
 }
-impl PartialEq for HeapObject {
-    fn eq(&self,other:&HeapObject) -> bool {
-        self==other
-    }
-}
 
-pub static nilObject : HeapObject = HeapObject{header:HeapHeader{all:1+(0<<32)},fields:[]};
-pub static trueObject : HeapObject = HeapObject{header:HeapHeader{all:3+(1<<32)},fields:[]};
-pub static falseObject : HeapObject = HeapObject{header:HeapHeader{all:4+(2<<32)},fields:[]};
+pub static nilObject : HeapObject = HeapObject{header:header!(class=1,hash=10101),fields:[]};
+pub static trueObject : HeapObject = HeapObject{header:header!(class=3,hash=12121),fields:[]};
+pub static falseObject : HeapObject = HeapObject{header:header!(class=4,hash=21212),fields:[]};
 const mask47 : u64 = 0x7fffffffffff;
 const mask22 : u32 = 0x3fffff;
 const mask5 : u8 = 0x1f;
@@ -120,22 +153,23 @@ impl HeapObject {
     #[inline]
     #[cfg(target_arch="x86_64")] // order of fields may differ
     pub fn size(&self) -> usize {
-        unsafe{self.header.bytes[3] as usize}
+        let size = self.header.size();
+        size
     }
     #[inline]
     #[cfg(target_arch="x86_64")]
     pub fn size_set(&mut self,new:usize) {
-        unsafe{self.header.bytes[3]=new as u8}
+        self.header.size_set(new)
     }
     #[inline]
     #[cfg(target_arch="x86_64")]
     pub fn identityHash(&self) -> usize {
-        ((unsafe{self.header.words[1]}) & mask22) as usize
+        self.header.hash()
     }
     #[inline]
     #[cfg(target_arch="x86_64")]
     pub fn classIndex(&self) -> usize {
-        ((unsafe{self.header.words[0]}) & mask22) as usize
+        self.header.class()
     }
     #[inline]
     pub fn at(&self,index:usize) -> Object {
@@ -147,6 +181,29 @@ impl HeapObject {
         value
     }
 }
+#[cfg(test)]
+mod testHeapObject {
+    use super::*;
+    #[test]
+    fn sizes() {
+        asssert_eq!(nilObject.size(),0);
+    }
+}
+impl Debug for HeapObject {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // The `f` value implements the `Write` trait, which is what the
+        // write! macro is expecting. Note that this formatting ignores the
+        // various flags provided to format strings.
+        write!(f, "({:?}",self.header);
+        write!(f,")")
+    }
+}
+impl PartialEq for HeapObject {
+    fn eq(&self,other:&HeapObject) -> bool {
+        self==other
+    }
+}
+
 pub struct AllocableRegion {
     base : * mut Object,
     end : * mut Object,
@@ -155,14 +212,33 @@ pub struct AllocableRegion {
     increment : isize,
 }
 const min_page_size : isize = 16384;
+extern crate libc;
 impl AllocableRegion {
     pub fn new(address: usize,size:isize,increment:isize) -> Self {
         let address = address as * mut Object;
         let size = (size+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
         let increment = (increment+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
+        let end = unsafe{address.offset(size)};
+        unsafe{
+                 let data = libc::mmap(
+            /* addr: */ address as *mut libc::c_void,
+            /* len: */ size as usize,
+            /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
+            // Then make the mapping *public* so it is written back to the file
+            /* flags: */ libc::MAP_ANON,
+            /* fd: */ 0,
+            /* offset: */ 0,
+        );
+
+        if data == libc::MAP_FAILED {
+            panic!("Could not access data from memory mapped file")
+        }
+
+            
+        }
         AllocableRegion {
             base : address,
-            end : unsafe{address.offset(size)},
+            end : end,
             current : address,
             base_allocation : size,
             increment : increment,
