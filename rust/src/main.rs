@@ -37,7 +37,7 @@ fn dispatch(this: Object,p1: Object,p2: Object) { // `self` is reserved
     
 }
 fn main() {
-    let gc = AllocableRegion::new(gc_main,gc_size,1000000).extend();
+    let gc = AllocableRegion::new(gc_main,gc_size);
     let temp = Object::from(-1<<49);
     let mut temp2 = Object::from((1<<49)-1);
     let temp3 = Object::from(2.0_f64);

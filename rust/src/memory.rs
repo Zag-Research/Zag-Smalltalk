@@ -208,44 +208,47 @@ pub struct AllocableRegion {
     base : * mut Object,
     end : * mut Object,
     current : * mut Object,
-    base_allocation : isize,
-    increment : isize,
 }
 const min_page_size : isize = 16384;
 extern crate libc;
 impl AllocableRegion {
-    pub fn new(address: usize,size:isize,increment:isize) -> Self {
+    pub fn new(address: usize,size:isize) -> Self {
         let address = address as * mut Object;
         let size = (size+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
-        let increment = (increment+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
-        let end = unsafe{address.offset(size)};
-        unsafe{
-                 let data = libc::mmap(
-            /* addr: */ address as *mut libc::c_void,
-            /* len: */ size as usize,
-            /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
-            // Then make the mapping *public* so it is written back to the file
-            /* flags: */ libc::MAP_ANON,
-            /* fd: */ 0,
-            /* offset: */ 0,
-        );
-
+        let data = unsafe{
+            libc::mmap(
+                /* addr: */ address as *mut libc::c_void,
+                /* len: */ size as usize,
+                /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
+                /* flags: */ libc::MAP_ANON,
+                /* fd: */ 0,
+                /* offset: */ 0,
+            )};
         if data == libc::MAP_FAILED {
             panic!("Could not access data from memory mapped file")
         }
-
-            
-        }
+        let data = data as *mut Object;
+        let end = unsafe{data.offset(size)};
         AllocableRegion {
-            base : address,
+            base : data,
             end : end,
-            current : address,
-            base_allocation : size,
-            increment : increment,
+            current : data,
         }
     }
-    pub fn extend(& mut self) -> &Self {
-        self.end = unsafe{self.end.offset(self.increment)};
+    pub fn release(& mut self) {
+        self.end = self.base;
+        let size = 0;
+        if -1 == unsafe{
+            libc::munmap(
+                /* addr: */ self.base as *mut libc::c_void,
+                /* len: */ size as usize,
+            )} {
+            panic!("Failed to release memory map")
+        }
+    }
+    pub fn allocObject(& mut self,size:isize) -> &Self {
+        self.current = unsafe{self.current.offset(size)};
+        // have to set the header and initialize the object
         self
     }
 }

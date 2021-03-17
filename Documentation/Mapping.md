@@ -37,11 +37,17 @@ So this leaves us with the following encoding based on the **S**ign+**M**antissa
 So, interpreted as an i64, any value that is less than or equal to the generated NaN value is a double. Else, if bit 50 is set, it's an integer and subtracting the integer 0 encoding will give the value. Else it's a pointer and subtracting the +inf encoding will give the value^[note that we don't encode 0 or 1 as pointer values].
 
 ### Object in Memory
-For now, at least, we are following the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap:
+We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
+
+There are a few significant changes:
+1. Zero-sized objects include Characters. The character value is encoded in the hash-code field. This allows 2 million possible character values which covers the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible code points.^[decreasing to 20 bits of hash value would not cover the potential space]
+2. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the complement of the pointer as a a forward.
+3. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
+4. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 First we have the object format tag:
 
-0. zero-sized objects (UndefinedObject True False et al)
+0. zero-sized objects (UndefinedObject True False Character et al)
 1. non-indexable objects with inst vars (Point et al) 
 2. indexable objects with no inst vars (Array et al)
 3. indexable objects with inst vars (MethodContext AdditionalMethodState et al)
