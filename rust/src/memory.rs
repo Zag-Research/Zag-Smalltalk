@@ -206,6 +206,7 @@ impl PartialEq for HeapObject {
 
 pub struct AllocableRegion {
     base : * mut Object,
+    size : usize,
     end : * mut Object,
     current : * mut Object,
 }
@@ -215,33 +216,39 @@ impl AllocableRegion {
     pub fn new(address: usize,size:isize) -> Self {
         let address = address as * mut Object;
         let size = (size+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
+        AllocableRegion {
+            base : address,
+            size : size,
+            end : address,
+            current : address,
+        }
+    }
+    pub fn mapMemory(& mut self) {
         let data = unsafe{
             libc::mmap(
-                /* addr: */ address as *mut libc::c_void,
-                /* len: */ size as usize,
+                /* addr: */ self.base as *mut libc::c_void,
+                /* len: */ self.size,
                 /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
                 /* flags: */ libc::MAP_ANON,
                 /* fd: */ 0,
                 /* offset: */ 0,
             )};
         if data == libc::MAP_FAILED {
-            panic!("Could not access data from memory mapped file")
+            panic!("Could not memory map")
         }
         let data = data as *mut Object;
-        let end = unsafe{data.offset(size)};
-        AllocableRegion {
-            base : data,
-            end : end,
-            current : data,
+        if data != self.address {
+            panic!("data mapped at wrong address")
         }
+        self.end = unsafe{data.offset(size)};
     }
-    pub fn release(& mut self) {
+    pub fn releaseMemory(& mut self) {
         self.end = self.base;
-        let size = 0;
+        self.current = self.base;
         if -1 == unsafe{
             libc::munmap(
                 /* addr: */ self.base as *mut libc::c_void,
-                /* len: */ size as usize,
+                /* len: */ self.size,
             )} {
             panic!("Failed to release memory map")
         }
@@ -250,6 +257,36 @@ impl AllocableRegion {
         self.current = unsafe{self.current.offset(size)};
         // have to set the header and initialize the object
         self
+    }
+    pub fn gc(& mut self,sink: & mut AllocableRegion) {
+    }
+}
+pub struct Memory {
+    genOld1 : AllocableRegion,
+    genOld2 : AllocableRegion,
+    genTeen : AllocableRegion,
+    nursery : AllocableRegion,
+}
+const min_page_size : isize = 16384;
+extern crate libc;
+impl Memory {
+    pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
+    }
+    pub fn allocObject(& mut self,size:isize) {
+    }
+    pub fn minorGC(&mut self) {
+    }
+    pub fn fullGC(&mut self) {
+    }
+    pub fn become(& mut self,target: Object, value: Object) {
+        if !target.is_ptr || !value.is_ptr {
+            panic!("can't become a fixed value")
+        }
+        if value<target {
+            self.become(value,target)
+        } else {
+
+        }
     }
 }
 pub const gc_main : usize = 0x100000000000;
