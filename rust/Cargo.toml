@@ -9,3 +9,9 @@ edition = "2018"
 [dependencies]
 #mmap = "*"
 libc = "0.2"
+criterion = "0.3"
+lazy_static = "*"
+
+[[bench]]
+name = "my_benchmark"
+harness = false

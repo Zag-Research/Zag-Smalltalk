@@ -215,7 +215,7 @@ extern crate libc;
 impl AllocableRegion {
     pub fn new(address: usize,size:isize) -> Self {
         let address = address as * mut Object;
-        let size = (size+min_page_size-1)&(-min_page_size)/(mem::size_of::<Object>() as isize);
+        let size = ((size+min_page_size-1)&(-min_page_size)) as usize/mem::size_of::<Object>();
         AllocableRegion {
             base : address,
             size : size,
@@ -237,10 +237,10 @@ impl AllocableRegion {
             panic!("Could not memory map")
         }
         let data = data as *mut Object;
-        if data != self.address {
+        if data != self.base {
             panic!("data mapped at wrong address")
         }
-        self.end = unsafe{data.offset(size)};
+        self.end = unsafe{data.offset(self.size as isize)};
     }
     pub fn releaseMemory(& mut self) {
         self.end = self.base;
@@ -267,8 +267,6 @@ pub struct Memory {
     genTeen : AllocableRegion,
     nursery : AllocableRegion,
 }
-const min_page_size : isize = 16384;
-extern crate libc;
 impl Memory {
     pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
     }
@@ -278,12 +276,12 @@ impl Memory {
     }
     pub fn fullGC(&mut self) {
     }
-    pub fn become(& mut self,target: Object, value: Object) {
-        if !target.is_ptr || !value.is_ptr {
+    pub fn becomeX(& mut self,target: Object, value: Object) {
+        if !target.is_heap_object() || !value.is_heap_object() {
             panic!("can't become a fixed value")
         }
-        if value<target {
-            self.become(value,target)
+        if (unsafe{value.i<target.i}) {
+            self.becomeX(value,target)
         } else {
 
         }
