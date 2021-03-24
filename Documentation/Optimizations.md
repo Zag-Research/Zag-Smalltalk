@@ -10,3 +10,6 @@
 - maybe have `value` as a special case in the dispatch table so that blocks can be evaluated faster
 - alternately (slightly less efficiently), blocks have a single-entry table, and if the symbol index isn't the desired one, they do a `super` send
 - we will recognize methods that are sent to particular classes (or messages that have limited numbers of implementations (like 1 or 2) e.g. `yourself`, `ifTrue:ifFalse:`, `whileTrue:`) and be able to inline them
+- the Object value for Symbols will have the index into the Sysmbol table and also the arity. Then the dispatch keys will have the same information encoded for each method so we don't have to check arity separately
+- the object header for BlockClosure will have the symbol hash as the hash value and BlockClosure as the class, This will be followed by code address (which would look like a double, if anyone could see it), then self, a reference to the indirect vector if any, and the closure fields
+- 
