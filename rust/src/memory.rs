@@ -186,7 +186,15 @@ mod testHeapObject {
     use super::*;
     #[test]
     fn sizes() {
-        asssert_eq!(nilObject.size(),0);
+        assert_eq!(nilObject.size(),0);
+    }
+    #[test]
+    fn info() {
+        assert_eq!(core::mem::size_of::<Object>(), 8);
+        assert_eq!(core::mem::size_of::<Option<bool>>(), 1);
+        println!("{}", unsafe { *((&Some(true)) as *const _ as *const u8) });
+        println!("{}", unsafe { *((&Some(false)) as *const _ as *const u8) });
+        println!("{}", unsafe { *((&None::<bool>) as *const _ as *const u8) });
     }
 }
 impl Debug for HeapObject {

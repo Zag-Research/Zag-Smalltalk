@@ -20,6 +20,8 @@ mod class;
 
 //use memory::*;
 
+//mod minimal;
+
 fn main() {
 /*    let gc = AllocableRegion::new(gc_main,gc_size);
     let temp = Object::from(-1<<49);

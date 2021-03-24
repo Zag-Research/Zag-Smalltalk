@@ -1,7 +1,7 @@
-use std::sync::Weak;
+use crate::memory::Object;
 #[repr(C)]  // don't shuffle the fields
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Class {
-    superclass : Weak<Class>,
+    superclass : Object,
 //    class encoded in the header
 }
