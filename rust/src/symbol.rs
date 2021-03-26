@@ -13,14 +13,14 @@ use crate::object::*;
 
 #[derive(Copy, Clone)]
 pub struct Symbol {
-    string : &'static str,
+    string : Option<&'static str>,
     left : i32,
     right : i32,
 }
 const MAX_SYMBOLS : usize = 100;
 use std::mem::ManuallyDrop;
-const NO_SYMBOL : Option<ManuallyDrop<Symbol>> = None;
-static mut symbolTable : [Option<ManuallyDrop<Symbol>>;MAX_SYMBOLS] = [NO_SYMBOL;MAX_SYMBOLS];
+const NO_SYMBOL : Symbol = Symbol{string:None,left:0,right:0};
+static mut symbolTable : [Symbol;MAX_SYMBOLS] = [NO_SYMBOL;MAX_SYMBOLS];
 use std::sync::RwLock;
 lazy_static! {
     static ref symbolFree : RwLock<usize> = RwLock::new(0);
@@ -32,18 +32,18 @@ pub fn intern(string : &'static str) -> Object {
     } else {
         let mut index = symbolFree.write().unwrap();
         let mut pos = *index;
-        while let Some(_) = unsafe{symbolTable[pos]} {
+        while let Symbol{string:Some(_), .. } = unsafe{symbolTable[pos]} {
             pos = pos + 1
         };
         *index = pos + 1;
         unsafe {
             std::mem::replace(
                 &mut symbolTable[pos],
-                Some(ManuallyDrop::new(Symbol {
-                    string: string,
+                Symbol {
+                    string: Some(string),
                     left: -1,
                     right: -1,
-                })),
+                },
             )
         };
         insertSymbol(pos)
