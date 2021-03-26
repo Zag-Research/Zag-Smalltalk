@@ -26,19 +26,6 @@ lazy_static! {
     static ref dispatchFree : RwLock<usize> = RwLock::new(0);
 }
 
-pub const classObject : usize = 0;
-pub const classBlockClosure : usize = 1;
-pub const classUndefinedObject : usize = 2;
-pub const classTrue : usize = 3;
-pub const classFalse : usize = 4;
-pub const classSmallInteger : usize = 5;
-pub const classSymbol : usize = 6;
-pub const classCharacter : usize = 7;
-pub const classString : usize = 8;
-pub const classClass : usize = 9;
-pub const classMetaclass : usize = 10;
-pub const classBehavior : usize = 11;
-pub const classFloat : usize = 12;
 pub fn addClass(c : Object, n : usize) {
     let mut index = dispatchFree.write().unwrap();
     let pos = *index;

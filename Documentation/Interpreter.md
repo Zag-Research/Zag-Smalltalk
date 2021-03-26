@@ -61,3 +61,9 @@ Although we're doing a linear scan for the second level, the size of the first-l
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
 
 ### Rust structure
+
+## Image format
+The image format is [described here](ImageFormat.md)
+## Dependencies/Porting
+[DebuggableASTInterpreter](https://github.com/carolahp/DebuggableASTInterpreter)
+[PharoCandle](https://github.com/guillep/PharoCandle)
