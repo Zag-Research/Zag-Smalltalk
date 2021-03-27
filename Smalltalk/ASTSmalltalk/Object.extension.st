@@ -36,3 +36,8 @@ Object >> asASSymbol [
 Object >> asASSyntax [
 	^ ASSyntax new value: self
 ]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> astObject: anASImage [ 
+	^ anASImage generalObject: self
+]
