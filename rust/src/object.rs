@@ -34,8 +34,11 @@ pub const nilObject : Object = literal!(class=classUndefinedObject,value=0x10100
 pub const trueObject : Object = literal!(class=classTrue,value=0x12120);
 pub const falseObject : Object = literal!(class=classFalse,value=0x21212);
 #[inline]
-pub const fn symbolOf(string: &str,hash: i64) -> Object {
+pub fn symbolOf(string: &str,hash: i64) -> Object {
     let mut arity = 0;
+    for ch in string.chars() {
+        if ch == ':' {arity += 1}
+    }
     literal!(class=classSymbol,value=hash,arity=arity)
 }
 impl Object {
@@ -95,6 +98,10 @@ impl Object {
     pub const fn as_closure_ptr(&self) -> & mut HeapObject {
         unsafe{& mut *((self.i-NAN_VALUE) as * mut HeapObject)}
     }
+    #[inline]
+    pub const fn raw(&self) -> * const Object {
+        unsafe{self.i as * const Object}
+    }
 }
 impl Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -102,7 +109,7 @@ impl Debug for Object {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         if self.is_literal() {
-            write!(f, "{}:{}",self.as_literal(),self.class_name())
+            write!(f, "{}:{} {:?}",self.as_literal(),self.class_name(),self.raw())
         } else if self.is_integer() {
             write!(f, "{}:{}",self.as_i64(),self.class_name())
         } else if self.is_double() {
@@ -128,6 +135,12 @@ impl From<i64> for Object {
     #[inline]
     fn from(i:i64) -> Self {
         Object{i:(((i<<16) as usize)>>13) as i64+NAN_VALUE-1+classSmallInteger}
+    }
+}
+impl From<char> for Object {
+    #[inline]
+    fn from(c:char) -> Self {
+        literal!(class=classCharacter,value=c as u32 as i64)
     }
 }
 impl From<f64> for Object {

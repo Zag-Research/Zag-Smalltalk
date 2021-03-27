@@ -28,19 +28,27 @@ use object::*;
 
 fn main() {
 //   let gc = AllocableRegion::new(gc_main,gc_size);
-/*    let temp = Object::from(-(1<<47));
+    let temp = Object::from(-(1<<47));
     let mut temp2 = Object::from((1<<47)-1);
     let temp3 = Object::from(2.0_f64);
     let temp3b = Object::from(0.0625_f64);
     println!("{:?} {:?} {:?}",temp,temp2,temp3);
     println!("{:?} {:?} {:?}",nilObject,trueObject,falseObject);
     //    println!("map address {:?} {:?} {:?} {:?}",temp,temp2,temp2b,temp3);
-    for i in 0..48 {
+    println!("{} {:?}",42,Object::from(42));
+    println!("{} {:?}",'A',Object::from('A'));
+    println!("{} {:?}",true,Object::from(true));
+    println!("{} {:?}",false,Object::from(false));
+    println!("{} {:?}","nil",nilObject);
+    println!("{} {:?}","#foo",symbolOf("foo",19));
+    println!("{} {:?}","#value:",symbolOf("value:",1));
+    println!("{} {:?}","#value:value:",symbolOf("value:value:",2));
+    for i in 40..48 {
         let n = 1<<i;
         let temp = Object::from(n-1);
         let temp2 = Object::from(-n);
         println!("{} : {:?} {:?} {:?} {:?}",i,temp,(n-1) as * const Object,temp2,-n as * const Object);
     }
-//    */
+//    
             
 }
