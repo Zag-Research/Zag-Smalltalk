@@ -33,6 +33,11 @@ macro_rules! literal {
 pub const nilObject : Object = literal!(class=classUndefinedObject,value=0x10100);
 pub const trueObject : Object = literal!(class=classTrue,value=0x12120);
 pub const falseObject : Object = literal!(class=classFalse,value=0x21212);
+#[inline]
+pub const fn symbolOf(string: &str,hash: i64) -> Object {
+    let mut arity = 0;
+    literal!(class=classSymbol,value=hash,arity=arity)
+}
 impl Object {
     #[inline]
     pub const fn is_integer(&self) -> bool {
