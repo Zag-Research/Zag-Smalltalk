@@ -1,8 +1,13 @@
 Extension { #name : #ByteSymbol }
 
 { #category : #'*ASTSmalltalk' }
-ByteSymbol >> astObject: anASImage [ 
+ByteSymbol >> astImageObject: anASImage [ 
 	^ anASImage symbol: self
+]
+
+{ #category : #'*ASTSmalltalk' }
+ByteSymbol >> astObject: anASImage [ 
+	^ self
 ]
 
 { #category : #'*ASTSmalltalk' }

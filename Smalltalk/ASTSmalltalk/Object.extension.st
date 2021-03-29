@@ -38,6 +38,11 @@ Object >> asASSyntax [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> astImageObject: anASImage [ 
+	^ anASImage literal: (anASImage generalObject: self) address >> 3 class: 0
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> astObject: anASImage [ 
 	^ anASImage generalObject: self
 ]

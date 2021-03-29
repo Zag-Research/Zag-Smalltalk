@@ -9,10 +9,24 @@ Class {
 		'classes',
 		'baseAddress',
 		'aStream',
-		'currentAddress'
+		'currentAddress',
+		'objects',
+		'process',
+		'output'
+	],
+	#classVars : [
+		'BaseAddress',
+		'MaxSize'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #'class initialization' }
+ASImage class >> initialize [
+	MaxSize := 16r7"ff".
+	BaseAddress := 16r1000000000.
+
+]
 
 { #category : #adding }
 ASImage >> class: aClass [
@@ -23,10 +37,82 @@ ASImage >> class: aClass [
 
 ]
 
+{ #category : #objects }
+ASImage >> generalObject: anObject [
+	| gen |
+	^ objects at: anObject ifAbsentPut: [
+				gen := ASGenerator new on: self object: anObject.
+				process add: gen.
+				self processOut.
+				gen
+			]
+]
+
+{ #category : #adding }
+ASImage >> header: header [
+	| code key value |
+	code := 0.
+	header do: [: flag |
+		flag isAssociation ifTrue: [
+			key := flag key.
+			value := flag value.
+			key = #class ifTrue: [ code := code bitOr: ((self class: value) bitAnd: 16r1fffff) ].
+			key = #hash ifTrue: [ code := code bitOr: (value bitAnd: 16r1fffff) << 21 ].
+			key = #size ifTrue: [ code := code bitOr: (value bitAnd: MaxSize) << 48 ].
+		] ifFalse: [
+			flag = #hasInstVars ifTrue: [ code := code bitOr: 1 << 42 ].
+			flag = #isVariable ifTrue: [ code := code bitOr: 1 << 43 ].
+			flag = #isForwarded ifTrue: [ code := code bitOr: 1 << 63 ].
+	]].
+	^ code
+]
+
+{ #category : #objects }
+ASImage >> imageObject: anObject [ 
+	^ anObject astImageObject: self
+]
+
+{ #category : #adding }
+ASImage >> include: anASGenerator object: anObject [
+	| nVars extra size header |
+	nVars := anObject class instSize.
+	header := OrderedCollection with: #class->anObject class.
+	header add: #hash -> currentAddress.
+	anObject class isVariable ifTrue: [
+		header add: #isVariable.
+		extra := anObject size.
+		nVars = 0 ifTrue: [
+			extra <= MaxSize ifTrue: [
+				header add: #size->extra.
+				nVars := extra.
+				extra := nil.
+			] ifFalse: [
+				nVars := extra.
+			]
+		] ifFalse: [
+				header add: #size->nVars;add: #hasInstVars.
+				nVars := nVars + extra.
+		]
+	]ifFalse: [
+		header add: #size->nVars;add: #hasInstVars.
+		extra := nil ].
+	anASGenerator
+		address: currentAddress
+		nVars: nVars
+		extra: extra
+		header: (self header: header).
+	size := 1 + (extra ifNil: [ 0 ] ifNotNil: [ 1 ]) + nVars.
+	currentAddress := currentAddress + (size * 8)
+]
+
 { #category : #initialization }
 ASImage >> initialize [
 	super initialize.
-	currentAddress := baseAddress := 16r1000000000.
+	baseAddress := BaseAddress.
+	currentAddress := baseAddress + 16.
+	objects := IdentityDictionary new.
+	process := OrderedCollection new.
+	output := OrderedCollection new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
 	#(value value: value:value: value:value:value: value:value:value:value:
@@ -34,7 +120,7 @@ ASImage >> initialize [
 			self symbol: symbol ].
 	{Object . BlockClosure . UndefinedObject . False .
 		True . SmallInteger . Symbol . Character .
-		Float . String . Class . Metaclass . Behavior . ASImage
+		Float . String . Class . Metaclass . Behavior . self class " this will be replaced with System "
 		} do: [: symbol |
 			self class: symbol ].
 
@@ -55,14 +141,29 @@ ASImage >> object: anObject [
 	^ anObject astObject: self
 ]
 
+{ #category : #objects }
+ASImage >> object: aObject fields: nFields elements: nElements [ 
+	self shouldBeImplemented 
+]
+
 { #category : #accessing }
 ASImage >> offset [
 	^ currentAddress - baseAddress
 ]
 
+{ #category : #process }
+ASImage >> processOut [
+	| gen |
+	[ process notEmpty ] whileTrue: [
+		gen := process removeFirst.
+		output add: gen.
+		gen 
+	]
+]
+
 { #category : #adding }
 ASImage >> symbol: aString [ 
-	^ self literal: (symbols at: aString asSymbol ifAbsentPut: [ symbols size ])+((aString select: [:c| c=$: ])size <<25) class: 6
+	^ self literal: (symbols at: aString asSymbol ifAbsentPut: [ symbols size ])+((aString select: [:c| c=$: ])size <<21) class: 6
 ]
 
 { #category : #writing }
@@ -71,7 +172,7 @@ ASImage >> writeClassTable [
 	classes size writeRawOn: aStream.
 	table := Array new: classes size.
 	classes keysAndValuesDo: [: key : value |
-		table at: value+1 put: (self object: key) ].
+		table at: value+1 put: (self imageObject: key) ].
 	table do: [: object | object writeRawOn: aStream ].
 
 ]
@@ -79,6 +180,8 @@ ASImage >> writeClassTable [
 { #category : #writing }
 ASImage >> writeHeap [
 	self offset / 8 writeRawOn: aStream.
+	output do: [: gen | gen writeFieldsOn: self ].
+
 
 ]
 

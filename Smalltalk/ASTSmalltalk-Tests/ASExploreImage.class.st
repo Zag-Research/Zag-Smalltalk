@@ -1,3 +1,6 @@
+"
+This class is just to extract some statistics from the running Pharo image.
+"
 Class {
 	#name : #ASExploreImage,
 	#superclass : #Object,
