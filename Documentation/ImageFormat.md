@@ -5,10 +5,10 @@ The image format contains no compiled code. It is output after a full garbage co
 | ------- | --------------------- | --------------------------------------- |
 | Header  | 0x0102030405415354    | Tag establishing endianness followed by AST |
 |         | heapSize              | Size of the heap in 64-bit words        |
-|         | nClasses              | number of classes in the class table    |
-|         | nSymbols              | number of symbols in the symbol table   |
 | Heap    | heapSize 64-bit words | the complete heap                       |
+|         | nClasses              | number of classes in the class table    |
 | Classes | nClasses 64-bit words | addresses in the heap of the classes    |
+|         | nSymbols              | number of symbols in the symbol table   |
 | Symbols | nSymbols  names       | 16-bit n, followed by n bytes; n=0 for skipped symbols                 |
 
 Loading looks like:
