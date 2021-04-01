@@ -1,7 +1,7 @@
 ##  AST Classes
 The AST Classes serve many purposes:
  1. They capture the structure of methods and blocks
- 2. They know how to linearize themselves into a sequence of low level operations so they can be interpreted
+ 2. They know how to linearize themselves into a sequence of low level operations so they can be compiled
  3. They know how to generate assembly code for an idealized machine.
 
 ```mermaid

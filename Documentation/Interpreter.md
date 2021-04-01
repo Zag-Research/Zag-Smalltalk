@@ -60,6 +60,65 @@ Although we're doing a linear scan for the second level, the size of the first-l
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
 
+## Interpretation Classes
+There are 8 classes that the interpreter understands for execution:
+### ASTSend
+Fields:
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- target - an expression that will be sent the message
+- selector - a symbol that is sent if target is self, then the selector can be a special symbol `super@message` which will be coded into the table for the class just like any other selector, but the code will be the appropriate method from the superclass of the current method's class.
+- arguments - a sequence of expressions
+### ASTSelf
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+### ASTLiteral
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- value - some literal value
+	- - could be atomic like a number, boolean, character
+	- - could be a sequence for arrays
+	- - could be an ASTMethod for a block (name will be `value`, `value:`, etc.)
+	- - if all the values are literals it will be represented as a literal array `#()`
+	- - else it will be represented as a constructed array `{}`
+ ### ASTReturn
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- expression - the value to be returned
+- nonLocal - true if the return is a non-local return
+### ASTSequence
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- sequence - an array of expressions
+### ASTLoad
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- target - value of the base for the load
+- offset - field index - forced SmallInteger
+### ASTStore
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- target - value of the base for the load
+- offset - field index
+- expression - the value to be stored
+### ASTMethod
+- whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
+- name - a symbol
+- primitive - primitive number or 0 - forced SmallInteger
+- an ASTSequence for the body
+- an array of parameter symbols
+
+
+
+## Auxiliary Classes
+These are not part of the main interpret loop, but are referenced by it:
+### Array
+- Contains fields for ASTSequence - always less than 63 fields so will be compact
+### ASTClass
+- name - a symbol
+- classVars - an array of class variables
+- sharedPools - an array of shared pool classes
+- methods - an array of method definitions
+
+## Forced SmallInteger
+- means that the field is optimized to be treated as a positive SmallInteger, even if it isn't
+- the bit pattern is ANDed with an appropriate value (63 for field references, 2047 for primitives), then MINed with the number of legal values (fields of the object)
+- doesn't break integrity, but will produce specious results if messed with
+
+
 ### Rust structure
 
 ## Image format

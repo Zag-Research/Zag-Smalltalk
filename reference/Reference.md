@@ -6,3 +6,8 @@
 - [Dangerust](http://cliffle.com/p/dangerust/1/)
 - ![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
 - [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
+- [How to properly wrap a C function pointer in Rust?](https://stackoverflow.com/questions/60969071/how-to-properly-wrap-a-c-function-pointer-in-rust)
+- [How do I convert a Rust closure to a C-style callback?](https://stackoverflow.com/questions/32270030/how-do-i-convert-a-rust-closure-to-a-c-style-callback)
+- [How do Rust closures work and how does it execute a closure?](https://stackoverflow.com/questions/45935100/how-do-rust-closures-work-and-how-does-it-execute-a-closure)
+- [How do I store a closure in a struct in Rust?](https://stackoverflow.com/questions/27831944/how-do-i-store-a-closure-in-a-struct-in-rust)
+- [Rust Closures concept](https://stackoverflow.com/questions/65682678/rust-closures-concept)
