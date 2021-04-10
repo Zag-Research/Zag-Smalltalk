@@ -2,9 +2,9 @@ use std::fmt;
 use std::fmt::Debug;
 pub const classObject : i64 = 0;
 pub const classBlockClosure : i64 = 1;
-pub const classUndefinedObject : i64 = 2;
+pub const classFalse : i64 = 2;
 pub const classTrue : i64 = 3;
-pub const classFalse : i64 = 4;
+pub const classUndefinedObject : i64 = 4;
 pub const classSmallInteger : i64 = 5;
 pub const classSymbol : i64 = 6;
 pub const classCharacter : i64 = 7;
@@ -14,7 +14,7 @@ pub const classClass : i64 = 10;
 pub const classMetaclass : i64 = 11;
 pub const classBehavior : i64 = 12;
 lazy_static! {
-    static ref class_names : Vec<&'static str> = vec!["object","closure","nil","true","false","integer","symbol","character","float"];
+    static ref class_names : Vec<&'static str> = vec!["Object","closure","UndefinedObject","True","False","SmallInteger","Symbol","Character","Float"];
 }
 #[derive(Copy, Clone)]
 pub union Object {

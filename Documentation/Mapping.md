@@ -8,7 +8,7 @@
 The IEEE 754 64-bit binary number is encoded as follows:
 	![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
 
-When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 51 bits are otherwise ignored as a floating point number. Bit 51 should also be 1 to make a quiet (non-signaling) NaN.
+When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 51 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
 So we have 52 bits to play with, as long as the number is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
 
@@ -16,28 +16,32 @@ There are several ways to do NaN tagging/encoding. You can choose integers, poin
 
 So this leaves us with the following encoding based on the **S**ign+**M**antissa and **F**raction bits:
 
-| S+M    | F    | F    | F    | Type                      |
-| ------ | ---- | ---- | ---- | ------------------------- |
-| 0000   | 0000 | 0000 | 0000 | double  +0                |
-| 0000   | xxxx | xxxx | xxxx | double                    |
-| 7FF7   | xxxx | xxxx | xxxx | double                    |
-| 7FF0   | 0000 | 0000 | 0000 | +inf                      |
-| 7FF8   | 0000 | 0000 | 0001 | NaN (generated)           |
-| 7FF8   | xxxx | xxxx | xxxx | NaN (unused)              |
-| 7FF9   | xxxx | xxxx | xxxx | pointer                   |
-| 7FFA/B | xhhh | hhxc | cccc | literals                  |
-| 7FFC/D | xxxx | xxxx | xxxx | negative integer   50-bit |
-| 7FFE   | 0000 | 0000 | 0000 | integer   0               |
-| 7FFE/F | xxxx | xxxx | xxxx | positive integer   50-bit |
-| 8000   | 0000 | 0000 | 0000 | double     -0             |
-| 8000   | xxxx | xxxx | xxxx | double                    |
-| FFEF   | xxxx | xxxx | xxxx | double                    |
-| FFF0   | 0000 | 0000 | 0000 | -inf                      |
-| FFF8-F | xxxx | xxxx | xxxx | NaN (unused)              |
+| S+M       | F    | F    | F    | Type            |
+| --------- | ---- | ---- | ---- | --------------- |
+| 0000      | 0000 | 0000 | 0000 | double  +0      |
+| 0000-7FEF | xxxx | xxxx | xxxx | double          |
+| 7FF0      | 0000 | 0000 | 0000 | +inf            |
+| 7FF8      | 0000 | 0000 | 0001 | NaN (generated) |
+| 7FF0-F    | xxxx | xxxx | xxxt | tagged literals |
+| 8000      | 0000 | 0000 | 0000 | double     -0   |
+| 8000-FFEF | xxxx | xxxx | xxxx | double          |
+| FFF0      | 0000 | 0000 | 0000 | -inf            |
+| FFF8-F    | xxxx | xxxx | xxxx | NaN (unused)    |
 
-So, interpreted as an i64, any value that is less than or equal to the generated NaN value is a double. Else, if bit 50 is set, it's an integer and subtracting the integer 0 encoding will give the value. If bit 49 is set it's a pointer. Else it's a literal and subtracting the +inf encoding will give the value^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
+So, interpreted as an i64, any value that is less than or equal to the generated NaN value is a double. Else, the bottom 3 bits are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
 
-Literals are interpreted just like the header word for heap objects. That is, they contain a class index, a hash code, and a length of zero..
+Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space, but the efficiency of dispatch and code generation depend on them being literal values and having separate classes
+
+#### Tag values
+0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. Since all heap objects are 8-byte aligned, this gives us 52-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like +inf.
+1. BlockClosure: These are the address of a heap closure object. By coding separately from other objects, we don't have to create a class entry for each closure. The hash field in the object header is the symbol for `value`, `value:`, etc. So a simple match against the message selector works for value messages, and if it doesn't match, it does a dispatch against the BlockClosure class. Note that the generated NaN value is also possible here, but it will have a 0 address so a simple check will dispatch that as a Float.
+2. False
+3. True
+4. UndefinedObject
+5. SmallInteger: For integers the "hash code" is the value, so this provides 49-bit integers. While other encodings could give an additional bit, decoding would be slower and therefore is not worth doing.
+6. Symbol: The hash code contains 2 portions: the low 28 bits are an index into the symbol table, 1 bit to code alternate versions of a symbol (for primitive failure dispatch), and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols).
+7. Character: The hash code contains the full Unicode value for the character
+8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
