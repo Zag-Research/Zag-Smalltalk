@@ -21,6 +21,23 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #export }
+ASImage class >> exportMethods [
+	^ self exportPackages flatCollect: [ :package |
+			package methods
+		]
+]
+
+{ #category : #export }
+ASImage class >> exportPackages [
+	^ RPackageOrganizer default packages select: [: package |
+			((package name beginsWith: 'ASTSmalltalk')
+					or: ((package name beginsWith: 'PC') 
+								and: [(package name findString: '-Option') = 0]))
+				and: [ (package name endsWith: '-Tests') not ]
+		]
+]
+
 { #category : #'class initialization' }
 ASImage class >> initialize [
 	MaxSize := 16r7"ff".

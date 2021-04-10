@@ -57,3 +57,39 @@ ASExploreImage class >> initialize [
 	Info at: #arity put: arity valuesAndCounts associations sorted.
 	^ Info
 ]
+
+{ #category : #'private - accessing' }
+ASExploreImage class >> numericPrimitivesInImage [
+	" self numericPrimitivesInImage associations sorted "
+	| primitives number |
+	primitives := IdentityDictionary new.
+	(ProtoObject withAllSubclasses flatCollect: #methods) do: [: method |
+		method pragmas do: [: pragma |
+			pragma selector = #primitive: ifTrue: [
+				number := pragma arguments first.
+				number isNumber ifTrue: [primitives at: number
+					ifPresent: [: oc | oc add: method ]
+					ifAbsentPut: [ OrderedCollection with: method ]]
+			]
+		]
+	].
+	^ primitives
+]
+
+{ #category : #'private - accessing' }
+ASExploreImage class >> primitives [
+	" self primitives associations sorted "
+	| primitives number |
+	primitives := IdentityDictionary new.
+	ASImage exportMethods do: [: method |
+		method pragmas do: [: pragma |
+			pragma selector = #primitive: ifTrue: [
+				number := pragma arguments first.
+				primitives at: number
+					ifPresent: [: oc | oc add: method ]
+					ifAbsentPut: [ OrderedCollection with: method ]
+			]
+		]
+	].
+	^ primitives
+]

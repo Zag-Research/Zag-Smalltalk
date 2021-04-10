@@ -1,6 +1,6 @@
 Extension { #name : #ByteArray }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk-Tests' }
 ByteArray >> at64: anInteger [
 	| result |
 	result := 0.
