@@ -28,75 +28,117 @@ So this leaves us with the following encoding based on the **S**ign+**M**antissa
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
 | FFF8-F    | xxxx | xxxx | xxxx | NaN (unused)    |
 
-So, interpreted as an i64, any value that is less than or equal to the generated NaN value is a double. Else, the bottom 3 bits are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
+So, interpreted as an i64, any value that is less than or equal to +inf is a double. Else, the bottom 3 bits are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
+
+### Literals
+All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
 Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space, but the efficiency of dispatch and code generation depend on them being literal values and having separate classes
 
 #### Tag values
 0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. Since all heap objects are 8-byte aligned, this gives us 52-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like +inf.
-1. BlockClosure: These are the address of a heap closure object. By coding separately from other objects, we don't have to create a class entry for each closure. The hash field in the object header is the symbol for `value`, `value:`, etc. So a simple match against the message selector works for value messages, and if it doesn't match, it does a dispatch against the BlockClosure class. Note that the generated NaN value is also possible here, but it will have a 0 address so a simple check will dispatch that as a Float.
-2. False
-3. True
-4. UndefinedObject
+1. BlockClosure: These are the address of a heap closure object. By coding separately from other objects, we don't have to create a class entry for each closure. The hash field in the object header is the symbol index for `value`, `value:`, or whatever the value selector is for this particular block. So a simple match against the message selector works for value messages, and if it doesn't match, it does a dispatch against the BlockClosure class. Note that the generated NaN value is also possible here, but it will have a 0 address so a simple check will dispatch that as a Float.
+2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
+3. True: This only encodes the single value `true`
+4. UndefinedObject: This encodes the value `nil` with all zero hash code. It also encodes a set of `specialReturn` values that can be returned from any message send for the purpose of unwinding the stack. For this, the hash value will be the address of the stack for the enclosing method.
 5. SmallInteger: For integers the "hash code" is the value, so this provides 49-bit integers. While other encodings could give an additional bit, decoding would be slower and therefore is not worth doing.
-6. Symbol: The hash code contains 2 portions: the low 28 bits are an index into the symbol table, 1 bit to code alternate versions of a symbol (for primitive failure dispatch), and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols).
-7. Character: The hash code contains the full Unicode value for the character
+6. Symbol: The hash code contains 2 portions: the low 28 bits are an index into the symbol table, 1 bit to code alternate versions of a symbol (for primitive failure dispatch), and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols). For Symbols, the hash-code field is an index into a table that points to the an internal representation of the Symbol, including the characters that make it up, but all that really is necessary is in the hash-code. It is used to hash into the selector table on a method dispatch, and is obviously necessary for testing equality. This means that several methods that access the string-ness of the symbol need to be specially coded, and means that unreferenced symbols cannot be reclaimed in the basic garbage collection process. However this seems worth it so that dispatch can proceed without having to follow a pointer. So a separate mechanism must be added to collect unused symbols and the associated Strings. Also an internal data structure (either a [balanced search](https://en.wikipedia.org/wiki/Self-balancing_binary_search_tree) tree or a hash tabled (hashed on the string, not the hash code)) must be used for `String>>#asSymbol`.
+7. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
 
 There are a few significant changes:
-1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the complement of the pointer as a a forward.
+1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the negation of the pointer as a a forward.
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-First we have the object format tag:
+First we have the object format tag. The bits in the tag are:
 
-0. ??
-1. non-indexable objects with inst vars (Point et al) 
-2. indexable objects with no inst vars (Array et al)
-3. indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-4. weak indexable objects with inst vars (WeakArray et al)
-5. weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-- 31 zero-sized objects (UndefinedObject True False Character et al)
+0. has instance variables
+1. is weak
+2. unused
+3. indexable
+4. indexable, no pointers (no requirement for scan on garbage collection)
 
-- 6-8 unused
--  (?) 64-bit indexable 
-- 10-11 32-bit indexable
-- 12-15 16-bit indexable 
-- 16-23 byte indexable 
-- 24-31 compiled method
+where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only instance variables; any value <16 has pointers. Only the following values currently have meaning:
+- 1: non-indexable objects with inst vars (Point et al) 
+- 3: weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+- 8: indexable objects with no inst vars (Array et al)
+- 9: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+- 10: weak indexable objects with inst vars (WeakArray et al)
+- 16: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 16, but change to format 8 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
+- 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
+- 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
+- 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, Stringe)
 
 This is the first field in the header-word for an object:
 
-| Bits | What         | Characteristics                                          |
-| ---- | ------------ | -------------------------------------------------------- |
-| 1    | isForward    | if set, rest of long-word is address of forwarded object |
-| 1    | isMarked     |                                                          |
-| 1    | isRemembered |                                                          |
-| 1    | isGrey       |                                                          |
-| 1    | isPinned     |                                                          |
-| 1    | isImmutable  |                                                          |
-| 1    | unused       |                                                          |
-| 5    | format       | (see above)                                              |
-| 1    | notIndexable |                                                          |
-| 8    | numSlots     |                                                          |
-| 21   | identityHash |                                                          |
-| 22   | classIndex   | LSB                                                      |
+| Bits | What         | Characteristics                                              |
+| ---- | ------------ | ------------------------------------------------------------ |
+| 1    | isForward    | if set, negation of long-word is address of forwarded object |
+| 15   | numSlots     | number of long-words beyond the header                       |
+| 1    | isImmutable  |                                                              |
+| 1    | unused       |                                                              |
+| 1    | unused       |                                                              |
+| 5    | format       | (see above)                                                  |
+| 20   | identityHash |                                                              |
+| 20   | classIndex   | LSB                                                          |
 
-If notIndexable is clear, then there is a second 8-byte header word that contains the allocated size (including the slots) in 8-byte words, and the maximum size in index units (8, 16, 32, or 64 bit).
+Unless format=9, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
 
-If numSlots is 0 and notIndexable is set, then there cannot be any instance variables or indexable values, and format will be 31.
+If the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-### Literals
-All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Characters, and Symbols. All others will need to be heap allocated. Literal values have the identityHash and classIndex in the same location as the header word. The MSB 15 bits are set to 7FFA so that the literal will qualify as a NaN. This leaves 6 bits unused in the literal.^[note that if we were willing to limit to 32 bit integers and 19 bits for dispatch table index that integers could be dispatched the same way as all other literals]
+If the format=9, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the index allocation word, followed by the indexed elements.
 
-For Characters, the character value is encoded in the hash-code field. This allows 2 million possible character values which covers the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.^[decreasing to 20 bits of hash value would not cover the potential space]
+#### Examples
 
-Actually, we don't need so many class values. The only literal types are UndefindObject, True, False, SmallInteger, Symbol, Character, so coding 3 bits would support all those, plus references and  BlockClosure, so we could index into a smaller dispatch table for those limited types, and support 48 bit integers. Then the reference dispatch could use the 22 bit class index from the header word for a secondary dispatch.
+A simple object like Point with 2 instance variables would look like:
 
-For Symbols, the hash-code field is an index into a table that points to the an internal representation of the Symbol, including the characters that make it up, but all that really is necessary is in the hash-code. It is used to hash into the selector table on a method dispatch, and is obviously necessary for testing equality. This means that several methods that access the string-ness of the symbol need to be specially coded, and means that unreferenced symbols cannot be reclaimed in the basic garbage collection process. However this seems worth it so that dispatch can proceed without having to follow a pointer. So a separate mechanism must be added to collect unused symbols and the associated Strings. Also an internal data structure (either a [balanced search](https://en.wikipedia.org/wiki/Self-balancing_binary_search_tree) tree or a hash tabled (hashed on the string, not the hash code)) must be used for `intern:`.
+| Value               | Description         |
+| ------------------- | ------------------- |
+| 0002 01hh hhhc cccc | length=2, format=1  |
+| xxxx xxxx xxxx xxxx | instance variable 1 (x) |
+| xxxx xxxx xxxx xxxx | instance variable 2 (y) |
+
+
+
+So an Array of 5 elements would look like:
+
+| Value               | Description                  | 
+| ------------------- | ---------------------------- |
+| 0005 08hh hhh0 000D | length=5, format=8, class=13 |
+| xxxx xxxx xxxx xxxx | index 1                      |
+| xxxx xxxx xxxx xxxx | index 2                      |
+| xxxx xxxx xxxx xxxx | index 3                      |
+| xxxx xxxx xxxx xxxx | index 4                      |
+| xxxx xxxx xxxx xxxx | index 5                      |
+
+And an Array of 2^20 elements would look like:
+
+| Value               | Description                      |
+| ------------------- | -------------------------------- |
+| 7FFF 08hh hhh0 000D | length=32767, format=8, class=13 |
+| 0000 0000 0010 0000 | 2^20                             |
+| xxxx xxxx xxxx xxxx | index 1                          |
+| xxxx xxxx xxxx xxxx | index 2                          |
+| xxxx xxxx xxxx xxxx | index 3                          |
+| ...                 | intermediate values              |
+| xxxx xxxx xxxx xxxx | index 2^20                       | 
+
+And a format 9 object with 2 instance variables and 3 indexable elements would look like:
+
+| Value               | Description         |
+| ------------------- | ------------------- |
+| 0002 09hh hhhc cccc | length=2, format=9  |
+| 0000 0000 0000 0003 | 3                   |
+| xxxx xxxx xxxx xxxx | instance variable 1 |
+| xxxx xxxx xxxx xxxx | instance variable 2 |
+| xxxx xxxx xxxx xxxx | index 1             |
+| xxxx xxxx xxxx xxxx | index 2             |
+| xxxx xxxx xxxx xxxx | index 3             | 
+
 
 ![Stats from Pharo Image](Pasted%20image%2020210320170341.png)
 

@@ -13,8 +13,15 @@ pub const classString : i64 = 9;
 pub const classClass : i64 = 10;
 pub const classMetaclass : i64 = 11;
 pub const classBehavior : i64 = 12;
+pub const classArray : i64 = 13;
+
 lazy_static! {
-    static ref class_names : Vec<&'static str> = vec!["Object","closure","UndefinedObject","True","False","SmallInteger","Symbol","Character","Float"];
+    static ref class_names : Vec<&'static str> = vec![
+        "Object","closure","False","True",
+        "UndefinedObject","SmallInteger","Symbol","Character",
+        "Float","String","Class","Metaclass",
+        "Behavior","Array",
+    ];
 }
 #[derive(Copy, Clone)]
 pub union Object {
