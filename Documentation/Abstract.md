@@ -14,9 +14,10 @@ The system is being developed on https://github.com/dvmason/AST-Smalltalk
 
 ## The [interpreter](Interpreter.md) is described here, including message dispatch.
 
-## The [memory structure and garbage collector](Memory_structure-Garbage_collector.md) are described here.
+## The [memory structure](Mapping.md), [garbage collector](Garbage_Collection.md), and [image format](ImageFormat.md) are described here.
 
 ## [Optimization opportunities](Optimizations.md) are described here.
+
 ## The [Just In Time compiler](JIT.md) is described here.
 <!--
 | Start | Fibonacci |
@@ -45,7 +46,7 @@ The system is being developed on https://github.com/dvmason/AST-Smalltalk
 [SOmething](https://github.com/liamcain/obsidian-periodic-notes)
 
 https://mermaid-js.github.io/mermaid/
--->
+
 ```mermaid
 gantt
     dateFormat  YYYY-MM-DD
@@ -83,3 +84,4 @@ gantt
 	Section Write paper
 	Basic outline           :active, wp1,20d
 ```
+-->

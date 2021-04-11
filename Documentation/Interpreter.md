@@ -27,10 +27,11 @@ Even if we somehow knew the class of the object, the tables would still be exces
 #### Our approach
 We build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods.
 
+### The table below **is wrong** (from a previous design).
+
 | Hash table for a class                   |                                      |
 | ---------------------------------------- | ------------------------------------ |
 | Pointer to the class                     |                                      |
-| `value` method pointer                   |                                      |
 | hash table mask (2^n-1)*8                |                                      |
 | hash entry 0 - points to 2nd level below | `<--` object has pointer to here     |
 | hash entry 1 - ditto                     |                                      |
