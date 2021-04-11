@@ -57,17 +57,17 @@ There are a few significant changes:
 First we have the object format tag. The bits in the tag are:
 
 0. has instance variables
-1. is weak
-2. unused
+1. unused (possibly "pointer-free")
+2. is weak
 3. indexable
 4. indexable, no pointers (no requirement for scan on garbage collection)
 
 where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only instance variables; any value <16 has pointers. Only the following values currently have meaning:
 - 1: non-indexable objects with inst vars (Point et al) 
-- 3: weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+- 5: weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
 - 8: indexable objects with no inst vars (Array et al)
 - 9: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 10: weak indexable objects with inst vars (WeakArray et al)
+- 12: weak indexable objects with inst vars (WeakArray et al)
 - 16: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 16, but change to format 8 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
