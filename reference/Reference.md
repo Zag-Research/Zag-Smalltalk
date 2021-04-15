@@ -11,3 +11,4 @@
 - [How do Rust closures work and how does it execute a closure?](https://stackoverflow.com/questions/45935100/how-do-rust-closures-work-and-how-does-it-execute-a-closure)
 - [How do I store a closure in a struct in Rust?](https://stackoverflow.com/questions/27831944/how-do-i-store-a-closure-in-a-struct-in-rust)
 - [Rust Closures concept](https://stackoverflow.com/questions/65682678/rust-closures-concept)
+- [Rustinomicon](https://doc.rust-lang.org/nomicon/)

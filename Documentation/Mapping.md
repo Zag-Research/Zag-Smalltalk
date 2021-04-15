@@ -21,8 +21,9 @@ So this leaves us with the following encoding based on the **S**ign+**M**antissa
 | 0000      | 0000 | 0000 | 0000 | double  +0      |
 | 0000-7FEF | xxxx | xxxx | xxxx | double          |
 | 7FF0      | 0000 | 0000 | 0000 | +inf            |
+| 7FF0-7    | xxxx | xxxx | xxxx | NaN (unused)    |
 | 7FF8      | 0000 | 0000 | 0001 | NaN (generated) |
-| 7FF0-F    | xxxx | xxxx | xxxt | tagged literals |
+| 7FF8-F    | xxxx | xxxx | xxxt | tagged literals |
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double          |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
@@ -41,7 +42,7 @@ Literals are interpreted similarly to a header word for heap objects. That is, t
 2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 3. True: This only encodes the single value `true`
 4. UndefinedObject: This encodes the value `nil` with all zero hash code. It also encodes a set of `specialReturn` values that can be returned from any message send for the purpose of unwinding the stack. For this, the hash value will be the address of the stack for the enclosing method.
-5. SmallInteger: For integers the "hash code" is the value, so this provides 49-bit integers. While other encodings could give an additional bit, decoding would be slower and therefore is not worth doing.
+5. SmallInteger: For integers the "hash code" is the value, so this provides 48-bit integers. While other encodings could give an additional bit, decoding would be slower and therefore is not worth doing.
 6. Symbol: The hash code contains 2 portions: the low 28 bits are an index into the symbol table, 1 bit to code alternate versions of a symbol (for primitive failure dispatch), and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols). For Symbols, the hash-code field is an index into a table that points to the an internal representation of the Symbol, including the characters that make it up, but all that really is necessary is in the hash-code. It is used to hash into the selector table on a method dispatch, and is obviously necessary for testing equality. This means that several methods that access the string-ness of the symbol need to be specially coded, and means that unreferenced symbols cannot be reclaimed in the basic garbage collection process. However this seems worth it so that dispatch can proceed without having to follow a pointer. So a separate mechanism must be added to collect unused symbols and the associated Strings. Also an internal data structure (either a [balanced search](https://en.wikipedia.org/wiki/Self-balancing_binary_search_tree) tree or a hash tabled (hashed on the string, not the hash code)) must be used for `String>>#asSymbol`.
 7. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals.
@@ -138,6 +139,13 @@ And a format 9 object with 2 instance variables and 3 indexable elements would l
 | xxxx xxxx xxxx xxxx | index 1             |
 | xxxx xxxx xxxx xxxx | index 2             |
 | xxxx xxxx xxxx xxxx | index 3             | 
+
+And a format 24 object with 2 instance variables and 3 indexable elements would look like:
+
+| Value               | Description         |
+| ------------------- | ------------------- |
+| 0001 1Bhh hhhc cccc | length=1, format=27 |
+| 6548 6c6c 006f 0000 | Hello               |
 
 
 ![Stats from Pharo Image](../images/Pasted%20image%2020210320170341.png)

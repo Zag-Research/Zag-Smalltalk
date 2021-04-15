@@ -14,7 +14,6 @@ pub const classClass : i64 = 10;
 pub const classMetaclass : i64 = 11;
 pub const classBehavior : i64 = 12;
 pub const classArray : i64 = 13;
-
 lazy_static! {
     static ref class_names : Vec<&'static str> = vec![
         "Object","closure","False","True",
@@ -37,9 +36,22 @@ macro_rules! literalfield {
 macro_rules! literal {
     ($($i:ident $( = $e:expr)?),+) => {Object{i:(NAN_VALUE-1) $(| (literalfield!($i $( = $e)? )))+}}
 }
-pub const nilObject : Object = literal!(class=classUndefinedObject,value=0x10100);
-pub const trueObject : Object = literal!(class=classTrue,value=0x12120);
-pub const falseObject : Object = literal!(class=classFalse,value=0x21212);
+pub const nilObject : Object = literal!(class=classUndefinedObject,value=7);
+pub const trueObject : Object = literal!(class=classTrue,value=5);
+pub const falseObject : Object = literal!(class=classFalse,value=3);
+impl Default for Object {
+    fn default() -> Self { nilObject }
+}
+impl PartialEq for Object {
+    fn eq(&self, other: &Object) -> bool {
+        let i = unsafe{self.i};
+        if (i|1)==NAN_VALUE {
+            false
+        } else {
+            unsafe{i==other.i}
+        }
+    }
+}
 #[inline]
 pub fn symbolOf(string: &str,hash: i64) -> Object {
     let mut arity = 0;
@@ -55,6 +67,11 @@ impl Object {
         i>NAN_VALUE && i&7==classSmallInteger
     }
     #[inline]
+    pub const fn is_bool(&self) -> bool {
+        let i=unsafe{self.i};
+        i>NAN_VALUE && i&6==classTrue&6
+    }
+    #[inline]
     pub const fn is_double(&self) -> bool {
         (unsafe{self.i})<=NAN_VALUE
     }
@@ -62,6 +79,11 @@ impl Object {
     pub const fn is_literal(&self) -> bool {
         let i=unsafe{self.i};
         i>NAN_VALUE && i&7 > classBlockClosure && i!= classSmallInteger
+    }
+    #[inline]
+    pub const fn is_heap_object(&self) -> bool {
+        let i=unsafe{self.i};
+        i>NAN_VALUE && i&6==classObject
     }
     #[inline]
     pub const fn is_object(&self) -> bool {
@@ -168,10 +190,37 @@ impl From<* const HeapObject> for Object {
         Object {i:(o as i64)+NAN_VALUE-1}
     }
 }
+impl std::ops::Not for Object {
+    type Output = Self;
+    fn not(self) -> Self::Output {
+        if self==trueObject {
+            falseObject
+        } else {
+            trueObject
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod testsObject {
     use super::*;
+    #[test]
+    fn default_object() {
+        let def : [Object;10] = Default::default();
+        assert_eq!(def[1],nilObject)
+    }
+    #[test]
+    fn equal_objects() {
+        assert_eq!(Object::from(-1<<47),Object::from(-1<<47));
+        assert_eq!(!Object::from(true),falseObject);
+        assert_eq!(!Object::from(false),trueObject);
+        assert!(f64::NAN!=f64::NAN);
+        let nan = Object::from(f64::NAN);
+        assert!(nan!=nan);
+        assert!(nan!=trueObject);
+        assert!(trueObject!=nan);
+    }
     #[test]
     fn convert_object() {
         // could get 2 more bits by changing the encoding, but makes several things more complicated
@@ -180,33 +229,45 @@ mod testsObject {
         assert_eq!(Object::from(-1).as_i64(),-1);
         assert_eq!(Object::from(1).as_i64(),1);
         assert_eq!(Object::from(2.0_f64).as_f64(),2.0_f64);
+        assert!( classTrue&6 == classFalse&6);
+        assert!( classObject&6 == classBlockClosure&6);
+        assert!(Object::from(true).is_bool());
+        assert!(Object::from(false).is_bool());
+        assert!(!Object::from(1).is_bool());
 //        assert_eq!(Object::from(&nilObject).as_ptr() as * const HeapObject,&nilObject as * const HeapObject);
     }
 }
+
+
 union HeapHeader {
     i : isize,
     u : usize,
     bytes : [u8;8],  // x86_64: 0 is lsb 7 is msb
+    halfWords : [u16;4],  // x86_64: 0 is low 3 is high
     words : [u32;2], // x86_64: 0 is low word, 1 is high
 }
+const hashShift : isize = 20;
+const classMask : usize = (1<<hashShift)-1;
+const hashMask : usize = 0xfffff;
+
 impl HeapHeader {
     fn class(&self) -> usize {
-        (unsafe{self.u})&(1<<22)-1
+        (unsafe{self.u})&classMask
     }
     fn hash(&self) -> usize {
-        (unsafe{self.u})>>32 & (1<<22)-1
+        (unsafe{self.u})>>hashShift & hashMask
     }
     fn size(&self) -> usize {
-        (unsafe{self.u})>>24 & 255
+        (unsafe{self.halfWords[3]}) as usize
     }
     fn size_set(&mut self,new:usize) {
-        unsafe{self.bytes[3]=new as u8}
+        unsafe{self.halfWords[3]=new as u16}
     }
     fn format(&self) -> usize {
-        (unsafe{self.u})>>56 & 31
+        ((unsafe{self.bytes[5]}) & 31) as usize
     }
     fn immutable(&self) -> bool {
-        (unsafe{self.u})>>22 != 0
+        (unsafe{self.bytes[5]}) & 128 != 0
     }
     fn forwarded(&self) -> bool {
         (unsafe{self.i})<0
