@@ -12,3 +12,7 @@
 - [How do I store a closure in a struct in Rust?](https://stackoverflow.com/questions/27831944/how-do-i-store-a-closure-in-a-struct-in-rust)
 - [Rust Closures concept](https://stackoverflow.com/questions/65682678/rust-closures-concept)
 - [Rustinomicon](https://doc.rust-lang.org/nomicon/)
+- [Rust Global.dealloc vs ptr::drop\_in\_place vs ManuallyDrop](https://stackoverflow.com/questions/62917242/rust-global-dealloc-vs-ptrdrop-in-place-vs-manuallydrop)
+- Function std::ptr::[drop\_in\_place](https://doc.rust-lang.org/std/ptr/fn.drop_in_place.html)
+- Union std::mem::[MaybeUninit](https://doc.rust-lang.org/std/mem/union.MaybeUninit.html)
+- [Methods for Array Initialization in Rust](https://www.joshmcguigan.com/blog/array-initialization-rust/)

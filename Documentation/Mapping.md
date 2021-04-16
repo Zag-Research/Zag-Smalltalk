@@ -34,7 +34,7 @@ So, interpreted as an i64, any value that is less than or equal to +inf is a dou
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space, but the efficiency of dispatch and code generation depend on them being literal values and having separate classes
+Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 48 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space, but the efficiency of dispatch and code generation depend on them being literal values and having separate classes
 
 #### Tag values
 0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. Since all heap objects are 8-byte aligned, this gives us 52-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like +inf.
