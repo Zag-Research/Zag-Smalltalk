@@ -43,7 +43,7 @@ Literals are interpreted similarly to a header word for heap objects. That is, t
 3. True: This only encodes the single value `true`
 4. UndefinedObject: This encodes the value `nil` with all zero hash code. It also encodes a set of `specialReturn` values that can be returned from any message send for the purpose of unwinding the stack. For this, the hash value will be the address of the stack for the enclosing method.
 5. SmallInteger: For integers the "hash code" is the value, so this provides 48-bit integers. While other encodings could give an additional bit, decoding would be slower and therefore is not worth doing.
-6. Symbol: The hash code contains 2 portions: the low 28 bits are an index into the symbol table, 1 bit to code alternate versions of a symbol (for primitive failure dispatch), and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols). For Symbols, the hash-code field is an index into a table that points to the an internal representation of the Symbol, including the characters that make it up, but all that really is necessary is in the hash-code. It is used to hash into the selector table on a method dispatch, and is obviously necessary for testing equality. This means that several methods that access the string-ness of the symbol need to be specially coded, and means that unreferenced symbols cannot be reclaimed in the basic garbage collection process. However this seems worth it so that dispatch can proceed without having to follow a pointer. So a separate mechanism must be added to collect unused symbols and the associated Strings. Also an internal data structure (either a [balanced search](https://en.wikipedia.org/wiki/Self-balancing_binary_search_tree) tree or a hash tabled (hashed on the string, not the hash code)) must be used for `String>>#asSymbol`.
+6. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 7. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals.
 
@@ -150,16 +150,3 @@ And a format 24 object with 2 instance variables and 3 indexable elements would 
 
 ![Stats from Pharo Image](../images/Pasted%20image%2020210320170341.png)
 
-## Web resources
-#### Rust
-- [primitive pointers](https://doc.rust-lang.org/std/primitive.pointer.html) and [nightly](https://doc.rust-lang.org/nightly/std/primitive.pointer.html)
-- [tranmute](https://doc.rust-lang.org/nightly/std/mem/fn.transmute.html)
-- [std::ptr](https://doc.rust-lang.org/nightly/std/ptr/index.html)
-- [libc](https://docs.rs/libc/0.2.68/libc/)
-- [labguage doc](https://doc.rust-lang.org/nightly/reference/expressions/if-expr.html)
-- [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html)
-
-#### Garbage collection
-- [Boehm MS vs Copying](https://hboehm.info/gc/complexity.html)
-- [Cornell course copying](http://www.cs.cornell.edu/courses/cs312/2003fa/lectures/sec24.htm)
-- [uta copying](https://lambda.uta.edu/cse5317/notes/node48.html)

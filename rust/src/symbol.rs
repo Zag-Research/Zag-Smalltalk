@@ -11,6 +11,7 @@
 
 use crate::object::*;
 
+#[derive(Copy,Clone,Debug)]
 pub struct Symbol {
     string : &'static str, //Option<&'static str>,
     left : u32,
@@ -39,11 +40,10 @@ impl Symbol {
         }
     }
 }
-const NO_SYMBOL : Symbol = Symbol{string:"",left:0,right:0};
 use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
 lazy_static! {
     static ref symbolFree : RwLock<usize> = RwLock::new(0);
-    static ref symbolRoot : RwLock<usize> = RwLock::new(0);
+    static ref symbolRoot : RwLock<u32> = RwLock::new(0);
     static ref symbolTable: RwLock<Vec<Symbol>> = RwLock::new(Vec::new());
 }
 pub fn intern(string : String) -> Object {
@@ -62,17 +62,18 @@ pub fn intern(string : String) -> Object {
         };
         *index = pos + 1;
         drop(index);
-        if pos==table.len() {table.push(NO_SYMBOL)};
+        if pos==table.len() {table.push(Symbol{string:"",left:0,right:0})};
         table[pos].set(Box::leak(string.into_boxed_str()));
-        insertSymbol(table,pos)
+        insertSymbol(&*table,pos);
+        symbolOf(table[pos].string,pos)
     }
 }
 pub fn lookupSymbol(string: &str) -> Option<Object> {
-    let root = symbolRoot.read().unwrap();
     let table = symbolTable.read().unwrap();
-    lookup(*root as u32,table,string)
+    let root = symbolRoot.read().unwrap();
+    lookup(*root,&*table,string)
 }
-fn lookup(root:u32,table:RwLockReadGuard<'_, Vec<Symbol>>,string: &str) -> Option<Object> {
+fn lookup(root:u32,table:&Vec<Symbol>,string: &str) -> Option<Object> {
     if root==0 {
         None
     } else {
@@ -84,26 +85,41 @@ fn lookup(root:u32,table:RwLockReadGuard<'_, Vec<Symbol>>,string: &str) -> Optio
         }
     }
 }
-pub fn insertSymbol(table: RwLockWriteGuard<'_, Vec<Symbol>>, pos : usize) -> Object {
+pub fn insertSymbol(table: &Vec<Symbol>, pos : usize) {
     let mut root = symbolRoot.write().unwrap();
     // MORE TO DO
-    nilObject
+    let ptr = table.as_ptr();
+    for i in 0..table.len() {
+        unsafe{
+            let sym = ptr.offset(i as isize);
+            println!("{}: {:p} {:?}",pos,sym,*sym);
+        }
+    };
+    insertSymbolWith(root,table,pos);
+}
+fn insertSymbolWith(root: RwLockWriteGuard<'_, u32>, table: &Vec<Symbol>, pos : usize) {
+    
 }
 #[cfg(test)]
 mod testsSymbol {
     use super::*;
     #[test]
     fn not_found() {
-        assert_matches!(lookupSymbol("new string"),None)
+        assert_matches!(lookupSymbol("new string"),None);
+        assert_matches!(lookupSymbol("new string"),None);
     }
-//    #[test]
+    #[test]
     fn add_and_lookup() {
         let abc = intern(String::from("abc"));
+        assert_eq!(abc,intern(String::from("abc")));
         let def = intern(String::from("def"));
+        assert!(abc!=def);
         assert_matches!(lookupSymbol("abc"),abc);
         assert_matches!(lookupSymbol("def"),def);
         let ghi = String::from("gh");
         let ghi = ghi+"i";
         let ghi = intern(ghi);
+        assert!(abc!=ghi);
+        assert_eq!(ghi,intern(String::from("ghi")));
     }
 }

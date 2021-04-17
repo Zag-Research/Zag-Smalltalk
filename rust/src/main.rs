@@ -7,6 +7,7 @@
 #![feature(const_raw_ptr_deref)]
 #![feature(const_fn_union)]
 #![feature(assert_matches)]
+#![feature(vec_into_raw_parts)]
 #![allow(warnings)] 
 #[macro_use]
 extern crate lazy_static;

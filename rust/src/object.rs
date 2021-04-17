@@ -380,7 +380,7 @@ mod testHeapObjectSize {
         assert_eq!(heapObjectSize(0,16,1),3);
     }
 }
-
+#[repr(C)]
 pub struct HeapObject {
     header : HeapHeader,
     fields : [Object;0], // typically many more than 1, but will be accessed as unsafe
@@ -403,12 +403,12 @@ impl HeapObject {
     #[inline]
     pub fn raw_at(&self,index:usize) -> Object {
         let fields : * const Object = &self.fields as * const Object;
-        unsafe{fields.offset(index as isize+1).read()} // shouldn't be +1
+        unsafe{fields.offset(index as isize).read()} // shouldn't be +1
     }
     #[inline]
     pub fn raw_at_put(&mut self,index:usize,value:Object) {
         let fields : * mut Object = &mut self.fields as * mut Object;
-        unsafe{fields.offset(index as isize+1).write(value)} // shouldn't be +1
+        unsafe{fields.offset(index as isize).write(value)} // shouldn't be +1
     }
     pub fn initialize(&mut self,class:usize,n_instVars:usize,n_indexed:isize,width:usize,hash:usize,init:Object) -> * mut HeapObject {
         let format=(if n_indexed>=0 {8} else {1});
@@ -466,6 +466,7 @@ mod testHeapObject {
     #[test]
     fn sizes() {
         assert_eq!(core::mem::size_of::<HeapObject>(), core::mem::size_of::<Object>());
+//        assert_eq!(core::mem::size_of::<Option<Object>>(), core::mem::size_of::<Object>());
     }
 }
 impl Debug for HeapObject {
