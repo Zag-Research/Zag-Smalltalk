@@ -28,98 +28,114 @@ impl Symbol {
         self.string.len() == 0
     }
     #[inline]
-    fn compare(&self, string : &str) -> u32 {
+    fn compare(&self, string : &str) -> usize {
         if self.string <= string {
             if self.string == string {
                 0
             } else {
-                self.right
+                self.right as usize
             }
         } else {
-            self.left
+            self.left as usize
         }
     }
 }
-use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
-lazy_static! {
-    static ref symbolFree : RwLock<usize> = RwLock::new(0);
-    static ref symbolRoot : RwLock<u32> = RwLock::new(0);
-    static ref symbolTable: RwLock<Vec<Symbol>> = RwLock::new(Vec::new());
+pub struct SymbolTable {
+    table : Vec<Symbol>,
+    root : usize,
+    free : usize,
 }
-pub fn intern(string : String) -> Object {
-    if let Some(object) = lookupSymbol(&string) {
-        object
-    } else {
-        let mut table = symbolTable.write().unwrap();
-        let mut index = symbolFree.write().unwrap();
-        let mut pos = *index;
+impl SymbolTable {
+    fn new() -> SymbolTable {
+        SymbolTable {
+            table : Vec::new(),
+            root : 0,
+            free : 0,
+        }
+    }
+    fn lookupSymbol(&self,string: &str) -> Option<Object> {
+        self.lookup(self.root,string)
+    }
+    fn lookup(&self,current:usize,string: &str) -> Option<Object> {
+        if current==0 {
+            None
+        } else {
+            let pos = self.table[current].compare(string);
+            if pos == 0 {
+                Some(symbolOf(string,current))
+            } else {
+                self.lookup(pos,string)
+            }
+        }
+    }
+    fn insertSymbol(& mut self,string: String) -> Object {
+        let mut pos = self.free;
         loop {
-            if pos==table.len() || table[pos].isEmpty() {
+            if pos==self.table.len() {
+                self.table.push(Symbol{string:"",left:0,right:0});
+                break
+            } else if self.table[pos].isEmpty() {
                 break
             } else {
                 pos = pos + 1
             }
         };
-        *index = pos + 1;
-        drop(index);
-        if pos==table.len() {table.push(Symbol{string:"",left:0,right:0})};
-        table[pos].set(Box::leak(string.into_boxed_str()));
-        insertSymbol(&*table,pos);
-        symbolOf(table[pos].string,pos)
+        self.free = pos + 1;
+        self.table[pos].set(Box::leak(string.into_boxed_str()));
+        self.insert(pos,self.root);
+        symbolOf(self.table[pos].string,pos)
     }
-}
-pub fn lookupSymbol(string: &str) -> Option<Object> {
-    let table = symbolTable.read().unwrap();
-    let root = symbolRoot.read().unwrap();
-    lookup(*root,&*table,string)
-}
-fn lookup(root:u32,table:&Vec<Symbol>,string: &str) -> Option<Object> {
-    if root==0 {
-        None
-    } else {
-        let pos = table[root as usize].compare(string);
-        if pos == 0 {
-            Some(symbolOf(string,root as usize))
-        } else {
-            lookup(pos,table,string)
-        }
+    fn insert(&self,current:usize,root:usize) {
+        
     }
-}
-pub fn insertSymbol(table: &Vec<Symbol>, pos : usize) {
-    let mut root = symbolRoot.write().unwrap();
-    // MORE TO DO
-    let ptr = table.as_ptr();
-    for i in 0..table.len() {
-        unsafe{
-            let sym = ptr.offset(i as isize);
-            println!("{}: {:p} {:?}",pos,sym,*sym);
-        }
-    };
-    insertSymbolWith(root,table,pos);
-}
-fn insertSymbolWith(root: RwLockWriteGuard<'_, u32>, table: &Vec<Symbol>, pos : usize) {
-    
 }
 #[cfg(test)]
 mod testsSymbol {
     use super::*;
     #[test]
     fn not_found() {
-        assert_matches!(lookupSymbol("new string"),None);
-        assert_matches!(lookupSymbol("new string"),None);
+        let st = SymbolTable::new();
+        assert_matches!(st.lookupSymbol("new string"),None);
+        assert_matches!(st.lookupSymbol("new string"),None);
     }
     #[test]
     fn add_and_lookup() {
-        let abc = intern(String::from("abc"));
-        assert_eq!(abc,intern(String::from("abc")));
-        let def = intern(String::from("def"));
+        let mut st = SymbolTable::new();
+        let abc = st.insertSymbol(String::from("abc"));
+        let def = st.insertSymbol(String::from("def"));
         assert!(abc!=def);
-        assert_matches!(lookupSymbol("abc"),abc);
-        assert_matches!(lookupSymbol("def"),def);
+        assert_matches!(st.lookupSymbol("abc"),Some(x) if x==abc);
+        assert_matches!(st.lookupSymbol("def"),Some(x) if x==def);
         let ghi = String::from("gh");
         let ghi = ghi+"i";
-        let ghi = intern(ghi);
+        let ghi = st.insertSymbol(ghi);
         assert!(abc!=ghi);
-        assert_eq!(ghi,intern(String::from("ghi")));
+        assert!(def!=ghi);
+        assert_matches!(st.lookupSymbol("ghi"),Some(x) if x==ghi);
     }
+}
+
+use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
+lazy_static! {
+    static ref symbolTable: RwLock<SymbolTable> = RwLock::new(SymbolTable::new());
+}
+pub fn intern(string : String) -> Object {
+    if let Some(object) = lookup(&*symbolTable.read().unwrap(),&string) {
+        object
+    } else {
+        let mut table = symbolTable.write().unwrap();
+        if let Some(object) = lookup(&*table,&string) { // might have been added while waiting for the write lock
+            object
+        } else {
+            insert(&mut *table,string)
+        }
+    }
+}
+#[inline]
+fn lookup(table: &SymbolTable,string: &str) -> Option<Object> {
+    table.lookupSymbol(string)
+}
+#[inline]
+fn insert(table: & mut SymbolTable,string: String) -> Object {
+    table.insertSymbol(string)
 }
