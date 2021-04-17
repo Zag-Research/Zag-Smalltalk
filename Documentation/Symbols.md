@@ -21,3 +21,5 @@ In Pharo, the String `asSymbol` checks for the existence in a Dictionary, but AS
 
 ### Web resources
 - [Open Data Structures](http://opendatastructures.org/versions/edition-0.1g/ods-python/ods-python-html.html)
+- Treaps need "random" priorities, but I don't want to save it in the data structure. But I have a unique counter value (the Symbol number) so could use [CBRNG](https://en.wikipedia.org/wiki/Counter-based_random_number_generator_(CBRNG)) to generate one. But simply doing `symNum*1999999973` as u32 does well enough
+- [Evaluating RNGs](https://pit-claudel.fr/clement/blog/how-random-is-pseudo-random-testing-pseudo-random-number-generators-and-measuring-randomness/)
