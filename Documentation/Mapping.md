@@ -51,14 +51,17 @@ Literals are interpreted similarly to a header word for heap objects. That is, t
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
 
 There are a few significant changes:
-1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the negation of the pointer as a a forward.
+1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the negation of the pointer as the forward.
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 First we have the object format tag. The bits in the tag are:
 
 0. has instance variables
-1. unused (possibly "pointer-free")
+1. pointer-free - for instance variables and Array (everything >=16 is pointer-free)
+	- set on creation
+	- cleared by a store of a pointer value in any field
+	- only reset by GC
 2. is weak
 3. indexable
 4. indexable, no pointers (no requirement for scan on garbage collection)
