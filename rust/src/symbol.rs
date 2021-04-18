@@ -10,7 +10,8 @@
 //     a aaaa is the arity of the symbol - 0-15 are valid (i.e. match existing methods)
 
 use crate::object::*;
-
+use std::cmp::Ordering;
+use std::fmt::{self,Debug};
 #[derive(Copy,Clone,Debug)]
 pub struct Symbol {
     string : &'static str, //Option<&'static str>,
@@ -28,22 +29,35 @@ impl Symbol {
         self.string.len() == 0
     }
     #[inline]
-    fn compare(&self, string : &str) -> usize {
-        if self.string <= string {
-            if self.string == string {
-                0
-            } else {
-                self.right as usize
-            }
-        } else {
-            self.left as usize
-        }
+    fn compare(&self, string : &str) -> Ordering {
+        self.string.cmp(string)
+    }
+}
+impl Ord for Symbol {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.compare(&other.string)
+    }
+}
+
+impl PartialOrd for Symbol {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Eq for Symbol {}
+impl PartialEq for Symbol {
+    fn eq(&self, other: &Self) -> bool {
+        self.string == other.string
     }
 }
 pub struct SymbolTable {
     table : Vec<Symbol>,
-    root : usize,
-    free : usize,
+    root : u32,
+    free : u32,
+}
+#[inline]
+fn priority(pos:u32) -> u32 {
+    pos.wrapping_mul(1999999973_u32)
 }
 impl SymbolTable {
     fn new() -> SymbolTable {
@@ -56,37 +70,97 @@ impl SymbolTable {
     fn lookupSymbol(&self,string: &str) -> Option<Object> {
         self.lookup(self.root,string)
     }
-    fn lookup(&self,current:usize,string: &str) -> Option<Object> {
+    fn lookup(&self,current:u32,string: &str) -> Option<Object> {
         if current==0 {
             None
         } else {
-            let pos = self.table[current].compare(string);
-            if pos == 0 {
-                Some(symbolOf(string,current))
-            } else {
-                self.lookup(pos,string)
+            match self.table[current as usize].compare(string) {
+                Ordering::Equal => Some(symbolOf(string,current as usize)),
+                Ordering::Less => self.lookup(self.table[current as usize].right,string),
+                Ordering::Greater => self.lookup(self.table[current as usize].left ,string),
             }
         }
     }
     fn insertSymbol(& mut self,string: String) -> Object {
         let mut pos = self.free;
         loop {
-            if pos==self.table.len() {
+            if pos>=self.table.len() as u32 {
                 self.table.push(Symbol{string:"",left:0,right:0});
+                if pos>0 {break}
+            } else if self.table[pos as usize].isEmpty() {
                 break
-            } else if self.table[pos].isEmpty() {
-                break
-            } else {
-                pos = pos + 1
-            }
+            };
+            pos = pos + 1
         };
         self.free = pos + 1;
-        self.table[pos].set(Box::leak(string.into_boxed_str()));
-        self.insert(pos,self.root);
-        symbolOf(self.table[pos].string,pos)
+        self.table[pos as usize].set(Box::leak(string.into_boxed_str()));
+        self.root = self.insert(pos,self.root);
+        symbolOf(self.table[pos as usize].string,pos as usize)
     }
-    fn insert(&self,current:usize,root:usize) {
-        
+    fn insert(&mut self,target:u32,root:u32) -> u32 {
+        if root==0 {
+            target
+        } else {
+            match self.table[target as usize].cmp(&self.table[root as usize]) {
+                Ordering::Equal => panic!("shouldn't be inserting an existing key: {}",self.table[target as usize].string),
+                Ordering::Less => {
+                    self.table[root as usize].left = self.insert(target,self.table[root as usize].left);
+                    // Fix Heap property if it is violated
+                    if priority(self.table[root as usize].left) > priority(root) {
+                        self.rightRotate(root)
+                    } else {
+                        root
+                    }
+                },
+                Ordering::Greater => {
+                    self.table[root as usize].right = self.insert(target,self.table[root as usize].right);
+                    // Fix Heap property if it is violated
+                    if priority(self.table[root as usize].right) > priority(root) {
+                        self.leftRotate(root)
+                    } else {
+                        root
+                    }
+                },
+            }
+        }
+    }
+    /* T1, T2 and T3 are subtrees of the tree rooted with y
+     * (on left side) or x (on right side)
+     *           y                               x
+     *          / \     Right Rotation          /  \
+     *         x   T3   – – – – – – – >        T1   y
+     *        / \       < - - - - - - -            / \
+     *       T1  T2     Left Rotation            T2  T3
+     */
+    fn rightRotate(&mut self,y:u32) -> u32 {
+        let x = self.table[y as usize].left;
+        let t2 = self.table[x as usize].right;
+        // Perform rotation
+        self.table[x as usize].right = y;
+        self.table[y as usize].left = t2;
+        x
+    }
+    fn leftRotate(&mut self,x:u32) -> u32 {
+        let y = self.table[x as usize].right;
+        let t2 = self.table[y as usize].left;
+        // Perform rotation
+        self.table[y as usize].left = x;
+        self.table[x as usize].right = t2;
+        y
+    }
+}
+impl Debug for SymbolTable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // The `f` value implements the `Write` trait, which is what the
+        // write! macro is expecting. Note that this formatting ignores the
+        // various flags provided to format strings.
+        //        for (i,s) in self.table.iter().enumerate() {
+        for i in 0..self.table.len() {
+            let s=self.table[i];
+            write!(f,"{}: {:?} {}\n",i,s,priority(i as u32));
+        };
+        write!(f,"root:{} free:{}",self.root,self.free)
+
     }
 }
 #[cfg(test)]
@@ -102,13 +176,22 @@ mod testsSymbol {
     fn add_and_lookup() {
         let mut st = SymbolTable::new();
         let abc = st.insertSymbol(String::from("abc"));
+        assert_matches!(st.lookupSymbol("abc"),Some(x) if x==abc);
         let def = st.insertSymbol(String::from("def"));
+        assert_matches!(st.lookupSymbol("def"),Some(x) if x==def);
         assert!(abc!=def);
         assert_matches!(st.lookupSymbol("abc"),Some(x) if x==abc);
         assert_matches!(st.lookupSymbol("def"),Some(x) if x==def);
         let ghi = String::from("gh");
         let ghi = ghi+"i";
         let ghi = st.insertSymbol(ghi);
+        st.insertSymbol(String::from("jkl"));
+        st.insertSymbol(String::from("mno"));
+        st.insertSymbol(String::from("pqr"));
+        st.insertSymbol(String::from("stu"));
+        st.insertSymbol(String::from("vwx"));
+        st.insertSymbol(String::from("yza"));
+//        println!("{:?}",st);
         assert!(abc!=ghi);
         assert!(def!=ghi);
         assert_matches!(st.lookupSymbol("ghi"),Some(x) if x==ghi);
