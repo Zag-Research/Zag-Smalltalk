@@ -1,13 +1,23 @@
+"
+I represent a simple Binary Search Tree. If I am balanced, I am the fastest comparison-based search structure.
+
+Unfortunately, in the worst case of un-balance, I become a linear search.
+
+I look like:
+               key
+              /   \
+           left   right
+where all the nodes less than key are in the left BST and all the nodes greater than key are in the right BST.
+"
 Class {
 	#name : #ASBst,
 	#superclass : #Object,
 	#instVars : [
-		'value',
 		'right',
-		'left'
+		'left',
+		'key'
 	],
 	#classInstVars : [
-		'table',
 		'root'
 	],
 	#category : #'ASTSmalltalk-Tests-Explore'
@@ -18,6 +28,12 @@ ASBst class >> addToTable: aValue [
 	table add: (self new with: aValue).
 	root := self insert: table size root: root.
 	
+]
+
+{ #category : #'class initialization' }
+ASBst class >> initialize [
+	root := nil.
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -31,12 +47,6 @@ ASBst class >> insert: insert root: parent [
 		parentElement right: (self insert: insert root: parentElement right)
 	].
 	^ parent
-]
-
-{ #category : #accessing }
-ASBst class >> statistics [
-
-	^ (ASBstStats on: table root: root) asString
 ]
 
 { #category : #statistics }
@@ -61,11 +71,13 @@ ASBst >> left: anInteger [
 
 { #category : #printing }
 ASBst >> printOn: aStream [
-	value printOn: aStream.
-	aStream nextPutAll: ': '.
+	aStream nextPut: $(.
+	key printOn: aStream.
+	aStream nextPut: $ .
 	left printOn: aStream.
-	aStream nextPutAll: ' - '.
+	aStream nextPut: $ .
 	right printOn: aStream.
+	aStream nextPut: $).
 
 ]
 
@@ -81,12 +93,12 @@ ASBst >> right: anInteger [
 
 { #category : #accessing }
 ASBst >> value [
-	^ value
+	^ key
 ]
 
 { #category : #'instance creation' }
 ASBst >> with: aValue [
-	value := aValue.
+	key := aValue.
 	left := right := 0.
 
 ]

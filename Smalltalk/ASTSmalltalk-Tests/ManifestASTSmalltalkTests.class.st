@@ -41,3 +41,8 @@ ManifestASTSmalltalkTests class >> ruleNobodyShouldSendMethodDictV1FalsePositive
 ManifestASTSmalltalkTests class >> ruleReTemporaryVariableCapitalizationRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:38.367969-05:00') )
 ]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleStringConcatenationRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-19T09:17:06.696728-04:00') )
+]
