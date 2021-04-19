@@ -33,17 +33,19 @@ fn main() {
     let mut temp2 = Object::from((1<<47)-1);
     let temp3 = Object::from(2.0_f64);
     let temp3b = Object::from(0.0625_f64);
-    println!("{:?} {:?} {:?}",temp,temp2,temp3);
+    println!("{:?} {:?} {:?} {:?}",temp,temp2,temp3,temp3b);
     println!("{:?} {:?} {:?}",nilObject,trueObject,falseObject);
-    //    println!("map address {:?} {:?} {:?} {:?}",temp,temp2,temp2b,temp3);
     println!("{} {:?}",42,Object::from(42));
+    println!("{} {:?}",1,Object::from(1));
     println!("{} {:?}",'A',Object::from('A'));
     println!("{} {:?}",true,Object::from(true));
     println!("{} {:?}",false,Object::from(false));
     println!("{} {:?}","nil",nilObject);
-    println!("{} {:?}","#foo",symbolOf("foo",19));
-    println!("{} {:?}","#value:",symbolOf("value:",1));
-    println!("{} {:?}","#value:value:",symbolOf("value:value:",2));
+    println!("{} {:?}","#value",symbolOf("value",1));
+    println!("{} {:?}","#value:",symbolOf("value:",2));
+    println!("{} {:?}","#value:value:",symbolOf("value:value:",3));
+    println!("{} {:?}","#==",symbolOf("==",7));
+    println!("{} {:?}",42.0,Object::from(42.0));
     for i in 40..48 {
         let n = 1<<i;
         let temp = Object::from(n-1);

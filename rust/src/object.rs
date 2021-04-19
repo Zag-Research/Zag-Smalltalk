@@ -142,15 +142,15 @@ impl Debug for Object {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         if self.is_literal() {
-            write!(f, "{}:{} {:?}",self.as_literal(),self.class_name(),self.raw())
+            write!(f, "{}:{} {:x}",self.as_literal(),self.class_name(),self.raw())
         } else if self.is_integer() {
-            write!(f, "{}:{}",self.as_i64(),self.class_name())
+            write!(f, "{}:{} {:x}",self.as_i64(),self.class_name(),self.raw())
         } else if self.is_double() {
-            write!(f, "{:e}:{}",self.as_f64(),self.class_name())
+            write!(f, "{:e}:{} {:x}",self.as_f64(),self.class_name(),self.raw())
         } else if self.is_object() {
-            write!(f, "{:?}:object", self.as_object_ptr())
+            write!(f, "{:?}:object {:x}", self.as_object_ptr(),self.raw())
         } else {
-            write!(f, "{:?}:closure", self.as_closure_ptr())
+            write!(f, "{:?}:closure {:x}", self.as_closure_ptr(),self.raw())
         }
     }
 }

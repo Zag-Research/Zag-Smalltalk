@@ -10,7 +10,7 @@
 //     a aaaa is the arity of the symbol - 0-15 are valid (i.e. match existing methods)
 
 use crate::object::*;
-use std::cmp::Ordering;
+use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt::{self,Debug};
 #[derive(Copy,Clone,Debug)]
 pub struct Symbol {
@@ -75,9 +75,9 @@ impl SymbolTable {
             None
         } else {
             match self.table[current as usize].compare(string) {
-                Ordering::Equal => Some(symbolOf(string,current as usize)),
-                Ordering::Less => self.lookup(self.table[current as usize].right,string),
-                Ordering::Greater => self.lookup(self.table[current as usize].left ,string),
+                Equal => Some(symbolOf(string,current as usize)),
+                Less => self.lookup(self.table[current as usize].right,string),
+                Greater => self.lookup(self.table[current as usize].left ,string),
             }
         }
     }
@@ -102,8 +102,8 @@ impl SymbolTable {
             target
         } else {
             match self.table[target as usize].cmp(&self.table[root as usize]) {
-                Ordering::Equal => panic!("shouldn't be inserting an existing key: {}",self.table[target as usize].string),
-                Ordering::Less => {
+                Equal => panic!("shouldn't be inserting an existing key: {}",self.table[target as usize].string),
+                Less => {
                     self.table[root as usize].left = self.insert(target,self.table[root as usize].left);
                     // Fix Heap property if it is violated
                     if priority(self.table[root as usize].left) > priority(root) {
@@ -112,7 +112,7 @@ impl SymbolTable {
                         root
                     }
                 },
-                Ordering::Greater => {
+                Greater => {
                     self.table[root as usize].right = self.insert(target,self.table[root as usize].right);
                     // Fix Heap property if it is violated
                     if priority(self.table[root as usize].right) > priority(root) {
