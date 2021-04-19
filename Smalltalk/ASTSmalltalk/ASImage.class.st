@@ -16,7 +16,13 @@ Class {
 	],
 	#classVars : [
 		'BaseAddress',
-		'MaxSize'
+		'ClassMask',
+		'FormatMask',
+		'FormatShift',
+		'HashMask',
+		'HashShift',
+		'SizeMask',
+		'SizeShift'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -40,8 +46,15 @@ ASImage class >> exportPackages [
 
 { #category : #'class initialization' }
 ASImage class >> initialize [
-	MaxSize := 16r7"ff".
 	BaseAddress := 16r1000000000.
+	SizeMask := 16r7fff.
+	SizeShift := 48.
+	FormatMask := 16r1f.
+	FormatShift := 40.
+	HashShift := 20.
+	HashMask := (1<<(FormatShift-HashShift))-1.
+	ClassMask :=  (1<<HashShift)-1.
+
 
 ]
 
@@ -73,14 +86,17 @@ ASImage >> header: header [
 		flag isAssociation ifTrue: [
 			key := flag key.
 			value := flag value.
-			key = #class ifTrue: [ code := code bitOr: ((self class: value) bitAnd: 16r1fffff) ].
-			key = #hash ifTrue: [ code := code bitOr: (value bitAnd: 16r1fffff) << 21 ].
-			key = #size ifTrue: [ code := code bitOr: (value bitAnd: MaxSize) << 48 ].
+			key = #class ifTrue: [ code := code bitOr: ((self class: value) bitAnd: ClassMask) . key := nil ].
+			key = #hash ifTrue: [ code := code bitOr: (value bitAnd: HashMask) << HashShift . key := nil ].
+			key = #size ifTrue: [ code := code bitOr: (value bitAnd: SizeMask) << SizeShift . key := nil ].
+			key = #format ifTrue: [ code := code bitOr: (value bitAnd: FormatMask) << FormatShift . key := nil ].
 		] ifFalse: [
-			flag = #hasInstVars ifTrue: [ code := code bitOr: 1 << 42 ].
-			flag = #isVariable ifTrue: [ code := code bitOr: 1 << 43 ].
-			flag = #isForwarded ifTrue: [ code := code bitOr: 1 << 63 ].
-	]].
+			key := flag.
+			key = #isImmutable ifTrue: [ code := code bitOr: 1 << 47 . key := nil ].
+			key = #isForwarded ifTrue: [ code := code bitOr: 1 << 63 . key := nil ].
+		].
+		key ifNotNil: [ self error: 'header field "',key asString,'" is illegal' ]
+	].
 	^ code
 ]
 
@@ -91,15 +107,20 @@ ASImage >> imageObject: anObject [
 
 { #category : #adding }
 ASImage >> include: anASGenerator object: anObject [
-	| nVars extra size header |
+	| nVars extra size header format |
 	nVars := anObject class instSize.
 	header := OrderedCollection with: #class->anObject class.
 	header add: #hash -> currentAddress.
+	format := nil.
 	anObject class isVariable ifTrue: [
-		header add: #isVariable.
+		anObject class = Array ifTrue: [
+			format := 8.
+		] ifFalse: [
+			self error: 'Unknown array type'
+		].
 		extra := anObject size.
 		nVars = 0 ifTrue: [
-			extra <= MaxSize ifTrue: [
+			extra <= SizeMask ifTrue: [
 				header add: #size->extra.
 				nVars := extra.
 				extra := nil.
@@ -107,12 +128,18 @@ ASImage >> include: anASGenerator object: anObject [
 				nVars := extra.
 			]
 		] ifFalse: [
+				self error: 'indexable with instVars'.
 				header add: #size->nVars;add: #hasInstVars.
 				nVars := nVars + extra.
 		]
 	]ifFalse: [
-		header add: #size->nVars;add: #hasInstVars.
+		header add: #size->nVars.
+		format:= 1.
 		extra := nil ].
+	format ifNil: [
+		self error: 'no format defined'
+	] ifNotNil: [
+		header add: #format->format].
 	anASGenerator
 		address: currentAddress
 		nVars: nVars
@@ -138,8 +165,8 @@ ASImage >> initialize [
 	{Object . BlockClosure . UndefinedObject . False .
 		True . SmallInteger . Symbol . Character .
 		Float . String . Class . Metaclass . Behavior . self class " this will be replaced with System "
-		} do: [: symbol |
-			self class: symbol ].
+		} do: [: class |
+			self class: class ].
 
 ]
 
@@ -179,8 +206,9 @@ ASImage >> processOut [
 ]
 
 { #category : #adding }
-ASImage >> symbol: aString [ 
-	^ self literal: (symbols at: aString asSymbol ifAbsentPut: [ symbols size ])+((aString select: [:c| c=$: ])size <<21) class: 6
+ASImage >> symbol: aString [
+	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
+	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
 ]
 
 { #category : #writing }

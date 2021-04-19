@@ -37,14 +37,17 @@ ASImageTest >> testAdditions [
 	| a1 a1o |
 	self assert: (imageWriter imageObject: 42) equals: 16r7ff8000000000155.
 	self assert: (imageWriter imageObject: 1) equals: 16r7ff800000000000d.
-	self assert: (imageWriter imageObject: true) equals: 16r7ff800000000000c.
-	self assert: (imageWriter imageObject: false) equals: 16r7ff8000000000003.
-	self assert: (imageWriter imageObject: nil) equals: 16r7ff800000000000a.
+	self assert: (imageWriter imageObject: true) equals: 16r7ff800000000002b.
+	self assert: (imageWriter imageObject: false) equals: 16r7ff800000000001a.
+	self assert: (imageWriter imageObject: nil) equals: 16r7ff800000000003c.
 	self assert: (imageWriter imageObject: $A) equals: 16r7ff800000000020f.
-	self assert: (imageWriter imageObject: #foo) equals: 16r7ff800000000009e.
-	self assert: (imageWriter imageObject: #value:) equals: 16r7ff800000100000e.
-	self assert: (imageWriter imageObject: #value:value:) equals: 16r7ff8000002000016.
+	self assert: (imageWriter imageObject: #value) equals: 16r7ff800000000000e.
+	self assert: (imageWriter imageObject: #value:) equals: 16r7ff8000010000016.
+	self assert: (imageWriter imageObject: #value:value:) equals: 16r7ff800002000001e.
 	self assert: (imageWriter imageObject: 42.0) equals: 16r4045000000000000.
+	self assert: (imageWriter imageObject: 2.0) equals: 16r4000000000000000.
+	self assert: (imageWriter imageObject: 6.25e-2) equals: 16r3fb0000000000000.
+	self assert: (imageWriter imageObject: #==) equals: 16r7ff800001000003e.
 	self assert: imageWriter offset equals: 16.
 	a1 := #(1 true nil).
 	a1o := imageWriter imageObject: a1.
@@ -66,7 +69,7 @@ ASImageTest >> testEmptyImage [
 
 { #category : #tests }
 ASImageTest >> testHeader [
-	self assert: (imageWriter header: #(isVariable)) equals: 16r80000000000.
+	self assert: (imageWriter header: #(isImmutable)) equals: 16r800000000000.
 
 ]
 
