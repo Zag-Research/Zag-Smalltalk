@@ -28,13 +28,6 @@ Class {
 	#category : #'ASTSmalltalk-Tests-Explore'
 }
 
-{ #category : #'class initialization' }
-ASTreap class >> initialize [
-	randomGenerator := Random new.
-	root := nil.
-
-]
-
 { #category : #random }
 ASTreap class >> random [
 	^ randomGenerator nextInt: 16r100000000 " 32 bit random integer "

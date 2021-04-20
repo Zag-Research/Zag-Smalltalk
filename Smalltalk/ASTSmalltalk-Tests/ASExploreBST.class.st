@@ -1,5 +1,10 @@
 "
-Explore various options for Binary Search Trees for use in symbol table.
+Explore various options for Binary Search Trees for use in the symbol table for AST Smalltalk.
+
+The SymbolTable will be implemented in Rust as will the rest of the VM.
+However, it's a lot easier to explore and run experiments in Smalltalk.
+
+Although hashing would likely be somewhat faster, Symbols are allocated in an array (a Rust Vec<Symbol>) and can't be moved once allocated, so a BST makes more sense. Also, while we want it to be fairly fast, it isn't on a critical execution path, really only being used when String>>#asSymbol is called (i.e. when a string has to be 'interned').
 "
 Class {
 	#name : #ASExploreBST,
@@ -26,19 +31,19 @@ ASExploreBST class >> optimalOrder: aCollection [
 ASExploreBST class >> stats [
 	" self stats "
 	| data results |
-	data := #(3 345 234 123 65 5 789 4435 4657 78 34 24 5667 345 76 09 8 909).
+	"data := #(3 345 234 123 65 5 789 4435 4657 78 34 24 5667 345 76 09 8 909)."
 	data := ByteSymbol allInstances first: 8191.
 	results := Dictionary new.
 	{ ASBst ". ASTreap . ASTreapPseudo" } do: [: class |
-		results at: class name,' random' put: (self statsOn: class statsWith: data).
-		results at: class name,' sorted' put: (self statsOn: class statsWith: data sorted).
-		results at: class name,' optimal' put: (self statsOn: class statsWith: (self optimalOrder: data sorted)).
+		results at: class name,' random' put: (self statsOn: class data: data).
+		results at: class name,' sorted' put: (self statsOn: class data: data sorted).
+		results at: class name,' optimal' put: (self statsOn: class data: (self optimalOrder: data sorted)).
 	].
 	^ results
 ]
 
 { #category : #accessing }
-ASExploreBST class >> statsOn: aClass statsWith: data [
+ASExploreBST class >> statsOn: aClass data: data [
 	| aBST |
 	aBST := aClass withAll: data.
 	^ self new

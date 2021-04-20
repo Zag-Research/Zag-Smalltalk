@@ -4,18 +4,20 @@ I represent a simple Binary Search Tree. If I am balanced, I am the fastest comp
 Unfortunately, in the worst case of un-balance, I become a linear search.
 
 I look like:
+```
                key
               /   \
            left   right
+```
 where all the nodes less than key are in the left BST and all the nodes greater than key are in the right BST.
 "
 Class {
 	#name : #ASBst,
 	#superclass : #Object,
 	#instVars : [
-		'right',
+		'key',
 		'left',
-		'key'
+		'right'
 	],
 	#classInstVars : [
 		'root'
@@ -23,50 +25,37 @@ Class {
 	#category : #'ASTSmalltalk-Tests-Explore'
 }
 
-{ #category : #'key table' }
-ASBst class >> addToTable: aValue [
-	table add: (self new with: aValue).
-	root := self insert: table size root: root.
-	
-]
-
-{ #category : #'class initialization' }
-ASBst class >> initialize [
+{ #category : #'instance creation' }
+ASBst class >> withAll: data [
 	root := nil.
-
+	data do: [: key |
+		root := root insert: (self new key: key).
+	].
+	^ root
 ]
 
-{ #category : #'as yet unclassified' }
-ASBst class >> insert: insert root: parent [ 
-	| parentElement |
-	parent = 0 ifTrue: [  ^ insert ].
-	parentElement := table at: parent.
-	(table at: insert) value < parentElement value ifTrue: [
-		parentElement left: (self insert: insert root: parentElement left)
+{ #category : #accessing }
+ASBst >> insert: anASBst [ 
+	anASBst key < key ifTrue: [
+		left := left insert: anASBst
 	] ifFalse: [
-		parentElement right: (self insert: insert root: parentElement right)
-	].
-	^ parent
+		right := right insert: anASBst
+	]
 ]
 
-{ #category : #statistics }
-ASBst class >> statsWith: aCollection [ 
-	table := OrderedCollection new.
-	root := 0.
-	aCollection do: [: each |
-		self addToTable: each
-	].
-	^ self statistics
+{ #category : #accessing }
+ASBst >> key [
+	^ key
+]
+
+{ #category : #accessing }
+ASBst >> key: aKey [ 
+	key := aKey
 ]
 
 { #category : #accessing }
 ASBst >> left [
 	^ left
-]
-
-{ #category : #accessing }
-ASBst >> left: anInteger [ 
-	left := anInteger
 ]
 
 { #category : #printing }
@@ -84,21 +73,4 @@ ASBst >> printOn: aStream [
 { #category : #accessing }
 ASBst >> right [
 	^ right
-]
-
-{ #category : #accessing }
-ASBst >> right: anInteger [ 
-	right := anInteger
-]
-
-{ #category : #accessing }
-ASBst >> value [
-	^ key
-]
-
-{ #category : #'instance creation' }
-ASBst >> with: aValue [
-	key := aValue.
-	left := right := 0.
-
 ]
