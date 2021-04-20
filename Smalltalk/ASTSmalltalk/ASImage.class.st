@@ -159,12 +159,12 @@ ASImage >> initialize [
 	output := OrderedCollection new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
-	#(value value: value:value: value:value:value: value:value:value:value:
+	#(value value: value:value: value:value:value: value:value:value:value: yourself == ~~ ~= = + - * size
 		) do: [: symbol |
 			self symbol: symbol ].
-	{Object . BlockClosure . UndefinedObject . False .
-		True . SmallInteger . Symbol . Character .
-		Float . String . Class . Metaclass . Behavior . self class " this will be replaced with System "
+	{Object . BlockClosure . False . True .
+		UndefinedObject . SmallInteger . Symbol . Character .
+		Float . String . Class . Metaclass . Behavior . Array . self class " this will be replaced with System "
 		} do: [: class |
 			self class: class ].
 
@@ -246,7 +246,7 @@ ASImage >> writeSymbolTable [
 	symbols size writeRawOn: aStream.
 	table := Array new: symbols size.
 	symbols keysAndValuesDo: [: key : value |
-		table at: value+1 put: key ].
+		table at: value put: key ].
 	table do: [: string | string writeWithCountOn: aStream ].
 
 ]

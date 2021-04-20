@@ -23,7 +23,7 @@ ASImageTest >> image [
 ASImageTest >> setUp [
 	super setUp.
 	imageWriter := ASImage new.
-	minImageSize := 364.
+	minImageSize := 424.
 
 ]
 
@@ -56,8 +56,8 @@ ASImageTest >> testAdditions [
 	self assert: (imageWriter imageObject: a1) equals: a1o.
 	self assert: imageWriter offset equals: 48.
 	self assert: (self image at64: 24) equals: 16r7ff800000000000d.
-	self assert: (self image at64: 32) equals: 16r7ff800000000000c.
-	self assert: (self image at64: 40) equals: 16r7ff800000000000a.
+	self assert: (self image at64: 32) equals: 16r7ff800000000002b.
+	self assert: (self image at64: 40) equals: 16r7ff800000000003c.
 
 
 ]
