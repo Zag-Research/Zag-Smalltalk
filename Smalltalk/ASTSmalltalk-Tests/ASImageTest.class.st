@@ -34,7 +34,7 @@ ASImageTest >> stream: aBlock [
 
 { #category : #tests }
 ASImageTest >> testAdditions [
-	| a1 a1o |
+	| a1 a1o a2 a2o |
 	self assert: (imageWriter imageObject: 42) equals: 16r7ff8000000000155.
 	self assert: (imageWriter imageObject: 1) equals: 16r7ff800000000000d.
 	self assert: (imageWriter imageObject: true) equals: 16r7ff800000000002b.
@@ -49,15 +49,21 @@ ASImageTest >> testAdditions [
 	self assert: (imageWriter imageObject: 6.25e-2) equals: 16r3fb0000000000000.
 	self assert: (imageWriter imageObject: #==) equals: 16r7ff800001000003e.
 	self assert: imageWriter offset equals: 16.
-	a1 := #(1 true nil).
+	a1 := #(1 true nil value).
 	a1o := imageWriter imageObject: a1.
 	self assert: a1o equals: 16r7ff8001000000010.
-	self assert: imageWriter offset equals: 48.
+	self assert: imageWriter offset equals: 56.
 	self assert: (imageWriter imageObject: a1) equals: a1o.
-	self assert: imageWriter offset equals: 48.
+	self assert: imageWriter offset equals: 56.
 	self assert: (self image at64: 24) equals: 16r7ff800000000000d.
 	self assert: (self image at64: 32) equals: 16r7ff800000000002b.
 	self assert: (self image at64: 40) equals: 16r7ff800000000003c.
+	self assert: (self image at64: 48) equals: 16r7ff800000000000e.
+	a2 := { a1 . #value: }.
+	a2o := imageWriter imageObject: a2.
+	self assert: a2o equals: 16r7ff8001000000038.
+	self assert: (self image at64: 64) equals: a1o.
+	self assert: (self image at64: 72) equals: 16r7ff8000010000016.
 
 
 ]
@@ -79,5 +85,6 @@ ASImageTest >> testWriteRawOn [
 	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).
 	self assert: (self array: [: s | 256 writeRawOn: s ]) equals: #(0 1 0 0 0 0 0 0).
 	self assert: (self array: [: s | -256 writeRawOn: s ]) equals: #(0 255 255 255 255 255 255 255).
+	self assert: (self array: [: s | 258*256+3*256+4*256+5*256+6*256+7*256+8 writeRawOn: s ]) equals: #(8 7 6 5 4 3 2 1).
 
 ]

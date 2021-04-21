@@ -38,6 +38,11 @@ ManifestASTSmalltalkTests class >> ruleNobodyShouldSendMethodDictV1FalsePositive
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> rulePrecedenceRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-21T00:02:16.426567-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalkTests class >> ruleReTemporaryVariableCapitalizationRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:38.367969-05:00') )
 ]
