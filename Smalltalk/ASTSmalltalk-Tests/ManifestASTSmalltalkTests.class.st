@@ -46,3 +46,8 @@ ManifestASTSmalltalkTests class >> ruleReTemporaryVariableCapitalizationRuleV1Fa
 ManifestASTSmalltalkTests class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-19T09:17:06.696728-04:00') )
 ]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-20T18:11:07.482607-04:00') )
+]

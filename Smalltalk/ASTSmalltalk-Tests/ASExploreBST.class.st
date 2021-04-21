@@ -32,23 +32,23 @@ ASExploreBST class >> stats [
 	" self stats "
 	| data results |
 	"data := #(3 345 234 123 65 5 789 4435 4657 78 34 24 5667 345 76 09 8 909)."
-	data := ByteSymbol allInstances first: 8191.
+	data := ByteSymbol allInstances.
 	results := Dictionary new.
-	{ ASBst ". ASTreap . ASTreapPseudo" } do: [: class |
+	{ ASBst . ASTreap . ASTreapPseudo } do: [: class |
 		results at: class name,' random' put: (self statsOn: class data: data).
-		results at: class name,' sorted' put: (self statsOn: class data: data sorted).
 		results at: class name,' optimal' put: (self statsOn: class data: (self optimalOrder: data sorted)).
+		results at: class name,' sorted' put: (self statsOn: class data: (class=ASBst ifTrue:[data first:819"1"] ifFalse:[data]) sorted).
 	].
 	^ results
 ]
 
 { #category : #accessing }
 ASExploreBST class >> statsOn: aClass data: data [
-	| aBST |
-	aBST := aClass withAll: data.
-	^ self new
+	| aBST ms |
+	ms := [ aBST := aClass withAll: data ] timeToRun.
+	^ (self new
 		on: aBST depth: 0;
-		result
+		result),', in ',ms humanReadablePrintString
 ]
 
 { #category : #initialization }
@@ -71,5 +71,5 @@ ASExploreBST >> on: tree depth: depth [
 
 { #category : #statistics }
 ASExploreBST >> result [
-	^ 'average depth:',(totalDepth/nObjects asFloat) asString
+	^ 'average depth: ',(totalDepth/nObjects printShowingDecimalPlaces: 2)
 ]

@@ -58,6 +58,11 @@ ASBst >> left [
 	^ left
 ]
 
+{ #category : #accessing }
+ASBst >> left: anASTreap [ 
+	left := anASTreap
+]
+
 { #category : #printing }
 ASBst >> printOn: aStream [
 	aStream nextPut: $(.
@@ -73,4 +78,9 @@ ASBst >> printOn: aStream [
 { #category : #accessing }
 ASBst >> right [
 	^ right
+]
+
+{ #category : #accessing }
+ASBst >> right: anASTreap [ 
+	right := anASTreap
 ]
