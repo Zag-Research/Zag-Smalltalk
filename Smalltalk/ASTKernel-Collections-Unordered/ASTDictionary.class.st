@@ -87,7 +87,7 @@ ASTDictionary >> collect: aBlock [
 ASTDictionary >> copy [
 	"Must copy all my associations or later stores into either dictionary will effect both the original and the copy."
 
-	^ self basicCopy
+	^ self shallowCopy
 		withArray:
 			(array
 				collect: [ :assoc | 

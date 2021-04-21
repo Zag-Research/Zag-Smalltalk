@@ -95,7 +95,7 @@ ASTArrayedCollection >> mergeSortFrom: startIndex to: stopIndex by: aBlock [
 		ifFalse: [ self error: 'bad start index' ].
 	stopIndex <= self size
 		ifFalse: [ self error: 'bad stop index' ].
-	temp := self basicCopy.
+	temp := self shallowCopy.
 	self
 		mergeSortFrom: startIndex
 		to: stopIndex

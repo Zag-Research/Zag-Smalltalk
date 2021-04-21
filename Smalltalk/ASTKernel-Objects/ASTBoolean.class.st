@@ -1,0 +1,24 @@
+Class {
+	#name : #ASTBoolean,
+	#superclass : #ASTObject,
+	#category : #'ASTKernel-Objects'
+}
+
+{ #category : #'as yet unclassified' }
+ASTBoolean class >> new [
+	"There is a single unique instance of each boolean."
+
+	self cannotInstantiate
+]
+
+{ #category : #testing }
+ASTBoolean >> isBoolean [
+	^ true
+]
+
+{ #category : #'as yet unclassified' }
+ASTBoolean >> shallowCopy [
+	"There is the only one instance of me, so answer myself."
+
+	^ self
+]

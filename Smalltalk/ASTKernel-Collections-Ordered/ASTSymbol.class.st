@@ -45,13 +45,6 @@ ASTSymbol >> at: anInteger put: anObject [
 ]
 
 { #category : #'as yet unclassified' }
-ASTSymbol >> basicCopy [
-	"Answer myself because Symbols are unique."
-
-	
-]
-
-{ #category : #'as yet unclassified' }
 ASTSymbol >> errorNoModification [
 	self error: 'Symbols can not be modified.'
 ]
@@ -82,6 +75,13 @@ ASTSymbol >> printOn: aStream [
 { #category : #'as yet unclassified' }
 ASTSymbol >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	self errorNoModification
+]
+
+{ #category : #'as yet unclassified' }
+ASTSymbol >> shallowCopy [
+	"Answer myself because Symbols are unique."
+
+	
 ]
 
 { #category : #'as yet unclassified' }

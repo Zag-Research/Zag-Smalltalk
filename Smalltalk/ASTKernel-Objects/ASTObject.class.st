@@ -1,3 +1,12 @@
+"
+I am the root of the class hierarchy in the AST Smalltalk system.
+
+This, and most of the subclasses were originally from PharoCandle.
+
+There have been a fair number of changes, as the VM is quite different, although we have attempted to change no more than necessary.
+
+[PharoCandle](https://github.com/guillep/PharoCandle) is a minimal Pharo distribution, based on [MicroSqueak](https://web.media.mit.edu/~jmaloney/microsqueak/readme.txt), by John Maloney.
+"
 Class {
 	#name : #ASTObject,
 	#superclass : #nil,
@@ -118,22 +127,6 @@ ASTObject >> basicAt: index put: value [
 ]
 
 { #category : #'as yet unclassified' }
-ASTObject >> basicCopy [
-	"Answer a copy of the receiver that shares the receiver's instance variables. This is usually handled by the primitive, so the code below is for documentation."
-
-	<primitive: 148>
-	| class result sz |
-	class := self class.
-	class isVariable
-		ifTrue: [ sz := self basicSize.
-			result := class basicNew: sz.
-			1 to: sz do: [ :i | result basicAt: i put: (self basicAt: i) ] ]
-		ifFalse: [ result := class basicNew ].
-	1 to: class instSize do: [ :i | result instVarAt: i put: (self instVarAt: i) ].
-	^ result
-]
-
-{ #category : #'as yet unclassified' }
 ASTObject >> basicIdentityHash [
 	"Answer a SmallInteger whose value is related to the receiver's identity.
 	This method must not be overridden, except by SmallInteger.
@@ -182,7 +175,7 @@ ASTObject >> class [
 ASTObject >> copy [
 	"Answer a copy of me. Subclasses should usually override this method to change copying behavior, not basicCopy. The exception is classes with unique instances, such as Symbol. This operation does not generally copy all the objects that I refer to.."
 
-	^ self basicCopy
+	^ self shallowCopy
 ]
 
 { #category : #'as yet unclassified' }
@@ -325,31 +318,36 @@ ASTObject >> instVarAt: anInteger put: anObject [
 	^ self basicAt: anInteger - self class instSize put: anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isBehavior [
 	"Answer true if I am a subclass of Behavior."
 
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+ASTObject >> isBoolean [
+	^ false
+]
+
+{ #category : #testing }
 ASTObject >> isCompiledMethod [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isContextPart [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isInteger [
 	"Overridden to return true in Integer."
 
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isKindOf: aClass [
 	"Answer whether the class, aClass, is a superclass or class of the receiver."
 
@@ -358,26 +356,26 @@ ASTObject >> isKindOf: aClass [
 		ifFalse: [ ^ self class inheritsFrom: aClass ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isNil [
 	"Answer true if the receiver is nil."
 
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isNumber [
 	"Overridden to return true in Number, natch"
 
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isSelfEvaluating [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> isSmallInteger [
 	^ false
 ]
@@ -530,6 +528,22 @@ ASTObject >> respondsTo: aSymbol [
 	"Answer whether the receiver's class or one of its superclasses has the given symbol as a message selector."
 
 	^ self class canUnderstand: aSymbol
+]
+
+{ #category : #'as yet unclassified' }
+ASTObject >> shallowCopy [
+	"Answer a copy of the receiver that shares the receiver's instance variables. This is usually handled by the primitive, so the code below is for documentation."
+
+	<primitive: 148>
+	| class result sz |
+	class := self class.
+	class isVariable
+		ifTrue: [ sz := self basicSize.
+			result := class basicNew: sz.
+			1 to: sz do: [ :i | result basicAt: i put: (self basicAt: i) ] ]
+		ifFalse: [ result := class basicNew ].
+	1 to: class instSize do: [ :i | result instVarAt: i put: (self instVarAt: i) ].
+	^ result
 ]
 
 { #category : #'as yet unclassified' }

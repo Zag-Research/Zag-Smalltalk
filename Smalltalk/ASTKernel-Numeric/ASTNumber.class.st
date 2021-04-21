@@ -227,7 +227,7 @@ ASTNumber >> floorLog: radix [
 	^ self asFloat floorLog: radix
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTNumber >> isNumber [
 	^ true
 ]

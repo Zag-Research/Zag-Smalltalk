@@ -1,6 +1,6 @@
 Class {
 	#name : #ASTFalse,
-	#superclass : #ASTTrue,
+	#superclass : #ASTBoolean,
 	#category : #'ASTKernel-Objects'
 }
 

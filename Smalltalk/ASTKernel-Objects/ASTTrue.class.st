@@ -1,15 +1,8 @@
 Class {
 	#name : #ASTTrue,
-	#superclass : #ASTObject,
+	#superclass : #ASTBoolean,
 	#category : #'ASTKernel-Objects'
 }
-
-{ #category : #'as yet unclassified' }
-ASTTrue class >> new [
-	"There is a single unique instance of each boolean."
-
-	self cannotInstantiate
-]
 
 { #category : #'as yet unclassified' }
 ASTTrue >> & alternativeObject [
@@ -23,13 +16,6 @@ ASTTrue >> and: alternativeBlock [
 	"Answer true if both the receiver AND the result of evaluating the given block are true. Only evaluate the given block if the receiver is true."
 
 	^ alternativeBlock value
-]
-
-{ #category : #'as yet unclassified' }
-ASTTrue >> basicCopy [
-	"There is the only one instance of me, so answer myself."
-
-	^ self
 ]
 
 { #category : #'as yet unclassified' }

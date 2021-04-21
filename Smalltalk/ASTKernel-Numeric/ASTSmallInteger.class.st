@@ -161,13 +161,6 @@ ASTSmallInteger >> asFloat [
 ]
 
 { #category : #'as yet unclassified' }
-ASTSmallInteger >> basicCopy [
-	"I am immutable (and not really an object), so answer myself."
-
-	
-]
-
-{ #category : #'as yet unclassified' }
 ASTSmallInteger >> basicIdentityHash [
 	^ self
 ]
@@ -346,6 +339,13 @@ ASTSmallInteger >> quo: aNumber [
 	aNumber class isSmallInteger
 		ifTrue: [ self primitiveFailed ]
 		ifFalse: [ ^ super quo: aNumber ]
+]
+
+{ #category : #'as yet unclassified' }
+ASTSmallInteger >> shallowCopy [
+	"I am immutable (and not really an object), so answer myself."
+
+	
 ]
 
 { #category : #'as yet unclassified' }

@@ -12,13 +12,6 @@ ASTUndefinedObject class >> new [
 ]
 
 { #category : #'as yet unclassified' }
-ASTUndefinedObject >> basicCopy [
-	"There is the only one instance of me, so answer myself."
-
-	^ self
-]
-
-{ #category : #'as yet unclassified' }
 ASTUndefinedObject >> ifNil: aBlock [
 	"A convenient test, in conjunction with Object ifNil:"
 
@@ -49,6 +42,13 @@ ASTUndefinedObject >> isNil [
 { #category : #'as yet unclassified' }
 ASTUndefinedObject >> printOn: aStream [
 	aStream nextPutAll: 'nil'
+]
+
+{ #category : #'as yet unclassified' }
+ASTUndefinedObject >> shallowCopy [
+	"There is the only one instance of me, so answer myself."
+
+	^ self
 ]
 
 { #category : #'as yet unclassified' }

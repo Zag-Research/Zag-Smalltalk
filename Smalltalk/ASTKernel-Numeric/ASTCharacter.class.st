@@ -120,9 +120,9 @@ ASTCharacter >> asCharacter [
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> asInteger [
-	"Answer my ASCII value."
-
-	^ value
+	"Answer the receiver's character code."
+	<primitive: 171>
+	^self primitiveFailed
 ]
 
 { #category : #'as yet unclassified' }
@@ -153,13 +153,6 @@ ASTCharacter >> asciiValue [
 	"Answer the value of the receiver that represents its ascii encoding."
 
 	^ value
-]
-
-{ #category : #'as yet unclassified' }
-ASTCharacter >> basicCopy [
-	"Answer myself because Characters are unique."
-
-	^ self
 ]
 
 { #category : #'as yet unclassified' }
@@ -227,6 +220,13 @@ ASTCharacter >> printOn: aStream [
 ASTCharacter >> setValue: newValue [
 	value ifNotNil: [ ^ self error: 'Characters are immutable' ].
 	value := newValue
+]
+
+{ #category : #'as yet unclassified' }
+ASTCharacter >> shallowCopy [
+	"Answer myself because Characters are unique."
+
+	^ self
 ]
 
 { #category : #'as yet unclassified' }

@@ -57,7 +57,7 @@ ASTMethodDictionary >> at: key put: value [
 ASTMethodDictionary >> copy [
 	"Copy my values array."
 
-	^ self basicCopy withArray: array basicCopy
+	^ self shallowCopy withArray: array shallowCopy
 ]
 
 { #category : #'as yet unclassified' }

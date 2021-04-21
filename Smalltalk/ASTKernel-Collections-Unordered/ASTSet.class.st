@@ -90,7 +90,7 @@ ASTSet >> collect: aBlock [
 
 { #category : #'as yet unclassified' }
 ASTSet >> copy [
-	^ self basicCopy withArray: array basicCopy
+	^ self shallowCopy withArray: array shallowCopy
 ]
 
 { #category : #'as yet unclassified' }
