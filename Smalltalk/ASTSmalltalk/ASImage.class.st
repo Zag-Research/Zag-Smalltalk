@@ -12,7 +12,10 @@ Class {
 		'currentAddress',
 		'objects',
 		'process',
-		'output'
+		'output',
+		'newClasses',
+		'selectors',
+		'newSelectors'
 	],
 	#classVars : [
 		'BaseAddress',
@@ -60,11 +63,34 @@ ASImage class >> initialize [
 
 { #category : #adding }
 ASImage >> class: aClass [
-	| symbol |
-	symbol := aClass name asSymbol.
-	self symbol: symbol.
-	^ classes at: symbol ifAbsentPut: [ classes size ].
+	^ classes at: aClass ifAbsentPut: [ newClasses add: aClass. classes size ].
 
+]
+
+{ #category : #writing }
+ASImage >> closeOverClassesAndSelectors [
+	| tempClasses tempSelectors |
+	[ newClasses size + newSelectors size > 0 ] whileTrue: [
+		tempClasses := newClasses.
+		newClasses := OrderedCollection new.
+		tempSelectors := newSelectors.
+		newSelectors := OrderedCollection new.
+		tempClasses do: [: class |
+			tempSelectors do: [: selector |
+				
+			]
+		]
+	]
+	
+]
+
+{ #category : #writing }
+ASImage >> createClassTable [ 
+	| table |
+	table := Array new: classes size.
+	classes keysAndValuesDo: [: class : number |
+		table at: number+1 put: (self imageObject: class) ].
+	^ table
 ]
 
 { #category : #objects }
@@ -159,15 +185,21 @@ ASImage >> initialize [
 	output := OrderedCollection new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
+	selectors := Set new.
+	newClasses := OrderedCollection new.
+	newSelectors := OrderedCollection new.
 	#(value value: value:value: value:value:value: value:value:value:value: yourself == ~~ ~= = + - * size
 		) do: [: symbol |
 			self symbol: symbol ].
 	{Object . BlockClosure . False . True .
 		UndefinedObject . SmallInteger . Symbol . Character .
-		Float . String . Class . Metaclass . Behavior . Array . self class " this will be replaced with System "
+		Float . " all of those above must be in this order "
+		String . Class . Metaclass .
+		Behavior . Array . ASTSystem
 		} do: [: class |
 			self class: class ].
-
+	#(start) do: [: selector |
+			self selector: selector ].
 ]
 
 { #category : #adding }
@@ -178,11 +210,6 @@ ASImage >> literal: l class: c [
 { #category : #writing }
 ASImage >> nextPutAll: aByteArray [
 	^ aStream nextPutAll: aByteArray.
-]
-
-{ #category : #objects }
-ASImage >> object: anObject [ 
-	^ anObject astObject: self
 ]
 
 { #category : #objects }
@@ -206,20 +233,15 @@ ASImage >> processOut [
 ]
 
 { #category : #adding }
+ASImage >> selector: aSymbol [
+	^ selectors addIfNotPresent: aSymbol ifPresentDo:  [ newSelectors add: aSymbol ].
+
+]
+
+{ #category : #adding }
 ASImage >> symbol: aString [
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
 	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
-]
-
-{ #category : #writing }
-ASImage >> writeClassTable [ 
-	| table |
-	classes size writeRawOn: aStream.
-	table := Array new: classes size.
-	classes keysAndValuesDo: [: key : value |
-		table at: value+1 put: (self imageObject: key) ].
-	table do: [: object | object writeRawOn: aStream ].
-
 ]
 
 { #category : #writing }
@@ -232,10 +254,13 @@ ASImage >> writeHeap [
 
 { #category : #writing }
 ASImage >> writeImageOn: aWriteStream [
+	| table |
 	aStream := aWriteStream.
 	16r6567616d69545341 writeRawOn: aStream.
+	self closeOverClassesAndSelectors.
+	table := self createClassTable.
 	self writeHeap.
-	self writeClassTable.
+	table writeRawOn: aStream.
 	self writeSymbolTable.
 	
 ]
