@@ -9,7 +9,12 @@ Class {
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleBadMessageRule2V1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASGenerator #processOn: #false)) #'2021-03-28T20:18:32.15206-04:00') #(#(#RGMethodDefinition #(#ASGenerator #writeFieldsOn: #false)) #'2021-03-28T22:55:47.987048-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASGenerator #processOn: #false)) #'2021-03-28T20:18:32.15206-04:00') #(#(#RGMethodDefinition #(#ASGenerator #writeFieldsOn: #false)) #'2021-03-28T22:55:47.987048-04:00') #(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-04-23T13:00:23.089715-04:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleBooleanPrecedenceRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object:fields: #false)) #'2021-04-24T08:09:44.248594-04:00') #(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-04-24T08:13:10.250271-04:00') )
 ]
 
 { #category : #'code-critics' }
@@ -28,11 +33,16 @@ ManifestASTSmalltalk class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleToDoCollectRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-04-23T13:00:13.221856-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleUsesTrueRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') )
 ]
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleUtilityMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASImage #writeSizeOf:on: #false)) #'2021-03-26T17:15:42.158959-04:00') #(#(#RGMethodDefinition #(#ASImage #literal:class: #false)) #'2021-03-26T17:35:53.311307-04:00') #(#(#RGMethodDefinition #(#ASImage #object: #false)) #'2021-03-27T10:43:41.041614-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImage #writeSizeOf:on: #false)) #'2021-03-26T17:15:42.158959-04:00') #(#(#RGMethodDefinition #(#ASImage #literal:class: #false)) #'2021-03-26T17:35:53.311307-04:00') #(#(#RGMethodDefinition #(#ASImage #object: #false)) #'2021-03-27T10:43:41.041614-04:00') #(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-04-23T13:11:04.477962-04:00') )
 ]

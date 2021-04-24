@@ -15,7 +15,8 @@ Class {
 		'output',
 		'newClasses',
 		'selectors',
-		'newSelectors'
+		'newSelectors',
+		'methods'
 	],
 	#classVars : [
 		'BaseAddress',
@@ -76,11 +77,22 @@ ASImage >> closeOverClassesAndSelectors [
 		tempSelectors := newSelectors.
 		newSelectors := OrderedCollection new.
 		tempClasses do: [: class |
-			tempSelectors do: [: selector |
-				
+			class superclass ifNotNil: [: superclass | self imageObject: superclass ].
+			self imageObject: class.
+			selectors do: [: selector |
+				class methodDict at: selector ifPresent: [: method | self method: method ]
+			]
+		].
+		tempSelectors do: [: selector |
+			classes keys do: [: class |
+				class methodDict at: selector ifPresent: [: method | self method: method ]
 			]
 		]
 	]
+]
+
+{ #category : #compiling }
+ASImage >> compileMethod: aCollection [ 
 	
 ]
 
@@ -133,45 +145,28 @@ ASImage >> imageObject: anObject [
 
 { #category : #adding }
 ASImage >> include: anASGenerator object: anObject [
-	| nVars extra size header format |
-	nVars := anObject class instSize.
-	header := OrderedCollection with: #class->anObject class.
+	| nVars extra size header format fields |
+	fields := anObject astFields.
+	nVars := fields size.
+	header := OrderedCollection with: #class -> anObject class.
 	header add: #hash -> currentAddress.
-	format := nil.
-	anObject class isVariable ifTrue: [
-		anObject class = Array ifTrue: [
-			format := 8.
-		] ifFalse: [
-			self error: 'Unknown array type'
-		].
-		extra := anObject size.
-		nVars = 0 ifTrue: [
-			extra <= SizeMask ifTrue: [
-				header add: #size->extra.
-				nVars := extra.
-				extra := nil.
-			] ifFalse: [
-				nVars := extra.
-			]
-		] ifFalse: [
-				self error: 'indexable with instVars'.
-				header add: #size->nVars;add: #hasInstVars.
-				nVars := nVars + extra.
-		]
-	]ifFalse: [
-		header add: #size->nVars.
-		format:= 1.
-		extra := nil ].
-	format ifNil: [
-		self error: 'no format defined'
-	] ifNotNil: [
-		header add: #format->format].
-	anASGenerator
+	format := anObject astFormat.
+	header add: #format -> format.
+	extra := nil.
+	(format & 24)>0 ifTrue: [ 
+			(format & 17) = 1 ifTrue: [ 
+					self error: 'indexable with instVars' ]
+				ifFalse: [ 
+					nVars <= SizeMask
+						ifTrue: [ header add: #size -> nVars ]
+						ifFalse: [ self error: 'oversize array' ] ]
+				  ]
+		ifFalse: [ header add: #size -> nVars ].
+	size := anASGenerator
 		address: currentAddress
-		nVars: nVars
 		extra: extra
-		header: (self header: header).
-	size := 1 + (extra ifNil: [ 0 ] ifNotNil: [ 1 ]) + nVars.
+		header: (self header: header)
+		fields: fields.
 	currentAddress := currentAddress + (size * 8)
 ]
 
@@ -185,6 +180,7 @@ ASImage >> initialize [
 	output := OrderedCollection new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
+	methods := Dictionary new.
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
@@ -194,8 +190,7 @@ ASImage >> initialize [
 	{Object . BlockClosure . False . True .
 		UndefinedObject . SmallInteger . Symbol . Character .
 		Float . " all of those above must be in this order "
-		String . Class . Metaclass .
-		Behavior . Array . ASTSystem
+		ASTSystem
 		} do: [: class |
 			self class: class ].
 	#(start) do: [: selector |
@@ -205,6 +200,11 @@ ASImage >> initialize [
 { #category : #adding }
 ASImage >> literal: l class: c [
 	^ 16r7FF8000000000000 + (l bitShift: 3) + c
+]
+
+{ #category : #accessing }
+ASImage >> method: aCompiledMethod [
+	methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
 ]
 
 { #category : #writing }
@@ -234,7 +234,7 @@ ASImage >> processOut [
 
 { #category : #adding }
 ASImage >> selector: aSymbol [
-	^ selectors addIfNotPresent: aSymbol ifPresentDo:  [ newSelectors add: aSymbol ].
+	^ selectors addIfNotPresent: aSymbol andDo:  [ newSelectors add: aSymbol ].
 
 ]
 

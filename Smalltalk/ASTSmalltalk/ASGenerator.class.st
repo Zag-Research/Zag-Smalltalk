@@ -14,11 +14,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'fields',
-		'elements',
 		'header',
-		'savedObject',
 		'address',
-		'nVars',
 		'extra'
 	],
 	#category : #'ASTSmalltalk-AST'
@@ -30,25 +27,23 @@ ASGenerator >> address [
 ]
 
 { #category : #accessing }
-ASGenerator >> address: anInteger nVars: anInteger2 extra: anInteger3 header: anObject [ 
+ASGenerator >> address: anInteger extra: anInteger3 header: anObject fields: anObject1 [ 
 	address := anInteger.
-	nVars := anInteger2.
 	extra := anInteger3.
 	header := anObject.
-
+	fields := anObject1.
+	^ 1 + (extra ifNil: [ 0 ] ifNotNil: [ 1 ]) + fields size
 ]
 
 { #category : #initialization }
 ASGenerator >> on: anASImage object: anObject [
-	anASImage include: self object: anObject.
-	savedObject := anObject.
-
+	anASImage include: self object: anObject
 ]
 
 { #category : #process }
 ASGenerator >> processOn: anASImage [
-	1 to: nVars do: [: i |
-		(savedObject instVarAt: i) astObject: anASImage
+	fields do: [: value |
+		value astObject: anASImage
 	]
 ]
 
@@ -56,7 +51,8 @@ ASGenerator >> processOn: anASImage [
 ASGenerator >> writeFieldsOn: anASImage [
 	header writeRawOn: anASImage.
 	extra ifNotNil: [ extra writeRawOn: anASImage ].
-	1 to: nVars do: [: i |
-		((savedObject instVarAt: i) 	astImageObject: anASImage) writeRawOn: anASImage
-	]
+	fields do: [: value |
+		(value astImageObject: anASImage) writeRawOn: anASImage
+	].
+
 ]
