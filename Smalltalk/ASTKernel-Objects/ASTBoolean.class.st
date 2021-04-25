@@ -16,7 +16,7 @@ ASTBoolean >> isBoolean [
 	^ true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTBoolean >> shallowCopy [
 	"There is the only one instance of me, so answer myself."
 

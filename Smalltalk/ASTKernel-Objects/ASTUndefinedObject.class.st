@@ -11,40 +11,40 @@ ASTUndefinedObject class >> new [
 	self cannotInstantiate
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTUndefinedObject >> ifNil: aBlock [
 	"A convenient test, in conjunction with Object ifNil:"
 
 	^ aBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTUndefinedObject >> ifNil: nilBlock ifNotNil: ifNotNilBlock [
 	"Evaluate the block for nil because I'm == nil"
 
 	^ nilBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTUndefinedObject >> ifNotNil: aBlock [
 	"A convenient test, in conjunction with Object ifNotNil:"
 
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTUndefinedObject >> isNil [
 	"Answer true if the receiver is nil."
 
 	^ true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTUndefinedObject >> printOn: aStream [
 	aStream nextPutAll: 'nil'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTUndefinedObject >> shallowCopy [
 	"There is the only one instance of me, so answer myself."
 

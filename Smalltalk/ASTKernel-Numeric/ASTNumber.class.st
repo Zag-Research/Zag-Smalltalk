@@ -267,7 +267,7 @@ ASTNumber >> negative [
 	^ self < 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTNumber >> printOn: aStream [
 	"Default print radix is 10"
 

@@ -23,7 +23,7 @@ ASTMessage >> lookupClass [
 	^ lookupClass
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTMessage >> printOn: aStream [
 	"Refer to the comment in Object|printOn:."
 

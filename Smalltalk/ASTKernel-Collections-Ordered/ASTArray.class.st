@@ -1,6 +1,7 @@
 Class {
 	#name : #ASTArray,
 	#superclass : #ASTArrayedCollection,
+	#type : #variable,
 	#category : #'ASTKernel-Collections-Ordered'
 }
 
@@ -36,7 +37,7 @@ ASTArray >> hash [
 	^ (self at: 1) hash + (self at: self size) hash
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTArray >> printOn: aStream [
 	aStream nextPutAll: '#('.
 	self

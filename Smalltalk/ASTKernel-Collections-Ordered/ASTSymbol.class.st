@@ -67,7 +67,7 @@ ASTSymbol >> initFrom: aString [
 		startingAt: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTSymbol >> printOn: aStream [
 	aStream nextPutAll: self
 ]
@@ -77,7 +77,7 @@ ASTSymbol >> replaceFrom: start to: stop with: replacement startingAt: repStart 
 	self errorNoModification
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTSymbol >> shallowCopy [
 	"Answer myself because Symbols are unique."
 

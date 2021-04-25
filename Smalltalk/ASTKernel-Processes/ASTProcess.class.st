@@ -47,7 +47,7 @@ ASTProcess >> nextLink: aLink [
 	nextLink := aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTProcess >> printOn: aStream [
 	super printOn: aStream.
 	aStream nextPutAll: ' in '.

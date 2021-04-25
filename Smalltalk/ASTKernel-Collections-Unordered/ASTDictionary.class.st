@@ -188,7 +188,7 @@ ASTDictionary >> noCheckAdd: anObject [
 	tally := tally + 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTDictionary >> printOn: aStream [
 	aStream nextPutAll: self class name , ' ('.
 	self

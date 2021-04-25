@@ -115,7 +115,7 @@ ASTInterval >> last [
 	^ stop - ((stop - start) \\ step)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTInterval >> printOn: aStream [
 	aStream nextPut: $(.
 	start printOn: aStream.

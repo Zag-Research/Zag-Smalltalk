@@ -341,7 +341,7 @@ ASTSmallInteger >> quo: aNumber [
 		ifFalse: [ ^ super quo: aNumber ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTSmallInteger >> shallowCopy [
 	"I am immutable (and not really an object), so answer myself."
 

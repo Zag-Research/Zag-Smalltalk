@@ -40,7 +40,7 @@ ASTValueLink >> nextLink: aLink [
 	nextLink := aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTValueLink >> printOn: aStream [
 	aStream nextPutAll: 'ValueLink('.
 	value printOn: aStream.

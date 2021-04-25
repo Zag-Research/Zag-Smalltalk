@@ -53,7 +53,7 @@ ASTFalse >> or: alternativeBlock [
 	^ alternativeBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTFalse >> printOn: aStream [
 	aStream nextPutAll: 'false'
 ]

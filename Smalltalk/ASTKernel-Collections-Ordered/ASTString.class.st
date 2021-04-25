@@ -335,7 +335,7 @@ ASTString >> numArgs [
 	^ -1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTString >> printOn: aStream [
 	"Print inside string quotes, doubling inbedded quotes."
 

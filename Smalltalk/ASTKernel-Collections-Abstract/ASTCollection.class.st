@@ -142,7 +142,7 @@ ASTCollection >> isEmpty [
 	^ self size = 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTCollection >> printOn: aStream [
 	"Refer to the comment in Object|printOn:."
 

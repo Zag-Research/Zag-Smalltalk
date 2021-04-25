@@ -219,10 +219,23 @@ ASTObject >> errorNonIntegerIndex [
 ]
 
 { #category : #'as yet unclassified' }
+ASTObject >> errorPharoImplementation [
+	"Error: an improper store was attempted."
+
+	self error: 'Incompatible implementation from Pharo.'
+]
+
+{ #category : #'as yet unclassified' }
 ASTObject >> errorSubscriptBounds: index [
 	"Error: the given index is out of range."
 
 	self error: 'Subscript is out of bounds: ' , index printString
+]
+
+{ #category : #halting }
+ASTObject >> halt: aString [ 
+	<primitive: 'halt'>
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -261,18 +274,18 @@ ASTObject >> ifNil: nilBlock [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> ifNil: nilBlock ifNotNil: ifNotNilBlock [
 	"Evaluate the block, unless I'm == nil (q.v.)"
 
-	^ ifNotNilBlock value
+	^ ifNotNilBlock cull: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> ifNotNil: ifNotNilBlock [
 	"Evaluate the block, unless I'm == nil (q.v.)"
 
-	^ ifNotNilBlock value
+	^ ifNotNilBlock cull: self
 ]
 
 { #category : #'as yet unclassified' }
@@ -478,7 +491,7 @@ ASTObject >> primitiveFailed [
 	self error: 'a primitive has failed'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTObject >> printOn: aStream [
 	"Print a description of me on the given stream."
 
@@ -530,7 +543,7 @@ ASTObject >> respondsTo: aSymbol [
 	^ self class canUnderstand: aSymbol
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTObject >> shallowCopy [
 	"Answer a copy of the receiver that shares the receiver's instance variables. This is usually handled by the primitive, so the code below is for documentation."
 

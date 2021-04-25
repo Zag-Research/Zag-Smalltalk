@@ -210,7 +210,7 @@ ASTBehavior >> new: desiredSize [
 	^ self basicNew: desiredSize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTBehavior >> printOn: aStream [
 	aStream nextPutAll: self name
 ]

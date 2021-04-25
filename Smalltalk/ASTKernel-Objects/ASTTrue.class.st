@@ -53,7 +53,7 @@ ASTTrue >> or: alternativeBlock [
 	^ true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTTrue >> printOn: aStream [
 	aStream nextPutAll: 'true'
 ]

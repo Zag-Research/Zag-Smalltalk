@@ -147,6 +147,7 @@ ASTClassBuilder >> newClassFormat [
 	"<2 bits of size><5 bits of compact class index><4 bits of inst spec><6 bits of size><1 bit with a 0>"
 
 	| size1 instSpec size2 compactClassIndex |
+	self errorPharoImplementation.
 	size1 := (self instSize + 1) // 64 bitAnd: 16r3.
 	instSpec := self isCompiledMethod
 		ifTrue: [ 12 ]

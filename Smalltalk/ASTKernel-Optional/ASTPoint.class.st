@@ -170,7 +170,7 @@ ASTPoint >> negated [
 	^ x negated @ y negated
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTPoint >> printOn: aStream [
 	"The receiver prints on aStream in terms of infix notation."
 

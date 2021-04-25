@@ -54,7 +54,7 @@ ASTAssociation >> key: aKey value: anObject [
 	value := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTAssociation >> printOn: aStream [
 	"Print in the format (key->value)."
 

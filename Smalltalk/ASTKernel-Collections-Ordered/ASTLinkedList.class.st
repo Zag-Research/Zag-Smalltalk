@@ -150,7 +150,7 @@ ASTLinkedList >> collect: aBlock [
 	| aLink newCollection |
 	newCollection := self class new.
 	aLink := firstLink.
-	[ aLink == nil ]
+	[ aLink isNil ]
 		whileFalse: [ newCollection add: (aBlock value: aLink value).
 			aLink := aLink nextLink ].
 	^ newCollection
@@ -273,7 +273,7 @@ ASTLinkedList >> linkOf: anObject ifAbsent: errorBlock [
 ASTLinkedList >> linksDo: aBlock [
 	| aLink |
 	aLink := firstLink.
-	[ aLink == nil ]
+	[ aLink isNil ]
 		whileFalse: [ aBlock value: aLink.
 			aLink := aLink nextLink ]
 ]
@@ -282,8 +282,7 @@ ASTLinkedList >> linksDo: aBlock [
 ASTLinkedList >> postCopy [
 	| aLink |
 	super postCopy.
-	firstLink isNil
-		ifFalse: [ aLink := firstLink := firstLink copy.
+	firstLink ifNotNil: [ aLink := firstLink := firstLink copy.
 			[ aLink nextLink isNil ]
 				whileFalse: [ aLink nextLink: (aLink := aLink nextLink copy) ].
 			lastLink := aLink ]

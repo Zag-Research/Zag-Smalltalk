@@ -117,8 +117,8 @@ ASTSystem class >> incrementalGarbageCollect [
 
 { #category : #'as yet unclassified' }
 ASTSystem class >> log: aString [
-	<primitive: 27> " unused in Pharo 9 image "
-	self append: aString toFile: 'log.txt'
+	<primitive: #log:> " unused in Pharo 9 image "
+	"self append: aString toFile: 'log.txt'"
 ]
 
 { #category : #'as yet unclassified' }
@@ -167,14 +167,14 @@ ASTSystem class >> specialObjectsArray: anArray [
 
 { #category : #'as yet unclassified' }
 ASTSystem class >> start [
-	<primitive: 'helloWorld'>
+	<primitive: #helloWorld>
 	self log: #helloWorld.
 "	self log: 'Welcome to Pharo Candle edition!' ""substrings"" asString.
 	self log: self tinyBenchmarks.
 	self log: ASTForm new primScreenSize printString.
 	self testNormalObject.
-	self testByteObject.
-	ASTObject superclass ifNil: [ self quit ]"
+	self testByteObject."
+	self quit
 ]
 
 { #category : #'as yet unclassified' }

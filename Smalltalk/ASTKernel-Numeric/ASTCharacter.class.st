@@ -1,9 +1,6 @@
 Class {
 	#name : #ASTCharacter,
 	#superclass : #ASTMagnitude,
-	#instVars : [
-		'value'
-	],
 	#classVars : [
 		'CharacterTable'
 	],
@@ -129,9 +126,9 @@ ASTCharacter >> asInteger [
 ASTCharacter >> asLowercase [
 	"If I am uppercase, answer the matching lowercase Character. Otherwise, answer myself."
 
-	(65 <= value and: [ value <= 90 ])
-		ifTrue: [ ^ (value + 32) asCharacter ]
-		ifFalse: [ ^ self ]	"self isUppercase"
+	self isUppercase
+		ifTrue: [ ^ (self asInteger + 32) asCharacter ]
+		ifFalse: [ ^ self ]	"self isLowercase"
 ]
 
 { #category : #'as yet unclassified' }
@@ -141,29 +138,30 @@ ASTCharacter >> asString [
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> asUppercase [
+
 	"If the receiver is lowercase, answer its matching uppercase Character."
 
-	(97 <= value and: [ value <= 122 ])
-		ifTrue: [ ^ (value - 32) asCharacter ]
-		ifFalse: [ ^ self ]	"self isLowercase"
+	self isLowercase
+		ifTrue: [ ^ (self asInteger - 32) asCharacter ]
+		ifFalse: [ "self isUppercase" ^ self ]
 ]
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> asciiValue [
 	"Answer the value of the receiver that represents its ascii encoding."
 
-	^ value
+	^ self asInteger
 ]
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> digitValue [
 	"Answer 0-9 if the receiver is $0-$9, 10-35 if it is $A-$Z, and -1 otherwise. This is used to parse literal numbers of radix 2-36."
 
-	value <= $9 asciiValue
-		ifTrue: [ ^ value - $0 asciiValue ].
-	value >= $A asciiValue
-		ifTrue: [ value <= $Z asciiValue
-				ifTrue: [ ^ value - $A asciiValue + 10 ] ].
+	self asInteger <= $9 asciiValue
+		ifTrue: [ ^ self asInteger - $0 asciiValue ].
+	self asInteger >= $A asciiValue
+		ifTrue: [ self asInteger <= $Z asciiValue
+				ifTrue: [ ^ self asInteger - $A asciiValue + 10 ] ].
 	^ -1
 ]
 
@@ -171,22 +169,28 @@ ASTCharacter >> digitValue [
 ASTCharacter >> hash [
 	"My hash is my value."
 
-	^ value
+	^ self asInteger
 ]
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> isDigit [
 	"Answer whether the receiver is a digit."
 
-	^ value >= 48 and: [ value <= 57 ]
+	^ self asInteger between: 48 and: 57
 ]
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> isLetter [
+
 	"Answer whether the receiver is a letter."
 
-	^ (65 <= value and: [ value <= 90 ])
-		or: [ 97 <= value and: [ value <= 122 ] ]
+	^ self isUppercase or: [ self isLowercase ]
+]
+
+{ #category : #'as yet unclassified' }
+ASTCharacter >> isLowercase [
+
+	^ self asInteger between: 97 and: 122
 ]
 
 { #category : #'as yet unclassified' }
@@ -200,7 +204,7 @@ ASTCharacter >> isSpecial [
 ASTCharacter >> isUppercase [
 	"Answer whether the receiver is an uppercase letter."
 
-	^ 65 <= value and: [ value <= 90 ]
+	^ self asInteger between: 65 and: 90
 ]
 
 { #category : #'as yet unclassified' }
@@ -210,7 +214,7 @@ ASTCharacter >> isVowel [
 	^ 'AEIOU' includes: self asUppercase
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTCharacter >> printOn: aStream [
 	aStream nextPut: $$.
 	aStream nextPut: self
@@ -218,11 +222,10 @@ ASTCharacter >> printOn: aStream [
 
 { #category : #'as yet unclassified' }
 ASTCharacter >> setValue: newValue [
-	value ifNotNil: [ ^ self error: 'Characters are immutable' ].
-	value := newValue
+	^ self error: 'Characters are immutable'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #copying }
 ASTCharacter >> shallowCopy [
 	"Answer myself because Characters are unique."
 
