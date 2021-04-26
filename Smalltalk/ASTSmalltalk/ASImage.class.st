@@ -184,7 +184,8 @@ ASImage >> initialize [
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
-	#(value value: value:value: value:value:value: value:value:value:value: yourself == ~~ ~= = + - * size
+	#(valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: " need to be first 5 symbols so that short-circuit on dispatch works "
+		value value: value:value: value:value:value: value:value:value:value: yourself == ~~ ~= = + - * size
 		) do: [: symbol |
 			self symbol: symbol ].
 	{Object . BlockClosure . False . True .
@@ -241,7 +242,7 @@ ASImage >> selector: aSymbol [
 { #category : #adding }
 ASImage >> symbol: aString [
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
+	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size ])+(aString numArgs <<25) class: 6
 ]
 
 { #category : #writing }

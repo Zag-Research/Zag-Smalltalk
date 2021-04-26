@@ -81,7 +81,7 @@ ASTClassBuilder >> compactClassIndex [
 
 { #category : #'as yet unclassified' }
 ASTClassBuilder >> compactClassIndexFor: aClassName [
-	^ #(#ASTCompiledMethod nil #ASTArray #ASTLargeNegativeInteger #ASTLargePositiveInteger #ASTFloat nil #ASTAssociation #ASTPoint #ASTRectangle #ASTString #ASTBlock nil #ASTMethodContext nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil)
+	^ #(#ASTCompiledMethod nil #ASTArray #ASTLargeNegativeInteger #ASTLargePositiveInteger #ASTFloat nil #ASTAssociation #ASTPoint #ASTRectangle #ASTString #ASTBlockClosure nil #ASTMethodContext nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil)
 		indexOf: aClassName
 		ifAbsent: [ 0 ]	"#ASTBitmap"
 ]

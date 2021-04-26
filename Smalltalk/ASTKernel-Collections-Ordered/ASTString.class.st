@@ -130,11 +130,7 @@ ASTString >> asString [
 ASTString >> asSymbol [
 	"This is the only place that new Symbols are created. A Symbol is created if and only if there is not already a Symbol with its contents in existance."
 
-	ASTSymbol
-		allInstancesDo: [ :sym | 
-			self = sym
-				ifTrue: [ ^ sym ] ].
-	^ (ASTSymbol basicNew: self size) initFrom: self
+	^ ASTSymbol intern: self
 ]
 
 { #category : #'as yet unclassified' }
