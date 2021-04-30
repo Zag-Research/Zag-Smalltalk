@@ -185,12 +185,13 @@ ASImage >> initialize [
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
 	#(valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: " need to be first 5 symbols so that short-circuit on dispatch works "
-		value value: value:value: value:value:value: value:value:value:value: yourself == ~~ ~= = + - * size
+		value value: value:value: value:value:value: value:value:value:value: " need to be the next 5 symbols "
+		yourself == ~~ ~= = + - * size
 		) do: [: symbol |
 			self symbol: symbol ].
 	{Object . BlockClosure . False . True .
 		UndefinedObject . SmallInteger . Symbol . Character .
-		Float . " all of those above must be in this order "
+		Float . " all of those above must be in this order because they are the immediate/literal classes "
 		ASTSystem
 		} do: [: class |
 			self class: class ].
@@ -272,7 +273,7 @@ ASImage >> writeSymbolTable [
 	symbols size writeRawOn: aStream.
 	table := Array new: symbols size.
 	symbols keysAndValuesDo: [: key : value |
-		table at: value put: key ].
+		table at: value+1 put: key ].
 	table do: [: string | string writeWithCountOn: aStream ].
 
 ]

@@ -23,7 +23,7 @@ ASImageTest >> image [
 ASImageTest >> setUp [
 	super setUp.
 	imageWriter := ASImage new.
-	minImageSize := 424.
+	minImageSize := 2686.
 
 ]
 
@@ -41,13 +41,13 @@ ASImageTest >> testAdditions [
 	self assert: (imageWriter imageObject: false) equals: 16r7ff800000000001a.
 	self assert: (imageWriter imageObject: nil) equals: 16r7ff800000000003c.
 	self assert: (imageWriter imageObject: $A) equals: 16r7ff800000000020f.
-	self assert: (imageWriter imageObject: #value) equals: 16r7ff800000000000e.
-	self assert: (imageWriter imageObject: #value:) equals: 16r7ff8000010000016.
-	self assert: (imageWriter imageObject: #value:value:) equals: 16r7ff800002000001e.
+	self assert: (imageWriter imageObject: #value) equals: 16r7ff800000000002e.
+	self assert: (imageWriter imageObject: #value:) equals: 16r7ff8000010000036.
+	self assert: (imageWriter imageObject: #value:value:) equals: 16r7ff800002000003e.
 	self assert: (imageWriter imageObject: 42.0) equals: 16r4045000000000000.
 	self assert: (imageWriter imageObject: 2.0) equals: 16r4000000000000000.
 	self assert: (imageWriter imageObject: 6.25e-2) equals: 16r3fb0000000000000.
-	self assert: (imageWriter imageObject: #==) equals: 16r7ff800001000003e.
+	self assert: (imageWriter imageObject: #==) equals: 16r7ff800001000005e.
 	self assert: imageWriter offset equals: 16.
 	a1 := #(1 true nil value).
 	a1o := imageWriter imageObject: a1.
