@@ -274,7 +274,7 @@ ASImage >> selector: aSymbol [
 { #category : #adding }
 ASImage >> symbol: aString [
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size ])+(aString numArgs <<25) class: 6
+	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
 ]
 
 { #category : #writing }
@@ -304,7 +304,7 @@ ASImage >> writeSymbolTable [
 	symbols size writeRawOn: aStream.
 	table := Array new: symbols size.
 	symbols keysAndValuesDo: [: key : value |
-		table at: value+1 put: key ].
+		table at: value put: key ].
 	table do: [: string | string writeWithCountOn: aStream ].
 
 ]
