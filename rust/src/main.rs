@@ -41,7 +41,9 @@ fn main() {
     println!("{} {:?}",true,Object::from(true));
     println!("{} {:?}",false,Object::from(false));
     println!("{} {:?}","nil",nilObject);
-    for s in &["valueWithArguments:","cull:","cull:cull:","cull:cull:cull:","cull:cull:cull:cull:","value","value:","value:value:","value:value:value:","value:value:value:value:"] {
+    for s in &["valueWithArguments:","cull:","cull:cull:","cull:cull:cull:","cull:cull:cull:cull:",
+               "value","value:","value:value:","value:value:value:","value:value:value:value:",
+               "yourself","==","~~","~=","=","+","-","*","size"] {
         intern(s.to_string());
     }
     println!("{} {:?}","#value",intern(String::from("value")));
@@ -49,11 +51,11 @@ fn main() {
     println!("{} {:?}","#value:value:",intern(String::from("value:value:")));
     println!("{} {:?}","#==",intern(String::from("==")));
     println!("{} {:?}",42.0,Object::from(42.0));
-    for i in 40..48 {
+    for i in 38..48 {
         let n = 1<<i;
         let temp = Object::from(n-1);
         let temp2 = Object::from(-n);
-        println!("{} : {:?} {:?} {:?} {:?}",i,temp,(n-1) as * const Object,temp2,-n as * const Object);
+        println!("{} : {:?} {:x} {:?} {:x}",i,temp,(n-1)<<3,temp2,-n<<3);
     }
 //    
             
