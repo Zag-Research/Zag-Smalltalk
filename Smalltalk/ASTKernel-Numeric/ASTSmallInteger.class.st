@@ -160,7 +160,7 @@ ASTSmallInteger >> asFloat [
 	self primitiveFailed
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'reflective operations' }
 ASTSmallInteger >> basicIdentityHash [
 	^ self
 ]

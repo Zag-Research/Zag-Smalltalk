@@ -153,6 +153,16 @@ ASTCharacter >> asciiValue [
 	^ self asInteger
 ]
 
+{ #category : #'reflective operations' }
+ASTCharacter >> basicIdentityHash [
+	"Answer the receiver's character code.
+	 The value answered is unsigned. It can in theory be in the full
+	 poisitive SmallInteger range, but based on Unicode, it is fair
+	 to assume that the value is in the range [ 0 ; 16r3FFFFF ]"
+	<primitive: 171>
+
+]
+
 { #category : #'as yet unclassified' }
 ASTCharacter >> digitValue [
 	"Answer 0-9 if the receiver is $0-$9, 10-35 if it is $A-$Z, and -1 otherwise. This is used to parse literal numbers of radix 2-36."

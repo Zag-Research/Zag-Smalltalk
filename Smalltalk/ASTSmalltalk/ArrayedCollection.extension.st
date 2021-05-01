@@ -7,5 +7,5 @@ ArrayedCollection >> astFields [
 
 { #category : #'*ASTSmalltalk' }
 ArrayedCollection >> astFormat [
-	self error: 'Need astFormat for ',self className
+	^ self subclassResponsibility
 ]

@@ -3,12 +3,9 @@ Class {
 	#superclass : #ASTObject,
 	#instVars : [
 		'symbol',
-		'arguments',
-		'locals',
 		'code',
 		'closure',
-		'selfObject',
-		'method'
+		'selfObject'
 	],
 	#category : #'ASTKernel-Methods'
 }

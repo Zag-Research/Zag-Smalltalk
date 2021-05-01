@@ -308,6 +308,13 @@ ASTFloat >> asFloat [
 	^ self
 ]
 
+{ #category : #'reflective operations' }
+ASTFloat >> basicIdentityHash [
+	"Answer the floating point high 32-bits xor low 32-bits."
+	<primitive: 2171>
+
+]
+
 { #category : #'as yet unclassified' }
 ASTFloat >> cos [
 	"Answer the cosine of the receiver taken as an angle in radians."

@@ -62,9 +62,31 @@ ASImage class >> initialize [
 
 ]
 
+{ #category : #writing }
+ASImage >> addFirstMethod: selector in: canonicalClasses [
+	canonicalClasses do: [: class |
+		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
+	]
+
+]
+
+{ #category : #accessing }
+ASImage >> canonicalClasses: aClass [
+	| name side |
+	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
+	name := aClass instanceSide name.
+	^ ((name beginsWith: 'AST') ifTrue: [
+			Smalltalk at: (name allButFirst: 3) ifPresent: [: c | { aClass . c } ] ifAbsent: [ { aClass } ]
+		] ifFalse: [
+			Smalltalk at: ('AST',name) asSymbol ifPresent: [: c | { c . aClass } ] ifAbsent: [ { aClass } ]
+		]) collect: side
+]
+
 { #category : #adding }
 ASImage >> class: aClass [
-	^ classes at: aClass ifAbsentPut: [ newClasses add: aClass. classes size ].
+	| cc |
+	cc := (self canonicalClasses: aClass) first.
+	^ classes at: cc ifAbsentPut: [ newClasses add: cc. classes size ].
 
 ]
 
@@ -76,24 +98,25 @@ ASImage >> closeOverClassesAndSelectors [
 		newClasses := OrderedCollection new.
 		tempSelectors := newSelectors.
 		newSelectors := OrderedCollection new.
-		tempClasses do: [: class |
-			class superclass ifNotNil: [: superclass | self imageObject: superclass ].
-			self imageObject: class.
+		tempClasses do: [: class | | cc |
+			cc := self canonicalClasses: class.
+			cc first superclass ifNotNil: [: superclass | self imageObject: superclass ].
+			self imageObject: cc first.
 			selectors do: [: selector |
-				class methodDict at: selector ifPresent: [: method | self method: method ]
+				self addFirstMethod: selector in: cc.
 			]
 		].
 		tempSelectors do: [: selector |
-			classes keys do: [: class |
-				class methodDict at: selector ifPresent: [: method | self method: method ]
+			classes keysDo: [: class |
+				self addFirstMethod: selector in: (self canonicalClasses: class).
 			]
 		]
 	]
 ]
 
 { #category : #compiling }
-ASImage >> compileMethod: aCollection [ 
-	
+ASImage >> compileMethod: aMethod [
+	self halt
 ]
 
 { #category : #writing }
@@ -159,7 +182,10 @@ ASImage >> include: anASGenerator object: anObject [
 				ifFalse: [ 
 					nVars <= SizeMask
 						ifTrue: [ header add: #size -> nVars ]
-						ifFalse: [ self error: 'oversize array' ] ]
+						ifFalse: [
+							extra := nVars.
+							header add: #size -> SizeMask.
+							self error: 'oversize array' ] ]
 				  ]
 		ifFalse: [ header add: #size -> nVars ].
 	size := anASGenerator
@@ -206,7 +232,12 @@ ASImage >> literal: l class: c [
 
 { #category : #accessing }
 ASImage >> method: aCompiledMethod [
-	methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
+	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
+]
+
+{ #category : #accessing }
+ASImage >> methods [
+	^ methods
 ]
 
 { #category : #writing }

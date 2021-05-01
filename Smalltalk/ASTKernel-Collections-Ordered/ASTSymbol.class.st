@@ -49,6 +49,16 @@ ASTSymbol >> at: anInteger put: anObject [
 	self errorNoModification
 ]
 
+{ #category : #'reflective operations' }
+ASTSymbol >> basicIdentityHash [
+	"Answer the receiver's character code.
+	 The value answered is unsigned. It can in theory be in the full
+	 poisitive SmallInteger range, but based on Unicode, it is fair
+	 to assume that the value is in the range [ 0 ; 16r3FFFFF ]"
+	<primitive: 171>
+
+]
+
 { #category : #'as yet unclassified' }
 ASTSymbol >> errorNoModification [
 	self error: 'Symbols can not be modified.'

@@ -11,6 +11,13 @@ ASTUndefinedObject class >> new [
 	self cannotInstantiate
 ]
 
+{ #category : #'reflective operations' }
+ASTUndefinedObject >> basicIdentityHash [
+	"Answer the literal hashcode."
+	<primitive: 171>
+
+]
+
 { #category : #testing }
 ASTUndefinedObject >> ifNil: aBlock [
 	"A convenient test, in conjunction with Object ifNil:"

@@ -11,6 +11,13 @@ ASTBoolean class >> new [
 	self cannotInstantiate
 ]
 
+{ #category : #'reflective operations' }
+ASTBoolean >> basicIdentityHash [
+	"Answer the literal hashcode."
+	<primitive: 171>
+
+]
+
 { #category : #testing }
 ASTBoolean >> isBoolean [
 	^ true

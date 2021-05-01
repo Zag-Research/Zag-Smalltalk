@@ -1,6 +1,6 @@
 Class {
 	#name : #ASTClass,
-	#superclass : #ASTBehavior,
+	#superclass : #ASTClassDescription,
 	#instVars : [
 		'name',
 		'instVarNames',

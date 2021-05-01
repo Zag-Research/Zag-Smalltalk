@@ -126,7 +126,7 @@ ASTObject >> basicAt: index put: value [
 		ifFalse: [ self errorNonIntegerIndex ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'reflective operations' }
 ASTObject >> basicIdentityHash [
 	"Answer a SmallInteger whose value is related to the receiver's identity.
 	This method must not be overridden, except by SmallInteger.

@@ -1,7 +1,7 @@
 Class {
 	#name : #ASTMethodDictionary,
 	#superclass : #ASTDictionary,
-	#category : #'ASTKernel-Methods'
+	#category : #'ASTKernel-Classes'
 }
 
 { #category : #'as yet unclassified' }

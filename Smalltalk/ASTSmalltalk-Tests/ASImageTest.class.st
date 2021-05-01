@@ -69,6 +69,21 @@ ASImageTest >> testAdditions [
 ]
 
 { #category : #tests }
+ASImageTest >> testClasses [
+	| system object symbol class |
+	system := imageWriter class: ASTSystem.
+	self assert: (imageWriter class: ASTSystem) equals: system.
+	object := imageWriter class: ASTObject.
+	self assert: (imageWriter class: Object) equals: object.
+	symbol := imageWriter class: Symbol.
+	self assert: (imageWriter class: ASTSymbol) equals: symbol.
+	class := imageWriter class: Class class.
+	self assert: (imageWriter class: ASTClass class) equals: class.
+
+
+]
+
+{ #category : #tests }
 ASImageTest >> testEmptyImage [
 	self assert: self image size equals: minImageSize
 ]
@@ -76,6 +91,23 @@ ASImageTest >> testEmptyImage [
 { #category : #tests }
 ASImageTest >> testHeader [
 	self assert: (imageWriter header: #(isImmutable)) equals: 16r800000000000.
+
+]
+
+{ #category : #tests }
+ASImageTest >> testMethods [
+	| start |
+	start := imageWriter method: ASTSystem class >> #start.
+	self assert: imageWriter methods size equals: 1.
+	imageWriter method: ASTSystem class >> #start.
+	self assert: imageWriter methods size equals: 1.
+	self assert: start class equals: ASTCode.
+
+]
+
+{ #category : #tests }
+ASImageTest >> testRepeatedImage [
+	self assert: self image equals: self image.
 
 ]
 

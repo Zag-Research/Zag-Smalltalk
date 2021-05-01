@@ -1,6 +1,6 @@
 Class {
 	#name : #ASTMetaclass,
-	#superclass : #ASTBehavior,
+	#superclass : #ASTClassDescription,
 	#instVars : [
 		'soleInstance'
 	],
