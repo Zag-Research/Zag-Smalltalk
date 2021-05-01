@@ -75,7 +75,7 @@ where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only
 - 16: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 16, but change to format 8 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
-- 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, Stringe)
+- 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
 
 This is the first field in the header-word for an object:
 
@@ -95,6 +95,8 @@ Unless format=9, there aren't **both** indexable elements and instance variables
 If the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
 If the format=9, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the index allocation word, followed by the indexed elements.
+
+For Behavior, the identityHash is the index into the class table.
 
 #### Examples
 
