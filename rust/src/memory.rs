@@ -1,61 +1,72 @@
 use std::mem;
 
 
+extern crate libc;
 pub struct AllocableRegion {
-    base : * mut Object,
+    base : * mut libc::c_void,
     size : usize,
     end : * mut Object,
     current : * mut Object,
 }
 const min_page_size : isize = 16384;
-extern crate libc;
+fn bytesRoundedToPageSize(size:isize) -> usize {
+    ((size+min_page_size-1)&(-min_page_size)) as usize
+}
 impl AllocableRegion {
     pub fn new(address: usize,size:isize) -> Self {
-        let address = address as * mut Object;
-        let size = ((size+min_page_size-1)&(-min_page_size)) as usize/mem::size_of::<Object>();
+        let address = address as * mut libc::c_void;
+        let end = address as *mut Object;
         AllocableRegion {
             base : address,
-            size : size,
-            end : address,
-            current : address,
+            size : bytesRoundedToPageSize(size),
+            end : end,
+            current : end,
         }
     }
     pub fn mapMemory(& mut self) {
         let data = unsafe{
             libc::mmap(
-                /* addr: */ self.base as *mut libc::c_void,
+                /* addr: */ self.base,
                 /* len: */ self.size,
                 /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
                 /* flags: */ libc::MAP_ANON,
-                /* fd: */ 0,
+                /* fd: */ -1,
                 /* offset: */ 0,
             )};
         if data == libc::MAP_FAILED {
             panic!("Could not memory map")
         }
-        let data = data as *mut Object;
         if data != self.base {
             panic!("data mapped at wrong address")
         }
-        self.end = unsafe{data.offset(self.size as isize)};
+        let data = data as *mut Object;
+        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>) as isize)};
     }
     pub fn releaseMemory(& mut self) {
-        self.end = self.base;
-        self.current = self.base;
+        let start = self.base as *mut Object;
+        self.end = start;
+        self.current = start;
         if -1 == unsafe{
             libc::munmap(
-                /* addr: */ self.base as *mut libc::c_void,
+                /* addr: */ self.base,
                 /* len: */ self.size,
             )} {
             panic!("Failed to release memory map")
         }
     }
-    pub fn allocObject(& mut self,size:isize) -> &Self {
-        self.current = unsafe{self.current.offset(size)};
-        // have to set the header and initialize the object
-        self
+    pub fn allocObject(& mut self,size:isize) -> * mut Object {
+        let new = self.current;
+        let mut next = unsafe{self.current.offset(size)};
+        if next > self.end {
+            self.gc(&self); // shouldn't be self!!!
+            self.allocObject(size)
+        } else {
+            // have to set the header and initialize the object
+            new
+        }
     }
     pub fn gc(& mut self,sink: & mut AllocableRegion) {
+        panic!("trying to gc")
     }
 }
 pub struct Memory {

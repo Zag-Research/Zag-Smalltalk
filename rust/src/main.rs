@@ -24,7 +24,7 @@ mod symbol;
 // mod class;
 
 use object::*;
-
+use symbol::intern;
 //mod minimal;
 
 fn main() {
@@ -41,10 +41,13 @@ fn main() {
     println!("{} {:?}",true,Object::from(true));
     println!("{} {:?}",false,Object::from(false));
     println!("{} {:?}","nil",nilObject);
-    println!("{} {:?}","#value",symbolOf("value",1));
-    println!("{} {:?}","#value:",symbolOf("value:",2));
-    println!("{} {:?}","#value:value:",symbolOf("value:value:",3));
-    println!("{} {:?}","#==",symbolOf("==",7));
+    for s in &["valueWithArguments:","cull:","cull:cull:","cull:cull:cull:","cull:cull:cull:cull:","value","value:","value:value:","value:value:value:","value:value:value:value:"] {
+        intern(s.to_string());
+    }
+    println!("{} {:?}","#value",intern(String::from("value")));
+    println!("{} {:?}","#value:",intern(String::from("value:")));
+    println!("{} {:?}","#value:value:",intern(String::from("value:value:")));
+    println!("{} {:?}","#==",intern(String::from("==")));
     println!("{} {:?}",42.0,Object::from(42.0));
     for i in 40..48 {
         let n = 1<<i;

@@ -203,9 +203,17 @@ lazy_static! {
     static ref symbolTable: RwLock<SymbolTable> = RwLock::new(SymbolTable::new());
 }
 pub fn intern(string : String) -> Object {
-    if let Some(object) = lookup(&*symbolTable.read().unwrap(),&string) {
+    fn lookup(table: &SymbolTable,string: &str) -> Option<Object> {
+        table.lookupSymbol(string)
+    }
+    fn insert(table: & mut SymbolTable,string: String) -> Object {
+        table.insertSymbol(string)
+    }
+    let table = symbolTable.read().unwrap();
+    if let Some(object) = lookup(&*table,&string) {
         object
     } else {
+        drop(table);
         let mut table = symbolTable.write().unwrap();
         if let Some(object) = lookup(&*table,&string) { // might have been added while waiting for the write lock
             object
@@ -213,12 +221,4 @@ pub fn intern(string : String) -> Object {
             insert(&mut *table,string)
         }
     }
-}
-#[inline]
-fn lookup(table: &SymbolTable,string: &str) -> Option<Object> {
-    table.lookupSymbol(string)
-}
-#[inline]
-fn insert(table: & mut SymbolTable,string: String) -> Object {
-    table.insertSymbol(string)
 }

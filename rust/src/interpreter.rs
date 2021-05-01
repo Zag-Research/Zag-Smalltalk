@@ -8,13 +8,13 @@ struct Method {
 #[repr(C)]  // don't shuffle the fields
 struct MethodMatch {
     hash: i64,
-    method: Option<Method>,
+    method: Option<&Method>,
 }
 #[repr(C)]  // don't shuffle the fields
 #[derive(Clone)]
 pub struct Dispatch {
     class: Object,
-    table: Vec<MethodMatch>,
+    table: &[MethodMatch],
 }
 
 const MAX_CLASSES : usize = 100;

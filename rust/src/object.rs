@@ -142,7 +142,7 @@ impl Debug for Object {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         if self.is_literal() {
-            write!(f, "{}:{} {:x}",self.as_literal(),self.class_name(),self.raw())
+            write!(f, "{:x}:{} {:x}",self.as_literal(),self.class_name(),self.raw())
         } else if self.is_integer() {
             write!(f, "{}:{} {:x}",self.as_i64(),self.class_name(),self.raw())
         } else if self.is_double() {
