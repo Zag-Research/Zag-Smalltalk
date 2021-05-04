@@ -1,23 +1,31 @@
-use crate::memory::*;
-use crate::class::*;
-#[derive(Copy, Clone)]
-#[repr(C)]  // don't shuffle the fields
-struct Method {
-}
-#[derive(Copy, Clone)]
-#[repr(C)]  // don't shuffle the fields
-struct MethodMatch {
-    hash: i64,
-    method: Option<&Method>,
-}
-#[repr(C)]  // don't shuffle the fields
+use crate::object::*;
+//type Object = u64;
+type Method = Fn(Object,Object,Object,Object)->Object;
 #[derive(Clone)]
+struct MethodMatch {
+    hash: Object,
+    method: Option<&'static Method>,
+}
+impl MethodMatch {
+    fn getMethod(&self,symbol:Object) -> Option<&Method> {
+        if self.hash == symbol {
+            self.method
+        } else {
+            None
+        }
+    }
+}
 pub struct Dispatch {
     class: Object,
-    table: &[MethodMatch],
+    table: Box<[MethodMatch]>,
 }
-
-const MAX_CLASSES : usize = 100;
+impl Dispatch {
+    fn getMethod(&self,symbol:Object) -> Option<&Method> {
+        let hash = symbol.immediateHash(self.table.len());
+        self.table[hash].getMethod(symbol)
+    }
+}
+const MAX_CLASSES : usize = 1000;
 use std::mem::ManuallyDrop;
 const NO_DISPATCH : ManuallyDrop<Option<Dispatch>> = ManuallyDrop::new(None);
 static mut dispatchTable : [ManuallyDrop<Option<Dispatch>>;MAX_CLASSES] = [NO_DISPATCH;MAX_CLASSES];
@@ -29,23 +37,32 @@ lazy_static! {
 pub fn addClass(c : Object, n : usize) {
     let mut index = dispatchFree.write().unwrap();
     let pos = *index;
-    *index += 1;
+    if pos >= MAX_CLASSES {panic!("too many classes")}
+    *index = pos + 1;
     replaceDispatch(pos,c,n);
 }
 pub fn replaceDispatch(pos : usize, c : Object, n : usize) -> Option<Dispatch> {
     let mut table = Vec::with_capacity(n);
-    table.resize(n,MethodMatch{hash:0,method:None});
+    table.resize(n,MethodMatch{hash:zeroObject,method:None});
     unsafe {
         let old = std::mem::replace(
             &mut dispatchTable[pos],
             ManuallyDrop::new(Some(Dispatch {
                 class: c,
-                table: table,
+                table: table.into_boxed_slice(),
             })),
         );
         ManuallyDrop::into_inner(old)
     }
 }
-fn dispatch(this: Object,symbol: Object,p1: Object,p2: Object) { // `self` is reserved
-    
+fn dispatch(this: Object,symbol: Object,p1: Object,p2: Object) -> Object { // `self` is reserved
+    if let Some(disp) = unsafe{&dispatchTable[this.class()].take()} {
+        if let Some(method) = disp.getMethod(symbol) {
+            method(this,symbol,p1,p2)
+        } else {
+            panic!("no method found")
+        }
+    } else {
+        panic!("no dispatch found")
+    }
 }

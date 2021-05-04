@@ -102,12 +102,20 @@ impl Object {
         class_names[self.class()]
     }
     #[inline]
-    pub const fn class(&self) -> usize {
+    pub const fn immediateHash(&self,other:usize) -> usize {
+        ((unsafe{self.i as usize})>>3)%other
+    }
+    #[inline]
+    pub fn class(&self) -> usize {
         (if self.is_double() {
             classFloat
         } else {
             let cl = (unsafe{self.i}) as usize &7;
-            cl
+            if cl == 0 {
+                panic!("other class")
+            } else {
+                cl
+            }
         }) as usize
     }
     #[inline]
@@ -124,12 +132,12 @@ impl Object {
         unsafe{self.f}
     }
     #[inline]
-    pub const fn as_object_ptr(&self) -> & mut HeapObject {
-        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapObject)}
+    pub const fn as_object_ptr(&self) -> * mut HeapHeader {
+        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapHeader)}
     }
     #[inline]
-    pub const fn as_closure_ptr(&self) -> & mut HeapObject {
-        unsafe{& mut *((self.i-NAN_VALUE) as * mut HeapObject)}
+    pub const fn as_closure_ptr(&self) -> & mut HeapHeader {
+        unsafe{& mut *((self.i-NAN_VALUE) as * mut HeapHeader)}
     }
     #[inline]
     pub const fn raw(&self) -> usize {
@@ -250,7 +258,7 @@ mod testsObject {
     }
 }
 
-
+#[derive(Copy, Clone)]
 union HeapHeader {
     i : isize,
     u : usize,
@@ -306,6 +314,12 @@ impl HeapHeader {
     #[inline]
     fn may_have_pointers(&self) -> bool {
         self.format()<16
+    }
+}
+impl From<Object> for HeapHeader {
+    #[inline]
+    fn from(o:Object) -> Self {
+        unsafe{*o.as_object_ptr()}
     }
 }
 impl Debug for HeapHeader {

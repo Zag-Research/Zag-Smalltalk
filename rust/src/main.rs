@@ -12,7 +12,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-// mod interpreter;
+mod interpreter;
 
 mod object; // defines Object and UndefinedObject Classes
 //mod blockClosure;
@@ -28,7 +28,7 @@ use symbol::intern;
 //mod minimal;
 
 fn main() {
-//   let gc = AllocableRegion::new(gc_main,gc_size);
+/*
     let temp = Object::from(-(1<<47));
     let mut temp2 = Object::from((1<<47)-1);
     let temp3 = Object::from(2.0_f64);
@@ -57,6 +57,8 @@ fn main() {
         let temp2 = Object::from(-n);
         println!("{} : {:?} {:x} {:?} {:x}",i,temp,(n-1)<<3,temp2,-n<<3);
     }
-//    
-            
+*/    
+//    let gc = AllocableRegion::new(gc_main,gc_size);
+    let system = intern(String::from("System"));
+//    let system_class = 
 }

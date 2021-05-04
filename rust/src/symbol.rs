@@ -209,16 +209,15 @@ pub fn intern(string : String) -> Object {
     fn insert(table: & mut SymbolTable,string: String) -> Object {
         table.insertSymbol(string)
     }
-    let table = symbolTable.read().unwrap();
-    if let Some(object) = lookup(&*table,&string) {
+    {
+        if let Some(object) = lookup(&*symbolTable.read().unwrap(),&string) {
+            return object
+        }
+    }
+    let mut table = symbolTable.write().unwrap();
+    if let Some(object) = lookup(&*table,&string) { // might have been added while waiting for the write lock
         object
     } else {
-        drop(table);
-        let mut table = symbolTable.write().unwrap();
-        if let Some(object) = lookup(&*table,&string) { // might have been added while waiting for the write lock
-            object
-        } else {
-            insert(&mut *table,string)
-        }
+        insert(&mut *table,string)
     }
 }

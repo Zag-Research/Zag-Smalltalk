@@ -1,4 +1,6 @@
 ## Reference
+- [Learn Rust](https://www.rust-lang.org/learn)
+- [Rust By Example](https://doc.rust-lang.org/rust-by-example/)
 - [mmap(2) man page](https://www.man7.org/linux/man-pages/man2/mmap.2.html)
 - [Rust primitive pointers](https://doc.rust-lang.org/std/primitive.pointer.html)
 - [Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)
