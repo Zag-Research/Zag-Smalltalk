@@ -1,33 +1,32 @@
 use std::fmt;
 use std::fmt::Debug;
-pub const classObject : usize = 0;
-pub const classBlockClosure : usize = 1;
-pub const classFalse : usize = 2;
-pub const classTrue : usize = 3;
-pub const classUndefinedObject : usize = 4;
-pub const classSmallInteger : usize = 5;
-pub const classSymbol : usize = 6;
-pub const classCharacter : usize = 7;
-pub const classFloat : usize = 8;
-pub const classString : usize = 9;
-pub const classClass : usize = 10;
-pub const classMetaclass : usize = 11;
-pub const classBehavior : usize = 12;
-pub const classArray : usize = 13;
-lazy_static! {
-    static ref class_names : Vec<&'static str> = vec![
-        "Object","closure","False","True",
-        "UndefinedObject","SmallInteger","Symbol","Character",
-        "Float","String","Class","Metaclass",
-        "Behavior","Array",
-    ];
-}
+pub const classObject: usize = 0;
+pub const classBlockClosure: usize = 1;
+pub const classFalse: usize = 2;
+pub const classTrue: usize = 3;
+pub const classUndefinedObject: usize = 4;
+pub const classSmallInteger: usize = 5;
+pub const classSymbol: usize = 6;
+pub const classCharacter: usize = 7;
+pub const classFloat: usize = 8;
+pub const classString: usize = 9;
+pub const classClass: usize = 10;
+pub const classMetaclass: usize = 11;
+pub const classBehavior: usize = 12;
+pub const classArray: usize = 13;
+use once_cell::sync::Lazy;
+static class_names: Lazy<Vec<&'static str>> = Lazy::new(|| vec![
+    "Object","closure","False","True",
+    "UndefinedObject","SmallInteger","Symbol","Character",
+    "Float","String","Class","Metaclass",
+    "Behavior","Array",
+]);
 #[derive(Copy, Clone)]
 pub union Object {
-    i : i64,
-    f : f64,
+    i: i64,
+    f: f64,
 }
-const NAN_VALUE : i64 = 0x7FF8_0000_0000_0001;
+const NAN_VALUE: i64 = 0x7FF8_0000_0000_0001;
 macro_rules! literalfield {
     (class = $e:expr) => {$e};
     (value = $e:expr) => {($e)<<3};
@@ -36,13 +35,13 @@ macro_rules! literalfield {
 macro_rules! literal {
     ($($i:ident $( = $e:expr)?),+) => {Object{i:((NAN_VALUE as usize-1) $(| (literalfield!($i $( = $e)? )))+) as i64}}
 }
-pub const nilObject : Object = literal!(class=classUndefinedObject,value=7);
-pub const trueObject : Object = literal!(class=classTrue,value=5);
-pub const falseObject : Object = literal!(class=classFalse,value=3);
+pub const nilObject: Object = literal!(class=classUndefinedObject,value=7);
+pub const trueObject: Object = literal!(class=classTrue,value=5);
+pub const falseObject: Object = literal!(class=classFalse,value=3);
 impl Default for Object {
     fn default() -> Self { nilObject }
 }
-pub const zeroObject : Object = Object{i:0}; // used to init non-Object array objects
+pub const zeroObject: Object = Object{i:0}; // used to init non-Object array objects
 
 impl PartialEq for Object {
     fn eq(&self, other: &Object) -> bool {
@@ -63,47 +62,62 @@ pub fn symbolOf(string: &str,hash: usize) -> Object {
     }
     literal!(class=classSymbol,value=hash,arity=arity)
 }
+#[inline]
+const fn object_test(i:i64) -> bool {
+    i>NAN_VALUE
+}
+const fn on_heap(i:i64) -> bool {
+    object_test(i) && i as usize &6==classObject
+}
 impl Object {
     #[inline]
     pub const fn is_integer(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && i as usize &7==classSmallInteger
+        let i = unsafe{self.i};
+        object_test(i) && i as usize &7==classSmallInteger
     }
     #[inline]
     pub const fn is_bool(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && i as usize &6==classTrue&6
+        let i = unsafe{self.i};
+        object_test(i) && i as usize &6==classTrue&6
     }
     #[inline]
     pub const fn is_double(&self) -> bool {
-        (unsafe{self.i})<=NAN_VALUE
+        !object_test(unsafe{self.i})
     }
     #[inline]
     pub const fn is_literal(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && ({let cl = i as usize &7; cl > classBlockClosure && cl!= classSmallInteger})
+        let i = unsafe{self.i};
+        object_test(i) && ({let cl = i as usize &7; cl > classBlockClosure && cl!= classSmallInteger})
     }
     #[inline]
     pub const fn is_on_heap(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && i as usize &6==classObject
+        on_heap(unsafe{self.i})
     }
     #[inline]
     pub const fn is_object(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && i as usize &7==classObject
+        let i = unsafe{self.i};
+        object_test(i) && i as usize &7==classObject
     }
     #[inline]
     pub const fn is_closure(&self) -> bool {
-        let i=unsafe{self.i};
-        i>NAN_VALUE && i as usize &7==classBlockClosure
+        let i = unsafe{self.i};
+        object_test(i) && i as usize &7==classBlockClosure
     }
     pub fn class_name(&self) -> &str {
         class_names[self.class()]
     }
     #[inline]
-    pub const fn immediateHash(&self,other:usize) -> usize {
-        ((unsafe{self.i as usize})>>3)%other
+    pub const fn immediateHash(&self) -> usize {
+        (unsafe{self.i as usize})>>3
+    }
+    #[inline]
+    pub fn hash(&self) -> usize {
+        let i = unsafe{self.i};
+        if on_heap(i) {
+            (unsafe{*self.as_object_ptr()}).hash()
+        } else {
+            (i as usize)>>3
+        }
     }
     #[inline]
     pub fn class(&self) -> usize {
@@ -111,7 +125,7 @@ impl Object {
             classFloat
         } else {
             let cl = (unsafe{self.i}) as usize &7;
-            if cl == 0 {
+            if cl <= classBlockClosure {
                 panic!("other class")
             } else {
                 cl
@@ -136,10 +150,6 @@ impl Object {
         unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapHeader)}
     }
     #[inline]
-    pub const fn as_closure_ptr(&self) -> & mut HeapHeader {
-        unsafe{& mut *((self.i-NAN_VALUE) as * mut HeapHeader)}
-    }
-    #[inline]
     pub const fn raw(&self) -> usize {
         unsafe{self.i as usize}
     }
@@ -158,7 +168,7 @@ impl Debug for Object {
         } else if self.is_object() {
             write!(f, "{:?}:object {:x}", self.as_object_ptr(),self.raw())
         } else {
-            write!(f, "{:?}:closure {:x}", self.as_closure_ptr(),self.raw())
+            write!(f, "{:?}:closure {:x}", self.as_object_ptr(),self.raw())
         }
     }
 }
@@ -202,6 +212,13 @@ impl From<* const HeapObject> for Object {
         Object {i:(o as i64)+NAN_VALUE-1}
     }
 }
+#[cfg(test)]
+impl From<&mut [HeapObject]> for Object {
+    #[inline]
+    fn from(o:&mut [HeapObject]) -> Self {
+        Object {i:(o.as_mut_ptr() as i64)+NAN_VALUE-1}
+    }
+}
 impl std::ops::Not for Object {
     type Output = Self;
     fn not(self) -> Self::Output {
@@ -220,7 +237,7 @@ mod testsObject {
     use std::mem;
     #[test]
     fn default_object() {
-        let def : [Object;10] = Default::default();
+        let def: [Object;10] = Default::default();
         assert_eq!(def[1],nilObject);
         assert_eq!(mem::size_of::<Object>(),8);
     }
@@ -260,15 +277,15 @@ mod testsObject {
 
 #[derive(Copy, Clone)]
 union HeapHeader {
-    i : isize,
-    u : usize,
-    bytes : [u8;8],  // x86_64: 0 is lsb 7 is msb
-    halfWords : [u16;4],  // x86_64: 0 is low 3 is high
-    words : [u32;2], // x86_64: 0 is low word, 1 is high
+    i: isize,
+    u: usize,
+    bytes: [u8;8],  // x86_64: 0 is lsb 7 is msb
+    halfWords: [u16;4],  // x86_64: 0 is low 3 is high
+    words: [u32;2], // x86_64: 0 is low word, 1 is high
 }
-const hashShift : usize = 20;
-const classMask : usize = (1<<hashShift)-1;
-const hashMask : usize = 0xfffff;
+const hashShift: usize = 20;
+const classMask: usize = (1<<hashShift)-1;
+const hashMask: usize = 0xfffff;
 
 impl HeapHeader {
     #[inline]
@@ -396,8 +413,8 @@ mod testHeapObjectSize {
 }
 #[repr(C)]
 pub struct HeapObject {
-    header : HeapHeader,
-    fields : [Object;0], // typically many more than 1, but will be accessed as unsafe
+    header: HeapHeader,
+    fields: [Object;0], // typically many more than 1, but will be accessed as unsafe
 }
 
 impl HeapObject {
@@ -416,12 +433,12 @@ impl HeapObject {
     }
     #[inline]
     pub fn raw_at(&self,index:usize) -> Object {
-        let fields : * const Object = &self.fields as * const Object;
+        let fields: * const Object = &self.fields as * const Object;
         unsafe{fields.offset(index as isize).read()} // shouldn't be +1
     }
     #[inline]
     pub fn raw_at_put(&mut self,index:usize,value:Object) {
-        let fields : * mut Object = &mut self.fields as * mut Object;
+        let fields: * mut Object = &mut self.fields as * mut Object;
         unsafe{fields.offset(index as isize).write(value)} // shouldn't be +1
     }
     pub fn initialize(&mut self,class:usize,n_instVars:usize,n_indexed:isize,width:usize,hash:usize,init:Object) -> * mut HeapObject {
@@ -452,7 +469,7 @@ mod testHeapObject {
         let mut mem = [0_usize;100];
         let one = Object::from(1);
         let two = Object::from(2);
-        let next : * mut HeapObject = &mut mem as * const usize as * mut HeapObject;
+        let next: * mut HeapObject = &mut mem as * const usize as * mut HeapObject;
         let obj1 = unsafe { next.as_mut().unwrap() };
         let mut next = obj1.initialize(classArray,0,5,8,0x11,Default::default());
         obj1.raw_at_put(0,falseObject);

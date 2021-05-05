@@ -10,7 +10,7 @@ edition = "2018"
 #mmap = "*"
 libc = "0.2"
 criterion = "0.3"
-lazy_static = "*"
+once_cell = "*"
 
 [[bench]]
 name = "my_benchmark"

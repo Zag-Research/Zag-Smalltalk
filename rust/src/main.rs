@@ -9,8 +9,7 @@
 #![feature(assert_matches)]
 #![feature(vec_into_raw_parts)]
 #![allow(warnings)] 
-#[macro_use]
-extern crate lazy_static;
+extern crate once_cell;
 
 mod interpreter;
 
@@ -55,7 +54,7 @@ fn main() {
         let n = 1<<i;
         let temp = Object::from(n-1);
         let temp2 = Object::from(-n);
-        println!("{} : {:?} {:x} {:?} {:x}",i,temp,(n-1)<<3,temp2,-n<<3);
+        println!("{}: {:?} {:x} {:?} {:x}",i,temp,(n-1)<<3,temp2,-n<<3);
     }
 */    
 //    let gc = AllocableRegion::new(gc_main,gc_size);

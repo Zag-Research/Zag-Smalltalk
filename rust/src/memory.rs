@@ -3,12 +3,12 @@ use std::mem;
 
 extern crate libc;
 pub struct AllocableRegion {
-    base : * mut libc::c_void,
-    size : usize,
-    end : * mut Object,
-    current : * mut Object,
+    base: * mut libc::c_void,
+    size: usize,
+    end: * mut Object,
+    current: * mut Object,
 }
-const min_page_size : isize = 16384;
+const min_page_size: isize = 16384;
 fn bytesRoundedToPageSize(size:isize) -> usize {
     ((size+min_page_size-1)&(-min_page_size)) as usize
 }
@@ -17,10 +17,10 @@ impl AllocableRegion {
         let address = address as * mut libc::c_void;
         let end = address as *mut Object;
         AllocableRegion {
-            base : address,
-            size : bytesRoundedToPageSize(size),
-            end : end,
-            current : end,
+            base: address,
+            size: bytesRoundedToPageSize(size),
+            end: end,
+            current: end,
         }
     }
     pub fn mapMemory(& mut self) {
@@ -70,10 +70,10 @@ impl AllocableRegion {
     }
 }
 pub struct Memory {
-    genOld1 : AllocableRegion,
-    genOld2 : AllocableRegion,
-    genTeen : AllocableRegion,
-    nursery : AllocableRegion,
+    genOld1: AllocableRegion,
+    genOld2: AllocableRegion,
+    genTeen: AllocableRegion,
+    nursery: AllocableRegion,
 }
 impl Memory {
     pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
@@ -95,5 +95,5 @@ impl Memory {
         }
     }
 }
-pub const gc_main : usize = 0x100000000000;
-pub const gc_size : isize = 0x000001000000;
+pub const gc_main: usize = 0x100000000000;
+pub const gc_size: isize = 0x000001000000;

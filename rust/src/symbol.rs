@@ -12,14 +12,15 @@
 use crate::object::*;
 use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt::{self,Debug};
+use once_cell::sync::Lazy;
 #[derive(Copy,Clone,Debug)]
 pub struct Symbol {
-    string : &'static str, //Option<&'static str>,
-    left : u32,
-    right : u32,
+    string: &'static str, //Option<&'static str>,
+    left: u32,
+    right: u32,
 }
 impl Symbol {
-    fn set(&mut self,string : &'static str) -> &'static str {
+    fn set(&mut self,string: &'static str) -> &'static str {
         self.left = 0;
         self.right = 0;
         std::mem::replace(&mut self.string,string)
@@ -29,7 +30,7 @@ impl Symbol {
         self.string.len() == 0
     }
     #[inline]
-    fn compare(&self, string : &str) -> Ordering {
+    fn compare(&self, string: &str) -> Ordering {
         self.string.cmp(string)
     }
 }
@@ -51,9 +52,9 @@ impl PartialEq for Symbol {
     }
 }
 pub struct SymbolTable {
-    table : Vec<Symbol>,
-    root : u32,
-    free : u32,
+    table: Vec<Symbol>,
+    root: u32,
+    free: u32,
 }
 #[inline]
 fn priority(pos:u32) -> u32 {
@@ -62,9 +63,9 @@ fn priority(pos:u32) -> u32 {
 impl SymbolTable {
     fn new() -> SymbolTable {
         SymbolTable {
-            table : Vec::new(),
-            root : 0,
-            free : 0,
+            table: Vec::new(),
+            root: 0,
+            free: 0,
         }
     }
     fn lookupSymbol(&self,string: &str) -> Option<Object> {
@@ -199,10 +200,8 @@ mod testsSymbol {
 }
 
 use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
-lazy_static! {
-    static ref symbolTable: RwLock<SymbolTable> = RwLock::new(SymbolTable::new());
-}
-pub fn intern(string : String) -> Object {
+static symbolTable: Lazy<RwLock<SymbolTable>> = Lazy::new(|| RwLock::new(SymbolTable::new()));
+pub fn intern(string: String) -> Object {
     fn lookup(table: &SymbolTable,string: &str) -> Option<Object> {
         table.lookupSymbol(string)
     }
