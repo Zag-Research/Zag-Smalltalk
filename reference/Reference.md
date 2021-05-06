@@ -8,6 +8,7 @@
 	- [Rust primitive pointers](https://doc.rust-lang.org/std/primitive.pointer.html) and [nightly](https://doc.rust-lang.org/nightly/std/primitive.pointer.html)
 	- [Unsafe Rust](https://doc.rust-lang.org/nightly/book/ch19-01-unsafe-rust.html)
 	- [2018 edition](https://doc.rust-lang.org/edition-guide/rust-2018/index.html)
+- [Playground](https://play.rust-lang.org/)
 - [mmap(2) man page](https://www.man7.org/linux/man-pages/man2/mmap.2.html)
 - [24 Days of Rust - interesting libraries](http://siciarz.net/)
 - [Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)

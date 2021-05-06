@@ -8,8 +8,7 @@
 #![feature(const_fn_union)]
 #![feature(assert_matches)]
 #![feature(vec_into_raw_parts)]
-#![allow(warnings)] 
-extern crate once_cell;
+#![allow(warnings)]
 
 mod interpreter;
 
