@@ -82,7 +82,7 @@ impl SymbolTable {
             }
         }
     }
-    fn insertSymbol(& mut self,string: String) -> Object {
+    fn insertSymbol(& mut self,string: &'static str) -> Object {
         let mut pos = self.free;
         loop {
             if pos>=self.table.len() as u32 {
@@ -94,7 +94,7 @@ impl SymbolTable {
             pos = pos + 1
         };
         self.free = pos + 1;
-        self.table[pos as usize].set(Box::leak(string.into_boxed_str()));
+        self.table[pos as usize].set(string);
         self.root = self.insert(pos,self.root);
         symbolOf(self.table[pos as usize].string,pos as usize)
     }
@@ -176,22 +176,22 @@ mod testsSymbol {
     #[test]
     fn add_and_lookup() {
         let mut st = SymbolTable::new();
-        let abc = st.insertSymbol(String::from("abc"));
+        let abc = st.insertSymbol("abc");
         assert_matches!(st.lookupSymbol("abc"),Some(x) if x==abc);
-        let def = st.insertSymbol(String::from("def"));
+        let def = st.insertSymbol("def");
         assert_matches!(st.lookupSymbol("def"),Some(x) if x==def);
         assert!(abc!=def);
         assert_matches!(st.lookupSymbol("abc"),Some(x) if x==abc);
         assert_matches!(st.lookupSymbol("def"),Some(x) if x==def);
         let ghi = String::from("gh");
         let ghi = ghi+"i";
-        let ghi = st.insertSymbol(ghi);
-        st.insertSymbol(String::from("jkl"));
-        st.insertSymbol(String::from("mno"));
-        st.insertSymbol(String::from("pqr"));
-        st.insertSymbol(String::from("stu"));
-        st.insertSymbol(String::from("vwx"));
-        st.insertSymbol(String::from("yza"));
+        let ghi = st.insertSymbol(Box::leak(ghi.into_boxed_str()));
+        st.insertSymbol("jkl");
+        st.insertSymbol("mno");
+        st.insertSymbol("pqr");
+        st.insertSymbol("stu");
+        st.insertSymbol("vwx");
+        st.insertSymbol("yza");
 //        println!("{:?}",st);
         assert!(abc!=ghi);
         assert!(def!=ghi);
@@ -201,20 +201,20 @@ mod testsSymbol {
 
 use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
 static symbolTable: Lazy<RwLock<SymbolTable>> = Lazy::new(|| RwLock::new(SymbolTable::new()));
-pub fn intern(string: String) -> Object {
+pub fn intern(string: &'static str) -> Object {
     fn lookup(table: &SymbolTable,string: &str) -> Option<Object> {
         table.lookupSymbol(string)
     }
-    fn insert(table: & mut SymbolTable,string: String) -> Object {
-        table.insertSymbol(string)
+    fn insert(table: & mut SymbolTable,string: &'static str) -> Object {
+        table.insertSymbol(string) //Box::leak(string.into_boxed_str()))
     }
     {
-        if let Some(object) = lookup(&*symbolTable.read().unwrap(),&string) {
+        if let Some(object) = lookup(&*symbolTable.read().unwrap(),string) {
             return object
         }
     }
     let mut table = symbolTable.write().unwrap();
-    if let Some(object) = lookup(&*table,&string) { // might have been added while waiting for the write lock
+    if let Some(object) = lookup(&*table,string) { // might have been added while waiting for the write lock
         object
     } else {
         insert(&mut *table,string)

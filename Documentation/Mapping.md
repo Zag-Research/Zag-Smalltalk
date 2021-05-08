@@ -77,6 +77,17 @@ where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
 - 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
 
+Consider alternative:
+ 1. only instVars - no pointers
+ 2. only instVars - pointers
+3. only instVars - weak (only interesting if it has pointers, so we can assume)
+4. only indexed <32K - no pointers
+5. only indexed <32K - pointers
+6. only indexed <32K? - weak (=> pointers)
+7. (possibly 0) instVars+indexed - indexed >32K - pointers
+8. (possibly 0) instVars+indexed - indexed >32K - no pointers
+- 
+- 
 This is the first field in the header-word for an object:
 
 | Bits | What         | Characteristics                                              |

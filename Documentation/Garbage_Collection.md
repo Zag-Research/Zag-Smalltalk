@@ -21,3 +21,4 @@ AST Smalltalk has several features that minimize the amount of work required by 
 - [Boehm MS vs Copying](https://hboehm.info/gc/complexity.html)
 - [Cornell course copying](http://www.cs.cornell.edu/courses/cs312/2003fa/lectures/sec24.htm)
 - [uta copying](https://lambda.uta.edu/cse5317/notes/node48.html)
+- [GNU Smalltalk partially-copying collector](https://www.gnu.org/software/smalltalk/manual/html_node/GC.html)

@@ -9,6 +9,8 @@
 #![feature(assert_matches)]
 #![feature(vec_into_raw_parts)]
 #![allow(warnings)]
+#[macro_use]
+extern crate static_assertions;
 
 mod interpreter;
 
@@ -20,6 +22,7 @@ mod object; // defines Object and UndefinedObject Classes
 mod symbol;
 //mod string;
 // mod class;
+mod memory;
 
 use object::*;
 use symbol::intern;
@@ -57,6 +60,6 @@ fn main() {
     }
 */    
 //    let gc = AllocableRegion::new(gc_main,gc_size);
-    let system = intern(String::from("System"));
+    let system = intern("System");
 //    let system_class = 
 }

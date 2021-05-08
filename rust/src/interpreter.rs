@@ -80,7 +80,7 @@ mod testsInterpreter {
     #[test]
     #[should_panic(expected = "no dispatch found")]
     fn dispatch_non_existant_class() {
-        dispatch(Object::from(3.14),intern(String::from("foo")),nilObject,nilObject,None);
+        dispatch(Object::from(3.14),intern("foo"),nilObject,nilObject,None);
     }
 /*    #[test]
     #[should_panic(expected = "no method found")]

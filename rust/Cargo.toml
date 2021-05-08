@@ -9,12 +9,13 @@ edition = "2018"
 [dependencies]
 #mmap = "*"
 libc = "0.2"
-lazy_static = "*"
 once_cell = "*"
-lazy-init = "*"
-static_init = "*"
+static_assertions = "1.1.0"
 
 [dev-dependencies]
+lazy_static = "*"
+lazy-init = "*"
+static_init = "*"
 criterion = "0.3"
 
 [[bench]]

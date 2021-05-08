@@ -230,16 +230,17 @@ impl std::ops::Not for Object {
     }
 }
 
+ // This type is used a lot. Make sure it doesn't unintentionally get bigger.
+#[cfg(target_arch = "x86_64")]
+static_assertions::assert_eq_size!(Object, u64);
 
 #[cfg(test)]
 mod testsObject {
     use super::*;
-    use std::mem;
     #[test]
     fn default_object() {
         let def: [Object;10] = Default::default();
         assert_eq!(def[1],nilObject);
-        assert_eq!(mem::size_of::<Object>(),8);
     }
     #[test]
     fn equal_objects() {
@@ -471,7 +472,7 @@ mod testHeapObject {
         let two = Object::from(2);
         let next: * mut HeapObject = &mut mem as * const usize as * mut HeapObject;
         let obj1 = unsafe { next.as_mut().unwrap() };
-        let mut next = obj1.initialize(classArray,0,5,8,0x11,Default::default());
+        let next = obj1.initialize(classArray,0,5,8,0x11,Default::default());
         obj1.raw_at_put(0,falseObject);
         obj1.raw_at_put(1,one);
         obj1.raw_at_put(2,two);

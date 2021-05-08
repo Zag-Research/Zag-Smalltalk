@@ -1,7 +1,7 @@
 use std::mem;
-
-
+use crate::object::*;
 extern crate libc;
+
 pub struct AllocableRegion {
     base: * mut libc::c_void,
     size: usize,
@@ -13,6 +13,23 @@ fn bytesRoundedToPageSize(size:isize) -> usize {
     ((size+min_page_size-1)&(-min_page_size)) as usize
 }
 impl AllocableRegion {
+    #[cfg(test)]
+    pub fn from_vec(memory: &mut Vec<Object>) -> Self {
+        memory.clear();
+        memory.resize_with(memory.capacity(), Default::default);
+        Self::makeTest(memory)
+    }
+    #[cfg(test)]
+    pub fn makeTest(memory:&mut [Object]) -> Self {
+        let start = (unsafe{memory.as_mut_ptr()}) as *mut Object;
+        AllocableRegion {
+            base: start as * mut libc::c_void,
+            size: memory.len()*mem::size_of::<Object>(),
+            end: (unsafe{start.offset(memory.len() as isize)}),
+            current: start,
+        }
+    }
+    #[cfg(not(test))]
     pub fn new(address: usize,size:isize) -> Self {
         let address = address as * mut libc::c_void;
         let end = address as *mut Object;
@@ -23,6 +40,7 @@ impl AllocableRegion {
             current: end,
         }
     }
+    #[cfg(not(test))]
     pub fn mapMemory(& mut self) {
         let data = unsafe{
             libc::mmap(
@@ -40,8 +58,9 @@ impl AllocableRegion {
             panic!("data mapped at wrong address")
         }
         let data = data as *mut Object;
-        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>) as isize)};
+        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>()) as isize)};
     }
+    #[cfg(not(test))]
     pub fn releaseMemory(& mut self) {
         let start = self.base as *mut Object;
         self.end = start;
@@ -58,15 +77,25 @@ impl AllocableRegion {
         let new = self.current;
         let mut next = unsafe{self.current.offset(size)};
         if next > self.end {
-            self.gc(&self); // shouldn't be self!!!
-            self.allocObject(size)
+            panic!("need to gc")
+            //self.gc(self); // shouldn't be self!!!
+            //self.allocObject(size)
         } else {
             // have to set the header and initialize the object
             new
         }
     }
+    #[cfg(not(test))]
     pub fn gc(& mut self,sink: & mut AllocableRegion) {
         panic!("trying to gc")
+    }
+}
+#[cfg(test)]
+mod testAllocableRegion {
+    use super::*;
+    #[test]
+    fn default_memory() {
+        let region = AllocableRegion::from_vec(&mut Vec::with_capacity(100));
     }
 }
 pub struct Memory {
@@ -85,15 +114,25 @@ impl Memory {
     pub fn fullGC(&mut self) {
     }
     pub fn becomeX(& mut self,target: Object, value: Object) {
-        if !target.is_heap_object() || !value.is_heap_object() {
+        if !target.is_on_heap() || !value.is_on_heap() {
             panic!("can't become a fixed value")
         }
-        if (unsafe{value.i<target.i}) {
+        panic!("become not implemented")
+/*        if (unsafe{value.i<target.i}) {
             self.becomeX(value,target)
         } else {
 
         }
-    }
+*/    }
 }
 pub const gc_main: usize = 0x100000000000;
 pub const gc_size: isize = 0x000001000000;
+#[cfg(test)]
+mod testMemory {
+    use super::*;
+    #[test]
+    fn default_memory() {
+        let mut memory: Vec<Object> = Vec::with_capacity(100);
+        let region = AllocableRegion::from_vec(&mut memory);
+    }
+}
