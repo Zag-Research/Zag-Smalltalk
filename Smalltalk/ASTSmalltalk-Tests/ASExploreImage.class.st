@@ -14,7 +14,7 @@ Class {
 { #category : #'class initialization' }
 ASExploreImage class >> initialize [
 	" self initialize inspect "
-	| methodDefinitions implementedMethods classCount classesWithNoMethods noIvarsOrIndex ivarsAndIndex justIndexable nonVariablesSize variablesSize moreThan30 arity |
+	| methodDefinitions implementedMethods classCount classesWithNoMethods noIvarsOrIndex ivarsAndIndex justIndexable nonVariablesSize variablesSize moreThan30 arity formats |
 	Info := Dictionary new.
 	Info at: #symbolCount put: ByteSymbol allInstances size "90813".
 	methodDefinitions := Bag new.
@@ -27,6 +27,7 @@ ASExploreImage class >> initialize [
 	noIvarsOrIndex := Set new.
 	ivarsAndIndex := Set new.
 	justIndexable := Set new.
+	formats := Dictionary new.
 	Object withAllSubclasses do: [: class |
 		methodDefinitions add: ((class methodDict size+1) log*10) asInteger.
 		(class class methodDict size = 0 and: [class methodDict size = 0]) ifTrue: [ classesWithNoMethods add: class].
@@ -39,8 +40,10 @@ ASExploreImage class >> initialize [
 			nonVariablesSize add: (class instSize + 1) asLargerPowerOfTwo.
 			class instSize > 44 ifTrue: [ moreThan30 add: class ].
 		].
+		formats at: class format >> 16 ifPresent: [: set | set add: class ] ifAbsentPut: [ Set with: class ].
 		classCount := classCount + 1.
 	].
+	Info at: #formats put: formats.
 	Info at: #classCount put: classCount.
 	Info at: #methodDefinitionsPerClass put: methodDefinitions valuesAndCounts associations sorted.
 	Info at: #variablesSize put: variablesSize valuesAndCounts associations sorted.
