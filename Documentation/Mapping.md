@@ -55,7 +55,7 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-First we have the object format tag. The bits in the tag are:
+First we have the object format tag. The bits in the tag are `not really!`:
 
 0. has instance variables
 1. pointer-free - for instance variables and Array (everything >=16 is pointer-free)
@@ -67,27 +67,28 @@ First we have the object format tag. The bits in the tag are:
 4. indexable, no pointers (no requirement for scan on garbage collection)
 
 where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only instance variables; any value <16 has pointers. Only the following values currently have meaning:
-- 1: non-indexable objects with inst vars (Point et al) 
-- 5: weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-- 8: indexable objects with no inst vars (Array et al)
-- 9: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 12: weak indexable objects with inst vars (WeakArray et al)
-- 16: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 16, but change to format 8 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
+- 0: non-indexable objects with inst vars (Association et al) 
+- 1: indexable <32k objects with no inst vars
+- 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
+- 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+- 14: indexable objects with inst vars - no pointers
+- 15: non-indexable objects with inst vars - no pointers (Point et al)
+- 16: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 1 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
+- 17: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 15 but change to format 1if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
 - 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
 
-Consider alternative:
- 1. only instVars - no pointers
- 2. only instVars - pointers
-3. only instVars - weak (only interesting if it has pointers, so we can assume)
-4. only indexed <32K - no pointers
-5. only indexed <32K - pointers
-6. only indexed <32K? - weak (=> pointers)
-7. (possibly 0) instVars+indexed - indexed >32K - pointers
-8. (possibly 0) instVars+indexed - indexed >32K - no pointers
-- 
-- 
+Everything >= 14 has no pointers, so GC doesn't look at them. Things are initially created as their pointer-free version (16,15,14), but change to their pointer-containing version (0,1,12) if a pointer is stored in them. If major GC doesn't detect any pointers, they revert to pointer-free version.
+
+For 0, 1, 15, 16, the size is determined by the length field. The only difference between 0 and 1 is whether `at:`, `size`, etc. should work or give an error. Similarly 15 and 16.
+
+For 12, 13, 14 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows.
+
+For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format.
+
+Array, and similar indexable-only classes, over 32K could be generated as either format 17 or 14. If we knew it would never get assigned a pointer, we could use 17, but 14 is safer (and probably *very* slightly faster).
+
 This is the first field in the header-word for an object:
 
 | Bits | What         | Characteristics                                              |
@@ -101,15 +102,15 @@ This is the first field in the header-word for an object:
 | 20   | identityHash |                                                              |
 | 20   | classIndex   | LSB                                                          |
 
-Unless format=9, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
+Unless format=12-14, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
 
-If the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
+For formats >= 17, if the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-If the format=9, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the index allocation word, followed by the indexed elements.
+If the format=12-14, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
 
 For Behavior, the identityHash is the index into the class table.
 
-#### Examples
+#### Examples `need update`
 
 A simple object like Point with 2 instance variables would look like:
 
