@@ -116,6 +116,58 @@ fn bench_lazy_static(c: &mut Criterion) {
     c.bench_function("lazy_static", |b| b.iter(|| access_lazy_static()));
 }
 
-criterion_group!(accesses, bench_once_cell,bench_static_init,bench_lazy_static,bench_lazy_init);
+
+static ONCE_CELL_MAP: once_cell::sync::Lazy<HashMap<String,String>> = once_cell::sync::Lazy::new(|| {
+    let mut m = HashMap::new();
+    m.insert(String::from("qwm800d7nq90-w"), String::from("x23   rx23    r"));
+    m.insert(String::from("8907cn    309r8623    b06"), String::from("078923n782 n"));
+    m.insert(String::from("89iopbwdf6789qw"), String::from("qwd9n7qw8d"));
+    m.insert(String::from("dqw90n8dunqw9-"), String::from("09nqwdn790"));
+
+    m
+
+});
+
+#[static_init::dynamic]
+static STATIC_INIT_MAP: HashMap<String,String> = [(String::from("qwm800d7nq90-w"), String::from("x23   rx23    r")),
+    (String::from("8907cn    309r8623    b06"), String::from("078923n782 n")),
+    (String::from("89iopbwdf6789qw"), String::from("qwd9n7qw8d")),
+    (String::from("dqw90n8dunqw9-"), String::from("09nqwdn790"))
+].iter().cloned().collect();
+
+#[macro_use]
+lazy_static!{
+    static ref LAZY_INIT_MAP: HashMap<String,String> = [(String::from("qwm800d7nq90-w"), String::from("x23   rx23    r")),
+                                                    (String::from("8907cn    309r8623    b06"), String::from("078923n782 n")),
+                                                    (String::from("89iopbwdf6789qw"), String::from("qwd9n7qw8d")),
+                                                    (String::from("dqw90n8dunqw9-"), String::from("09nqwdn790"))
+                                                ].iter().cloned().collect();
+}
+
+fn iter_once_cell() {
+    for (i,j) in ONCE_CELL_MAP.iter() {
+        i.len();j.len();
+    }
+}
+
+fn iter_static_init() {
+    for (i,j) in STATIC_INIT_MAP.iter() {
+        i.len();j.len();
+    }
+}
+
+fn iter_lazy_static() {
+    for (i,j) in LAZY_INIT_MAP.iter() {
+        i.len();j.len();
+    }
+}
+
+fn iter_benchmark(c: &mut Criterion) {
+    c.bench_function("ONCE CELL", |b| b.iter(|| iter_once_cell()));
+    c.bench_function("SATIC INIT", |b| b.iter(|| iter_static_init()));
+    c.bench_function("LAZY STATIC", |b| b.iter(|| iter_lazy_static()));
+}
+
+criterion_group!(accesses, bench_once_cell,bench_static_init,bench_lazy_static,bench_lazy_init,iter_benchmark);
 criterion_main!(/*benches,accesses,*/extract);
 
