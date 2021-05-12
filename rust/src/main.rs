@@ -12,20 +12,21 @@
 #[macro_use]
 extern crate static_assertions;
 
-mod interpreter;
+mod treap;
+// mod interpreter;
 
-mod object; // defines Object and UndefinedObject Classes
+// mod object; // defines Object and UndefinedObject Classes
 //mod blockClosure;
 //mod boolean;
 //mod character;
 //mod smallInteger;
-mod symbol;
+// mod symbol;
 //mod string;
 // mod class;
-mod memory;
+// mod memory;
 
-use object::*;
-use symbol::intern;
+// use object::*;
+// use symbol::intern;
 //mod minimal;
 
 fn main() {
@@ -60,6 +61,6 @@ fn main() {
     }
 */    
 //    let gc = AllocableRegion::new(gc_main,gc_size);
-    let system = intern("System");
+//    let system = intern("System");
 //    let system_class = 
 }
