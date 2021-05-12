@@ -144,6 +144,10 @@ lazy_static!{
                                                 ].iter().cloned().collect();
 }
 
+extern crate late_static;
+use late_static::LateStatic;
+static LATE_STATIC_MAP: LateStatic<HashMap<String,String>> = LateStatic::new();
+
 fn iter_once_cell() {
     for (i,j) in ONCE_CELL_MAP.iter() {
         i.len();j.len();
@@ -162,10 +166,25 @@ fn iter_lazy_static() {
     }
 }
 
+fn iter_late_static() {
+    for (i,j) in LATE_STATIC_MAP.iter() {
+        i.len();j.len();
+    }
+}
+
 fn iter_benchmark(c: &mut Criterion) {
+    unsafe{
+        LateStatic::assign(&LATE_STATIC_MAP, [(String::from("qwm800d7nq90-w"), String::from("x23   rx23    r")),
+            (String::from("8907cn    309r8623    b06"), String::from("078923n782 n")),
+            (String::from("89iopbwdf6789qw"), String::from("qwd9n7qw8d")),
+            (String::from("dqw90n8dunqw9-"), String::from("09nqwdn790"))
+        ].iter().cloned().collect());
+    }
+
     c.bench_function("ONCE CELL", |b| b.iter(|| iter_once_cell()));
     c.bench_function("SATIC INIT", |b| b.iter(|| iter_static_init()));
     c.bench_function("LAZY STATIC", |b| b.iter(|| iter_lazy_static()));
+    c.bench_function("LATE STATIC", |b| b.iter(|| iter_late_static()));
 }
 
 criterion_group!(accesses, bench_once_cell,bench_static_init,bench_lazy_static,bench_lazy_init,iter_benchmark);

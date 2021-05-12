@@ -17,6 +17,7 @@ lazy_static = "*"
 lazy-init = "*"
 static_init = "*"
 criterion = "0.3"
+late-static = "*"
 
 [[bench]]
 name = "my_benchmark"
