@@ -16,7 +16,9 @@ static_assertions = "1.1.0"
 lazy_static = "*"
 lazy-init = "*"
 static_init = "*"
+late-static = "*"
 criterion = "0.3"
+rand = "*"
 
 [[bench]]
 name = "my_benchmark"

@@ -42,7 +42,7 @@ pub struct Treap<K:Copy + PartialEq + Ord + Debug,R> {
     table: Vec<Element<K>>,
     root: i32,
     free: u32,
-    init: Box<Fn(u32)->Option<K>>,
+    init: Box<Fn(u32)->(K,bool)>,
     result: Box<Fn(&K,u32)->R>,
     empty: Box<Fn(&K)->bool>,
 }
@@ -51,7 +51,7 @@ fn priority(pos:i32) -> u32 {
     ((pos+1) as u32).wrapping_mul(1999999973_u32)
 }
 impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
-    fn new(init:Box<Fn(u32)->Option<K>>,result:Box<Fn(&K,u32)->R>,empty:Box<Fn(&K)->bool>) -> Treap<K,R> {
+    fn new(init:Box<Fn(u32)->(K,bool)>,result:Box<Fn(&K,u32)->R>,empty:Box<Fn(&K)->bool>) -> Treap<K,R> {
         Treap::<K,R> {
             table: Vec::new(),
             root: -1,
@@ -77,10 +77,12 @@ impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
         let mut pos = self.free;
         loop {
             if pos>=self.table.len() as u32 {
-                if let Some(value) = (self.init)(pos) {
-                    self.table.push(Element::<K>{value,left:-1,right:-1})
-                } else {
+                let (value,done) = (self.init)(pos);
+                self.table.push(Element::<K>{value,left:-1,right:-1});
+                if done {
                     break
+                } else {
+                    self.root = self.insert(pos,self.root) as i32;
                 }
             } else if (self.empty)(&self.table[pos as usize].value) {
                 break
@@ -144,6 +146,10 @@ impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
         y
     }
     #[cfg(test)]
+    fn size(&self) -> usize {
+        self.table.len()
+    }
+    #[cfg(test)]
     fn depth(&self) -> u32 {
         self.internal_depth(self.root)
     }
@@ -153,7 +159,7 @@ impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
             1
         } else {
             max(self.internal_depth(self.table[root as usize].left),
-                self.internal_depth(self.table[root as usize].right))
+                self.internal_depth(self.table[root as usize].right))+1
         }
     }
 }
@@ -182,7 +188,7 @@ mod testTreap {
         }
     }
     fn int_treap() -> Treap<isize,u32> {
-        Treap::new(Box::new(|x| None),Box::new(|_,x| x),Box::new(|x| false))
+        Treap::new(Box::new(|x| (x as isize - 100,x>3)),Box::new(|_,x| x),Box::new(|x| false))
     }
     #[test]
     fn empty() {
@@ -195,8 +201,55 @@ mod testTreap {
         assert_matches!(tp.lookupElement(1),None);
     }
     #[test]
-    fn add_one() {
+    fn add_some() {
         let mut tp = int_treap();
-        assert_matches!(intern(&mut tp,42),1);
+        assert_matches!(intern(&mut tp,42),4);
+        assert_matches!(intern(&mut tp,17),5);
+        assert_matches!(intern(&mut tp,42),4);
+    }
+    extern crate rand;
+    #[test]
+    fn add_lots() {
+        let mut tp = int_treap();
+        for i in 0..50 {
+            intern(&mut tp,i);
+        }
+        //println!("{:?} Depth: {}",tp,tp.depth());
+        assert_matches!(intern(&mut tp,42),46);
+        assert_matches!(intern(&mut tp,17),21);
+        assert_matches!(intern(&mut tp,42),46);
+        assert_matches!(tp.size(),54);
+        assert_matches!(tp.depth(),12);
+        for i in 50..4091 {
+            intern(&mut tp,i);
+        }
+        assert_matches!(tp.size(),4095);
+        assert_matches!(tp.depth(),24); // not as good as the 12 for perfectly balanced, but way better than the 4095 for unbalanced
+        for i in 4091..131067 {
+            intern(&mut tp,rand::random());
+        }
+        assert_matches!(tp.size(),131071);
+        //assert_matches!(tp.depth(),41 or 42); // versus 17 for perfectly balanced
+    }
+    type TString = &'static str;
+    fn string_treap() -> Treap<TString,u32> {
+        Treap::new(Box::new(|x| ("",true)),Box::new(|_,x| x),Box::new(|x| false))
+    }
+    #[test]
+    fn emptyS() {
+        let tp = string_treap();
+        assert_matches!(tp.depth(),1);
+    }
+    #[test]
+    fn not_foundS() {
+        let tp = string_treap();
+        assert_matches!(tp.lookupElement(""),None);
+    }
+    #[test]
+    fn add_someS() {
+        let mut tp = string_treap();
+        assert_matches!(intern(&mut tp,"hello"),0);
+        assert_matches!(intern(&mut tp,"goodbye"),1);
+        assert_matches!(intern(&mut tp,"hello"),0);
     }
 }
