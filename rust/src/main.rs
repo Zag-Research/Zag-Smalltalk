@@ -11,6 +11,8 @@
 #![allow(warnings)]
 #[macro_use]
 extern crate static_assertions;
+#[macro_use]
+extern crate lazy_static;
 
 mod treap;
 // mod interpreter;

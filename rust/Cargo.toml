@@ -9,8 +9,9 @@ edition = "2018"
 [dependencies]
 #mmap = "*"
 libc = "0.2"
-once_cell = "*"
+#once_cell = "*"
 static_assertions = "1.1.0"
+lazy_static = "*"
 
 [dev-dependencies]
 lazy_static = "*"

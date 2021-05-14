@@ -2,7 +2,6 @@
 
 use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt::{self,Debug};
-use once_cell::sync::Lazy;
 use std::cmp::max;
 #[derive(Copy,Clone,Debug)]
 pub struct Element<K:Copy + PartialEq + Ord + Debug> {
@@ -38,53 +37,52 @@ impl <K:Copy + PartialEq + Ord + Debug> PartialEq for Element<K> {
         self.value == other.value
     }
 }
-pub struct Treap<K:Copy + PartialEq + Ord + Debug,R> {
+pub struct Treap<K:'static + Copy + PartialEq + Ord + Debug> {
     table: Vec<Element<K>>,
     root: i32,
     free: u32,
-    init: Box<Fn(u32)->(K,bool)>,
-    result: Box<Fn(&K,u32)->R>,
-    empty: Box<Fn(&K)->bool>,
+    init: &'static [K],
+    empty: K,
 }
 #[inline]
 fn priority(pos:i32) -> u32 {
     ((pos+1) as u32).wrapping_mul(1999999973_u32)
 }
-impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
-    fn new(init:Box<Fn(u32)->(K,bool)>,result:Box<Fn(&K,u32)->R>,empty:Box<Fn(&K)->bool>) -> Treap<K,R> {
-        Treap::<K,R> {
+impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
+    fn new(init:&'static [K],empty:K) -> Treap<K> {
+        Treap::<K> {
             table: Vec::new(),
             root: -1,
             free: 0,
-            init,result,empty,
+            init,empty,
         }
     }
-    fn lookupElement(&self,key:K) -> Option<R> {
+    fn lookupElement(&self,key:K) -> Option<u32> {
         self.lookup(self.root,key)
     }
-    fn lookup(&self,current:i32,key:K) -> Option<R> {
+    fn lookup(&self,current:i32,key:K) -> Option<u32> {
         if current<0 {
             None
         } else {
             match self.table[current as usize].compare(&key) {
-                Equal => Some((self.result)(&key,current as u32)),
+                Equal => Some(current as u32),
                 Less => self.lookup(self.table[current as usize].right,key),
                 Greater => self.lookup(self.table[current as usize].left ,key),
             }
         }
     }
-    fn insertElement(& mut self,key: K) -> R {
+    fn insertElement(& mut self,key: K) -> u32 {
         let mut pos = self.free;
         loop {
             if pos>=self.table.len() as u32 {
-                let (value,done) = (self.init)(pos);
-                self.table.push(Element::<K>{value,left:-1,right:-1});
-                if done {
-                    break
-                } else {
+                if pos<self.init.len() as u32 {
+                    self.table.push(Element::<K>{value:self.init[pos as usize],left:-1,right:-1});
                     self.root = self.insert(pos,self.root) as i32;
+                } else {
+                    self.table.push(Element::<K>{value:self.empty,left:-1,right:-1});
+                    break
                 }
-            } else if (self.empty)(&self.table[pos as usize].value) {
+            } else if self.empty == self.table[pos as usize].value {
                 break
             };
             pos = pos + 1
@@ -92,7 +90,7 @@ impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
         self.free = pos + 1;
         self.table[pos as usize].set(key);
         self.root = self.insert(pos,self.root) as i32;
-        (self.result)(&self.table[pos as usize].value,pos)
+        pos
     }
     fn insert(&mut self,target:u32,root:i32) -> i32 {
         if root<0 {
@@ -163,7 +161,7 @@ impl <K: Copy + PartialEq + Ord + Debug,R> Treap<K,R> {
         }
     }
 }
-impl <K:Copy + PartialEq + Ord + Debug,R> Debug for Treap<K,R> {
+impl <K:Copy + PartialEq + Ord + Debug> Debug for Treap<K> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // The `f` value implements the `Write` trait, which is what the
         // write! macro is expecting. Note that this formatting ignores the
@@ -177,18 +175,61 @@ impl <K:Copy + PartialEq + Ord + Debug,R> Debug for Treap<K,R> {
 
     }
 }
+use std::sync::{RwLock,RwLockReadGuard,RwLockWriteGuard};
+pub struct LockingTreap<K:'static + Copy + PartialEq + Ord + Debug> {
+    treap : RwLock<Treap<K>>,
+}
+impl <K:Copy + PartialEq + Ord + Debug> LockingTreap<K> {
+    fn new(init:&'static [K],empty:K) -> LockingTreap<K> {
+        LockingTreap::<K> {
+            treap: RwLock::new(Treap::new(init,empty)),
+        }
+    }
+    fn intern(&self,key: K) -> u32 {
+        fn lookup<K:Copy + PartialEq + Ord + Debug>(treap: &Treap<K>,key: K) -> Option<u32> {
+            treap.lookupElement(key)
+        }
+        fn insert<K:Copy + PartialEq + Ord + Debug>(treap: & mut Treap<K>,key: K) -> u32 {
+            treap.insertElement(key)
+        }
+        {
+            let treap = self.treap.read().unwrap();
+            if let Some(result) = lookup(&*treap,key) {
+                return result
+            }
+        }
+        let mut treap = self.treap.write().unwrap();
+        if let Some(result) = lookup(&*treap,key) { // might have been added while waiting for the write lock
+            result
+        } else {
+            insert(&mut *treap,key)
+        }
+    }
+}
+#[cfg(test)]
+static default_isize_values: &[isize] = &[-100,-99,-98,-97];
+#[cfg(test)]
+fn create_isize_treap() -> LockingTreap<isize> {
+    LockingTreap::new(default_isize_values,-1)
+}
+
+#[cfg(test)]
+lazy_static!{
+    static ref v_lazy_static: LockingTreap<isize> = create_isize_treap();
+}
+
 #[cfg(test)]
 mod testTreap {
     use super::*;
-    fn intern<K:Copy + PartialEq + Ord + Debug,R>(tp:&mut Treap<K,R>,key: K) -> R {
+    fn intern<K:Copy + PartialEq + Ord + Debug>(tp:&mut Treap<K>,key: K) -> u32 {
         if let Some(result) = tp.lookupElement(key) {
             return result
         } else {
             tp.insertElement(key)
         }
     }
-    fn int_treap() -> Treap<isize,u32> {
-        Treap::new(Box::new(|x| (x as isize - 100,x>3)),Box::new(|_,x| x),Box::new(|x| false))
+    fn int_treap() -> Treap<isize> {
+        Treap::new(default_isize_values,-1)
     }
     #[test]
     fn empty() {
@@ -206,6 +247,13 @@ mod testTreap {
         assert_matches!(intern(&mut tp,42),4);
         assert_matches!(intern(&mut tp,17),5);
         assert_matches!(intern(&mut tp,42),4);
+    }
+    #[test]
+    fn add_some_locking() {
+        let mut tp = &*v_lazy_static;
+        assert_matches!(tp.intern(42),4);
+        assert_matches!(tp.intern(17),5);
+        assert_matches!(tp.intern(42),4);
     }
     extern crate rand;
     #[test]
@@ -232,8 +280,8 @@ mod testTreap {
         //assert_matches!(tp.depth(),41 or 42); // versus 17 for perfectly balanced
     }
     type TString = &'static str;
-    fn string_treap() -> Treap<TString,u32> {
-        Treap::new(Box::new(|x| ("",true)),Box::new(|_,x| x),Box::new(|x| false))
+    fn string_treap() -> Treap<TString> {
+        Treap::new(&[],"")
     }
     #[test]
     fn emptyS() {

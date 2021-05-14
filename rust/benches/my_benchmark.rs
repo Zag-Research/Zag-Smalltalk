@@ -92,7 +92,6 @@ fn bench_once_cell(c: &mut Criterion) {
 }
 
 
-extern crate lazy_init;
 extern crate static_init;
 #[static_init::dynamic]
 static v_static_init: bool = true;
@@ -105,7 +104,7 @@ fn bench_static_init(c: &mut Criterion) {
     c.bench_function("static_init", |b| b.iter(|| access_static_init()));
 }
 
-
+extern crate lazy_init;
 #[static_init::dynamic]
 static v_lazy_init: lazy_init::Lazy<bool> = lazy_init::Lazy::default();
 
