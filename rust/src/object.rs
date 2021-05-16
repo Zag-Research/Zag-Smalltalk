@@ -1,3 +1,4 @@
+use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt;
 use std::fmt::Debug;
 pub const classObject: usize = 0;
@@ -14,18 +15,12 @@ pub const classClass: usize = 10;
 pub const classMetaclass: usize = 11;
 pub const classBehavior: usize = 12;
 pub const classArray: usize = 13;
-use once_cell::sync::Lazy;
-static class_names: Lazy<Vec<&'static str>> = Lazy::new(|| vec![
-    "Object","closure","False","True",
-    "UndefinedObject","SmallInteger","Symbol","Character",
-    "Float","String","Class","Metaclass",
-    "Behavior","Array",
-]);
 #[derive(Copy, Clone)]
 pub union Object {
     i: i64,
     f: f64,
 }
+pub type StaticStr = &'static str;
 const NAN_VALUE: i64 = 0x7FF8_0000_0000_0001;
 macro_rules! literalfield {
     (class = $e:expr) => {$e};
@@ -43,6 +38,19 @@ impl Default for Object {
 }
 pub const zeroObject: Object = Object{i:0}; // used to init non-Object array objects
 
+impl Ord for Object {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let s = unsafe{self.i};
+        let o = unsafe{other.i};
+        s.cmp(&o)
+    }
+}
+impl PartialOrd for Object {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Eq for Object {}
 impl PartialEq for Object {
     fn eq(&self, other: &Object) -> bool {
         let i = unsafe{self.i};
@@ -62,61 +70,68 @@ pub fn symbolOf(string: &str,hash: usize) -> Object {
     }
     literal!(class=classSymbol,value=hash,arity=arity)
 }
-#[inline]
-const fn object_test(i:i64) -> bool {
-    i>NAN_VALUE
+pub const fn unarySymbolOf(_string: &str,hash: usize) -> Object {
+    literal!(class=classSymbol,value=hash)
 }
-const fn on_heap(i:i64) -> bool {
-    object_test(i) && i as usize &6==classObject
+#[inline]
+const fn object_test(i:usize) -> bool {
+    (i as i64)>NAN_VALUE
+}
+const fn on_heap(i:usize) -> bool {
+    object_test(i) && i&6==classObject
 }
 impl Object {
     #[inline]
     pub const fn is_integer(&self) -> bool {
-        let i = unsafe{self.i};
-        object_test(i) && i as usize &7==classSmallInteger
+        let i = self.raw();
+        object_test(i) && i&7==classSmallInteger
+    }
+    #[inline]
+    pub const fn is_symbol(&self) -> bool {
+        let i = self.raw();
+        object_test(i) && i&7==classSymbol
     }
     #[inline]
     pub const fn is_bool(&self) -> bool {
-        let i = unsafe{self.i};
-        object_test(i) && i as usize &6==classTrue&6
+        let i = self.raw();
+        object_test(i) && i&6==classTrue&6
     }
     #[inline]
     pub const fn is_double(&self) -> bool {
-        !object_test(unsafe{self.i})
+        !object_test(self.raw())
     }
     #[inline]
     pub const fn is_literal(&self) -> bool {
-        let i = unsafe{self.i};
-        object_test(i) && ({let cl = i as usize &7; cl > classBlockClosure && cl!= classSmallInteger})
+        let i = self.raw();
+        object_test(i) && ({let cl = i&7; cl > classBlockClosure && cl!= classSmallInteger})
     }
     #[inline]
     pub const fn is_on_heap(&self) -> bool {
-        on_heap(unsafe{self.i})
+        on_heap(self.raw())
     }
     #[inline]
     pub const fn is_object(&self) -> bool {
-        let i = unsafe{self.i};
-        object_test(i) && i as usize &7==classObject
+        let i = self.raw();
+        object_test(i) && i&7==classObject
     }
     #[inline]
     pub const fn is_closure(&self) -> bool {
-        let i = unsafe{self.i};
-        object_test(i) && i as usize &7==classBlockClosure
+        let i = self.raw();
+        object_test(i) && i&7==classBlockClosure
     }
     pub fn class_name(&self) -> &str {
-        class_names[self.class()]
+        crate::class::name_str(self.class())
     }
     #[inline]
     pub const fn immediateHash(&self) -> usize {
-        (unsafe{self.i as usize})>>3
+        (self.raw()>>3)&hashMask
     }
     #[inline]
     pub fn hash(&self) -> usize {
-        let i = unsafe{self.i};
-        if on_heap(i) {
+        if on_heap(self.raw()) {
             (unsafe{*self.as_object_ptr()}).hash()
         } else {
-            (i as usize)>>3
+            self.immediateHash()
         }
     }
     #[inline]
@@ -124,8 +139,8 @@ impl Object {
         (if self.is_double() {
             classFloat
         } else {
-            let cl = (unsafe{self.i}) as usize &7;
-            if cl <= classBlockClosure {
+            let cl = self.raw() & 7;
+            if cl == classObject {
                 panic!("other class")
             } else {
                 cl
@@ -159,8 +174,10 @@ impl Debug for Object {
         // The `f` value implements the `Write` trait, which is what the
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
-        if self.is_literal() {
-            write!(f, "{:x}:{} {:x}",self.as_literal(),self.class_name(),self.raw())
+        if self.is_symbol() {
+            write!(f, "{}",crate::symbol::str_of(*self))
+        } else if self.is_literal() {
+            write!(f, "{:x}:{} {:x}",self.as_literal(),"self.class_name()",self.raw())
         } else if self.is_integer() {
             write!(f, "{}:{} {:x}",self.as_i64(),self.class_name(),self.raw())
         } else if self.is_double() {
@@ -233,6 +250,8 @@ impl std::ops::Not for Object {
  // This type is used a lot. Make sure it doesn't unintentionally get bigger.
 #[cfg(target_arch = "x86_64")]
 static_assertions::assert_eq_size!(Object, u64);
+#[cfg(target_arch = "x86_64")]
+static_assertions::assert_eq_size!(Option<u32>, u64);
 
 #[cfg(test)]
 mod testsObject {
@@ -241,6 +260,11 @@ mod testsObject {
     fn default_object() {
         let def: [Object;10] = Default::default();
         assert_eq!(def[1],nilObject);
+    }
+    #[test]
+    fn class_names() {
+        assert_eq!(symbolOf("Object",10).class_name(),"Symbol");
+        assert_eq!(Object::from(42).class_name(),"SmallInteger");
     }
     #[test]
     fn equal_objects() {

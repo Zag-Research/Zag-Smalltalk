@@ -40,7 +40,7 @@ impl <K:Copy + PartialEq + Ord + Debug> PartialEq for Element<K> {
 pub struct Treap<K:'static + Copy + PartialEq + Ord + Debug> {
     table: Vec<Element<K>>,
     root: i32,
-    free: u32,
+    free: usize,
     init: &'static [K],
     empty: K,
 }
@@ -57,6 +57,9 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
             init,empty,
         }
     }
+    fn at(&self,index: usize) -> K {
+        self.table[index].value
+    }
     fn lookupElement(&self,key:K) -> Option<u32> {
         self.lookup(self.root,key)
     }
@@ -71,52 +74,64 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
             }
         }
     }
-    fn insertElement(& mut self,key: K) -> u32 {
+    fn checkInitialized(& self) -> bool {
+        self.free>=self.init.len()
+    }
+    fn ensureInitialized(& mut self) -> usize {
         let mut pos = self.free;
+        while pos<self.init.len() {
+            self.table.push(Element::<K>{value:self.init[pos],left:-1,right:-1});
+            self.root = self.insert(pos,self.root);
+            pos = pos + 1;
+            self.free = pos;
+        }
+        pos
+    }
+    pub fn insertElement(& mut self,key: K) -> usize {
+        let mut pos = self.ensureInitialized();
+        if let Some(result) = self.lookupElement(key) {
+            // might have been added while waiting for the write lock or in the init
+            return result as usize
+        }
         loop {
-            if pos>=self.table.len() as u32 {
-                if pos<self.init.len() as u32 {
-                    self.table.push(Element::<K>{value:self.init[pos as usize],left:-1,right:-1});
-                    self.root = self.insert(pos,self.root) as i32;
-                } else {
-                    self.table.push(Element::<K>{value:self.empty,left:-1,right:-1});
-                    break
-                }
-            } else if self.empty == self.table[pos as usize].value {
+            if pos>=self.table.len() {
+                self.table.push(Element::<K>{value:self.empty,left:-1,right:-1});
+                break
+            } else if self.empty == self.table[pos].value {
                 break
             };
             pos = pos + 1
         };
         self.free = pos + 1;
-        self.table[pos as usize].set(key);
-        self.root = self.insert(pos,self.root) as i32;
+        self.table[pos].set(key);
+        self.root = self.insert(pos,self.root);
         pos
     }
-    fn insert(&mut self,target:u32,root:i32) -> i32 {
-        if root<0 {
-            target as i32
-        } else {
-            match self.table[target as usize].cmp(&self.table[root as usize]) {
-                Equal => panic!("shouldn't be inserting an existing key: {:?}",self.table[target as usize].value),
-                Less => {
-                    self.table[root as usize].left = self.insert(target,self.table[root as usize].left);
-                    // Fix Heap property if it is violated
-                    if priority(self.table[root as usize].left) > priority(root) {
-                        self.rightRotate(root)
-                    } else {
-                        root
-                    }
-                },
-                Greater => {
-                    self.table[root as usize].right = self.insert(target,self.table[root as usize].right);
-                    // Fix Heap property if it is violated
-                    if priority(self.table[root as usize].right) > priority(root) {
-                        self.leftRotate(root)
-                    } else {
-                        root
-                    }
-                },
-            }
+    fn insert(&mut self,target:usize,iroot:i32) -> i32 {
+        if iroot<0 {
+            return target as i32
+        }
+        let root = iroot as usize;
+        match self.table[target].cmp(&self.table[root]) {
+            Equal => panic!("shouldn't be inserting an existing key: {:?}",self.table[target].value),
+            Less => {
+                self.table[root].left = self.insert(target,self.table[root].left);
+                // Fix Heap property if it is violated
+                if priority(self.table[root].left) > priority(iroot) {
+                    self.rightRotate(root)
+                } else {
+                    root as i32
+                }
+            },
+            Greater => {
+                self.table[root].right = self.insert(target,self.table[root].right);
+                // Fix Heap property if it is violated
+                if priority(self.table[root].right) > priority(iroot) {
+                    self.leftRotate(root)
+                } else {
+                    root as i32
+                }
+            },
         }
     }
     /* T1, T2 and T3 are subtrees of the tree rooted with y
@@ -127,20 +142,20 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
      *        / \       < - - - - - - -            / \
      *       T1  T2     Left Rotation            T2  T3
      */
-    fn rightRotate(&mut self,y:i32) -> i32 {
-        let x = self.table[y as usize].left;
+    fn rightRotate(&mut self,y:usize) -> i32 {
+        let x = self.table[y].left;
         let t2 = self.table[x as usize].right;
         // Perform rotation
-        self.table[x as usize].right = y;
-        self.table[y as usize].left = t2;
+        self.table[x as usize].right = y as i32;
+        self.table[y].left = t2;
         x
     }
-    fn leftRotate(&mut self,x:i32) -> i32 {
-        let y = self.table[x as usize].right;
+    fn leftRotate(&mut self,x:usize) -> i32 {
+        let y = self.table[x].right;
         let t2 = self.table[y as usize].left;
         // Perform rotation
-        self.table[y as usize].left = x;
-        self.table[x as usize].right = t2;
+        self.table[y as usize].left = x as i32;
+        self.table[x].right = t2;
         y
     }
     #[cfg(test)]
@@ -180,34 +195,37 @@ pub struct LockingTreap<K:'static + Copy + PartialEq + Ord + Debug> {
     treap : RwLock<Treap<K>>,
 }
 impl <K:Copy + PartialEq + Ord + Debug> LockingTreap<K> {
-    fn new(init:&'static [K],empty:K) -> LockingTreap<K> {
+    pub fn new(init:&'static [K],empty:K) -> LockingTreap<K> {
         LockingTreap::<K> {
             treap: RwLock::new(Treap::new(init,empty)),
         }
     }
-    fn intern(&self,key: K) -> u32 {
-        fn lookup<K:Copy + PartialEq + Ord + Debug>(treap: &Treap<K>,key: K) -> Option<u32> {
-            treap.lookupElement(key)
-        }
-        fn insert<K:Copy + PartialEq + Ord + Debug>(treap: & mut Treap<K>,key: K) -> u32 {
-            treap.insertElement(key)
-        }
+    pub fn at(&self,index: usize) -> K {
         {
             let treap = self.treap.read().unwrap();
-            if let Some(result) = lookup(&*treap,key) {
-                return result
+            if (&*treap).checkInitialized() {
+                return (&*treap).at(index)
             }
         }
         let mut treap = self.treap.write().unwrap();
-        if let Some(result) = lookup(&*treap,key) { // might have been added while waiting for the write lock
-            result
-        } else {
-            insert(&mut *treap,key)
+        (&mut *treap).ensureInitialized();
+        (&*treap).at(index)
+    }
+    pub fn intern(&self,key: K) -> usize {
+        {
+            let treap = self.treap.read().unwrap();
+            if (&*treap).checkInitialized() {
+                if let Some(result) = (&*treap).lookupElement(key) {
+                    return result as usize
+                }
+            }
         }
+        let mut treap = self.treap.write().unwrap();
+        (&mut *treap).insertElement(key)
     }
 }
 #[cfg(test)]
-static default_isize_values: &[isize] = &[-100,-99,-98,-97];
+static default_isize_values: &[isize] = &[-100,-99,-98,7];
 #[cfg(test)]
 fn create_isize_treap() -> LockingTreap<isize> {
     LockingTreap::new(default_isize_values,-1)
@@ -221,12 +239,12 @@ lazy_static!{
 #[cfg(test)]
 mod testTreap {
     use super::*;
-    fn intern<K:Copy + PartialEq + Ord + Debug>(tp:&mut Treap<K>,key: K) -> u32 {
-        if let Some(result) = tp.lookupElement(key) {
-            return result
-        } else {
+    fn intern<K:Copy + PartialEq + Ord + Debug>(tp:&mut Treap<K>,key: K) -> usize {
+//        if let Some(result) = tp.lookupElement(key) {
+//            return result as usize
+//        } else {
             tp.insertElement(key)
-        }
+//        }
     }
     fn int_treap() -> Treap<isize> {
         Treap::new(default_isize_values,-1)
@@ -244,6 +262,7 @@ mod testTreap {
     #[test]
     fn add_some() {
         let mut tp = int_treap();
+        assert_matches!(intern(&mut tp,7),3);
         assert_matches!(intern(&mut tp,42),4);
         assert_matches!(intern(&mut tp,17),5);
         assert_matches!(intern(&mut tp,42),4);
@@ -262,18 +281,17 @@ mod testTreap {
         for i in 0..50 {
             intern(&mut tp,i);
         }
-        //println!("{:?} Depth: {}",tp,tp.depth());
-        assert_matches!(intern(&mut tp,42),46);
-        assert_matches!(intern(&mut tp,17),21);
-        assert_matches!(intern(&mut tp,42),46);
-        assert_matches!(tp.size(),54);
+        assert_matches!(intern(&mut tp,42),45);
+        assert_matches!(intern(&mut tp,17),20);
+        assert_matches!(intern(&mut tp,42),45);
+        assert_matches!(tp.size(),53);
         assert_matches!(tp.depth(),12);
-        for i in 50..4091 {
+        for i in 50..4092 {
             intern(&mut tp,i);
         }
         assert_matches!(tp.size(),4095);
         assert_matches!(tp.depth(),24); // not as good as the 12 for perfectly balanced, but way better than the 4095 for unbalanced
-        for i in 4091..131067 {
+        for i in 4092..131068 {
             intern(&mut tp,rand::random());
         }
         assert_matches!(tp.size(),131071);

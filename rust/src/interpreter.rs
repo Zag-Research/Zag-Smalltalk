@@ -21,23 +21,25 @@ pub struct Dispatch {
 }
 impl Dispatch {
     fn getMethod(&self,symbol:Object) -> Option<&Method> {
-        let hash = symbol.immediateHash()%self.table.len();
-        self.table[hash].getMethod(symbol)
+        let len = self.table.len();
+        let hash = symbol.immediateHash()%len;
+        for index in (hash..len).into_iter().chain((0..hash).into_iter()) {
+            let m = self.table[index].getMethod(symbol);
+            if m.is_some() {return m}
+        }
+        None
     }
 }
 const MAX_CLASSES: usize = 1000;
 use std::mem::ManuallyDrop;
-const NO_DISPATCH: ManuallyDrop<Option<Dispatch>> = ManuallyDrop::new(None);
-static mut dispatchTable: [ManuallyDrop<Option<Dispatch>>;MAX_CLASSES] = [NO_DISPATCH;MAX_CLASSES];
+type TDispatch = ManuallyDrop<Option<Dispatch>>;
+const NO_DISPATCH: TDispatch = ManuallyDrop::new(None);
+static mut dispatchTable: [TDispatch;MAX_CLASSES] = [NO_DISPATCH;MAX_CLASSES];
 use std::sync::RwLock;
-use once_cell::sync::Lazy;
 
-static dispatchFree: Lazy<RwLock<usize>> = Lazy::new(|| RwLock::new(0));
-#[cfg(test)]
-static debugClasses: Lazy<bool> = Lazy::new(|| {
-    
-    true
-});
+lazy_static!{
+    static ref dispatchFree: RwLock<usize> = RwLock::new(0);
+}
 
 pub fn addClass(c: Object, n: usize) {
     let mut index = dispatchFree.write().unwrap();
@@ -85,6 +87,6 @@ mod testsInterpreter {
 /*    #[test]
     #[should_panic(expected = "no method found")]
     fn dispatch_non_existant_method() {
-        dispatch(Object::from(3.14),intern(String::from("foo")),nilObject,nilObject,None);
+        dispatch(Object::from(3.14),intern("foo"),nilObject,nilObject,None);
     }*/
 }

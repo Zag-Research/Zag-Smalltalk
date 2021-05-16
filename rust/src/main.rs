@@ -15,16 +15,17 @@ extern crate static_assertions;
 extern crate lazy_static;
 
 mod treap;
-// mod interpreter;
+mod interpreter;
 
-// mod object; // defines Object and UndefinedObject Classes
+#[macro_use]
+mod object; // defines Object and UndefinedObject Classes
 //mod blockClosure;
 //mod boolean;
 //mod character;
 //mod smallInteger;
-// mod symbol;
+mod symbol;
 //mod string;
-// mod class;
+mod class;
 // mod memory;
 
 // use object::*;
