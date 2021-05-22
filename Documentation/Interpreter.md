@@ -16,6 +16,11 @@ Logically, Smalltalk message dispatch follows these steps:
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
  2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from another class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
+ 
+ See:
+ - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
+ - [from Dynamic Dispatch](https://en.wikipedia.org/wiki/Dynamic_dispatch)
+ - [from Late binding](https://en.wikipedia.org/wiki/Late_binding)
 
 #### Java dispatch
 Java has five opcodes to invoke methods, but the one we're interested in is `invokevirtual` which does virtual dispatch the same as Smalltalk^[the other 4 are because of the impoverished nature of Java object structure].

@@ -57,8 +57,8 @@ There are a few significant changes:
 
 First we have the object format tag. The bits in the tag are `not really!`:
 
-0. has instance variables
-1. pointer-free - for instance variables and Array (everything >=16 is pointer-free)
+0. is indexable
+2. pointer-free - for instance variables and Array (everything >=16 is pointer-free)
 	- set on creation
 	- cleared by a store of a pointer value in any field
 	- only reset by GC
@@ -67,27 +67,25 @@ First we have the object format tag. The bits in the tag are `not really!`:
 4. indexable, no pointers (no requirement for scan on garbage collection)
 
 where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only instance variables; any value <16 has pointers. Only the following values currently have meaning:
-- 0: non-indexable objects with inst vars (Association et al) 
-- 1: indexable <32k objects with no inst vars
-- 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
+- 10: non-indexable objects with inst vars (Association et al) 
+- 11: indexable <32k objects with no inst vars
 - 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 14: indexable objects with inst vars - no pointers
-- 15: non-indexable objects with inst vars - no pointers (Point et al)
-- 16: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 1 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
-- 17: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 15 but change to format 1if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
+- 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
+- 14: non-indexable objects with inst vars - no pointers (Point et al)
+- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 16 but change to format 1 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
+- 16: indexable objects with inst vars - no pointers
+- 17: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 15 but change to format 12 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
 - 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
 
-Everything >= 14 has no pointers, so GC doesn't look at them. Things are initially created as their pointer-free version (16,15,14), but change to their pointer-containing version (0,1,12) if a pointer is stored in them. If major GC doesn't detect any pointers, they revert to pointer-free version.
+Everything >= 14 has no pointers, so GC doesn't look at them. Things are initially created as their pointer-free version (16,15,14), but change to their pointer-containing version (12,11,10) if a pointer is stored in them. If major GC doesn't detect any pointers, they revert to pointer-free version.
 
-For 0, 1, 15, 16, the size is determined by the length field. The only difference between 0 and 1 is whether `at:`, `size`, etc. should work or give an error. Similarly 15 and 16.
+For 10, 11, 14, 15, the size is determined by the length field. The only difference between 10 and 11 is whether `at:`, `size`, etc. should work or give an error. Similarly 14 and 15.
 
-For 12, 13, 14 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows.
+For 12, 13, 16 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows.
 
-For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format.
-
-Array, and similar indexable-only classes, over 32K could be generated as either format 17 or 14. If we knew it would never get assigned a pointer, we could use 17, but 14 is safer (and probably *very* slightly faster).
+For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format. Also the objects are initialized with zeros, rather than the `nil` for all <= 16.
 
 This is the first field in the header-word for an object:
 

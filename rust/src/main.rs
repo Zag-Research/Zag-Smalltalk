@@ -8,6 +8,7 @@
 #![feature(const_fn_union)]
 #![feature(assert_matches)]
 #![feature(vec_into_raw_parts)]
+#![feature(thread_local)]
 #![allow(warnings)]
 #[macro_use]
 extern crate static_assertions;
@@ -26,7 +27,7 @@ mod object; // defines Object and UndefinedObject Classes
 mod symbol;
 //mod string;
 mod class;
-// mod memory;
+mod memory;
 
 // use object::*;
 // use symbol::intern;
