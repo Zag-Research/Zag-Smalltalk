@@ -1,4 +1,5 @@
 use std::mem;
+use std::cell::RefCell;
 use crate::object::*;
 extern crate libc;
 
@@ -16,9 +17,9 @@ fn bytesRoundedToPageSize(size:isize) -> usize {
     ((size+min_page_size-1)&(-min_page_size)) as usize
 }
 impl AllocableRegion {
-    fn makeLocal(memory:&mut [usize]) -> Self {
-        let start = memory.as_mut_ptr() as *mut HeapObject;
-        let size = memory.len();
+    fn makeLocal(mem:&mut [usize]) -> Self {
+        let start = mem.as_mut_ptr() as *mut HeapObject;
+        let size = mem.len();
         AllocableRegion {
             base: start,
             size: size*mem::size_of::<HeapObject>(),
@@ -84,17 +85,22 @@ impl AllocableRegion {
 const NurserySize : usize = 25000;
 #[thread_local]
 static mut NurseryMemory : [usize;NurserySize] = [0;NurserySize];
-thread_local! {
-    static Nursery: AllocableRegion = AllocableRegion::makeLocal(unsafe{&mut NurseryMemory});
-}
 use std::sync::RwLock;
 pub struct Memory {
     genOld1: AllocableRegion,
-    genOld2: AllocableRegion,
-    genTeen: AllocableRegion,
+    //genOld2: AllocableRegion,
+    //genTeen: AllocableRegion,
     nursery: AllocableRegion,
 }
 impl Memory {
+    fn new(base:usize,size:isize,nursery:AllocableRegion) -> Self {
+        let mut mem = Memory {
+            genOld1: AllocableRegion::new(base,size),
+            nursery,
+        };
+        mem.genOld1.mapMemory();
+        mem
+    }
     pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
     }
     pub fn allocObject(& mut self,size:isize) {
@@ -102,13 +108,13 @@ impl Memory {
         // need to lock long enough to allocate space for object
         // then can't allow GC until the object is initialized
     }
-    pub fn minorGC(&mut self) {
+    fn minorGC(&mut self) {
         panic!("not implemented")
     }
-    pub fn fullGC(&mut self) {
+    fn fullGC(&mut self) {
         panic!("not implemented")
     }
-    pub fn becomeX(& mut self,target: Object, value: Object) {
+    fn becomeX(& mut self,target: Object, value: Object) {
         if !target.is_on_heap() || !value.is_on_heap() {
             panic!("can't become a fixed value")
         }
@@ -122,11 +128,22 @@ impl Memory {
 }
 pub const gc_main: usize = 0x100000000000;
 pub const gc_size: isize = 0x000001000000;
-#[cfg(testx)]
+thread_local! {
+    pub static memory: RefCell<Memory> = RefCell::new(Memory::new(gc_main,gc_size,AllocableRegion::makeLocal(unsafe{&mut NurseryMemory})));
+}
+pub fn assignObject(target: Object, offset: isize,value: Object) {
+    memory.with(|mem| mem.borrow_mut().assignObject(target,offset,value))
+}
+pub fn allocObject(size:isize) {
+    memory.with(|mem| mem.borrow_mut().allocObject(size))
+}
+#[cfg(test)]
 mod testMemory {
     use super::*;
     #[test]
     fn test1() {
-
+/*        Nursery.with(|n| n.borrow_mut().allocObject(10));
+        check_init_nursery();
+        unsafe{Nursery2.allocObject(10)};*/
     }
 }

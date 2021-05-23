@@ -55,18 +55,7 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-First we have the object format tag. The bits in the tag are `not really!`:
-
-0. is indexable
-2. pointer-free - for instance variables and Array (everything >=16 is pointer-free)
-	- set on creation
-	- cleared by a store of a pointer value in any field
-	- only reset by GC
-2. is weak
-3. indexable
-4. indexable, no pointers (no requirement for scan on garbage collection)
-
-where the low 4 bits are only interpreted when bit 4=0. So any value <8 has only instance variables; any value <16 has pointers. Only the following values currently have meaning:
+First we have the object format tag. Only the following values currently have meaning:
 - 10: non-indexable objects with inst vars (Association et al) 
 - 11: indexable <32k objects with no inst vars
 - 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
