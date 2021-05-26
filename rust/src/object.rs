@@ -30,9 +30,10 @@ macro_rules! literalfield {
 macro_rules! literal {
     ($($i:ident $( = $e:expr)?),+) => {Object{i:((NAN_VALUE as usize-1) $(| (literalfield!($i $( = $e)? )))+) as i64}}
 }
-pub const nilObject: Object = literal!(class=classUndefinedObject,value=7);
-pub const trueObject: Object = literal!(class=classTrue,value=5);
 pub const falseObject: Object = literal!(class=classFalse,value=3);
+pub const trueObject: Object = literal!(class=classTrue,value=5);
+pub const nilObject: Object = literal!(class=classUndefinedObject,value=7);
+pub const placeholderObject: Object = literal!(class=classUndefinedObject,value=0x1ffffff);
 impl Default for Object {
     fn default() -> Self {
         if cfg!(test) {Object{i:42}}
@@ -126,15 +127,15 @@ impl Object {
         crate::class::name_str(self.class())
     }
     #[inline]
-    pub const fn immediateHash(&self) -> usize {
-        (self.raw()>>3)&hashMask
+    pub const fn immediateHash(&self) -> u32 {
+        (self.raw()>>3) as u32
     }
     #[inline]
     pub fn hash(&self) -> usize {
         if on_heap(self.raw()) {
             (unsafe{*self.as_object_ptr()}).hash()
         } else {
-            self.immediateHash()
+            self.immediateHash() as usize&hashMask
         }
     }
     #[inline]
@@ -155,7 +156,7 @@ impl Object {
         (unsafe{self.i})<<13>>16
     }
     #[inline]
-    // this is the same as as_i64, but keeping them separate allows changing encoding if we ever wanted to change the encoding
+    // this is the same as as_i64, but keeping them separate allows changing encoding if we ever wanted to
     pub const fn as_literal(&self) -> i64 {
         (unsafe{self.i})<<13>>16
     }
@@ -346,15 +347,16 @@ impl HeapHeader {
     }
     #[inline]
     fn is_weak(&self) -> bool {
-        (self.format()&20)==4
+        self.format()==13
     }
     #[inline]
     fn has_instVars(&self) -> bool {
-        (self.format()&17)==1
+        let format = self.format();
+        format==16 || format<15 && format!=11
     }
     #[inline]
     fn may_have_pointers(&self) -> bool {
-        self.format()<16
+        self.format()<14
     }
 }
 impl From<Object> for HeapHeader {
@@ -387,25 +389,22 @@ mod testHeapHeader {
     use super::*;
     #[test]
     fn transforms() {
-        let h = header!(class=11,hash=17,format=1,immutable);
+        let h = header!(class=11,hash=17,format=11,immutable);
         assert_eq!(h.class(),11);
         assert_eq!(h.hash(),17);
         assert!(h.is_immutable());
-        assert!(h.has_instVars());
+        assert!(!h.has_instVars());
         assert!(h.may_have_pointers());
         assert!(!h.is_weak());
         assert!(!h.is_forwarded());
-        assert!(!h.is_indexed());
-    }
-    #[test]
-    fn sizes() {
-        assert_eq!(core::mem::size_of::<HeapHeader>(), core::mem::size_of::<Object>());
+        assert!(h.is_indexed());
     }
 }
 
 const format_inst:usize = 10;
 const format_idx:usize = 11;
 const format_idx_inst:usize = 12;
+const format_idx_inst_weak:usize = 13;
 const format_inst_np:usize = 14;
 const format_idx_np:usize = 15;
 const format_idx_inst_np:usize = 16;
@@ -415,26 +414,27 @@ const format_idx_other_4:usize = 18;
 const format_idx_other_2:usize = 20;
 const format_idx_other_1:usize = 24;
 #[inline]
-fn formatAndSize(n_instVars:usize,n_indexed:isize,width:isize) -> (usize,usize) {
-    if n_indexed < 0 {
-        (format_inst_np , n_instVars)
+fn formatAndSize(n_instVars:usize,n_indexed:isize,width:isize,weak:bool) -> (usize,usize,isize) {
+    if weak {
+        (format_idx_inst_weak, n_instVars, n_instVars as isize + std::cmp::max(0,n_indexed) + 2)
+    } else if n_indexed < 0 {
+        (format_inst_np , n_instVars, n_instVars as isize +1)
     } else if n_instVars > 0 {
-        (format_idx_inst_np, n_instVars)
+        (format_idx_inst_np, n_instVars, n_instVars as isize + n_indexed + 2)
     } else if width<0 {
         if n_indexed < 32767 {
-            (format_idx_np , n_indexed as usize)
+            (format_idx_np , n_indexed as usize, n_indexed + 1)
         } else {
-            (format_idx_inst_np , 0)
+            (format_idx_inst_np , 0, n_indexed + 2)
         }
     } else {
-        let items_per_word = 8 / (width as usize);
-        let words = ((n_indexed as usize) + items_per_word - 1) / items_per_word;
-        (format_idx_other_base+items_per_word , (
-            if words < 32767 {
-                words as usize
-            } else {
-                0
-            }))
+        let items_per_word = 8 / width;
+        let words = (n_indexed + items_per_word - 1) / items_per_word;
+        if words < 32767 {
+            (format_idx_other_base+items_per_word as usize, words as usize, words + 1)
+        } else {
+            (format_idx_other_base+items_per_word as usize, 32767, words + 2)
+        }
     }
 }
 #[cfg(test)]
@@ -442,50 +442,23 @@ mod testFormatAndSize {
     use super::*;
     #[test]
     fn sizes() {
-        assert_eq!(formatAndSize(3,-1,-1),(format_inst_np,3));
-        assert_eq!(formatAndSize(0,5,-1),(format_idx_np,5));
-        assert_eq!(formatAndSize(0,40000,-1),(format_idx_inst_np,32767));
-        assert_eq!(formatAndSize(0,17,8),(format_idx_other_8,17));
-        assert_eq!(formatAndSize(0,17,4),(0,10));
-        assert_eq!(formatAndSize(0,17,2),(0,6));
-        assert_eq!(formatAndSize(0,17,1),(0,4));
-        assert_eq!(formatAndSize(0,16,4),(0,9));
-        assert_eq!(formatAndSize(0,16,2),(0,5));
-        assert_eq!(formatAndSize(0,16,1),(0,3));
-    }
-}
-#[inline]
-fn heapObjectSize(n_instVars: usize, n_indexed: isize, width: usize) -> usize {
-    if n_indexed < 0 {
-        1 + n_instVars
-    } else {
-        let items_per_word = 8 / width;
-        let words = ((n_indexed as usize) + items_per_word - 1) / items_per_word;
-        if n_instVars > 0 {
-            2 + (n_indexed as usize) + n_instVars
-        } else {
-            if words < 32767 {
-                1 + words
-            } else {
-                2 + words
-            }
-        }
-    }
-}
-#[cfg(test)]
-mod testHeapObjectSize {
-    use super::*;
-    #[test]
-    fn sizes() {
-        assert_eq!(heapObjectSize(3,-1,8),4);
-        assert_eq!(heapObjectSize(0,5,8),6);
-        assert_eq!(heapObjectSize(0,40000,8),40002);
-        assert_eq!(heapObjectSize(0,17,4),10);
-        assert_eq!(heapObjectSize(0,17,2),6);
-        assert_eq!(heapObjectSize(0,17,1),4);
-        assert_eq!(heapObjectSize(0,16,4),9);
-        assert_eq!(heapObjectSize(0,16,2),5);
-        assert_eq!(heapObjectSize(0,16,1),3);
+        assert_eq!(formatAndSize(3,-1,-1,false),(format_inst_np,3,4));
+        assert_eq!(formatAndSize(0,5,-1,false),(format_idx_np,5,6));
+        assert_eq!(formatAndSize(3,-1,-1,true),(format_idx_inst_weak,3,5));
+        assert_eq!(formatAndSize(0,5,-1,true),(format_idx_inst_weak,0,7));
+        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np,0,40002));
+        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np,0,40002));
+        assert_eq!(formatAndSize(5,40000,-1,false),(format_idx_inst_np,5,40007));
+        assert_eq!(formatAndSize(5,20000,-1,false),(format_idx_inst_np,5,20007));
+        assert_eq!(formatAndSize(0,40000,8,false),(format_idx_other_8,32767,40002));
+        assert_eq!(formatAndSize(0,20000,8,false),(format_idx_other_8,20000,20001));
+        assert_eq!(formatAndSize(0,17,8,false),(format_idx_other_8,17,18));
+        assert_eq!(formatAndSize(0,17,4,false),(format_idx_other_4,9,10));
+        assert_eq!(formatAndSize(0,17,2,false),(format_idx_other_2,5,6));
+        assert_eq!(formatAndSize(0,17,1,false),(format_idx_other_1,3,4));
+        assert_eq!(formatAndSize(0,16,4,false),(format_idx_other_4,8,9));
+        assert_eq!(formatAndSize(0,16,2,false),(format_idx_other_2,4,5));
+        assert_eq!(formatAndSize(0,16,1,false),(format_idx_other_1,2,3));
     }
 }
 #[repr(C)]
@@ -505,31 +478,46 @@ impl HeapObject {
         self.header.class()
     }
     #[inline]
-    pub fn extraIndex(&self) -> isize {
+    pub fn n_instVars(&self) -> usize {
         let format = self.header.format();
-        if format&26==10 {
-            -1
+        if format&27==11 {
+            0
+        } else if format<=16 {
+            self.header.size()
         } else {
-            let size = self.header.size() as isize;
-            if format<=16 && format>=12 {
-                size
-            } else {
-                if size<32767 {
-                    -1
-                } else {
-                    0
-                }
-            }
+            0
         }
     }
     #[inline]
-    pub fn lastIndex(&self) -> usize {
-        let extra = self.extraIndex();
-        if extra < 0 {
-            self.header.size()-1
+    pub fn firstIndex(&self) -> usize {
+        let size = self.header.size();
+        let format = self.header.format();
+        if format&27==10 {
+            size
+        } else if format&27==11 {
+            0
+        } else if format<=16 {
+            size+1
+        } else if size<32767 {
+            0
         } else {
-            let extra = extra as usize;
-            extra+self.raw_at(extra).raw()
+            1
+        }
+    }
+    #[inline]
+    pub fn n_index(&self) -> usize {
+        let size = self.header.size();
+        let format = self.header.format();
+        if format&27==10 {
+            0
+        } else if format&27==11 {
+            size
+        } else if format<=16 {
+            self.raw_at(size).raw()
+        } else if size<32767 {
+            size
+        } else {
+            self.raw_at(0).raw()
         }
     }
     #[inline]
@@ -543,27 +531,20 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).write(value)}
     }
     pub fn initialize(&mut self,init:Object) {
-        let extra = self.extraIndex();
-        if extra<0 {
-            for i in 0..self.lastIndex() {
-                self.raw_at_put(i,init)
-            };
-        } else {
-            let extra = extra as usize;
-            for i in 0..extra {
-                self.raw_at_put(i,init)
-            };
-            for i in extra+1..self.lastIndex() {
-                self.raw_at_put(i,init)
-            };
-        }
+        for i in 0..self.n_instVars() {
+            self.raw_at_put(i,Default::default())
+        };
+        let first = self.firstIndex();
+        for i in first..first+self.n_index() {
+            self.raw_at_put(i,init)
+        };
     }
-    pub fn alloc(&mut self,class:usize,n_instVars:usize,n_indexed:isize,width:isize,hash:usize) -> * mut HeapObject {
-        let (format,size)=formatAndSize(n_instVars,n_indexed,width);
+    pub fn alloc(&mut self,class:usize,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+        let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
         self.header=header!(class=class,hash=hash,format=format,size=size);
-        let extra = self.extraIndex();
-        if extra>0 {self.raw_at_put(extra as usize,Object{i:n_indexed as i64})};
-        unsafe{(self as *mut HeapObject).offset((self.lastIndex()+1) as isize)}
+        let extra = self.firstIndex();
+        if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed as i64})};
+        unsafe{(self as *mut HeapObject).offset(total_size)}
     }
 }
 impl Default for HeapObject {
@@ -575,7 +556,8 @@ impl Default for HeapObject {
 #[cfg(test)]
 mod testHeapObject {
     use super::*;
-    fn print_first(array:&[usize],n:usize) {
+    fn print_first(array:&[usize],end:*const HeapObject) {
+        let n = unsafe{(end as *const usize).offset_from(array.as_ptr()) as usize};
         for (index,value) in array[..n].iter().enumerate() {
             if index%8==0 {
                 if index>0 {println!("")};
@@ -588,37 +570,37 @@ mod testHeapObject {
     #[test]
     fn correct() {
         let def: Object = Default::default();
-        let uninit = 42_usize;
+        let uninit = 0xdead_usize;
         let mut mem = [uninit;100000];
         let one = Object::from(1);
         let two = Object::from(2);
         let next: * mut HeapObject = &mut mem as * const usize as * mut HeapObject;
         let obj1 = unsafe { next.as_mut().unwrap() };
-        let next = obj1.alloc(classArray,0,5,8,0x11);
+        let next = obj1.alloc(classArray,0,5,-1,0x101,false);
         obj1.initialize(Default::default());
         obj1.raw_at_put(0,falseObject);
         obj1.raw_at_put(1,one);
         obj1.raw_at_put(2,two);
         let obj2 = unsafe { next.as_mut().unwrap() };
-        let next = obj2.alloc(classClass,3,-1,8,0x22);
+        let next = obj2.alloc(classClass,3,-1,-1,0x202,false);
         obj2.initialize(Default::default());
         obj2.raw_at_put(0,trueObject);
         obj2.raw_at_put(1,one);
         let obj3 = unsafe { next.as_mut().unwrap() };
-        let _ = obj3.alloc(classBehavior,0,-1,8,0x33);
-        obj1.initialize(Default::default());
-//      print_first(&mem,20);
-        assert_eq!(mem[0],0x0005008000110000d); // obj1
+        let end = obj3.alloc(classBehavior,0,-1,-1,0x303,false);
+        obj3.initialize(Default::default());
+        print_first(&mem,end);
+        assert_eq!(mem[0],0x00050f001010000d); // obj1
         assert_eq!(mem[1],falseObject.raw());
         assert_eq!(mem[2],one.raw());
         assert_eq!(mem[3],two.raw());
         assert_eq!(mem[4],def.raw());
         assert_eq!(mem[5],def.raw());
-        assert_eq!(mem[6],0x000301000220000a); // obj2
+        assert_eq!(mem[6],0x00030e002020000a); // obj2
         assert_eq!(mem[7],trueObject.raw());
         assert_eq!(mem[8],one.raw());
         assert_eq!(mem[9],def.raw());
-        assert_eq!(mem[10],0x000001000330000c); // obj3
+        assert_eq!(mem[10],0x00000e003030000c); // obj3
         assert_eq!(mem[11],uninit);
     }
     #[test]

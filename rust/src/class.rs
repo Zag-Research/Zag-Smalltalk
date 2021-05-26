@@ -1,11 +1,5 @@
 use crate::object::*;
 use crate::treap::LockingTreap;
-#[repr(C)]  // don't shuffle the fields
-#[derive(Copy, Clone)]
-pub struct Class {
-    superclass: Object,
-//    class encoded in the header
-}
 static first_classes: &[Object]= &[
     unarySymbolOf("Object",10+classObject),
     unarySymbolOf("BlockClosure",10+classBlockClosure),
