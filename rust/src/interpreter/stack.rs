@@ -19,9 +19,25 @@ pub fn eq_constant(thread:&mut Thread,object:Object) -> FunctionResult {
     }
     NormalReturn
 }
+pub fn eq_class(thread:&mut Thread,object:Object) -> FunctionResult {
+    if thread.pop().class()==object.as_u16() {
+        thread.push(trueObject)
+    } else {
+        thread.push(falseObject)
+    }
+    NormalReturn
+}
+pub fn eq(thread:&mut Thread,_:Object) -> FunctionResult {
+    if thread.pop()==thread.pop() {
+        thread.push(trueObject)
+    } else {
+        thread.push(falseObject)
+    }
+    NormalReturn
+}
 pub fn br_true(thread:&mut Thread,object:Object) -> FunctionResult {
     if thread.pop()==trueObject {
-        Branch(object.as_i48() as isize)
+        Branch(object.as_i48())
     } else {
         NormalReturn
     }

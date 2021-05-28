@@ -161,6 +161,10 @@ impl Object {
         ((unsafe{self.i}) as usize)<<13>>16
     }
     #[inline]
+    pub const fn as_u16(&self) -> u16 {
+        (unsafe{self.i>>3}) as u16
+    }
+    #[inline]
     // this is the same as as_i48, but keeping them separate allows changing encoding if we ever wanted to
     pub const fn as_literal(&self) -> isize {
         (unsafe{self.i})<<13>>16
