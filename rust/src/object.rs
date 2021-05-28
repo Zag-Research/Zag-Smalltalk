@@ -1,34 +1,35 @@
 use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt;
 use std::fmt::Debug;
-pub const classObject: usize = 0;
-pub const classBlockClosure: usize = 1;
-pub const classFalse: usize = 2;
-pub const classTrue: usize = 3;
-pub const classUndefinedObject: usize = 4;
-pub const classSmallInteger: usize = 5;
-pub const classSymbol: usize = 6;
-pub const classCharacter: usize = 7;
-pub const classFloat: usize = 8;
-pub const classString: usize = 9;
-pub const classClass: usize = 10;
-pub const classMetaclass: usize = 11;
-pub const classBehavior: usize = 12;
-pub const classArray: usize = 13;
+pub const classObject: u16 = 0;
+pub const classBlockClosure: u16 = 1;
+pub const classFalse: u16 = 2;
+pub const classTrue: u16 = 3;
+pub const classUndefinedObject: u16 = 4;
+pub const classSmallInteger: u16 = 5;
+pub const classSymbol: u16 = 6;
+pub const classCharacter: u16 = 7;
+pub const classFloat: u16 = 8;
+pub const classString: u16 = 9;
+pub const classClass: u16 = 10;
+pub const classMetaclass: u16 = 11;
+pub const classBehavior: u16 = 12;
+pub const classArray: u16 = 13;
 #[derive(Copy, Clone)]
 pub union Object {
-    i: i64,
+    i: isize,
     f: f64,
 }
+static_assertions::assert_eq_size!(isize, f64);
 pub type StaticStr = &'static str;
-const NAN_VALUE: i64 = 0x7FF8_0000_0000_0001;
+const NAN_VALUE: isize = 0x7FF8_0000_0000_0001;
 macro_rules! literalfield {
-    (class = $e:expr) => {$e};
+    (class = $e:expr) => {($e as usize)};
     (value = $e:expr) => {($e)<<3};
     (arity = $e:expr) => {($e)<<28};
 }
 macro_rules! literal {
-    ($($i:ident $( = $e:expr)?),+) => {Object{i:((NAN_VALUE as usize-1) $(| (literalfield!($i $( = $e)? )))+) as i64}}
+    ($($i:ident $( = $e:expr)?),+) => {Object{i:((NAN_VALUE as usize-1) $(| (literalfield!($i $( = $e)? )))+) as isize}}
 }
 pub const falseObject: Object = literal!(class=classFalse,value=3);
 pub const trueObject: Object = literal!(class=classTrue,value=5);
@@ -74,31 +75,31 @@ pub fn symbolOf(string: &str,hash: usize) -> Object {
     }
     literal!(class=classSymbol,value=hash,arity=arity)
 }
-pub const fn unarySymbolOf(_string: &str,hash: usize) -> Object {
-    literal!(class=classSymbol,value=hash)
+pub const fn unarySymbolOf(_string: &str,hash: u16) -> Object {
+    literal!(class=classSymbol,value=hash as usize)
 }
 #[inline]
 const fn object_test(i:usize) -> bool {
-    (i as i64)>NAN_VALUE
+    (i as isize)>NAN_VALUE
 }
 const fn on_heap(i:usize) -> bool {
-    object_test(i) && i&6==classObject
+    object_test(i) && (i&6) as u16==classObject
 }
 impl Object {
     #[inline]
     pub const fn is_integer(&self) -> bool {
         let i = self.raw();
-        object_test(i) && i&7==classSmallInteger
+        object_test(i) && (i&7) as u16==classSmallInteger
     }
     #[inline]
     pub const fn is_symbol(&self) -> bool {
         let i = self.raw();
-        object_test(i) && i&7==classSymbol
+        object_test(i) && (i&7) as u16==classSymbol
     }
     #[inline]
     pub const fn is_bool(&self) -> bool {
         let i = self.raw();
-        object_test(i) && i&6==classTrue&6
+        object_test(i) && (i&6) as u16==classTrue&6
     }
     #[inline]
     pub const fn is_double(&self) -> bool {
@@ -107,7 +108,7 @@ impl Object {
     #[inline]
     pub const fn is_literal(&self) -> bool {
         let i = self.raw();
-        object_test(i) && ({let cl = i&7; cl > classBlockClosure && cl!= classSmallInteger})
+        object_test(i) && ({let cl = (i&7) as u16; cl > classBlockClosure && cl!= classSmallInteger})
     }
     #[inline]
     pub const fn is_on_heap(&self) -> bool {
@@ -116,12 +117,12 @@ impl Object {
     #[inline]
     pub const fn is_object(&self) -> bool {
         let i = self.raw();
-        object_test(i) && i&7==classObject
+        object_test(i) && (i&7) as u16==classObject
     }
     #[inline]
     pub const fn is_closure(&self) -> bool {
         let i = self.raw();
-        object_test(i) && i&7==classBlockClosure
+        object_test(i) && (i&7) as u16==classBlockClosure
     }
     pub fn class_name(&self) -> &str {
         crate::class::name_str(self.class())
@@ -139,25 +140,29 @@ impl Object {
         }
     }
     #[inline]
-    pub fn class(&self) -> usize {
-        (if self.is_double() {
+    pub fn class(&self) -> u16 {
+        if self.is_double() {
             classFloat
         } else {
-            let cl = self.raw() & 7;
+            let cl = (self.raw() & 7) as u16;
             if cl == classObject {
                 panic!("other class")
             } else {
                 cl
             }
-        }) as usize
+        }
     }
     #[inline]
-    pub const fn as_i64(&self) -> i64 {
-        (unsafe{self.i})<<13>>16
+    pub const fn as_i48(&self) -> isize {
+        (unsafe{self.i as isize})<<13>>16
     }
     #[inline]
-    // this is the same as as_i64, but keeping them separate allows changing encoding if we ever wanted to
-    pub const fn as_literal(&self) -> i64 {
+    pub const fn as_u48(&self) -> usize {
+        ((unsafe{self.i}) as usize)<<13>>16
+    }
+    #[inline]
+    // this is the same as as_i48, but keeping them separate allows changing encoding if we ever wanted to
+    pub const fn as_literal(&self) -> isize {
         (unsafe{self.i})<<13>>16
     }
     #[inline]
@@ -181,9 +186,9 @@ impl Debug for Object {
         if self.is_symbol() {
             write!(f, "{}",crate::symbol::str_of(*self))
         } else if self.is_literal() {
-            write!(f, "{:x}:{} {:x}",self.as_literal(),"self.class_name()",self.raw())
+            write!(f, "{:x}: {:x}",self.as_literal(),self.raw())
         } else if self.is_integer() {
-            write!(f, "{}:{} {:x}",self.as_i64(),self.class_name(),self.raw())
+            write!(f, "{}:{} {:x}",self.as_i48(),self.class_name(),self.raw())
         } else if self.is_double() {
             write!(f, "{:e}:{} {:x}",self.as_f64(),self.class_name(),self.raw())
         } else if self.is_object() {
@@ -203,10 +208,10 @@ impl From<bool> for Object {
         }
     }
 }
-impl From<i64> for Object {
+impl From<isize> for Object {
     #[inline]
-    fn from(i:i64) -> Self {
-        Object{i:((((i<<16) as usize)>>13)+NAN_VALUE as usize -1+classSmallInteger) as i64}
+    fn from(i:isize) -> Self {
+        Object{i:((((i<<16) as usize)>>13)+NAN_VALUE as usize -1+classSmallInteger as usize) as isize}
     }
 }
 impl From<char> for Object {
@@ -230,14 +235,14 @@ impl From<& HeapObject> for Object {
 impl From<* const HeapObject> for Object {
     #[inline]
     fn from(o: * const HeapObject) -> Self {
-        Object {i:(o as i64)+NAN_VALUE-1}
+        Object {i:(o as isize)+NAN_VALUE-1}
     }
 }
 #[cfg(test)]
 impl From<&mut [HeapObject]> for Object {
     #[inline]
     fn from(o:&mut [HeapObject]) -> Self {
-        Object {i:(o.as_mut_ptr() as i64)+NAN_VALUE-1}
+        Object {i:(o.as_mut_ptr() as isize)+NAN_VALUE-1}
     }
 }
 impl std::ops::Not for Object {
@@ -282,11 +287,11 @@ mod testsObject {
     #[test]
     fn convert_object() {
         // could get 2 more bits by changing the encoding, but makes several things more complicated
-        assert_eq!(Object::from(-1<<47).as_i64(),-1<<47);
-        assert_eq!(Object::from((1<<47)-1).as_i64(),(1<<47)-1);
-        assert!(Object::from(-1<<48).as_i64()!=-1<<48);
-        assert_eq!(Object::from(-1).as_i64(),-1);
-        assert_eq!(Object::from(1).as_i64(),1);
+        assert_eq!(Object::from(-1<<47).as_i48(),-1<<47);
+        assert_eq!(Object::from((1<<47)-1).as_i48(),(1<<47)-1);
+        assert!(Object::from(-1<<48).as_i48()!=-1<<48);
+        assert_eq!(Object::from(-1).as_i48(),-1);
+        assert_eq!(Object::from(1).as_i48(),1);
         assert_eq!(Object::from(2.0_f64).as_f64(),2.0_f64);
         assert!( classTrue&6 == classFalse&6);
         assert!( classObject&6 == classBlockClosure&6);
@@ -374,7 +379,7 @@ impl Debug for HeapHeader {
     }
 }
 macro_rules! headerfield {
-    (class = $e:expr) => {$e};
+    (class = $e:expr) => {($e as usize)};
     (immutable) => {1<<47};
     (size = $e:expr) => {($e)<<48};
     (hash = $e:expr) => {(($e)&hashMask)<<hashShift};
@@ -539,11 +544,11 @@ impl HeapObject {
             self.raw_at_put(i,init)
         };
     }
-    pub fn alloc(&mut self,class:usize,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+    pub fn alloc(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
         let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
         self.header=header!(class=class,hash=hash,format=format,size=size);
         let extra = self.firstIndex();
-        if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed as i64})};
+        if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed})};
         unsafe{(self as *mut HeapObject).offset(total_size)}
     }
 }
@@ -560,12 +565,12 @@ mod testHeapObject {
         let n = unsafe{(end as *const usize).offset_from(array.as_ptr()) as usize};
         for (index,value) in array[..n].iter().enumerate() {
             if index%8==0 {
-                if index>0 {println!("")};
+                if index>0 {println!()};
                 print!("{:4x}:",index)
             };
             print!(" {:016x}",value)
         }
-        if n>0 {println!("")}
+        if n>0 {println!()}
     }
     #[test]
     fn correct() {

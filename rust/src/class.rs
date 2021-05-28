@@ -19,6 +19,6 @@ static first_classes: &[Object]= &[
 lazy_static!{
     static ref classTable: LockingTreap<Object> = LockingTreap::new(first_classes,nilObject);
 }
-pub fn name_str(class:usize) -> StaticStr {
-    crate::symbol::str_of(classTable.at(class))
+pub fn name_str(class:u16) -> StaticStr {
+    crate::symbol::str_of(classTable.at(class as usize))
 }

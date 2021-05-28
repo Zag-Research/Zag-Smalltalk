@@ -184,7 +184,7 @@ impl <K:Copy + PartialEq + Ord + Debug> Debug for Treap<K> {
         //        for (i,s) in self.table.iter().enumerate() {
         for i in 0..self.table.len() {
             let s=self.table[i];
-            write!(f,"{}: {:?} {}\n",i,s,priority(i as i32));
+            writeln!(f,"{}: {:?} {}",i,s,priority(i as i32));
         };
         write!(f,"root:{} free:{}",self.root,self.free)
 

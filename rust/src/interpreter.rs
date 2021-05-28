@@ -1,27 +1,55 @@
 use crate::object::*;
-type Function = fn(&mut Thread,Object,Option<&Method>) -> FunctionResult;
-#[derive(Eq,PartialEq,Debug)]
-pub enum FunctionResult {
-    NormalReturn,
-    NonLocalReturn,
-    ExceptionSignaled,
-}
-use FunctionResult::*;
-mod primitives {
-    use super::*;
-    pub fn yourself(thread:&mut Thread,selector:Object,method:Option<&Method>) -> FunctionResult {
-        NormalReturn
-    }
-}
 pub struct Thread {
     stack:Vec<Object>,
 }
 impl Thread {
+    #[inline]
     pub fn push(&mut self,o:Object) {
         self.stack.push(o)
     }
+    #[inline]
+    pub fn push_i48(&mut self,i:isize) {
+        self.stack.push(Object::from(i))
+    }
+    #[inline]
     pub fn top(&self) -> Object {
         self.stack[self.stack.len()-1]
+    }
+    #[inline]
+    pub fn pop(&mut self) -> Object {
+        self.stack.pop().unwrap()
+    }
+    #[inline]
+    pub fn atOffset(&self,position:usize) -> Object {
+        self.stack[self.stack.len()-position]
+    }
+    #[inline]
+    pub fn at(&self,position:usize) -> Object {
+        self.stack[position]
+    }
+    #[inline]
+    pub fn at_put(&mut self,position:usize,value:Object) {
+        self.stack[position]=value;
+    }
+    #[inline]
+    pub fn offset(&self,offset:usize) -> usize {
+        self.stack.len()-offset-1
+    }
+    #[inline]
+    pub fn reserve(&mut self,space:usize) {
+        self.stack.resize(self.stack.len()+space,nilObject);
+    }
+    #[inline]
+    pub fn pop_to(&mut self,position:usize) {
+        self.stack.truncate(position+1);
+    }
+    #[inline]
+    pub fn discard(&mut self,position:usize) {
+        self.stack.truncate(self.stack.len()-position);
+    }
+    #[inline]
+    pub fn append(&mut self,other:&mut Vec<Object>) {
+        self.stack.append(other);
     }
 }
 impl Default for Thread {
@@ -29,14 +57,40 @@ impl Default for Thread {
         Thread{ stack: vec![placeholderObject]}
     }
 }
+#[derive(Eq,PartialEq,Debug)]
+pub enum FunctionResult {
+    NormalReturn,
+    NonLocalReturn,
+    Branch(isize),
+    ExceptionSignaled,
+}
+use FunctionResult::*;
+
+#[macro_export]
+macro_rules! restack_mask_field {
+    () => { 0 };
+    ($e:expr) => { $e };
+    ($e:expr, $($es:expr),+) => { (restack_mask_field!($($es),*))<<5 | $e};
+}
+#[macro_export]
+macro_rules! restack_mask {
+    ($d:expr => $($es:expr),*) => { Object::from((
+        (restack_mask_field!($($es),*))<<8 | $d
+            ) as isize)
+    }
+}
+
+type ThreadedFunction = fn(&mut Thread,Object) -> FunctionResult;
+pub mod stack;
 #[derive(Default,Clone)]
 pub struct Method {
     class_index: u16,
     parameters: u8,
     locals: u8,
     symbol_index: u32,
-    code: Vec<(Function,Object)>,
+    code: Vec<(ThreadedFunction,Object)>,
 }
+const Max_Method_Size:isize = 32000;
 impl Method {
     pub fn new(class_index: u16,parameters: u8,locals: u8,symbol_index: u32) -> Self {
         Method{
@@ -47,42 +101,57 @@ impl Method {
             code: Vec::new(),
         }
     }
-    pub fn instr(&mut self,f:Function) {
+    pub fn instr(&mut self,f:ThreadedFunction) {
         self.code.push((f,placeholderObject))
     }
-    pub fn instr_with(&mut self,f:Function,o:Object) {
+    pub fn instr_with(&mut self,f:ThreadedFunction,o:Object) {
         self.code.push((f,o))
+    }
+    pub fn instr_i48(&mut self,f:ThreadedFunction,i:isize) {
+        self.code.push((f,Object::from(i)))
     }
     pub fn execute(&self,thread:&mut Thread) -> FunctionResult {
         let mut pc:usize = 0;
         let end = self.code.len()-1;
-        let this_index = thread.stack.len()-self.parameters as usize-1;
-        thread.stack.resize(thread.stack.len()+self.locals as usize,nilObject);
+        let self_index = thread.offset(self.parameters as usize);
+        thread.reserve(self.locals as usize);
         loop {
             if pc==end {break};
             let (f,o)=self.code[pc];
-            match f(thread,o,None) {
-                NormalReturn => {pc = pc + 1},
+            match f(thread,o) {
+                NormalReturn => { pc = pc + 1},
+                Branch(offset) => { pc = (pc as isize + offset + 1) as usize},
                 NonLocalReturn => {panic!("non-local return")},
                 ExceptionSignaled => {panic!("exception signaled")},
             }
         };
         let (f,o)=self.code[pc];
-        f(thread,o,None)
+        f(thread,o)
     }
 }
-#[cfg(test)]
-mod testMethod {
+type Function = fn(&mut Thread,Option<&Method>) -> FunctionResult;
+mod primitives {
     use super::*;
-    use crate::symbol::intern;
-    #[test]
-    fn noop() {
-        let mut thread:Thread = Default::default();
-        thread.push(Object::from(42));
-        let mut method = Method::new(classObject as u16,0,0,intern("yourself").immediateHash());
-        method.instr(primitives::yourself);
-        assert_eq!(method.execute(&mut thread),NormalReturn);
-        assert_eq!(thread.top(),Object::from(42));
+    pub mod object {
+        use super::*;
+        pub fn yourself(thread:&mut Thread,_:Option<&Method>) -> FunctionResult {
+            NormalReturn
+        }
+    }
+    pub mod smallInteger {
+        use super::*;
+        pub fn add(thread:&mut Thread,_:Option<&Method>) -> FunctionResult {
+            let self_index = thread.stack.len()-2;
+            let this = thread.at(self_index);
+            let other = thread.at(self_index+1);
+            if this.is_integer() && other.is_integer() {
+                thread.at_put(self_index,Object::from(this.as_i48()+other.as_i48()));
+                thread.pop_to(self_index)
+            } else {
+                panic!("not SmallIntegers")
+            };
+            NormalReturn
+        }
     }
 }
 #[derive(Clone)]
@@ -97,6 +166,11 @@ impl MethodMatch {
         } else {
             None
         }
+    }
+}
+impl Default for MethodMatch {
+    fn default() -> Self {
+        MethodMatch{function:primitives::object::yourself,method:Default::default()}
     }
 }
 pub struct Dispatch {
@@ -134,7 +208,7 @@ pub fn addClass(c: Object, n: usize) {
 }
 pub fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
     let mut table = Vec::with_capacity(n);
-    table.resize(n,MethodMatch{function:primitives::yourself,method:Default::default()});
+    table.resize(n,Default::default());
     unsafe {
         let old = std::mem::replace(
             &mut dispatchTable[pos],
@@ -150,9 +224,9 @@ fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
     let selector_hash = selector.immediateHash();
     let arity = selector_hash>>25;
     let this = thread.stack[thread.stack.len()-(arity as usize)-1];
-    if let Some(disp) = unsafe{&dispatchTable[this.class()].take()} {
+    if let Some(disp) = unsafe{&dispatchTable[this.class() as usize].take()} {
         if let Some(MethodMatch{function,method}) = disp.getMethod(selector_hash) {
-            function(thread,placeholderObject,Some(method))
+            function(thread,Some(method))
         } else {
             panic!("no method found")
         }
