@@ -16,6 +16,11 @@ impl Thread {
         self.stack[self.stack.len()-1]
     }
     #[inline]
+    pub fn replace(&mut self,object:Object) {
+        let len = self.stack.len()-1;
+        self.stack[len]=object
+    }
+    #[inline]
     pub fn pop(&mut self) -> Object {
         self.stack.pop().unwrap()
     }
@@ -66,21 +71,20 @@ pub enum FunctionResult {
 }
 use FunctionResult::*;
 
-#[macro_export]
-macro_rules! restack_mask_field {
-    () => { 0 };
-    ($e:expr) => { $e };
-    ($e:expr, $($es:expr),+) => { (restack_mask_field!($($es),*))<<5 | $e};
-}
-#[macro_export]
-macro_rules! restack_mask {
+#[macro_export] // use internal rules: https://danielkeep.github.io/tlborm/book/pat-internal-rules.html
+macro_rules! restack_mask { 
+    (@field) => { 0 };
+    (@field $e:expr) => { $e };
+    (@field $e:expr, $($es:expr),+) => { (restack_mask!(@field $($es),*))<<5 | $e};
     ($d:expr => $($es:expr),*) => { Object::from((
-        (restack_mask_field!($($es),*))<<8 | $d
+        (restack_mask!(@field $($es),*))<<8 | $d
             ) as isize)
     }
 }
 
-type ThreadedFunction = fn(&mut Thread,Object) -> FunctionResult;
+type Function = fn(&mut Thread,Object) -> FunctionResult;
+type AddStrFunction = fn(&'static str,Function);
+type AddI32Function = fn(i32,Function);
 pub mod stack;
 #[derive(Default,Clone)]
 pub struct Method {
@@ -88,7 +92,7 @@ pub struct Method {
     parameters: u8,
     locals: u8,
     symbol_index: u32,
-    code: Vec<(ThreadedFunction,Object)>,
+    code: Box<Vec<(Function,Object)>>,
 }
 const Max_Method_Size:isize = 32000;
 impl Method {
@@ -98,16 +102,16 @@ impl Method {
             parameters,
             locals,
             symbol_index,
-            code: Vec::new(),
+            code: Box::new(Vec::new()),
         }
     }
-    pub fn instr(&mut self,f:ThreadedFunction) {
+    pub fn instr(&mut self,f:Function) {
         self.code.push((f,placeholderObject))
     }
-    pub fn instr_with(&mut self,f:ThreadedFunction,o:Object) {
+    pub fn instr_with(&mut self,f:Function,o:Object) {
         self.code.push((f,o))
     }
-    pub fn instr_i48(&mut self,f:ThreadedFunction,i:isize) {
+    pub fn instr_i48(&mut self,f:Function,i:isize) {
         self.code.push((f,Object::from(i)))
     }
     pub fn execute(&self,thread:&mut Thread) -> FunctionResult {
@@ -129,48 +133,30 @@ impl Method {
         f(thread,o)
     }
 }
-type Function = fn(&mut Thread,Option<&Method>) -> FunctionResult;
-mod primitives {
-    use super::*;
-    pub mod object {
-        use super::*;
-        pub fn yourself(thread:&mut Thread,_:Option<&Method>) -> FunctionResult {
-            NormalReturn
-        }
-    }
-    pub mod smallInteger {
-        use super::*;
-        pub fn add(thread:&mut Thread,_:Option<&Method>) -> FunctionResult {
-            let self_index = thread.stack.len()-2;
-            let this = thread.at(self_index);
-            let other = thread.at(self_index+1);
-            if this.is_integer() && other.is_integer() {
-                thread.at_put(self_index,Object::from(this.as_i48()+other.as_i48()));
-                thread.pop_to(self_index)
-            } else {
-                panic!("not SmallIntegers")
-            };
-            NormalReturn
-        }
-    }
+mod primitives;
+#[derive(Clone)]
+enum MethodType {
+    Function(Function),
+    Method(Method),
+    NoType,
 }
 #[derive(Clone)]
 struct MethodMatch {
-    function: Function,
-    method: Method,
+    selector: u32,
+    function: Box<MethodType>,
 }
 impl MethodMatch {
-    fn getMethod(&self,symbol_index:u32) -> Option<&Self> {
-        if self.method.symbol_index == symbol_index {
-            Some(&self)
+    fn getMethod(&self,selector:u32) -> &MethodType {
+        if self.selector == selector {
+            &self.function
         } else {
-            None
+            &MethodType::NoType
         }
     }
 }
 impl Default for MethodMatch {
     fn default() -> Self {
-        MethodMatch{function:primitives::object::yourself,method:Default::default()}
+        MethodMatch{function:Box::new(MethodType::NoType),selector:Default::default()}
     }
 }
 pub struct Dispatch {
@@ -178,14 +164,17 @@ pub struct Dispatch {
     table: Box<[MethodMatch]>,
 }
 impl Dispatch {
-    fn getMethod(&self,symbol_hash:u32) -> Option<&MethodMatch> {
+    fn getMethod(&self,selector:Object) -> &MethodType {
         let len = self.table.len();
-        let hash = symbol_hash as usize%len;
+        let iHash = selector.immediateHash();
+        let hash = iHash as usize%len;
         for index in (hash..len).into_iter().chain((0..hash).into_iter()) {
-            let m = self.table[index].getMethod(symbol_hash);
-            if m.is_some() {return m}
+            match self.table[index].getMethod(iHash) {
+                MethodType::NoType => {},
+                result => {return result},
+            }
         }
-        None
+        &MethodType::NoType
     }
 }
 const MAX_CLASSES: usize = 1000;
@@ -198,7 +187,14 @@ use std::sync::RwLock;
 lazy_static!{
     static ref dispatchFree: RwLock<usize> = RwLock::new(0);
 }
-
+pub fn getClass(class:u16) -> Object {
+    if (class as usize)<MAX_CLASSES {
+        if let Some(dispatch) = unsafe{dispatchTable[class as usize].take()} {
+            return dispatch.class
+        }
+    }
+    panic!("class {} not initialized",class)
+}
 pub fn addClass(c: Object, n: usize) {
     let mut index = dispatchFree.write().unwrap();
     let pos = *index;
@@ -220,21 +216,19 @@ pub fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
         ManuallyDrop::into_inner(old)
     }
 }
-fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
-    let selector_hash = selector.immediateHash();
-    let arity = selector_hash>>25;
+pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
+    let arity = selector.immediateHash()>>25;
     let this = thread.stack[thread.stack.len()-(arity as usize)-1];
     if let Some(disp) = unsafe{&dispatchTable[this.class() as usize].take()} {
-        if let Some(MethodMatch{function,method}) = disp.getMethod(selector_hash) {
-            function(thread,Some(method))
-        } else {
-            panic!("no method found")
+        match disp.getMethod(selector) {
+            MethodType::Function(function) => function(thread,selector),
+            MethodType::Method(method) => method.execute(thread),
+            MethodType::NoType => panic!("no method found"),
         }
     } else {
         panic!("no dispatch found")
     }
 }
-
 #[cfg(test)]
 mod testsInterpreter {
     use super::*;

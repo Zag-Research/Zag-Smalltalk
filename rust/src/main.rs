@@ -35,6 +35,15 @@ use symbol::intern;
 //mod minimal;
 
 fn main() {
+    use interpreter::*;
+    //memory::loadHeap();
+    let mut thread:Thread = Default::default();
+    let classIndex = class::class_index(intern("System"));
+    let class = getClass(classIndex);
+    thread.push(class);
+    let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
+    method.instr_with(dispatch,intern("start"));
+    method.execute(&mut thread);
 //*
     let temp3 = Object::from(2.0_f64);
     let temp3b = Object::from(0.0625_f64);

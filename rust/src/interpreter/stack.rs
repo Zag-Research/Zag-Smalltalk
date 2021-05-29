@@ -1,4 +1,8 @@
 use super::*;
+pub fn load(add_str:AddStrFunction,add_i32:AddI32Function) {
+    add_i32(110,eq);
+    add_i32(1,add);
+}
 pub fn dup(thread:&mut Thread,_:Object) -> FunctionResult {
     thread.push(thread.top());
     NormalReturn
@@ -45,8 +49,11 @@ pub fn br_true(thread:&mut Thread,object:Object) -> FunctionResult {
 pub fn nop(thread:&mut Thread,_:Object) -> FunctionResult {
     NormalReturn
 }
-pub fn add(thread:&mut Thread,_:Object) -> FunctionResult {
-    primitives::smallInteger::add(thread,None)
+pub fn add(thread:&mut Thread,selector:Object) -> FunctionResult {
+    if !thread.top().is_integer() { return super::primitives::primitive_fail(thread,selector,1,nilObject) }
+    let result = Object::from(thread.pop().as_i48()+thread.pop().as_i48());
+    thread.push(result);
+    NormalReturn
 }
 pub fn restack(thread:&mut Thread,fields:Object) -> FunctionResult {
     let mut fields = fields.as_u48() as usize;
@@ -73,7 +80,7 @@ mod testMethod {
     fn noop() {
         let mut thread:Thread = Default::default();
         thread.push(Object::from(42));
-        let mut method = Method::new(classObject as u16,0,0,intern("yourself").immediateHash());
+        let mut method = Method::new(classObject,0,0,intern("yourself").immediateHash());
         method.instr(stack::nop);
         assert_eq!(method.execute(&mut thread),NormalReturn);
         assert_eq!(thread.top(),Object::from(42));
@@ -83,7 +90,7 @@ mod testMethod {
         let mut thread:Thread = Default::default();
         thread.push_i48(25);
         thread.push_i48(17);
-        let mut method = Method::new(classSmallInteger as u16,2,0,intern("+").immediateHash());
+        let mut method = Method::new(classSmallInteger,2,0,intern("+").immediateHash());
         method.instr(stack::add);
         assert_eq!(method.execute(&mut thread),NormalReturn);
         assert_eq!(thread.top().as_i48(),42);
@@ -94,7 +101,7 @@ mod testMethod {
         for i in 1..6 {
             thread.push_i48(i);
         }
-        let mut method = Method::new(classSmallInteger as u16,2,0,intern("foo").immediateHash());
+        let mut method = Method::new(classSmallInteger,2,0,intern("foo").immediateHash());
         method.instr(stack::dup);
         method.instr_i48(stack::constant,3);
         method.instr(stack::add);

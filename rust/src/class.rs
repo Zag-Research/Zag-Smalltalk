@@ -22,3 +22,6 @@ lazy_static!{
 pub fn name_str(class:u16) -> StaticStr {
     crate::symbol::str_of(classTable.at(class as usize))
 }
+pub fn class_index(symbol:Object) -> u16 {
+    classTable.intern(symbol) as u16
+}
