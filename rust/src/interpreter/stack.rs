@@ -11,6 +11,9 @@ pub fn drop(thread:&mut Thread,_:Object) -> FunctionResult {
     thread.pop_to(thread.offset(1));
     NormalReturn
 }
+pub fn pre_return(_:&mut Thread,_:Object) -> FunctionResult {
+    ReturnIsNext
+}
 pub fn constant(thread:&mut Thread,object:Object) -> FunctionResult {
     thread.push(object);
     NormalReturn
@@ -64,9 +67,13 @@ pub fn restack(thread:&mut Thread,fields:Object) -> FunctionResult {
         keep.push(thread.atOffset(fields as u32 & 31));
         fields = fields >> 5
     }
-    thread.discard(discard);
+    thread.discard(discard&127);
     thread.append(&mut keep);
-    NormalReturn
+    if discard>127 {
+        ReturnIsNext
+    } else {
+        NormalReturn
+    }
 }
 #[cfg(test)]
 mod testMethod {

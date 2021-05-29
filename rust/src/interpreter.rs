@@ -36,6 +36,9 @@ impl Thread {
     pub fn at_put(&mut self,position:usize,value:Object) {
         self.stack[position]=value;
     }
+    pub fn start_method(&self,_:usize) {}
+    #[inline]
+    pub fn end_method(&self) {}
     #[inline]
     pub fn offset(&self,offset:usize) -> usize {
         self.stack.len()-offset-1
@@ -68,6 +71,7 @@ pub enum FunctionResult {
     NonLocalReturn,
     Branch(isize),
     ExceptionSignaled,
+    ReturnIsNext,
 }
 use FunctionResult::*;
 
@@ -116,20 +120,24 @@ impl Method {
     }
     pub fn execute(&self,thread:&mut Thread) -> FunctionResult {
         let mut pc:usize = 0;
-        let end = self.code.len()-1;
+        let code = &*self.code;
+        let end = code.len()-1;
         let self_index = thread.offset(self.parameters as usize);
+        thread.start_method(self_index);
         thread.reserve(self.locals as usize);
         loop {
             if pc==end {break};
-            let (f,o)=self.code[pc];
+            let (f,o)=code[pc];
             match f(thread,o) {
                 NormalReturn => { pc = pc + 1},
                 Branch(offset) => { pc = (pc as isize + offset + 1) as usize},
+                ReturnIsNext => { pc = pc + 1;break}
                 NonLocalReturn => {panic!("non-local return")},
                 ExceptionSignaled => {panic!("exception signaled")},
             }
         };
-        let (f,o)=self.code[pc];
+        let (f,o)=code[pc];
+        thread.end_method();
         f(thread,o)
     }
 }
