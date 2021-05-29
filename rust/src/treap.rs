@@ -87,11 +87,11 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
         }
         pos
     }
-    pub fn insertElement(& mut self,key: K) -> usize {
+    pub fn insertElement(& mut self,key: K) -> u32 {
         let mut pos = self.ensureInitialized();
         if let Some(result) = self.lookupElement(key) {
             // might have been added while waiting for the write lock or in the init
-            return result as usize
+            return result
         }
         loop {
             if pos>=self.table.len() {
@@ -105,7 +105,7 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
         self.free = pos + 1;
         self.table[pos].set(key);
         self.root = self.insert(pos,self.root);
-        pos
+        pos as u32
     }
     fn insert(&mut self,target:usize,iroot:i32) -> i32 {
         if iroot<0 {
@@ -211,12 +211,12 @@ impl <K:Copy + PartialEq + Ord + Debug> LockingTreap<K> {
         (&mut *treap).ensureInitialized();
         (&*treap).at(index)
     }
-    pub fn intern(&self,key: K) -> usize {
+    pub fn intern(&self,key: K) -> u32 {
         {
             let treap = self.treap.read().unwrap();
             if (&*treap).checkInitialized() {
                 if let Some(result) = (&*treap).lookupElement(key) {
-                    return result as usize
+                    return result
                 }
             }
         }
@@ -239,7 +239,7 @@ lazy_static!{
 #[cfg(test)]
 mod testTreap {
     use super::*;
-    fn intern<K:Copy + PartialEq + Ord + Debug>(tp:&mut Treap<K>,key: K) -> usize {
+    fn intern<K:Copy + PartialEq + Ord + Debug>(tp:&mut Treap<K>,key: K) -> u32 {
 //        if let Some(result) = tp.lookupElement(key) {
 //            return result as usize
 //        } else {

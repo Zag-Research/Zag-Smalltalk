@@ -25,8 +25,8 @@ impl Thread {
         self.stack.pop().unwrap()
     }
     #[inline]
-    pub fn atOffset(&self,position:usize) -> Object {
-        self.stack[self.stack.len()-position]
+    pub fn atOffset(&self,position:u32) -> Object {
+        self.stack[self.stack.len()-position as usize]
     }
     #[inline]
     pub fn at(&self,position:usize) -> Object {
@@ -177,18 +177,18 @@ impl Dispatch {
         &MethodType::NoType
     }
 }
-const MAX_CLASSES: usize = 1000;
+const MAX_CLASSES: u16 = 1000;
 use std::mem::ManuallyDrop;
 type TDispatch = ManuallyDrop<Option<Dispatch>>;
 const NO_DISPATCH: TDispatch = ManuallyDrop::new(None);
-static mut dispatchTable: [TDispatch;MAX_CLASSES] = [NO_DISPATCH;MAX_CLASSES];
+static mut dispatchTable: [TDispatch;MAX_CLASSES as usize] = [NO_DISPATCH;MAX_CLASSES as usize];
 use std::sync::RwLock;
 
 lazy_static!{
     static ref dispatchFree: RwLock<usize> = RwLock::new(0);
 }
 pub fn getClass(class:u16) -> Object {
-    if (class as usize)<MAX_CLASSES {
+    if class<MAX_CLASSES {
         if let Some(dispatch) = unsafe{dispatchTable[class as usize].take()} {
             return dispatch.class
         }
@@ -198,7 +198,7 @@ pub fn getClass(class:u16) -> Object {
 pub fn addClass(c: Object, n: usize) {
     let mut index = dispatchFree.write().unwrap();
     let pos = *index;
-    if pos >= MAX_CLASSES {panic!("too many classes")}
+    if pos >= MAX_CLASSES as usize {panic!("too many classes")}
     *index = pos + 1;
     replaceDispatch(pos,c,n);
 }
@@ -218,7 +218,7 @@ pub fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
 }
 pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
     let arity = selector.immediateHash()>>25;
-    let this = thread.stack[thread.stack.len()-(arity as usize)-1];
+    let this = thread.atOffset(arity+1);
     if let Some(disp) = unsafe{&dispatchTable[this.class() as usize].take()} {
         match disp.getMethod(selector) {
             MethodType::Function(function) => function(thread,selector),

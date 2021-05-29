@@ -1,20 +1,20 @@
 use crate::object::*;
 use crate::treap::LockingTreap;
 static first_classes: &[Object]= &[
-    unarySymbolOf("Object",10+classObject),
-    unarySymbolOf("BlockClosure",10+classBlockClosure),
-    unarySymbolOf("False",10+classFalse),
-    unarySymbolOf("True",10+classTrue),
-    unarySymbolOf("UndefinedObject",10+classUndefinedObject),
-    unarySymbolOf("SmallInteger",10+classSmallInteger),
-    unarySymbolOf("Symbol",10+classSymbol),
-    unarySymbolOf("Character",10+classCharacter),
-    unarySymbolOf("Float",10+classFloat),
-    unarySymbolOf("String",10+classString),
-    unarySymbolOf("Class",10+classClass),
-    unarySymbolOf("Metaclass",10+classMetaclass),
-    unarySymbolOf("Behavior",10+classBehavior),
-    unarySymbolOf("Array",10+classArray),
+    uncheckedSymbolOf(10+classObject as u32),
+    uncheckedSymbolOf(10+classBlockClosure as u32),
+    uncheckedSymbolOf(10+classFalse as u32),
+    uncheckedSymbolOf(10+classTrue as u32),
+    uncheckedSymbolOf(10+classUndefinedObject as u32),
+    uncheckedSymbolOf(10+classSmallInteger as u32),
+    uncheckedSymbolOf(10+classSymbol as u32),
+    uncheckedSymbolOf(10+classCharacter as u32),
+    uncheckedSymbolOf(10+classFloat as u32),
+    uncheckedSymbolOf(10+classString as u32),
+    uncheckedSymbolOf(10+classClass as u32),
+    uncheckedSymbolOf(10+classMetaclass as u32),
+    uncheckedSymbolOf(10+classBehavior as u32),
+    uncheckedSymbolOf(10+classArray as u32),
 ];
 lazy_static!{
     static ref classTable: LockingTreap<Object> = LockingTreap::new(first_classes,nilObject);

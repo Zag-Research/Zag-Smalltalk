@@ -56,12 +56,12 @@ pub fn add(thread:&mut Thread,selector:Object) -> FunctionResult {
     NormalReturn
 }
 pub fn restack(thread:&mut Thread,fields:Object) -> FunctionResult {
-    let mut fields = fields.as_u48() as usize;
+    let mut fields = fields.as_u48();
     let discard = fields&255;
     let mut keep = Vec::new();
     fields = fields>>8;
     while fields>0 {
-        keep.push(thread.atOffset(fields&31));
+        keep.push(thread.atOffset(fields as u32 & 31));
         fields = fields >> 5
     }
     thread.discard(discard);

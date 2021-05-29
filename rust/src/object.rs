@@ -75,7 +75,7 @@ pub fn symbolOf(string: &str,hash: usize) -> Object {
     }
     literal!(class=classSymbol,value=hash,arity=arity)
 }
-pub const fn unarySymbolOf(_string: &str,hash: u16) -> Object {
+pub const fn uncheckedSymbolOf(hash: u32) -> Object {
     literal!(class=classSymbol,value=hash as usize)
 }
 #[inline]
