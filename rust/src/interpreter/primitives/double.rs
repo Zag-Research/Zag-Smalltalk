@@ -1,11 +1,12 @@
 use super::*;
-pub fn load(add_str:AddStrFunction,add_i32:AddI32Function) {
+pub fn load(add_str:AddStrPrimitive,add_i32:AddI32Primitive) {
     add_i32(41,add);
     add_i32(47,eq);
 }
 pub fn add(thread:&mut Thread,selector:Object) -> FunctionResult {
     if !thread.top().is_double() { return super::primitive_fail(thread,selector,1,nilObject) }
-    thread.push(Object::from(thread.pop().as_double()+thread.pop().as_double()));
+    let result = Object::from(thread.pop().as_f64()+thread.pop().as_f64());
+    thread.push(result);
     NormalReturn
 }
 pub fn eq(thread:&mut Thread,selector:Object) -> FunctionResult {

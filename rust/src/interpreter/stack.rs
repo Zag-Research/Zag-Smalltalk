@@ -1,5 +1,5 @@
 use super::*;
-pub fn load(add_str:AddStrFunction,add_i32:AddI32Function) {
+pub fn load(add_str:AddStrPrimitive,add_i32:AddI32Primitive) {
     add_i32(110,eq);
     add_i32(1,add);
 }

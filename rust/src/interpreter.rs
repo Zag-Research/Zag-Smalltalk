@@ -36,7 +36,10 @@ impl Thread {
     pub fn at_put(&mut self,position:usize,value:Object) {
         self.stack[position]=value;
     }
-    pub fn start_method(&self,_:usize) {}
+    #[inline]
+    pub fn start_method_get_self_index(&self,parameters:u8) {
+        self.offset(parameters as usize);
+    }
     #[inline]
     pub fn end_method(&self) {}
     #[inline]
@@ -87,8 +90,8 @@ macro_rules! restack_mask {
 }
 
 type Function = fn(&mut Thread,Object) -> FunctionResult;
-type AddStrFunction = fn(&'static str,Function);
-type AddI32Function = fn(i32,Function);
+type AddStrPrimitive = fn(&'static str,Function);
+type AddI32Primitive = fn(i32,Function);
 pub mod stack;
 #[derive(Default,Clone)]
 pub struct Method {
@@ -122,8 +125,7 @@ impl Method {
         let mut pc:usize = 0;
         let code = &*self.code;
         let end = code.len()-1;
-        let self_index = thread.offset(self.parameters as usize);
-        thread.start_method(self_index);
+        let self_index = thread.start_method_get_self_index(self.parameters);
         thread.reserve(self.locals as usize);
         loop {
             if pc==end {break};

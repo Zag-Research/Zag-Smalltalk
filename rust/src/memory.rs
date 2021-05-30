@@ -1,17 +1,30 @@
 use std::mem;
 use std::cell::RefCell;
+use std::sync::RwLock;
+use std::sync::Arc;
 use crate::object::*;
 extern crate libc;
 
+enum RegionType {
+    Nursery,
+    NurseryWithBackup(Arc<RwLock<AllocableRegion>>),
+    // TeenWithBackup(Arc<RwLock<AllocableRegion>>),
+    Old, // should go away
+    PrimaryOld(Arc<RwLock<AllocableRegion>>),
+    SecondaryOld(Arc<RwLock<AllocableRegion>>),
+}
 pub struct AllocableRegion {
     base: * mut HeapObject,
     size: usize,
     end: * mut HeapObject,
     current: * mut HeapObject,
+    region_type: RegionType,
 }
 unsafe impl Send for AllocableRegion {}
 unsafe impl Sync for AllocableRegion {}
 
+const gc_main: usize = 0x100000000000;
+const gc_size: isize = 0x000001000000;
 const min_page_size: isize = 16384;
 fn bytesRoundedToPageSize(size:isize) -> usize {
     ((size+min_page_size-1)&(-min_page_size)) as usize
@@ -23,8 +36,9 @@ impl AllocableRegion {
         AllocableRegion {
             base: start,
             size: size*mem::size_of::<HeapObject>(),
-            end: (unsafe{start.offset(size as isize)}),
+            end: (unsafe{start.offset(size as isize - 1)}),
             current: start,
+            region_type: RegionType::Nursery,
         }
     }
     fn new(address: usize,size:isize) -> Self {
@@ -34,6 +48,7 @@ impl AllocableRegion {
             size: bytesRoundedToPageSize(size),
             end: end,
             current: end,
+            region_type: RegionType::Old,
         }
     }
     fn mapMemory(& mut self) {
@@ -53,7 +68,7 @@ impl AllocableRegion {
         if data != self.base {
             panic!("data mapped at wrong address")
         }
-        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>()) as isize)};
+        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>()) as isize - 1)};
     }
     pub fn releaseMemory(& mut self) {
         self.end = self.base;
@@ -66,47 +81,19 @@ impl AllocableRegion {
             panic!("Failed to release memory map")
         }
     }
-    pub fn allocObject(& mut self,size:isize) -> Option<* mut HeapObject> {
+    pub fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> Option<* mut HeapObject> {
         let new = self.current;
-        let mut next = unsafe{self.current.offset(size)};
+        let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
         if next > self.end {
             None
         } else {
-            // have to set the header and initialize the object
+            self.current = next;
+            (unsafe{&mut*new}).initialize();
             Some(new)
         }
     }
-    #[cfg(not(test))]
-    pub fn gc(& mut self,sink: & mut AllocableRegion) {
-        panic!("trying to gc")
-    }
-}
-
-const NurserySize : usize = 25000;
-#[thread_local]
-static mut NurseryMemory : [usize;NurserySize] = [0;NurserySize];
-use std::sync::RwLock;
-pub struct Memory {
-    genOld1: AllocableRegion,
-    //genOld2: AllocableRegion,
-    //genTeen: AllocableRegion,
-    nursery: AllocableRegion,
-}
-impl Memory {
-    fn new(base:usize,size:isize,nursery:AllocableRegion) -> Self {
-        let mut mem = Memory {
-            genOld1: AllocableRegion::new(base,size),
-            nursery,
-        };
-        mem.genOld1.mapMemory();
-        mem
-    }
     pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
-    }
-    pub fn allocObject(& mut self,size:isize) {
-        // get code from HeapObject
-        // need to lock long enough to allocate space for object
-        // then can't allow GC until the object is initialized
+        panic!("not implemented")
     }
     fn minorGC(&mut self) {
         panic!("not implemented")
@@ -126,24 +113,24 @@ impl Memory {
         }
 */    }
 }
-pub const gc_main: usize = 0x100000000000;
-pub const gc_size: isize = 0x000001000000;
+
+const NurserySize : usize = 25000;
+#[thread_local]
+static mut NurseryMemory : [usize;NurserySize] = [0;NurserySize];
 thread_local! {
-    pub static memory: RefCell<Memory> = RefCell::new(Memory::new(gc_main,gc_size,AllocableRegion::makeLocal(unsafe{&mut NurseryMemory})));
+    pub static memory: RefCell<AllocableRegion> = RefCell::new(AllocableRegion::makeLocal(unsafe{&mut NurseryMemory}));
 }
 pub fn assignObject(target: Object, offset: isize,value: Object) {
     memory.with(|mem| mem.borrow_mut().assignObject(target,offset,value))
 }
-pub fn allocObject(size:isize) {
-    memory.with(|mem| mem.borrow_mut().allocObject(size))
+pub fn allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> Option<* mut HeapObject> {
+    memory.with(|mem| mem.borrow_mut().allocObject(class,n_instVars,n_indexed,width,hash,weak))
 }
 #[cfg(test)]
 mod testMemory {
     use super::*;
     #[test]
     fn test1() {
-/*        Nursery.with(|n| n.borrow_mut().allocObject(10));
-        check_init_nursery();
-        unsafe{Nursery2.allocObject(10)};*/
+        memory.with(|n| n.borrow_mut().allocObject(classArray,0,10,-1,0,false));
     }
 }

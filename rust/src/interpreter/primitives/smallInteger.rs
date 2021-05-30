@@ -1,5 +1,5 @@
 use super::*;
-pub fn load(add_str:AddStrFunction,add_i32:AddI32Function) {
+pub fn load(add_str:AddStrPrimitive,add_i32:AddI32Primitive) {
     add_i32(7,eq);
 }
 pub fn eq(thread:&mut Thread,selector:Object) -> FunctionResult {

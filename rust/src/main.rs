@@ -35,16 +35,7 @@ use symbol::intern;
 //mod minimal;
 
 fn main() {
-    use interpreter::*;
-    //memory::loadHeap();
-    let mut thread:Thread = Default::default();
-    let classIndex = class::class_index(intern("System"));
-    let class = getClass(classIndex);
-    thread.push(class);
-    let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
-    method.instr_with(dispatch,intern("start"));
-    method.execute(&mut thread);
-//*
+/*
     let temp3 = Object::from(2.0_f64);
     let temp3b = Object::from(0.0625_f64);
     println!("{:?} {:?}",temp3,temp3b);
@@ -62,14 +53,22 @@ fn main() {
     println!("{} {:?}","#value:value:",intern("value:value:"));
     println!("{} {:?}","#==",intern("=="));
     println!("{} {:?}",42.0,Object::from(42.0));
-    for i in 38..50 {
+    for i in 48..50 {
         let n = 1<<(i-1);
         let temp = Object::from(n-1);
         let temp2 = Object::from(-n);
-        println!("{}: {:?} {:x} {:x} {:?} {:x} {:x}",i,temp,temp.as_u48(),(n-1)<<3,temp2,temp2.as_u48(),-n<<3);
+        println!("{} bit SmallInteger: {:?} {:x} {:?} {:x}",i,temp,temp.as_u48(),temp2,temp2.as_u48());
     }
+    println!("notice 49 bit wraps around, showing that 48 bit is all we can represent");
 // */    
-//    let gc = AllocableRegion::new(gc_main,gc_size);
-//    let system = intern("System");
-//    let system_class = 
+
+    use interpreter::*;
+    //memory::loadHeap();
+    let mut thread:Thread = Default::default();
+    let classIndex = class::class_index(intern("System"));
+    let class = getClass(classIndex);
+    thread.push(class);
+    let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
+    method.instr_with(dispatch,intern("start"));
+    method.execute(&mut thread);
 }

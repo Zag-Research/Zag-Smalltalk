@@ -1,6 +1,7 @@
 use super::*;
 pub mod object;
 pub mod smallInteger;
+pub mod double;
 use std::collections::HashMap;
 #[derive(Eq,PartialEq,Hash)]
 enum Key {
@@ -37,6 +38,7 @@ fn prim_lookup(k:Key) -> Option<Function> {
     }
     object::load(add_str,add_i32);
     smallInteger::load(add_str,add_i32);
+    double::load(add_str,add_i32);
     super::stack::load(add_str,add_i32);
     prim_lookup(k)
 }

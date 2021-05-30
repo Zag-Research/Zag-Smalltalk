@@ -317,7 +317,7 @@ union HeapHeader {
     words: [u32;2], // x86_64: 0 is low word, 1 is high
 }
 
-const hashShift: usize = 20;
+const hashShift: usize = 16;
 const classMask: usize = (1<<hashShift)-1;
 const hashMask: usize = 0xfffff;
 
@@ -382,16 +382,14 @@ impl Debug for HeapHeader {
         write!(f, "cl:{} hs:{} sz:{} fm:{}:-",self.class(),self.hash(),self.size(),self.format())
     }
 }
-macro_rules! headerfield {
-    (class = $e:expr) => {($e as usize)};
-    (immutable) => {1<<47};
-    (size = $e:expr) => {($e)<<48};
-    (hash = $e:expr) => {(($e)&hashMask)<<hashShift};
-    (format = $e:expr) => {($e)<<40};
-    (forward) => {1<<63};
-}
 macro_rules! header {
-    ($($i:ident $( = $e:expr)?),+) => {HeapHeader{u:0_usize $(| (headerfield!($i $( = $e)? )))+}}
+    (@field class = $e:expr) => {($e as usize)};
+    (@field immutable) => {1<<47};
+    (@field size = $e:expr) => {($e)<<48};
+    (@field hash = $e:expr) => {(($e)&hashMask)<<hashShift};
+    (@field format = $e:expr) => {($e)<<40};
+    (@field forward) => {1<<63};
+    ($($i:ident $( = $e:expr)?),+) => {HeapHeader{u:0_usize $(| (header!(@field $i $( = $e)? )))+}}
 }
 #[cfg(test)]
 mod testHeapHeader {
@@ -539,10 +537,11 @@ impl HeapObject {
         let fields: * mut Object = &mut self.fields as * mut Object;
         unsafe{fields.offset(index as isize).write(value)}
     }
-    pub fn initialize(&mut self,init:Object) {
+    pub fn initialize(&mut self) {
         for i in 0..self.n_instVars() {
             self.raw_at_put(i,Default::default())
         };
+        let init = {if self.header.format()<=16 {Default::default()} else {zeroObject}};
         let first = self.firstIndex();
         for i in first..first+self.n_index() {
             self.raw_at_put(i,init)
@@ -550,6 +549,7 @@ impl HeapObject {
     }
     pub fn alloc(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
         let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
+        let hash = {if hash==0 {self as *mut HeapObject as usize} else {hash}};
         self.header=header!(class=class,hash=hash,format=format,size=size);
         let extra = self.firstIndex();
         if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed})};
@@ -586,30 +586,30 @@ mod testHeapObject {
         let next: * mut HeapObject = &mut mem as * const usize as * mut HeapObject;
         let obj1 = unsafe { next.as_mut().unwrap() };
         let next = obj1.alloc(classArray,0,5,-1,0x101,false);
-        obj1.initialize(Default::default());
+        obj1.initialize();
         obj1.raw_at_put(0,falseObject);
         obj1.raw_at_put(1,one);
         obj1.raw_at_put(2,two);
         let obj2 = unsafe { next.as_mut().unwrap() };
         let next = obj2.alloc(classClass,3,-1,-1,0x202,false);
-        obj2.initialize(Default::default());
+        obj2.initialize();
         obj2.raw_at_put(0,trueObject);
         obj2.raw_at_put(1,one);
         let obj3 = unsafe { next.as_mut().unwrap() };
         let end = obj3.alloc(classBehavior,0,-1,-1,0x303,false);
-        obj3.initialize(Default::default());
+        obj3.initialize();
         print_first(&mem,end);
-        assert_eq!(mem[0],0x00050f001010000d); // obj1
+        assert_eq!(mem[0],0x00050f000101000d); // obj1
         assert_eq!(mem[1],falseObject.raw());
         assert_eq!(mem[2],one.raw());
         assert_eq!(mem[3],two.raw());
         assert_eq!(mem[4],def.raw());
         assert_eq!(mem[5],def.raw());
-        assert_eq!(mem[6],0x00030e002020000a); // obj2
+        assert_eq!(mem[6],0x00030e000202000a); // obj2
         assert_eq!(mem[7],trueObject.raw());
         assert_eq!(mem[8],one.raw());
         assert_eq!(mem[9],def.raw());
-        assert_eq!(mem[10],0x00000e003030000c); // obj3
+        assert_eq!(mem[10],0x00000e000303000c); // obj3
         assert_eq!(mem[11],uninit);
     }
     #[test]

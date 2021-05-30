@@ -61,9 +61,9 @@ First we have the object format tag. Only the following values currently have me
 - 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 - 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
 - 14: non-indexable objects with inst vars - no pointers (Point et al)
-- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 16 but change to format 1 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
+- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 11 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
 - 16: indexable objects with inst vars - no pointers
-- 17: 64-bit indexable - non-pointers (Array with only literals and Floats, DoubleWordArray,) Arrays are initially created as format 15 but change to format 12 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 16.
+- 17: 64-bit indexable - non-pointers (DoubleWordArray,DoubleArray,)
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
 - 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
 - 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
@@ -86,8 +86,9 @@ This is the first field in the header-word for an object:
 | 1    | unused       |                                                              |
 | 1    | unused       |                                                              |
 | 5    | format       | (see above)                                                  |
+| 4    | unused       |                                                              |
 | 20   | identityHash |                                                              |
-| 20   | classIndex   | LSB                                                          |
+| 16   | classIndex   | LSB                                                          |
 
 Unless format=12-14, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
 
