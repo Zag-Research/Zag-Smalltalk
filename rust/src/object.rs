@@ -134,7 +134,7 @@ impl Object {
     #[inline]
     pub fn hash(&self) -> usize {
         if on_heap(self.raw()) {
-            (unsafe{*self.as_object_ptr()}).hash()
+            (unsafe{&*self.as_object_ptr()}).identityHash()
         } else {
             self.immediateHash() as usize&hashMask
         }
@@ -174,8 +174,8 @@ impl Object {
         unsafe{self.f}
     }
     #[inline]
-    pub const fn as_object_ptr(&self) -> * mut HeapHeader {
-        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapHeader)}
+    pub const fn as_object_ptr(&self) -> * mut HeapObject {
+        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapObject)}
     }
     #[inline]
     pub const fn raw(&self) -> usize {
@@ -189,10 +189,18 @@ impl Debug for Object {
         // various flags provided to format strings.
         if self.is_symbol() {
             write!(f, "{}",crate::symbol::str_of(*self))
-        } else if self.is_literal() {
-            write!(f, "{:x}: {:x}",self.as_literal(),self.raw())
         } else if self.is_integer() {
             write!(f, "{}:{} {:x}",self.as_i48(),self.class_name(),self.raw())
+        } else if self.is_literal() {
+            if *self==nilObject {
+                write!(f,"nil")
+            } else if *self==trueObject {
+                write!(f,"true")
+            } else if *self==falseObject {
+                write!(f,"false")
+            } else {
+                write!(f, "{:?}: {:x}",self.as_literal() as u8 as char,self.raw())
+            }
         } else if self.is_double() {
             write!(f, "{:e}:{} {:x}",self.as_f64(),self.class_name(),self.raw())
         } else if self.is_object() {
@@ -236,6 +244,12 @@ impl From<& HeapObject> for Object {
         Object::from(o as *const HeapObject)
     }
 }
+impl From<&mut HeapObject> for Object {
+    #[inline]
+    fn from(o: &mut HeapObject) -> Self {
+        Object::from(o as * const HeapObject)
+    }
+}        
 impl From<* const HeapObject> for Object {
     #[inline]
     fn from(o: * const HeapObject) -> Self {
@@ -368,10 +382,10 @@ impl HeapHeader {
         self.format()<14
     }
 }
-impl From<Object> for HeapHeader {
+impl From<Object> for &HeapObject {
     #[inline]
     fn from(o:Object) -> Self {
-        unsafe{*o.as_object_ptr()}
+        unsafe{&*o.as_object_ptr()}
     }
 }
 impl Debug for HeapHeader {
@@ -496,7 +510,7 @@ impl HeapObject {
         }
     }
     #[inline]
-    pub fn firstIndex(&self) -> usize {
+    fn firstIndex(&self) -> usize {
         let size = self.header.size();
         let format = self.header.format();
         if format&27==10 {
@@ -529,15 +543,16 @@ impl HeapObject {
     }
     #[inline]
     pub fn raw_at(&self,index:usize) -> Object {
-        let fields: * const Object = &self.fields as * const Object;
+        let fields = &self.fields as * const Object;
         unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
     pub fn raw_at_put(&mut self,index:usize,value:Object) {
-        let fields: * mut Object = &mut self.fields as * mut Object;
+        let fields = &mut self.fields as * mut Object;
         unsafe{fields.offset(index as isize).write(value)}
     }
     pub fn initialize(&mut self) {
+        println!("instV {} fi {} next {}",self.n_instVars(),self.firstIndex(),self.firstIndex()+self.n_index());
         for i in 0..self.n_instVars() {
             self.raw_at_put(i,Default::default())
         };
@@ -555,6 +570,15 @@ impl HeapObject {
         if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed})};
         unsafe{(self as *mut HeapObject).offset(total_size)}
     }
+    #[cfg(test)]
+    pub fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+        let result = self.alloc(class,fields.len(),-1,-1,0,false);
+        for (i,obj) in fields.iter().enumerate() {
+            println!("{}: {:?}",i,*obj);
+            self.raw_at_put(i,*obj)
+        }
+        result
+    }
 }
 impl Default for HeapObject {
     fn default() -> Self {
@@ -566,7 +590,7 @@ impl Default for HeapObject {
 mod testHeapObject {
     use super::*;
     fn print_first(array:&[usize],end:*const HeapObject) {
-        let n = unsafe{(end as *const usize).offset_from(array.as_ptr()) as usize};
+        let n = unsafe{(end as *const usize).offset_from(array.as_ptr()) as usize}+1;
         for (index,value) in array[..n].iter().enumerate() {
             if index%8==0 {
                 if index>0 {println!()};
@@ -579,7 +603,7 @@ mod testHeapObject {
     #[test]
     fn correct() {
         let def: Object = Default::default();
-        let uninit = 0xdead_usize;
+        let uninit = 0xdead0000dead_usize;
         let mut mem = [uninit;100000];
         let one = Object::from(1);
         let two = Object::from(2);
@@ -596,8 +620,12 @@ mod testHeapObject {
         obj2.raw_at_put(0,trueObject);
         obj2.raw_at_put(1,one);
         let obj3 = unsafe { next.as_mut().unwrap() };
-        let end = obj3.alloc(classBehavior,0,-1,-1,0x303,false);
+        let next = obj3.alloc(classBehavior,0,-1,-1,0x303,false);
         obj3.initialize();
+        let object3 = Object::from(obj3);
+        let end = next;
+        let obj4 = unsafe { next.as_mut().unwrap() };
+        let end = obj4.init(classBehavior,&[one,nilObject,object3,def,Object::from(3.14),Object::from('X'),trueObject]);
         print_first(&mem,end);
         assert_eq!(mem[0],0x00050f000101000d); // obj1
         assert_eq!(mem[1],falseObject.raw());
@@ -610,7 +638,15 @@ mod testHeapObject {
         assert_eq!(mem[8],one.raw());
         assert_eq!(mem[9],def.raw());
         assert_eq!(mem[10],0x00000e000303000c); // obj3
-        assert_eq!(mem[11],uninit);
+//        assert_eq!(mem[11],0x00050e000303000c); // obj4
+        assert_eq!(mem[12],one.raw());
+        assert_eq!(mem[13],nilObject.raw());
+        assert_eq!(mem[14],object3.raw());
+        assert_eq!(mem[15],def.raw());
+        assert_eq!(mem[16],Object::from(3.14).raw());
+        assert_eq!(mem[17],Object::from('X').raw());
+        assert_eq!(mem[18],trueObject.raw());
+        assert_eq!(mem[19],uninit);
     }
     #[test]
     fn sizes() {
