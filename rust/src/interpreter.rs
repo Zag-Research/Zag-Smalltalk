@@ -243,7 +243,9 @@ pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
 mod testsInterpreter {
     use super::*;
     use crate::symbol::intern;
-    
+    fn init_classes() {
+//        let l1 = 
+    }
     #[test]
     #[should_panic(expected = "no dispatch found")]
     fn dispatch_non_existant_class() {

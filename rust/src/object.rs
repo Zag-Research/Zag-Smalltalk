@@ -249,10 +249,16 @@ impl From<&mut HeapObject> for Object {
     fn from(o: &mut HeapObject) -> Self {
         Object::from(o as * const HeapObject)
     }
-}        
+}
 impl From<* const HeapObject> for Object {
     #[inline]
     fn from(o: * const HeapObject) -> Self {
+        Object {i:(o as isize)+NAN_VALUE-1}
+    }
+}
+impl From<* mut HeapObject> for Object {
+    #[inline]
+    fn from(o: * mut HeapObject) -> Self {
         Object {i:(o as isize)+NAN_VALUE-1}
     }
 }
@@ -405,6 +411,9 @@ macro_rules! header {
     (@field forward) => {1<<63};
     ($($i:ident $( = $e:expr)?),+) => {HeapHeader{u:0_usize $(| (header!(@field $i $( = $e)? )))+}}
 }
+macro_rules! objects {
+    ($($e:expr),*) => {&[$( Object::from($e)),*]}
+}
 #[cfg(test)]
 mod testHeapHeader {
     use super::*;
@@ -449,12 +458,14 @@ fn formatAndSize(n_instVars:usize,n_indexed:isize,width:isize,weak:bool) -> (usi
             (format_idx_inst_np , 0, n_indexed + 2)
         }
     } else {
-        let items_per_word = 8 / width;
-        let words = (n_indexed + items_per_word - 1) / items_per_word;
+        let items_per_word = 8 / width as usize;
+        let mut remainder = n_indexed as usize%items_per_word;
+        if remainder==0 {remainder=items_per_word}
+        let words = (n_indexed as usize + items_per_word - 1) / items_per_word;
         if words < 32767 {
-            (format_idx_other_base+items_per_word as usize, words as usize, words + 1)
+            (format_idx_other_base+items_per_word*2-remainder, words, words as isize + 1)
         } else {
-            (format_idx_other_base+items_per_word as usize, 32767, words + 2)
+            (format_idx_other_base+items_per_word*2-remainder, 32767, words as isize + 2)
         }
     }
 }
@@ -474,9 +485,11 @@ mod testFormatAndSize {
         assert_eq!(formatAndSize(0,40000,8,false),(format_idx_other_8,32767,40002));
         assert_eq!(formatAndSize(0,20000,8,false),(format_idx_other_8,20000,20001));
         assert_eq!(formatAndSize(0,17,8,false),(format_idx_other_8,17,18));
-        assert_eq!(formatAndSize(0,17,4,false),(format_idx_other_4,9,10));
-        assert_eq!(formatAndSize(0,17,2,false),(format_idx_other_2,5,6));
-        assert_eq!(formatAndSize(0,17,1,false),(format_idx_other_1,3,4));
+        assert_eq!(formatAndSize(0,17,4,false),(format_idx_other_4+1,9,10));
+        assert_eq!(formatAndSize(0,17,2,false),(format_idx_other_2+3,5,6));
+        assert_eq!(formatAndSize(0,17,1,false),(format_idx_other_1+7,3,4));
+        assert_eq!(formatAndSize(0,18,2,false),(format_idx_other_2+2,5,6));
+        assert_eq!(formatAndSize(0,20,1,false),(format_idx_other_1+4,3,4));
         assert_eq!(formatAndSize(0,16,4,false),(format_idx_other_4,8,9));
         assert_eq!(formatAndSize(0,16,2,false),(format_idx_other_2,4,5));
         assert_eq!(formatAndSize(0,16,1,false),(format_idx_other_1,2,3));
@@ -497,6 +510,14 @@ impl HeapObject {
     #[inline]
     pub fn classIndex(&self) -> usize {
         self.header.class()
+    }
+    #[inline]
+    pub fn format(&self) -> usize {
+        self.header.format()
+    }
+    #[inline]
+    pub fn header_size(&self) -> usize {
+        self.header.size()
     }
     #[inline]
     pub fn n_instVars(&self) -> usize {
@@ -526,8 +547,22 @@ impl HeapObject {
         }
     }
     #[inline]
-    pub fn n_index(&self) -> usize {
+    pub fn words(&self) -> usize {
         let size = self.header.size();
+        let format = self.header.format();
+        if format&26==10 {
+            size+1
+        } else if format<=16 {
+            size+2+self.raw_at(size).raw()
+        } else if size<32767 {
+            size+1
+        } else {
+            2+self.raw_at(size).raw()
+        }
+    }
+    #[inline]
+    pub fn size(&self) -> usize {
+        let mut size = self.header.size();
         let format = self.header.format();
         if format&27==10 {
             0
@@ -535,10 +570,19 @@ impl HeapObject {
             size
         } else if format<=16 {
             self.raw_at(size).raw()
-        } else if size<32767 {
-            size
         } else {
-            self.raw_at(0).raw()
+            if size>=32767 {
+                size = self.raw_at(0).raw()
+            }
+            if format>=24 {
+                size*8-(format&7)
+            } else if format>=20 {
+                size*4-(format&3)
+            } else if format>=18 {
+                size*2-(format&1)
+            } else {
+                size
+            }
         }
     }
     #[inline]
@@ -547,18 +591,62 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
+    pub fn at(&self,index:usize) -> Object {
+        let format = self.header.format();
+        if format&27==10 {
+            panic!("at for non-indexable")
+        }
+        let fields = &self.fields as * const Object;
+        unsafe{fields.offset(index as isize).read()}
+    }
+    #[inline]
+    pub fn at_put_u8(&self,index:usize,value:u8) {
+        let format = self.header.format();
+        if format<24 {
+            panic!("at_put_u8 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u8;
+        unsafe{fields.offset(index as isize).read()};
+    }
+    #[inline]
+    pub fn at_put_u16(&self,index:usize,value:u16) {
+        let format = self.header.format();
+        if format<24 {
+            panic!("at_put_u16 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u16;
+        unsafe{fields.offset(index as isize).read()};
+    }
+    #[inline]
+    pub fn at_put_u32(&self,index:usize,value:u32) {
+        let format = self.header.format();
+        if format<18 || format>=20 {
+            panic!("at_put_u32 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u32;
+        unsafe{fields.offset(index as isize).read()};
+    }
+    #[inline]
+    pub fn at_put_u64(&self,index:usize,value:u64) {
+        let format = self.header.format();
+        if format<24 {
+            panic!("at_put_u64 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u64;
+        unsafe{fields.offset(index as isize).read()};
+    }
+    #[inline]
     pub fn raw_at_put(&mut self,index:usize,value:Object) {
         let fields = &mut self.fields as * mut Object;
         unsafe{fields.offset(index as isize).write(value)}
     }
     pub fn initialize(&mut self) {
-        println!("instV {} fi {} next {}",self.n_instVars(),self.firstIndex(),self.firstIndex()+self.n_index());
         for i in 0..self.n_instVars() {
             self.raw_at_put(i,Default::default())
         };
         let init = {if self.header.format()<=16 {Default::default()} else {zeroObject}};
         let first = self.firstIndex();
-        for i in first..first+self.n_index() {
+        for i in first..self.words()-1 {
             self.raw_at_put(i,init)
         };
     }
@@ -574,10 +662,18 @@ impl HeapObject {
     pub fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
         let result = self.alloc(class,fields.len(),-1,-1,0,false);
         for (i,obj) in fields.iter().enumerate() {
-            println!("{}: {:?}",i,*obj);
             self.raw_at_put(i,*obj)
         }
         result
+    }
+}
+pub trait HeapObj {
+    fn len(&self) -> usize;
+}
+impl HeapObj for *mut HeapObject {
+    #[inline]
+    fn len(&self) -> usize {
+        (unsafe{&**self}).size()
     }
 }
 impl Default for HeapObject {
