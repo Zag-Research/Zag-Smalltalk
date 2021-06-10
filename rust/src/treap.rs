@@ -4,7 +4,7 @@ use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt::{self,Debug};
 use std::cmp::max;
 #[derive(Copy,Clone,Debug)]
-pub struct Element<K:Copy + PartialEq + Ord + Debug> {
+struct Element<K:Copy + PartialEq + Ord + Debug> {
     value: K,
     left: i32,
     right: i32,
@@ -37,7 +37,7 @@ impl <K:Copy + PartialEq + Ord + Debug> PartialEq for Element<K> {
         self.value == other.value
     }
 }
-pub struct Treap<K:'static + Copy + PartialEq + Ord + Debug> {
+struct Treap<K:'static + Copy + PartialEq + Ord + Debug> {
     table: Vec<Element<K>>,
     root: i32,
     free: usize,
@@ -87,7 +87,7 @@ impl <K: Copy + PartialEq + Ord + Debug> Treap<K> {
         }
         pos
     }
-    pub fn insertElement(& mut self,key: K) -> u32 {
+    fn insertElement(& mut self,key: K) -> u32 {
         let mut pos = self.ensureInitialized();
         if let Some(result) = self.lookupElement(key) {
             // might have been added while waiting for the write lock or in the init

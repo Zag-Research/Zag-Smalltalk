@@ -9,6 +9,7 @@
 #![feature(assert_matches)]
 #![feature(vec_into_raw_parts)]
 #![feature(thread_local)]
+#![feature(const_fn_trait_bound)]
 #![allow(warnings)]
 #![warn(clippy::default_numeric_fallback)]
 #[macro_use]
@@ -65,7 +66,7 @@ fn main() {
     use interpreter::*;
     //memory::loadHeap();
     let mut thread:Thread = Default::default();
-    let classIndex = class::class_index(intern("System"));
+    let classIndex = class::class_intern("System");
     let class = getClass(classIndex);
     thread.push(class);
     let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());

@@ -10,11 +10,13 @@ static first_classes: &[Object]= &[
     uncheckedSymbolOf(10+classSymbol as u32),
     uncheckedSymbolOf(10+classCharacter as u32),
     uncheckedSymbolOf(10+classFloat as u32),
+    uncheckedSymbolOf(10+classArray as u32),
     uncheckedSymbolOf(10+classString as u32),
     uncheckedSymbolOf(10+classClass as u32),
     uncheckedSymbolOf(10+classMetaclass as u32),
     uncheckedSymbolOf(10+classBehavior as u32),
-    uncheckedSymbolOf(10+classArray as u32),
+    uncheckedSymbolOf(10+classMethod as u32),
+    uncheckedSymbolOf(10+classSystem as u32),
 ];
 lazy_static!{
     static ref classTable: LockingTreap<Object> = LockingTreap::new(first_classes,nilObject);
@@ -22,6 +24,9 @@ lazy_static!{
 pub fn name_str(class:u16) -> StaticStr {
     crate::symbol::str_of(classTable.at(class as usize))
 }
-pub fn class_index(symbol:Object) -> u16 {
+pub fn class_intern(symbol:&'static str) -> u16 {
+    class_index(crate::symbol::intern(symbol)) as u16
+}
+fn class_index(symbol:Object) -> u16 {
     classTable.intern(symbol) as u16
 }

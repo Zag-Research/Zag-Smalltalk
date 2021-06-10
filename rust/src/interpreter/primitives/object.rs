@@ -1,7 +1,7 @@
 use super::*;
 pub fn load(add_str:AddStrPrimitive,add_i32:AddI32Primitive) {
-    add_str("yourself",yourself);
-    add_str("log:",log_);
+    add_str("yourself prim",yourself);
+    add_str("log: prim",log_);
 }
 fn log_(thread:&mut Thread,_:Object) -> FunctionResult {
     println!("{:?}",thread.pop());

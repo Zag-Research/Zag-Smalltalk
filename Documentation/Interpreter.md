@@ -11,7 +11,7 @@ Logically, Smalltalk message dispatch follows these steps:
  2. look up the selector symbol in C's `methodDict`
  3. if found, the value of the lookup is the method code - call it
  4. if not found and C has a superclass, set C to the superclass and continue at 2
- 5. the method is not found, so create a Message object and go back to 1 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
+ 5. the method is not found, so create a Message object, set C to the class of the target and go back to 2 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
 
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
@@ -30,7 +30,7 @@ The difference is that the Java compiler statically knows the index into the dis
 Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods, leading to 80MB of dispatch tables - still excessive (and would have horrible cache locality).
 
 #### Our approach
-We build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods.
+We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
 
 ### The table below **is wrong** (from a previous design).
 
@@ -83,7 +83,7 @@ Fields:
 	- - could be an array
 	- - - if all the values are literals (or arrays of literals) it will be represented as a literal array `#()`
 	- - - else it will be represented as a constructed array `{}`
-	- - could be an ASTMethod for a block (name will be `value`, `value:`, etc.)
+	- - could be an ASMethod for a block (name will be `value`, `value:`, etc.)
 If whitespace is nil and value is literal or array of literal, the ASLiteral can be omitted, and the literal be the expression value.
  ### ASReturn
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
@@ -118,14 +118,17 @@ Can often stand in for ASSequence if there is no whitespace to be included.
 These are not part of the main interpret loop, but are referenced by it:
 ### ASBehavior
 ### ASClass
-- flags - isVariable
+- methods - an array of method definitions for the instances
+- instVarNames - an array of instance variable names for the instances
+- superclass - the superclass
 - name - a symbol
+- format - the format code to use when creating instances
 - classVars - an array of class variables
 - sharedPools - an array of shared pool classes
-- methods - an array of method definitions
-- suoerclass - the superclass
 ### ASMetaclass
-All the fields from class, plus:
+- methods - an array of method definitions for the class
+- instVarNames - an array of instance variable names for the class
+- superclass - the superclass
 - instance - instanceSide
 
 ## Forced SmallInteger

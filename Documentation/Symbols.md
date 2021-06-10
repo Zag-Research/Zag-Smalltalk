@@ -1,7 +1,7 @@
 # Symbols
 One of the ways that this interpreter runs fast is that it encodes Symbols in a particular way.
 
-Symbols are literals - meaning that they are immediate object like integers, booleans, and characters.
+Symbols are literals - meaning that they are immediate object like small integers, booleans, and characters.
 
 The hash code contains 2 portions: the low 25 bits are an index into the symbol table, and the next 5 bits are the arity of the symbol. This supports millions of symbols (a typical Pharo image has about 90,000 symbols). For Symbols, the hash-code field is an index into a table that points to the an internal representation of the Symbol, including the characters that make it up, but all that really is necessary is in the hash-code. It is used to hash into the selector table on a method dispatch, and is obviously necessary for testing equality. This means that several methods that access the string-ness of the symbol need to be specially coded, and means that unreferenced symbols cannot be reclaimed in the basic garbage collection process. However this seems worth it so that dispatch can proceed without having to follow a pointer. So a separate mechanism must be added to collect unused symbols and the associated Strings.
 

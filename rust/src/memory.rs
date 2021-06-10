@@ -1,136 +1,162 @@
 use std::mem;
 use std::cell::RefCell;
-use std::sync::RwLock;
-use std::sync::Arc;
+use std::sync::{RwLock,Mutex,Arc};
 use crate::object::*;
 extern crate libc;
+extern crate errno;
 
-enum RegionType {
-    Nursery,
-    NurseryWithBackup(Arc<RwLock<AllocableRegion>>),
-    // TeenWithBackup(Arc<RwLock<AllocableRegion>>),
-    Old, // should go away
-    PrimaryOld(Arc<RwLock<AllocableRegion>>),
-    SecondaryOld(Arc<RwLock<AllocableRegion>>),
+type HOInit<'a> = &'a dyn Fn(&mut HeapObject);
+trait AllocableRegion {
+    fn assignObject(& mut self,target: Object, offset: isize,value: Object);
+    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject>;
+    #[cfg(test)]
+    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject;
 }
-pub struct AllocableRegion {
+struct ThreadLocalRegion {
     base: * mut HeapObject,
-    size: usize,
     end: * mut HeapObject,
     current: * mut HeapObject,
-    region_type: RegionType,
 }
-unsafe impl Send for AllocableRegion {}
-unsafe impl Sync for AllocableRegion {}
-
-const gc_main: usize = 0x100000000000;
-const gc_size: isize = 0x000001000000;
-const min_page_size: isize = 16384;
-fn bytesRoundedToPageSize(size:isize) -> usize {
-    ((size+min_page_size-1)&(-min_page_size)) as usize
-}
-impl AllocableRegion {
-    fn makeLocal(mem:&mut [usize]) -> Self {
+impl ThreadLocalRegion {
+    fn new(mem:&mut [usize]) -> Self {
         let start = mem.as_mut_ptr() as *mut HeapObject;
         let size = mem.len();
-        AllocableRegion {
+        ThreadLocalRegion {
             base: start,
-            size: size*mem::size_of::<HeapObject>(),
             end: (unsafe{start.offset(size as isize - 1)}),
             current: start,
-            region_type: RegionType::Nursery,
-        }
-    }
-    fn new(address: usize,size:isize) -> Self {
-        let end = address as *mut HeapObject;
-        AllocableRegion {
-            base: end,
-            size: bytesRoundedToPageSize(size),
-            end: end,
-            current: end,
-            region_type: RegionType::Old,
-        }
-    }
-    fn mapMemory(& mut self) {
-        let data = unsafe{
-            libc::mmap(
-                /* addr: */ self.base as * mut libc::c_void,
-                /* len: */ self.size,
-                /* prot: */ libc::PROT_READ | libc::PROT_WRITE,
-                /* flags: */ libc::MAP_ANON,
-                /* fd: */ -1,
-                /* offset: */ 0,
-            )};
-        if data == libc::MAP_FAILED {
-            panic!("Could not memory map")
-        }
-        let data = data as *mut HeapObject;
-        if data != self.base {
-            panic!("data mapped at wrong address")
-        }
-        self.end = unsafe{data.offset((self.size/mem::size_of::<Object>()) as isize - 1)};
-    }
-    pub fn releaseMemory(& mut self) {
-        self.end = self.base;
-        self.current = self.base;
-        if -1 == unsafe{
-            libc::munmap(
-                /* addr: */ self.base as * mut libc::c_void,
-                /* len: */ self.size,
-            )} {
-            panic!("Failed to release memory map")
-        }
-    }
-    pub fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> Option<* mut HeapObject> {
-        let new = self.current;
-        let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
-        if next > self.end {
-            None
-        } else {
-            self.current = next;
-            (unsafe{&mut*new}).initialize();
-            Some(new)
         }
     }
     #[cfg(test)]
-    pub fn memory_used(&mut self) -> isize {
+    fn memory_used(&mut self) -> isize {
         unsafe{self.current.offset_from(self.base)}
     }
+}
+unsafe impl Send for ThreadLocalRegion {}
+unsafe impl Sync for ThreadLocalRegion {}
+
+const gc_primary: usize = 0x100000000000;
+const gc_secondary:  usize = 0x180000000000;
+const gc_size: isize = 0x000001000000;
+const min_page_size: isize = 16384;
+impl AllocableRegion for ThreadLocalRegion {
+    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
+        let new = self.current;
+        if new < self.end {
+            let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
+            if next <= self.end {
+                self.current = next;
+                f(unsafe{&mut *new});
+                return Some(new)
+            }
+        }
+        None
+    }
+    fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
+        panic!("not implemented")
+    }
     #[cfg(test)]
-    pub fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
         let new = self.current;
         let mut next = (unsafe{&mut*new}).init(class,fields);
         if next > self.end {
-            panic!("allocation past end of memory")
+            panic!("insufficient memory for 'init'")
         } else {
             self.current = next;
+            new
         }
-        new
     }
-    pub fn init_str(&mut self,string:&str) -> * mut HeapObject {
-        let mut max_width:isize = 0;
-        let mut len = 0;
-        for c in string.chars() {
-            len += 1;
-            max_width = std::cmp::max(max_width,c.len_utf8() as isize)
-        }
-        if max_width==3 {max_width=4}
-        if let Some(result) = self.allocObject(classString,0,len,max_width,0,false) {
-            let obj = unsafe{result.as_ref().unwrap()};
-            println!("max: {} len: {} format: {} size: {}",max_width,len,obj.format(),obj.header_size());
-            for (i,c) in string.chars().enumerate() {
-                if max_width==1 {
-                    obj.at_put_u8(i,c as u8)
-                } else {
-                    obj.at_put_u32(i,c as u32)
-                };
+}
+struct MappedRegion {
+    base: * mut HeapObject,
+    end: * mut HeapObject,
+    current: * mut HeapObject,
+    other_region: Option<&'static AllocableRegion>,
+}
+impl AllocableRegion for MappedRegion {
+    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
+        let new = self.current;
+        if new < self.end {
+            let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
+            if next <= self.end {
+                self.current = next;
+                f(unsafe{&mut *new});
+                return Some(new)
             }
-            result
+        }
+        None
+    }
+    fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
+        panic!("not implemented")
+    }
+    #[cfg(test)]
+    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+        let new = self.current;
+        let mut next = (unsafe{&mut*new}).init(class,fields);
+        if next > self.end {
+            panic!("insufficient memory for 'init'")
         } else {
-            panic!("failed to allocate string")
+            self.current = next;
+            new
         }
     }
-    pub fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
+}
+impl MappedRegion {
+    const fn new(address: usize) -> Self {
+        let end = address as *mut HeapObject;
+        MappedRegion {
+            base: end,
+            end: end,
+            current: end,
+            other_region: None,
+        }
+    }
+    fn is_mapped(&self) -> bool {
+        self.end>self.base
+    }
+    fn mapMemory(& mut self,size:isize) {
+        use libc::*;
+        use errno::errno;
+        let size = ((size+min_page_size-1)&(-min_page_size)) as usize;
+        let end = unsafe{self.base.offset((size/mem::size_of::<HeapObject>()) as isize - 1)};
+        if self.end < end {
+            let data = unsafe{
+                mmap(
+                    /* addr: */ self.base as * mut c_void,
+                    /* len: */ size,
+                    /* prot: */ PROT_READ | PROT_WRITE,
+                    /* flags: */ MAP_ANON | MAP_SHARED,
+                    /* fd: */ -1,
+                    /* offset: */ 0,
+                )};
+            if data == MAP_FAILED {
+                panic!("mmap failed; Error: {}",errno())
+            }
+            let data = data as *mut HeapObject;
+            if data != self.base {
+                panic!("data mapped at wrong address")
+            }
+            self.end = end
+        }
+    }
+    fn releaseMemory(& mut self) {
+        use libc::*;
+        use errno::errno;
+        let size = (unsafe{self.end.offset_from(self.base)}+1) as usize*mem::size_of::<HeapObject>();
+        self.end = self.base;
+        self.current = self.base;
+        if -1 == unsafe{
+            munmap(
+                /* addr: */ self.base as * mut c_void,
+                /* len: */ size,
+            )} {
+            panic!("munmap failed; Error: {}",errno())
+        }
+    }
+    fn collect_from(&mut self,source:&mut AllocableRegion) {
+        panic!("collect_from not implemented")
+    }
+    fn assignObject(& mut self,target: Object, offset: isize,value: Object) {
         panic!("not implemented")
     }
     fn minorGC(&mut self) {
@@ -156,20 +182,116 @@ const NurserySize : usize = 25000;
 #[thread_local]
 static mut NurseryMemory : [usize;NurserySize] = [0;NurserySize];
 thread_local! {
-    pub static memory: RefCell<AllocableRegion> = RefCell::new(AllocableRegion::makeLocal(unsafe{&mut NurseryMemory}));
+    static memory: RefCell<ThreadLocalRegion> = RefCell::new(ThreadLocalRegion::new(unsafe{&mut NurseryMemory}));
 }
 pub fn assignObject(target: Object, offset: isize,value: Object) {
     memory.with(|mem| mem.borrow_mut().assignObject(target,offset,value))
 }
-pub fn allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> Option<* mut HeapObject> {
-    memory.with(|mem| mem.borrow_mut().allocObject(class,n_instVars,n_indexed,width,hash,weak))
+pub fn allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+    memory.with(|mem|
+                loop {
+                    if let Some(result) = mem.borrow_mut().
+                        allocObject(class,n_instVars,n_indexed,width,hash,weak,
+                                    &| obj: &mut HeapObject | obj.initialize()) {
+                            return result
+                        }
+                    primary_do(&|region| region.collect_from(&mut *mem.borrow_mut()));
+                })
 }
 #[cfg(test)]
 pub fn init(class:u16,fields:&[Object]) -> * mut HeapObject {
     memory.with(|mem| mem.borrow_mut().init(class,fields))
 }
+pub fn str_shape(string:&str) -> (isize,isize) {
+    let mut max_width:isize = 0;
+    let mut len = 0;
+    for c in string.chars() {
+        len += 1;
+        max_width = std::cmp::max(max_width,c.len_utf8() as isize)
+    }
+    if max_width==3 {max_width=4}
+    (len,max_width)
+}
 pub fn init_str(string:&str) -> * mut HeapObject {
-    memory.with(|mem| mem.borrow_mut().init_str(string))
+    let (len,max_width) = str_shape(&string);
+    memory.with(|mem|
+                loop {
+                    if let Some(result) = mem.borrow_mut().
+                        allocObject(classString,0,len,max_width,0,false,
+                                    &| obj: &mut HeapObject |
+                                    {
+                                        let lastIndex = obj.words()-2;
+                                        if lastIndex>=0 {obj.raw_at_put(lastIndex,zeroObject)};
+                                        for (i,c) in string.chars().enumerate() {
+                                            if max_width==1 {
+                                                obj.at_put_u8(i,c as u8)
+                                            } else {
+                                                obj.at_put_u32(i,c as u32)
+                                            };
+                                        }
+                                    }) {
+                            return result
+                        }
+                    primary_do(&|region| region.collect_from(&mut *mem.borrow_mut()));
+                })
+}
+enum WhichRegion {Primary,Secondary,Unitialized}
+lazy_static!{
+    static ref which_region: Mutex<WhichRegion> = Mutex::new(WhichRegion::Unitialized);
+}
+static mut primary_region: MappedRegion = MappedRegion::new(gc_primary);
+static mut secondary_region: MappedRegion = MappedRegion::new(gc_secondary);
+fn primary_do<'a,T>(f:&'a dyn Fn(&mut MappedRegion)-> T) -> T {
+    let mut which = which_region.lock().unwrap();
+    match &*which {
+        Unitialized => {
+            *which = WhichRegion::Primary;
+            unsafe{primary_region.mapMemory(gc_size)};
+            unsafe{secondary_region.mapMemory(gc_size)};
+            f(unsafe{&mut primary_region})
+        },
+        Primary => f(unsafe{&mut primary_region}),
+        Secondary => f(unsafe{&mut secondary_region}),
+    }
+}
+#[cfg(test)]
+pub fn primary_init(class:u16,fields:&[Object]) -> * mut HeapObject {
+    primary_do(&|region| region.init(class,fields))
+}
+pub fn primary_allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+    primary_do(&|region|
+               loop {
+                   if let Some(result) = region.
+                       allocObject(class,n_instVars,n_indexed,width,hash,weak,
+                                   &| obj: &mut HeapObject | obj.initialize()) {
+                           return result
+                       }
+                   panic!()
+               }
+    )
+}
+pub fn primary_init_str(string:&str) -> * mut HeapObject {
+    let (len,max_width) = str_shape(&string);
+    primary_do(&|region|
+                loop {
+                    if let Some(result) = region.
+                        allocObject(classString,0,len,max_width,0,false,
+                                    &| obj: &mut HeapObject |
+                                    {
+                                        let lastIndex = obj.words()-2;
+                                        if lastIndex>=0 {obj.raw_at_put(lastIndex,zeroObject)};
+                                        for (i,c) in string.chars().enumerate() {
+                                            if max_width==1 {
+                                                obj.at_put_u8(i,c as u8)
+                                            } else {
+                                                obj.at_put_u32(i,c as u32)
+                                            };
+                                        }
+                                    }) {
+                            return result
+                        }
+                   panic!()
+                })
 }
 #[cfg(test)]
 #[macro_export]
@@ -186,7 +308,12 @@ mod testMemory {
     use crate::symbol::*;
     #[test]
     fn memory_direct() {
-        memory.with(|n| n.borrow_mut().allocObject(classArray,0,10,-1,0,false));
+        memory.with(|n|
+            loop {
+                if let Some(result) = n.borrow_mut().allocObject(classArray,0,10,-1,0,false,&|obj| ()) {return}
+                panic!("allocation failed")
+            }
+            )
     }
     #[test]
     fn memory_used_test() {

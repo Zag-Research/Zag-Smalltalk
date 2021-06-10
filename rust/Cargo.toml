@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 #mmap = "*"
 libc = "0.2"
+errno = "*"
 #once_cell = "*"
 static_assertions = "1.1.0"
 lazy_static = "*"

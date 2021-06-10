@@ -10,11 +10,13 @@ pub const classSmallInteger: u16 = 5;
 pub const classSymbol: u16 = 6;
 pub const classCharacter: u16 = 7;
 pub const classFloat: u16 = 8;
-pub const classString: u16 = 9;
-pub const classClass: u16 = 10;
-pub const classMetaclass: u16 = 11;
-pub const classBehavior: u16 = 12;
-pub const classArray: u16 = 13;
+pub const classArray: u16 = 9;
+pub const classString: u16 = 10;
+pub const classClass: u16 = 11;
+pub const classMetaclass: u16 = 12;
+pub const classBehavior: u16 = 13;
+pub const classMethod: u16 = 14;
+pub const classSystem: u16 = 15;
 #[derive(Copy, Clone)]
 pub union Object {
     i: isize,
@@ -82,8 +84,10 @@ pub const fn uncheckedSymbolOf(hash: u32) -> Object {
 const fn object_test(i:usize) -> bool {
     (i as isize)>NAN_VALUE
 }
-const fn on_heap(i:usize) -> bool {
-    object_test(i) && (i&6) as u16==classObject
+static_assertions::const_assert_eq!(classObject|1,classBlockClosure);
+#[inline]
+pub const fn on_heap(i:usize) -> bool {
+    object_test(i) && (i&6) as u16==classObject // catches classBlockClosure too since that assertion
 }
 impl Object {
     #[inline]
@@ -236,6 +240,12 @@ impl From<f64> for Object {
     #[inline]
     fn from(f:f64) -> Self {
         Object {f:f}
+    }
+}
+impl From<&'static str> for Object {
+    #[inline]
+    fn from(symbol:&'static str) -> Self {
+        crate::symbol::intern(symbol)
     }
 }
 impl From<& HeapObject> for Object {
@@ -431,31 +441,31 @@ mod testHeapHeader {
     }
 }
 
-const format_inst:usize = 10;
-const format_idx:usize = 11;
-const format_idx_inst:usize = 12;
-const format_idx_inst_weak:usize = 13;
-const format_inst_np:usize = 14;
-const format_idx_np:usize = 15;
-const format_idx_inst_np:usize = 16;
-const format_idx_other_base:usize = 16;
-const format_idx_other_8:usize = 17;
-const format_idx_other_4:usize = 18;
-const format_idx_other_2:usize = 20;
-const format_idx_other_1:usize = 24;
+pub const format_inst:isize = 10;
+const format_idx:isize = 11;
+const format_idx_inst:isize = 12;
+const format_idx_inst_weak:isize = 13;
+pub const format_inst_np:isize = 14;
+const format_idx_np:isize = 15;
+const format_idx_inst_np:isize = 16;
+const format_idx_other_base:isize = 16;
+const format_idx_other_8:isize = 17;
+const format_idx_other_4:isize = 18;
+const format_idx_other_2:isize = 20;
+const format_idx_other_1:isize = 24;
 #[inline]
 fn formatAndSize(n_instVars:usize,n_indexed:isize,width:isize,weak:bool) -> (usize,usize,isize) {
     if weak {
-        (format_idx_inst_weak, n_instVars, n_instVars as isize + std::cmp::max(0,n_indexed) + 2)
+        (format_idx_inst_weak as usize, n_instVars, n_instVars as isize + std::cmp::max(0,n_indexed) + 2)
     } else if n_indexed < 0 {
-        (format_inst_np , n_instVars, n_instVars as isize +1)
+        (format_inst_np as usize, n_instVars, n_instVars as isize +1)
     } else if n_instVars > 0 {
-        (format_idx_inst_np, n_instVars, n_instVars as isize + n_indexed + 2)
+        (format_idx_inst_np as usize, n_instVars, n_instVars as isize + n_indexed + 2)
     } else if width<0 {
         if n_indexed < 32767 {
-            (format_idx_np , n_indexed as usize, n_indexed + 1)
+            (format_idx_np as usize, n_indexed as usize, n_indexed + 1)
         } else {
-            (format_idx_inst_np , 0, n_indexed + 2)
+            (format_idx_inst_np as usize, 0, n_indexed + 2)
         }
     } else {
         let items_per_word = 8 / width as usize;
@@ -463,9 +473,9 @@ fn formatAndSize(n_instVars:usize,n_indexed:isize,width:isize,weak:bool) -> (usi
         if remainder==0 {remainder=items_per_word}
         let words = (n_indexed as usize + items_per_word - 1) / items_per_word;
         if words < 32767 {
-            (format_idx_other_base+items_per_word*2-remainder, words, words as isize + 1)
+            (format_idx_other_base as usize+items_per_word*2-remainder, words, words as isize + 1)
         } else {
-            (format_idx_other_base+items_per_word*2-remainder, 32767, words as isize + 2)
+            (format_idx_other_base as usize+items_per_word*2-remainder, 32767, words as isize + 2)
         }
     }
 }
@@ -474,25 +484,25 @@ mod testFormatAndSize {
     use super::*;
     #[test]
     fn sizes() {
-        assert_eq!(formatAndSize(3,-1,-1,false),(format_inst_np,3,4));
-        assert_eq!(formatAndSize(0,5,-1,false),(format_idx_np,5,6));
-        assert_eq!(formatAndSize(3,-1,-1,true),(format_idx_inst_weak,3,5));
-        assert_eq!(formatAndSize(0,5,-1,true),(format_idx_inst_weak,0,7));
-        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np,0,40002));
-        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np,0,40002));
-        assert_eq!(formatAndSize(5,40000,-1,false),(format_idx_inst_np,5,40007));
-        assert_eq!(formatAndSize(5,20000,-1,false),(format_idx_inst_np,5,20007));
-        assert_eq!(formatAndSize(0,40000,8,false),(format_idx_other_8,32767,40002));
-        assert_eq!(formatAndSize(0,20000,8,false),(format_idx_other_8,20000,20001));
-        assert_eq!(formatAndSize(0,17,8,false),(format_idx_other_8,17,18));
-        assert_eq!(formatAndSize(0,17,4,false),(format_idx_other_4+1,9,10));
-        assert_eq!(formatAndSize(0,17,2,false),(format_idx_other_2+3,5,6));
-        assert_eq!(formatAndSize(0,17,1,false),(format_idx_other_1+7,3,4));
-        assert_eq!(formatAndSize(0,18,2,false),(format_idx_other_2+2,5,6));
-        assert_eq!(formatAndSize(0,20,1,false),(format_idx_other_1+4,3,4));
-        assert_eq!(formatAndSize(0,16,4,false),(format_idx_other_4,8,9));
-        assert_eq!(formatAndSize(0,16,2,false),(format_idx_other_2,4,5));
-        assert_eq!(formatAndSize(0,16,1,false),(format_idx_other_1,2,3));
+        assert_eq!(formatAndSize(3,-1,-1,false),(format_inst_np as usize,3,4));
+        assert_eq!(formatAndSize(0,5,-1,false),(format_idx_np as usize,5,6));
+        assert_eq!(formatAndSize(3,-1,-1,true),(format_idx_inst_weak as usize,3,5));
+        assert_eq!(formatAndSize(0,5,-1,true),(format_idx_inst_weak as usize,0,7));
+        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np as usize,0,40002));
+        assert_eq!(formatAndSize(0,40000,-1,false),(format_idx_inst_np as usize,0,40002));
+        assert_eq!(formatAndSize(5,40000,-1,false),(format_idx_inst_np as usize,5,40007));
+        assert_eq!(formatAndSize(5,20000,-1,false),(format_idx_inst_np as usize,5,20007));
+        assert_eq!(formatAndSize(0,40000,8,false),(format_idx_other_8 as usize,32767,40002));
+        assert_eq!(formatAndSize(0,20000,8,false),(format_idx_other_8 as usize,20000,20001));
+        assert_eq!(formatAndSize(0,17,8,false),(format_idx_other_8 as usize,17,18));
+        assert_eq!(formatAndSize(0,17,4,false),(format_idx_other_4 as usize+1,9,10));
+        assert_eq!(formatAndSize(0,17,2,false),(format_idx_other_2 as usize+3,5,6));
+        assert_eq!(formatAndSize(0,17,1,false),(format_idx_other_1 as usize+7,3,4));
+        assert_eq!(formatAndSize(0,18,2,false),(format_idx_other_2 as usize+2,5,6));
+        assert_eq!(formatAndSize(0,20,1,false),(format_idx_other_1 as usize+4,3,4));
+        assert_eq!(formatAndSize(0,16,4,false),(format_idx_other_4 as usize,8,9));
+        assert_eq!(formatAndSize(0,16,2,false),(format_idx_other_2 as usize,4,5));
+        assert_eq!(formatAndSize(0,16,1,false),(format_idx_other_1 as usize,2,3));
     }
 }
 #[repr(C)]
@@ -600,7 +610,7 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
-    pub fn at_put_u8(&self,index:usize,value:u8) {
+    pub fn at_put_u8(&mut self,index:usize,value:u8) {
         let format = self.header.format();
         if format<24 {
             panic!("at_put_u8 for non-indexable")
@@ -609,7 +619,7 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()};
     }
     #[inline]
-    pub fn at_put_u16(&self,index:usize,value:u16) {
+    pub fn at_put_u16(&mut self,index:usize,value:u16) {
         let format = self.header.format();
         if format<24 {
             panic!("at_put_u16 for non-indexable")
@@ -618,7 +628,7 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()};
     }
     #[inline]
-    pub fn at_put_u32(&self,index:usize,value:u32) {
+    pub fn at_put_u32(&mut self,index:usize,value:u32) {
         let format = self.header.format();
         if format<18 || format>=20 {
             panic!("at_put_u32 for non-indexable")
@@ -627,7 +637,7 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()};
     }
     #[inline]
-    pub fn at_put_u64(&self,index:usize,value:u64) {
+    pub fn at_put_u64(&mut self,index:usize,value:u64) {
         let format = self.header.format();
         if format<24 {
             panic!("at_put_u64 for non-indexable")
@@ -723,17 +733,17 @@ mod testHeapObject {
         let obj4 = unsafe { next.as_mut().unwrap() };
         let end = obj4.init(classBehavior,&[one,nilObject,object3,def,Object::from(3.14),Object::from('X'),trueObject]);
         print_first(&mem,end);
-        assert_eq!(mem[0],0x00050f000101000d); // obj1
+        assert_eq!(mem[0],0x00050f0001010009); // obj1
         assert_eq!(mem[1],falseObject.raw());
         assert_eq!(mem[2],one.raw());
         assert_eq!(mem[3],two.raw());
         assert_eq!(mem[4],def.raw());
         assert_eq!(mem[5],def.raw());
-        assert_eq!(mem[6],0x00030e000202000a); // obj2
+        assert_eq!(mem[6],0x00030e000202000b); // obj2
         assert_eq!(mem[7],trueObject.raw());
         assert_eq!(mem[8],one.raw());
         assert_eq!(mem[9],def.raw());
-        assert_eq!(mem[10],0x00000e000303000c); // obj3
+        assert_eq!(mem[10],0x00000e000303000d); // obj3
 //        assert_eq!(mem[11],0x00050e000303000c); // obj4
         assert_eq!(mem[12],one.raw());
         assert_eq!(mem[13],nilObject.raw());

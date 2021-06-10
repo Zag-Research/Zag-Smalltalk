@@ -1,4 +1,6 @@
 use crate::object::*;
+use crate::memory::*;
+use crate::class::*;
 pub struct Thread {
     stack:Vec<Object>,
 }
@@ -192,7 +194,7 @@ use std::mem::ManuallyDrop;
 type TDispatch = ManuallyDrop<Option<Dispatch>>;
 const NO_DISPATCH: TDispatch = ManuallyDrop::new(None);
 static mut dispatchTable: [TDispatch;MAX_CLASSES as usize] = [NO_DISPATCH;MAX_CLASSES as usize];
-use std::sync::RwLock;
+use std::sync::{RwLock,Mutex};
 
 lazy_static!{
     static ref dispatchFree: RwLock<usize> = RwLock::new(0);
@@ -243,8 +245,28 @@ pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
 mod testsInterpreter {
     use super::*;
     use crate::symbol::intern;
+    macro_rules! pinit {
+        ($c:expr => $($e:expr),*) => {primary_init($c,&[$( Object::from($e)),*])}
+    }
+    lazy_static!{
+        static ref needs_initialization: Mutex<bool> = Mutex::new(true);
+    }
     fn init_classes() {
-//        let l1 = 
+        let mut init = needs_initialization.lock().unwrap();
+        if *init {
+            *init=false;
+            let meth = class_intern("Method");
+            let clas = class_intern("Class");
+            assert_eq!(clas,classClass);
+            let empty = pinit!(classArray =>);
+            let meta = class_intern("Metaclass");
+            let object_class = class_intern("Object class");
+            let object_ = pinit!(object_class => empty, empty, "Object", format_inst_np, nilObject);
+            let object_class_ = pinit!(meta => empty, empty, nilObject, object_);
+            let system_class = class_intern("System class");
+            let log_ = pinit!(meth => "log:","log: prim",empty,empty,empty);
+            let system_ = pinit!(system_class => pinit!(classArray => log_), empty, "System", format_inst_np, object_);
+        }
     }
     #[test]
     #[should_panic(expected = "no dispatch found")]
@@ -252,6 +274,18 @@ mod testsInterpreter {
         let mut thread:Thread = Default::default();
         dispatch(&mut thread,intern("foo"));
     }
+    #[test]
+    fn system_start() {
+        init_classes();
+        let mut thread:Thread = Default::default();
+        let classIndex = class_intern("System");
+        let class = getClass(classIndex);
+        thread.push(class);
+        let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
+        method.instr_with(dispatch,intern("start"));
+        method.execute(&mut thread);
+    }
+    
 /*    #[test]
     #[should_panic(expected = "no method found")]
     fn dispatch_non_existant_method() {

@@ -3,10 +3,10 @@
 // This is a rather special implementation that codes Symbols in a particular way to facilitate fast message lookups
 
 // A Symbol is a literal Object with a coding of:
-// 0111 1111 1111 1000 0000 0000 0000 000a aaaa 0000 hhhh hhhh hhhh hhhh hhhh hccc
+// 0111 1111 1111 1000 0000 0000 0000 000a aaaa 0000 0hhh hhhh hhhh hhhh hhhh hccc
 // where:
 //     ccc is 110 (6) - the class index for Symbol
-//     hhhh hhhh hhhh hhhh hhhh h is the offset in the Symbol table
+//     hhh hhhh hhhh hhhh hhhh h is the offset in the Symbol table
 //     a aaaa is the arity of the symbol - 0-15 are valid (i.e. match existing methods)
 
 use crate::object::*;
@@ -17,8 +17,8 @@ static first_symbols: &[StaticStr]= &[
     "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:", /* need to be the next 5 symbols */
     "Object", "BlockClosure", "False", "True",
     "UndefinedObject", "SmallInteger", "Symbol", "Character",
-    "Float", "String", "Class", "Metaclass",
-    "Behavior", "Array",
+    "Float", "Array", "String", "Class", "Metaclass",
+    "Behavior", "Method", "System",
     "yourself", "==", "~~", "~=", "=", "+", "-", "*", "size",
 ];
 lazy_static!{
