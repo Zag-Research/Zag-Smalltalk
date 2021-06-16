@@ -11,6 +11,7 @@
 
 use crate::object::*;
 use crate::treap::LockingTreap;
+use std::sync::Mutex;
 
 static first_symbols: &[StaticStr]= &[
     "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", /* need to be first 5 symbols so that short-circuit on dispatch works */
@@ -26,6 +27,16 @@ lazy_static!{
 }
 pub fn intern(string: StaticStr) -> Object {
     symbolOf(&string,symbolTable.intern(&string) as usize)
+}
+lazy_static!{
+    static ref endSymbol: Mutex<u32> = Mutex::new(u32::MAX);
+}
+/* used to generate symbols for metaclasses, so will never be many of them */
+pub fn unique_symbol() -> Object {
+    let mut end = endSymbol.lock().unwrap();
+    let n = *end;
+    *end = n - 1;
+    uncheckedSymbolOf(n)
 }
 pub fn str_of(obj:Object) -> StaticStr {
     symbolTable.at(obj.hash())

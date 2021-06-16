@@ -44,7 +44,7 @@ pub fn eq(thread:&mut Thread,_:Object) -> FunctionResult {
 }
 pub fn br_true(thread:&mut Thread,object:Object) -> FunctionResult {
     if thread.pop()==trueObject {
-        Branch(object.as_i48())
+        JumpTo(object.as_u48() as u32)
     } else {
         NormalReturn
     }

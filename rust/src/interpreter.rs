@@ -1,6 +1,8 @@
 use crate::object::*;
 use crate::memory::*;
 use crate::class::*;
+use std::sync::{RwLock,Mutex,Arc};
+
 pub struct Thread {
     stack:Vec<Object>,
 }
@@ -18,6 +20,10 @@ impl Thread {
         self.stack[self.stack.len()-1]
     }
     #[inline]
+    pub fn second(&self) -> Object {
+        self.stack[self.stack.len()-2]
+    }
+    #[inline]
     pub fn replace(&mut self,object:Object) {
         let len = self.stack.len()-1;
         self.stack[len]=object
@@ -31,6 +37,10 @@ impl Thread {
         self.stack[self.stack.len()-position as usize]
     }
     #[inline]
+    pub fn size(&self) -> usize {
+        self.stack.len()
+    }
+    #[inline]
     pub fn at(&self,position:usize) -> Object {
         self.stack[position]
     }
@@ -39,8 +49,8 @@ impl Thread {
         self.stack[position]=value;
     }
     #[inline]
-    pub fn start_method_get_self_index(&self,parameters:u8) {
-        self.offset(parameters as usize);
+    pub fn start_method_get_self_index(&self,parameters:u8) -> usize {
+        self.offset(parameters as usize)
     }
     #[inline]
     pub fn end_method(&self) {}
@@ -57,8 +67,8 @@ impl Thread {
         self.stack.truncate(position+1);
     }
     #[inline]
-    pub fn discard(&mut self,position:usize) {
-        self.stack.truncate(self.stack.len()-position);
+    pub fn discard(&mut self,number:usize) {
+        self.stack.truncate(self.stack.len()-number);
     }
     #[inline]
     pub fn append(&mut self,other:&mut Vec<Object>) {
@@ -73,8 +83,10 @@ impl Default for Thread {
 #[derive(Eq,PartialEq,Debug)]
 pub enum FunctionResult {
     NormalReturn,
-    NonLocalReturn,
-    Branch(isize),
+    NonLocalReturn(u32), // stack frame number
+    JumpTo(u32), // instruction number
+    MakeClosure(u32), // block number
+    SpillReturn,
     ExceptionSignaled,
     ReturnIsNext,
 }
@@ -97,22 +109,26 @@ type AddI32Primitive = fn(i32,Function);
 pub mod stack;
 #[derive(Default,Clone)]
 pub struct Method {
-    class_index: u16,
+    class_index: ClassIndex,
     parameters: u8,
     locals: u8,
     symbol_index: u32,
-    code: Box<Vec<(Function,Object)>>,
+    code: Vec<(Function,Object)>,
+    blocks: Vec<Arc<Method>>,
 }
-const Max_Method_Size:isize = 32000;
 impl Method {
-    pub fn new(class_index: u16,parameters: u8,locals: u8,symbol_index: u32) -> Self {
+    pub fn new(class_index: ClassIndex,parameters: u8,locals: u8,symbol_index: u32) -> Self {
         Method{
             class_index,
             parameters,
             locals,
             symbol_index,
-            code: Box::new(Vec::new()),
+            code: Vec::new(),
+            blocks: Vec::new(),
         }
+    }
+    fn alloc(&self) -> &mut HeapObject {
+        unsafe{allocObject(classBlockClosure,self.locals as usize+2,-1,-1,0,false).as_mut().unwrap()}
     }
     pub fn instr(&mut self,f:Function) {
         self.code.push((f,placeholderObject))
@@ -134,9 +150,34 @@ impl Method {
             let (f,o)=code[pc];
             match f(thread,o) {
                 NormalReturn => { pc = pc + 1},
-                Branch(offset) => { pc = (pc as isize + offset + 1) as usize},
                 ReturnIsNext => { pc = pc + 1;break}
-                NonLocalReturn => {panic!("non-local return")},
+                JumpTo(new_pc) => { pc = new_pc as usize},
+                NonLocalReturn(index) => {
+                    thread.end_method();
+                    thread.pop_to(index as usize);
+                    if thread.size()==self_index {
+                        return NormalReturn
+                    } else {
+                        return SpillReturn
+                    }
+                },
+                SpillReturn => {
+                    thread.end_method();
+                    if thread.size()==self_index {
+                        return NormalReturn
+                    } else {
+                        return SpillReturn
+                    }
+                },
+                MakeClosure(block) => {
+                    pc = pc + 1;
+                    let method = self.blocks[block as usize].clone();
+                    let ptr = unsafe{&*Arc::as_ptr(&method)};
+                    let closure = ptr.alloc();
+                    closure.raw_at_put(0,Object::from(Arc::into_raw(method) as * const HeapObject));
+                    closure.raw_at_put(1,Object::from(self_index as isize));
+                    thread.push(Object::from(closure));
+                },
                 ExceptionSignaled => {panic!("exception signaled")},
             }
         };
@@ -168,7 +209,7 @@ impl MethodMatch {
 }
 impl Default for MethodMatch {
     fn default() -> Self {
-        MethodMatch{function:Box::new(MethodType::NoType),selector:Default::default()}
+        MethodMatch{function:Box::new(MethodType::NoType),selector:u32::MAX}
     }
 }
 pub struct Dispatch {
@@ -182,24 +223,23 @@ impl Dispatch {
         let hash = iHash as usize%len;
         for index in (hash..len).into_iter().chain((0..hash).into_iter()) {
             match self.table[index].getMethod(iHash) {
-                MethodType::NoType => {},
+                MethodType::NoType => break,
                 result => {return result},
             }
         }
         &MethodType::NoType
     }
 }
-const MAX_CLASSES: u16 = 1000;
+const MAX_CLASSES: ClassIndex = 1000;
 use std::mem::ManuallyDrop;
 type TDispatch = ManuallyDrop<Option<Dispatch>>;
 const NO_DISPATCH: TDispatch = ManuallyDrop::new(None);
 static mut dispatchTable: [TDispatch;MAX_CLASSES as usize] = [NO_DISPATCH;MAX_CLASSES as usize];
-use std::sync::{RwLock,Mutex};
 
 lazy_static!{
-    static ref dispatchFree: RwLock<usize> = RwLock::new(0);
+    static ref dispatchFree: Mutex<()> = Mutex::new(());
 }
-pub fn getClass(class:u16) -> Object {
+pub fn getClass(class:ClassIndex) -> Object {
     if class<MAX_CLASSES {
         if let Some(dispatch) = unsafe{dispatchTable[class as usize].take()} {
             return dispatch.class
@@ -207,14 +247,12 @@ pub fn getClass(class:u16) -> Object {
     }
     panic!("class {} not initialized",class)
 }
-pub fn addClass(c: Object, n: usize) {
-    let mut index = dispatchFree.write().unwrap();
-    let pos = *index;
-    if pos >= MAX_CLASSES as usize {panic!("too many classes")}
-    *index = pos + 1;
-    replaceDispatch(pos,c,n);
+fn addClass(pos: ClassIndex, c: Object) {
+    let lock = dispatchFree.lock().unwrap();
+    if pos >= MAX_CLASSES {panic!("too many classes")}
+    replaceDispatch(pos as usize,c,4);
 }
-pub fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
+fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
     let mut table = Vec::with_capacity(n);
     table.resize(n,Default::default());
     unsafe {
@@ -231,15 +269,28 @@ pub fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
 pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
     let arity = selector.immediateHash()>>25;
     let this = thread.atOffset(arity+1);
-    if let Some(disp) = unsafe{&dispatchTable[this.class() as usize].take()} {
-        match disp.getMethod(selector) {
-            MethodType::Function(function) => function(thread,selector),
-            MethodType::Method(method) => method.execute(thread),
-            MethodType::NoType => panic!("no method found"),
-        }
+    let class = this.class();
+    if let Some(disp) = unsafe{&dispatchTable[class as usize].take()} {
+        execute(disp.getMethod(selector),thread,selector,class)
     } else {
-        panic!("no dispatch found")
+        panic!("no dispatch found for {}",crate::class::name_str(class))
     }
+}
+#[inline]
+fn execute(method:&MethodType,thread:& mut Thread,selector:Object,class:ClassIndex) -> FunctionResult {
+    match method {
+        MethodType::Function(function) => function(thread,selector),
+        MethodType::Method(method) => method.execute(thread),
+        MethodType::NoType => make_execute_method(thread,selector,class),
+    }
+}
+fn make_execute_method(thread:&mut Thread,selector:Object,class:ClassIndex) -> FunctionResult {
+    let method = make_method(selector,class);
+    execute(&method,thread,selector,class)
+}
+fn make_method(selector:Object,class:ClassIndex) -> Box<MethodType> {
+    
+    panic!("make_method")
 }
 #[cfg(test)]
 mod testsInterpreter {
@@ -248,6 +299,9 @@ mod testsInterpreter {
     macro_rules! pinit {
         ($c:expr => $($e:expr),*) => {primary_init($c,&[$( Object::from($e)),*])}
     }
+    macro_rules! array {
+        ($($e:expr),*) => {primary_array(&[$( Object::from($e)),*])}
+    }
     lazy_static!{
         static ref needs_initialization: Mutex<bool> = Mutex::new(true);
     }
@@ -255,17 +309,27 @@ mod testsInterpreter {
         let mut init = needs_initialization.lock().unwrap();
         if *init {
             *init=false;
-            let meth = class_intern("Method");
-            let clas = class_intern("Class");
-            assert_eq!(clas,classClass);
-            let empty = pinit!(classArray =>);
-            let meta = class_intern("Metaclass");
-            let object_class = class_intern("Object class");
-            let object_ = pinit!(object_class => empty, empty, "Object", format_inst_np, nilObject);
-            let object_class_ = pinit!(meta => empty, empty, nilObject, object_);
-            let system_class = class_intern("System class");
-            let log_ = pinit!(meth => "log:","log: prim",empty,empty,empty);
-            let system_ = pinit!(system_class => pinit!(classArray => log_), empty, "System", format_inst_np, object_);
+            let method_ = class_index("Method");
+            let class_ = class_index("Class");
+            assert_eq!(class_,classClass);
+            let empty = array!();
+            let meta_ = class_index("Metaclass");
+            let object_meta_ = metaclass_index();
+            let object = pinit!(object_meta_ => empty, empty, nilObject, "Object", format_inst_np, nilObject);
+            addClass(classObject, object);
+            let object_meta = pinit!(meta_ => empty, empty, nilObject, object);
+            addClass(object_meta_, object_meta);
+            let smallI_meta_ = metaclass_index();
+            let addI_ = pinit!(method_ => "+",1,empty,empty,empty);
+            let smallI = pinit!(smallI_meta_ => array!(addI_), empty, object, "SmallInteger", format_inst_np, nilObject);
+            addClass(classSmallInteger, smallI);
+            let system_ = class_index("System");
+            let system_meta_ = metaclass_index();
+            let log_ = pinit!(method_ => "log:","log: prim",empty,empty,empty);
+            let system = pinit!(system_meta_ => empty, empty, object, "System", format_inst_np, object);
+            addClass(system_, system);
+            let system_meta = pinit!(meta_ => array!(log_), empty, object_meta, system);
+            addClass(system_meta_, system_meta);
         }
     }
     #[test]
@@ -274,18 +338,49 @@ mod testsInterpreter {
         let mut thread:Thread = Default::default();
         dispatch(&mut thread,intern("foo"));
     }
+
     #[test]
+    fn add_integers_immediate() {
+        use crate::interpreter::primitives::smallInteger::*;
+        init_classes();
+        let mut thread:Thread = Default::default();
+        assert_eq!(thread.size(),1);
+        thread.push_i48(25);
+        thread.push_i48(17);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        method.instr(addI);
+        method.execute(&mut thread);
+        assert_eq!(thread.size(),2);
+        assert_eq!(thread.top().as_i48(),42);
+    }
+
+    #[test]
+    fn add_integers_dispatch() {
+        use crate::interpreter::primitives::smallInteger::*;
+        init_classes();
+        let mut thread:Thread = Default::default();
+        assert_eq!(thread.size(),1);
+        thread.push_i48(25);
+        thread.push_i48(17);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        method.instr_with(dispatch,intern("+"));
+        method.execute(&mut thread);
+        assert_eq!(thread.size(),2);
+        assert_eq!(thread.top().as_i48(),42);
+    }
+
+/*    #[test]
     fn system_start() {
         init_classes();
         let mut thread:Thread = Default::default();
-        let classIndex = class_intern("System");
+        let classIndex = class_index("System");
         let class = getClass(classIndex);
         thread.push(class);
         let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
         method.instr_with(dispatch,intern("start"));
         method.execute(&mut thread);
     }
-    
+*/
 /*    #[test]
     #[should_panic(expected = "no method found")]
     fn dispatch_non_existant_method() {

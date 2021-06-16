@@ -32,7 +32,7 @@ Even if we somehow knew the class of the object, the tables would still be exces
 #### Our approach
 We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
 
-### The table below **is wrong** (from a previous design).
+### The table below is *wrong (from a previous design)*.
 
 | Hash table for a class                   |                                      |
 | ---------------------------------------- | ------------------------------------ |
@@ -130,6 +130,10 @@ These are not part of the main interpret loop, but are referenced by it:
 - instVarNames - an array of instance variable names for the class
 - superclass - the superclass
 - instance - instanceSide
+### ASBlockClosure
+- method code
+- index of `self`
+- block-local variables (including values shared with the method)
 
 ## Forced SmallInteger
 - means that the field is optimized to be treated as a positive SmallInteger, even if it isn't

@@ -21,12 +21,15 @@ static first_classes: &[Object]= &[
 lazy_static!{
     static ref classTable: LockingTreap<Object> = LockingTreap::new(first_classes,nilObject);
 }
-pub fn name_str(class:u16) -> StaticStr {
+pub fn name_str(class:ClassIndex) -> StaticStr {
     crate::symbol::str_of(classTable.at(class as usize))
 }
-pub fn class_intern(symbol:&'static str) -> u16 {
-    class_index(crate::symbol::intern(symbol)) as u16
+pub fn class_index(symbol:&'static str) -> ClassIndex {
+    class_index_from_symbol(crate::symbol::intern(symbol)) as ClassIndex
 }
-fn class_index(symbol:Object) -> u16 {
-    classTable.intern(symbol) as u16
+pub fn metaclass_index() -> ClassIndex {
+    classTable.intern(crate::symbol::unique_symbol()) as ClassIndex
+}
+pub fn class_index_from_symbol(symbol:Object) -> ClassIndex {
+    classTable.intern(symbol) as ClassIndex
 }

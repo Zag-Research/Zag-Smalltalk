@@ -8,9 +8,9 @@ extern crate errno;
 type HOInit<'a> = &'a dyn Fn(&mut HeapObject);
 trait AllocableRegion {
     fn assignObject(& mut self,target: Object, offset: isize,value: Object);
-    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject>;
+    fn allocObject(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject>;
     #[cfg(test)]
-    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject;
+    fn init(&mut self,class:ClassIndex,fields:&[Object]) -> * mut HeapObject;
 }
 struct ThreadLocalRegion {
     base: * mut HeapObject,
@@ -40,7 +40,7 @@ const gc_secondary:  usize = 0x180000000000;
 const gc_size: isize = 0x000001000000;
 const min_page_size: isize = 16384;
 impl AllocableRegion for ThreadLocalRegion {
-    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
+    fn allocObject(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
         let new = self.current;
         if new < self.end {
             let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
@@ -56,7 +56,7 @@ impl AllocableRegion for ThreadLocalRegion {
         panic!("not implemented")
     }
     #[cfg(test)]
-    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+    fn init(&mut self,class:ClassIndex,fields:&[Object]) -> * mut HeapObject {
         let new = self.current;
         let mut next = (unsafe{&mut*new}).init(class,fields);
         if next > self.end {
@@ -74,7 +74,7 @@ struct MappedRegion {
     other_region: Option<&'static AllocableRegion>,
 }
 impl AllocableRegion for MappedRegion {
-    fn allocObject(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
+    fn allocObject(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool,f:HOInit) -> Option<* mut HeapObject> {
         let new = self.current;
         if new < self.end {
             let mut next = (unsafe{&mut*new}).alloc(class,n_instVars,n_indexed,width,hash,weak);
@@ -90,7 +90,7 @@ impl AllocableRegion for MappedRegion {
         panic!("not implemented")
     }
     #[cfg(test)]
-    fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+    fn init(&mut self,class:ClassIndex,fields:&[Object]) -> * mut HeapObject {
         let new = self.current;
         let mut next = (unsafe{&mut*new}).init(class,fields);
         if next > self.end {
@@ -102,6 +102,17 @@ impl AllocableRegion for MappedRegion {
     }
 }
 impl MappedRegion {
+    #[cfg(test)]
+    fn array(&mut self,elements:&[Object]) -> * mut HeapObject {
+        let new = self.current;
+        let mut next = (unsafe{&mut*new}).array(elements);
+        if next > self.end {
+            panic!("insufficient memory for 'array'")
+        } else {
+            self.current = next;
+            new
+        }
+    }
     const fn new(address: usize) -> Self {
         let end = address as *mut HeapObject;
         MappedRegion {
@@ -187,7 +198,7 @@ thread_local! {
 pub fn assignObject(target: Object, offset: isize,value: Object) {
     memory.with(|mem| mem.borrow_mut().assignObject(target,offset,value))
 }
-pub fn allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+pub fn allocObject(class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
     memory.with(|mem|
                 loop {
                     if let Some(result) = mem.borrow_mut().
@@ -199,7 +210,7 @@ pub fn allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:u
                 })
 }
 #[cfg(test)]
-pub fn init(class:u16,fields:&[Object]) -> * mut HeapObject {
+pub fn init(class:ClassIndex,fields:&[Object]) -> * mut HeapObject {
     memory.with(|mem| mem.borrow_mut().init(class,fields))
 }
 pub fn str_shape(string:&str) -> (isize,isize) {
@@ -255,10 +266,14 @@ fn primary_do<'a,T>(f:&'a dyn Fn(&mut MappedRegion)-> T) -> T {
     }
 }
 #[cfg(test)]
-pub fn primary_init(class:u16,fields:&[Object]) -> * mut HeapObject {
-    primary_do(&|region| region.init(class,fields))
+pub fn primary_init(class:ClassIndex,fields:&[Object]) -> Object {
+    Object::from(primary_do(&|region| region.init(class,fields)))
 }
-pub fn primary_allocObject(class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+#[cfg(test)]
+pub fn primary_array(elements:&[Object]) -> Object {
+    Object::from(primary_do(&|region| region.array(elements)))
+}
+pub fn primary_allocObject(class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
     primary_do(&|region|
                loop {
                    if let Some(result) = region.

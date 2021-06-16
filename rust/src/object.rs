@@ -1,22 +1,23 @@
 use std::cmp::Ordering::{self,Equal,Less,Greater};
 use std::fmt;
 use std::fmt::Debug;
-pub const classObject: u16 = 0;
-pub const classBlockClosure: u16 = 1;
-pub const classFalse: u16 = 2;
-pub const classTrue: u16 = 3;
-pub const classUndefinedObject: u16 = 4;
-pub const classSmallInteger: u16 = 5;
-pub const classSymbol: u16 = 6;
-pub const classCharacter: u16 = 7;
-pub const classFloat: u16 = 8;
-pub const classArray: u16 = 9;
-pub const classString: u16 = 10;
-pub const classClass: u16 = 11;
-pub const classMetaclass: u16 = 12;
-pub const classBehavior: u16 = 13;
-pub const classMethod: u16 = 14;
-pub const classSystem: u16 = 15;
+pub type ClassIndex = u16;
+pub const classObject: ClassIndex = 0;
+pub const classBlockClosure: ClassIndex = 1;
+pub const classFalse: ClassIndex = 2;
+pub const classTrue: ClassIndex = 3;
+pub const classUndefinedObject: ClassIndex = 4;
+pub const classSmallInteger: ClassIndex = 5;
+pub const classSymbol: ClassIndex = 6;
+pub const classCharacter: ClassIndex = 7;
+pub const classFloat: ClassIndex = 8;
+pub const classArray: ClassIndex = 9;
+pub const classString: ClassIndex = 10;
+pub const classClass: ClassIndex = 11;
+pub const classMetaclass: ClassIndex = 12;
+pub const classBehavior: ClassIndex = 13;
+pub const classMethod: ClassIndex = 14;
+pub const classSystem: ClassIndex = 15;
 #[derive(Copy, Clone)]
 pub union Object {
     i: isize,
@@ -87,23 +88,23 @@ const fn object_test(i:usize) -> bool {
 static_assertions::const_assert_eq!(classObject|1,classBlockClosure);
 #[inline]
 pub const fn on_heap(i:usize) -> bool {
-    object_test(i) && (i&6) as u16==classObject // catches classBlockClosure too since that assertion
+    object_test(i) && (i&6) as ClassIndex==classObject // catches classBlockClosure too since that assertion
 }
 impl Object {
     #[inline]
     pub const fn is_integer(&self) -> bool {
         let i = self.raw();
-        object_test(i) && (i&7) as u16==classSmallInteger
+        object_test(i) && (i&7) as ClassIndex==classSmallInteger
     }
     #[inline]
     pub const fn is_symbol(&self) -> bool {
         let i = self.raw();
-        object_test(i) && (i&7) as u16==classSymbol
+        object_test(i) && (i&7) as ClassIndex==classSymbol
     }
     #[inline]
     pub const fn is_bool(&self) -> bool {
         let i = self.raw();
-        object_test(i) && (i&6) as u16==classTrue&6
+        object_test(i) && (i&6) as ClassIndex==classTrue&6
     }
     #[inline]
     pub const fn is_double(&self) -> bool {
@@ -112,7 +113,7 @@ impl Object {
     #[inline]
     pub const fn is_literal(&self) -> bool {
         let i = self.raw();
-        object_test(i) && ({let cl = (i&7) as u16; cl > classBlockClosure && cl!= classSmallInteger})
+        object_test(i) && ({let cl = (i&7) as ClassIndex; cl > classBlockClosure && cl!= classSmallInteger})
     }
     #[inline]
     pub const fn is_on_heap(&self) -> bool {
@@ -121,12 +122,12 @@ impl Object {
     #[inline]
     pub const fn is_object(&self) -> bool {
         let i = self.raw();
-        object_test(i) && (i&7) as u16==classObject
+        object_test(i) && (i&7) as ClassIndex==classObject
     }
     #[inline]
     pub const fn is_closure(&self) -> bool {
         let i = self.raw();
-        object_test(i) && (i&7) as u16==classBlockClosure
+        object_test(i) && (i&7) as ClassIndex==classBlockClosure
     }
     pub fn class_name(&self) -> &str {
         crate::class::name_str(self.class())
@@ -144,11 +145,11 @@ impl Object {
         }
     }
     #[inline]
-    pub fn class(&self) -> u16 {
+    pub fn class(&self) -> ClassIndex {
         if self.is_double() {
             classFloat
         } else {
-            let cl = (self.raw() & 7) as u16;
+            let cl = (self.raw() & 7) as ClassIndex;
             if cl == classObject {
                 panic!("other class")
             } else {
@@ -398,10 +399,10 @@ impl HeapHeader {
         self.format()<14
     }
 }
-impl From<Object> for &HeapObject {
+impl From<Object> for &mut HeapObject {
     #[inline]
     fn from(o:Object) -> Self {
-        unsafe{&*o.as_object_ptr()}
+        unsafe{&mut *o.as_object_ptr()}
     }
 }
 impl Debug for HeapHeader {
@@ -660,7 +661,7 @@ impl HeapObject {
             self.raw_at_put(i,init)
         };
     }
-    pub fn alloc(&mut self,class:u16,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
+    pub fn alloc(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
         let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
         let hash = {if hash==0 {self as *mut HeapObject as usize} else {hash}};
         self.header=header!(class=class,hash=hash,format=format,size=size);
@@ -669,9 +670,17 @@ impl HeapObject {
         unsafe{(self as *mut HeapObject).offset(total_size)}
     }
     #[cfg(test)]
-    pub fn init(&mut self,class:u16,fields:&[Object]) -> * mut HeapObject {
+    pub fn init(&mut self,class:ClassIndex,fields:&[Object]) -> * mut HeapObject {
         let result = self.alloc(class,fields.len(),-1,-1,0,false);
         for (i,obj) in fields.iter().enumerate() {
+            self.raw_at_put(i,*obj)
+        }
+        result
+    }
+    #[cfg(test)]
+    pub fn array(&mut self,elements:&[Object]) -> * mut HeapObject {
+        let result = self.alloc(classClass,0,elements.len() as isize,-1,0,false);
+        for (i,obj) in elements.iter().enumerate() {
             self.raw_at_put(i,*obj)
         }
         result
