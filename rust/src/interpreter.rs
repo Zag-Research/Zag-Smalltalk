@@ -1,15 +1,47 @@
 use crate::object::*;
 use crate::memory::*;
 use crate::class::*;
+use self::primitives::*;
 use std::sync::{RwLock,Mutex,Arc};
+use std::rc::Rc;
+use std::cell::RefCell;
 
+#[derive(Debug)]
 pub struct Thread {
     stack:Vec<Object>,
+    self_index: usize,
+    self_symbol: Object,
+    frames: Vec<usize>,
+}
+impl Default for Thread {
+    fn default() -> Self {
+        Thread{
+            stack: Vec::new(),
+            self_index:0,
+            self_symbol: crate::symbol::intern("self"),
+            frames:Vec::new()}
+    }
 }
 impl Thread {
     #[inline]
     pub fn push(&mut self,o:Object) {
         self.stack.push(o)
+    }
+    #[inline]
+    pub fn push_self(&mut self) {
+        self.stack.push(self.stack[self.self_index])
+    }
+    #[inline]
+    pub fn push_local(&mut self,offset:usize) {
+        self.stack.push(self.stack[self.self_index+offset])
+    }
+    #[inline]
+    pub fn pop_to_local(&mut self,offset:usize) {
+        self.stack[self.self_index+offset] = self.stack.pop().unwrap()
+    }
+    #[inline]
+    pub fn assign_local(&mut self,offset:usize,value:Object) {
+        self.stack[self.self_index+offset]=value
     }
     #[inline]
     pub fn push_i48(&mut self,i:isize) {
@@ -18,6 +50,10 @@ impl Thread {
     #[inline]
     pub fn top(&self) -> Object {
         self.stack[self.stack.len()-1]
+    }
+    #[inline]
+    pub fn is_self(&self,obj:Object) -> bool {
+        self.self_symbol==obj
     }
     #[inline]
     pub fn second(&self) -> Object {
@@ -49,11 +85,16 @@ impl Thread {
         self.stack[position]=value;
     }
     #[inline]
-    pub fn start_method_get_self_index(&self,parameters:u8) -> usize {
-        self.offset(parameters as usize)
+    pub fn start_method_get_self_index(&mut self,parameters:u8) -> usize {
+        self.frames.push(self.self_index);
+        let s = self.offset(parameters as usize);
+        self.self_index = s;
+        s
     }
     #[inline]
-    pub fn end_method(&self) {}
+    pub fn end_method(&mut self) {
+        self.self_index = self.frames.pop().unwrap()
+    }
     #[inline]
     pub fn offset(&self,offset:usize) -> usize {
         self.stack.len()-offset-1
@@ -61,6 +102,11 @@ impl Thread {
     #[inline]
     pub fn reserve(&mut self,space:usize) {
         self.stack.resize(self.stack.len()+space,nilObject);
+    }
+    #[inline]
+    pub fn return_with(&mut self,obj:Object) {
+        self.stack.truncate(self.self_index+1);
+        self.stack[self.self_index] = obj
     }
     #[inline]
     pub fn pop_to(&mut self,position:usize) {
@@ -73,11 +119,6 @@ impl Thread {
     #[inline]
     pub fn append(&mut self,other:&mut Vec<Object>) {
         self.stack.append(other);
-    }
-}
-impl Default for Thread {
-    fn default() -> Self {
-        Thread{ stack: vec![placeholderObject]}
     }
 }
 #[derive(Eq,PartialEq,Debug)]
@@ -190,107 +231,237 @@ mod primitives;
 #[derive(Clone)]
 enum MethodType {
     Function(Function),
-    Method(Method),
+    Method(Rc<Method>),
     NoType,
 }
 #[derive(Clone)]
 struct MethodMatch {
-    selector: u32,
-    function: Box<MethodType>,
+    selector: usize,
+    function: MethodType,
+}
+enum SelectorMatch {
+    Match,
+    Empty,
+    Other,
 }
 impl MethodMatch {
-    fn getMethod(&self,selector:u32) -> &MethodType {
+    #[inline]
+    fn selector_match(&self,selector:usize) -> SelectorMatch {
         if self.selector == selector {
-            &self.function
+            SelectorMatch::Match
+        } else if self.selector == usize::MAX {
+            SelectorMatch::Empty
         } else {
-            &MethodType::NoType
+            SelectorMatch::Other
         }
     }
 }
 impl Default for MethodMatch {
     fn default() -> Self {
-        MethodMatch{function:Box::new(MethodType::NoType),selector:u32::MAX}
+        MethodMatch{function:MethodType::NoType,selector:usize::MAX}
     }
 }
 pub struct Dispatch {
     class: Object,
     table: Box<[MethodMatch]>,
 }
-impl Dispatch {
-    fn getMethod(&self,selector:Object) -> &MethodType {
-        let len = self.table.len();
-        let iHash = selector.immediateHash();
-        let hash = iHash as usize%len;
-        for index in (hash..len).into_iter().chain((0..hash).into_iter()) {
-            match self.table[index].getMethod(iHash) {
-                MethodType::NoType => break,
-                result => {return result},
+const DISPATCH_OVERFLOW:usize = 2; // always at least one entry past the hash
+#[inline]
+fn hash_index(table:&[MethodMatch],selector:usize) -> usize {
+    let len = table.len();
+    if len>DISPATCH_OVERFLOW {
+        let hash = selector%(len-DISPATCH_OVERFLOW);
+        for index in hash..len {
+            match table[index].selector_match(selector) {
+                SelectorMatch::Other => (),
+                _ => return index,
             }
         }
-        &MethodType::NoType
+    }
+    usize::MAX
+}
+impl Dispatch {
+    fn getMethod(&self,selector:Object) -> &MethodType {
+        match hash_index(&self.table,selector.raw()>>3) {
+            usize::MAX => &MethodType::NoType,
+            index => &self.table[index].function,
+        }
     }
 }
-const MAX_CLASSES: ClassIndex = 1000;
-use std::mem::ManuallyDrop;
-type TDispatch = ManuallyDrop<Option<Dispatch>>;
-const NO_DISPATCH: TDispatch = ManuallyDrop::new(None);
-static mut dispatchTable: [TDispatch;MAX_CLASSES as usize] = [NO_DISPATCH;MAX_CLASSES as usize];
+const N_CLASS_DISPATCHES: ClassIndex = MAX_CLASS+METACLASS_OFFSET+1;
+type TDispatch = Option<Dispatch>;
+const NO_DISPATCH: TDispatch = None;
+static mut dispatchTable: [TDispatch;N_CLASS_DISPATCHES as usize] = [NO_DISPATCH;N_CLASS_DISPATCHES as usize];
 
 lazy_static!{
     static ref dispatchFree: Mutex<()> = Mutex::new(());
 }
 pub fn getClass(class:ClassIndex) -> Object {
-    if class<MAX_CLASSES {
-        if let Some(dispatch) = unsafe{dispatchTable[class as usize].take()} {
+    if class<N_CLASS_DISPATCHES {
+        if let Some(dispatch) = unsafe{&dispatchTable[class as usize]} {
             return dispatch.class
         }
     }
     panic!("class {} not initialized",class)
 }
-fn addClass(pos: ClassIndex, c: Object) {
+fn addClass(class: ClassIndex, c: Object) {
+    if class >= N_CLASS_DISPATCHES {panic!("too many classes")}
     let lock = dispatchFree.lock().unwrap();
-    if pos >= MAX_CLASSES {panic!("too many classes")}
-    replaceDispatch(pos as usize,c,4);
-}
-fn replaceDispatch(pos: usize, c: Object, n: usize) -> Option<Dispatch> {
-    let mut table = Vec::with_capacity(n);
-    table.resize(n,Default::default());
-    unsafe {
-        let old = std::mem::replace(
-            &mut dispatchTable[pos],
-            ManuallyDrop::new(Some(Dispatch {
+    unsafe{dispatchTable[class as usize] = Some(Dispatch {
                 class: c,
-                table: table.into_boxed_slice(),
-            })),
-        );
-        ManuallyDrop::into_inner(old)
+                table: Vec::with_capacity(0).into_boxed_slice(),
+    })}
+}
+fn addMethodToTable(table:&mut Vec<MethodMatch>,selector:usize,method:&MethodType) -> bool {
+    let len = table.capacity();
+    let hash = selector%(len-DISPATCH_OVERFLOW);
+    for index in hash..hash+DISPATCH_OVERFLOW {
+        if let SelectorMatch::Other = table[index].selector_match(selector) {
+            // slot taken
+        } else {
+            table[index].selector = selector;
+            table[index].function = method.clone();
+            return true
+        }
+    }
+    false
+}
+fn addMethodToDispatch(class:ClassIndex,selector:Object,method:MethodType) {
+    let selector = selector.raw()>>3;
+    let lock = dispatchFree.lock().unwrap();
+    if let Some(disp) = unsafe{&mut dispatchTable[class as usize]} {
+        match hash_index(&disp.table,selector) {
+            usize::MAX => {
+                let mut count = 3;
+                for mm in disp.table.iter() {
+                    match mm.selector_match(selector) {
+                        SelectorMatch::Empty => (),
+                        _ => count += 1,
+                    }
+                }
+                let mut unfinished = true;
+                let mut table = Vec::new();
+                while unfinished {
+                    unfinished = false;
+                    count = count*4/3;
+                    table = Vec::with_capacity(count+DISPATCH_OVERFLOW);
+                    addMethodToTable(&mut table,selector,&method);
+                    for mm in disp.table.iter() {
+                        if addMethodToTable(&mut table,mm.selector,&mm.function) {unfinished = true;break}
+                    }
+                }
+                table.resize(table.capacity(),Default::default());
+                disp.table=table.into_boxed_slice()
+            },
+            index => {
+                disp.table[index].selector = selector;
+                disp.table[index].function = method
+            },
+        }
+    } else {
+        panic!("class {} not initialized",class)
     }
 }
+// selector is normally a Symbol for normal lookup
+// but for super, it is an integer with the low 32 bits being from the Symbol, and the high 16 bits a class
 pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
     let arity = selector.immediateHash()>>25;
     let this = thread.atOffset(arity+1);
     let class = this.class();
-    if let Some(disp) = unsafe{&dispatchTable[class as usize].take()} {
-        execute(disp.getMethod(selector),thread,selector,class)
+    let lookupClass = selector.dispatch_class(class);
+    if let Some(disp) = unsafe{&dispatchTable[class as usize]} {
+        execute(disp.getMethod(selector),thread,selector,class,lookupClass)
     } else {
         panic!("no dispatch found for {}",crate::class::name_str(class))
     }
 }
 #[inline]
-fn execute(method:&MethodType,thread:& mut Thread,selector:Object,class:ClassIndex) -> FunctionResult {
+fn execute(method:&MethodType,thread:& mut Thread,selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> FunctionResult {
     match method {
         MethodType::Function(function) => function(thread,selector),
         MethodType::Method(method) => method.execute(thread),
-        MethodType::NoType => make_execute_method(thread,selector,class),
+        MethodType::NoType => interpret_or_make_execute_method(thread,selector,class,lookupClass),
     }
 }
-fn make_execute_method(thread:&mut Thread,selector:Object,class:ClassIndex) -> FunctionResult {
-    let method = make_method(selector,class);
-    execute(&method,thread,selector,class)
+fn interpret_or_make_execute_method(thread:&mut Thread,selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> FunctionResult {
+    let method = find_method(selector,class,lookupClass);
+    interpret_primitive_or_method(method,thread,selector,class,lookupClass)
 }
-fn make_method(selector:Object,class:ClassIndex) -> Box<MethodType> {
-    
-    panic!("make_method")
+fn find_method(selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> &'static HeapObject {
+    let classO = unsafe{&*getClass(lookupClass).as_object_ptr()};
+    println!("classO {:?} selector {:?}",classO,selector);
+    let methods = unsafe{&*classO.raw_at(0).as_object_ptr()};
+    for idx in  0..methods.size() {
+        let method = unsafe{&*methods.at(idx).as_object_ptr()};
+        if method.raw_at(0)==selector{
+            return method
+        }
+    }
+    panic!("find_method")
+}
+fn interpret_primitive_or_method(method:&HeapObject,thread:&mut Thread,selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> FunctionResult {
+    let code = method.raw_at(1);
+    if let Some(function) = prim_lookup(code) {
+        return function(thread,selector)
+    }
+    if code!=Object::from(0) {
+        panic!("interpret_primitive_or_method - missing primitive:{:?}",code)
+    }
+    interpret_method(method,thread,selector,class,lookupClass)
+}
+fn interpret_method(method:&HeapObject,thread:&mut Thread,selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> FunctionResult {
+    let self_index = thread.start_method_get_self_index(selector.arity());
+    let body = unsafe{&*method.raw_at(2).as_object_ptr()};
+    for idx in 0..body.size() {
+        if interpret_expression(body.at(idx),method,thread)  {
+            break
+        }
+    }
+    thread.return_with(thread.top());
+    thread.end_method();
+    NormalReturn
+}
+fn interpret_expression(expression:Object,method:&HeapObject,thread:&mut Thread) -> bool  {
+    if expression.is_on_heap() {
+        let expression = unsafe{&*expression.as_object_ptr()};
+        match expression.class() {
+            classReturn => {
+                interpret_expression(expression.raw_at(0),method,thread);
+                return true
+            },
+            classSend => {
+                println!("send {:?}",expression);
+                interpret_expression(expression.raw_at(0),method,thread);
+                interpret_push_array(expression.raw_at(2),method,thread);
+                dispatch(thread,expression.raw_at(1));
+            },
+            classLiteral => thread.push(expression.raw_at(0)),
+            classLoad => {panic!("expression {:?}",expression)},
+            classStore => {panic!("expression {:?}",expression)},
+            _ => {panic!("expression {:?}",expression)},
+        }
+    } else if expression.is_symbol() {
+        if thread.is_self(expression) {
+            thread.push_self()
+        } else {
+            panic!("expression {:?}",expression);
+        }
+    } else {   
+        thread.push(expression);
+    }
+    return false
+}
+fn interpret_push_array(array:Object,method:&HeapObject,thread:&mut Thread) {
+    assert!(array.is_on_heap());
+    let array = unsafe{&*array.as_object_ptr()};
+    match array.class() {
+        classArray => {
+            for idx in 0..array.size() {
+                interpret_expression(array.at(idx),method,thread);
+            }
+        },
+        _ => panic!("expected array {:?} {:?}",array,thread),
+    }
 }
 #[cfg(test)]
 mod testsInterpreter {
@@ -298,6 +469,21 @@ mod testsInterpreter {
     use crate::symbol::intern;
     macro_rules! pinit {
         ($c:expr => $($e:expr),*) => {primary_init($c,&[$( Object::from($e)),*])}
+    }
+    macro_rules! class {
+        ($c:expr => $($e:expr),*) => {primary_init($c+METACLASS_OFFSET,&[$( Object::from($e)),*])}
+    }
+    macro_rules! method {
+        ($($e:expr),*) => {primary_init(classMethod,&[$( Object::from($e)),*])}        
+    }
+    macro_rules! doReturn {
+        ($($e:expr),*) => {primary_init(classReturn,&[$( Object::from($e)),*])}        
+    }
+    macro_rules! send {
+        ($($e:expr),*) => {primary_init(classSend,&[$( Object::from($e)),*])}        
+    }
+    macro_rules! load {
+        ($($e:expr),*) => {primary_init(classLoad,&[$( Object::from($e)),*])}        
     }
     macro_rules! array {
         ($($e:expr),*) => {primary_array(&[$( Object::from($e)),*])}
@@ -314,21 +500,46 @@ mod testsInterpreter {
             assert_eq!(class_,classClass);
             let empty = array!();
             let meta_ = class_index("Metaclass");
-            let object_meta_ = metaclass_index();
-            let object = pinit!(object_meta_ => empty, empty, nilObject, "Object", format_inst_np, nilObject);
+            let object_meta_ =classObject+METACLASS_OFFSET;
+            let object = pinit!(object_meta_ => empty, empty, nilObject, "Object", format_inst_np, empty, empty);
             addClass(classObject, object);
             let object_meta = pinit!(meta_ => empty, empty, nilObject, object);
             addClass(object_meta_, object_meta);
-            let smallI_meta_ = metaclass_index();
-            let addI_ = pinit!(method_ => "+",1,empty,empty,empty);
-            let smallI = pinit!(smallI_meta_ => array!(addI_), empty, object, "SmallInteger", format_inst_np, nilObject);
+            let smallI = class!(classSmallInteger => array!(
+                method!("+",1,empty,empty,empty,nilObject),
+                method!("-",2,empty,empty,empty,nilObject),
+                method!("*",9,empty,empty,empty,nilObject),
+                method!("=",7,empty,empty,empty,nilObject),
+                method!("foo",0,array!(
+                    doReturn!(
+                        send!("self","*",array!(7)),
+                        false)
+                ),empty,empty,nilObject),
+                method!("factorial",0,array!(
+                    doReturn!(
+                        send!(
+                            send!("self","=",array!(1)),
+                            "ifTrue:ifFalse:",array!(
+                                method!("value",0,array!(
+                                    load!("self",1)
+                                ),empty,empty,nilObject),
+                                method!("value",0,array!(
+                                    send!(load!("self",1),"*",
+                                          send!(
+                                              send!(load!("self",1),"-",array!(1)),
+                                              "factorial",empty))
+                                ),empty,empty,nilObject))),
+                        false)
+                ),empty,empty,nilObject)
+            ), empty, object, "SmallInteger", format_inst_np, empty, empty);
             addClass(classSmallInteger, smallI);
             let system_ = class_index("System");
-            let system_meta_ = metaclass_index();
-            let log_ = pinit!(method_ => "log:","log: prim",empty,empty,empty);
-            let system = pinit!(system_meta_ => empty, empty, object, "System", format_inst_np, object);
+            let system_meta_ = system_+METACLASS_OFFSET;
+            let system = class!(system_ => empty, empty, object, "System", format_inst_np, empty, empty);
             addClass(system_, system);
-            let system_meta = pinit!(meta_ => array!(log_), empty, object_meta, system);
+            let system_meta = pinit!(meta_ => array!(
+                method!("log:","log: prim",empty,empty,empty,nilObject)
+            ), empty, object_meta, system);
             addClass(system_meta_, system_meta);
         }
     }
@@ -336,6 +547,7 @@ mod testsInterpreter {
     #[should_panic(expected = "no dispatch found")]
     fn dispatch_non_existant_class() {
         let mut thread:Thread = Default::default();
+        thread.push(nilObject);
         dispatch(&mut thread,intern("foo"));
     }
 
@@ -344,13 +556,13 @@ mod testsInterpreter {
         use crate::interpreter::primitives::smallInteger::*;
         init_classes();
         let mut thread:Thread = Default::default();
-        assert_eq!(thread.size(),1);
+        assert_eq!(thread.size(),0);
         thread.push_i48(25);
         thread.push_i48(17);
         let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
         method.instr(addI);
         method.execute(&mut thread);
-        assert_eq!(thread.size(),2);
+        assert_eq!(thread.size(),1);
         assert_eq!(thread.top().as_i48(),42);
     }
 
@@ -359,13 +571,42 @@ mod testsInterpreter {
         use crate::interpreter::primitives::smallInteger::*;
         init_classes();
         let mut thread:Thread = Default::default();
-        assert_eq!(thread.size(),1);
+        assert_eq!(thread.size(),0);
         thread.push_i48(25);
         thread.push_i48(17);
         let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
         method.instr_with(dispatch,intern("+"));
         method.execute(&mut thread);
-        assert_eq!(thread.size(),2);
+        assert_eq!(thread.size(),1);
+        assert_eq!(thread.top().as_i48(),42);
+    }
+/*
+    #[test]
+    fn integers_factorial() {
+        use crate::interpreter::primitives::smallInteger::*;
+        init_classes();
+        let mut thread:Thread = Default::default();
+        assert_eq!(thread.size(),0);
+        thread.push_i48(1);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        method.instr_with(dispatch,intern("factorial"));
+        method.execute(&mut thread);
+        assert_eq!(thread.size(),1);
+        assert_eq!(thread.top().as_i48(),1);
+    }
+*/
+    #[test]
+    fn integers_foo() {
+        use crate::interpreter::primitives::smallInteger::*;
+        init_classes();
+        let mut thread:Thread = Default::default();
+        assert_eq!(thread.size(),0);
+        thread.push_i48(6);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        method.instr_with(dispatch,intern("foo"));
+        method.execute(&mut thread);
+        println!("thread {:?}",thread);
+        assert_eq!(thread.size(),1);
         assert_eq!(thread.top().as_i48(),42);
     }
 

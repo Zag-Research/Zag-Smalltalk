@@ -13,13 +13,13 @@ use crate::object::*;
 use crate::treap::LockingTreap;
 use std::sync::Mutex;
 
-static first_symbols: &[StaticStr]= &[
+const first_symbols: &[StaticStr]= &[
     "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", /* need to be first 5 symbols so that short-circuit on dispatch works */
     "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:", /* need to be the next 5 symbols */
     "Object", "BlockClosure", "False", "True",
     "UndefinedObject", "SmallInteger", "Symbol", "Character",
     "Float", "Array", "String", "Class", "Metaclass",
-    "Behavior", "Method", "System",
+    "Behavior", "Method", "System","Return","Send","Literal","Load","Store",
     "yourself", "==", "~~", "~=", "=", "+", "-", "*", "size",
 ];
 lazy_static!{
@@ -54,6 +54,6 @@ mod testSymbol {
     #[test]
     fn object() {
         assert_eq!(intern("Object"),symbolOf("Object",10));
-        assert_eq!(format!("{:?}",intern("Object")),"Object");
+        assert_eq!(format!("{:?}",intern("Object")),"#Object");
     }
 }

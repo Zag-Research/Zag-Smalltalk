@@ -90,13 +90,13 @@ This is the first field in the header-word for an object:
 | 20   | identityHash |                                                              |
 | 16   | classIndex   | LSB                                                          |
 
-Unless format=12-14, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
+Unless format=12,13,16, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
 
 For formats >= 17, if the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-If the format=12-14, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
+If the format=12,13,16, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
 
-For Behavior, the identityHash is the index into the class table.
+For BlockClosure, the high 4 bits of the identityHash is the number of parameters for the block.
 
 #### Examples `need update`
 

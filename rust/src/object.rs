@@ -1,7 +1,8 @@
 use std::cmp::Ordering::{self,Equal,Less,Greater};
+use std::hash::{Hash,Hasher};
 use std::fmt;
 use std::fmt::Debug;
-pub type ClassIndex = u16;
+pub type ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo only has 20000, so shouldn't be a problem
 pub const classObject: ClassIndex = 0;
 pub const classBlockClosure: ClassIndex = 1;
 pub const classFalse: ClassIndex = 2;
@@ -18,6 +19,12 @@ pub const classMetaclass: ClassIndex = 12;
 pub const classBehavior: ClassIndex = 13;
 pub const classMethod: ClassIndex = 14;
 pub const classSystem: ClassIndex = 15;
+pub const classReturn: ClassIndex = 16;
+pub const classSend: ClassIndex = 17;
+pub const classLiteral: ClassIndex = 18;
+pub const classLoad: ClassIndex = 19;
+pub const classStore: ClassIndex = 20;
+pub const number_of_constant_classes: usize = 21;
 #[derive(Copy, Clone)]
 pub union Object {
     i: isize,
@@ -69,6 +76,12 @@ impl PartialEq for Object {
         }
     }
 }
+impl Hash for Object {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let i = unsafe{self.i};
+        i.hash(state);
+    }
+}
 #[inline]
 pub fn symbolOf(string: &str,hash: usize) -> Object {
     let mut arity = 0;
@@ -91,6 +104,10 @@ pub const fn on_heap(i:usize) -> bool {
     object_test(i) && (i&6) as ClassIndex==classObject // catches classBlockClosure too since that assertion
 }
 impl Object {
+    #[inline]
+    pub const fn raw(&self) -> usize {
+        unsafe{self.i as usize}
+    }
     #[inline]
     pub const fn is_integer(&self) -> bool {
         let i = self.raw();
@@ -133,6 +150,10 @@ impl Object {
         crate::class::name_str(self.class())
     }
     #[inline]
+    pub const fn arity(&self) -> u8 {
+        (self.raw()>>28) as u8
+    }
+    #[inline]
     pub const fn immediateHash(&self) -> u32 {
         (self.raw()>>3) as u32
     }
@@ -156,6 +177,11 @@ impl Object {
                 cl
             }
         }
+    }
+    #[inline]
+    pub const fn dispatch_class(&self,class:ClassIndex) -> ClassIndex {
+        // lookups for super methods must add entry to dispatch that maps to something unique: Symbol hash + (target class << 20)
+        if self.is_integer() {(self.raw()>>35) as ClassIndex} else {class}
     }
     #[inline]
     pub const fn as_i48(&self) -> isize {
@@ -182,10 +208,6 @@ impl Object {
     pub const fn as_object_ptr(&self) -> * mut HeapObject {
         unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapObject)}
     }
-    #[inline]
-    pub const fn raw(&self) -> usize {
-        unsafe{self.i as usize}
-    }
 }
 impl Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -193,9 +215,9 @@ impl Debug for Object {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         if self.is_symbol() {
-            write!(f, "{}",crate::symbol::str_of(*self))
+            write!(f, "#{}",crate::symbol::str_of(*self))
         } else if self.is_integer() {
-            write!(f, "{}:{} {:x}",self.as_i48(),self.class_name(),self.raw())
+            write!(f, "{}",self.as_i48())
         } else if self.is_literal() {
             if *self==nilObject {
                 write!(f,"nil")
@@ -204,12 +226,12 @@ impl Debug for Object {
             } else if *self==falseObject {
                 write!(f,"false")
             } else {
-                write!(f, "{:?}: {:x}",self.as_literal() as u8 as char,self.raw())
+                write!(f, "{:?}",self.as_literal() as u8 as char)
             }
         } else if self.is_double() {
-            write!(f, "{:e}:{} {:x}",self.as_f64(),self.class_name(),self.raw())
+            write!(f, "{:e}",self.as_f64())
         } else if self.is_object() {
-            write!(f, "{:?}:object {:x}", self.as_object_ptr(),self.raw())
+            write!(f, "{:?}", self.as_object_ptr())
         } else {
             write!(f, "{:?}:closure {:x}", self.as_object_ptr(),self.raw())
         }
@@ -354,8 +376,11 @@ const hashMask: usize = 0xfffff;
 
 impl HeapHeader {
     #[inline]
-    fn class(&self) -> usize {
-        (unsafe{self.u})&classMask
+    fn class(&self) -> ClassIndex {
+        ((unsafe{self.u})&classMask)  as ClassIndex
+    }
+    pub fn class_name(&self) -> &str {
+        crate::class::name_str(self.class())
     }
     #[inline]
     fn hash(&self) -> usize {
@@ -410,7 +435,8 @@ impl Debug for HeapHeader {
         // The `f` value implements the `Write` trait, which is what the
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
-        write!(f, "cl:{} hs:{} sz:{} fm:{}:-",self.class(),self.hash(),self.size(),self.format())
+        let class = self.class();
+        write!(f, "{}{}",self.class_name(),(if crate::class::is_meta(class){" class"}else{""}))
     }
 }
 macro_rules! header {
@@ -519,7 +545,7 @@ impl HeapObject {
         self.header.hash()
     }
     #[inline]
-    pub fn classIndex(&self) -> usize {
+    pub fn class(&self) -> ClassIndex {
         self.header.class()
     }
     #[inline]
@@ -540,6 +566,10 @@ impl HeapObject {
         } else {
             0
         }
+    }
+    #[inline]
+    pub fn is_indexable(&self) -> bool {
+        self.header.format()&27!=10
     }
     #[inline]
     fn firstIndex(&self) -> usize {
@@ -597,6 +627,22 @@ impl HeapObject {
         }
     }
     #[inline]
+    pub fn width(&self) -> isize {
+        let mut size = self.header.size();
+        let format = self.header.format();
+        if format<=16 {
+            -1
+        } else if format>=24 {
+            1
+        } else if format>=20 {
+            2
+        } else if format>=18 {
+            4
+        } else {
+            8
+        }
+    }
+    #[inline]
     pub fn raw_at(&self,index:usize) -> Object {
         let fields = &self.fields as * const Object;
         unsafe{fields.offset(index as isize).read()}
@@ -611,45 +657,81 @@ impl HeapObject {
         unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
-    pub fn at_put_u8(&mut self,index:usize,value:u8) {
+    pub fn raw_at_put(&mut self,index:usize,value:Object) {
+        let fields = &mut self.fields as * mut Object;
+        unsafe{fields.offset(index as isize).write(value)}
+    }
+    #[inline]
+    pub fn at_u8(& self,index:usize) -> u8 {
         let format = self.header.format();
         if format<24 {
             panic!("at_put_u8 for non-indexable")
         }
         let fields = &self.fields as * const Object as * const u8;
-        unsafe{fields.offset(index as isize).read()};
+        unsafe{fields.offset(index as isize).read()}
+    }
+    #[inline]
+    pub fn at_put_u8(&mut self,index:usize,value:u8) {
+        let format = self.header.format();
+        if format<24 {
+            panic!("at_put_u8 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * mut u8;
+        unsafe{fields.offset(index as isize).write(value)};
+    }
+    #[inline]
+    pub fn at_u16(& self,index:usize) -> u16 {
+        let format = self.header.format();
+        if format>=24 || format<20 {
+            panic!("at_u16 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u16;
+        unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
     pub fn at_put_u16(&mut self,index:usize,value:u16) {
         let format = self.header.format();
-        if format<24 {
+        if format>=24 || format<20 {
             panic!("at_put_u16 for non-indexable")
         }
-        let fields = &self.fields as * const Object as * const u16;
-        unsafe{fields.offset(index as isize).read()};
+        let fields = &self.fields as * const Object as * mut u16;
+        unsafe{fields.offset(index as isize).write(value)};
+    }
+    #[inline]
+    pub fn at_u32(& self,index:usize) -> u32 {
+        let format = self.header.format();
+        if format>=20 || format<18 {
+            panic!("at_u32 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u32;
+        unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
     pub fn at_put_u32(&mut self,index:usize,value:u32) {
         let format = self.header.format();
-        if format<18 || format>=20 {
+        if format>=20 || format<18 {
             panic!("at_put_u32 for non-indexable")
         }
-        let fields = &self.fields as * const Object as * const u32;
-        unsafe{fields.offset(index as isize).read()};
+        let fields = &self.fields as * const Object as * mut u32;
+        unsafe{fields.offset(index as isize).write(value)};
+    }
+    #[inline]
+    pub fn at_u64(& self,index:usize) -> u64 {
+        let format = self.header.format();
+        if format!=17 {
+            panic!("at_put_u64 for non-indexable")
+        }
+        let fields = &self.fields as * const Object as * const u64;
+        unsafe{fields.offset(index as isize).read()}
     }
     #[inline]
     pub fn at_put_u64(&mut self,index:usize,value:u64) {
         let format = self.header.format();
-        if format<24 {
+        if format!=17 {
             panic!("at_put_u64 for non-indexable")
         }
-        let fields = &self.fields as * const Object as * const u64;
-        unsafe{fields.offset(index as isize).read()};
-    }
-    #[inline]
-    pub fn raw_at_put(&mut self,index:usize,value:Object) {
-        let fields = &mut self.fields as * mut Object;
-        unsafe{fields.offset(index as isize).write(value)}
+        let fields = &self.fields as * const Object as * mut u64;
+        unsafe{fields.offset(index as isize).write(value)};
     }
     pub fn initialize(&mut self) {
         for i in 0..self.n_instVars() {
@@ -663,7 +745,8 @@ impl HeapObject {
     }
     pub fn alloc(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
         let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
-        let hash = {if hash==0 {self as *mut HeapObject as usize} else {hash}};
+        let self_hash = self as *mut HeapObject as usize >> 3;
+        let hash = if hash==0 {self_hash} else if hash<=16 {((hash-1)<<16)|(self_hash&0xffff)} else {hash};
         self.header=header!(class=class,hash=hash,format=format,size=size);
         let extra = self.firstIndex();
         if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed})};
@@ -679,7 +762,7 @@ impl HeapObject {
     }
     #[cfg(test)]
     pub fn array(&mut self,elements:&[Object]) -> * mut HeapObject {
-        let result = self.alloc(classClass,0,elements.len() as isize,-1,0,false);
+        let result = self.alloc(classArray,0,elements.len() as isize,-1,0,false);
         for (i,obj) in elements.iter().enumerate() {
             self.raw_at_put(i,*obj)
         }
@@ -775,6 +858,26 @@ impl Debug for HeapObject {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         write!(f, "({:?}",self.header);
+        for iv in  0..self.n_instVars() {
+            write!(f, " {:?}",self.raw_at(iv));
+        };
+        if self.is_indexable() {
+            let size = self.size();
+            let width = self.width();
+            write!(f,"(");
+            let mut prefix = "";
+            for idx in 0..size {
+                match width {
+                    1 => write!(f,"{}{}",prefix,self.at_u8(idx)),
+                    2 => write!(f,"{}{}",prefix,self.at_u16(idx)),
+                    4 => write!(f,"{}{}",prefix,self.at_u32(idx)),
+                    8 => write!(f,"{}{}",prefix,self.at_u64(idx)),
+                    _ => write!(f,"{}{:?}",prefix,self.at(idx)),
+                };
+                prefix = " ";
+            };
+            write!(f,")");
+        };
         write!(f,")")
     }
 }

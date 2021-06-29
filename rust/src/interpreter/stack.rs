@@ -2,6 +2,8 @@ use super::*;
 pub fn load(add_str:AddStrPrimitive,add_i32:AddI32Primitive) {
     add_i32(110,eq);
     add_i32(1,add);
+    add_str("nop",nop);
+    add_str("dup",dup);
 }
 pub fn dup(thread:&mut Thread,_:Object) -> FunctionResult {
     thread.push(thread.top());
@@ -97,7 +99,7 @@ mod testMethod {
         let mut thread:Thread = Default::default();
         thread.push_i48(25);
         thread.push_i48(17);
-        let mut method = Method::new(classSmallInteger,2,0,intern("+").immediateHash());
+        let mut method = Method::new(classSmallInteger,1,0,intern("+").immediateHash());
         method.instr(stack::add);
         assert_eq!(method.execute(&mut thread),NormalReturn);
         assert_eq!(thread.top().as_i48(),42);
@@ -108,7 +110,7 @@ mod testMethod {
         for i in 1..6 {
             thread.push_i48(i);
         }
-        let mut method = Method::new(classSmallInteger,2,0,intern("foo").immediateHash());
+        let mut method = Method::new(classSmallInteger,4,0,intern("foo").immediateHash());
         method.instr(stack::dup);
         method.instr_i48(stack::constant,3);
         method.instr(stack::add);

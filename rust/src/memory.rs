@@ -270,6 +270,31 @@ pub fn primary_init(class:ClassIndex,fields:&[Object]) -> Object {
     Object::from(primary_do(&|region| region.init(class,fields)))
 }
 #[cfg(test)]
+mod testFoo {
+    use super::*;
+    use crate::symbol::*;
+    pub fn old_convert(foo: Object, _elements: impl IntoIterator<Item = Object>) -> Object {
+        foo
+    }
+    pub fn new_convert(
+        foo: impl Into<Object>,
+        elements: impl IntoIterator<Item = impl Into<Object>>,
+    ) -> Object {
+        old_convert(foo.into(), elements.into_iter().map(Into::into))
+    }
+    
+    #[test]
+    fn testOldConvert() {
+        old_convert(Object::from(42), [Object::from(3.1415),Object::from("str")]);
+    }
+/* can never work perfectly because arrays have to be homogeneous
+    #[test]
+    fn testNewConvert() {
+        new_convert(42, [3.1415,"abc"]);
+    }
+*/
+}
+#[cfg(test)]
 pub fn primary_array(elements:&[Object]) -> Object {
     Object::from(primary_do(&|region| region.array(elements)))
 }
