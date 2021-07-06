@@ -69,7 +69,7 @@ fn main() {
     let classIndex = class::class_index("System");
     let class = getClass(classIndex);
     thread.push(class);
-    let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
+    let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash(),0);
     method.instr_with(dispatch,intern("start"));
     method.execute(&mut thread);
 }

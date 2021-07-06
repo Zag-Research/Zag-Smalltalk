@@ -89,7 +89,7 @@ mod testMethod {
     fn noop() {
         let mut thread:Thread = Default::default();
         thread.push(Object::from(42));
-        let mut method = Method::new(classObject,0,0,intern("yourself").immediateHash());
+        let mut method = Method::new(classObject,0,0,intern("yourself").immediateHash(),0);
         method.instr(stack::nop);
         assert_eq!(method.execute(&mut thread),NormalReturn);
         assert_eq!(thread.top(),Object::from(42));
@@ -99,7 +99,7 @@ mod testMethod {
         let mut thread:Thread = Default::default();
         thread.push_i48(25);
         thread.push_i48(17);
-        let mut method = Method::new(classSmallInteger,1,0,intern("+").immediateHash());
+        let mut method = Method::new(classSmallInteger,1,0,intern("+").immediateHash(),0);
         method.instr(stack::add);
         assert_eq!(method.execute(&mut thread),NormalReturn);
         assert_eq!(thread.top().as_i48(),42);
@@ -110,7 +110,7 @@ mod testMethod {
         for i in 1..6 {
             thread.push_i48(i);
         }
-        let mut method = Method::new(classSmallInteger,4,0,intern("foo").immediateHash());
+        let mut method = Method::new(classSmallInteger,4,0,intern("foo").immediateHash(),0);
         method.instr(stack::dup);
         method.instr_i48(stack::constant,3);
         method.instr(stack::add);

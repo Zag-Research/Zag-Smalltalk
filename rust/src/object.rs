@@ -44,6 +44,7 @@ macro_rules! literal {
 pub const falseObject: Object = literal!(class=classFalse,value=3);
 pub const trueObject: Object = literal!(class=classTrue,value=5);
 pub const nilObject: Object = literal!(class=classUndefinedObject,value=7);
+pub const selfSymbolObject: Object = literal!(class=classSymbol,value=10);
 pub const placeholderObject: Object = literal!(class=classUndefinedObject,value=0x1ffffff);
 impl Default for Object {
     fn default() -> Self {
@@ -119,6 +120,11 @@ impl Object {
         object_test(i) && (i&7) as ClassIndex==classSymbol
     }
     #[inline]
+    pub const fn is_nil(&self) -> bool {
+        let i = self.raw();
+        object_test(i) && (i&7) as ClassIndex==classUndefinedObject
+    }
+    #[inline]
     pub const fn is_bool(&self) -> bool {
         let i = self.raw();
         object_test(i) && (i&6) as ClassIndex==classTrue&6
@@ -146,6 +152,10 @@ impl Object {
         let i = self.raw();
         object_test(i) && (i&7) as ClassIndex==classBlockClosure
     }
+    #[inline]
+    pub fn is_self_symbol(&self) -> bool {
+        *self==selfSymbolObject
+    }
     pub fn class_name(&self) -> &str {
         crate::class::name_str(self.class())
     }
@@ -172,7 +182,7 @@ impl Object {
         } else {
             let cl = (self.raw() & 7) as ClassIndex;
             if cl == classObject {
-                panic!("other class")
+                (unsafe{&*self.as_object_ptr()}).class()
             } else {
                 cl
             }
@@ -206,7 +216,8 @@ impl Object {
     }
     #[inline]
     pub const fn as_object_ptr(&self) -> * mut HeapObject {
-        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapObject)}
+//        unsafe{& mut *((self.i-NAN_VALUE+1) as * mut HeapObject)}
+        unsafe{& mut *(((self.i<<13) as usize>>16<<3) as * mut HeapObject)}
     }
 }
 impl Debug for Object {
@@ -406,6 +417,9 @@ impl HeapHeader {
     fn is_forwarded(&self) -> bool {
         (unsafe{self.i})<0
     }
+    fn raw(&self) -> usize {
+        unsafe{self.u}
+    }
     #[inline]
     fn is_indexed(&self) -> bool {
         self.format()>=8
@@ -436,7 +450,7 @@ impl Debug for HeapHeader {
         // write! macro is expecting. Note that this formatting ignores the
         // various flags provided to format strings.
         let class = self.class();
-        write!(f, "{}{}",self.class_name(),(if crate::class::is_meta(class){" class"}else{""}))
+        write!(f, "{}{}:{}",self.class_name(),(if crate::class::is_meta(class){" class"}else{""}),self.hash())
     }
 }
 macro_rules! header {
@@ -746,7 +760,7 @@ impl HeapObject {
     pub fn alloc(&mut self,class:ClassIndex,n_instVars:usize,n_indexed:isize,width:isize,hash:usize,weak:bool) -> * mut HeapObject {
         let (format,size,total_size)=formatAndSize(n_instVars,n_indexed,width,weak);
         let self_hash = self as *mut HeapObject as usize >> 3;
-        let hash = if hash==0 {self_hash} else if hash<=16 {((hash-1)<<16)|(self_hash&0xffff)} else {hash};
+        let hash = if hash==0 {self_hash} else {hash};
         self.header=header!(class=class,hash=hash,format=format,size=size);
         let extra = self.firstIndex();
         if extra>self.n_instVars() {self.raw_at_put(extra-1,Object{i:n_indexed})};

@@ -10,7 +10,6 @@ use std::cell::RefCell;
 pub struct Thread {
     stack:Vec<Object>,
     self_index: usize,
-    self_symbol: Object,
     frames: Vec<usize>,
 }
 impl Default for Thread {
@@ -18,7 +17,6 @@ impl Default for Thread {
         Thread{
             stack: Vec::new(),
             self_index:0,
-            self_symbol: crate::symbol::intern("self"),
             frames:Vec::new()}
     }
 }
@@ -50,10 +48,6 @@ impl Thread {
     #[inline]
     pub fn top(&self) -> Object {
         self.stack[self.stack.len()-1]
-    }
-    #[inline]
-    pub fn is_self(&self,obj:Object) -> bool {
-        self.self_symbol==obj
     }
     #[inline]
     pub fn second(&self) -> Object {
@@ -94,6 +88,10 @@ impl Thread {
     #[inline]
     pub fn end_method(&mut self) {
         self.self_index = self.frames.pop().unwrap()
+    }
+    #[inline]
+    pub fn self_index(&self) -> usize {
+        self.self_index
     }
     #[inline]
     pub fn offset(&self,offset:usize) -> usize {
@@ -153,12 +151,13 @@ pub struct Method {
     class_index: ClassIndex,
     parameters: u8,
     locals: u8,
+    closure_fields: u8,
     symbol_index: u32,
     code: Vec<(Function,Object)>,
     blocks: Vec<Arc<Method>>,
 }
 impl Method {
-    pub fn new(class_index: ClassIndex,parameters: u8,locals: u8,symbol_index: u32) -> Self {
+    pub fn new(class_index: ClassIndex,parameters: u8,locals: u8,symbol_index: u32,closure_fields: u8) -> Self {
         Method{
             class_index,
             parameters,
@@ -166,10 +165,11 @@ impl Method {
             symbol_index,
             code: Vec::new(),
             blocks: Vec::new(),
+            closure_fields,
         }
     }
-    fn alloc(&self) -> &mut HeapObject {
-        unsafe{allocObject(classBlockClosure,self.locals as usize+2,-1,-1,0,false).as_mut().unwrap()}
+    fn allocBlockClosure(&self) -> &mut HeapObject {
+        unsafe{allocObject(classBlockClosure,self.closure_fields as usize+2,-1,-1,0,false).as_mut().unwrap()}
     }
     pub fn instr(&mut self,f:Function) {
         self.code.push((f,placeholderObject))
@@ -214,7 +214,7 @@ impl Method {
                     pc = pc + 1;
                     let method = self.blocks[block as usize].clone();
                     let ptr = unsafe{&*Arc::as_ptr(&method)};
-                    let closure = ptr.alloc();
+                    let closure = ptr.allocBlockClosure();
                     closure.raw_at_put(0,Object::from(Arc::into_raw(method) as * const HeapObject));
                     closure.raw_at_put(1,Object::from(self_index as isize));
                     thread.push(Object::from(closure));
@@ -270,7 +270,7 @@ const DISPATCH_OVERFLOW:usize = 2; // always at least one entry past the hash
 fn hash_index(table:&[MethodMatch],selector:usize) -> usize {
     let len = table.len();
     if len>DISPATCH_OVERFLOW {
-        let hash = selector%(len-DISPATCH_OVERFLOW);
+        let hash = hash_mod(len,selector);
         for index in hash..len {
             match table[index].selector_match(selector) {
                 SelectorMatch::Other => (),
@@ -314,7 +314,7 @@ fn addClass(class: ClassIndex, c: Object) {
 }
 fn addMethodToTable(table:&mut Vec<MethodMatch>,selector:usize,method:&MethodType) -> bool {
     let len = table.capacity();
-    let hash = selector%(len-DISPATCH_OVERFLOW);
+    let hash = hash_mod(len,selector);
     for index in hash..hash+DISPATCH_OVERFLOW {
         if let SelectorMatch::Other = table[index].selector_match(selector) {
             // slot taken
@@ -368,11 +368,29 @@ pub fn dispatch(thread:&mut Thread,selector:Object) -> FunctionResult {
     let arity = selector.immediateHash()>>25;
     let this = thread.atOffset(arity+1);
     let class = this.class();
-    let lookupClass = selector.dispatch_class(class);
-    if let Some(disp) = unsafe{&dispatchTable[class as usize]} {
-        execute(disp.getMethod(selector),thread,selector,class,lookupClass)
+    if class == classBlockClosure {
+        dispatch_closure(thread,selector,this)
     } else {
-        panic!("no dispatch found for {}",crate::class::name_str(class))
+        println!("send: {:?} {:?} {}",thread.top(),selector,class);
+        let lookupClass = selector.dispatch_class(class);
+        if let Some(disp) = unsafe{&dispatchTable[class as usize]} {
+            execute(disp.getMethod(selector),thread,selector,class,lookupClass)
+        } else {
+            panic!("no dispatch found for {}",crate::class::name_str(class))
+        }
+    }
+}
+fn dispatch_closure(thread:&mut Thread,selector:Object,this_:Object) -> FunctionResult {
+    let this = unsafe{&*this_.as_object_ptr()};
+    if  this.identityHash()==selector.hash() {
+        println!("dispatch_closure hash matches: {:?} {:?}",this,selector);
+        if this.raw_at(0).is_on_heap() {
+            interpret_method(unsafe{&*this.raw_at(0).as_object_ptr()},thread,selector)
+        } else {
+        panic!("dispatch_closure: {:?} {:?}",this,selector)
+        }
+    } else {
+        panic!("dispatch_closure: {:?} {:?}",this,selector)
     }
 }
 #[inline]
@@ -407,9 +425,9 @@ fn interpret_primitive_or_method(method:&HeapObject,thread:&mut Thread,selector:
     if code!=Object::from(0) {
         panic!("interpret_primitive_or_method - missing primitive:{:?}",code)
     }
-    interpret_method(method,thread,selector,class,lookupClass)
+    interpret_method(method,thread,selector)
 }
-fn interpret_method(method:&HeapObject,thread:&mut Thread,selector:Object,class:ClassIndex,lookupClass:ClassIndex) -> FunctionResult {
+fn interpret_method(method:&HeapObject,thread:&mut Thread,selector:Object) -> FunctionResult {
     let self_index = thread.start_method_get_self_index(selector.arity());
     let body = unsafe{&*method.raw_at(2).as_object_ptr()};
     for idx in 0..body.size() {
@@ -423,25 +441,38 @@ fn interpret_method(method:&HeapObject,thread:&mut Thread,selector:Object,class:
 }
 fn interpret_expression(expression:Object,method:&HeapObject,thread:&mut Thread) -> bool  {
     if expression.is_on_heap() {
-        let expression = unsafe{&*expression.as_object_ptr()};
-        match expression.class() {
+        let eptr = unsafe{&*expression.as_object_ptr()};
+        match eptr.class() {
             classReturn => {
-                interpret_expression(expression.raw_at(0),method,thread);
+                interpret_expression(eptr.raw_at(0),method,thread);
                 return true
             },
             classSend => {
-                println!("send {:?}",expression);
-                interpret_expression(expression.raw_at(0),method,thread);
-                interpret_push_array(expression.raw_at(2),method,thread);
-                dispatch(thread,expression.raw_at(1));
+                println!("send {:?}",eptr);
+                interpret_expression(eptr.raw_at(0),method,thread);
+                interpret_push_array(eptr.raw_at(2),method,thread);
+                dispatch(thread,eptr.raw_at(1));
             },
-            classLiteral => thread.push(expression.raw_at(0)),
-            classLoad => {panic!("expression {:?}",expression)},
-            classStore => {panic!("expression {:?}",expression)},
-            _ => {panic!("expression {:?}",expression)},
+            classLiteral => thread.push(eptr.raw_at(0)),
+            classLoad => {panic!("expression {:?}",eptr)},
+            classStore => {panic!("expression {:?}",eptr)},
+            classMethod => {
+                let closure_fields = Vec::new();
+                // make closure
+                println!("making closure: {:?} 0x{:x}",eptr.raw_at(0),eptr.raw_at(0).hash());
+                let closure = unsafe{allocObject(classBlockClosure,closure_fields.len()+2,-1,-1,eptr.raw_at(0).hash()+0x100000000,false).as_mut().unwrap()};
+                closure.raw_at_put(0,expression);
+                closure.raw_at_put(1,Object::from(thread.self_index() as isize));
+                for (index,obj) in closure_fields.iter().enumerate() {
+                    closure.raw_at_put(2+index,*obj);
+                }
+                thread.push(Object::from(closure));
+            },
+            classBlockClosure => {panic!("expression {:?}",eptr)},
+            _ => {panic!("expression {:?}",eptr)},
         }
     } else if expression.is_symbol() {
-        if thread.is_self(expression) {
+        if expression.is_self_symbol() {
             thread.push_self()
         } else {
             panic!("expression {:?}",expression);
@@ -512,25 +543,54 @@ mod testsInterpreter {
                 method!("=",7,empty,empty,empty,nilObject),
                 method!("foo",0,array!(
                     doReturn!(
-                        send!("self","*",array!(7)),
+                        send!(send!("self","+",array!(2)),"*",array!(7)),
                         false)
                 ),empty,empty,nilObject),
-                method!("factorial",0,array!(
-                    doReturn!(
-                        send!(
-                            send!("self","=",array!(1)),
-                            "ifTrue:ifFalse:",array!(
-                                method!("value",0,array!(
-                                    load!("self",1)
-                                ),empty,empty,nilObject),
-                                method!("value",0,array!(
-                                    send!(load!("self",1),"*",
-                                          send!(
-                                              send!(load!("self",1),"-",array!(1)),
-                                              "factorial",empty))
-                                ),empty,empty,nilObject))),
-                        false)
-                ),empty,empty,nilObject)
+                method!("bar",0,
+                        array!(
+                            doReturn!(
+                                send!(
+                                    send!(
+                                        method!("value",0,
+                                                array!(
+                                                    doReturn!(
+                                                        send!(
+                                                            load!("self",1),
+                                                            "+",array!(2)),
+                                                        false)),
+                                                empty,empty,nilObject),
+                                        "value",empty),
+                                    "*",array!(7)),
+                                false)),
+                        empty,empty,nilObject),
+                method!("factorial",0,
+                        array!(
+                            doReturn!(
+                                send!(
+                                    send!("self",
+                                          "=",array!(1)),
+                                    "ifTrue:ifFalse:",array!(
+                                        method!("value",0,
+                                                array!(
+                                                    doReturn!(
+                                                        load!("self",1),
+                                                        false)),
+                                                empty,empty,nilObject),
+                                        method!("value",0,
+                                                array!(
+                                                    doReturn!(
+                                                        send!(
+                                                            load!("self",1),
+                                                            "*",array!(
+                                                                send!(
+                                                                    send!(
+                                                                        load!("self",1),
+                                                                        "-",array!(1)),
+                                                                    "factorial",empty))),
+                                                        false)),
+                                                empty,empty,nilObject))),
+                                false)),
+                        empty,empty,nilObject)
             ), empty, object, "SmallInteger", format_inst_np, empty, empty);
             addClass(classSmallInteger, smallI);
             let system_ = class_index("System");
@@ -559,7 +619,7 @@ mod testsInterpreter {
         assert_eq!(thread.size(),0);
         thread.push_i48(25);
         thread.push_i48(17);
-        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash(),0);
         method.instr(addI);
         method.execute(&mut thread);
         assert_eq!(thread.size(),1);
@@ -574,36 +634,51 @@ mod testsInterpreter {
         assert_eq!(thread.size(),0);
         thread.push_i48(25);
         thread.push_i48(17);
-        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash(),0);
         method.instr_with(dispatch,intern("+"));
         method.execute(&mut thread);
         assert_eq!(thread.size(),1);
         assert_eq!(thread.top().as_i48(),42);
     }
-/*
-    #[test]
+
+//    #[test]
     fn integers_factorial() {
         use crate::interpreter::primitives::smallInteger::*;
         init_classes();
         let mut thread:Thread = Default::default();
         assert_eq!(thread.size(),0);
         thread.push_i48(1);
-        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash(),0);
         method.instr_with(dispatch,intern("factorial"));
         method.execute(&mut thread);
         assert_eq!(thread.size(),1);
         assert_eq!(thread.top().as_i48(),1);
     }
-*/
+
     #[test]
     fn integers_foo() {
         use crate::interpreter::primitives::smallInteger::*;
         init_classes();
         let mut thread:Thread = Default::default();
         assert_eq!(thread.size(),0);
-        thread.push_i48(6);
-        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash());
+        thread.push_i48(4);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash(),0);
         method.instr_with(dispatch,intern("foo"));
+        method.execute(&mut thread);
+        println!("thread {:?}",thread);
+        assert_eq!(thread.size(),1);
+        assert_eq!(thread.top().as_i48(),42);
+    }
+
+    #[test]
+    fn integers_bar() {
+        use crate::interpreter::primitives::smallInteger::*;
+        init_classes();
+        let mut thread:Thread = Default::default();
+        assert_eq!(thread.size(),0);
+        thread.push_i48(4);
+        let mut method = Method::new(classUndefinedObject,0,0,intern("doIt").immediateHash(),0);
+        method.instr_with(dispatch,intern("bar"));
         method.execute(&mut thread);
         println!("thread {:?}",thread);
         assert_eq!(thread.size(),1);
@@ -617,7 +692,7 @@ mod testsInterpreter {
         let classIndex = class_index("System");
         let class = getClass(classIndex);
         thread.push(class);
-        let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash());
+        let mut method = Method::new(classIndex,0,0,intern("doIt").immediateHash(),0);
         method.instr_with(dispatch,intern("start"));
         method.execute(&mut thread);
     }
@@ -627,4 +702,8 @@ mod testsInterpreter {
     fn dispatch_non_existant_method() {
         dispatch(Object::from(3.14),intern("foo"),nilObject,nilObject,None);
     }*/
+}
+#[inline]
+fn hash_mod(len:usize,selector:usize) -> usize {
+    selector%(len-DISPATCH_OVERFLOW)
 }

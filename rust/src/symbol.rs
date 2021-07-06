@@ -16,6 +16,7 @@ use std::sync::Mutex;
 const first_symbols: &[StaticStr]= &[
     "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", /* need to be first 5 symbols so that short-circuit on dispatch works */
     "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:", /* need to be the next 5 symbols */
+    "self",
     "Object", "BlockClosure", "False", "True",
     "UndefinedObject", "SmallInteger", "Symbol", "Character",
     "Float", "Array", "String", "Class", "Metaclass",
@@ -53,7 +54,12 @@ mod testSymbol {
     }
     #[test]
     fn object() {
-        assert_eq!(intern("Object"),symbolOf("Object",10));
+        assert_eq!(intern("Object"),symbolOf("Object",11));
         assert_eq!(format!("{:?}",intern("Object")),"#Object");
+    }
+    #[test]
+    fn self_symbol() {
+        assert!(intern("self").is_self_symbol());
+        assert_eq!(format!("{:?}",intern("self")),"#self");
     }
 }
