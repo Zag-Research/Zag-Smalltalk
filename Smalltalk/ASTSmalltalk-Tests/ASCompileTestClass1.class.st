@@ -1,6 +1,6 @@
 Class {
 	#name : #ASCompileTestClass1,
-	#superclass : #TestCase,
+	#superclass : #Object,
 	#category : #'ASTSmalltalk-Tests-Code'
 }
 

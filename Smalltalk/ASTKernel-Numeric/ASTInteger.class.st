@@ -168,7 +168,7 @@ ASTInteger >> asInteger [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #benchmarks }
 ASTInteger >> benchFib [
 	"Handy send-heavy benchmark"
 
@@ -185,7 +185,7 @@ ASTInteger >> benchFib [
 		ifFalse: [ (self - 1) benchFib + (self - 2) benchFib + 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #benchmarks }
 ASTInteger >> benchmark [
 	"Handy bytecode-heavy benchmark"
 
