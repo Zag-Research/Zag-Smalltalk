@@ -200,14 +200,19 @@ ASTSystem class >> testNormalObject [
 	self log: (test instVarAt: 2) asString
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #benchmarks }
 ASTSystem class >> tinyBenchmarks [
 	"Report the results of running the two tiny benchmarks."
+	
+	| t1 t2 r n1 n2 |
+	n1 := 1.
+	[t1 := [n1 benchmark] timeToRun.
+	t1 < 1000] whileTrue:[n1 := n1 * 2]. "Note: #benchmark's runtime is about O(n)"
 
-	| n t1 t2 r |
-	n := 25.
-	t1 := [ n benchmark ] timeToRun.
-	t2 := [ r := 28 benchFib ] timeToRun.
-	^ (n * 500000 * 1000 // t1) printString , ' bytecodes/sec; '
-		, (r * 1000 // t2) printString , ' sends/sec'
+	n2 := 28.
+	[t2 := [r := n2 benchFib] timeToRun.
+	t2 < 1000] whileTrue:[n2 := n2 + 1]. "Note: #benchFib's runtime is about O(n^2)."
+
+	^ ((n1 * 500000 * 1000) // t1) printString, ' bytecodes/sec ',n1 printString,' iterations; ',
+	  ((r * 1000) // t2) printString, ' sends/sec ',n2 printString,' fib'
 ]
