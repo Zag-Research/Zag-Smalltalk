@@ -5,6 +5,15 @@ Class {
 }
 
 { #category : #tests }
+ASCompilerTest >> testPlus1 [
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#plus1:.
+	self assert: method arguments equals: #().
+	self assert: method selector equals: #plus1:.
+
+]
+
+{ #category : #tests }
 ASCompilerTest >> testSimple1 [
 	| method |
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#simple1.

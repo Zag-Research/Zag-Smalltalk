@@ -14,14 +14,13 @@ Class {
 
 { #category : #parsing }
 ASCompiler >> body [
-	| token |
-	token := aScanner peek.
-	token value = $^ ifTrue: [
-		aScanner next.
-		^ ASReturnNode new expression: self expression
-	].
-	^ self error: 'Unexpected token: ',token value asString
-	
+	^ Array streamContents: [ :s |
+			self localDefs.
+		  (self sequenceTo: s then: [ aScanner atEnd ] withReturn: true) ifFalse: [ 
+			  s nextPut: (ASReturnNode new expression: #self asASSelf) ].
+		  aScanner atEnd ifFalse: [ 
+			  ^ self error: 'Unexpected token: ' , aScanner peek asString ]
+		]
 ]
 
 { #category : #compilation }
@@ -34,9 +33,9 @@ ASCompiler >> compileMethod: aMethod [
 ASCompiler >> compileMethodInClass: aClass [
 	| token selector args method savedScope |
 	token := aScanner next.
-	token isIdentifier ifFalse: [ ^ self error: 'Method must start with identifier' ].
+	token isMethodIntro ifFalse: [ ^ self error: 'Method must start with identifier' ].
 	args := OrderedCollection new.
-	( token isKeyword ) ifFalse: [
+	token isKeyword ifFalse: [
 		selector := token value
 	] ifTrue: [
 		selector := ''.
@@ -51,13 +50,52 @@ ASCompiler >> compileMethodInClass: aClass [
 	].
 	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
 	savedScope := scope.
-	scope := method nestedScopeOf: aClass.
-	method body: self body.
-	scope := savedScope.
+	[
+		scope := method nestedScopeOf: aClass.
+		method body: self body
+	] ensure: [
+		scope := savedScope
+	].
 	^ method
 ]
 
 { #category : #parsing }
 ASCompiler >> expression [
-	^ aScanner next
+	| token |
+	token := aScanner next.
+]
+
+{ #category : #parsing }
+ASCompiler >> localDefs [
+
+]
+
+{ #category : #parsing }
+ASCompiler >> sequenceTo: s then: endBlock withReturn: returnAllowed [
+	| token |
+	[
+		[aScanner peek isSeparator] whileTrue: [aScanner next].
+		token := aScanner peek.
+		endBlock value or: [token isReturn or: [s nextPut: (self statementThen: endBlock). true]]
+	] whileFalse: [
+		aScanner next
+	].
+	token isReturn ifTrue: [
+		returnAllowed ifFalse: [ self error: 'unexpected return'].
+		aScanner next.
+		s nextPut: (ASReturnNode new expression: self expression).
+		[ aScanner peek isSeparator ] whileTrue: [ aScanner next ].
+		^ true
+	].
+	[ aScanner peek isSeparator ] whileTrue: [ aScanner next ].
+	^ false
+]
+
+{ #category : #parsing }
+ASCompiler >> statementThen: aBlock [
+	| result |
+	result := self expression.
+	(aScanner peek isSeparator or: [ aBlock value ]) ifTrue: [self error: 'missing separator'].
+	[ aScanner peek isSeparator ] whileTrue: [ aScanner next ].
+	^ result
 ]

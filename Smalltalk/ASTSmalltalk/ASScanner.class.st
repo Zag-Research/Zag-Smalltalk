@@ -24,7 +24,7 @@ ASScanner >> asArray [
 
 { #category : #conversion }
 ASScanner >> atEnd [
-	^ self peek isNil
+	^ self peek atEnd
 ]
 
 { #category : #scanning }
@@ -38,12 +38,16 @@ ASScanner >> binaryIdentifier [
 ]
 
 { #category : #scanning }
-ASScanner >> identifier [ 
-	^ (String streamContents: [: s | | char |
+ASScanner >> identifier [
+	^ (String streamContents: [: s | | char prevWasColon |
+			prevWasColon := false.
 			[
 				s << aStream next.
 				char := aStream peek.
-				aStream atEnd not and: [ char = $_ or: [ char isLetter or: [ char isDigit ]]]] whileTrue
+				aStream atEnd not and: [ char tokenish or: [ prevWasColon and: [ ('=>' includes: char) and: [ s setFrom: 1 to: s size-1. s position: s size. false ] ] ]]
+			] whileTrue: [
+				prevWasColon := char = $:
+			]
 		]) asASIdentifier
 ]
 
@@ -66,7 +70,6 @@ ASScanner >> number [
 { #category : #scanning }
 ASScanner >> peek [
 	peek ifNotNil: [ ^ peek ].
-	aStream atEnd ifTrue: [ ^ nil ].
 	^ peek := self token
 ]
 
@@ -100,15 +103,22 @@ ASScanner >> symbol [
 ASScanner >> token [
 
 	| char |
-	[ aStream atEnd ifTrue: [ ^ nil ].
+	[ aStream atEnd ifTrue: [ ^ ASEnd new ].
 		aStream peek isSeparator ] whileTrue: [ aStream next ].
 	char := aStream peek.
-	('^.[]{}():|' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	('^.[]{}()|' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
 	char = $" ifTrue: [ ^ self comment ].
 	char = $# ifTrue: [ ^ self symbol ].
 	char = $' ifTrue: [ ^ self string ].
+	char = $: ifTrue: [
+		aStream next.
+		('=>' includes: aStream peek) ifTrue: [
+			^ (':',aStream next asString) asASSyntax
+		] ifFalse: [
+			^ $: asASSyntax
+	]].
 	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
 	^ self error: 'Illegal character:',char asString
 ]

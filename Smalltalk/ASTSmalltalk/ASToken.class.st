@@ -21,7 +21,42 @@ ASToken >> asASSymbol [
 ]
 
 { #category : #testing }
+ASToken >> atEnd [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isArrayBuild [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isAssignment [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isBar [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isBlockStart [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isColon [
+	^ false
+]
+
+{ #category : #testing }
 ASToken >> isIdentifier [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isKeyword [
 	^ false
 ]
 
@@ -31,12 +66,47 @@ ASToken >> isLiteral [
 ]
 
 { #category : #testing }
+ASToken >> isMethodIntro [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isOpenBracket [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isParen [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isParrot [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> isReturn [
+	^ false
+]
+
+{ #category : #testing }
 ASToken >> isSelf [
 	^ false
 ]
 
 { #category : #testing }
+ASToken >> isSeparator [
+	^ false
+]
+
+{ #category : #testing }
 ASToken >> isSpecial [
+	^ false
+]
+
+{ #category : #testing }
+ASToken >> matchesBracket: unused [
 	^ false
 ]
 
