@@ -1,10 +1,12 @@
 Class {
 	#name : #ASLiteral,
-	#superclass : #ASToken,
+	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
 
-{ #category : #testing }
-ASLiteral >> isLiteral [
-	^ true
+{ #category : #parsing }
+ASLiteral >> assignmentExpression: anASCompiler [ 
+	| target |
+	target := anASCompiler nextToken.
+	^ anASCompiler peek keywordExpression: anASCompiler target: target
 ]

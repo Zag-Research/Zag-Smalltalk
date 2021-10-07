@@ -33,7 +33,7 @@ ASCompiler >> compileMethod: aMethod [
 ASCompiler >> compileMethodInClass: aClass [
 	| token selector args method savedScope |
 	token := aScanner next.
-	token isMethodIntro ifFalse: [ ^ self error: 'Method must start with identifier' ].
+	token isSelector ifFalse: [ ^ self error: 'Method must start with identifier' ].
 	args := OrderedCollection new.
 	token isKeyword ifFalse: [
 		selector := token value
@@ -61,13 +61,27 @@ ASCompiler >> compileMethodInClass: aClass [
 
 { #category : #parsing }
 ASCompiler >> expression [
-	| token |
-	token := aScanner next.
+	^ aScanner peek assignmentExpression: self
 ]
 
 { #category : #parsing }
 ASCompiler >> localDefs [
 
+]
+
+{ #category : #scanning }
+ASCompiler >> nextToken [
+	^ aScanner next
+]
+
+{ #category : #scanning }
+ASCompiler >> peek [
+	^ aScanner peek
+]
+
+{ #category : #accessing }
+ASCompiler >> scanner [
+	^ aScanner
 ]
 
 { #category : #parsing }
@@ -95,7 +109,7 @@ ASCompiler >> sequenceTo: s then: endBlock withReturn: returnAllowed [
 ASCompiler >> statementThen: aBlock [
 	| result |
 	result := self expression.
-	(aScanner peek isSeparator or: [ aBlock value ]) ifTrue: [self error: 'missing separator'].
+	(aScanner peek isSeparator or: [ aBlock value ]) ifFalse: [self error: 'missing separator'].
 	[ aScanner peek isSeparator ] whileTrue: [ aScanner next ].
 	^ result
 ]

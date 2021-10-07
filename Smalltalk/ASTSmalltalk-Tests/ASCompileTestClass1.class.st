@@ -24,3 +24,8 @@ ASCompileTestClass1 >> prim [
 ASCompileTestClass1 >> simple1 [
 	^ 42
 ]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> unaries [
+	^ 42 negated abs
+]

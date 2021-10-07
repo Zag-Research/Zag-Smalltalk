@@ -1,8 +1,25 @@
 Class {
 	#name : #ASIdentifier,
-	#superclass : #ASToken,
+	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
+
+{ #category : #scanning }
+ASIdentifier class >> with: aString [
+	| specials alphas colons last size |
+	specials := alphas := colons := size :=0.
+	last := $..
+	aString do: [ : c |
+		c isSpecial ifTrue: [ specials := specials + 1 ].
+		(c isLetter or: [ c=$_ or: [c isDigit and: [alphas > 0]]]) ifTrue: [ alphas := alphas + 1 ].
+		last := c.
+		size := size + 1
+	].
+	specials = size ifTrue: [ ^ ASBinaryId new value: aString ].
+	alphas = size ifTrue: [ ^ ASUnaryId new value: aString ].
+	(last = $: and: [ alphas + 1 = size ]) ifTrue: [ ^ ASKeywordId new value: aString ].
+	^ self new value: aString
+]
 
 { #category : #accessing }
 ASIdentifier >> arity [
@@ -14,27 +31,14 @@ ASIdentifier >> arity [
 	^ 1+(value count: [: c | c=$:])
 ]
 
-{ #category : #testing }
-ASIdentifier >> isBinary [
-	^ value first isSpecial
+{ #category : #parsing }
+ASIdentifier >> processKeyword: anASCompiler target: target [ 
+	self isUnary ifTrue: [ ^ ASSend new target: target selector: self args: #() ].
+	self halt
 ]
 
-{ #category : #testing }
-ASIdentifier >> isIdentifier [
-	^ true
-]
-
-{ #category : #testing }
-ASIdentifier >> isKeyword [
-	^ value last = $:
-]
-
-{ #category : #testing }
-ASIdentifier >> isMethodIntro [
-	^ self arity between: 1 and: 2
-]
-
-{ #category : #testing }
-ASIdentifier >> isUnary [
-	^ self isKeyword not and: [ self isBinary not ]
+{ #category : #parsing }
+ASIdentifier >> processUnary: anASCompiler target: target [
+	self isUnary ifFalse: [ ^ target ].
+	^ self processUnary: anASCompiler target: (ASSend target: target selector: self args: #())
 ]

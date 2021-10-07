@@ -106,7 +106,7 @@ ASScanner >> token [
 	[ aStream atEnd ifTrue: [ ^ ASEnd new ].
 		aStream peek isSeparator ] whileTrue: [ aStream next ].
 	char := aStream peek.
-	('^.[]{}()|' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	('^.[]{}()|;' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
 	char = $" ifTrue: [ ^ self comment ].

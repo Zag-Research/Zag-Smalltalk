@@ -21,3 +21,13 @@ ASCompilerTest >> testSimple1 [
 	self assert: method selector equals: #simple1.
 
 ]
+
+{ #category : #tests }
+ASCompilerTest >> testUnaries [
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#unaries.
+	self assert: method arguments equals: #().
+	self assert: method selector equals: #unaries.
+	self halt.
+
+]

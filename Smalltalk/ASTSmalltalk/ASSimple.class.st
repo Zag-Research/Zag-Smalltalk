@@ -1,5 +1,5 @@
 Class {
-	#name : #ASSelf,
-	#superclass : #ASSpecial,
+	#name : #ASSimple,
+	#superclass : #ASToken,
 	#category : #'ASTSmalltalk-Tokens'
 }

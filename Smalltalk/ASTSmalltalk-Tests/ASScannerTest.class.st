@@ -37,7 +37,7 @@ ASScannerTest >> testAsStream [
 { #category : #tests }
 ASScannerTest >> testIDs [
 	self assert: (ASScanner new scanCode: ' abc ') token equals:  'abc' asASIdentifier.
-	self assert: (ASScanner new scanCode: ' * ') token equals:  '*' asASIdentifier.
+	self assert: (ASScanner new scanCode: ' * ') token equals:  $* asASIdentifier.
 	self assert: (ASScanner new scanCode: ' abc:= ') token equals:  'abc' asASIdentifier.
 	self assert: (ASScanner new scanCode: ' abc: ') token equals:  'abc:' asASIdentifier.
 	self assert: (ASScanner new scanCode: ' abc:def: ') token equals:  'abc:def:' asASIdentifier.
@@ -47,12 +47,12 @@ ASScannerTest >> testIDs [
 	self assert: (ASScanner new scanCode: ' abc: ') token arity equals:  2.
 	self assert: (ASScanner new scanCode: ' abc:def: ') token arity equals:  3.
 	self assert: (ASScanner new scanCode: ' abc:def ') token arity equals:  0.
-	self assert: (ASScanner new scanCode: ' abc ') token isMethodIntro.
-	self assert: (ASScanner new scanCode: ' * ') token isMethodIntro.
-	self assert: (ASScanner new scanCode: ' abc: ') token isMethodIntro.
-	self deny: (ASScanner new scanCode: ' abc:def: ') token isMethodIntro.
-	self deny: (ASScanner new scanCode: ' abc:def ') token isMethodIntro.
-	self deny: (ASScanner new scanCode: ' nil ') token isMethodIntro.
+	self assert: (ASScanner new scanCode: ' abc ') token isSelector.
+	self assert: (ASScanner new scanCode: ' * ') token isSelector.
+	self assert: (ASScanner new scanCode: ' abc: ') token isSelector.
+	self deny: (ASScanner new scanCode: ' abc:def: ') token isSelector.
+	self deny: (ASScanner new scanCode: ' abc:def ') token isSelector.
+	self deny: (ASScanner new scanCode: ' nil ') token isSelector.
 
 ]
 
@@ -94,20 +94,12 @@ ASScannerTest >> testSyntax [
 	self assert: (ASScanner new scanCode: ' ^ ') token isReturn.
 	self assert: (ASScanner new scanCode: ' . ') token isSeparator.
 	self assert: (ASScanner new scanCode: ' : ') token isColon.
-	self assert: (ASScanner new scanCode: ' := ') token isAssignment.
-	self assert: (ASScanner new scanCode: ' :> ') token isParrot.
-	self assert: (ASScanner new scanCode: ' [ ') token isOpenBracket.
-	self assert: (ASScanner new scanCode: ' { ') token isOpenBracket.
-	self assert: (ASScanner new scanCode: ' ( ') token isOpenBracket.
-	self assert: (ASScanner new scanCode: ' [ ') token isBlockStart.
-	self assert: (ASScanner new scanCode: ' { ') token isArrayBuild.
-	self assert: (ASScanner new scanCode: ' ( ') token isParen.
-	self assert: ($] asASSyntax matchesBracket: $[ asASSyntax).
-	self assert: ($} asASSyntax matchesBracket: ${ asASSyntax).
-	self assert: ($) asASSyntax matchesBracket: $( asASSyntax).
-	self assert: ($] asASSyntax matchesBracket: $[).
-	self assert: ($} asASSyntax matchesBracket: ${).
-	self assert: ($) asASSyntax matchesBracket: $().
+	self assert: $] asASSyntax isBlockEnd.
+	self assert: $} asASSyntax isArrayEnd.
+	self assert: $) asASSyntax isCloseParen.
+	self deny: $[ asASSyntax isBlockEnd.
+	self deny: ${ asASSyntax isArrayEnd.
+	self deny: $( asASSyntax isCloseParen.
 
 ]
 
