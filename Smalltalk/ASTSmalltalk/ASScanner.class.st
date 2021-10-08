@@ -39,6 +39,11 @@ ASScanner >> binaryIdentifier [
 
 { #category : #scanning }
 ASScanner >> identifier [
+	^ self identifierString asASIdentifier
+]
+
+{ #category : #scanning }
+ASScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
 			[
@@ -48,7 +53,7 @@ ASScanner >> identifier [
 			] whileTrue: [
 				prevWasColon := char = $:
 			]
-		]) asASIdentifier
+		])
 ]
 
 { #category : #scanning }
@@ -95,8 +100,8 @@ ASScanner >> string [
 ASScanner >> symbol [
 	aStream next.
 	aStream peek = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
-	aStream peek = $' ifTrue: [ ^ self string asASSymbol].
-	^ self identifier asASSymbol
+	aStream peek = $' ifTrue: [ ^ self string value asASSymbol].
+	^ self identifierString asASSymbol
 ]
 
 { #category : #scanning }

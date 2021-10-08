@@ -11,3 +11,8 @@ Class {
 ASReturnNode >> expression: anASNode [
 	expression := anASNode
 ]
+
+{ #category : #testing }
+ASReturnNode >> isReturn [
+	^ true
+]

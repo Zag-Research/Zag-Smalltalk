@@ -1,6 +1,6 @@
 Class {
 	#name : #ASMethodNode,
-	#superclass : #Object,
+	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
 		'arguments',
@@ -10,6 +10,11 @@ Class {
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #accessing }
+ASMethodNode >> add: name [ 
+	names add: name
+]
 
 { #category : #accessing }
 ASMethodNode >> arguments [

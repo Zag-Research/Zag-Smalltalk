@@ -5,8 +5,6 @@ Class {
 }
 
 { #category : #parsing }
-ASLiteral >> assignmentExpression: anASCompiler [ 
-	| target |
-	target := anASCompiler nextToken.
-	^ anASCompiler peek keywordExpression: anASCompiler target: target
+ASLiteral >> assignExpression: anASCompiler [ 
+	^ self expression: anASCompiler
 ]

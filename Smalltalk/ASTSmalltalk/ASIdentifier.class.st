@@ -15,20 +15,10 @@ ASIdentifier class >> with: aString [
 		last := c.
 		size := size + 1
 	].
-	specials = size ifTrue: [ ^ ASBinaryId new value: aString ].
-	alphas = size ifTrue: [ ^ ASUnaryId new value: aString ].
-	(last = $: and: [ alphas + 1 = size ]) ifTrue: [ ^ ASKeywordId new value: aString ].
-	^ self new value: aString
-]
-
-{ #category : #accessing }
-ASIdentifier >> arity [
-	| last |
-	last := value last.
-	last tokenish ifFalse: [ ^ 2 ].
-	(value includes: $:) ifFalse: [ ^ 1 ].
-	last = $: ifFalse: [ ^ 0 ].
-	^ 1+(value count: [: c | c=$:])
+	specials = size ifTrue: [ ^ ASBinaryId new value: aString asSymbol ].
+	alphas = size ifTrue: [ ^ ASUnaryId new value: aString asSymbol ].
+	(last = $: and: [ alphas + 1 = size ]) ifTrue: [ ^ ASKeywordId new value: aString asSymbol ].
+	^ self error: 'Invalid identifier: ',aString
 ]
 
 { #category : #parsing }

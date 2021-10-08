@@ -15,14 +15,19 @@ ASToken >> = other [
 	^ self class = other class and: [value = other value]
 ]
 
-{ #category : #scanning }
-ASToken >> asASSymbol [
-	^ ASSymbol new value: value asSymbol
-]
-
 { #category : #testing }
 ASToken >> atEnd [
 	^ false
+]
+
+{ #category : #parsing }
+ASToken >> classSelector: anASCompiler args: aCollection selector: selector [ 
+	^ selector asSymbol
+]
+
+{ #category : #parsing }
+ASToken >> expectEnd [
+	self error: 'Unexpected token: ',self asString
 ]
 
 { #category : #testing }
@@ -39,6 +44,11 @@ ASToken >> printOn: s [
 { #category : #parsing }
 ASToken >> processKeyword: anASCompiler target: anASLiteral [ 
 	^ nil
+]
+
+{ #category : #accessing }
+ASToken >> symbol [
+	^ value asSymbol
 ]
 
 { #category : #accessing }

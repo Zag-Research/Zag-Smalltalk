@@ -8,3 +8,17 @@ Class {
 ASEnd >> atEnd [
 	^ true
 ]
+
+{ #category : #parsing }
+ASEnd >> expectEnd [
+]
+
+{ #category : #parsing }
+ASEnd >> keywordExpression: anASCompiler target: target [ 
+	^ target
+]
+
+{ #category : #parsing }
+ASEnd >> nonStatements: anASCompiler [ 
+
+]
