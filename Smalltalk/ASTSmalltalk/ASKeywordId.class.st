@@ -22,3 +22,15 @@ ASKeywordId >> classSelector: anASCompiler args: args selector: selector [
 	args add: (anASCompiler peek parameterFrom: anASCompiler).
 	^ anASCompiler peek classSelector: anASCompiler args: args selector: selector,self value
 ]
+
+{ #category : #parsing }
+ASKeywordId >> keywordExpression: anASCompiler target: target [
+	^ self keywordExpression: anASCompiler target: target selector: '' args: OrderedCollection new
+]
+
+{ #category : #parsing }
+ASKeywordId >> keywordExpression: anASCompiler target: target selector: selector args: args [
+	anASCompiler nextToken.
+	args add: (anASCompiler peek binaryExpression: anASCompiler).
+	^ anASCompiler peek keywordExpression: anASCompiler target: target selector: selector,value args: args
+]
