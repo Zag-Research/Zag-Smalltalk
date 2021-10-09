@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #parsing }
-ASAssignmentToken >> possibleAssign: anASCompiler target: anASUnaryId [
+ASAssignmentToken >> possibleAssign: anASCompiler target: target [
 	anASCompiler nextToken.
-	^ ASAssignment new target: anASUnaryId value: (anASCompiler peek expression: anASCompiler)
+	^ ASAssignment new target: target value: (anASCompiler peek assignExpression: anASCompiler)
 ]

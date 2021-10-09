@@ -33,7 +33,7 @@ ASScanner >> binaryIdentifier [
 			[
 				s << aStream next.
 				char := aStream peek.
-				aStream atEnd not and: [ '=<>+-*/\!@%&|~?' includes: char ]] whileTrue
+				aStream atEnd not and: [ char isSpecial ]] whileTrue
 		]) asASIdentifier
 ]
 
@@ -98,10 +98,14 @@ ASScanner >> string [
 
 { #category : #scanning }
 ASScanner >> symbol [
+	| char |
 	aStream next.
-	aStream peek = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
-	aStream peek = $' ifTrue: [ ^ self string value asASSymbol].
-	^ self identifierString asASSymbol
+	char := aStream peek.
+	char isLetter ifTrue: [ ^ self identifierString asASSymbol ].
+	char = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
+	char = $' ifTrue: [ ^ self string value asASSymbol].
+	char isDigit ifTrue: [ ^ self number ].
+^ self error: 'invalid symbol'
 ]
 
 { #category : #scanning }
@@ -111,7 +115,7 @@ ASScanner >> token [
 	[ aStream atEnd ifTrue: [ ^ ASEnd new ].
 		aStream peek isSeparator ] whileTrue: [ aStream next ].
 	char := aStream peek.
-	('^.[]{}()|;' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
 	char = $" ifTrue: [ ^ self comment ].

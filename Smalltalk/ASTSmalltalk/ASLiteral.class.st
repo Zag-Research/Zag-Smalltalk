@@ -6,5 +6,5 @@ Class {
 
 { #category : #parsing }
 ASLiteral >> assignExpression: anASCompiler [ 
-	^ self expression: anASCompiler
+	^ self keywordExpression: anASCompiler
 ]

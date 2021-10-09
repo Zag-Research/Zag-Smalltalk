@@ -13,7 +13,9 @@ ASCompileTestClass1 >> + n1 [
 
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
-	^ self plus1: self unaries * 2
+	| forty2 |
+	forty2 := self unaries * 2.
+	^ self plus1: forty2
 ]
 
 { #category : #'testing - examples' }
@@ -47,5 +49,12 @@ ASCompileTestClass1 >> unaries [
 ASCompileTestClass1 >> | n1 [
 	| temp |
 	temp := self | n1.
+	^ temp
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> || n1 [
+	| temp temp2 |
+	temp := temp2 :=self || n1.
 	^ temp
 ]

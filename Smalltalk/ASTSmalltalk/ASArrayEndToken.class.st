@@ -1,5 +1,5 @@
 Class {
 	#name : #ASArrayEndToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASClosers,
 	#category : #'ASTSmalltalk-Tokens'
 }

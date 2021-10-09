@@ -91,9 +91,16 @@ ASScannerTest >> testSimple [
 { #category : #tests }
 ASScannerTest >> testSyntax [
 	self assert: (ASScanner new scanCode: ' ^ ') token equals:  $^ asASSyntax.
+	self should: [(ASScanner new scanCode: ' #+ ') token] raise:  Error.
+	self should: [(ASScanner new scanCode: ' # ') token] raise:  Error.
+	self assert: (ASScanner new scanCode: ' #( ') token equals:  '#(' asASSyntax.
 	self assert: (ASScanner new scanCode: ' . ') token equals:  $. asASSyntax.
 	self assert: (ASScanner new scanCode: ' : ') token equals:  $: asASSyntax.
 	self assert: (ASScanner new scanCode: ' := ') token equals:  ':=' asASSyntax.
+	self assert: (ASScanner new scanCode: ' | ') token equals:  $| asASSyntax.
+	self assert: (ASScanner new scanCode: ' |: ') token equals: $| asASSyntax.
+	self assert: (ASScanner new scanCode: ' || ') token equals: '||' asASIdentifier.
+	self assert: (ASScanner new scanCode: ' |+ ') token equals: '|+' asASIdentifier.
 	"self assert: (ASScanner new scanCode: ' ^ ') token isReturn.
 	self assert: (ASScanner new scanCode: ' . ') token isSeparator.
 	self assert: (ASScanner new scanCode: ' : ') token isColon.

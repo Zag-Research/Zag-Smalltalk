@@ -189,7 +189,7 @@ ASTBlockClosure >> whileNil: aBlock [
 ASTBlockClosure >> whileNotNil: aBlock [ 
 	"Evaluate the argument, aBlock, as long as the value of the receiver is not nil."
 
-	self value ifNotNil: [ aBlock value. self whileNotNil: aBlock ].
+	self value ifNotNil: [ aBlock value. ^ self whileNotNil: aBlock ].
 	^ nil
 ]
 

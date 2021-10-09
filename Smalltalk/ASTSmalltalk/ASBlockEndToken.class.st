@@ -1,5 +1,5 @@
 Class {
 	#name : #ASBlockEndToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASClosers,
 	#category : #'ASTSmalltalk-Tokens'
 }

@@ -50,3 +50,8 @@ ASMethodNode >> selector [
 ASMethodNode >> selector: aString [ 
 	selector := aString
 ]
+
+{ #category : #accessing }
+ASMethodNode >> statements [
+	^ body
+]

@@ -5,9 +5,8 @@ Class {
 }
 
 { #category : #parsing }
-ASReturnToken >> statements: aCollection compiler: anASCompiler [
+ASReturnToken >> statement: anASCompiler [ 
 	anASCompiler nextToken. " consume the ^ "
-	aCollection add: (ASReturnNode new expression: (anASCompiler peek assignExpression: anASCompiler)).
-	anASCompiler peek nonStatements: anASCompiler.
+	^ ASReturnNode new expression: (anASCompiler peek assignExpression: anASCompiler)
 
 ]

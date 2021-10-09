@@ -1,6 +1,6 @@
 Class {
 	#name : #ASBarToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASBinaryId,
 	#category : #'ASTSmalltalk-Tokens'
 }
 

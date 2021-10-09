@@ -1,6 +1,6 @@
 Class {
 	#name : #ASEnd,
-	#superclass : #ASToken,
+	#superclass : #ASClosers,
 	#category : #'ASTSmalltalk-Tokens'
 }
 
@@ -14,11 +14,6 @@ ASEnd >> expectEnd [
 ]
 
 { #category : #parsing }
-ASEnd >> keywordExpression: anASCompiler target: target [ 
-	^ target
-]
-
-{ #category : #parsing }
-ASEnd >> nonStatements: anASCompiler [ 
-
+ASEnd >> statement: anASCompiler [ 
+	^ nil
 ]

@@ -7,7 +7,7 @@ Class {
 	#category : #'ASTSmalltalk-Tokens'
 }
 
-{ #category : #'instance creation' }
+{ #category : #'class initialization' }
 ASSyntax class >> initialize [
 	classMap := {
 			$^ -> ASReturnToken .
@@ -19,7 +19,9 @@ ASSyntax class >> initialize [
 			$} -> ASArrayEndToken .
 			$( -> ASOpenParenToken .
 			$) -> ASCloseParenToken .
+			'#(' -> ASLiteralListToken .
 			$| -> ASBarToken .
+			'|' -> ASBarToken .
 			$; -> ASCascadeToken .
 			':=' -> ASAssignmentToken .
 			':>' -> ASParrotToken .
@@ -28,5 +30,5 @@ ASSyntax class >> initialize [
 
 { #category : #'instance creation' }
 ASSyntax class >> with: aCharacterOrString [ 
-	^ (classMap at: aCharacterOrString) new value: aCharacterOrString
+	^ (classMap at: aCharacterOrString ifAbsent: [^ self error: 'invalid character sequence: ',aCharacterOrString ]) new value: aCharacterOrString
 ]

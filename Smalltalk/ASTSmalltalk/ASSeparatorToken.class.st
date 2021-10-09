@@ -1,13 +1,8 @@
 Class {
 	#name : #ASSeparatorToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASClosers,
 	#category : #'ASTSmalltalk-Tokens'
 }
-
-{ #category : #parsing }
-ASSeparatorToken >> keywordExpression: anASCompiler target: target [
-	^ target
-]
 
 { #category : #parsing }
 ASSeparatorToken >> nonStatements: anASCompiler [ 
@@ -16,12 +11,7 @@ ASSeparatorToken >> nonStatements: anASCompiler [
 ]
 
 { #category : #parsing }
-ASSeparatorToken >> statements: anASCompiler [ 
-	self shouldBeImplemented.
-]
-
-{ #category : #parsing }
-ASSeparatorToken >> statements: aCollection compiler: anASCompiler [ 
+ASSeparatorToken >> statement: anASCompiler [ 
 	anASCompiler nextToken. " consume the . "
-	^ anASCompiler peek statements: aCollection compiler: anASCompiler
+	^ anASCompiler peek statement: anASCompiler
 ]

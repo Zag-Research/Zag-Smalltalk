@@ -24,6 +24,7 @@ ASCompiler >> compileMethodInClass: aClass [
 	args := OrderedCollection new.
 	selector := aScanner peek classSelector: self args: args.
 	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
+	args do: [ : arg | method add: arg ].
 	savedScope := scope.
 	[
 		scope := method nestedScopeOf: aClass.
@@ -46,7 +47,7 @@ ASCompiler >> methodBody [
 	statements := OrderedCollection new.
 	self statements: statements.
 	(statements notEmpty and: [statements last isReturn]) ifFalse: [ 
-		statements add: (ASReturnNode new expression: #self asASSelf)
+		statements add: (ASReturnNode new unaryExpression: #self asASSelf)
 	].
 	aScanner peek expectEnd.
 	^ statements
@@ -65,6 +66,6 @@ ASCompiler >> peek [
 { #category : #parsing }
 ASCompiler >> statements: statements [ 
 	| statement |
-	[ statement := aScanner peek assignExpression: self ] whileNotNil: [ statements add: statement ].
+	[ statement := aScanner peek statement: self ] whileNotNil: [ statements add: statement ].
 
 ]

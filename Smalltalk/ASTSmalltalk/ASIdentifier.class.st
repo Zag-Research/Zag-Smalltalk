@@ -22,13 +22,16 @@ ASIdentifier class >> with: aString [
 ]
 
 { #category : #parsing }
-ASIdentifier >> processKeyword: anASCompiler target: target [ 
-	self isUnary ifTrue: [ ^ ASSend new target: target selector: self args: #() ].
-	self halt
+ASIdentifier >> possibleAssign: anASCompiler target: target [ 
+	self keywordExpression: anASCompiler target: target
 ]
 
 { #category : #parsing }
-ASIdentifier >> processUnary: anASCompiler target: target [
-	self isUnary ifFalse: [ ^ target ].
-	^ self processUnary: anASCompiler target: (ASSend target: target selector: self args: #())
+ASIdentifier >> unaryExpression: anASCompiler target: target [ 
+	^ target
+]
+
+{ #category : #accessing }
+ASIdentifier >> value: aString [
+	value := aString asSymbol
 ]

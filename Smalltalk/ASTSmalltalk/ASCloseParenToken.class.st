@@ -1,5 +1,5 @@
 Class {
 	#name : #ASCloseParenToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASClosers,
 	#category : #'ASTSmalltalk-Tokens'
 }

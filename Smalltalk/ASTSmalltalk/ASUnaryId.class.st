@@ -24,6 +24,12 @@ ASUnaryId >> assignExpression: anASCompiler [
 ]
 
 { #category : #parsing }
+ASUnaryId >> binaryExpression: anASCompiler target: target [
+	anASCompiler nextToken. " consume the selector "
+	^ anASCompiler peek binaryExpression: anASCompiler target: (ASSend new target: target selector: value args: #())
+]
+
+{ #category : #parsing }
 ASUnaryId >> classSelector: anASCompiler args: aCollection [ 
 	^ anASCompiler nextToken value asSymbol
 ]
@@ -31,11 +37,23 @@ ASUnaryId >> classSelector: anASCompiler args: aCollection [
 { #category : #parsing }
 ASUnaryId >> keywordExpression: anASCompiler target: target [
 	anASCompiler nextToken. " consume the selector "
-	^ anASCompiler peek keywordExpression: anASCompiler target: (ASSend new target: target selector: self symbol args: #())
+	^ anASCompiler peek keywordExpression: anASCompiler target: (ASSend new target: target selector: value args: #())
 ]
 
 { #category : #parsing }
 ASUnaryId >> parameterFrom: anASCompiler [ 
 	anASCompiler nextToken.
 	^ value
+]
+
+{ #category : #parsing }
+ASUnaryId >> statement: anASCompiler [
+	^ self assignExpression: anASCompiler 
+
+]
+
+{ #category : #parsing }
+ASUnaryId >> unaryExpression: anASCompiler target: target [
+	anASCompiler nextToken. " consume the selector "
+	^ anASCompiler peek unaryExpression: anASCompiler target: (ASSend new target: target selector: self symbol args: #())
 ]

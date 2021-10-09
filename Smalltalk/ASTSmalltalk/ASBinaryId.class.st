@@ -10,6 +10,14 @@ ASBinaryId >> arity [
 ]
 
 { #category : #parsing }
+ASBinaryId >> binaryExpression: anASCompiler target: target [
+	| arg |
+	anASCompiler nextToken. " consume the selector "
+	arg := anASCompiler peek unaryExpression: anASCompiler.
+	^ anASCompiler peek binaryExpression: anASCompiler target: (ASSend new target: target selector: value args: { arg })
+]
+
+{ #category : #parsing }
 ASBinaryId >> classSelector: anASCompiler args: args [ 
 	anASCompiler nextToken.
 	args add: (anASCompiler peek parameterFrom: anASCompiler).
@@ -20,6 +28,6 @@ ASBinaryId >> classSelector: anASCompiler args: args [
 ASBinaryId >> keywordExpression: anASCompiler target: target [ 
 	| arg |
 	anASCompiler nextToken. " consume the selector "
-	arg := anASCompiler peek expression: anASCompiler.
+	arg := anASCompiler peek unaryExpression: anASCompiler.
 	^ anASCompiler peek keywordExpression: anASCompiler target: (ASSend new target: target selector: value args: { arg })
 ]

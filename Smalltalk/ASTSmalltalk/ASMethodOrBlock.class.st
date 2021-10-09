@@ -13,3 +13,8 @@ ASMethodOrBlock >> initialize [
 	names := OrderedCollection new.
 
 ]
+
+{ #category : #accessing }
+ASMethodOrBlock >> scope [
+	^ names
+]

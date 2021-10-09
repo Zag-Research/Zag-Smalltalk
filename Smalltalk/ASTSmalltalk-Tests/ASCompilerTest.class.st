@@ -5,11 +5,33 @@ Class {
 }
 
 { #category : #tests }
+ASCompilerTest >> testGives43 [
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#gives43.
+	self assert: method arguments equals: #().
+	self assert: method selector equals: #gives43.
+	self assert: method scope asArray equals: #(forty2).
+	self assert: method statements size equals: 2.
+
+]
+
+{ #category : #tests }
 ASCompilerTest >> testOr [
 	| method |
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#|.
-	self assert: method arguments equals: #().
+	self assert: method arguments equals: #(n1).
 	self assert: method selector equals: #|.
+	self assert: method scope asArray equals: #(n1 temp).
+	self assert: method statements size equals: 2.
+
+]
+
+{ #category : #tests }
+ASCompilerTest >> testOrOr [
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#||.
+	self assert: method arguments equals: #(n1).
+	self assert: method selector equals: #||.
 
 ]
 
@@ -17,7 +39,7 @@ ASCompilerTest >> testOr [
 ASCompilerTest >> testPlus [
 	| method |
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#+.
-	self assert: method arguments equals: #().
+	self assert: method arguments equals: #(n1).
 	self assert: method selector equals: #+.
 
 ]
@@ -26,7 +48,7 @@ ASCompilerTest >> testPlus [
 ASCompilerTest >> testPlus1 [
 	| method |
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#plus1:.
-	self assert: method arguments equals: #().
+	self assert: method arguments equals: #(aNumber).
 	self assert: method selector equals: #plus1:.
 
 ]
@@ -35,7 +57,7 @@ ASCompilerTest >> testPlus1 [
 ASCompilerTest >> testPlusAndAnd [
 	| method |
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#plus:and:and:.
-	self assert: method arguments equals: #().
+	self assert: method arguments equals: #(n1 n2 n3).
 	self assert: method selector equals: #plus:and:and:.
 
 ]

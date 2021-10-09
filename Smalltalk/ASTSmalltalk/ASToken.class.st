@@ -26,6 +26,11 @@ ASToken >> classSelector: anASCompiler args: aCollection selector: selector [
 ]
 
 { #category : #parsing }
+ASToken >> defs: anASCompiler scope: anASMethodNode [ 
+
+]
+
+{ #category : #parsing }
 ASToken >> expectEnd [
 	self error: 'Unexpected token: ',self asString
 ]
