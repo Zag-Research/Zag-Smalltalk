@@ -1,5 +1,10 @@
 Class {
 	#name : #ASLiteralListToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
+
+{ #category : #parsing }
+ASLiteralListToken >> parseWith: anASCompiler [
+	self shouldBeImplemented
+]

@@ -4,6 +4,25 @@ Class {
 	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
+{ #category : #asserting }
+ASCompilerTest >> assertEquivalent: anObject [ 
+	| result |
+	result := ASCompiler new statementForTest: anObject printString.
+	self assert: result baseValue equals: anObject.
+
+]
+
+{ #category : #tests }
+ASCompilerTest >> testCascade [
+	| method |
+	method := ASCompiler new compileMethod: ASCompileTestClass1>>#cascade.
+	self assert: method arguments equals: #().
+	self assert: method selector equals: #cascade.
+	self assert: method scope asArray equals: #(foo).
+	self assert: method statements size equals: 17.
+
+]
+
 { #category : #tests }
 ASCompilerTest >> testGives43 [
 	| method |
@@ -68,6 +87,16 @@ ASCompilerTest >> testSimple1 [
 	method := ASCompiler new compileMethod: ASCompileTestClass1>>#simple1.
 	self assert: method arguments equals: #().
 	self assert: method selector equals: #simple1.
+
+]
+
+{ #category : #tests }
+ASCompilerTest >> testStatements [
+	self assertEquivalent: 42.
+	self assertEquivalent: #hello.
+	self assertEquivalent: 'abc'.
+	self assertEquivalent: nil.
+	self assertEquivalent: #( 1 (2 3) #(nil #nil)).
 
 ]
 

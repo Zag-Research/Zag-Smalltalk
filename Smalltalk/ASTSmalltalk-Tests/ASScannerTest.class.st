@@ -82,6 +82,7 @@ ASScannerTest >> testSimple [
 	self assert: (ASScanner new scanCode: ' true') token equals: 'true' asASSpecial.
 	self assert: (ASScanner new scanCode: ' false') token equals: 'false' asASSpecial.
 	self assert: (ASScanner new scanCode: ' nil') token equals: 'nil' asASSpecial.
+	self assert: (ASScanner new scanCode: ' #nil') token equals: 'nil' asASSymbol.
 	self assert: (ASScanner new scanCode: ' self') token equals: #self asASSelf.
 	self assert: (ASScanner new scanCode: ' super') token equals: #super asASSelf.
 	self assert: (ASScanner new scanCode: ' thisContext') token equals: #thisContext asASSpecial.

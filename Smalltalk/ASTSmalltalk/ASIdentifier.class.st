@@ -18,7 +18,7 @@ ASIdentifier class >> with: aString [
 	specials = size ifTrue: [ ^ ASBinaryId new value: aString asSymbol ].
 	alphas = size ifTrue: [ ^ ASUnaryId new value: aString asSymbol ].
 	(last = $: and: [ alphas + 1 = size ]) ifTrue: [ ^ ASKeywordId new value: aString asSymbol ].
-	^ self error: 'Invalid identifier: ',aString
+	^ ASImproperId new value: aString
 ]
 
 { #category : #parsing }

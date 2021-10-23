@@ -3,8 +3,3 @@ Class {
 	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
-
-{ #category : #parsing }
-ASLiteral >> assignExpression: anASCompiler [ 
-	^ self keywordExpression: anASCompiler
-]

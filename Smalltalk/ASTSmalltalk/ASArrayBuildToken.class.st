@@ -1,5 +1,10 @@
 Class {
 	#name : #ASArrayBuildToken,
-	#superclass : #ASSyntax,
+	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
+
+{ #category : #parsing }
+ASArrayBuildToken >> parseWith: anASCompiler [
+	self shouldBeImplemented
+]

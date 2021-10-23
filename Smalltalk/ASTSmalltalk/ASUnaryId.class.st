@@ -18,7 +18,7 @@ ASUnaryId >> arity [
 ]
 
 { #category : #parsing }
-ASUnaryId >> assignExpression: anASCompiler [ 
+ASUnaryId >> assignExpression: anASCompiler [
 	anASCompiler nextToken.
 	^ anASCompiler peek possibleAssign: anASCompiler target: self
 ]
