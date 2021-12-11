@@ -86,8 +86,7 @@ This is the first field in the header-word for an object:
 | 1    | unused       |                                                              |
 | 1    | unused       |                                                              |
 | 5    | format       | (see above)                                                  |
-| 4    | unused       |                                                              |
-| 20   | identityHash |                                                              |
+| 24   | identityHash |                                                              |
 | 16   | classIndex   | LSB                                                          |
 
 Unless format=12,13,16, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.

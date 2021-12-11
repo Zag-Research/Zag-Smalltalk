@@ -19,6 +19,8 @@ The system is being developed on https://github.com/dvmason/AST-Smalltalk
 ## [Optimization opportunities](Optimizations.md) are described here.
 
 ## The [Just In Time compiler](JIT.md) is described here.
+
+## [Experiments](Experiments.md)
 <!--
 | Start | Fibonacci |
 | ----- | --------- |
