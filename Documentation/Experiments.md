@@ -12,7 +12,6 @@ Same experiments as above, but now generating native code for methods
 
 ## Development Milestones
 
-### Conor
 1. Export Classes/Methods to image file - Smalltalk
     - [x] symbols
     - [ ] classes
@@ -23,14 +22,11 @@ Same experiments as above, but now generating native code for methods
     - [ ] raw sends
     - [ ] parameterized inlining
 6. Paper describing new dispatch in system
-### Dave
 1. Compiling AST to bytecode
     - [ ] Deutsch cache - monomorphic
     - [ ] cache - polymorphic
     - [ ] cache - megamorphic
 3. Garbage collection
-
-### Unassigned
 1. LLVM
     - [ ] Compiling AST to LLVM-IR using raw/parameterized-inlining
     - [ ] Compiling AST to LLVM-IR using Deutsch cache
