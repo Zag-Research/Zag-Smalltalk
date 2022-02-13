@@ -25,14 +25,24 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double          |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF0-F    | xxxx | xxxx | xxxt | tagged literals |
+| FFF1-F    | xxxx | xxxx | xxxt | tagged literals |
+| FFF1      | xxxx | xxxx | xxxx | heap object |
+| FFF2      | xxxx | xxxx | xxxx | block closure |
+| FFF3      | xxxx | xxxx | xxxx | False |
+| FFF4      | xxxx | xxxx | xxxx | True |
+| FFF5      | xxxx | xxxx | xxxx | UndefinedObject |
+| FFF6      | xxxx | xxxx | xxxx | Symbol |
+| FFF7      | xxxx | xxxx | xxxx | Character |
+| FFF8-D    | xxxx | xxxx | xxxx | unused tags |
+| FFFE      | xxxx | xxxx | xxxx | Positive SmallInteger |
+| FFFF      | xxxx | xxxx | xxxx | Negative SmallInteger |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 3 bits are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
 
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 4 bits and the hash code is 48 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
 0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. Since all heap objects are 8-byte aligned, this gives us 52-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like +inf.
@@ -40,10 +50,14 @@ Literals are interpreted similarly to a header word for heap objects. That is, t
 2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 3. True: This only encodes the single value `true`
 4. UndefinedObject: This encodes the value `nil` with all zero hash code. It also encodes a set of `specialReturn` values that can be returned from any message send for the purpose of unwinding the stack. For this, the hash value will be the address of the stack for the enclosing method.
-5. SmallInteger: For integers the "hash code" is the value, so this provides 49-bit integers (-281,474,976,710,656 to 281,474,976,710,655).
-6. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
-7. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals.
+5. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
+6. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
+
+Tags 7-12 are currently unused.
+
+13. SmallInteger: For integers the "hash code" is the value and it uses the last 2 of the tags, so this provides 49-bit integers (-281,474,976,710,656 to 281,474,976,710,655).
+14. Also SmallIntegers
+15. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF0).
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
