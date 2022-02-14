@@ -1,5 +1,6 @@
 #include <stdio.h>
-#define print(t,v) printf("%-10s 0x%lx\n",t,v)
+//#define print(t,v) printf("%-10s 0x%lx\n",t,v)
+#define print(t,v) printf("%-10s 0x%lx %d\n",t,v,get_class(v))
 typedef unsigned long objectT;
 #define negative_inf 0xfff0000000000000
 #define false 0xfff4000000000000
@@ -20,7 +21,7 @@ static inline double as_double(const objectT x) {
   y.ul=x;
   return y.d;
 }
-#define get_class(x) (((objectT)(x)>>49)>0x7ff0?(((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
+#define get_class(x) (((objectT)(x)>>49)>0x7ff0?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
 static inline int get_class_7ff0(const objectT x) {
   long ptr = (((long)(x))<<15>>12);
   if (ptr==0) return 8;

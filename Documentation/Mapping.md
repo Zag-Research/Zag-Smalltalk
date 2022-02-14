@@ -33,8 +33,8 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF8      | 0000 | 0100 | 0002 | UndefinedObject |
 | FFFA/B      | xxxx | xxxx | xxxx | Symbol |
 | FFFC/D      | xxxx | xxxx | xxxx | Character |
-| FFFE      | xxxx | xxxx | xxxx | Positive SmallInteger |
-| FFFF      | xxxx | xxxx | xxxx | Negative SmallInteger |
+| FFFE      | xxxx | xxxx | xxxx | Negative SmallInteger |
+| FFFF      | xxxx | xxxx | xxxx | Positive SmallInteger |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
 
@@ -51,7 +51,7 @@ Literals are interpreted similarly to a header word for heap objects. That is, t
 4. UndefinedObject: This encodes the value `nil` with all zero hash code. It also encodes a set of `specialReturn` values that can be returned from any message send for the purpose of unwinding the stack. For this, the hash value will be the address of the stack for the enclosing method.
 5. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 6. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-7. SmallInteger: For integers the "hash code" is the value and it uses the last 2 of the tags, so this provides 49-bit integers (-281,474,976,710,656 to 281,474,976,710,655).
+7. SmallInteger: For integers the low 48 bits of the"hash code" make up the value, so this provides 48-bit integers (-140,737,488,355,328 to 140,737,488,355,327). The negative integers are first, with a 0 in the 49th bit, followed by the positive integers with a 1 in the 49th bit. This allows numerous optimizations of SmallInteger operations, at the cost of 1 bit of SmallInteger range.
 8. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF0).
 
 ### Object in Memory
