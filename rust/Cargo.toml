@@ -20,6 +20,7 @@ lazy-init = "*"
 static_init = "*"
 late-static = "*"
 criterion = "0.3"
+late-static = "*"
 rand = "*"
 
 [[bench]]
