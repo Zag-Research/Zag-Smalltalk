@@ -10,16 +10,16 @@ Class {
 	#category : #'ASTKernel-Methods'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> cull: arg1 [
 	"Evaluate this block with one or fewer arguments."
 
-	^ self numArgs < 2
+	^ self numArgs = 0
 			ifTrue: [ self value ]
 			ifFalse: [ self value: arg1]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> cull: arg1 cull: arg2 [
 	"Evaluate this block with two or fewer arguments."
 
@@ -28,7 +28,7 @@ ASTBlockClosure >> cull: arg1 cull: arg2 [
 			ifFalse: [ self value: arg1 value: arg2]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> cull: arg1 cull: arg2 cull: arg3 [
 	"Evaluate this block with three or fewer arguments."
 
@@ -37,7 +37,7 @@ ASTBlockClosure >> cull: arg1 cull: arg2 cull: arg3 [
 			ifFalse: [ self value: arg1 value: arg2 value: arg3]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> cull: arg1 cull: arg2 cull: arg3 cull: arg4 [
 	"Evaluate this block with four or fewer arguments."
 
@@ -75,12 +75,7 @@ ASTBlockClosure >> ifError: errorHandlerBlock [
 	^ val
 ]
 
-{ #category : #'as yet unclassified' }
-ASTBlockClosure >> method [
-	^ method
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTBlockClosure >> numArgs [
 	^ symbol numArgs
 ]
@@ -91,7 +86,7 @@ ASTBlockClosure >> numArgsError: numArgsForInvocation [
 	ArgumentsCountMismatch signalExpectedArgumentsCount: self numArgs calledArgumentsCount: numArgsForInvocation 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTBlockClosure >> numCopiedValues [
 	"Answer the number of copied values of the receiver.  Since these are
 	 stored in the receiver's indexable fields this is the receiver's basic size.
@@ -100,6 +95,15 @@ ASTBlockClosure >> numCopiedValues [
 
 	<primitive: 62>
 	^ self basicSize
+]
+
+{ #category : #exceptions }
+ASTBlockClosure >> on: exception do: handlerAction [
+	"Evaluate the receiver in the scope of an exception handler.
+	The following primitive is just a marker used to find the error handling context. 
+	See MethodContext>>#isHandlerOrSignalingContext. "
+	<primitive: 199>  
+	^ self value
 ]
 
 { #category : #'as yet unclassified' }
@@ -112,42 +116,42 @@ ASTBlockClosure >> timeToRun [
 	^ ASTSystem milliseconds - startMSecs
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> value [
 	"Evaluate this block without any arguments."
 
 	^ self numArgsError: 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> value: arg [
 	"Evaluate this block with one argument."
 
 	^ self numArgsError: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> value: arg1 value: arg2 [
 	"Evaluate this block with two arguments."
 
 	^ self numArgsError: 2
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> value: arg1 value: arg2 value: arg3 [
 	"Evaluate this block with three arguments."
 
 	^ self numArgsError: 3
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> value: arg1 value: arg2 value: arg3 value: arg4 [
 	"Evaluate this block with four arguments."
 
 	^ self numArgsError: 4
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #evaluating }
 ASTBlockClosure >> valueWithArguments: anArray [
 	"Primitive. Evaluate the block represented by the receiver. The argument is an Array whose elements are the arguments for the block. Fail if the length of the Array is not the same as the the number of arguments that the block was expecting. Fail if the block is already being executed. Essential. See Object documentation whatIsAPrimitive."
 
@@ -156,4 +160,50 @@ ASTBlockClosure >> valueWithArguments: anArray [
 		ifTrue: [ self
 				error: 'Attempt to evaluate a block that is already being evaluated.' ]
 		ifFalse: [ self numArgsError: anArray size ]
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileFalse [
+	"Evaluate the receiver, as long as its value is false."
+ 
+	self value ifFalse: [ self whileFalse ]
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileFalse: aBlock [ 
+	"Evaluate the argument, aBlock, as long as the value of the receiver is false."
+
+	self value ifFalse: [ aBlock value. self whileFalse: aBlock ].
+	^ nil
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileNil: aBlock [ 
+	"Evaluate the argument, aBlock, as long as the value of the receiver is nil."
+
+	self value ifNil: [ aBlock value. self whileNil: aBlock ].
+	^ nil
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileNotNil: aBlock [ 
+	"Evaluate the argument, aBlock, as long as the value of the receiver is not nil."
+
+	self value ifNotNil: [ aBlock value. ^ self whileNotNil: aBlock ].
+	^ nil
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileTrue [
+	"Evaluate the receiver, as long as its value is true."
+ 
+	self value ifTrue: [ self whileTrue ]
+]
+
+{ #category : #controlling }
+ASTBlockClosure >> whileTrue: aBlock [ 
+	"Evaluate the argument, aBlock, as long as the value of the receiver is true."
+
+	self value ifTrue: [ aBlock value. self whileTrue: aBlock ].
+	^ nil
 ]

@@ -3,8 +3,9 @@ Extension { #name : #Object }
 { #category : #'*ASTSmalltalk' }
 Object >> asASIdentifier [
 	(#('true' 'false' 'nil' 'thisContext') includes: self) ifTrue: [ ^ self asASSpecial ].
-	(#('self' 'super') includes: self) ifTrue: [ ^ ASSelf new value: self ].
-	^ ASIdentifier new value: self
+	(#('self' 'super') includes: self) ifTrue: [ ^ self asASSelf ].
+	'|' = self ifTrue: [ ^ self asASSyntax ].
+	^ ASIdentifier with: self asString
 ]
 
 { #category : #'*ASTSmalltalk' }
@@ -34,7 +35,7 @@ Object >> asASSymbol [
 
 { #category : #'*ASTSmalltalk' }
 Object >> asASSyntax [
-	^ ASSyntax new value: self
+	^ ASSyntax with: self
 ]
 
 { #category : #'*ASTSmalltalk' }

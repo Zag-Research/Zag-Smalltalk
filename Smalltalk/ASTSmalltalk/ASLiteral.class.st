@@ -1,10 +1,5 @@
 Class {
 	#name : #ASLiteral,
-	#superclass : #ASToken,
+	#superclass : #ASSimple,
 	#category : #'ASTSmalltalk-Tokens'
 }
-
-{ #category : #testing }
-ASLiteral >> isLiteral [
-	^ true
-]

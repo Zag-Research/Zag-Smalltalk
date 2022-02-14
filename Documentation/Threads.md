@@ -1,7 +1,7 @@
 ## Threads
 One of the features of Rust is that it has a clean model for using multiple threads as a form of multi-processing.
 
-Smalltalk has processes, but they are typically only used for I/O andwatchdog/idle processes. That said, we would like to have threads efficiently and correctly implement processes.
+Smalltalk has processes, but they are typically only used for I/O and watchdog/idle processes. That said, we would like to have threads efficiently and correctly implement processes.
 
 There are shared data-structures that we don't want to protect with Mutex or even RWLocks. These include:
 1. Garbage collection. Each thread has its own nursery heaps that don't overlap, but the main heap is shared, so anything that collects into that heap must synchronize.

@@ -9,15 +9,19 @@ edition = "2018"
 [dependencies]
 #mmap = "*"
 libc = "0.2"
-once_cell = "*"
+errno = "*"
+#once_cell = "*"
 static_assertions = "1.1.0"
+lazy_static = "*"
 
 [dev-dependencies]
 lazy_static = "*"
 lazy-init = "*"
 static_init = "*"
+late-static = "*"
 criterion = "0.3"
 late-static = "*"
+rand = "*"
 
 [[bench]]
 name = "my_benchmark"

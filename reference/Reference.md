@@ -10,6 +10,8 @@
 	- [2018 edition](https://doc.rust-lang.org/edition-guide/rust-2018/index.html)
 - [Playground](https://play.rust-lang.org/)
 - [Rust Performance Book](https://nnethercote.github.io/perf-book/)
+- [The Little Book of Rust Macros](https://danielkeep.github.io/tlborm/book/)
+- [Rust tips: Box, RC, Arc, Cell, RefCell, Mutex](https://tekshinobi.com/rust-tips-box-rc-arc-cell-refcell-mutex/)
 - [mmap(2) man page](https://www.man7.org/linux/man-pages/man2/mmap.2.html)
 - [24 Days of Rust - interesting libraries](http://siciarz.net/)
 - [Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)

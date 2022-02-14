@@ -12,18 +12,6 @@ Class {
 	#category : #'ASTSmalltalk-Compiler'
 }
 
-{ #category : #parsing }
-ASCompiler >> body [
-	| token |
-	token := aScanner peek.
-	token value = $^ ifTrue: [
-		aScanner next.
-		^ ASReturnNode new expression: self expression
-	].
-	^ self error: 'Unexpected token: ',token value asString
-	
-]
-
 { #category : #compilation }
 ASCompiler >> compileMethod: aMethod [
 	aScanner := ASScanner new scanCode: aMethod sourceCode readStream.
@@ -32,32 +20,52 @@ ASCompiler >> compileMethod: aMethod [
 
 { #category : #parsing }
 ASCompiler >> compileMethodInClass: aClass [
-	| token selector args method savedScope |
-	token := aScanner next.
-	token isIdentifier ifFalse: [ ^ self error: 'Method must start with identifier' ].
+	| selector args method savedScope |
 	args := OrderedCollection new.
-	( token isKeyword ) ifFalse: [
-		selector := token value
-	] ifTrue: [
-		selector := ''.
-		[
-			selector := selector,token value.
-			token := aScanner next.
-			token isUnary ifFalse: [ ^ self error: 'Method arguments must be simple identifiers' ].
-			args add: token.
-			token := aScanner peek.
-			token isKeyword
-		] whileTrue: [ aScanner next ]
-	].
+	selector := aScanner peek classSelector: self args: args.
 	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
+	args do: [ : arg | method add: arg ].
 	savedScope := scope.
-	scope := method nestedScopeOf: aClass.
-	method body: self body.
-	scope := savedScope.
+	[
+		scope := method nestedScopeOf: aClass.
+		method body: self methodBody
+	] ensure: [
+		scope := savedScope
+	].
 	^ method
 ]
 
 { #category : #parsing }
-ASCompiler >> expression [
+ASCompiler >> localDefs [
+	aScanner peek defs: self scope: scope.
+]
+
+{ #category : #parsing }
+ASCompiler >> methodBody [
+	| statements |
+	self localDefs.
+	statements := OrderedCollection new.
+	self statements: statements.
+	(statements notEmpty and: [statements last isReturn]) ifFalse: [ 
+		statements add: (ASReturnNode new unaryExpression: #self asASSelf)
+	].
+	aScanner peek expectEnd.
+	^ statements
+]
+
+{ #category : #scanning }
+ASCompiler >> nextToken [
 	^ aScanner next
+]
+
+{ #category : #scanning }
+ASCompiler >> peek [
+	^ aScanner peek
+]
+
+{ #category : #parsing }
+ASCompiler >> statements: statements [ 
+	| statement |
+	[ statement := aScanner peek statement: self ] whileNotNil: [ statements add: statement ].
+
 ]

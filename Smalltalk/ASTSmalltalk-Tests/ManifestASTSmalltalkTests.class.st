@@ -61,3 +61,13 @@ ManifestASTSmalltalkTests class >> ruleStringConcatenationRuleV1FalsePositive [
 ManifestASTSmalltalkTests class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-20T18:11:07.482607-04:00') )
 ]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleToDoCollectRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#'ASMessageStats class' #gen:types: #true)) #'2021-07-07T17:27:13.451371-04:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-07-06T19:53:44.153899-04:00') )
+]

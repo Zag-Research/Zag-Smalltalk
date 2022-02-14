@@ -61,7 +61,23 @@ criterion_group!(extract,timing_null,timing_shift,timing_shift2,timing_mask,timi
  * static_init             time:   [2.5625 ns 2.5805 ns 2.6013 ns]
  * lazy_static             time:   [785.32 ps 807.08 ps 837.60 ps]
  * lazy_init               time:   [2.9278 ns 2.9578 ns 2.9887 ns]
+
+ * nothing                 time:   [267.21 ps 269.84 ps 272.98 ps]
+ * lazy_static             time:   [1.7328 ns 1.7446 ns 1.7571 ns]
+ * late_static             time:   [1.7343 ns 1.7485 ns 1.7636 ns]
+ * once_cell               time:   [1.9278 ns 1.9381 ns 1.9485 ns]
+ * static_init             time:   [2.5523 ns 2.5795 ns 2.6091 ns]
+ * lazy_init               time:   [3.4119 ns 3.4286 ns 3.4453 ns]
  */
+
+#[inline(never)]
+fn access_nothing() -> bool {
+    true
+}
+fn bench_nothing(c: &mut Criterion) {
+    c.bench_function("nothing", |b| b.iter(|| access_nothing()));
+}
+
 extern crate once_cell;
 static v_once_cell: once_cell::sync::Lazy<bool> = once_cell::sync::Lazy::new(|| {
     true
@@ -76,7 +92,6 @@ fn bench_once_cell(c: &mut Criterion) {
 }
 
 
-extern crate lazy_init;
 extern crate static_init;
 #[static_init::dynamic]
 static v_static_init: bool = true;
@@ -89,7 +104,7 @@ fn bench_static_init(c: &mut Criterion) {
     c.bench_function("static_init", |b| b.iter(|| access_static_init()));
 }
 
-
+extern crate lazy_init;
 #[static_init::dynamic]
 static v_lazy_init: lazy_init::Lazy<bool> = lazy_init::Lazy::default();
 
@@ -115,7 +130,6 @@ fn access_lazy_static() -> bool {
 fn bench_lazy_static(c: &mut Criterion) {
     c.bench_function("lazy_static", |b| b.iter(|| access_lazy_static()));
 }
-
 
 static ONCE_CELL_MAP: once_cell::sync::Lazy<HashMap<String,String>> = once_cell::sync::Lazy::new(|| {
     let mut m = HashMap::new();
@@ -190,3 +204,25 @@ fn iter_benchmark(c: &mut Criterion) {
 criterion_group!(accesses, bench_once_cell,bench_static_init,bench_lazy_static,bench_lazy_init,iter_benchmark);
 criterion_main!(/*benches,accesses,*/extract);
 
+extern crate late_static;
+use late_static::LateStatic;
+
+struct Foo {
+    pub value: bool,
+}
+
+static FOO: LateStatic<Foo> = LateStatic::new();
+
+#[inline(never)]
+fn access_late_static() -> bool {
+    FOO.value
+}
+fn bench_late_static(c: &mut Criterion) {
+    unsafe {
+        LateStatic::assign(&FOO, Foo { value: true });
+    }
+    c.bench_function("late_static", |b| b.iter(|| access_lazy_static()));
+}
+
+criterion_group!(accesses, bench_nothing,bench_once_cell,bench_static_init,bench_lazy_static,bench_lazy_init,bench_late_static);
+criterion_main!(/*benches,*/accesses,/*extract*/);

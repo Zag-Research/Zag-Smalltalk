@@ -11,11 +11,16 @@ Logically, Smalltalk message dispatch follows these steps:
  2. look up the selector symbol in C's `methodDict`
  3. if found, the value of the lookup is the method code - call it
  4. if not found and C has a superclass, set C to the superclass and continue at 2
- 5. the method is not found, so create a Message object and go back to 1 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
+ 5. the method is not found, so create a Message object, set C to the class of the target and go back to 2 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
 
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
  2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from another class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
+ 
+ See:
+ - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
+ - [from Dynamic Dispatch](https://en.wikipedia.org/wiki/Dynamic_dispatch)
+ - [from Late binding](https://en.wikipedia.org/wiki/Late_binding)
 
 #### Java dispatch
 Java has five opcodes to invoke methods, but the one we're interested in is `invokevirtual` which does virtual dispatch the same as Smalltalk^[the other 4 are because of the impoverished nature of Java object structure].
@@ -25,39 +30,27 @@ The difference is that the Java compiler statically knows the index into the dis
 Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods, leading to 80MB of dispatch tables - still excessive (and would have horrible cache locality).
 
 #### Our approach
-We build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods.
+We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
 
-### The table below **is wrong** (from a previous design).
 
-| Hash table for a class                   |                                      |
-| ---------------------------------------- | ------------------------------------ |
-| Pointer to the class                     |                                      |
-| hash table mask (2^n-1)*8                |                                      |
-| hash entry 0 - points to 2nd level below | `<--` object has pointer to here     |
-| hash entry 1 - ditto                     |                                      |
-| ...                                      |                                      |
-| hash entry 2^n-1 - ditto                     |                                      |
-| symbol hash                              | `<--` pointed to by one of the above |
-| method address                           |                                      |
-| symbol hash                              |                                      |
-| method address                           |                                      |
-| symbol hash                              | `<--` pointed to by one of the above |
-| method address                           |                                      |
-| symbol hash                              |                                      |
-| ...                                      |                                      |
-| 0                                        |  designates end of table                                     |
-| 1                                        |                                      |
+| Dispatch table entry for a class                   |                                      |
+| ---------------------------------------- | ---------------- |
+| Pointer to the class                     |  a HeapObject
+| Pointer to an array of MethodMatch values | on the Rust heap
+
+| MethodMatch array entry                  |                                      |
+| ---------------------------------------- | ----------------- |
+| hashed symbol | immediate object shifted to remove type |
+| pointer to a MethodType | either a function (primitive) or a method or none
 
 The sequence to look up a method is:
-1. get the symbol hash value - the offset from the start of the symbol table
-2. bit-and it with the hash table mask
-3. offset into the table to get a pointer to the 2nd level table
-4. the 2nd level table is a sequence of symbol hash value/method address pairs
-5. scan linearly through the 2nd level table looking for a match
-	1. if found, use the next word as an address for the method code
-	2. if 0, then this symbol isn't in the table, fire off a DNU
+1. use the entire literal (treated as a u64) as the selector hash value - the raw value (usually symbols, but could be integers for `super` dispatches)
+2. calculate the remainder with the hash table size (less the overflow)
+3. scan linearly (from that point )through the table looking for a match
+	1. if found, use the MethodType to access the primitive or method code
+	2. if the MethodType is `NoType`, then this symbol isn't in the table, fire off a DNU
 
-Although we're doing a linear scan for the second level, the size of the first-level table will mean that only very rarely will we have to search beyond 2 entries. There will be zero entries in the original table, but they may be filled in over time. This will mean that DNUs may have to search a little longed in some circumstances, but the cost of this search will be swamped by the other requirements of a DNU.
+Although we're doing a linear scan the design of the table will mean that only very rarely will we have to search beyond 2 entries. There will be `NoType` entries in the original table (including at least one overflow past the last direct-hash value), but they may be filled in over time. This will mean that DNUs may have to search a little longer in some circumstances, but the cost of this search will be swamped by the other requirements of a DNU.
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
 
@@ -78,7 +71,7 @@ Fields:
 	- - could be an array
 	- - - if all the values are literals (or arrays of literals) it will be represented as a literal array `#()`
 	- - - else it will be represented as a constructed array `{}`
-	- - could be an ASTMethod for a block (name will be `value`, `value:`, etc.)
+	- - could be an ASMethod for a block (name will be `value`, `value:`, etc.)
 If whitespace is nil and value is literal or array of literal, the ASLiteral can be omitted, and the literal be the expression value.
  ### ASReturn
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
@@ -103,6 +96,7 @@ If whitespace is nil, the ASSequence can be omitted, and the array be the expres
 - primitive - primitive number or 0 - forced SmallInteger
 - an ASSequence for the body
 - an array of parameter symbols
+- an array of locals symbols
 - class - the class this method is defined in
 ### Array
 - Contains fields for ASSequence - always less than 63 fields so will be compact
@@ -113,15 +107,22 @@ Can often stand in for ASSequence if there is no whitespace to be included.
 These are not part of the main interpret loop, but are referenced by it:
 ### ASBehavior
 ### ASClass
-- flags - isVariable
+- methods - an array of method definitions for the instances
+- instVarNames - an array of instance variable names for the instances
+- superclass - the superclass
 - name - a symbol
+- format - the format code to use when creating instances
 - classVars - an array of class variables
 - sharedPools - an array of shared pool classes
-- methods - an array of method definitions
-- suoerclass - the superclass
 ### ASMetaclass
-All the fields from class, plus:
+- methods - an array of method definitions for the class
+- instVarNames - an array of instance variable names for the class
+- superclass - the superclass
 - instance - instanceSide
+### ASBlockClosure
+- method code
+- index of `self`
+- block-local variables (including values shared with the method)
 
 ## Forced SmallInteger
 - means that the field is optimized to be treated as a positive SmallInteger, even if it isn't

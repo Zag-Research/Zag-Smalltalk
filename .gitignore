@@ -37,3 +37,4 @@ Dailies
 rust/target
 PharoCandle
 bug
+c/eg*[0-9]
