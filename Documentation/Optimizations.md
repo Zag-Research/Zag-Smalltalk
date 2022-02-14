@@ -1,8 +1,9 @@
 ## Optimization Opportunities
 
-- self messages where the method is not overridden can be inlined
+- self messages can be inlined
 	- doesn't matter if the method is from a superclass, as long as it's not overridden below the current class
-	- can be a bit tricky if the inlined method is from a superclass, because self messages there refer to both messages defined there and (since we're inlining) anything down to the current method as long as not overridden below there
+	- can be a bit tricky if the inlined method is from a superclass, because self messages there refer to both messages defined there and (since we're inlining) anything down to the current method
+	- overrides below the current target class are irrelevant because the original message was sent to an instance of the target class, so overrides below that are not relevant
 - if we have recognized the other argument to be the same class as self, then ditto
 - tail call elimination
 - closures for blocks that send no messages can be allocated on the stack

@@ -44,9 +44,9 @@ We lazily build a single dispatch table for each class, which includes not just 
 | pointer to a MethodType | either a function (primitive) or a method or none
 
 The sequence to look up a method is:
-1. get the selector hash value - the raw value with the type shifted off (usually symbols, but could be integers for `super` dispatches)
+1. use the entire literal (treated as a u64) as the selector hash value - the raw value (usually symbols, but could be integers for `super` dispatches)
 2. calculate the remainder with the hash table size (less the overflow)
-3. scan linearly through the table looking for a match
+3. scan linearly (from that point )through the table looking for a match
 	1. if found, use the MethodType to access the primitive or method code
 	2. if the MethodType is `NoType`, then this symbol isn't in the table, fire off a DNU
 
