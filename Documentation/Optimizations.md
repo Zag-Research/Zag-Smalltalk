@@ -25,3 +25,15 @@
 - exporter has map of Pharo primitives to AST primitive numbers - signals error for any unmapped ones
 - if my class is <= 8 I can check with an AND and comparison. Use for `nil`, `true`, and `false` rather than compare the value. Can also check for the special return value
 - `at:`, `at:put:` and `instVarAt:`,`instVarAt:put:` are opposite for most classes; e.g. Array has the former, but the latter signal an error, whereas Point has the opposite behavior. Therefore, when looking up one of these on a failed dispatch, we can choose the appropriate implementations of these depending on the format of the class. Ditto for ByteArray/String, Symbol, format 9.
+- by making SmallInteger be tag 7, they are the last values in the 64-but values. By coding them as 49-bit values and with the negative integers first it means several optimizations fall out:
+	- comparisons
+		1. a u64 comparison will give the correct signed comparison for 2 tagged values
+		2. anding with 1 will correctly test for odd/even
+	- arithmetic
+		1. adding untagged positive integers to a tagged integer treated as a signed integer will always stay in the range of SmallInteger unless the result is positive, in which case there has just been overflow
+		2. similarly subtracting  an untagged positive integer is in overflow if the result is less than (0xfffe000000000000) (treated as a u64)
+		3. and, or, xor, etc. with positive untagged integers will work correctly
+	- conversion
+		1.  subtracting a tagged 0 (0xffff000000000000) will give an untagged 49-bit integer
+		2. adding an untagged 49-bit integer to a tagged 0 will give the correctly tagged SmallInteger
+- other...
