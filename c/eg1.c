@@ -10,6 +10,7 @@ int main(int argc,char **argv) {
   print("S_foo",S_foo);
   print("S_bar_",S_bar_);
   print("$c",character_of('c'));
+  print("-42",from_int(-42));
   print("42",from_int(42));
   print("42.0",from_double(42.0));
   print("inf",from_double(INFINITY));

@@ -30,13 +30,12 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF2/3      | xxxx | xxxx | xxxx | block closure |
 | FFF4      | 0000 | 0001 | 0000 | False |
 | FFF6      | 0000 | 0010 | 0001 | True |
-| FFF8      | 0000 | 0100 | 0002 | UndefinedObject |
+| FFF8      | 1000 | 0000 | 0000 | UndefinedObject |
 | FFFA/B      | xxxx | xxxx | xxxx | Symbol |
 | FFFC/D      | xxxx | xxxx | xxxx | Character |
-| FFFE      | xxxx | xxxx | xxxx | Negative SmallInteger |
-| FFFF      | xxxx | xxxx | xxxx | Positive SmallInteger |
+| FFFE/F      | xxxx | xxxx | xxxx | SmallInteger |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.^[note that we don't encode 0 or 1 as literal values, so there is no conflict with the generated NaN value or +inf].
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.
 
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.

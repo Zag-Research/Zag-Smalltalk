@@ -36,4 +36,7 @@
 	- conversion
 		1.  subtracting a tagged 0 (0xffff000000000000) will give an untagged 49-bit integer
 		2. adding an untagged 49-bit integer to a tagged 0 will give the correctly tagged SmallInteger
+		3. oring a tagged 0 with any value unsigned>= the false value will give a basicIdentityHash - doubles, heap objects and closures need other implementations
+- error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure
+- become: /elementsExchangeIdentityWith: need to preserve/swap hash values so that dictionaries continue to work correctly
 - other...
