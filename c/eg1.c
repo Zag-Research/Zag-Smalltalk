@@ -5,6 +5,9 @@ char *symbol_table[]={0,"sym1","foo","bar:","sym4"};
 #define S_bar_ symbol_of(3,1)
 int main(int argc,char **argv) {
   print("object",from_double(-INFINITY)+1);
+  print("object",from_object(&main));
+  print("object",from_object(&argc));
+  print("closure",from_closure(&main));
   print("false",false);
   print("true",true);
   print("nil",nil);

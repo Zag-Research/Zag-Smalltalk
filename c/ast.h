@@ -7,6 +7,8 @@ typedef unsigned long objectT;
 #define true 0xfff6000000100001
 #define nil 0xfff8100000000000
 #define symbol_of(index,arity) ((index)|((arity)<<20)|(0x7ffdl<<49))
+#define from_object(addr) ((((long)(void*)addr)>>3)|(0x7ff8l<<49))
+#define from_closure(addr) ((((long)(void*)addr)>>3)|(0x7ff9l<<49))
 #define character_of(c) ((objectT)(c))|(0x7ffel<<49)
 #define from_int(x) (((objectT)(x))+int_zero)
 #define int_zero 0xffff000000000000
@@ -31,36 +33,35 @@ static inline int get_class_7ff0(const objectT x) {
   if (ptr>0) return ptr&0xffff;
   __builtin_trap();
 }
-#define max_printString 100
 static char * printString(objectT x) {
-  static char result[max_printString+1];
+  static char result[100];
   switch (short_class(x)) {
   case 0:
-    snprintf(result,max_printString,"object 0x%lx",as_pointer(x));
+    snprintf(result,sizeof(result),"object 0x%lx",as_pointer(x));
     break;
   case 1:
-    snprintf(result,max_printString,"closure 0x%lx",as_pointer(x));
+    snprintf(result,sizeof(result),"closure 0x%lx",as_pointer(x));
     break;
   case 2:
-    snprintf(result,max_printString,"false");
+    snprintf(result,sizeof(result),"false");
     break;
   case 3:
-    snprintf(result,max_printString,"true");
+    snprintf(result,sizeof(result),"true");
     break;
   case 4:
-    snprintf(result,max_printString,"nil");
+    snprintf(result,sizeof(result),"nil");
     break;
   case 5:
-    snprintf(result,max_printString,"#%s",symbol_table[x&0xfffff]);
+    snprintf(result,sizeof(result),"#%s",symbol_table[x&0xfffff]);
     break;
   case 6:
-    snprintf(result,max_printString,"$%c",(char)(x&0xffffff));
+    snprintf(result,sizeof(result),"$%c",(char)(x&0xffffff));
     break;
   case 7:
-    snprintf(result,max_printString,"%ld",as_int(x));
+    snprintf(result,sizeof(result),"%ld",as_int(x));
     break;
   case 8:
-    snprintf(result,max_printString,"%g",as_double(x));
+    snprintf(result,sizeof(result),"%g",as_double(x));
     break;
   }
   return result;
