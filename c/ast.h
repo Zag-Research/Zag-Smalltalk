@@ -2,7 +2,7 @@
 //#define print(t,v) printf("%-10s 0x%lx\n",t,v)
 #define print(v) ({typeof (v) V = (v);printf("%-25s 0x%lx %d %s\n",#v,V,short_class(V),printString(V));})
 typedef unsigned long objectT;
-#define negative_inf 0xfff0000000000000
+#define NEGATIVE_INF 0xfff0000000000000
 #define false 0xfff4000000010000
 #define true 0xfff6000000100001
 #define nil 0xfff8100000000000
@@ -10,14 +10,16 @@ typedef unsigned long objectT;
 #define from_object(addr) ((((long)(void*)addr)>>3)|(0x7ff8l<<49))
 #define from_closure(addr) ((((long)(void*)addr)>>3)|(0x7ff9l<<49))
 #define from_char(c) ((objectT)(c))|(0x7ffel<<49)
-#define from_int(x) (((objectT)(x))+int_zero)
-#define int_zero 0xffff000000000000
+#define from_int(x) (((objectT)(x))+INT_ZERO)
+#define INT_MINVAL 0xfffe000000000000
+#define INT_ZERO   0xffff000000000000
+#define INT_MAXVAL 0xffffffffffffffff
 #define from_double(x) ({         \
   union {objectT ul;double d;} y_; \
   y_.d=x;                          \
   y_.ul;                           \
     })
-#define as_int(x) (((long)(x))-int_zero)
+#define as_int(x) (((long)(x))-INT_ZERO)
 #define as_double(x) ({            \
   union {objectT ul;double d;} y_; \
   y_.ul=x;                         \
@@ -25,7 +27,7 @@ typedef unsigned long objectT;
 })
 #define as_pointer(x) (((long)(x))<<15>>12)
 #define get_class(x) (((objectT)(x)>>49)>0x7ff8?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
-#define short_class(x) (((objectT)(x))>0xfff0000000000000?((int)((objectT)(x)>>49)&7):8)
+#define short_class(x) (((objectT)(x))>NEGATIVE_INF?((int)((objectT)(x)>>49)&7):8)
 static inline int get_class_7ff0(const objectT x) {
   long ptr = as_pointer(x);
   if (ptr==0) return 8;
