@@ -7,8 +7,8 @@ typedef unsigned long objectT;
 #define true 0xfff6000000100001
 #define nil 0xfff8100000000000
 #define symbol_of(index,arity) ((index)|((arity)<<20)|(0x7ffdl<<49))
-#define from_object(addr) ((((long)(void*)addr)>>3)|(0x7ff8l<<49))
-#define from_closure(addr) ((((long)(void*)addr)>>3)|(0x7ff9l<<49))
+#define from_object(addr) ((((long)(void*)addr))+(0x7ff8l<<49))
+#define from_closure(addr) ((((long)(void*)addr))+(0x7ff9l<<49))
 #define from_char(c) ((objectT)(c))|(0x7ffel<<49)
 #define from_int(x) (((objectT)(x))+INT_ZERO)
 #define INT_MINVAL 0xfffe000000000000
@@ -25,7 +25,7 @@ typedef unsigned long objectT;
   y_.ul=x;                         \
   y_.d;                            \
 })
-#define as_pointer(x) (((long)(x))<<15>>12)
+#define as_pointer(x) (((long)(x))<<12>>12)
 #define get_class(x) (((objectT)(x)>>49)>0x7ff8?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
 #define short_class(x) (((objectT)(x))>NEGATIVE_INF?((int)((objectT)(x)>>49)&7):8)
 static inline int get_class_7ff0(const objectT x) {
@@ -68,3 +68,9 @@ static char * printString(objectT x) {
   }
   return result;
 }
+typedef objectT (*f0T)(objectT self);
+typedef objectT (*f1T)(objectT self,objectT other);
+typedef objectT (*f2T)(objectT self,objectT other,objectT other2);
+typedef objectT (*f3T)(objectT self,objectT other,objectT other2,objectT other3);
+typedef struct {objectT key;f0T func;} matchT;
+typedef struct{long header;objectT name;objectT superclass;short size;short dispatchSize;matchT *matches;} classT;

@@ -3,6 +3,24 @@ char *symbol_table[]={0,"sym1","foo","bar:","sym4"};
 #include <math.h>
 #define S_foo symbol_of(2,0)
 #define S_bar_ symbol_of(3,1)
+#define S_Object symbol_of(4,0)
+#define S_Number symbol_of(5,0)
+#define S_SmallInteger symbol_of(6,0)
+objectT M_intplus_(objectT self,objectT other){
+  return self;
+}
+objectT M_negated(objectT self){
+  objectT result=from_int(0-as_int(self));
+  // if (result==0) overflow;
+  return result;
+}
+objectT M_yourself(objectT self){
+  return self;
+}
+matchT dispatch_SmallInteger[]={{nil,(f0T)0},{S_foo,&M_yourself},{S_foo,&M_negated},{S_bar_,(f0T)&M_intplus_},{nil,(f0T)0}};
+classT C_Object={42,S_Object,nil,0,0,0};
+classT C_Number={42,S_Number,from_object(&C_Object),0,0,0};
+classT C_SmallInteger={42,S_SmallInteger,from_object(&C_Number),0,4,dispatch_SmallInteger};
 int main(int argc,char **argv) {
   print(from_double(-INFINITY)+1);
   print(from_object(&main));
