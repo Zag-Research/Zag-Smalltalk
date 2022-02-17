@@ -1,11 +1,13 @@
-char *symbol_table[]={0,"sym1","foo","bar:","sym4"};
+char *symbol_table[]={0,"sym1","yourself","bar:","sym4"};
 #include "ast.h"
 #include <math.h>
-#define S_foo symbol_of(2,0)
+#define S_yourself symbol_of(2,0)
 #define S_bar_ symbol_of(3,1)
 #define S_Object symbol_of(4,0)
+#define S_Magnitude symbol_of(5,0)
 #define S_Number symbol_of(5,0)
 #define S_SmallInteger symbol_of(6,0)
+#define S_negated symbol_of(7,0)
 objectT M_intplus_(objectT self,objectT other){
   return self;
 }
@@ -17,10 +19,37 @@ objectT M_negated(objectT self){
 objectT M_yourself(objectT self){
   return self;
 }
-matchT dispatch_SmallInteger[]={{nil,(f0T)0},{S_foo,&M_yourself},{S_foo,&M_negated},{S_bar_,(f0T)&M_intplus_},{nil,(f0T)0}};
-classT C_Object={42,S_Object,nil,0,0,0};
-classT C_Number={42,S_Number,from_object(&C_Object),0,0,0};
-classT C_SmallInteger={42,S_SmallInteger,from_object(&C_Number),0,4,dispatch_SmallInteger};
+matchT dispatch_Object[]={REF(yourself),NILREF};
+matchT dispatch_Number[]={NILREF};
+matchT dispatch_Magnitude[]={NILREF};
+matchT dispatch_SmallInteger[]={REF(yourself),REF(negated),REF2(bar_,M_intplus_),NILREF};
+classT C_Object={CLASS_HEADER(Object),S_Object,nil,0,DISPATCH(Object)};
+/*CLASS(BlockClosure,,0);
+CLASS(False,,0);
+CLASS(True,,0);
+CLASS(UndefinedObject,,0);
+CLASS(Symbol,,0);
+CLASS(Character,,0);
+*/
+classT C_Number;
+CLASS(SmallInteger,Number,0);
+/*CLASS(Float,,0);
+CLASS(Array,,0);
+CLASS(String,,0);
+CLASS(Class,,0);
+CLASS(Metaclass,,0);
+CLASS(Behavior,,0);
+CLASS(Method,,0);
+CLASS(System,,0);
+*/
+CLASS(Magnitude,Object,0);
+CLASS(Number,Magnitude,0);
+/*CLASS(Return,,0);
+CLASS(Send,,0);
+CLASS(Literal,,0);
+CLASS(Load,,0);
+CLASS(Store,,0);
+*/
 int main(int argc,char **argv) {
   print(from_double(-INFINITY)+1);
   print(from_object(&main));
@@ -29,7 +58,7 @@ int main(int argc,char **argv) {
   print(false);
   print(true);
   print(nil);
-  print(S_foo);
+  print(S_yourself);
   print(S_bar_);
   print(from_char('c'));
   print(from_int(-42));

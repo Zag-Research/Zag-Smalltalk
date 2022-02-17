@@ -39,4 +39,5 @@
 		3. oring a tagged 0 with any value unsigned>= the false value will give a basicIdentityHash - doubles, heap objects and closures need other implementations
 - error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure
 - become: /elementsExchangeIdentityWith: need to preserve/swap hash values so that dictionaries continue to work correctly
+- DNU goes to class initial lookup class - e.g. super, not starting at the object
 - other...

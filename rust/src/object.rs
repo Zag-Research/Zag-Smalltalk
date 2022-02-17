@@ -8,9 +8,9 @@ pub const classBlockClosure: ClassIndex = 1;
 pub const classFalse: ClassIndex = 2;
 pub const classTrue: ClassIndex = 3;
 pub const classUndefinedObject: ClassIndex = 4;
-pub const classSmallInteger: ClassIndex = 5;
-pub const classSymbol: ClassIndex = 6;
-pub const classCharacter: ClassIndex = 7;
+pub const classSymbol: ClassIndex = 5;
+pub const classCharacter: ClassIndex = 6;
+pub const classSmallInteger: ClassIndex = 7;
 pub const classFloat: ClassIndex = 8;
 pub const classArray: ClassIndex = 9;
 pub const classString: ClassIndex = 10;
@@ -28,18 +28,19 @@ pub const number_of_constant_classes: usize = 21;
 #[derive(Copy, Clone)]
 pub union Object {
     i: isize,
+    u: usize,
     f: f64,
 }
 static_assertions::assert_eq_size!(isize, f64);
 pub type StaticStr = &'static str;
-const NAN_VALUE: isize = 0x7FF8_0000_0000_0001;
+const NEG_INFINITY: usize = 0xFFF8_0000_0000_0000;
 macro_rules! literalfield {
-    (class = $e:expr) => {($e as usize)};
-    (value = $e:expr) => {($e)<<3};
+    (class = $e:expr) => {($e as usize<<49)};
+    (value = $e:expr) => {$e};
     (arity = $e:expr) => {($e)<<28};
 }
 macro_rules! literal {
-    ($($i:ident $( = $e:expr)?),+) => {Object{i:((NAN_VALUE as usize-1) $(| (literalfield!($i $( = $e)? )))+) as isize}}
+    ($($i:ident $( = $e:expr)?),+) => {Object{u:(NEG_INFINITY $(| (literalfield!($i $( = $e)? )))+)}}
 }
 pub const falseObject: Object = literal!(class=classFalse,value=3);
 pub const trueObject: Object = literal!(class=classTrue,value=5);

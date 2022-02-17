@@ -74,3 +74,10 @@ typedef objectT (*f2T)(objectT self,objectT other,objectT other2);
 typedef objectT (*f3T)(objectT self,objectT other,objectT other2,objectT other3);
 typedef struct {objectT key;f0T func;} matchT;
 typedef struct{long header;objectT name;objectT superclass;short size;short dispatchSize;matchT *matches;} classT;
+#define REF(name) {S_##name,(f0T)&M_##name}
+#define REF2(sym,func) {S_##sym,(f0T)&func}
+#define NILREF {nil,(f0T)0}
+#define CLASS_HEADER(name) ((((&C_##name-&C_Object)/sizeof(classT))<<8)+42)
+#define DISPATCH(name) sizeof(dispatch_##name)/sizeof(matchT)-1,dispatch_##name
+#define CLASS(name,super,size) classT C_##name={CLASS_HEADER(name),S_##name,from_object(&C_##super),size,DISPATCH(name)}
+#define METACLASS(name,super,size) classT C_M_##name={42,S_##name,from_object(&C_M_##super),size,DISPATCH(M_##name)}
