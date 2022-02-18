@@ -73,11 +73,13 @@ typedef objectT (*f1T)(objectT self,objectT other);
 typedef objectT (*f2T)(objectT self,objectT other,objectT other2);
 typedef objectT (*f3T)(objectT self,objectT other,objectT other2,objectT other3);
 typedef struct {objectT key;f0T func;} matchT;
-typedef struct{long header;objectT name;objectT superclass;short size;short dispatchSize;matchT *matches;} classT;
+typedef struct{long header;objectT name;objectT superclass;short size;objectT matches;} classT;
 #define REF(name) {S_##name,(f0T)&M_##name}
 #define REF2(sym,func) {S_##sym,(f0T)&func}
 #define NILREF {nil,(f0T)0}
-#define CLASS_HEADER(name) ((((&C_##name-&C_Object)/sizeof(classT))<<8)+42)
-#define DISPATCH(name) sizeof(dispatch_##name)/sizeof(matchT)-1,dispatch_##name
+#define HEADER(format,numSlots,hash,classIndex) ((((long)(numSlots))<<48)|((long)(format)<<40)|((hash)<<16)|(classIndex))
+#define DISPATCH_HEADER(name,size) {HEADER(15,size,S_##name&0xfffff,11+(S_##name&0xffff)),(f0T)from_object(&C_##name)}
+#define CLASS_HEADER(name) HEADER(10,4,S_##name&0xfffff,11+(S_Class&0xffff))
+#define DISPATCH(name) from_object(dispatch_##name)
 #define CLASS(name,super,size) classT C_##name={CLASS_HEADER(name),S_##name,from_object(&C_##super),size,DISPATCH(name)}
-#define METACLASS(name,super,size) classT C_M_##name={42,S_##name,from_object(&C_M_##super),size,DISPATCH(M_##name)}
+#define METACLASS(name,super,size) classT C_M_##name={CLASS_HEADER(name),S_##name,from_object(&C_M_##super),size,DISPATCH(M_##name)}
