@@ -38,3 +38,4 @@ rust/target
 PharoCandle
 bug
 c/eg*[0-9]
+zig/zig-cache/*
