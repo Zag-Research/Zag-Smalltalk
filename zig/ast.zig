@@ -39,13 +39,13 @@ pub const Object = switch (native_endian) {
         packed struct {
             signMantissa: u12,
             tag : Tag,
-            highHash: u29,
-            hash : i20,
+            highHash: u25,
+            hash : i24,
     },
     .Little =>
         packed struct {
-            hash : i20,
-            highHash: u29,
+            hash : i24,
+            highHash: u25,
             tag : Tag,
             signMantissa: u12,
     },
@@ -117,7 +117,7 @@ pub const returnE = enum {
     Normal,
     NonLocal
 };
-const methodT = fn(stack : [*]Object, heap : [*]Object) returnE;
+const methodT = fn(self : Object, stack : [*]Object, heap : [*]Object) returnE;
 test "thread 0 initialization" {
     thread = threadT.init();
 }

@@ -43,4 +43,6 @@
 - DNU goes to class initial lookup class - e.g. super, not starting at the object
 - if parameters and local values are classes 2-8 (False to Float) we don't need to keep them on the stack, because they won't be affected by garbage collection. If there are non-local-return blocks, then self will need to be maintained and values referenced by escaping blocks will have to reside in the closure as tagged values.
 - tagged address for objects (tag 0) mod 16777213 will give a good 24 bit hash value
+- when exiting a method, any block closure that has a non-local return should have its hash value set to 0. Then if any `value`, `value:`, etc. is sent, those methods in `BlockClosure` will be called (because the hash field didn't match) and they should all fail
+- convert all `<primitive: 42>` pragmas to a send to `primitive_42` with appropriate parameters and possibly an error block. Then they can be inlined specially, even for low-optimized compilers/tests
 - other...

@@ -4,6 +4,7 @@ const stdout = @import("std").io.getStdOut().writer();
 const Symbol = struct {
     usingnamespace @import("symbol.zig");
     const add = @This().symbol_of(42,0);
+    const add_ = @This().symbol_of(43,1);
 };
 const A = @import("ast.zig");
 const from = A.from;
@@ -16,6 +17,7 @@ test "import whole namespace" {
     try stdout.print("-inf, 0x{x}!\n", .{NEGATIVE_INF});
     try stdout.print("yourself, {}!\n", .{Symbol.yourself});
     try stdout.print("add, {}!\n", .{Symbol.add});
+    try stdout.print("add_, {}!\n", .{Symbol.add_});
     try stdout.print("3.14, {}!\n", .{from(3.14)});
     try stdout.print("1.0, {}!\n", .{from(1.0)});
     try stdout.print("2.0, {}!\n", .{from(2.0)});
