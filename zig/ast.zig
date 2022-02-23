@@ -2,9 +2,9 @@ const a = 1;
 pub const b = 2;
 pub const c = 3;
 pub const NEGATIVE_INF = 0xfff0000000000000;
-const False = 0xfff4000000010000;
-const True = 0xfff6000000100001;
-const Nil = 0xfff8100000000000;
+pub const False = @bitCast(Object,@as(u64,0xfff4000000100002));
+pub const True = @bitCast(Object,@as(u64,0xfff6000000100001));
+pub const Nil = @bitCast(Object,@as(u64,0xfff8000000000000));
 const INT_MINVAL = 0xfffe000000000000;
 const INT_ZERO =  0xffff000000000000;
 const INT_MAXVAL = 0xffffffffffffffff;
@@ -39,13 +39,13 @@ pub const Object = switch (native_endian) {
         packed struct {
             signMantissa: u12,
             tag : Tag,
-            highHash: u17,
-            hash : i32,
+            highHash: u29,
+            hash : i20,
     },
     .Little =>
         packed struct {
-            hash : i32,
-            highHash: u17,
+            hash : i20,
+            highHash: u29,
             tag : Tag,
             signMantissa: u12,
     },
@@ -64,6 +64,9 @@ pub fn from(value: anytype) Object {
             },
             .ComptimeFloat => {
                 return  @bitCast(Object,@as(f64,value));
+            },
+            .Bool => {
+                return if (value) True else False;
             },
 //            .Pointer => {
   //              return self.write(value);
@@ -117,6 +120,51 @@ pub const returnE = enum {
 const methodT = fn(stack : [*]Object, heap : [*]Object) returnE;
 test "thread 0 initialization" {
     thread = threadT.init();
+}
+const n_primes : usize = 20;
+fn gen_primes() [n_primes]u32 {
+    var p : [n_primes]u32 = undefined;
+    var possible : u32 = 7;
+    var previous : u32 = 0;
+    var i: usize = 0;
+    @setEvalBranchQuota(100000);
+    next:
+        while (true) : (possible += 2) {
+            var j: usize = 3;
+            while (j*j <= possible) : (j += 2) {
+                if (possible%j==0) continue :next;
+            }
+            if (possible < previous * 13 / 10) continue :next;
+            previous = possible;
+            p[i] =  possible;
+            i += 1;
+            if (i>=n_primes) return p;
+    }
+}
+const prime_values : [n_primes]u32 = gen_primes();
+pub fn next_prime_larger_than(n : u32) u32 {
+    var low : usize = 0;
+    var high : usize = n_primes-1;
+    while (low<=high) {
+        const mid = (low+high)/2;
+        if (mid==0) return prime_values[0];
+        if (prime_values[mid]>=n) {
+            if (prime_values[mid-1]<n) return prime_values[mid];
+            high=mid;
+        } else
+            low=mid+1;
+    }
+    return 11959;
+}
+test "primes" {
+    const expect = @import("std").testing.expect;
+    try expect(next_prime_larger_than(3)==7);
+    try expect(next_prime_larger_than(25)==29);
+    try expect(next_prime_larger_than(167)==167);
+    try expect(next_prime_larger_than(1889)==1889);
+    try expect(next_prime_larger_than(1890)==11959);
+//    const stdout = @import("std").io.getStdOut().writer();
+//    try stdout.print("primes: {any}\n",.{prime_values});
 }
 
 //#include <stdio.h>

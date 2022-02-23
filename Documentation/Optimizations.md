@@ -32,12 +32,15 @@
 	- arithmetic
 		1. adding untagged positive integers to a tagged integer treated as a signed integer will always stay in the range of SmallInteger unless the result is positive, in which case there has just been overflow
 		2. similarly subtracting  an untagged positive integer is in overflow if the result is less than (0xfffe000000000000) (treated as a u64)
-		3. and, or, xor, etc. with positive untagged integers will work correctly
+		3. `or`, `xor`, etc. with positive untagged integers will work correctly
+		4. `and` with *tagged* positive integers will work correctly
 	- conversion
 		1.  subtracting a tagged 0 (0xffff000000000000) will give an untagged 49-bit integer
 		2. adding an untagged 49-bit integer to a tagged 0 will give the correctly tagged SmallInteger
-		3. oring a tagged 0 with any value unsigned>= the false value will give a basicIdentityHash - doubles, heap objects and closures need other implementations
+		3. `or`ing a tagged 0 with any value unsigned>= the false value will give a basicIdentityHash - doubles, heap objects and closures need other implementations. In most cases doing a remainder with the whole u64 will work, and give a better hash. Actually, for any immediate value (class 2-8) taking a remainder of the whole u64 with a large prime (4294967291 is the largest 32-bit prime) should give an excellent hash. Doing a 64-bit multiply wouldn't work well for e.g. floating point or true/false/nil.
 - error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure
 - become: /elementsExchangeIdentityWith: need to preserve/swap hash values so that dictionaries continue to work correctly
 - DNU goes to class initial lookup class - e.g. super, not starting at the object
+- if parameters and local values are classes 2-8 (False to Float) we don't need to keep them on the stack, because they won't be affected by garbage collection. If there are non-local-return blocks, then self will need to be maintained and values referenced by escaping blocks will have to reside in the closure as tagged values.
+- tagged address for objects (tag 0) mod 16777213 will give a good 24 bit hash value
 - other...
