@@ -9,7 +9,7 @@ const INT_MINVAL = 0xfffe000000000000;
 const INT_ZERO =  0xffff000000000000;
 const INT_MAXVAL = 0xffffffffffffffff;
 const native_endian = @import("builtin").target.cpu.arch.endian();
-const Header = switch (native_endian) {
+pub const Header = switch (native_endian) {
     .Big => 
         packed struct {
             numSlots: u16,
@@ -33,25 +33,44 @@ test "Header structure" {
     try expect(asInt == 0x00110a0001230023);
 }
 
-pub const Tag = enum (u3) { Object, Closure, False, True, UndefinedObject, Symbol, Character, SmalltInteger};
-pub const Object = switch (native_endian) {
-    .Big => 
-        packed struct {
-            signMantissa: u12,
-            tag : Tag,
-            highHash: u25,
-            hash : i24,
-    },
-    .Little =>
-        packed struct {
-            hash : i24,
-            highHash: u25,
-            tag : Tag,
-            signMantissa: u12,
-    },
-};
-
-pub fn from(value: anytype) Object {
+const objectMethods = struct {
+    pub fn is_int(self : Object) callconv(.Inline) bool {
+        return @bitCast(u64,self)>=INT_MINVAL;
+    }
+    pub fn is_double(self : Object) callconv(.Inline) bool {
+        return @bitCast(u64,self)>=NEGATIVE_INF;
+    }
+    pub fn is_bool(self : Object) callconv(.Inline) bool {
+        if (self==True) return true;
+        return self==False;
+    }
+    pub fn is_heap(self : Object) callconv(.Inline) bool {
+        if (@bitCast(u64,self)<=NEGATIVE_INF) return false;
+        return @bitCast(u64,self)<@bitCast(u64,False);
+    }
+    pub fn as_int(self : Object) callconv(.Inline) i64 {
+        return @bitCast(i64,@bitCast(u64,self)-INT_ZERO);
+    }
+    pub fn as_double(self : Object) callconv(.Inline) f64 {
+        return @bitCast(f64,self);
+    }
+    pub fn as_bool(self : Object) callconv(.Inline) bool {
+        return @bitCast(u64,self)==@bitCast(u64,True);
+    }
+    pub fn as_char(self : Object) callconv(.Inline) u8 {
+        return @intCast(u8,self.hash&0xff);
+    }
+    pub fn as_string(self : Object) callconv(.Inline) *const [12:0]u8 {
+        //
+        // symbol handling broken
+        //
+        _ = self;
+        return "dummy string";
+    }
+    pub fn as_pointer(self : Object) callconv(.Inline) *Header {
+        return @intToPtr(*Header,@bitCast(usize,@bitCast(i64,self)<<12>>12));
+    }
+    pub fn from(value: anytype) callconv(.Inline) Object {
         switch (@typeInfo(@TypeOf(value))) {
             .Int => {
                 return @bitCast(Object,@bitCast(u64,value)+%INT_ZERO);
@@ -68,43 +87,77 @@ pub fn from(value: anytype) Object {
             .Bool => {
                 return if (value) True else False;
             },
-//            .Pointer => {
-  //              return self.write(value);
-    //        },
             else => {
-                @compileError("Unable to convert '" ++ @typeName(@TypeOf(value)) ++ "'");
+                return @bitCast(Object,@ptrToInt(value)+NEGATIVE_INF);
             },
+        }
     }
+    pub fn closure(self : Object) callconv(.Inline) Object {
+        return @bitCast(Object,@bitCast(u64,self)+(1<<49));
+    }
+    pub fn immediate_class(self : Object) callconv(.Inline) u64 {
+        if (@bitCast(u64,self)<=NEGATIVE_INF) return 8;
+        return (@bitCast(u64,self)>>49)&7;
+    }
+    pub fn get_class(self : Object) callconv(.Inline) u64 {
+        if (@bitCast(u64,self)<=NEGATIVE_INF) return 8;
+        const immediate = (@bitCast(u64,self)>>49)&7;
+        if (immediate>1) return immediate;
+        return self.as_pointer().*.get_class();
+    }
+    pub fn print(self : Object, writer : @import("std").fs.File.Writer) !void {
+        try switch (self.immediate_class()) {
+            0 => writer.print("object",.{}),//,as_pointer(self)),
+            1 => writer.print("closure",.{}),//,as_pointer(x));
+            2 => writer.print("false",.{}),
+            3 => writer.print("true",.{}),
+            4 => writer.print("nil",.{}),
+            5 => writer.print("{s}",.{self.as_string()}),
+            6 => writer.print("${c}",.{self.as_char()}),
+            7 => writer.print("{d}",.{self.as_int()}),
+            8 => writer.print("{}",.{self.as_double()}),
+            else => unreachable
+        };
+    }
+};
+test "printing" {
+    const stdout = @import("std").io.getStdOut().writer();
+//    try stdout.print("{}",.{@typeInfo(@TypeOf(stdout))});
+    try Object.from(42).print(stdout);
 }
+pub const Tag = enum (u3) { Object, Closure, False, True, UndefinedObject, Symbol, Character, SmallInteger};
+pub const Object = switch (native_endian) {
+    .Big => 
+        packed struct {
+            signMantissa: u12,
+            tag : Tag,
+            highHash: u25,
+            hash : i24,
+            usingnamespace objectMethods;
+    },
+    .Little =>
+        packed struct {
+            hash : i24,
+            highHash: u25,
+            tag : Tag,
+            signMantissa: u12,
+            usingnamespace objectMethods;
+    },
+};
+
 test "from conversion" {
     const expect = @import("std").testing.expect;
-    try expect(@bitCast(f64,from(3.14))==3.14);
-    try expect(@bitCast(u64,from(42))==INT_ZERO+%42);
-}
-pub fn is_int(x : Object) callconv(.Inline) bool {
-    return @bitCast(u64,x)>=INT_MINVAL;
-}
-pub fn is_double(x : Object) callconv(.Inline) bool {
-    return @bitCast(u64,x)>=NEGATIVE_INF;
-}
-pub fn is_bool(x : Object) callconv(.Inline) bool {
-    if (x==True) return true;
-    return x==False;
-}
-pub fn as_int(x : Object) callconv(.Inline) i64 {
-    return @bitCast(i64,@bitCast(u64,x)-INT_ZERO);
-}
-pub fn as_double(x : Object) callconv(.Inline) f64 {
-    return @bitCast(f64,x);
-}
-pub fn as_bool(x : Object) callconv(.Inline) bool {
-    return @bitCast(u64,x)==@bitCast(u64,True);
+    try expect(@bitCast(f64,Object.from(3.14))==3.14);
+    try expect(@bitCast(u64,Object.from(42))==INT_ZERO+%42);
 }
 test "as conversion" {
     const expect = @import("std").testing.expect;
-    try expect(as_double(from(3.14))==3.14);
-    try expect(as_int(from(42))==42);
-    try expect(as_bool(from(true))==true);
+    const x = Object.from(42);
+    try expect(Object.from(&x).is_heap());
+    try expect(Object.from(3.14).as_double()==3.14);
+    try expect(Object.from(42).as_int()==42);
+    try expect(Object.from(42).is_int());
+    try expect(Object.from(true).as_bool()==true);
 }
 //pub fn from_object(x : anytype) callconv(.Inline) Object {
   //  return 42;
@@ -191,46 +244,3 @@ test "primes" {
 // #define from_object(addr) ((((long)(void*)addr))+(0x7ff8l<<49))
 // #define from_closure(addr) ((((long)(void*)addr))+(0x7ff9l<<49))
 // #define from_char(c) ((objectT)(c))|(0x7ffel<<49)
-// #define as_pointer(x) (((long)(x))<<12>>12)
-// #define get_class(x) (((objectT)(x)>>49)>0x7ff8?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
-// #define short_class(x) (((objectT)(x))>NEGATIVE_INF?((int)((objectT)(x)>>49)&7):8)
-// static inline int get_class_7ff0(const objectT x) {
-//   long ptr = as_pointer(x);
-//   if (ptr==0) return 8;
-//   ptr = *((long *)ptr);
-//   if (ptr>0) return ptr&0xffff;
-//   __builtin_trap();
-// }
-// static char * printString(objectT x) {
-//   static char result[100];
-//   switch (short_class(x)) {
-//   case 0:
-//     snprintf(result,sizeof(result),"object 0x%lx",as_pointer(x));
-//     break;
-//   case 1:
-//     snprintf(result,sizeof(result),"closure 0x%lx",as_pointer(x));
-//     break;
-//   case 2:
-//     snprintf(result,sizeof(result),"false");
-//     break;
-//   case 3:
-//     snprintf(result,sizeof(result),"true");
-//     break;
-//   case 4:
-//     snprintf(result,sizeof(result),"nil");
-//     break;
-//   case 5:
-//     snprintf(result,sizeof(result),"#%s",symbol_table[x&0xfffff]);
-//     break;
-//   case 6:
-//     snprintf(result,sizeof(result),"$%c",(char)(x&0xffffff));
-//     break;
-//   case 7:
-//     snprintf(result,sizeof(result),"%ld",as_int(x));
-//     break;
-//   case 8:
-//     snprintf(result,sizeof(result),"%g",as_double(x));
-//     break;
-//   }
-//   return result;
-// }

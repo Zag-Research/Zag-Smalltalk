@@ -7,25 +7,29 @@ const Symbol = struct {
     const add_ = @This().symbol_of(43,1);
 };
 const A = @import("ast.zig");
-const from = A.from;
 const Object = A.Object;
 const returnE = A.returnE;
 const Nil = A.Nil;
 const NEGATIVE_INF = A.NEGATIVE_INF;
 
-test "import whole namespace" {
-    try stdout.print("-inf, 0x{x}!\n", .{NEGATIVE_INF});
-    try stdout.print("yourself, {}!\n", .{Symbol.yourself});
-    try stdout.print("add, {}!\n", .{Symbol.add});
-    try stdout.print("add_, {}!\n", .{Symbol.add_});
-    try stdout.print("3.14, {}!\n", .{from(3.14)});
-    try stdout.print("1.0, {}!\n", .{from(1.0)});
-    try stdout.print("2.0, {}!\n", .{from(2.0)});
-    try stdout.print("42, {}!\n", .{from(42)});
-    try stdout.print("-17, {}!\n", .{from(-17)});
-    try stdout.print("false, {}!\n", .{from(false)});
-    try stdout.print("true, {}!\n", .{from(true)});
-    try stdout.print("Nil, {}!\n", .{Nil});
+test "printing objects" {
+    const from = Object.from;
+    try stdout.print("-inf, 0x{x}\n", .{NEGATIVE_INF});
+    const x = A.Header{ .numSlots = 17, .format = 10, .hash=0x123, .classIndex = 35 };
+    try stdout.print("ptr, {}\n", .{from(&x)});
+    try stdout.print("ptr deref, {}\n", .{from(&x).as_pointer().*});
+    try stdout.print("ptr, {}\n", .{from(&Nil).closure()});
+    try stdout.print("yourself, {}\n", .{Symbol.yourself});
+    try stdout.print("add, {}\n", .{Symbol.add});
+    try stdout.print("add_, {}\n", .{Symbol.add_});
+    try stdout.print("3.14, {}\n", .{from(3.14)});
+    try stdout.print("1.0, {}\n", .{from(1.0)});
+    try stdout.print("2.0, {}\n", .{from(2.0)});
+    try stdout.print("42, {}\n", .{from(42)});
+    try stdout.print("-17, {}\n", .{from(-17)});
+    try stdout.print("false, {}\n", .{from(false)});
+    try stdout.print("true, {}\n", .{from(true)});
+    try stdout.print("Nil, {}\n", .{Nil});
 }
 
 fn test1(stack : [*]Object, heap : [*]Object) returnE {
@@ -39,6 +43,7 @@ test "run test1" {
 }
 
 test "hashes" {
+    const from = Object.from;
     const bigPrime : u64 = 16777213;//4294967291;
     const mod : u64 = 128;
     try stdout.print("42 {}\n",.{@bitCast(u64,from(42))%bigPrime%mod});
