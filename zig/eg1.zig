@@ -40,7 +40,7 @@ test "run test1" {
 
 test "hashes" {
     const bigPrime : u64 = 16777213;//4294967291;
-    const mod : u64 = 100;
+    const mod : u64 = 128;
     try stdout.print("42 {}\n",.{@bitCast(u64,from(42))%bigPrime%mod});
     try stdout.print("-17 {}\n",.{@bitCast(u64,from(-17))%bigPrime%mod});
     try stdout.print("3.14 {}\n",.{@bitCast(u64,from(3.14))%bigPrime%mod});
@@ -49,4 +49,5 @@ test "hashes" {
     try stdout.print("true {}\n",.{@bitCast(u64,from(true))%bigPrime%mod});
     try stdout.print("false {}\n",.{@bitCast(u64,from(false))%bigPrime%mod});
     try stdout.print("nil {}\n",.{@bitCast(u64,Nil)%bigPrime%mod});
+    try expect(@bitCast(u64,Nil)%bigPrime%mod != @bitCast(u64,from(false))%bigPrime%mod);
 }
