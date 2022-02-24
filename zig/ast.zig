@@ -81,12 +81,30 @@ test "from conversion" {
     try expect(@bitCast(f64,from(3.14))==3.14);
     try expect(@bitCast(u64,from(42))==INT_ZERO+%42);
 }
-
+pub fn is_int(x : Object) callconv(.Inline) bool {
+    return @bitCast(u64,x)>=INT_MINVAL;
+}
+pub fn is_double(x : Object) callconv(.Inline) bool {
+    return @bitCast(u64,x)>=NEGATIVE_INF;
+}
+pub fn is_bool(x : Object) callconv(.Inline) bool {
+    if (x==True) return true;
+    return x==False;
+}
 pub fn as_int(x : Object) callconv(.Inline) i64 {
     return @bitCast(i64,@bitCast(u64,x)-INT_ZERO);
 }
 pub fn as_double(x : Object) callconv(.Inline) f64 {
     return @bitCast(f64,x);
+}
+pub fn as_bool(x : Object) callconv(.Inline) bool {
+    return @bitCast(u64,x)==@bitCast(u64,True);
+}
+test "as conversion" {
+    const expect = @import("std").testing.expect;
+    try expect(as_double(from(3.14))==3.14);
+    try expect(as_int(from(42))==42);
+    try expect(as_bool(from(true))==true);
 }
 //pub fn from_object(x : anytype) callconv(.Inline) Object {
   //  return 42;
@@ -170,11 +188,6 @@ test "primes" {
     try expect(next_prime_larger_than(1890)==11959);
 }
 
-//#include <stdio.h>
-//#define print(t,v) printf("%-10s 0x%lx\n",t,v)
-
-// #define print(v) ({typeof (v) V = (v);printf("%-25s 0x%lx %d %s\n",#v,V,short_class(V),printString(V));})
-// typedef unsigned long objectT;
 // #define from_object(addr) ((((long)(void*)addr))+(0x7ff8l<<49))
 // #define from_closure(addr) ((((long)(void*)addr))+(0x7ff9l<<49))
 // #define from_char(c) ((objectT)(c))|(0x7ffel<<49)
@@ -221,18 +234,3 @@ test "primes" {
 //   }
 //   return result;
 // }
-// typedef objectT (*f0T)(objectT self);
-// typedef objectT (*f1T)(objectT self,objectT other);
-// typedef objectT (*f2T)(objectT self,objectT other,objectT other2);
-// typedef objectT (*f3T)(objectT self,objectT other,objectT other2,objectT other3);
-// typedef struct {objectT key;f0T func;} matchT;
-// typedef struct{long header;objectT name;objectT superclass;short size;objectT matches;} classT;
-// #define REF(name) {S_##name,(f0T)&M_##name}
-// #define REF2(sym,func) {S_##sym,(f0T)&func}
-// #define NILREF {nil,(f0T)0}
-// #define HEADER(format,numSlots,hash,classIndex) ((((long)(numSlots))<<48)|((long)(format)<<40)|((hash)<<16)|(classIndex))
-// #define DISPATCH_HEADER(name,size) {HEADER(15,size,S_##name&0xfffff,11+(S_##name&0xffff)),(f0T)from_object(&C_##name)}
-// #define CLASS_HEADER(name) HEADER(10,4,S_##name&0xfffff,11+(S_Class&0xffff))
-// #define DISPATCH(name) from_object(dispatch_##name)
-// #define CLASS(name,super,size) classT C_##name={CLASS_HEADER(name),S_##name,from_object(&C_##super),size,DISPATCH(name)}
-// #define METACLASS(name,super,size) classT C_M_##name={CLASS_HEADER(name),S_##name,from_object(&C_M_##super),size,DISPATCH(M_##name)}

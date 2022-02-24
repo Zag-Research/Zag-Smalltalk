@@ -38,12 +38,12 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.
 
 ### Literals
-All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
+All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
 Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
-0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like -inf.
+0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like -inf, but that is irrelevant as no heap object will have a 0 address.
 1. BlockClosure: These are the address of a heap closure object. By coding separately from other objects, we don't have to create a class entry for each closure. The hash field in the object header is the symbol index for `value`, `value:`, or whatever the value selector is for this particular block. So a simple match against the message selector works for value messages, and if it doesn't match, it does a dispatch against the BlockClosure class.
 2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 3. True: This only encodes the single value `true`
