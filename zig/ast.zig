@@ -60,7 +60,7 @@ const objectMethods = struct {
     pub fn as_char(self : Object) callconv(.Inline) u8 {
         return @intCast(u8,self.hash&0xff);
     }
-    pub fn as_string(self : Object) callconv(.Inline) *const [12:0]u8 {
+    pub fn as_string(self : Object) callconv(.Inline) [] const u8 {
         //
         // symbol handling broken
         //
@@ -105,6 +105,10 @@ const objectMethods = struct {
         if (immediate>1) return immediate;
         return self.as_pointer().*.get_class();
     }
+    pub fn println(self : Object, writer : @import("std").fs.File.Writer) !void {
+        try self.print(writer);
+        try writer.print("\n",.{});
+    }
     pub fn print(self : Object, writer : @import("std").fs.File.Writer) !void {
         try switch (self.immediate_class()) {
             0 => writer.print("object",.{}),//,as_pointer(self)),
@@ -122,8 +126,9 @@ const objectMethods = struct {
 };
 test "printing" {
     const stdout = @import("std").io.getStdOut().writer();
-//    try stdout.print("{}",.{@typeInfo(@TypeOf(stdout))});
-    try Object.from(42).print(stdout);
+    const symbol = @import("symbol.zig");
+    try Object.from(42).println(stdout);
+    try symbol.yourself.println(stdout);
 }
 pub const Tag = enum (u3) { Object, Closure, False, True, UndefinedObject, Symbol, Character, SmallInteger};
 pub const Object = switch (native_endian) {
