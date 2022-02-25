@@ -169,33 +169,54 @@ test "as conversion" {
 //}
 var next_thread_number : u64 = 0;
 const default_heap_size = 512;
-threadlocal var default_heap : [default_heap_size]Object = undefined;
-pub const threadT = packed struct {
+const Allocator = @import("std").mem.Allocator;
+pub const threadT = struct {
     id : u64,
     heap : [*]Object,
     stack: [*]Object,
-    start: [*]Object,
-    end:   [*]Object,
-    pub fn init() threadT {
+    allocated: []Object,
+    allocator: Allocator,
+    const Self = @This();
+    pub fn init(allocator: Allocator,size:usize) !threadT {
         defer next_thread_number += 1;
-        const end = @as([*]Object,&default_heap)+default_heap_size;
+        const allocated = allocator.alloc(Object,size) catch |err| return err;
         return threadT {
             .id = next_thread_number,
-            .stack = end,
-            .end = end,
-            .start = &default_heap,
-            .heap = &default_heap,
+            .stack = allocated.ptr+allocated.len,
+            .heap = allocated.ptr,
+            .allocated = allocated,
+            .allocator = allocator,
         };
     }
+    pub fn deinit(self : *Self) void {
+        self.allocator.free(self.allocated);
+        self.* = undefined;
+    }
 };
-pub threadlocal var thread : threadT = undefined;
 pub const returnE = enum {
     Normal,
-    NonLocal
+    NonLocal,
+    PrimitiveFailed,
 };
-const methodT = fn(self : Object, stack : [*]Object, heap : [*]Object) returnE;
+const methodT = fn(thread : threadT, self : Object, stack : [*]Object, heap : [*]Object) returnE;
+fn thread0test(allocator:Allocator) !void {
+    var thread = threadT.init(allocator,default_heap_size) catch |err| return err;
+    defer thread.deinit();
+}
 test "thread 0 initialization" {
-    thread = threadT.init();
+    try withAllocator(thread0test);
+}
+pub fn withAllocator(f : anytype) !void {
+    var gpa = @import("std").heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer {
+        const leaked = gpa.deinit();
+        if (leaked) @panic("Allocation leakage");
+    }
+    //    const allocator = @import("std").heap.page_allocator;
+    try f(allocator);
+}
+pub fn main() void {
 }
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
