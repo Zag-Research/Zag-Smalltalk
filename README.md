@@ -1,5 +1,5 @@
 # AST-Smalltalk
-Smalltalk VM Written in Rust with methods stored as type-annotated ASTs
+Smalltalk VM Written in Rust/Zig with methods stored as type-annotated ASTs
 
 Eventually it wiil include a JIT compiler
 
