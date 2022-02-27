@@ -25,9 +25,8 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF0-F    | xxxx | xxxx | xxxt | tagged literals |
-| FFF0/1      | xxxx | xxxx | xxxx | heap object |
-| FFF2/3      | xxxx | xxxx | xxxx | block closure |
+| FFF2-F    | xxxx | xxxx | xxxt | tagged literals |
+| FFF2/3      | xxxx | xxxx | xxxx | heap object |
 | FFF4      | 0000 | 0001 | 0000 | False |
 | FFF6      | 0000 | 0010 | 0001 | True |
 | FFF8      | 1000 | 0000 | 0000 | UndefinedObject |
@@ -40,11 +39,10 @@ So, interpreted as a u64, any value that is less than or equal to -inf is a doub
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 3 bits and the hash code is 49 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes. (If another class looked worth it, one or more of `nil`, `true`, or `false`, could be special heap-objects, but the current code is cleaner.)
 
 #### Tag values
-0. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures. Note that the address can't be 0, or it would look like -inf, but that is irrelevant as no heap object will have a 0 address.
-1. BlockClosure: These are the address of a heap closure object. By coding separately from other objects, we don't have to create a class entry for each closure. The hash field in the object header is the symbol index for `value`, `value:`, or whatever the value selector is for this particular block. So a simple match against the message selector works for value messages, and if it doesn't match, it does a dispatch against the BlockClosure class.
+1. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures.
 2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 3. True: This only encodes the single value `true`
 4. UndefinedObject: This encodes the value `nil` with all zero hash code.
@@ -67,7 +65,7 @@ First we have the object format tag. Only the following values currently have me
 - 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 - 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
 - 14: non-indexable objects with inst vars - no pointers (Point et al)
-- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 11 if a closure or other heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
+- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 11 if a heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
 - 16: indexable objects with inst vars - no pointers
 - 17: 64-bit indexable - non-pointers (DoubleWordArray,DoubleArray,)
 - 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
@@ -101,7 +99,7 @@ For formats >= 17, if the length field=32767, the header word is followed by a w
 
 If the format=12,13,16, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
 
-For BlockClosure, the high 4 bits of the identityHash is the number of parameters for the block.
+For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code.
 
 #### Examples `need update`
 

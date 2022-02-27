@@ -195,8 +195,12 @@ pub const threadT = struct {
 };
 pub const returnE = enum {
     Normal,
-    NonLocal,
     PrimitiveFailed,
+    NonLocal,
+    ExceptionSignaled,
+    pub fn nonLocal(self : returnE) bool {
+        return self>=returnE.NonLocal;
+    }
 };
 const methodT = fn(thread : threadT, self : Object, stack : [*]Object, heap : [*]Object) returnE;
 fn thread0test(allocator:Allocator) !void {
