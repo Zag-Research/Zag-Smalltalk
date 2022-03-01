@@ -1,13 +1,12 @@
-const a = 1;
-pub const b = 2;
-pub const c = 3;
-pub const NEGATIVE_INF = 0xfff0000000000000;
+pub const Start_of_Literals = 0xfff2000000000000;
 pub const False = @bitCast(Object,@as(u64,0xfff4000000000000));
-pub const True = @bitCast(Object,@as(u64,0xfff6000001000001));
+pub const True = @bitCast(Object,@as(u64,0xfff6000000000001));
 pub const Nil = @bitCast(Object,@as(u64,0xfff8000000000000));
-const INT_MINVAL = 0xfffe000000000000;
-const INT_ZERO =  0xffff000000000000;
-const INT_MAXVAL = 0xffffffffffffffff;
+const u64_MINVAL = 0xfffe000000000000;
+const u64_ZERO =  0xffff000000000000;
+pub const Object_MINVAL = @bitCast(Object,@as(u64,u64_MINVAL));
+pub const Object_INT_ZERO = @bitCast(Object,@as(u64,u64_ZERO));
+pub const Object_MAXVAL = @bitCast(Object,@as(u64,0xffffffffffffffff));
 const native_endian = @import("builtin").target.cpu.arch.endian();
 pub const Header = switch (native_endian) {
     .Big => 
@@ -35,21 +34,21 @@ test "Header structure" {
 
 const objectMethods = struct {
     pub fn is_int(self : Object) callconv(.Inline) bool {
-        return @bitCast(u64,self)>=INT_MINVAL;
+        return @bitCast(u64,self)>=u64_MINVAL;
     }
     pub fn is_double(self : Object) callconv(.Inline) bool {
-        return @bitCast(u64,self)>=NEGATIVE_INF;
+        return @bitCast(u64,self)>=Start_of_Literals;
     }
     pub fn is_bool(self : Object) callconv(.Inline) bool {
         if (self==True) return true;
         return self==False;
     }
     pub fn is_heap(self : Object) callconv(.Inline) bool {
-        if (@bitCast(u64,self)<=NEGATIVE_INF) return false;
+        if (@bitCast(u64,self)<=Start_of_Literals) return false;
         return @bitCast(u64,self)<@bitCast(u64,False);
     }
     pub fn as_int(self : Object) callconv(.Inline) i64 {
-        return @bitCast(i64,@bitCast(u64,self)-INT_ZERO);
+        return @bitCast(i64,@bitCast(u64,self)-u64_ZERO);
     }
     pub fn as_double(self : Object) callconv(.Inline) f64 {
         return @bitCast(f64,self);
@@ -73,10 +72,10 @@ const objectMethods = struct {
     pub fn from(value: anytype) callconv(.Inline) Object {
         switch (@typeInfo(@TypeOf(value))) {
             .Int => {
-                return @bitCast(Object,@bitCast(u64,value)+%INT_ZERO);
+                return @bitCast(Object,@bitCast(u64,value)+%u64_ZERO);
             },
             .ComptimeInt => {
-                return @bitCast(Object,@bitCast(u64,@as(i64,value))+%INT_ZERO);
+                return @bitCast(Object,@bitCast(u64,@as(i64,value))+%u64_ZERO);
             },
             .Float => {
                 return  @bitCast(Object,value);
@@ -88,19 +87,19 @@ const objectMethods = struct {
                 return if (value) True else False;
             },
             else => {
-                return @bitCast(Object,@ptrToInt(value)+NEGATIVE_INF);
+                return @bitCast(Object,@ptrToInt(value)+Start_of_Literals);
             },
         }
     }
-    pub fn closure(self : Object) callconv(.Inline) Object {
-        return @bitCast(Object,@bitCast(u64,self)+(1<<49));
+    pub fn fullHash(self : Object) callconv(.Inline) u64 {
+        return @bitCast(u64,self)%16777213;
     }
     pub fn immediate_class(self : Object) callconv(.Inline) u64 {
-        if (@bitCast(u64,self)<=NEGATIVE_INF) return 8;
+        if (@bitCast(u64,self)<=Start_of_Literals) return 8;
         return (@bitCast(u64,self)>>49)&7;
     }
     pub fn get_class(self : Object) callconv(.Inline) u64 {
-        if (@bitCast(u64,self)<=NEGATIVE_INF) return 8;
+        if (@bitCast(u64,self)<=Start_of_Literals) return 8;
         const immediate = (@bitCast(u64,self)>>49)&7;
         if (immediate>1) return immediate;
         return self.as_pointer().*.get_class();
@@ -130,7 +129,7 @@ test "printing" {
     try Object.from(42).println(stdout);
     try symbol.yourself.println(stdout);
 }
-pub const Tag = enum (u3) { Object, Closure, False, True, UndefinedObject, Symbol, Character, SmallInteger};
+pub const Tag = enum (u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger};
 pub const Object = switch (native_endian) {
     .Big => 
         packed struct {
@@ -153,7 +152,7 @@ pub const Object = switch (native_endian) {
 test "from conversion" {
     const expect = @import("std").testing.expect;
     try expect(@bitCast(f64,Object.from(3.14))==3.14);
-    try expect(@bitCast(u64,Object.from(42))==INT_ZERO+%42);
+    try expect(@bitCast(u64,Object.from(42))==u64_ZERO+%42);
 }
 test "as conversion" {
     const expect = @import("std").testing.expect;
@@ -167,110 +166,3 @@ test "as conversion" {
 //pub fn from_object(x : anytype) callconv(.Inline) Object {
   //  return 42;
 //}
-var next_thread_number : u64 = 0;
-const default_heap_size = 512;
-const Allocator = @import("std").mem.Allocator;
-pub const threadT = struct {
-    id : u64,
-    heap : [*]Object,
-    stack: [*]Object,
-    allocated: []Object,
-    allocator: Allocator,
-    const Self = @This();
-    pub fn init(allocator: Allocator,size:usize) !threadT {
-        defer next_thread_number += 1;
-        const allocated = allocator.alloc(Object,size) catch |err| return err;
-        return threadT {
-            .id = next_thread_number,
-            .stack = allocated.ptr+allocated.len,
-            .heap = allocated.ptr,
-            .allocated = allocated,
-            .allocator = allocator,
-        };
-    }
-    pub fn deinit(self : *Self) void {
-        self.allocator.free(self.allocated);
-        self.* = undefined;
-    }
-};
-pub const returnE = enum {
-    Normal,
-    PrimitiveFailed,
-    NonLocal,
-    ExceptionSignaled,
-    pub fn nonLocal(self : returnE) bool {
-        return self>=returnE.NonLocal;
-    }
-};
-const methodT = fn(thread : threadT, self : Object, stack : [*]Object, heap : [*]Object) returnE;
-fn thread0test(allocator:Allocator) !void {
-    var thread = threadT.init(allocator,default_heap_size) catch |err| return err;
-    defer thread.deinit();
-}
-test "thread 0 initialization" {
-    try withAllocator(thread0test);
-}
-pub fn withAllocator(f : anytype) !void {
-    var gpa = @import("std").heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const leaked = gpa.deinit();
-        if (leaked) @panic("Allocation leakage");
-    }
-    //    const allocator = @import("std").heap.page_allocator;
-    try f(allocator);
-}
-pub fn main() void {
-}
-fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
-    var p : [n_primes]T = undefined;
-    var possible : T = 7;
-    var previous : T = 0;
-    var i: usize = 0;
-    if (n_primes>13) @setEvalBranchQuota(100000);
-    next:
-        while (true) : (possible += 2) {
-            var j: usize = 3;
-            while (j*j <= possible) : (j += 2) {
-                if (possible%j==0) continue :next;
-            }
-            if (possible < previous * 13 / 10) continue :next;
-            previous = possible;
-            p[i] =  possible;
-            i += 1;
-            if (i>=n_primes) return p;
-    }
-}
-const prime_values = gen_primes(u32,13);
-pub fn next_prime_larger_than(n : u32) u32 {
-    var low : usize = 0;
-    var high : usize = prime_values.len-1;
-    while (low<=high) {
-        const mid = (low+high)/2;
-        if (mid==0) return prime_values[0];
-        if (prime_values[mid]>=n) {
-            if (prime_values[mid-1]<n) return prime_values[mid];
-            high=mid;
-        } else
-            low=mid+1;
-    }
-    return 11959;
-}
-test "primes" {
-//    const stdout = @import("std").io.getStdOut().writer();
-//    try stdout.print("primes: {any}\n",.{prime_values});
-    const expect = @import("std").testing.expect;
-    try expect(next_prime_larger_than(3)==7);
-    try expect(next_prime_larger_than(24)==29);
-    try expect(next_prime_larger_than(167)==167);
-    try expect(next_prime_larger_than(224)==293);
-    if (prime_values.len<20) {
-        try expect(next_prime_larger_than(294)==11959);
-    } else
-        try expect(next_prime_larger_than(1889)==1889);
-    try expect(next_prime_larger_than(1890)==11959);
-}
-
-// #define from_object(addr) ((((long)(void*)addr))+(0x7ff8l<<49))
-// #define from_closure(addr) ((((long)(void*)addr))+(0x7ff9l<<49))
-// #define from_char(c) ((objectT)(c))|(0x7ffel<<49)

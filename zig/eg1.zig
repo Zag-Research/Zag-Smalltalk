@@ -6,30 +6,31 @@ const Symbol = struct {
     const add = @This().symbol_of(42,0);
     const add_ = @This().symbol_of(43,1);
 };
-const A = @import("ast.zig");
-const Object = A.Object;
-const returnE = A.returnE;
-const Nil = A.Nil;
-const NEGATIVE_INF = A.NEGATIVE_INF;
+const O = @import("object.zig");
+const Nil = O.Nil;
+const Object = O.Object;
+const Dispatch = @import("dispatch.zig");
+const returnE = Dispatch.returnE;
+const Thread = @import("thread.zig");
+const NEGATIVE_INF = @as(u64,0xfff0000000000000);
 
 test "printing objects" {
     const from = Object.from;
-    try stdout.print("-inf, 0x{x}\n", .{NEGATIVE_INF});
-    const x = A.Header{ .numSlots = 17, .format = 10, .hash=0x123, .classIndex = 35 };
-    try stdout.print("ptr, {}\n", .{from(&x)});
-    try stdout.print("ptr deref, {}\n", .{from(&x).as_pointer().*});
-    try stdout.print("ptr, {}\n", .{from(&Nil).closure()});
-    try stdout.print("yourself, {}\n", .{Symbol.yourself});
-    try stdout.print("add, {}\n", .{Symbol.add});
-    try stdout.print("add_, {}\n", .{Symbol.add_});
-    try stdout.print("3.14, {}\n", .{from(3.14)});
-    try stdout.print("1.0, {}\n", .{from(1.0)});
-    try stdout.print("2.0, {}\n", .{from(2.0)});
-    try stdout.print("42, {}\n", .{from(42)});
-    try stdout.print("-17, {}\n", .{from(-17)});
-    try stdout.print("false, {}\n", .{from(false)});
-    try stdout.print("true, {}\n", .{from(true)});
-    try stdout.print("Nil, {}\n", .{Nil});
+    try stdout.print("-inf, 0x{x} {}\n", .{NEGATIVE_INF,@bitCast(f64,NEGATIVE_INF)});
+    const x = O.Header{ .numSlots = 17, .format = 10, .hash=0x123, .classIndex = 35 };
+    try stdout.print("ptr, {} {}\n", .{from(&x),from(&x).fullHash()});
+//    try stdout.print("ptr deref, {}\n", .{from(&x).as_pointer().*});
+    try stdout.print("yourself, {} {}\n", .{Symbol.yourself,Symbol.yourself.fullHash()});
+    try stdout.print("add, {} {}\n", .{Symbol.add,Symbol.add.fullHash()});
+    try stdout.print("add_, {} {}\n", .{Symbol.add_,Symbol.add_.fullHash()});
+    try stdout.print("3.14, {} {}\n", .{@bitCast(f64,from(3.14)),from(3.14).fullHash()});
+    try stdout.print("1.0, {} {}\n", .{@bitCast(f64,from(1.0)),from(1.0).fullHash()});
+    try stdout.print("2.0, {} {}\n", .{@bitCast(f64,from(2.0)),from(2.0).fullHash()});
+    try stdout.print("42, {} {}\n", .{from(42),from(42).fullHash()});
+    try stdout.print("-17, {} {}\n", .{from(-17),from(-17).fullHash()});
+    try stdout.print("false, {} {}\n", .{from(false),from(false).fullHash()});
+    try stdout.print("true, {} {}\n", .{from(true),from(true).fullHash()});
+    try stdout.print("Nil, {} {}\n", .{Nil,Nil.fullHash()});
 }
 
 fn test1(stack : [*]Object, heap : [*]Object) returnE {
@@ -37,10 +38,10 @@ fn test1(stack : [*]Object, heap : [*]Object) returnE {
     return .Normal;
 }
 
-test "run test1" {
-    A.thread = A.threadT.init();
-    try expect(test1(A.thread.stack,A.thread.heap)==.Normal);
-}
+//test "run test1" {
+//    var thread = Thread.Thread.init();
+//    try expect(test1(thread.stack,thread.heap)==.Normal);
+//}
 
 test "hashes" {
     const from = Object.from;

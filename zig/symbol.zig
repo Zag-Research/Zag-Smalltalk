@@ -1,4 +1,4 @@
-const ObjectT = @import("ast.zig").Object;
+const ObjectT = @import("object.zig").Object;
 pub fn symbol_of(comptime index: u64,comptime arity: u64) callconv(.Inline) ObjectT {
     return @bitCast(ObjectT,index|(arity<<24)|(0x7ffd<<49));
 }
