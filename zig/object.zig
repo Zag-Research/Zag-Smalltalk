@@ -166,3 +166,12 @@ test "as conversion" {
 //pub fn from_object(x : anytype) callconv(.Inline) Object {
   //  return 42;
 //}
+const HeapObject = packed struct {
+    header: Header,
+    objects: [0]Object,
+};
+
+test "sizeof" {
+    const expect = @import("std").testing.expect;
+    try expect(@sizeOf(HeapObject) == 8);
+}

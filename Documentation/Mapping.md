@@ -59,45 +59,56 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-First we have the object format tag. Only the following values currently have meaning:
-- 10: non-indexable objects with inst vars (Association et al) 
-- 11: indexable <32k objects with no inst vars
-- 12: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 13: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
-- 14: non-indexable objects with inst vars - no pointers (Point et al)
-- 15: indexable <32k objects with no inst vars - no pointers. Arrays are initially created as format 15 but change to format 11 if a heap reference is stored. During garbage collection, if no reference is found during the scan, it reverts to format 15
-- 16: indexable objects with inst vars - no pointers
+First we have the object format tag. The bits code the following:
+- bit 0: = 1 means the object contains instance variables
+- bit 1: = 2 means the object is indexable
+- bit 2: = 4 means the pointers in the object are weak references
+- bit 3: = 8 means none of the objects are pointers (i.e. they are all literals)
+- bit 4: = 16 means none of values in the object are objects and the low 4 bits encode the length of the values
+
+Therefore, only the following values currently have meaning:
+- 1: non-indexable objects with inst vars (Association et al) 
+- 2: indexable <32k objects with no inst vars
+- 3: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+- 7: weak indexable objects with inst vars (WeakArray et al) also (Ephemeron)
+- 9: non-indexable objects with inst vars - no pointers (Point et al)
+- 10: indexable <32k objects with no inst vars - no pointer (Array et al)
+- 11: indexable objects with inst vars - no pointers
 - 17: 64-bit indexable - non-pointers (DoubleWordArray,DoubleArray,)
-- 18-19: 32-bit indexable - low bit encodes unused bytes at end (WordArray, IntegerArray, FloatArray, WideString)
-- 20-23: 16-bit indexable - low 2 bits encode unused bytes at end (DoubleByteArray)
+- 18-19: 32-bit indexable - low bit encodes unused half-words at end (WordArray, IntegerArray, FloatArray, WideString)
+- 20-23: 16-bit indexable - low 2 bits encode unused quarter-words at end (DoubleByteArray)
 - 24-31: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
 
-Everything >= 14 has no pointers, so GC doesn't look at them. Things are initially created as their pointer-free version (16,15,14), but change to their pointer-containing version (12,11,10) if a pointer is stored in them. If major GC doesn't detect any pointers, they revert to pointer-free version.
+Everything >= 8 has no pointers, so GC doesn't look at them. Things are initially created as their pointer-free version (9,10,11), but change to their pointer-containing version (1,2,3) if a pointer is stored in them. During garbage collection, if no reference is found during the scan, they revert to the pointer-free version (i.e. bit 3 is set).
 
-For 10, 11, 14, 15, the size is determined by the length field. The only difference between 10 and 11 is whether `at:`, `size`, etc. should work or give an error. Similarly 14 and 15.
+For 1, 2, 9, 10, the size is determined by the length field. The only difference between 1 and 2 is whether `at:`, `size`, etc. should work or give an error. Similarly 9 and 10.
 
-For 12, 13, 16 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows.
+For 3, 7, 11 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows. Weak objects are rare enough that we don't bother to handle cases with no instance variables or no indexable values separately.
 
-For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format. Also the objects are initialized with zeros, rather than the `nil` for all <= 16.
+For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format. Also the objects are initialized with zeros, rather than the `nil` for all < 16.
 
-This is the first field in the header-word for an object:
+This is the header-word for an object:
 
 | Bits | What         | Characteristics                                              |
 | ---- | ------------ | ------------------------------------------------------------ |
 | 1    | isForward    | if set, negation of long-word is address of forwarded object |
-| 15   | numSlots     | number of long-words beyond the header                       |
-| 1    | isImmutable  |                                                              |
-| 1    | unused       |                                                              |
-| 1    | unused       |                                                              |
-| 5    | format       | (see above)                                                  |
+| 15   | length     | number of long-words beyond the header                       |
+| 1    | unused       | \                                                           |
+| 1    | unused       |  !                                                            |
+| 1    | isImmutable  |  !                                                           |
+| 1    | (part of type)       |  !                                                            |
+| 1    | isRawData    |  + format(see above)                                                  |
+| 1    | isWeak       |  !                                                            |
+| 1    | isIndexable  |  !                                                           |
+| 1    | hasInstVars  | /                                                           |
 | 24   | identityHash |                                                              |
 | 16   | classIndex   | LSB                                                          |
 
-Unless format=12,13,16, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
+Unless format=3,7,11, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
 
 For formats >= 17, if the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-If the format=12,13,16, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
+If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code.
 

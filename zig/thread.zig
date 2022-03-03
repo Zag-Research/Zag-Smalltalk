@@ -2,26 +2,20 @@ var next_thread_number : u64 = 0;
 const default_heap_size = 512;
 const Allocator = @import("std").mem.Allocator;
 const Object = @import("object.zig").Object;
+const Memory = @import("memory.zig").Object;
 pub const Thread = struct {
     id : u64,
-    heap : [*]Object,
-    stack: [*]Object,
-    allocated: []Object,
-    allocator: Allocator,
+    heap : Memory.Heap,
     const Self = @This();
-    pub fn init(allocator: Allocator,size:usize) !Thread {
+    pub fn init(allocator: Allocator,size:usize) !Self {
         defer next_thread_number += 1;
-        const allocated = allocator.alloc(Object,size) catch |err| return err;
-        return Thread {
+        return Self {
             .id = next_thread_number,
-            .stack = allocated.ptr+allocated.len,
-            .heap = allocated.ptr,
-            .allocated = allocated,
-            .allocator = allocator,
+            .heap = Memory.Heap.init(allocator,size),
         };
     }
     pub fn deinit(self : *Self) void {
-        self.allocator.free(self.allocated);
+        self.heap.deinit();
         self.* = undefined;
     }
 };
