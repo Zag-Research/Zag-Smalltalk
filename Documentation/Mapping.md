@@ -96,8 +96,8 @@ This is the header-word for an object:
 | 1    | unused       | \                                                           |
 | 1    | unused       |  !                                                            |
 | 1    | isImmutable  |  !                                                           |
-| 1    | (part of type)       |  !                                                            |
-| 1    | isRawData    |  + format(see above)                                                  |
+| 1    | isRawData       |  !                                                            |
+| 1    | isPointerFree    |  + format(see above)                                                  |
 | 1    | isWeak       |  !                                                            |
 | 1    | isIndexable  |  !                                                           |
 | 1    | hasInstVars  | /                                                           |

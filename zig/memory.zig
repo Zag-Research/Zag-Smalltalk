@@ -20,7 +20,7 @@ const Heap = struct {
         self.allocator.free(self.allocated);
         self.* = undefined;
     }
-    pub alloc(self : *Self, class : Class.ClassIndex) !Object {
+    pub fn alloc(self : *Self, class : Class.ClassIndex, format: Format, iv_size : usize, array_size : usize, fill: anytype) !Object {
     }
 };
 test "fixed buffer allocator" {
