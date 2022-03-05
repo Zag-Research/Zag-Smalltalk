@@ -59,7 +59,7 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-First we have the object format tag. The bits code the following:
+First we have the object format tag. The low 5 bits code the following:
 - bit 0: = 1 means the object contains instance variables
 - bit 1: = 2 means the object is indexable
 - bit 2: = 4 means the pointers in the object are weak references
@@ -92,12 +92,12 @@ This is the header-word for an object:
 | Bits | What         | Characteristics                                              |
 | ---- | ------------ | ------------------------------------------------------------ |
 | 1    | isForward    | if set, negation of long-word is address of forwarded object |
-| 15   | length     | number of long-words beyond the header                       |
+| 15   | length       | number of long-words beyond the header                       |
 | 1    | unused       | \                                                           |
-| 1    | unused       |  !                                                            |
+| 1    | isGlobal     |  !                                                            |
 | 1    | isImmutable  |  !                                                           |
-| 1    | isRawData       |  !                                                            |
-| 1    | isPointerFree    |  + format(see above)                                                  |
+| 1    | isRawData    |  !                                                            |
+| 1    | isPointerFree|  + format(see above)                                                  |
 | 1    | isWeak       |  !                                                            |
 | 1    | isIndexable  |  !                                                           |
 | 1    | hasInstVars  | /                                                           |
@@ -108,7 +108,12 @@ Unless format=3,7,11, there aren't **both** indexable elements and instance vari
 
 For formats >= 17, if the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements.
+If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 32766 indexable elements.
+
+The remaining format bits encode:
+- bit 5: = 32 means that the object is immutable, so any assignments will signal an exception
+- bit 6: = 64 means that the object is in a global heap. If a value is being assigned that is a heap object but is not global, that value will have to be promoted to the global heap first because otherwise other threads could not access it. Note that this doesn't differentiate between nursery and young generations, so copying from nursery to young generations will have to start the scan at the beginning of the young generation - rather than the current end of heap as would be used for other promotion copies.
+- bit 7: - 128 is currently unused
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code.
 

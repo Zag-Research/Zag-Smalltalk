@@ -24,17 +24,17 @@ const objectMethods = struct {
         if (@bitCast(u64, self) <= Start_of_Literals) return false;
         return @bitCast(u64, self) < @bitCast(u64, False);
     }
-    pub inline fn as_int(self: Object) i64 {
-        return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);
-    }
-    pub inline fn as_double(self: Object) f64 {
-        return @bitCast(f64, self);
-    }
-    pub inline fn as_bool(self: Object) bool {
-        return @bitCast(u64, self) == @bitCast(u64, True);
-    }
-    pub inline fn as_char(self: Object) u8 {
-        return @intCast(u8, self.hash & 0xff);
+    const HeapPointer = *@import("heap.zig").HeapObject;
+    pub inline fn to(self: Object, comptime T:type) T {
+        switch (T) {
+            .i64 => {if (self.is_int())return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
+            .f64 => {return @bitCast(f64, self);},
+            .bool=> {return @bitCast(u64, self) == @bitCast(u64, True);},
+            .u8  => {return @intCast(u8, self.hash & 0xff);},
+            .HeapPointer => {return @intToPtr(HeapPointer, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
+            else => {},
+        }
+        return error.Conversion;
     }
     pub inline fn as_string(self: Object) []const u8 {
         //
@@ -42,9 +42,6 @@ const objectMethods = struct {
         //
         _ = self;
         return "dummy string";
-    }
-    pub inline fn as_pointer(self: Object) *Header {
-        return @intToPtr(*Header, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));
     }
     pub inline fn from(value: anytype) Object {
         switch (@typeInfo(@TypeOf(value))) {
@@ -93,9 +90,9 @@ const objectMethods = struct {
             3 => writer.print("true", .{}),
             4 => writer.print("nil", .{}),
             5 => writer.print("{s}", .{self.as_string()}),
-            6 => writer.print("${c}", .{self.as_char()}),
-            7 => writer.print("{d}", .{self.as_int()}),
-            8 => writer.print("{}", .{self.as_double()}),
+            6 => writer.print("${c}", .{self.to(u8)}),
+            7 => writer.print("{d}", .{self.to(i64)}),
+            8 => writer.print("{}", .{self.to(f64)}),
             else => unreachable,
         };
     }
@@ -133,8 +130,8 @@ test "as conversion" {
     const expect = @import("std").testing.expect;
     const x = Object.from(42);
     try expect(Object.from(&x).is_heap());
-    try expect(Object.from(3.14).as_double() == 3.14);
-    try expect(Object.from(42).as_int() == 42);
+    try expect(Object.from(3.14).to(f64) == 3.14);
+    try expect(Object.from(42).to(i64) == 42);
     try expect(Object.from(42).is_int());
-    try expect(Object.from(true).as_bool() == true);
+    try expect(Object.from(true).to(bool) == true);
 }
