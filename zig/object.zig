@@ -14,27 +14,26 @@ const objectMethods = struct {
         return @bitCast(u64, self) >= u64_MINVAL;
     }
     pub inline fn is_double(self: Object) bool {
-        return @bitCast(u64, self) >= Start_of_Literals;
+        return @bitCast(u64, self) < Start_of_Literals;
     }
     pub inline fn is_bool(self: Object) bool {
-        if (self == True) return true;
-        return self == False;
+        return @bitCast(u64,self) >= @bitCast(u64,False) and @bitCast(u64,self) < @bitCast(u64,Nil);
     }
     pub inline fn is_heap(self: Object) bool {
-        if (@bitCast(u64, self) <= Start_of_Literals) return false;
+        if (@bitCast(u64, self) < Start_of_Literals) return false;
         return @bitCast(u64, self) < @bitCast(u64, False);
     }
     const HeapPointer = *@import("heap.zig").HeapObject;
     pub inline fn to(self: Object, comptime T:type) T {
         switch (T) {
-            .i64 => {if (self.is_int())return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
-            .f64 => {return @bitCast(f64, self);},
-            .bool=> {return @bitCast(u64, self) == @bitCast(u64, True);},
-            .u8  => {return @intCast(u8, self.hash & 0xff);},
-            .HeapPointer => {return @intToPtr(HeapPointer, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
+            i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
+            f64 => {if (self.is_double()) return @bitCast(f64, self);},
+            bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
+            //u8  => {return @intCast(u8, self.hash & 0xff);},
+            HeapPointer => {if (self.is_heap()) return @intToPtr(HeapPointer, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
             else => {},
         }
-        return error.Conversion;
+        unreachable;
     }
     pub inline fn as_string(self: Object) []const u8 {
         //
@@ -126,12 +125,12 @@ test "from conversion" {
     try expect(@bitCast(f64, Object.from(3.14)) == 3.14);
     try expect(@bitCast(u64, Object.from(42)) == u64_ZERO +% 42);
 }
-test "as conversion" {
-    const expect = @import("std").testing.expect;
+test "to conversion" {
+    const testing = @import("std").testing;
     const x = Object.from(42);
-    try expect(Object.from(&x).is_heap());
-    try expect(Object.from(3.14).to(f64) == 3.14);
-    try expect(Object.from(42).to(i64) == 42);
-    try expect(Object.from(42).is_int());
-    try expect(Object.from(true).to(bool) == true);
+    try testing.expect(Object.from(&x).is_heap());
+    try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
+    try testing.expectEqual(Object.from(42).to(i64), 42);
+    try testing.expect(Object.from(42).is_int());
+    try testing.expectEqual(Object.from(true).to(bool), true);
 }

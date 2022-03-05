@@ -70,7 +70,7 @@ test "Header structure" {
     var asInt = @bitCast(u64, header);
     try expect(asInt == 0x0011010001230023);
 }
-const HeapObject = packed struct {
+pub const HeapObject = packed struct {
     header: Header,
     objects: [0]Object,
     const Self = @This();
@@ -79,6 +79,12 @@ const HeapObject = packed struct {
             const size = self.header.length;
             return self.objects[0..size];
         } else return &[0]Object{};
+    }
+    pub inline fn indexables(self: Self,T:type) ![]T {
+        if (self.header.format.isIndexable()) {
+            const size = self.header.length;
+            return self.objects[0..size];
+        } else return error.NotIndexable;
     }
 };
 
