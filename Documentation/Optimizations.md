@@ -50,5 +50,5 @@
 - For each heap, keep the address of the bottom & top of the heap arena as tagged object pointers so that when scanning, for each object, if (obj<obj_high and obj>obj_low) then it's in this arena so copy it - otherwise treat it as a literal
 - `on:do:` adds to a linked list through the runtime stack of the thread so that a subsequent signal can evaluate the do block if the exception matches, so it is possible to resume. If it doesn't resume, unwind the stack to the calling point, handling `ensure:`s on the way.
 - non-local returns will similarly unwind the stack to the appropriate method, handling `ensure:`s on the way.
-- 
+- interpreting the length+isForward as a single u16 value means no masking is required, and values<32767 are actual, =32767 means extended and >32767 means forwarded
 - other...

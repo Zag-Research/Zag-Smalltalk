@@ -8,7 +8,8 @@ pub const Object_MINVAL = @bitCast(Object, @as(u64, u64_MINVAL));
 pub const Object_INT_ZERO = @bitCast(Object, @as(u64, u64_ZERO));
 pub const Object_MAXVAL = @bitCast(Object, @as(u64, 0xffffffffffffffff));
 const native_endian = @import("builtin").target.cpu.arch.endian();
-const Header = @import("heap.zig").Header;
+const heap = @import("heap.zig");
+const HeapPtr = heap.HeapPtr;
 const objectMethods = struct {
     pub inline fn is_int(self: Object) bool {
         return @bitCast(u64, self) >= u64_MINVAL;
@@ -23,14 +24,13 @@ const objectMethods = struct {
         if (@bitCast(u64, self) < Start_of_Literals) return false;
         return @bitCast(u64, self) < @bitCast(u64, False);
     }
-    const HeapPointer = *@import("heap.zig").HeapObject;
     pub inline fn to(self: Object, comptime T:type) T {
         switch (T) {
             i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPointer => {if (self.is_heap()) return @intToPtr(HeapPointer, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
+            HeapPtr => {if (self.is_heap()) return @intToPtr(HeapPtr, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
             else => {},
         }
         unreachable;
@@ -44,24 +44,22 @@ const objectMethods = struct {
     }
     pub inline fn from(value: anytype) Object {
         switch (@typeInfo(@TypeOf(value))) {
-            .Int => {
-                return @bitCast(Object, @bitCast(u64, value) +% u64_ZERO);
-            },
+            .Int,
             .ComptimeInt => {
                 return @bitCast(Object, @bitCast(u64, @as(i64, value)) +% u64_ZERO);
             },
-            .Float => {
-                return @bitCast(Object, value);
-            },
+            .Float,
             .ComptimeFloat => {
                 return @bitCast(Object, @as(f64, value));
             },
             .Bool => {
                 return if (value) True else False;
             },
-            else => {
-                return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
+            .Pointer => {
+                if (@TypeOf(value)==HeapPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
+                unreachable;
             },
+            else => unreachable,
         }
     }
     pub inline fn fullHash(self: Object) u64 {
@@ -127,8 +125,9 @@ test "from conversion" {
 }
 test "to conversion" {
     const testing = @import("std").testing;
-    const x = Object.from(42);
+    var x = @import("heap.zig").dummyHO;
     try testing.expect(Object.from(&x).is_heap());
+    try testing.expectEqual((&x).totalSize(), 1);
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
     try testing.expectEqual(Object.from(42).to(i64), 42);
     try testing.expect(Object.from(42).is_int());
