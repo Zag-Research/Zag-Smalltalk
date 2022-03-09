@@ -2,7 +2,7 @@ var next_thread_number : u64 = 0;
 const default_heap_size = 512;
 const Allocator = @import("std").mem.Allocator;
 const Object = @import("object.zig").Object;
-const Memory = @import("memory.zig").Object;
+const memory = @import("memory.zig");
 pub const Thread = struct {
     id : u64,
     heap : Memory.Heap,
@@ -11,7 +11,7 @@ pub const Thread = struct {
         defer next_thread_number += 1;
         return Self {
             .id = next_thread_number,
-            .heap = Memory.Heap.init(allocator,size),
+            .heap = memory.Heap.init(allocator,size),
         };
     }
     pub fn deinit(self : *Self) void {

@@ -10,18 +10,40 @@ pub const Format = enum(u8) {
     arrayNP = Indexable + PointerFree,
     bothNP = InstVars + Indexable + PointerFree,
     raw64 = Indexable_64,
+    _,
     const Self = @This();
-    const InstVars = 1;
-    const Indexable = 2;
-    const Weak = 4;
-    const PointerFree = 8;
-    const RawData = 16;
-    const Indexable_64 = 17;
-    const Indexable_32 = 18;
-    const Indexable_16 = 20;
-    const Indexable_8 = 24;
-    const BaseFormat = 31;
-    const Immutable = 32;
+    const InstVars : u8 = 1;
+    const Indexable : u8 = 2;
+    const Weak : u8 = 4;
+    const PointerFree : u8 = 8;
+    const RawData : u8 = 16;
+    const Indexable_64 : u8 = 17;
+    const Indexable_32 : u8 = 18;
+    const Indexable_16 : u8 = 20;
+    const Indexable_8 : u8 = 24;
+    const BaseFormat : u8 = 31;
+    const Immutable : u8 = 32;
+    pub inline fn weak(self: Self) Self {
+        return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + InstVars + Indexable + Weak);
+    }
+    pub inline fn base(self: Self) Self {
+        return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat));
+    }
+    pub inline fn object(self: Self) Self {
+        return @intToEnum(Self,@bitCast(u8,self) + InstVars);
+    }
+    pub inline fn array(self: Self) Self {
+        return @intToEnum(Self,@bitCast(u8,self) + Indexable);
+    }
+    pub inline fn raw(self: Self, T : type, size : usize) Self {
+        switch (T) {
+            u8,i8 => {return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + Indexable_8 + ((-@intCast(isize,size))&7));},
+            u16,i16 => {return @intToEnum(Self,(@bitCast(u16,self) & ~BaseFormat) + Indexable_16 + ((-@intCast(isize,size))&3));},
+            u32,i32,f32 => {return @intToEnum(Self,(@bitCast(u32,self) & ~BaseFormat) + Indexable_32 + ((-@intCast(isize,size))&1));},
+            u64,i64,f64 => {return @intToEnum(Self,(@bitCast(u64,self) & ~BaseFormat) + Indexable_64);},
+            else => {return self;},
+        }
+    }
     pub inline fn hasInstVars(self: Self) bool {
         return @bitCast(u8, self) & InstVars != 0 and @bitCast(u8, self) & BaseFormat < RawData;
     }
@@ -57,21 +79,33 @@ pub const Format = enum(u8) {
     }
 };
 pub const HeapPtr = *Header;
+pub inline fn header(length : u16, format : Format, classIndex : u16) Header {
+    return Header {
+        .length = length,
+        .format = format,
+        .hash = 0,
+        .classIndex = classIndex,
+    };
+}
 const heapMethods = struct {
+    pub inline fn setHash(self: *Header,hash: u24) Header {
+        self.hash=hash;
+        return self.*;
+    }
     pub inline fn instVars(self: HeapPtr) []Object {
         if (self.format.hasInstVars()) {
             const size = self.length;
-            return self.asObjectArray[1..size+1];
+            return self.asObjectArray()[1..size+1];
         } else return &[0]Object{};
     }
     pub inline fn indexables(self: HeapPtr,T:type) ![]T {
         if (self.format.isIndexable()) {
             const size = self.length;
-            return self.asObjectArray[1..size+1];
+            return self.asObjectArray()[1..size+1];
         } else return error.NotIndexable;
     }
     pub inline fn asObjectArray(self: HeapPtr) [*]Object {
-        return @bitCast([*]Object,self);
+        return @ptrCast([*]Object,self);
     }
     pub inline fn derefForwarded(self: HeapPtr) HeapPtr {
         return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
@@ -101,8 +135,6 @@ const Header = switch (native_endian) {
 test "Header structure" {
     const expect = @import("std").testing.expect;
     try expect(@sizeOf(Header) == 8);
-    var header = Header{ .length = 17, .format = Format.object, .hash = 0x123, .classIndex = 35 };
-    var asInt = @bitCast(u64, header);
-    try expect(asInt == 0x0011010001230023);
+    const hdr = header(17, Format.object, 35).setHash(0x123);
+    try expect(@bitCast(u64, hdr) == 0x0011010001230023);
 }
-pub const dummyHO = Header{ .length = 0, .format = Format.object, .hash = 0x123, .classIndex = 35 };

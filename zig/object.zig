@@ -125,7 +125,7 @@ test "from conversion" {
 }
 test "to conversion" {
     const testing = @import("std").testing;
-    var x = @import("heap.zig").dummyHO;
+    var x = heap.header(0,heap.Format.object,42);
     try testing.expect(Object.from(&x).is_heap());
     try testing.expectEqual((&x).totalSize(), 1);
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
