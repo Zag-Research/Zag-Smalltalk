@@ -5,7 +5,7 @@ const Object = @import("object.zig").Object;
 const memory = @import("memory.zig");
 pub const Thread = struct {
     id : u64,
-    heap : Memory.Heap,
+    heap : memory.Heap,
     const Self = @This();
     pub fn init(allocator: Allocator,size:usize) !Self {
         defer next_thread_number += 1;
@@ -17,6 +17,9 @@ pub const Thread = struct {
     pub fn deinit(self : *Self) void {
         self.heap.deinit();
         self.* = undefined;
+    }
+    pub inline fn stack(self: Self) [*]Object {
+        return self.heap.tos;
     }
 };
 fn thread0test(allocator:Allocator) !void {

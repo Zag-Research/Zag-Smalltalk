@@ -11,6 +11,9 @@ const native_endian = @import("builtin").target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const objectMethods = struct {
+    pub inline fn equals(self: Object,other: Object) bool {
+        return @bitCast(u64, self) == @bitCast(u64,other);
+    }
     pub inline fn is_int(self: Object) bool {
         return @bitCast(u64, self) >= u64_MINVAL;
     }
@@ -125,7 +128,7 @@ test "from conversion" {
 }
 test "to conversion" {
     const testing = @import("std").testing;
-    var x = heap.header(0,heap.Format.object,42);
+    var x = heap.header(0,heap.Format.object,42,0);
     try testing.expect(Object.from(&x).is_heap());
     try testing.expectEqual((&x).totalSize(), 1);
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);

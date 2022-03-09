@@ -2,6 +2,7 @@ const page_size = @import("std").mem.page_size/@sizeOf(Header);
 const Object = @import("object.zig").Object;
 const native_endian = @import("builtin").target.cpu.arch.endian();
 pub const Format = enum(u8) {
+    none = 0,
     object = InstVars,
     array = Indexable,
     both = InstVars + Indexable,
@@ -79,17 +80,16 @@ pub const Format = enum(u8) {
     }
 };
 pub const HeapPtr = *Header;
-pub inline fn header(length : u16, format : Format, classIndex : u16) Header {
-    return Header {
-        .length = length,
-        .format = format,
-        .hash = 0,
-        .classIndex = classIndex,
-    };
-}
 const heapMethods = struct {
+    pub inline fn asObject(self: Header) Object {
+        return @bitCast(Object,self);
+    }
     pub inline fn setHash(self: *Header,hash: u24) Header {
         self.hash=hash;
+        return self.*;
+    }
+    pub inline fn setNArgs(self: *Header,args: u8) Header {
+        self.hash=(self.hash & 0xffff)+(args<<16);
         return self.*;
     }
     pub inline fn instVars(self: HeapPtr) []Object {
@@ -98,7 +98,7 @@ const heapMethods = struct {
             return self.asObjectArray()[1..size+1];
         } else return &[0]Object{};
     }
-    pub inline fn indexables(self: HeapPtr,T:type) ![]T {
+    pub inline fn indexables(self: HeapPtr,comptime T:type) ![]T {
         if (self.format.isIndexable()) {
             const size = self.length;
             return self.asObjectArray()[1..size+1];
@@ -132,9 +132,17 @@ const Header = switch (native_endian) {
         usingnamespace heapMethods;
     },
 };
+pub inline fn header(length : u16, format : Format, classIndex : u16, hash: u24) Header {
+    return Header {
+        .length = length,
+        .format = format,
+        .hash = hash,
+        .classIndex = classIndex,
+    };
+}
 test "Header structure" {
     const expect = @import("std").testing.expect;
     try expect(@sizeOf(Header) == 8);
-    const hdr = header(17, Format.object, 35).setHash(0x123);
+    const hdr = header(17, Format.object, 35,0x123);
     try expect(@bitCast(u64, hdr) == 0x0011010001230023);
 }

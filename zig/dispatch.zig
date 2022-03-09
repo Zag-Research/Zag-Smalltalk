@@ -1,15 +1,15 @@
 const Object = @import("object.zig").Object;
 const Thread = @import("thread.zig").Thread;
-pub const returnE = enum {
+pub const MethodReturns = enum {
     Normal,
     PrimitiveFailed,
     NonLocal,
     ExceptionSignaled,
-    pub fn nonLocal(self : returnE) bool {
-        return self>=returnE.NonLocal;
+    pub fn nonLocal(self : MethodReturns) bool {
+        return self>=MethodReturns.NonLocal;
     }
 };
-const methodT = fn(thread : Thread, self : Object, stack : [*]Object, heap : [*]Object) returnE;
+const methodT = fn(thread : Thread) MethodReturns;
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
     var possible : T = 7;
