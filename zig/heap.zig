@@ -261,7 +261,7 @@ const TestArena = struct {
     const testing = @import("std").testing;
     fn init(expected:[]const Object) !Self {
         const output = try testing.allocator.alloc(Object,expected.len);
-        const allocator = @import("std").heap.FixedBufferAllocator.init(mem.sliceAsBytes(output)).allocator();
+        const allocator = @import("std").heap.FixedBufferAllocator.init(mem.sliceAsBytes(output));//.allocator();
         return Self {
             .expected = expected,
             .output = output,
