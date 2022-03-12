@@ -1,6 +1,5 @@
 const std = @import("std");
 const mem = std.mem;
-const Allocator = mem.Allocator;
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -164,33 +163,91 @@ test "Header structure" {
     const hdr = header(17, Format.object, 35,0x123);
     try expect(@bitCast(u64, hdr) == 0x0011010001230023);
 }
-const ArenaType = enum {
-    Nursery,
-    Teen,
-    Global,
-    Test,
+const NurseryArena = Arena {
+    .vtable = nurseryVtable,
+    .heap = undefined,
+    .tos = undefined,
+    .allocated = undefined,
+    .collectTo = undefined,
 };
+const nurseryVtable =  Arena.Vtable {
+    .getGlobal = getGlobalNext,
+};
+fn getGlobalNext(self: *Arena) *Arena {
+    if (self.collectTo) | ptr | return ptr.getGlobal();
+    @panic("nothing to collect to");
+}
+const TeenArena = Arena {
+    .vtable = teenVtable,
+    .heap = undefined,
+    .tos = undefined,
+    .allocated = undefined,
+    .collectTo = undefined,
+};
+const teenVtable =  Arena.Vtable {
+    .getGlobal = getGlobalNext,
+};
+const GlobalArena = Arena {
+    .vtable = globalVtable,
+    .heap = undefined,
+    .tos = undefined,
+    .allocated = undefined,
+    .collectTo = undefined,
+};
+const globalVtable =  Arena.Vtable {
+    .getGlobal = getGlobalSelf,
+};
+const TestArena = Arena {
+    .vtable = testVtable,
+    .heap = undefined,
+    .tos = undefined,
+    .allocated = undefined,
+    .collectTo = undefined,
+};
+const testVtable =  Arena.Vtable {
+    .getGlobal = getGlobalSelf,
+};
+fn getGlobalSelf(self: *Arena) *Arena {
+    return self;
+}
+
 const Arena = struct {
+    vtable: Vtable,
     heap: HeapPtr,
     tos: [*]Object,
     allocated: []Object,
-    allocator: Allocator,
-    arenaType: ArenaType,
-    const Self = @This();
-    pub fn init(allocator: Allocator,size:usize, arenaType: ArenaType) !Self {
-        const allocated = allocator.alloc(Object,size) catch |err| return err;
+    collectTo: ?*Arena,
+    const Self = Arena;
+    const Vtable = struct {
+        getGlobal : arenaStar_to_arenaStar,
+    };
+    const arenaStar_to_arenaStar = fn (self: *Arena) *Arena;
+    const vtable = Vtable {
+        .getGlobal = getGlobalV,
+    };
+    fn getGlobalV(_: *Arena) *Arena {
+        @panic("missing vtable:getGlobal");
+    }
+    pub fn getGlobal(self: *Arena) *Arena {
+        return self.vtable.getGlobal(self);
+    }
+    pub fn setCollectTo(self: *Arena, collectTo: ?*Arena) void {
+        self.collectTo = collectTo;
+    }
+    pub fn init(self: *const Arena, size:usize, collectTo: ?*Arena) !Arena {
+        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
         //try @import("std").io.getStdOut().writer().print("allocated ptr=0x{x} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
-        return Self {
-            .tos = allocated.ptr+allocated.len,
+        return Arena {
+            .vtable = self.vtable,
             .heap = @ptrCast(HeapPtr,allocated.ptr),
+            .tos = allocated.ptr+allocated.len,
+            .collectTo = collectTo,
             .allocated = allocated,
-            .allocator = allocator,
-            .arenaType = arenaType,
         };
     }
     pub fn deinit(self : *Self) void {
         //@import("std").io.getStdOut().writer().print("deallocate ptr=0x{x} len={}\n",.{@ptrToInt(self.allocated.ptr),self.allocated.len}) catch unreachable;
-        self.allocator.free(self.allocated);
+        std.heap.page_allocator.free(self.allocated) catch |err| return err;
         self.* = undefined;
     }
     pub fn alloc(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, fill: anytype) !HeapPtr {
@@ -230,7 +287,7 @@ const Arena = struct {
         }
         const result = self.heap;
         self.heap = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
-        const hash = if (self.arenaType==.Test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
+        const hash = if (@import("builtin").is_test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
         const head = header(@intCast(u16,size),form,classIndex,hash);
         result.* = @bitCast(Object,head);
         const instVars = result.instVars();
@@ -252,57 +309,32 @@ const Arena = struct {
     pub inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, fill: anytype) !HeapPtr {
         return self.alloc(classIndex, Format.none, 0, array_size, fill);
     }
-};
-const TestArena = struct {
-    expected: []const Object,
-    output: []Object,
-    arena : Arena,
-    const Self=@This();
-    const testing = @import("std").testing;
-    fn init(expected:[]const Object) !Self {
-        const output = try testing.allocator.alloc(Object,expected.len);
-        const allocator = @import("std").heap.FixedBufferAllocator.init(mem.sliceAsBytes(output));//.allocator();
-        return Self {
-            .expected = expected,
-            .output = output,
-            .arena = try Arena.init(allocator,expected.len,ArenaType.Test),
+    fn with(self: *const Arena, expected: []Object) !Arena {
+        const size = expected.len+4;
+        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
+        return Arena {
+            .vtable = self.vtable,
+            .heap = @ptrCast(HeapPtr,allocated.ptr+1),
+            .tos = allocated.ptr+1+expected.len,
+            .collectTo = null,
+            .allocated = allocated,
         };
     }
-    fn deinit(self: *Self) void {
-        self.arena.deinit();
-        testing.allocator.free(self.output);
-        self.* = undefined;
-        //testing.allocator.deinit();
-    }
-    inline fn allocObject(self : *Self, classIndex : class.ClassIndex, iv_size : usize) !HeapPtr {
-        return self.arena.allocObject(classIndex, iv_size);
-    }
-    inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, fill: anytype) !HeapPtr {
-        return self.arena.allocRaw(classIndex, array_size, fill);
-    }
-    inline fn alloc(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, fill: anytype) !HeapPtr {
-        return self.arena.alloc(classIndex,format,iv_size,array_size,fill);
-    }
-    fn isEqual(self: Self) bool {
-        for (self.expected) |item, index| {
-            if (@bitCast(u64,self.output[index]) != @bitCast(u64,item)) {
+    fn verify(self: Self, expected: []Object) void {
+        for (expected) |item, index| {
+            if (@bitCast(u64,self.allocated[index+1]) != @bitCast(u64,item)) {
                 @import("std").io.getStdOut().writer().print("comparing[{}] expected=0x{x} output=0x{x}\n",
-                                                             .{index,@bitCast(u64,item),@bitCast(u64,self.output[index])}) catch unreachable;
-                return false;
+                                                             .{index,@bitCast(u64,item),@bitCast(u64,self.allocated[index])}) catch unreachable;
+                @panic("output was not as expected");
             }
         }
-        return true;
-    }
-    fn finish(self: *Self) void {
-        testing.expect(self.isEqual()) catch @panic("output was not expected");
-        self.deinit();
     }
 };
 test "simple object allocator" {
     const h = header(3,Format.object,42,0);
-    const expected = [_]Object{h.asObject(),True,Nil,False};
-    var testArena = try TestArena.init(expected[0..]);
-    defer testArena.finish();
+    const expected = ([_]Object{h.asObject(),True,Nil,False})[0..];
+    var testArena = try TestArena.with(expected);
+    defer testArena.verify(expected);
     const obj = try testArena.allocObject(42,3);
     const ivs = obj.instVars();
     ivs[0]=True;
@@ -313,9 +345,9 @@ test "three object allocator" {
     const h1 = header(3,Format.object,42,0);
     const h2 = header(1,Format.both,43,0);
     const h3 = header(2,Format.array,44,0);
-    const expected = [_]Object{h1.asObject(),True,Nil,False,h2.asObject(),True,@bitCast(Object,@as(u64,1)),False,h3.asObject(),Nil,True};
-    var testArena = try TestArena.init(expected[0..]);
-    defer testArena.finish();
+    const expected = ([_]Object{h1.asObject(),True,Nil,False,h2.asObject(),True,@bitCast(Object,@as(u64,1)),False,h3.asObject(),Nil,True})[0..];
+    var testArena = try TestArena.with(expected);
+    defer testArena.verify(expected);
     const obj1 = try testArena.allocObject(42,3);
     const ivs1 = obj1.instVars();
     try testing.expectEqual(ivs1.len,3);
@@ -334,8 +366,4 @@ test "three object allocator" {
     const idx3 = try obj3.indexables(Object);
     try testing.expectEqual(idx3.len,2);
     idx3[1]=True;
-    // with the following line commented, the test crashes in the testing.allocator.free()
-    // I've printed out the allocated slice after allocation and before freeing, and they are the same
-    // uncommented, it works fine
-    @import("std").io.getStdOut().writer().print("idx3 ptr=0x{x} len={}\n",.{@ptrToInt(idx3.ptr),idx3.len}) catch unreachable;
 }

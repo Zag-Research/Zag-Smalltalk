@@ -32,3 +32,5 @@
 - [libc](https://docs.rs/libc/0.2.68/libc/)
 - [labguage doc](https://doc.rust-lang.org/nightly/reference/expressions/if-expr.html)
 - [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html)
+- [UTF8 strings](https://github.com/svenvc/UTF8String)
+- 
