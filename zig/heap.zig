@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const mem = std.mem;
 const object = @import("object.zig");
 const Object = object.Object;
@@ -30,6 +31,19 @@ pub const Format = enum(u8) {
     const Indexable_8 : u8 = 24;
     const BaseFormat : u8 = 31;
     const Immutable : u8 = 32;
+    fn calcSizes() [32]u8 {
+        var sizes : [32]u8 = undefined;
+        var i:u8 = 0;
+        while (i<=BaseFormat) : (i += 1) {
+            if (i<RawData) sizes[i]=@sizeOf(Object)
+            else if (i<Indexable_32) sizes[i]=@sizeOf(u64)
+            else if (i<Indexable_16) sizes[i]=@sizeOf(u32)
+            else if (i<Indexable_8) sizes[i]=@sizeOf(u16)
+            else sizes[i]=@sizeOf(u8);
+        }
+        return sizes;
+    }
+    const fieldSizes : [32]u8 = calcSizes();
     pub inline fn weak(self: Self) Self {
         return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + InstVars + Indexable + Weak);
     }
@@ -287,7 +301,7 @@ const Arena = struct {
         }
         const result = self.heap;
         self.heap = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
-        const hash = if (@import("builtin").is_test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
+        const hash = if (builtin.is_test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
         const head = header(@intCast(u16,size),form,classIndex,hash);
         result.* = @bitCast(Object,head);
         const instVars = result.instVars();

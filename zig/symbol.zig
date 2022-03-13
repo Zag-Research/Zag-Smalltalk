@@ -1,5 +1,5 @@
 const ObjectT = @import("object.zig").Object;
-pub fn symbol_of(comptime index: u64,comptime arity: u64) callconv(.Inline) ObjectT {
+pub inline fn symbol_of(index: u64, arity: u64) ObjectT {
     return @bitCast(ObjectT,index|(arity<<24)|(0x7ffd<<49));
 }
 pub const yourself = symbol_of(2,0);
