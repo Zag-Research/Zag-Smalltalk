@@ -31,30 +31,42 @@ pub const Format = enum(u8) {
     const Indexable_8 : u8 = 24;
     const BaseFormat : u8 = 31;
     const Immutable : u8 = 32;
+    const Global : u8 = 64;
     fn calcSizes() [32]u8 {
         var sizes : [32]u8 = undefined;
         var i:u8 = 0;
         while (i<=BaseFormat) : (i += 1) {
-            if (i<RawData) sizes[i]=@sizeOf(Object)
-            else if (i<Indexable_32) sizes[i]=@sizeOf(u64)
-            else if (i<Indexable_16) sizes[i]=@sizeOf(u32)
-            else if (i<Indexable_8) sizes[i]=@sizeOf(u16)
-            else sizes[i]=@sizeOf(u8);
+           if (i<Indexable_32) sizes[i]=1
+            else if (i<Indexable_16) sizes[i]=2
+            else if (i<Indexable_8) sizes[i]=4
+            else sizes[i]=8;
         }
         return sizes;
     }
     const fieldSizes : [32]u8 = calcSizes();
+    fn calcPartials() [32]u8 {
+        var partials : [32]u8 = undefined;
+        var i:u8 = 0;
+        while (i<=BaseFormat) : (i += 1) {
+           if (i<Indexable_32) partials[i]=0
+            else if (i<Indexable_16) partials[i]=Indexable_32-i
+            else if (i<Indexable_8) partials[i]=Indexable_16-i
+            else partials[i]=Indexable_8-i;
+        }
+        return partials;
+    }
+    const fieldPartials : [32]u8 = calcPartials();
     pub inline fn weak(self: Self) Self {
         return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + InstVars + Indexable + Weak);
     }
-    pub inline fn base(self: Self) Self {
+    pub inline fn noBase(self: Self) Self {
         return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat));
     }
     pub inline fn object(self: Self) Self {
-        return @intToEnum(Self,@bitCast(u8,self) + InstVars);
+        return @intToEnum(Self,@bitCast(u8,self) | InstVars);
     }
     pub inline fn array(self: Self) Self {
-        return @intToEnum(Self,@bitCast(u8,self) + Indexable);
+        return @intToEnum(Self,@bitCast(u8,self) | Indexable);
     }
     pub inline fn raw(self: Self, T : type, size : usize) Self {
         switch (T) {
@@ -66,43 +78,65 @@ pub const Format = enum(u8) {
         }
     }
     pub inline fn hasInstVars(self: Self) bool {
-        return @bitCast(u8, self) & InstVars != 0 and @bitCast(u8, self) & BaseFormat < RawData;
+        return @bitCast(u8, self) & InstVars+RawData == InstVars;
     }
     pub inline fn isIndexable(self: Self) bool {
-        return @bitCast(u8, self) & Indexable != 0 or @bitCast(u8, self) & BaseFormat >= RawData;
+        return @bitCast(u8, self) & Indexable+RawData != 0;
     }
     pub inline fn hasBoth(self: Self) bool {
-        return @bitCast(u8, self) & InstVars+Indexable == InstVars+Indexable and @bitCast(u8, self) & BaseFormat < RawData;
+        return @bitCast(u8, self) & InstVars+Indexable+RawData == InstVars+Indexable;
     }
     pub inline fn isWeak(self: Self) bool {
-        return @bitCast(u8, self) & Weak != 0 and @bitCast(u8, self) & BaseFormat < RawData;
+        return @bitCast(u8, self) & Weak+RawData == Weak;
     }
     pub inline fn isPointerFree(self: Self) bool {
-        return @bitCast(u8, self) & BaseFormat >= PointerFree;
+        const base = @bitCast(u8, self) & BaseFormat;
+        return base >= PointerFree;
     }
     pub inline fn hasPointers(self: Self) bool {
         return ~self.isPointerFree();
     }
+    pub inline fn is_64(self: Self) bool {
+        const base = @bitCast(u8, self) & BaseFormat;
+        return base == Indexable_64;
+    }
+    pub inline fn is_32(self: Self) bool {
+        const base = @bitCast(u8, self) & BaseFormat;
+        return base >= Indexable_32 and base <= Indexable_32 + 1;
+    }
+    pub inline fn is_16(self: Self) bool {
+        const base = @bitCast(u8, self) & BaseFormat;
+        return base >= Indexable_16 and base <= Indexable_16 + 3;
+    }
+    pub inline fn is_8(self: Self) bool {
+        const base = @bitCast(u8, self) & BaseFormat;
+        return base >= Indexable_8 and base <= Indexable_8 + 7;
+    }
     pub inline fn isImmutable(self: Self) bool {
         return @bitCast(u8, self) & Immutable != 0;
     }
-    pub inline fn is_64(self: Self) bool {
-        return @bitCast(u8, self) & RawData != 0 and @bitCast(u8, self) & BaseFormat == Indexable_64;
-    }
-    pub inline fn is_32(self: Self) bool {
-        return @bitCast(u8, self) & RawData != 0 and @bitCast(u8, self) & BaseFormat >= Indexable_32 and @bitCast(u8, self) & BaseFormat <= Indexable_32 + 1;
-    }
-    pub inline fn is_16(self: Self) bool {
-        return @bitCast(u8, self) & RawData != 0 and @bitCast(u8, self) & BaseFormat >= Indexable_16 and @bitCast(u8, self) & BaseFormat <= Indexable_16 + 3;
-    }
-    pub inline fn is_8(self: Self) bool {
-        return @bitCast(u8, self) & RawData != 0 and @bitCast(u8, self) & BaseFormat >= Indexable_8 and @bitCast(u8, self) & BaseFormat <= Indexable_8 + 7;
+    pub inline fn isGlobal(self: Self) bool {
+        return @bitCast(u8, self) & Global != 0;
     }
 };
+test "header formats" {
+    const expect = @import("std").testing.expect;
+    try expect(Format.object.hasInstVars());
+    try expect(!Format.object.isPointerFree());
+    try expect(Format.objectNP.isPointerFree());
+    try expect(!Format.object.isIndexable());
+    try expect(Format.raw64.isPointerFree());
+    try expect(!Format.raw64.isWeak());
+    try expect(!Format.object.isWeak());
+    try expect(Format.weak.isWeak());
+}
 pub const HeapPtr = *Header;
 const heapMethods = struct {
     pub inline fn asObject(self: Header) Object {
         return @bitCast(Object,self);
+    }
+    pub inline fn asObjectArray(self: HeapPtr) [*]Object {
+        return @ptrCast([*]Object,self);
     }
     pub inline fn setHash(self: *Header,hash: u24) Header {
         self.hash=hash;
@@ -134,9 +168,6 @@ const heapMethods = struct {
                 else => {return error.NotImplemented;},
             }
         } else return error.NotIndexable;
-    }
-    pub inline fn asObjectArray(self: HeapPtr) [*]Object {
-        return @ptrCast([*]Object,self);
     }
     pub inline fn derefForwarded(self: HeapPtr) HeapPtr {
         return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
@@ -259,13 +290,44 @@ const Arena = struct {
             .allocated = allocated,
         };
     }
+    fn with(self: *const Arena, expected: []Object) !Arena {
+        const size = expected.len+4;
+        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
+        const stdout =  std.io.getStdOut().writer();
+        try stdout.print("allocated ptr=0x{x} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
+
+        try stdout.print("heap=0x{x} tos=0x{x}\n",.{@ptrToInt(allocated.ptr+1),@ptrToInt(allocated.ptr+1+expected.len)});
+        return Arena {
+            .vtable = self.vtable,
+            .heap = @ptrCast(HeapPtr,allocated.ptr+1),
+            .tos = allocated.ptr+1+expected.len,
+            .collectTo = null,
+            .allocated = allocated,
+        };
+    }
     pub fn deinit(self : *Self) void {
         //@import("std").io.getStdOut().writer().print("deallocate ptr=0x{x} len={}\n",.{@ptrToInt(self.allocated.ptr),self.allocated.len}) catch unreachable;
         std.heap.page_allocator.free(self.allocated) catch |err| return err;
         self.* = undefined;
     }
+    fn verify(self: *Self, expected: []Object) void {
+        const stdout =  std.io.getStdOut().writer();
+        if (@ptrCast([*]Object,self.heap)!=self.tos) {
+            stdout.print("heap=0x{x} tos=0x{x}\n",.{@ptrToInt(self.heap),@ptrToInt(self.tos)}
+                         ) catch unreachable;
+            @panic("heap didn't end up at end");
+        }
+        for (expected) |item, index| {
+            if (@bitCast(u64,self.allocated[index+1]) != @bitCast(u64,item)) {
+               stdout.print("comparing[{}] expected=0x{x} output=0x{x}\n",
+                            .{index,@bitCast(u64,item),@bitCast(u64,self.allocated[index])}
+                            ) catch unreachable;
+                @panic("output was not as expected");
+            }
+        }
+    }
     pub fn alloc(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, fill: anytype) !HeapPtr {
-        var form = format.base();
+        var form = format.noBase();
         var size = iv_size + array_size;
         var totalSize = size+1;
         var asize = array_size;
@@ -281,9 +343,11 @@ const Arena = struct {
                     if (array_size>32766) form=form.object(); // big arrays use Format.both
                 }
                 if (format.isWeak()) form=form.weak();
+                try @import("std").io.getStdOut().writer().print("form={} format={} format.isWeak={}\n",.{@enumToInt(form),@enumToInt(format),format.isWeak()});
                 if (form.hasBoth()) {
                     totalSize += 1;
                     size = iv_size;
+                    @panic("form.hasBoth");
                 }
             },
             u8,i8,u16,i16,u32,i32,f32,u64,i64,f64 => |T| {
@@ -318,30 +382,10 @@ const Arena = struct {
         return @ptrCast(HeapPtr,result);
     }
     pub inline fn allocObject(self : *Self, classIndex : class.ClassIndex, iv_size : usize) !HeapPtr {
-        return self.alloc(classIndex, Format.none, iv_size, 0, object.Nil);
+        return self.alloc(classIndex, Format.object, iv_size, 0, object.Nil);
     }
     pub inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, fill: anytype) !HeapPtr {
         return self.alloc(classIndex, Format.none, 0, array_size, fill);
-    }
-    fn with(self: *const Arena, expected: []Object) !Arena {
-        const size = expected.len+4;
-        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
-        return Arena {
-            .vtable = self.vtable,
-            .heap = @ptrCast(HeapPtr,allocated.ptr+1),
-            .tos = allocated.ptr+1+expected.len,
-            .collectTo = null,
-            .allocated = allocated,
-        };
-    }
-    fn verify(self: Self, expected: []Object) void {
-        for (expected) |item, index| {
-            if (@bitCast(u64,self.allocated[index+1]) != @bitCast(u64,item)) {
-                @import("std").io.getStdOut().writer().print("comparing[{}] expected=0x{x} output=0x{x}\n",
-                                                             .{index,@bitCast(u64,item),@bitCast(u64,self.allocated[index])}) catch unreachable;
-                @panic("output was not as expected");
-            }
-        }
     }
 };
 test "simple object allocator" {
@@ -359,15 +403,21 @@ test "three object allocator" {
     const h1 = header(3,Format.object,42,0);
     const h2 = header(1,Format.both,43,0);
     const h3 = header(2,Format.array,44,0);
-    const expected = ([_]Object{h1.asObject(),True,Nil,False,h2.asObject(),True,@bitCast(Object,@as(u64,1)),False,h3.asObject(),Nil,True})[0..];
+    const expected = ([_]Object{
+        h1.asObject(),True,Nil,False,
+        h2.asObject(),True,@bitCast(Object,@as(u64,1)),False,
+        h3.asObject(),Nil,True,
+    })[0..];
     var testArena = try TestArena.with(expected);
     defer testArena.verify(expected);
     const obj1 = try testArena.allocObject(42,3);
+    try testing.expectEqual(obj1.totalSize(),4);
     const ivs1 = obj1.instVars();
     try testing.expectEqual(ivs1.len,3);
     ivs1[0]=True;
     ivs1[2]=False;
     const obj2 = try testArena.alloc(43,Format.both,1,1,Nil);
+    try testing.expectEqual(obj2.totalSize(),4);
     const ivs2 = obj2.instVars();
     try testing.expectEqual(ivs2.len,1);
     ivs2[0]=True;
@@ -375,6 +425,7 @@ test "three object allocator" {
     try testing.expectEqual(idx2.len,1);
     idx2[0]=False;
     const obj3 = try testArena.alloc(44,Format.array,0,2,Nil);
+    try testing.expectEqual(obj3.totalSize(),3);
     const ivs3 = obj3.instVars();
     try testing.expectEqual(ivs3.len,0);
     const idx3 = try obj3.indexables(Object);
