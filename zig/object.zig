@@ -1,3 +1,4 @@
+const std = @import("std");
 pub const Start_of_Literals = 0xfff2000000000000;
 pub const False = @bitCast(Object, @as(u64, 0xfff4000000000000));
 pub const True = @bitCast(Object, @as(u64, 0xfff6000000000001));
@@ -78,14 +79,17 @@ const objectMethods = struct {
         if (immediate > 1) return immediate;
         return self.as_pointer().*.get_class();
     }
-    pub fn println(self: Object, writer: @import("std").fs.File.Writer) !void {
-        try self.print(writer);
-        try writer.print("\n", .{});
-    }
-    pub fn print(self: Object, writer: @import("std").fs.File.Writer) !void {
+    pub fn format(
+        self: Object,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        
         try switch (self.immediate_class()) {
-            0 => writer.print("object", .{}), //,as_pointer(self)),
-            1 => writer.print("closure", .{}), //,as_pointer(x));
+            1 => writer.print("object:0x{x:>16}", .{@bitCast(u64,self)}), //,as_pointer(x));
             2 => writer.print("false", .{}),
             3 => writer.print("true", .{}),
             4 => writer.print("nil", .{}),
@@ -98,22 +102,22 @@ const objectMethods = struct {
     }
 };
 test "printing" {
-    const stdout = @import("std").io.getStdOut().writer();
+    const stdout = std.io.getStdOut().writer();
     const symbol = @import("symbol.zig");
-    try Object.from(42).println(stdout);
-    try symbol.yourself.println(stdout);
+    try stdout.print("{}\n",.{Object.from(42)});
+    try stdout.print("{}\n",.{symbol.yourself});
 }
 pub const Tag = enum(u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
-        signMantissa: u12,
+        signMantissa: u12 align(8),
         tag: Tag,
         highHash: u25,
         hash: i24,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
-        hash: i24,
+        hash: i24 align(8),
         highHash: u25,
         tag: Tag,
         signMantissa: u12,
@@ -122,12 +126,12 @@ pub const Object = switch (native_endian) {
 };
 
 test "from conversion" {
-    const expect = @import("std").testing.expect;
+    const expect = std.testing.expect;
     try expect(@bitCast(f64, Object.from(3.14)) == 3.14);
     try expect(@bitCast(u64, Object.from(42)) == u64_ZERO +% 42);
 }
 test "to conversion" {
-    const testing = @import("std").testing;
+    const testing = std.testing;
     var x = heap.header(0,heap.Format.object,42,0);
     try testing.expect(Object.from(&x).is_heap());
     try testing.expectEqual((&x).totalSize(), 1);
