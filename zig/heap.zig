@@ -123,6 +123,20 @@ pub const Format = enum(u8) {
         return @bitCast(u8, self) & Global != 0;
     }
 };
+fn eq(v:u8,f:Format) !void {
+    return std.testing.expectEqual(v,@enumToInt(f));
+}
+test "raw formats" {
+    try eq(24,Format.none.raw(u8,0));
+    try eq(31,Format.none.raw(u8,1));
+    try eq(30,Format.none.raw(u8,2));
+    try eq(29,Format.none.raw(u8,3));
+    try eq(28,Format.none.raw(u8,4));
+    try eq(27,Format.none.raw(u8,5));
+    try eq(26,Format.none.raw(u8,6));
+    try eq(25,Format.none.raw(u8,7));
+    try eq(24,Format.none.raw(u8,8));
+}
 test "header formats" {
     const expect = std.testing.expect;
     try expect(Format.object.hasInstVars());
@@ -170,8 +184,17 @@ const heapMethods = struct {
                     return oa[0..size];
                 }
             },
-            i64,u64,f64,i32,u32,f32,i16,u16,i8,u8 => {
+            i64,u64,f64 => {
                 return @ptrCast([*]T,oa)[0..size];
+            },
+            i32,u32,f32 => {
+                return @ptrCast([*]T,oa)[0..size*2-(@enumToInt(form)&1)];
+            },
+            i16,u16 => {
+                return @ptrCast([*]T,oa)[0..size*4-(@enumToInt(form)&3)];
+            },
+            i8,u8 => {
+                return @ptrCast([*]T,oa)[0..size*8-(@enumToInt(form)&7)];
             },
             else => {@panic("Not Implemented");},
         }
@@ -386,7 +409,7 @@ const Arena = struct {
         }
         if (!ok) return error.OutputDiffered;
     }
-    pub inline fn allocObject(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize) HeapPtr {
+    pub fn allocObject(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize) HeapPtr {
         var form = format.noBase();
         var totalSize = iv_size + array_size + 1;
         if (iv_size>0) form=form.object();
@@ -399,11 +422,11 @@ const Arena = struct {
         const size = if (form.hasInstVars()) iv_size else array_size;
         return self.alloc(classIndex, form, iv_size, array_size, size, totalSize, object.Nil);
     }
-    pub inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, comptime T: type) HeapPtr {
+    pub fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, comptime T: type) HeapPtr {
         const objectWidth = @sizeOf(Object);
         const width = @sizeOf(T);
         const asize = (array_size*width+objectWidth-width)/objectWidth;
-        const form = Format.none.raw(T,asize);
+        const form = Format.none.raw(T,array_size);
         const size = @minimum(asize,32767);
         var totalSize = asize+(if (size<asize) @as(usize,2) else 1);
         return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO); //,&[0]Object{});
@@ -418,9 +441,19 @@ const Arena = struct {
         if (totalSize>size+1) @ptrCast([*]Object,result)[iv_size+1] = @bitCast(Object,asize);
         return @ptrCast(HeapPtr,result);
     }
+    pub inline fn allocString(self: *Self, source: []const u8) HeapPtr {
+        const result = self.allocRaw(class.String,source.len,u8);
+        //const stdout = std.io.getStdOut().writer();
+        //stdout.print("result={} ptr=0x{x:0>16} len={}\n",.{result,@ptrToInt(result.indexables(u8).ptr),result.indexables(u8).len}) catch unreachable;
+        mem.copy(u8,result.indexables(u8),source);
+        return result;
+    }
+    pub inline fn allocGlobalString(self: *Self, source: []const u8) HeapPtr {
+        return self.getGlobal().allocString(source);
+    }
 };
 test "four object allocator" {
-    const stdout = std.io.getStdOut().writer();
+    // const stdout = std.io.getStdOut().writer();
     const testing = std.testing;
     const h1 = header(3,Format.object,42,0);
     const h2 = header(1,Format.both,43,0);
@@ -461,9 +494,27 @@ test "four object allocator" {
     try testing.expectEqual(@as(usize,3),ivs1.len);
     ivs1[0]=True;
     ivs1[2]=False;
-    try stdout.print("obj1*=0x{x:0>16}: {}\n",.{@ptrToInt(obj1),obj1});
-    try stdout.print("obj2*=0x{x:0>16}: {}\n",.{@ptrToInt(obj2),obj2});
-    try stdout.print("obj3*=0x{x:0>16}: {}\n",.{@ptrToInt(obj3),obj3});
-    try stdout.print("obj4*=0x{x:0>16}: {}\n",.{@ptrToInt(obj4),obj4});
+    // try stdout.print("obj1*=0x{x:0>16}: {}\n",.{@ptrToInt(obj1),obj1});
+    // try stdout.print("obj2*=0x{x:0>16}: {}\n",.{@ptrToInt(obj2),obj2});
+    // try stdout.print("obj3*=0x{x:0>16}: {}\n",.{@ptrToInt(obj3),obj3});
+    // try stdout.print("obj4*=0x{x:0>16}: {}\n",.{@ptrToInt(obj4),obj4});
+    try testArena.verify(expected);
+}
+test "string allocator" {
+    //const stdout = std.io.getStdOut().writer();
+    const testing = std.testing;
+    const h1 = header(1,Format.none.raw(u8,5),class.String,0);
+    const h2 = header(2,Format.none.raw(u8,5),class.String,0);
+    const expected = ([_]Object{
+        h1.asObject(),object.fromLE(0x0000006f6c6c6568),
+        h2.asObject(),object.fromLE(0x646e612073696874),object.fromLE(0x0000007461687420),
+    })[0..];
+    var testArena = try TestArena.with(expected);
+    const obj1 = testArena.allocGlobalString("hello"[0..]);
+    try testing.expectEqual(@as(usize,5),obj1.indexables(u8).len);
+    //try stdout.print("obj1*=0x{x:0>16}: \"{}\"\n",.{@ptrToInt(obj1),obj1});
+    const obj2 = testArena.allocGlobalString("this and that"[0..]);
+    try testing.expectEqual(@as(usize,13),obj2.indexables(u8).len);
+    //try stdout.print("obj2*=0x{x:0>16}: \"{}\"\n",.{@ptrToInt(obj2),obj2});
     try testArena.verify(expected);
 }

@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 pub const Start_of_Literals = 0xfff2000000000000;
 pub const False = @bitCast(Object, @as(u64, 0xfff4000000000000));
 pub const True = @bitCast(Object, @as(u64, 0xfff6000000000001));
@@ -12,6 +13,10 @@ pub const ZERO = @bitCast(Object, @as(u64, 0));
 const native_endian = @import("builtin").target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
+pub fn fromLE(v: u64) Object {
+    const val = @ptrCast(*const [8]u8,&v);
+    return @bitCast(Object,mem.readIntLittle(u64,val));
+}
 const objectMethods = struct {
     pub inline fn equals(self: Object,other: Object) bool {
         return @bitCast(u64, self) == @bitCast(u64,other);
