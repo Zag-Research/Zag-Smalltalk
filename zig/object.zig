@@ -8,6 +8,7 @@ const u64_ZERO = 0xffff000000000000;
 pub const Object_MINVAL = @bitCast(Object, @as(u64, u64_MINVAL));
 pub const Object_INT_ZERO = @bitCast(Object, @as(u64, u64_ZERO));
 pub const Object_MAXVAL = @bitCast(Object, @as(u64, 0xffffffffffffffff));
+pub const ZERO = @bitCast(Object, @as(u64, 0));
 const native_endian = @import("builtin").target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;

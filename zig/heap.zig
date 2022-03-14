@@ -157,9 +157,8 @@ const heapMethods = struct {
             return self.asObjectArray()[0..size];
         } else return &[0]Object{};
     }
-    pub inline fn indexables(self: HeapConstPtr,comptime T:type) ![]T {
+    pub inline fn indexables(self: HeapConstPtr,comptime T:type) []T {
         const form = self.objectFormat;
-        if (!form.isIndexable()) return error.NotIndexable;
         const size = self.length;
         const oa = self.asObjectArray();
         switch (T) {
@@ -171,10 +170,10 @@ const heapMethods = struct {
                     return oa[0..size];
                 }
             },
-            i64,u64,f64 => {
+            i64,u64,f64,i32,u32,f32,i16,u16,i8,u8 => {
                 return @ptrCast([*]T,oa)[0..size];
             },
-            else => {return error.NotImplemented;},
+            else => {@panic("Not Implemented");},
         }
        
     }
@@ -202,7 +201,13 @@ const heapMethods = struct {
         if (self.objectFormat.isRaw()) {
             if (self.objectFormat.is8() and self.classIndex==class.String) {
                 try writer.print("{s}",.{self.indexables(u8)});
-            } else try writer.print("raw",.{});
+            } else if (self.objectFormat.is8()) {
+                try writer.print("raw[{}]",.{self.indexables(u8).len});
+            } else if (self.objectFormat.is16()) {
+                try writer.print("raw[{}]",.{self.indexables(u16).len});
+            } else if (self.objectFormat.is32()) {
+                try writer.print("raw[{}]",.{self.indexables(u32).len});
+            } else try writer.print("raw[{}]",.{self.indexables(u64).len});
         } else {
             var blank = false;
             const ivs = self.instVars();
@@ -216,7 +221,7 @@ const heapMethods = struct {
                 try writer.print(")",.{});
             }
             if (self.objectFormat.isIndexable()) {
-                const idx = self.indexables(Object) catch return error.InputOutput;
+                const idx = self.indexables(Object);
                 if (blank) try writer.print(" ",.{});
                 blank = false;
                 try writer.print("{c}",.{'{'});
@@ -345,10 +350,10 @@ const Arena = struct {
     fn with(self: *const Arena, expected: []Object) !Arena {
         const size = expected.len+4;
         const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
-        const stdout =  std.io.getStdOut().writer();
-        try stdout.print("allocated ptr=0x{x} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
+        //const stdout =  std.io.getStdOut().writer();
+        //try stdout.print("allocated ptr=0x{x} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
 
-        try stdout.print("heap=0x{x:0>16} tos=0x{x:0>16}\n",.{@ptrToInt(allocated.ptr+1),@ptrToInt(allocated.ptr+1+expected.len)});
+        //try stdout.print("heap=0x{x:0>16} tos=0x{x:0>16}\n",.{@ptrToInt(allocated.ptr+1),@ptrToInt(allocated.ptr+1+expected.len)});
         return Arena {
             .vtable = self.vtable,
             .heap = @ptrCast(HeapPtr,allocated.ptr+1),
@@ -381,66 +386,37 @@ const Arena = struct {
         }
         if (!ok) return error.OutputDiffered;
     }
-    fn alloc(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, fill: anytype) !HeapPtr {
+    pub inline fn allocObject(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize) HeapPtr {
         var form = format.noBase();
-        var size = iv_size + array_size;
-        var totalSize = size+1;
-        var asize = array_size;
-        var fillPattern = @bitCast(Object,@as(u64,0));
-        const objectWidth = @sizeOf(Object);
-        var width : usize = objectWidth;
-        switch (@TypeOf(fill)) {
-            Object => {
-                fillPattern = fill;
-                if (iv_size>0) form=form.object();
-                if (array_size>0 or format.isIndexable()) {
-                    form=form.array();
-                    if (array_size>32766) form=form.object(); // big arrays use Format.both
-                }
-                if (format.isWeak()) form=form.weak();
-                //try std.io.getStdOut().writer().print("form={} format={} format.isWeak={}\n",.{@enumToInt(form),@enumToInt(format),format.isWeak()});
-                if (form.hasBoth()) {
-                    totalSize += 1;
-                    size = iv_size;
-                }
-            },
-            u8,i8,u16,i16,u32,i32,f32,u64,i64,f64 => |T| {
-                width = @sizeOf(T);
-                size = (size*width+objectWidth-width)/objectWidth;
-                form = form.raw(T,size);
-                asize = size;
-                totalSize=size+1;
-                if (size>32766) {
-                    size=32767;
-                    totalSize+=1;
-                }
-            },
-            else => {},
+        var totalSize = iv_size + array_size + 1;
+        if (iv_size>0) form=form.object();
+        if (array_size>0) {
+            form=form.array();
+            if (array_size>32766) form=form.object(); // big arrays use Format.both
         }
+        if (format.isWeak()) form=form.weak();
+        if (form.hasBoth()) totalSize += 1;
+        const size = if (form.hasInstVars()) iv_size else array_size;
+        return self.alloc(classIndex, form, iv_size, array_size, size, totalSize, object.Nil);
+    }
+    pub inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, comptime T: type) HeapPtr {
+        const objectWidth = @sizeOf(Object);
+        const width = @sizeOf(T);
+        const asize = (array_size*width+objectWidth-width)/objectWidth;
+        const form = Format.none.raw(T,asize);
+        const size = @minimum(asize,32767);
+        var totalSize = asize+(if (size<asize) @as(usize,2) else 1);
+        return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO); //,&[0]Object{});
+    }
+    inline fn alloc(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object) HeapPtr {
         const result = self.heap;
         self.heap = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
         const hash = if (builtin.is_test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
         const head = header(@intCast(u16,size),form,classIndex,hash);
         result.* = @bitCast(Object,head);
+        mem.set(Object,@ptrCast([*]Object,result)[1..totalSize],fill);
         if (totalSize>size+1) @ptrCast([*]Object,result)[iv_size+1] = @bitCast(Object,asize);
-        if (form.isIndexable()) {
-            var indexables = try result.indexables(@TypeOf(fill));
-            for (indexables) |_,index| {
-                indexables[index]=fill;
-            }
-        }
         return @ptrCast(HeapPtr,result);
-    }
-    pub inline fn allocObject(self : *Self, classIndex : class.ClassIndex, iv_size : usize, array_size : usize) !HeapPtr {
-        const result = try self.alloc(classIndex, Format.object, iv_size, array_size, object.Nil);
-        const instVars = result.instVars();
-        for (instVars) |_,index| {
-            instVars[index]=Nil;
-        }
-        return result;
-    }
-    pub inline fn allocRaw(self : *Self, classIndex : class.ClassIndex, array_size : usize, fill: anytype) !HeapPtr {
-        return self.alloc(classIndex, Format.none, 0, array_size, fill);
     }
 };
 test "four object allocator" {
@@ -457,28 +433,28 @@ test "four object allocator" {
         h4.asObject(),@bitCast(Object,@as(i64,0)),@bitCast(Object,@as(i64,1)),
     })[0..];
     var testArena = try TestArena.with(expected);
-    const obj1 = try testArena.allocObject(42,3,0);
+    const obj1 = testArena.allocObject(42,Format.none,3,0);
     try testing.expectEqual(@as(usize,4),obj1.totalSize());
-    const obj2 = try testArena.allocObject(43,1,1);
+    const obj2 = testArena.allocObject(43,Format.none,1,1);
     try testing.expectEqual(@as(usize,4),obj2.totalSize());
-    const obj3 = try testArena.allocObject(44,0,2);
+    const obj3 = testArena.allocObject(44,Format.none,0,2);
     try testing.expectEqual(@as(usize,3),obj3.totalSize());
-    const obj4 = try testArena.allocRaw(45,2,@as(u64,0));
+    const obj4 = testArena.allocRaw(45,2,u64);
     try testing.expectEqual(@as(usize,3),obj4.totalSize());
     const ivs4 = obj4.instVars();
     try testing.expectEqual(@as(usize,0),ivs4.len);
-    const idx4 = try obj4.indexables(i64);
+    const idx4 = obj4.indexables(i64);
     try testing.expectEqual(@as(usize,2),idx4.len);
     idx4[1]=1;
     const ivs3 = obj3.instVars();
     try testing.expectEqual(@as(usize,0),ivs3.len);
-    const idx3 = try obj3.indexables(Object);
+    const idx3 = obj3.indexables(Object);
     try testing.expectEqual(@as(usize,2),idx3.len);
     idx3[1]=True;
     const ivs2 = obj2.instVars();
     try testing.expectEqual(@as(usize,1),ivs2.len);
     ivs2[0]=True;
-    const idx2 = try obj2.indexables(Object);
+    const idx2 = obj2.indexables(Object);
     try testing.expectEqual(@as(usize,1),idx2.len);
     idx2[0]=False;
     const ivs1 = obj1.instVars();
