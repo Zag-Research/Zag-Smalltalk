@@ -151,17 +151,23 @@ test "header formats" {
 pub const HeapPtr = *Header;
 pub const HeapConstPtr = *const Header;
 const heapMethods = struct {
+    pub inline fn isIndexable(self: HeapConstPtr) bool {
+        return self.objectFormat.isIndexable();
+    }
+    pub inline fn isRaw(self: HeapConstPtr) bool {
+        return self.objectFormat.isRaw();
+    }
     pub inline fn asObject(self: Header) Object {
         return @bitCast(Object,self);
     }
     pub inline fn asObjectArray(self: HeapConstPtr) [*]Object {
         return @intToPtr([*]Object,@ptrToInt(self))+1;
     }
-    pub inline fn setHash(self: *Header,hash: u24) Header {
+    pub inline fn setHash(self: HeapPtr,hash: u24) Header {
         self.hash=hash;
         return self.*;
     }
-    pub inline fn setNArgs(self: *Header,args: u8) Header {
+    pub inline fn setNArgs(self: HeapPtr,args: u8) Header {
         self.hash=(self.hash & 0xffff)+(args<<16);
         return self.*;
     }
@@ -288,7 +294,7 @@ test "Header structure" {
     const hdr = header(17, Format.object, 35,0x123);
     try expect(@bitCast(u64, hdr) == 0x0011010001230023);
 }
-const NurseryArena = Arena {
+pub const NurseryArena = Arena {
     .vtable = nurseryVtable,
     .heap = undefined,
     .tos = undefined,
@@ -302,7 +308,7 @@ fn getGlobalNext(self: *Arena) *Arena {
     if (self.collectTo) | ptr | return ptr.getGlobal();
     @panic("nothing to collect to");
 }
-const TeenArena = Arena {
+pub const TeenArena = Arena {
     .vtable = teenVtable,
     .heap = undefined,
     .tos = undefined,
@@ -322,7 +328,7 @@ const GlobalArena = Arena {
 const globalVtable =  Arena.Vtable {
     .getGlobal = getGlobalSelf,
 };
-const TestArena = Arena {
+pub const TestArena = Arena {
     .vtable = testVtable,
     .heap = undefined,
     .tos = undefined,
@@ -370,7 +376,7 @@ const Arena = struct {
             .allocated = allocated,
         };
     }
-    fn with(self: *const Arena, expected: []Object) !Arena {
+    pub fn with(self: *const Arena, expected: []Object) !Arena {
         const size = expected.len+4;
         const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
         //const stdout =  std.io.getStdOut().writer();

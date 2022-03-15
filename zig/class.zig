@@ -22,6 +22,8 @@ pub const Send: ClassIndex = 19;
 pub const Literal: ClassIndex = 20;
 pub const Load: ClassIndex = 21;
 pub const Store: ClassIndex = 22;
+pub const SymbolTable: ClassIndex = 23;
+pub const Dispatch: ClassIndex = 24;
 pub var number_of_classes: usize = 1;
 pub fn init() !void {
     const classes = [_]ClassIndex {
@@ -47,6 +49,8 @@ pub fn init() !void {
         "Literal",
         "Load",
         "Store",
+        "SymbolTable",
+        "Dispatch",
     };
     _ = classes;
 }
