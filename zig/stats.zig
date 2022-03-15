@@ -39,9 +39,8 @@ pub fn Stats(comptime T:type) type {
         pub fn max(self : Self) f64 {
             return self.maxValue;
         }
-        pub fn largestMin(_: void, a: @This(), b: @This()) Order {
-            if (a.min>b.min) return Order.lt;
-            return Order.gt;
+        pub fn noData(self : Self) bool {
+            return self.n==0;
         }
     };
 }
