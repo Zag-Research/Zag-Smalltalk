@@ -300,6 +300,7 @@ pub const NurseryArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
+    .size = 2048,
 };
 const nurseryVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
@@ -314,6 +315,7 @@ pub const TeenArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
+    .size = 4096,
 };
 const teenVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
@@ -324,6 +326,7 @@ const GlobalArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
+    .size = 32768,
 };
 const globalVtable =  Arena.Vtable {
     .getGlobal = getGlobalSelf,
@@ -334,6 +337,7 @@ pub const TestArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
+    .size = 2048,
 };
 const testVtable =  Arena.Vtable {
     .getGlobal = getGlobalSelf,
@@ -342,12 +346,13 @@ fn getGlobalSelf(self: *Arena) *Arena {
     return self;
 }
 
-const Arena = struct {
+pub const Arena = struct {
     vtable: Vtable,
     heap: HeapPtr,
     tos: [*]Object,
     allocated: []Object,
     collectTo: ?*Arena,
+    size: usize,
     const Self = Arena;
     const Vtable = struct {
         getGlobal : arenaStar_to_arenaStar,
@@ -365,8 +370,8 @@ const Arena = struct {
     pub fn setCollectTo(self: *Arena, collectTo: ?*Arena) void {
         self.collectTo = collectTo;
     }
-    pub fn init(self: *const Arena, size:usize, collectTo: ?*Arena) !Arena {
-        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
+    pub fn init(self: *const Arena, collectTo: ?*Arena) !Arena {
+        const allocated = std.heap.page_allocator.alloc(Object,self.size) catch |err| return err;
         //try std.io.getStdOut().writer().print("allocated ptr=0x{x:0>16} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
         return Arena {
             .vtable = self.vtable,
@@ -374,6 +379,7 @@ const Arena = struct {
             .tos = allocated.ptr+allocated.len,
             .collectTo = collectTo,
             .allocated = allocated,
+            .size = self.size,
         };
     }
     pub fn with(self: *const Arena, expected: []Object) !Arena {
@@ -389,11 +395,12 @@ const Arena = struct {
             .tos = allocated.ptr+1+expected.len,
             .collectTo = null,
             .allocated = allocated,
+            .size = size,
         };
     }
     pub fn deinit(self : *Self) void {
         //std.io.getStdOut().writer().print("deallocate ptr=0x{x:0>16} len={}\n",.{@ptrToInt(self.allocated.ptr),self.allocated.len}) catch unreachable;
-        std.heap.page_allocator.free(self.allocated) catch |err| return err;
+        std.heap.page_allocator.free(self.allocated);
         self.* = undefined;
     }
     fn verify(self: *Self, expected: []Object) !void {
