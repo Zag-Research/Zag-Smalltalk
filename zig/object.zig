@@ -52,7 +52,12 @@ const objectMethods = struct {
         _ = self;
         return "dummy string";
     }
+    pub inline fn as(self: Object, comptime T:type) []T {
+        return self.to(HeapPtr).as(T);
+    }
     pub inline fn from(value: anytype) Object {
+        const T = @TypeOf(value);
+        if (T==HeapPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -65,9 +70,8 @@ const objectMethods = struct {
             .Bool => {
                 return if (value) True else False;
             },
-            .Pointer => {
-                if (@TypeOf(value)==HeapPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
-                unreachable;
+            .Null => {
+                return Nil;
             },
             else => unreachable,
         }

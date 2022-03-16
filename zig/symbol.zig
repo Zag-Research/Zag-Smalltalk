@@ -66,19 +66,38 @@ fn symbol_table() type {
     return struct {
         theObject: ast.object.Object,
         const Self = @This();
-        fn lookup(s: *Self,thread: ast.thread.Thread,str: []const u8) ast.object.Object {
+        fn lookup(s: *Self,str: []const u8) ast.object.Object {
             _ = str;
             _ = s;
-            _ = thread;
             return ast.object.Nil;
         }
-        fn init() Self {
+        fn init(thread: ast.thread.Thread) Self {
+            _ = thread;
             return .{
                 .theObject = ast.object.Nil,
             };
         }
         fn deinit(s: *Self) void {
             s.*=undefined;
+        }
+        fn intern(s: *Self,thread: ast.thread.Thread,string: ast.object.Object) ast.object.Object {
+            while (true) {
+                const result = s.internDirect(string);
+                _ = thread;
+                return result;
+            }
+            unreachable;
+        }
+        fn internDirect(s: *Self,string: ast.object.Object) ast.object.Object {
+            _ = s;
+            _ = string;
+            return ast.object.Nil;
+        }
+        fn internLiteral(s: *Self,string: []const u8) ast.object.Object {
+            var buffer: [200]u8 align(8)= undefined;
+            var tempArena = ast.heap.tempArena(&buffer);
+            const str = try tempArena.allocString(string);
+            return s.internDirect(str);
         }
         fn loadInitialSymbols(s: *Self,thread: ast.thread.Thread) void {
             const initialSymbols = .{
@@ -104,52 +123,52 @@ test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     var thread = try ast.thread.Thread.init();
     defer thread.deinit();
-    var symbol = symbol_table().init();
+    var symbol = symbol_table().init(thread);
     symbol.loadInitialSymbols(thread);
     defer symbol.deinit();
-    try expectEqual(valueWithArguments_,symbol.lookup(thread,"valueWithArguments:"));
-    try expectEqual(cull_,symbol.lookup(thread,"cull:"));
-    try expectEqual(cull_cull_,symbol.lookup(thread,"cull:cull:"));
-    try expectEqual(cull_cull_cull_,symbol.lookup(thread,"cull:cull:cull:"));
-    try expectEqual(cull_cull_cull_cull_,symbol.lookup(thread,"cull:cull:cull:cull:"));
-    try expectEqual(value,symbol.lookup(thread,"value"));
-    try expectEqual(value_,symbol.lookup(thread,"value:"));
-    try expectEqual(value_value_,symbol.lookup(thread,"value:value:"));
-    try expectEqual(value_value_value_,symbol.lookup(thread,"value:value:value:"));
-    try expectEqual(value_value_value_value_,symbol.lookup(thread,"value:value:value:value:"));
-    try expectEqual(self,symbol.lookup(thread,"self"));
-    try expectEqual(Object,symbol.lookup(thread,"Object"));
-    try expectEqual(BlockClosure,symbol.lookup(thread,"BlockClosure"));
-    try expectEqual(False,symbol.lookup(thread,"False"));
-    try expectEqual(True,symbol.lookup(thread,"True"));
-    try expectEqual(UndefinedObject,symbol.lookup(thread,"UndefinedObject"));
-    try expectEqual(SmallInteger,symbol.lookup(thread,"SmallInteger"));
-    try expectEqual(Symbol,symbol.lookup(thread,"Symbol"));
-    try expectEqual(Character,symbol.lookup(thread,"Character"));
-    try expectEqual(Float,symbol.lookup(thread,"Float"));
-    try expectEqual(Array,symbol.lookup(thread,"Array"));
-    try expectEqual(String,symbol.lookup(thread,"String"));
-    try expectEqual(Class,symbol.lookup(thread,"Class"));
-    try expectEqual(Metaclass,symbol.lookup(thread,"Metaclass"));
-    try expectEqual(Behavior,symbol.lookup(thread,"Behavior"));
-    try expectEqual(Method,symbol.lookup(thread,"Method"));
-    try expectEqual(Magnitude,symbol.lookup(thread,"Magnitude"));
-    try expectEqual(Number,symbol.lookup(thread,"Number"));
-    try expectEqual(System,symbol.lookup(thread,"System"));
-    try expectEqual(Return,symbol.lookup(thread,"Return"));
-    try expectEqual(Send,symbol.lookup(thread,"Send"));
-    try expectEqual(Literal,symbol.lookup(thread,"Literal"));
-    try expectEqual(Load,symbol.lookup(thread,"Load"));
-    try expectEqual(Store,symbol.lookup(thread,"Store"));
-    try expectEqual(SymbolTable,symbol.lookup(thread,"SymbolTable"));
-    try expectEqual(Dispatch,symbol.lookup(thread,"Dispatch"));
-    try expectEqual(yourself,symbol.lookup(thread,"yourself"));
-    try expectEqual(@"==",symbol.lookup(thread,"=="));
-    try expectEqual(@"~~",symbol.lookup(thread,"~~"));
-    try expectEqual(@"~=",symbol.lookup(thread,"~="));
-    try expectEqual(@"=",symbol.lookup(thread,"="));
-    try expectEqual(@"+",symbol.lookup(thread,"+"));
-    try expectEqual(@"-",symbol.lookup(thread,"-"));
-    try expectEqual(@"*",symbol.lookup(thread,"*"));
-    try expectEqual(size,symbol.lookup(thread,"size"));
+    try expectEqual(valueWithArguments_,symbol.lookup("valueWithArguments:"));
+    try expectEqual(cull_,symbol.lookup("cull:"));
+    try expectEqual(cull_cull_,symbol.lookup("cull:cull:"));
+    try expectEqual(cull_cull_cull_,symbol.lookup("cull:cull:cull:"));
+    try expectEqual(cull_cull_cull_cull_,symbol.lookup("cull:cull:cull:cull:"));
+    try expectEqual(value,symbol.lookup("value"));
+    try expectEqual(value_,symbol.lookup("value:"));
+    try expectEqual(value_value_,symbol.lookup("value:value:"));
+    try expectEqual(value_value_value_,symbol.lookup("value:value:value:"));
+    try expectEqual(value_value_value_value_,symbol.lookup("value:value:value:value:"));
+    try expectEqual(self,symbol.lookup("self"));
+    try expectEqual(Object,symbol.lookup("Object"));
+    try expectEqual(BlockClosure,symbol.lookup("BlockClosure"));
+    try expectEqual(False,symbol.lookup("False"));
+    try expectEqual(True,symbol.lookup("True"));
+    try expectEqual(UndefinedObject,symbol.lookup("UndefinedObject"));
+    try expectEqual(SmallInteger,symbol.lookup("SmallInteger"));
+    try expectEqual(Symbol,symbol.lookup("Symbol"));
+    try expectEqual(Character,symbol.lookup("Character"));
+    try expectEqual(Float,symbol.lookup("Float"));
+    try expectEqual(Array,symbol.lookup("Array"));
+    try expectEqual(String,symbol.lookup("String"));
+    try expectEqual(Class,symbol.lookup("Class"));
+    try expectEqual(Metaclass,symbol.lookup("Metaclass"));
+    try expectEqual(Behavior,symbol.lookup("Behavior"));
+    try expectEqual(Method,symbol.lookup("Method"));
+    try expectEqual(Magnitude,symbol.lookup("Magnitude"));
+    try expectEqual(Number,symbol.lookup("Number"));
+    try expectEqual(System,symbol.lookup("System"));
+    try expectEqual(Return,symbol.lookup("Return"));
+    try expectEqual(Send,symbol.lookup("Send"));
+    try expectEqual(Literal,symbol.lookup("Literal"));
+    try expectEqual(Load,symbol.lookup("Load"));
+    try expectEqual(Store,symbol.lookup("Store"));
+    try expectEqual(SymbolTable,symbol.lookup("SymbolTable"));
+    try expectEqual(Dispatch,symbol.lookup("Dispatch"));
+    try expectEqual(yourself,symbol.lookup("yourself"));
+    try expectEqual(@"==",symbol.lookup("=="));
+    try expectEqual(@"~~",symbol.lookup("~~"));
+    try expectEqual(@"~=",symbol.lookup("~="));
+    try expectEqual(@"=",symbol.lookup("="));
+    try expectEqual(@"+",symbol.lookup("+"));
+    try expectEqual(@"-",symbol.lookup("-"));
+    try expectEqual(@"*",symbol.lookup("*"));
+    try expectEqual(size,symbol.lookup("size"));
 }
