@@ -13,6 +13,7 @@ pub const ZERO = @bitCast(Object, @as(u64, 0));
 const native_endian = @import("builtin").target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
+const HeapConstPtr = heap.HeapConstPtr;
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
     return @bitCast(Object,mem.readIntLittle(u64,val));
@@ -28,7 +29,10 @@ const objectMethods = struct {
         return @bitCast(u64, self) < Start_of_Literals;
     }
     pub inline fn is_bool(self: Object) bool {
-        return @bitCast(u64,self) >= @bitCast(u64,False) and @bitCast(u64,self) < @bitCast(u64,Nil);
+        return @bitCast(u64,self) == @bitCast(u64,False) or @bitCast(u64,self) == @bitCast(u64,True);
+    }
+    pub inline fn is_nil(self: Object) bool {
+        return @bitCast(u64,self) == @bitCast(u64,Nil);
     }
     pub inline fn is_heap(self: Object) bool {
         if (@bitCast(u64, self) < Start_of_Literals) return false;
@@ -40,7 +44,7 @@ const objectMethods = struct {
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPtr => {if (self.is_heap()) return @intToPtr(HeapPtr, @bitCast(usize, @bitCast(i64, self) << 12 >> 12));},
+            HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(HeapPtr, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {},
         }
         unreachable;
@@ -52,12 +56,13 @@ const objectMethods = struct {
         _ = self;
         return "dummy string";
     }
-    pub inline fn as(self: Object, comptime T:type) []T {
-        return self.to(HeapPtr).as(T);
+    pub inline fn arrayAsSlice(self: Object, comptime T:type) []T {
+        if (self.is_heap()) return self.to(HeapPtr).arrayAsSlice(T);
+        return &[0]T{};
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
-        if (T==HeapPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
+        if (T==HeapConstPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -138,6 +143,10 @@ pub const Object = switch (native_endian) {
     },
 };
 
+test "slicing" {
+    const testing = std.testing;
+    try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
+}
 test "from conversion" {
     const expect = std.testing.expect;
     try expect(@bitCast(f64, Object.from(3.14)) == 3.14);
@@ -145,9 +154,6 @@ test "from conversion" {
 }
 test "to conversion" {
     const testing = std.testing;
-    var x = heap.header(0,heap.Format.object,42,0);
-    try testing.expect(Object.from(&x).is_heap());
-    try testing.expectEqual((&x).totalSize(), 1);
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
     try testing.expectEqual(Object.from(42).to(i64), 42);
     try testing.expect(Object.from(42).is_int());

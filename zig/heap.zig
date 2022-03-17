@@ -122,20 +122,20 @@ pub const Format = enum(u8) {
     pub inline fn isGlobal(self: Self) bool {
         return @bitCast(u8, self) & Global != 0;
     }
+    fn eq(f: Self, v: u8) !void {
+        return std.testing.expectEqual(v,@enumToInt(f));
+    }
 };
-fn eq(v:u8,f:Format) !void {
-    return std.testing.expectEqual(v,@enumToInt(f));
-}
 test "raw formats" {
-    try eq(24,Format.none.raw(u8,0));
-    try eq(31,Format.none.raw(u8,1));
-    try eq(30,Format.none.raw(u8,2));
-    try eq(29,Format.none.raw(u8,3));
-    try eq(28,Format.none.raw(u8,4));
-    try eq(27,Format.none.raw(u8,5));
-    try eq(26,Format.none.raw(u8,6));
-    try eq(25,Format.none.raw(u8,7));
-    try eq(24,Format.none.raw(u8,8));
+    try Format.none.raw(u8,0).eq(Format.Indexable_8+0);
+    try Format.none.raw(u8,1).eq(Format.Indexable_8+7);
+    try Format.none.raw(u8,2).eq(Format.Indexable_8+6);
+    try Format.none.raw(u8,3).eq(Format.Indexable_8+5);
+    try Format.none.raw(u8,4).eq(Format.Indexable_8+4);
+    try Format.none.raw(u8,5).eq(Format.Indexable_8+3);
+    try Format.none.raw(u8,6).eq(Format.Indexable_8+2);
+    try Format.none.raw(u8,7).eq(Format.Indexable_8+1);
+    try Format.none.raw(u8,8).eq(Format.Indexable_8+0);
 }
 test "header formats" {
     const expect = std.testing.expect;
@@ -151,8 +151,25 @@ test "header formats" {
 pub const HeapPtr = *Header;
 pub const HeapConstPtr = *const Header;
 const heapMethods = struct {
-    pub inline fn as(self: HeapConstPtr, T: type) []T {
-        return mem.bytesAsSlice(T,self.indexables(u8));
+    pub inline fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
+        const scale = @sizeOf(Object)/@sizeOf(T);
+        const form = self.objectFormat;
+        const formi = @enumToInt(form);
+        var size :usize = self.length;
+        var oa = self.asObjectArray();
+        if (size==32767) {
+            size = @bitCast(usize,oa[0]);
+            oa += 1;
+        }
+        return mem.bytesAsSlice(
+            T,
+            if (formi>=Format.Indexable_8) @ptrCast([*]T,oa)[0..size*scale-(formi&7)]
+                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&3)]
+                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
+                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale]
+                else if (!form.isIndexable()) &[0]T{}
+                else if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
+                else @ptrCast([*]T,oa)[0..size*scale]);
     }
     pub inline fn isIndexable(self: HeapConstPtr) bool {
         return self.objectFormat.isIndexable();
@@ -160,7 +177,10 @@ const heapMethods = struct {
     pub inline fn isRaw(self: HeapConstPtr) bool {
         return self.objectFormat.isRaw();
     }
-    pub inline fn asObject(self: Header) Object {
+    pub inline fn asObject(self: HeapConstPtr) Object {
+        return Object.from(self);
+    }
+    pub inline fn cast(self: Header) Object {
         return @bitCast(Object,self);
     }
     pub inline fn asObjectArray(self: HeapConstPtr) [*]Object {
@@ -203,24 +223,8 @@ const heapMethods = struct {
             i16,u16 => {
                 return @ptrCast([*]T,oa)[0..size*4-(formi&3)];
             },
-            i8 => {
+            i8,u8 => {
                 return @ptrCast([*]T,oa)[0..size*8-(formi&7)];
-            },
-            u8 => {
-                if (formi>=Format.Indexable_8)
-                    return @ptrCast([*]u8,oa)[0..size*8-(formi&7)];
-                if (formi>=Format.Indexable_16)
-                    return @ptrCast([*]u8,oa)[0..size*8-(formi&3)];
-                if (formi>=Format.Indexable_16)
-                    return @ptrCast([*]u8,oa)[0..size*8-(formi&1)];
-                if (formi>=Format.Indexable_16)
-                    return @ptrCast([*]u8,oa)[0..size*8];
-                if (form.hasInstVars()) {
-                    const array_size = @bitCast(usize,oa[size]);
-                    return @ptrCast([*]u8,oa+size+1)[0..array_size*8];
-                } else {
-                    return @ptrCast([*]u8,oa)[0..size*8];
-                }
             },
             else => {},
         }
@@ -233,7 +237,7 @@ const heapMethods = struct {
         const form = self.objectFormat;
         var size : usize = self.length;
         if (form.isRaw()) {
-            if (size>=32767) unreachable;
+            if (size>=32767) size += @bitCast(u64,self.asObjectArray()[0])+1;
         } else if (form.hasBoth()) {
             size += @bitCast(u64,self.asObjectArray()[size])+1;
         }
@@ -502,9 +506,23 @@ test "temp arena" {
     var buffer: [40]u8 align(8)= undefined;
     var testArena = tempArena(&buffer);
     const obj1 = try testArena.allocObject(42,Format.none,3,0);
+    try testing.expect(obj1.asObject().is_heap());
     try testing.expectEqual(obj1.totalSize(),4);
     try testing.expectError(error.HeapFull,testArena.allocObject(42,Format.none,3,0));
 }
+test "slicing" {
+    const testing = std.testing;
+    var buffer: [100]u8 align(8)= undefined;
+    var testArena = tempArena(&buffer);
+    const hp1 = try testArena.allocObject(42,Format.none,1,2);
+    const obj1 = hp1.asObject();
+    try testing.expectEqual(hp1.arrayAsSlice(u8).len,16);
+    try testing.expectEqual(obj1.arrayAsSlice(u8).len,16);
+    try testing.expectEqual(hp1.arrayAsSlice(u8),obj1.arrayAsSlice(u8));
+    const hp2 = try testArena.allocObject(42,Format.none,1,0);
+    try testing.expectEqual(hp2.arrayAsSlice(u8).len,0);
+}
+    
 test "four object allocator" {
     // const stdout = std.io.getStdOut().writer();
     const testing = std.testing;
@@ -513,10 +531,10 @@ test "four object allocator" {
     const h3 = header(2,Format.array,44,0);
     const h4 = header(2,Format.raw64,45,0);
     const expected = ([_]Object{
-        h1.asObject(),True,Nil,False,
-        h2.asObject(),True,@bitCast(Object,@as(u64,1)),False,
-        h3.asObject(),Nil,True,
-        h4.asObject(),@bitCast(Object,@as(i64,0)),@bitCast(Object,@as(i64,1)),
+        h1.cast(),True,Nil,False,
+        h2.cast(),True,@bitCast(Object,@as(u64,1)),False,
+        h3.cast(),Nil,True,
+        h4.cast(),@bitCast(Object,@as(i64,0)),@bitCast(Object,@as(i64,1)),
     })[0..];
     var testArena = try TestArena.with(expected);
     const obj1 = try testArena.allocObject(42,Format.none,3,0);
@@ -559,8 +577,8 @@ test "string allocator" {
     const h1 = header(1,Format.none.raw(u8,5),class.String,0);
     const h2 = header(2,Format.none.raw(u8,5),class.String,0);
     const expected = ([_]Object{
-        h1.asObject(),object.fromLE(0x0000006f6c6c6568),
-        h2.asObject(),object.fromLE(0x646e612073696874),object.fromLE(0x0000007461687420),
+        h1.cast(),object.fromLE(0x0000006f6c6c6568),
+        h2.cast(),object.fromLE(0x646e612073696874),object.fromLE(0x0000007461687420),
     })[0..];
     var testArena = try TestArena.with(expected);
     const obj1 = try testArena.allocGlobalString("hello"[0..]);

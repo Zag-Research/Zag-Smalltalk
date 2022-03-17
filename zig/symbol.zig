@@ -58,73 +58,106 @@ pub const @"*" = symbol_of(44,1);
 pub const size = symbol0(45);
 pub const negated = symbol0(46);
 
+const initialSymbolTableSize = 250;
  
 pub fn init(thread: ast.thread.Thread) void {
     _ = thread;
 }
-fn symbol_table() type {
-    return struct {
-        theObject: ast.object.Object,
-        const Self = @This();
-        fn lookup(s: *Self,str: []const u8) ast.object.Object {
-            _ = str;
-            _ = s;
-            return ast.object.Nil;
-        }
-        fn init(thread: ast.thread.Thread) Self {
-            _ = thread;
-            return .{
-                .theObject = ast.object.Nil,
-            };
-        }
-        fn deinit(s: *Self) void {
-            s.*=undefined;
-        }
-        fn intern(s: *Self,thread: ast.thread.Thread,string: ast.object.Object) ast.object.Object {
-            while (true) {
-                const result = s.internDirect(string);
-                _ = thread;
-                return result;
-            }
-            unreachable;
-        }
-        fn internDirect(s: *Self,string: ast.object.Object) ast.object.Object {
-            _ = s;
-            _ = string;
-            return ast.object.Nil;
-        }
-        fn internLiteral(s: *Self,string: []const u8) ast.object.Object {
-            var buffer: [200]u8 align(8)= undefined;
-            var tempArena = ast.heap.tempArena(&buffer);
-            const str = try tempArena.allocString(string);
-            return s.internDirect(str);
-        }
-        fn loadInitialSymbols(s: *Self,thread: ast.thread.Thread) void {
-            const initialSymbols = .{
-                "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", 
-                "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:",
-                "self",
-                "Object", "BlockClosure", "False", "True",
-                "UndefinedObject", "SmallInteger", "Symbol", "Character",
-                "Float", "Array", "String", "Class", "Metaclass",
-                "Behavior", "Magnitude", "Number", "Method", "System",
-                "Return","Send","Literal","Load","Store",
-                "SymbolTable", "Dispatch",
-                "yourself", "==", "~~", "~=", "=", "+", "-", "*", "size",
-            };
-            _ = initialSymbols;
-            _ = s;
-            _ = thread;
-        }
-    };
+const objectTreap = ast.treap.Treap(ast.object.Object);
+fn numArgs(string: []const u8) u32 {
+    if (string.len==0) return 0;
+    const first = string[0];
+    if (first<'A' or (first>'Z' and first<'a') or first>'z') return 1;
+    var count : u32 = 0;
+    for (string) |char| {
+        if (char==':') count +=1;
+    }
+    return count;
 }
-    
+fn compareObject(a: ast.object.Object, b: ast.object.Object) std.math.Order {
+    const sla = a.arrayAsSlice(u8);
+    const slb = b.arrayAsSlice(u8);
+    for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
+        const vb=slb[index];
+        if (va<vb) return std.math.Order.lt;
+        if (va>vb) return std.math.Order.gt;
+    }
+    if (sla.len<slb.len) return std.math.Order.lt;
+    if (sla.len>slb.len) return std.math.Order.gt;
+    return std.math.Order.eq;
+}
+const Symbol_Table = struct {
+    theObject: ast.object.Object,
+    const Self = @This();
+    fn init(arena: *ast.heap.Arena) !Self {
+        var theHeapObject = try arena.allocObject(@truncate(u16,SymbolTable.fullHash()),
+                                          ast.heap.Format.none,0,initialSymbolTableSize*2);
+        return Symbol_Table {
+            .theObject = theHeapObject.asObject(),
+        };
+    }
+    fn deinit(s: *Self) void {
+        s.*=undefined;
+    }
+    fn lookup(s: *Self,string: []const u8) ast.object.Object {
+        const treap = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        return lookupDirect(treap,string);
+    }
+    fn lookupDirect(treap: objectTreap, string: []const u8) ast.object.Object {
+        const nArgs = numArgs(string);
+        _ = nArgs;
+        _ = treap;
+        return ast.object.Nil;
+    }
+    fn intern(s: *Self,thread: ast.thread.Thread,string: ast.object.Object) ast.object.Object {
+        const arena = thread.heap.getGlobal();
+        while (true) {
+            const result = s.internDirect(arena,string);
+            return result;
+        }
+        unreachable;
+    }
+    fn internDirect(s: *Self, arena: ast.heap.Arena, string: ast.object.Object) ast.object.Object {
+        const treap = objectTreap.ref(s.theObject.as(u8));
+        const result = s.lookupDirect(treap,string);
+        if (!result.is_nil()) return result;
+        const str = try string.promote(arena);
+        _ = str;
+        const index = 0;
+        const nArgs = numArgs(string);
+        return symbol_of(index,nArgs);
+    }
+    fn internLiteral(s: *Self,arena: ast.heap.Arena, string: []const u8) ast.object.Object {
+        var buffer: [200]u8 align(8)= undefined;
+        var tempArena = ast.heap.tempArena(&buffer);
+        const str = try tempArena.allocString(string);
+        return s.internDirect(arena,str);
+    }
+    fn loadInitialSymbols(s: *Self,arena: ast.heap.Arena) void {
+        const initialSymbols = .{
+            "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", 
+            "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:",
+            "self",
+            "Object", "BlockClosure", "False", "True",
+            "UndefinedObject", "SmallInteger", "Symbol", "Character",
+            "Float", "Array", "String", "Class", "Metaclass",
+            "Behavior", "Magnitude", "Number", "Method", "System",
+            "Return","Send","Literal","Load","Store",
+            "SymbolTable", "Dispatch",
+            "yourself", "==", "~~", "~=", "=", "+", "-", "*", "size",
+        };
+        _ = initialSymbols;
+        _ = s;
+        _ = arena;
+    }
+};
+
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
-    var thread = try ast.thread.Thread.init();
-    defer thread.deinit();
-    var symbol = symbol_table().init(thread);
-    symbol.loadInitialSymbols(thread);
+    var buffer: [6000]u8 align(8)= undefined;
+    var arena = ast.heap.tempArena(&buffer);
+    var symbol = try Symbol_Table.init(&arena);
+    symbol.loadInitialSymbols(arena);
     defer symbol.deinit();
     try expectEqual(valueWithArguments_,symbol.lookup("valueWithArguments:"));
     try expectEqual(cull_,symbol.lookup("cull:"));
