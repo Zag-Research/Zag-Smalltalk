@@ -44,7 +44,7 @@ const objectMethods = struct {
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(HeapPtr, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
+            HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {},
         }
         unreachable;
@@ -93,6 +93,9 @@ const objectMethods = struct {
         const immediate = (@bitCast(u64, self) >> 49) & 7;
         if (immediate > 1) return immediate;
         return self.as_pointer().*.get_class();
+    }
+    pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
+        return arena.promote(self);
     }
     pub fn format(
         self: Object,

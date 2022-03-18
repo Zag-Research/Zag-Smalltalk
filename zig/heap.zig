@@ -240,7 +240,7 @@ const heapMethods = struct {
     pub inline fn derefForwarded(self: HeapPtr) HeapPtr {
         return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
     }
-    pub inline fn totalSize(self: HeapPtr) usize {
+    pub inline fn totalSize(self: HeapConstPtr) usize {
         const form = self.objectFormat;
         var size : usize = self.length;
         if (form.isRaw()) {
@@ -410,7 +410,7 @@ pub const Arena = struct {
             .tos = allocated.ptr+allocated.len,
             .collectTo = collectTo,
             .allocated = allocated,
-            .size = self.size,
+            .size = allocated.len,
         };
     }
     pub fn with(self: *const Arena, expected: []Object) !Arena {
@@ -452,6 +452,17 @@ pub const Arena = struct {
             }
         }
         if (!ok) return error.OutputDiffered;
+    }
+    pub fn promote(self: *Self, obj: Object) !Object {
+        if (!obj.is_heap()) return obj;
+        const result = self.heap;
+        const ptr = obj.to(HeapConstPtr);
+        const totalSize = ptr.totalSize();
+        const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
+        if (@ptrToInt(end)>@ptrToInt(self.tos)) return error.HeapFull;
+        self.heap = end;
+        @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
+        return result.asObject();
     }
     pub fn allocObject(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize) !HeapPtr {
         var form = format.noBase();
@@ -498,15 +509,16 @@ pub const Arena = struct {
         return self.getGlobal().allocString(source);
     }
 };
-pub fn tempArena(buffer: []align(8)u8) Arena {
-        return Arena {
-            .vtable = GlobalArena.vtable,
-            .heap = @ptrCast(HeapPtr,buffer.ptr),
-            .tos = @ptrCast([*]Object,buffer.ptr)+buffer.len/8,
-            .collectTo = undefined,
-            .allocated = undefined,
-            .size = buffer.len,
-        };
+pub fn tempArena(bytes: []align(8)u8) Arena {
+    var allocated = mem.bytesAsSlice(Object,bytes);
+    return Arena {
+        .vtable = GlobalArena.vtable,
+        .heap = @ptrCast(HeapPtr,allocated.ptr),
+        .tos = allocated.ptr+allocated.len,
+        .collectTo = undefined,
+        .allocated = allocated,
+        .size = allocated.len,
+    };
 }
 test "temp arena" {
     const testing = std.testing;
@@ -519,7 +531,7 @@ test "temp arena" {
 }
 test "slicing" {
     const testing = std.testing;
-    var buffer: [100]u8 align(8)= undefined;
+    var buffer: [128]u8 align(8)= undefined;
     var testArena = tempArena(&buffer);
     const hp0 = try testArena.allocObject(42,Format.none,1,0);
     try testing.expectEqual(hp0.arrayAsSlice(u8).len,0);

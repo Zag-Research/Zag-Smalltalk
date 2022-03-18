@@ -63,7 +63,8 @@ pub fn init(thr: thread.Thread) void {
     _ = thr;
 }
 const objectTreap = treap.Treap(object.Object);
-fn numArgs(string: []const u8) u32 {
+fn numArgs(obj: object.Object) u32 {
+    const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
     const first = string[0];
     if (first<'A' or (first>'Z' and first<'a') or first>'z') return 1;
@@ -112,12 +113,12 @@ const Symbol_Table = struct {
     fn lookupDirect(trp: *objectTreap, string: object.Object) object.Object {
         const index = trp.lookup(string);
         if (index>0) {
-            const nArgs = numArgs(string.arrayAsSlice(u8));
+            const nArgs = numArgs(string);
             return symbol_of(index,nArgs);
         }
         return Nil;
     }
-    fn internLiteral(s: *Self,arena: heap.Arena, string: []const u8) object.Object {
+    fn internLiteral(s: *Self,arena: *heap.Arena, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
         const str = tempArena.allocString(string) catch unreachable;
@@ -136,16 +137,16 @@ const Symbol_Table = struct {
         }
         unreachable;
     }
-    fn internDirect(arena: heap.Arena, trp: *objectTreap, string: object.Object) object.Object {
+    fn internDirect(arena: *heap.Arena, trp: *objectTreap, string: object.Object) object.Object {
         const result = lookupDirect(trp,string);
         if (!result.is_nil()) return result;
-        const str = try string.promote(arena);
+        const str = string.promoteTo(arena) catch return Nil;
         _ = str;
         const index = 0;
         const nArgs = numArgs(string);
         return symbol_of(index,nArgs);
     }
-    fn loadInitialSymbols(s: *Self,arena: heap.Arena) void {
+    fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
         var symbols = std.mem.tokenize(
             u8,
 \\ valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: 
@@ -170,7 +171,7 @@ test "symbols match initialized symbol table" {
     var buffer: [6000]u8 align(8)= undefined;
     var arena = heap.tempArena(&buffer);
     var symbol = try Symbol_Table.init(&arena);
-    symbol.loadInitialSymbols(arena);
+    symbol.loadInitialSymbols(&arena);
     defer symbol.deinit();
     try expectEqual(valueWithArguments_,symbol.lookupLiteral("valueWithArguments:"));
     try expectEqual(cull_,symbol.lookupLiteral("cull:"));
