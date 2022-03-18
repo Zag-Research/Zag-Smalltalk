@@ -24,7 +24,8 @@ pub const Load: ClassIndex = 21;
 pub const Store: ClassIndex = 22;
 pub const SymbolTable: ClassIndex = 23;
 pub const Dispatch: ClassIndex = 24;
-pub var number_of_classes: usize = 1;
+var number_of_classes: usize = 24;
+var classes = [_]object.Object{object.Nil} ** 5000;
 pub fn init() !void {
     const classes = [_]ClassIndex {
         "Object",

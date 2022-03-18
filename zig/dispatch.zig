@@ -9,7 +9,7 @@ pub const MethodReturns = enum {
         return self>=MethodReturns.NonLocal;
     }
 };
-const methodT = fn(thread : Thread) MethodReturns;
+const methodT = fn(thread : *Thread) MethodReturns;
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
     var possible : T = 7;
@@ -58,3 +58,4 @@ test "primes" {
         try expect(next_prime_larger_than(1889)==1889);
     try expect(next_prime_larger_than(1890)==11959);
 }
+pub const SymbolMethod = struct {symbol: []u8, method: methodT};
