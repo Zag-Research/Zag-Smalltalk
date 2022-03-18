@@ -154,22 +154,29 @@ const heapMethods = struct {
     pub inline fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
         const scale = @sizeOf(Object)/@sizeOf(T);
         const form = self.objectFormat;
-        const formi = @enumToInt(form);
-        var size :usize = self.length;
-        var oa = self.asObjectArray();
-        if (size==32767) {
-            size = @bitCast(usize,oa[0]);
-            oa += 1;
+        if (form.isRaw()) {
+            const formi = @enumToInt(form);
+            var size :usize = self.length;
+            var oa = self.asObjectArray();
+            if (size==32767) {
+                size = @bitCast(usize,oa[0]);
+                oa += 1;
+            }
+            return mem.bytesAsSlice(
+                T,
+                if (formi>=Format.Indexable_8) @ptrCast([*]T,oa)[0..size*scale-(formi&7)]
+                    else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&3)]
+                    else if (formi>=Format.Indexable_32) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
+                    else @ptrCast([*]T,oa)[0..size*scale]);
+        } else {
+            const size = self.length;
+            const oa = self.asObjectArray();
+            return mem.bytesAsSlice(
+                T,
+                if (!form.isIndexable()) (&[0]T{})
+                    else if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
+                    else @ptrCast([*]T,oa)[0..size*scale]);
         }
-        return mem.bytesAsSlice(
-            T,
-            if (formi>=Format.Indexable_8) @ptrCast([*]T,oa)[0..size*scale-(formi&7)]
-                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&3)]
-                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
-                else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale]
-                else if (!form.isIndexable()) &[0]T{}
-                else if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
-                else @ptrCast([*]T,oa)[0..size*scale]);
     }
     pub inline fn isIndexable(self: HeapConstPtr) bool {
         return self.objectFormat.isIndexable();
@@ -514,13 +521,13 @@ test "slicing" {
     const testing = std.testing;
     var buffer: [100]u8 align(8)= undefined;
     var testArena = tempArena(&buffer);
+    const hp0 = try testArena.allocObject(42,Format.none,1,0);
+    try testing.expectEqual(hp0.arrayAsSlice(u8).len,0);
     const hp1 = try testArena.allocObject(42,Format.none,1,2);
     const obj1 = hp1.asObject();
     try testing.expectEqual(hp1.arrayAsSlice(u8).len,16);
     try testing.expectEqual(obj1.arrayAsSlice(u8).len,16);
     try testing.expectEqual(hp1.arrayAsSlice(u8),obj1.arrayAsSlice(u8));
-    const hp2 = try testArena.allocObject(42,Format.none,1,0);
-    try testing.expectEqual(hp2.arrayAsSlice(u8).len,0);
 }
     
 test "four object allocator" {

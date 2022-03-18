@@ -37,7 +37,7 @@ pub fn Treap(comptime K:type) type {
             return treap;
         }
         pub fn ref(memory: []u8, compare: Compare) Self {
-            return .{
+            return Self {
                 .table = mem.bytesAsSlice(Element,memory),
                 .compare = compare,
             };
@@ -77,7 +77,7 @@ pub fn Treap(comptime K:type) type {
         inline fn setFree(self: *Self,f: u32) void {
             self.table[0].left=f;
         }
-        pub inline fn lookup(self: *Self,key:K) u32 {
+        pub inline fn lookup(self: *Self, key: K) u32 {
             return self.lookupElement(self.root(),key);
         }
         fn lookupElement(self: *Self,current:u32,key:K) u32 {
