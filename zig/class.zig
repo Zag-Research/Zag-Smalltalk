@@ -1,4 +1,5 @@
 const heap = @import("heap");
+const object = @import("object.zig");
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has less than 18000 (including metaclasses), so shouldn't be a problem
 pub const Object: ClassIndex = 1;
 pub const False: ClassIndex = 2;
@@ -27,7 +28,7 @@ pub const Dispatch: ClassIndex = 24;
 var number_of_classes: usize = 24;
 var classes = [_]object.Object{object.Nil} ** 5000;
 pub fn init() !void {
-    const classes = [_]ClassIndex {
+    const classesList = [_]ClassIndex {
         "Object",
         "False",
         "True",
@@ -53,5 +54,5 @@ pub fn init() !void {
         "SymbolTable",
         "Dispatch",
     };
-    _ = classes;
+    _ = classesList;
 }

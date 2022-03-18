@@ -106,13 +106,13 @@ const Symbol_Table = struct {
         return s.lookup(str.asObject());
     }
     fn lookup(s: *Self,string: object.Object) object.Object {
-        const trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
-        return lookupDirect(trp,string);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        return lookupDirect(&trp,string);
     }
-    fn lookupDirect(trp: objectTreap, string: object.Object) object.Object {
+    fn lookupDirect(trp: *objectTreap, string: object.Object) object.Object {
         const index = trp.lookup(string);
         if (index>0) {
-            const nArgs = numArgs(string);
+            const nArgs = numArgs(string.arrayAsSlice(u8));
             return symbol_of(index,nArgs);
         }
         return Nil;
@@ -120,23 +120,24 @@ const Symbol_Table = struct {
     fn internLiteral(s: *Self,arena: heap.Arena, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
-        const str = try tempArena.allocString(string);
-        return s.intern(arena,str.asObject());
+        const str = tempArena.allocString(string) catch unreachable;
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        return internDirect(arena,&trp,str.asObject());
     }
     fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {
         _ = thr;
-        const trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
         const arena = thread.heap.getGlobal();
         while (true) {
-            const lu = s.lookupDirect(treap,string);
+            const lu = lookupDirect(&trp,string);
             if (!lu.is_nil()) return lu;
-            const result = s.internDirect(arena,trp,string);
+            const result = s.internDirect(arena,&trp,string);
             return result;
         }
         unreachable;
     }
-    fn internDirect(s: *Self, arena: heap.Arena, trp: anytype, string: object.Object) object.Object {
-        const result = s.lookupDirect(trp,string);
+    fn internDirect(arena: heap.Arena, trp: *objectTreap, string: object.Object) object.Object {
+        const result = lookupDirect(trp,string);
         if (!result.is_nil()) return result;
         const str = try string.promote(arena);
         _ = str;
@@ -145,21 +146,22 @@ const Symbol_Table = struct {
         return symbol_of(index,nArgs);
     }
     fn loadInitialSymbols(s: *Self,arena: heap.Arena) void {
-        const initialSymbols = .{
-            "valueWithArguments:", "cull:", "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", 
-            "value", "value:", "value:value:", "value:value:value:", "value:value:value:value:",
-            "self",
-            "Object", "BlockClosure", "False", "True",
-            "UndefinedObject", "SmallInteger", "Symbol", "Character",
-            "Float", "Array", "String", "Class", "Metaclass",
-            "Behavior", "Magnitude", "Number", "Method", "System",
-            "Return","Send","Literal","Load","Store",
-            "SymbolTable", "Dispatch",
-            "yourself", "==", "~~", "~=", "=", "+", "-", "*", "size",
-        };
-        _ = initialSymbols;
-        _ = s;
-        _ = arena;
+        var symbols = std.mem.tokenize(
+            u8,
+\\ valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: 
+\\ value value: value:value: value:value:value: value:value:value:value:
+\\ self
+\\ Object BlockClosure False True
+\\ UndefinedObject SmallInteger Symbol Character
+\\ Float Array String Class Metaclass
+\\ Behavior Magnitude Number Method System
+\\ ReturnSendLiteralLoadStore
+\\ SymbolTable Dispatch
+\\ yourself == ~~ ~= = + - * size
+                ," \n");
+        while(symbols.next()) |symbol| {
+            _ = s.internLiteral(arena,symbol);
+        }
     }
 };
 
