@@ -74,25 +74,13 @@ fn numArgs(obj: object.Object) u32 {
     }
     return count;
 }
-fn compareObject(a: object.Object, b: object.Object) std.math.Order {
-    const sla = a.arrayAsSlice(u8);
-    const slb = b.arrayAsSlice(u8);
-    for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
-        const vb=slb[index];
-        if (va<vb) return std.math.Order.lt;
-        if (va>vb) return std.math.Order.gt;
-    }
-    if (sla.len<slb.len) return std.math.Order.lt;
-    if (sla.len>slb.len) return std.math.Order.gt;
-    return std.math.Order.eq;
-}
 const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
     fn init(arena: *heap.Arena) !Self {
         var theHeapObject = try arena.allocObject(@truncate(u16,SymbolTable.fullHash()),
                                                   heap.Format.none,0,initialSymbolTableSize*2);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareObject,Nil);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {
             .theObject = theHeapObject.asObject(),
         };
@@ -107,7 +95,7 @@ const Symbol_Table = struct {
         return s.lookup(str.asObject());
     }
     fn lookup(s: *Self,string: object.Object) object.Object {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
         return lookupDirect(&trp,string);
     }
     fn lookupDirect(trp: *objectTreap, string: object.Object) object.Object {
@@ -122,12 +110,12 @@ const Symbol_Table = struct {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
         const str = tempArena.allocString(string) catch unreachable;
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
         return internDirect(arena,&trp,str.asObject());
     }
     fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {
         _ = thr;
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
         const arena = thread.heap.getGlobal();
         while (true) {
             const lu = lookupDirect(&trp,string);
@@ -141,8 +129,7 @@ const Symbol_Table = struct {
         const result = lookupDirect(trp,string);
         if (!result.is_nil()) return result;
         const str = string.promoteTo(arena) catch return Nil;
-        _ = str;
-        const index = 0;
+        const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
         return symbol_of(index,nArgs);
     }
@@ -156,7 +143,7 @@ const Symbol_Table = struct {
 \\ UndefinedObject SmallInteger Symbol Character
 \\ Float Array String Class Metaclass
 \\ Behavior Magnitude Number Method System
-\\ ReturnSendLiteralLoadStore
+\\ Return Send Literal Load Store
 \\ SymbolTable Dispatch
 \\ yourself == ~~ ~= = + - * size
                 ," \n");

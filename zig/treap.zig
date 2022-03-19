@@ -153,14 +153,6 @@ pub fn Treap(comptime K:type) type {
         }
     };
 }
-fn compareObject(left: Object, right: Object) Order {
-    const l = @bitCast(u64,left);
-    const r = @bitCast(u64,right);
-    if (l==r) return Order.eq;
-    if (l<r) return Order.lt;
-    if (l>r) return Order.gt;
-    unreachable;
-}
 fn compareU64(l: u64, r: u64) Order {
     return math.order(l,r);
 }

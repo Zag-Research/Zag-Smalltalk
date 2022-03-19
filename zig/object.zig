@@ -18,6 +18,7 @@ pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
     return @bitCast(Object,mem.readIntLittle(u64,val));
 }
+pub const compareObject = objectMethods.compare;
 const objectMethods = struct {
     pub inline fn equals(self: Object,other: Object) bool {
         return @bitCast(u64, self) == @bitCast(u64,other);
@@ -84,6 +85,21 @@ const objectMethods = struct {
     pub inline fn fullHash(self: Object) u64 {
         return @bitCast(u64, self) % 16777213;
     }
+    pub fn compare(self: Object, other: Object) std.math.Order {
+        const ord = std.math.Order;
+        if (@bitCast(u64,self)==@bitCast(u64,other)) return ord.eq;
+        if (self.immediate_class() != other.immediate_class()) unreachable;
+        const sla = self.arrayAsSlice(u8);
+        const slb = other.arrayAsSlice(u8);
+        for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
+            const vb=slb[index];
+            if (va<vb) return ord.lt;
+            if (va>vb) return ord.gt;
+        }
+        if (sla.len<slb.len) return ord.lt;
+        if (sla.len>slb.len) return ord.gt;
+        return ord.eq;
+    }
     pub inline fn immediate_class(self: Object) u64 {
         if (@bitCast(u64, self) <= Start_of_Literals) return 8;
         return (@bitCast(u64, self) >> 49) & 7;
@@ -111,7 +127,7 @@ const objectMethods = struct {
             2 => writer.print("false", .{}),
             3 => writer.print("true", .{}),
             4 => writer.print("nil", .{}),
-            5 => writer.print("{s}", .{self.as_string()}),
+            5 => writer.print("#{s}", .{self.as_string()}),
             6 => writer.print("${c}", .{self.to(u8)}),
             7 => writer.print("{d}", .{self.to(i64)}),
             8 => writer.print("{}", .{self.to(f64)}),
@@ -126,7 +142,7 @@ test "printing" {
     const symbol = @import("symbol.zig");
     try stream.print("{}\n",.{Object.from(42)});
     try stream.print("{}\n",.{symbol.yourself});
-    try std.testing.expectEqualSlices(u8, "42\ndummy string\n", fbs.getWritten());
+    try std.testing.expectEqualSlices(u8, "42\n#dummy string\n", fbs.getWritten());
 }
 pub const Tag = enum(u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger };
 pub const Object = switch (native_endian) {
