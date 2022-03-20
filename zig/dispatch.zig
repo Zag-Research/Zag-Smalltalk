@@ -2,6 +2,7 @@ const Object = @import("object.zig").Object;
 const Thread = @import("thread.zig").Thread;
 const HeapPtr = @import("heap.zig").HeapPtr;
 const Nil = @import("symbol.zig").Nil;
+const builtin = @import("builtin");
 
 pub const MethodReturns = enum {
     Normal,
@@ -34,7 +35,7 @@ fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
             if (i>=n_primes) return p;
     }
 }
-const prime_values = gen_primes(u32,13);
+const prime_values = gen_primes(u32,if (builtin.is_test) 13 else 20);
 pub fn next_prime_larger_than(n : u32) u32 {
     var low : usize = 0;
     var high : usize = prime_values.len-1;
@@ -67,23 +68,38 @@ test "primes" {
 const max_classes = 1000;
 var classDispatch : [max_classes]HeapPtr = undefined;
 
-pub fn call(sym: Object,thread: Thread) MethodReturns {
-    const nArgs = sym.nArgs;
+pub fn call(selector: Object,thread: Thread) MethodReturns {
+    const nArgs = selector.nArgs;
     const self = thread.heap.tos[nArgs];
     const class = self.get_class();    
     const dispatch = classDispatch[class];
-    const hash = @bitCast(u64,sym)%(dispatch.length-1);
+    const random = @truncate(u32,@bitCast(u64,selector))*%0xa1fdc7a3;
+    const hash = random%(dispatch.length/2-1);
     const symbolMethodPtr = @ptrCast([*]SymbolMethod,dispatch+1)+hash;
-    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
     symbolMethodPtr -= 1;
-    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
-    if (Nil.equals(symbolMethodPtr.symbol)) return dnu(thread,sym);
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    if (Nil.equals(symbolMethodPtr.symbol)) return dnu(selector,thread);
     symbolMethodPtr -= 1;
-    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
-    return dnu(sym,thread);
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    return dnu(selector,thread);
 }
-fn dnu(sym: Object,thread: Thread) MethodReturns {
-    _ = sym;
+pub fn call2(self: Object, selector: Object,thread: Thread) MethodReturns {
+    const class = self.get_class();    
+    const dispatch = classDispatch[class];
+    const random = @truncate(u32,@bitCast(u64,selector))*%0xa1fdc7a3;
+    const hash = random%(dispatch.length/2-1);
+    const symbolMethodPtr = @ptrCast([*]SymbolMethod,dispatch+1)+hash;
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    symbolMethodPtr -= 1;
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    if (Nil.equals(symbolMethodPtr.symbol)) return dnu(selector,thread);
+    symbolMethodPtr -= 1;
+    if (selector.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    return dnu(selector,thread);
+}
+fn dnu(selector: Object,thread: Thread) MethodReturns {
+    _ = selector;
     _ = thread;
     unreachable;
 }

@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const builtin = @import("builtin");
 pub const Start_of_Literals = 0xfff2000000000000;
 pub const False = @bitCast(Object, @as(u64, 0xfff4000000000000));
 pub const True = @bitCast(Object, @as(u64, 0xfff6000000000001));
@@ -10,7 +11,7 @@ pub const Object_MINVAL = @bitCast(Object, @as(u64, u64_MINVAL));
 pub const Object_INT_ZERO = @bitCast(Object, @as(u64, u64_ZERO));
 pub const Object_MAXVAL = @bitCast(Object, @as(u64, 0xffffffffffffffff));
 pub const ZERO = @bitCast(Object, @as(u64, 0));
-const native_endian = @import("builtin").target.cpu.arch.endian();
+const native_endian = builtin.target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
