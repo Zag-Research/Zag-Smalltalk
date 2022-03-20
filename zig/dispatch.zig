@@ -1,5 +1,8 @@
 const Object = @import("object.zig").Object;
 const Thread = @import("thread.zig").Thread;
+const HeapPtr = @import("heap.zig").HeapPtr;
+const Nil = @import("symbol.zig").Nil;
+
 pub const MethodReturns = enum {
     Normal,
     PrimitiveFailed,
@@ -10,6 +13,8 @@ pub const MethodReturns = enum {
     }
 };
 const methodT = fn(thread : *Thread) MethodReturns;
+pub const SymbolMethod = packed struct{ symbol: Object, method: methodT};
+
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
     var possible : T = 7;
@@ -58,4 +63,27 @@ test "primes" {
         try expect(next_prime_larger_than(1889)==1889);
     try expect(next_prime_larger_than(1890)==11959);
 }
-pub const SymbolMethod = struct {symbol: []u8, method: methodT};
+
+const max_classes = 1000;
+var classDispatch : [max_classes]HeapPtr = undefined;
+
+pub fn call(sym: Object,thread: Thread) MethodReturns {
+    const nArgs = sym.nArgs;
+    const self = thread.heap.tos[nArgs];
+    const class = self.get_class();    
+    const dispatch = classDispatch[class];
+    const hash = @bitCast(u64,sym)%(dispatch.length-1);
+    const symbolMethodPtr = @ptrCast([*]SymbolMethod,dispatch+1)+hash;
+    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    symbolMethodPtr -= 1;
+    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    if (Nil.equals(symbolMethodPtr.symbol)) return dnu(thread,sym);
+    symbolMethodPtr -= 1;
+    if (sym.equals(symbolMethodPtr.symbol)) return symbolMethodPtr.method(thread);
+    return dnu(sym,thread);
+}
+fn dnu(sym: Object,thread: Thread) MethodReturns {
+    _ = sym;
+    _ = thread;
+    unreachable;
+}

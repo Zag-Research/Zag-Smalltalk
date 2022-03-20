@@ -121,7 +121,8 @@ const Symbol_Table = struct {
             const lu = lookupDirect(&trp,string);
             if (!lu.is_nil()) return lu;
             const result = s.internDirect(arena,&trp,string);
-            return result;
+            if (!result.is_nil()) return result;
+            unreachable; // out of space
         }
         unreachable;
     }

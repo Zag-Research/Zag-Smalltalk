@@ -14,6 +14,9 @@ const native_endian = @import("builtin").target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
+const Thread = @import("thread.zig");
+const dispatch = @import("dispatch.zig");
+
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
     return @bitCast(Object,mem.readIntLittle(u64,val));
@@ -113,6 +116,9 @@ const objectMethods = struct {
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);
     }
+    pub inline fn call(self: Object, thread: Thread) dispatch.MethodRetruns {
+        return dispatch.call(self,thread);
+    }
     pub fn format(
         self: Object,
         comptime fmt: []const u8,
@@ -149,13 +155,15 @@ pub const Object = switch (native_endian) {
     .Big => packed struct {
         signMantissa: u12 align(8),
         tag: Tag,
-        highHash: u25,
+        highHash: u17,
+        nArgs : u8,
         hash: i24,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
         hash: i24 align(8),
-        highHash: u25,
+        nArgs : u8,
+        highHash: u17,
         tag: Tag,
         signMantissa: u12,
         usingnamespace objectMethods;
