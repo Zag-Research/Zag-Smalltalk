@@ -5,7 +5,7 @@ const heap = @import("heap.zig");
 const treap = @import("treap.zig");
 const thread = @import("thread.zig");
 pub inline fn symbol_of(index: u64, arity: u64) object.Object {
-    return @bitCast(object.Object,index|(arity<<24)|(0x7ffd<<49));
+    return symbol0(index|(arity<<24));
 }
 pub inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));

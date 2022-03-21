@@ -148,6 +148,7 @@ test "header formats" {
     try expect(!Format.object.isWeak());
     try expect(Format.weak.isWeak());
 }
+pub const HeaderArray = [*]Header;
 pub const HeapPtr = *Header;
 pub const HeapConstPtr = *const Header;
 const heapMethods = struct {
@@ -237,8 +238,11 @@ const heapMethods = struct {
         }
         unreachable;
     }
-    pub inline fn derefForwarded(self: HeapPtr) HeapPtr {
+    pub inline fn derefForwarded(self: HeapConstPtr) HeapPtr {
         return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
+    }
+    pub inline fn get_class(self: HeapConstPtr) u16 {
+        return self.classIndex;
     }
     pub inline fn totalSize(self: HeapConstPtr) usize {
         const form = self.objectFormat;
@@ -336,7 +340,7 @@ pub const NurseryArena = Arena {
 const nurseryVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
 };
-fn getGlobalNext(self: *Arena) *Arena {
+fn getGlobalNext(self: *const Arena) *Arena {
     if (self.collectTo) | ptr | return ptr.getGlobal();
     @panic("nothing to collect to");
 }
@@ -373,8 +377,8 @@ pub const TestArena = Arena {
 const testVtable =  Arena.Vtable {
     .getGlobal = getGlobalSelf,
 };
-fn getGlobalSelf(self: *Arena) *Arena {
-    return self;
+fn getGlobalSelf(self: *const Arena) *Arena {
+    return @intToPtr(*Arena,@ptrToInt(self));
 }
 
 pub const Arena = struct {
@@ -388,27 +392,30 @@ pub const Arena = struct {
     const Vtable = struct {
         getGlobal : arenaStar_to_arenaStar,
     };
-    const arenaStar_to_arenaStar = fn (self: *Arena) *Arena;
+    const arenaStar_to_arenaStar = fn (self: *const Arena) *Arena;
     const vtable = Vtable {
         .getGlobal = getGlobalV,
     };
-    fn getGlobalV(_: *Arena) *Arena {
+    fn getGlobalV(_: *const Arena) *Arena {
         @panic("missing vtable:getGlobal");
     }
-    pub fn getGlobal(self: *Arena) *Arena {
+    pub fn getGlobal(self: *const Arena) *Arena {
         return self.vtable.getGlobal(self);
+    }
+    pub fn space(self: *const Arena) usize {
+        return (@ptrToInt(self.tos)-@ptrToInt(self.heap))/@sizeOf(Object);
     }
     pub fn setCollectTo(self: *Arena, collectTo: ?*Arena) void {
         self.collectTo = collectTo;
     }
-    pub fn init(self: *const Arena, collectTo: ?*Arena) !Arena {
+    pub fn init(self: *const Arena) !Arena {
         const allocated = std.heap.page_allocator.alloc(Object,self.size) catch |err| return err;
         //try std.io.getStdOut().writer().print("allocated ptr=0x{x:0>16} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
         return Arena {
             .vtable = self.vtable,
             .heap = @ptrCast(HeapPtr,allocated.ptr),
             .tos = allocated.ptr+allocated.len,
-            .collectTo = collectTo,
+            .collectTo = null,
             .allocated = allocated,
             .size = allocated.len,
         };

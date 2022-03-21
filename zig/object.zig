@@ -112,7 +112,7 @@ const objectMethods = struct {
         if (@bitCast(u64, self) <= Start_of_Literals) return 8;
         const immediate = (@bitCast(u64, self) >> 49) & 7;
         if (immediate > 1) return immediate;
-        return self.as_pointer().*.get_class();
+        return self.to(HeapPtr).*.get_class();
     }
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);

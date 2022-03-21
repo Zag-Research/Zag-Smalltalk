@@ -11,19 +11,19 @@ const NonLocal = MethodReturns.NonLocal;
 const ExceptionSignaled = MethodReturns.ExceptionSignaled;
 const getSym = @import("symbol.zig").getSymbol;
 
-fn @"+"(thread : *Thread) MethodReturns {
+fn @"+"(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
-fn @"-"(thread : *Thread) MethodReturns {
+fn @"-"(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
-fn @"="(thread : *Thread) MethodReturns {
+fn @"="(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
-fn @"*"(thread : *Thread) MethodReturns {
+fn @"*"(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
-fn factorial(thread : *Thread) MethodReturns {
+fn factorial(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
     

@@ -10,7 +10,13 @@ pub const Thread = struct {
         defer next_thread_number += 1;
         return Self {
             .id = next_thread_number,
-            .heap = try heap.NurseryArena.init(null),
+            .heap = try heap.NurseryArena.init(),
+        };
+    }
+    pub fn initForTest() !Self {
+        return Self {
+            .id = 0,
+            .heap = try heap.TestArena.init(),
         };
     }
     pub fn deinit(self : *Self) void {
@@ -19,5 +25,13 @@ pub const Thread = struct {
     }
     pub inline fn stack(self: Self) [*]Object {
         return self.heap.tos;
+    }
+    pub inline fn push(self: *Self, obj: Object) void {
+        if (self.heap.space()<1) unreachable;
+        self.heap.tos -= 1;
+        self.heap.tos[0]=obj;
+    }
+    pub inline fn getArena(self: *Self) *heap.Arena {
+        return &self.heap;
     }
 };
