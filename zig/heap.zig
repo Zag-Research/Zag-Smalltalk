@@ -329,13 +329,14 @@ test "Header structure" {
     const hdr = header(17, Format.object, 35,0x123);
     try expect(@bitCast(u64, hdr) == 0x0011010001230023);
 }
+const nurserySize = 2048;
 pub const NurseryArena = Arena {
     .vtable = nurseryVtable,
     .heap = undefined,
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
-    .size = 2048,
+    .size = nurserySize,
 };
 const nurseryVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
@@ -350,7 +351,7 @@ pub const TeenArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
-    .size = 4096,
+    .size = nurserySize*3,
 };
 const teenVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
