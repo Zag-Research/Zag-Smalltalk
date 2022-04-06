@@ -3,15 +3,6 @@ const std = @import("std");
 const math = std.math;
 const Order = math.Order;
 const mem = std.mem;
-const object = @import("object.zig");
-const Object = object.Object;
-const heap = @import("heap.zig");
-const HeapPtr = heap.HeapPtr;
-const stats = @import("stats.zig");
-const class = @import("class.zig");
-fn priority(pos:u32) u32 {
-    return pos*%0xa1fdc7a3;
-}
 pub fn Treap(comptime K:type) type {
     const Element = packed struct {
         left: u32,
@@ -27,10 +18,7 @@ pub fn Treap(comptime K:type) type {
         const Less = Order.lt;
         const Greater = Order.gt;
         pub fn init(memory: []u8, compare: Compare, empty: K) Self {
-            // every 2 Objects in the heap object will form an Element
-            // K must be an object - size element, and if it's in the pointer range must point into the heap (either current or more permanent)
-            // left,right as an object will together look like an f64 or a positive SmallInteger (because the only negative is -1)
-            // in either case it will be ignored by garbage collection
+            // if this is allocated on an object heap, left,right as an object will together look like an f64 so it will be ignored by garbage collection
             var treap = ref(memory,compare);
             treap.setRoot(0);
             treap.extend(1,empty);
@@ -52,19 +40,6 @@ pub fn Treap(comptime K:type) type {
                 index += 1;
             }
         }
-        pub fn depths(self: *Self, data: []u32) void {
-            self.walk(self.root(),1,data);
-        }
-        fn walk(self: *Self, pos: u32, depth: u32, data: []u32) void {
-            data[pos]=depth;
-            if (self.table[pos].left>0) {
-                self.walk(self.table[pos].left,depth+1,data);
-                if (self.table[pos].right>0)
-                    self.walk(self.table[pos].right,depth+1,data);
-            } else if (self.table[pos].right>0) {
-                self.walk(self.table[pos].right,depth+1,data);
-            }
-        }
         inline fn root(self: *Self) u32 {
             return self.table[0].right;
         }
@@ -76,6 +51,9 @@ pub fn Treap(comptime K:type) type {
         }
         inline fn setFree(self: *Self,f: u32) void {
             self.table[0].left=f;
+        }
+        inline fn priority(pos:u32) u32 { // "random" number based on position in the array
+            return pos*%0xa1fdc7a3;
         }
         pub inline fn lookup(self: *Self, key: K) u32 {
             return self.lookupElement(self.root(),key);
@@ -104,9 +82,8 @@ pub fn Treap(comptime K:type) type {
             return pos;
         }
         fn insertElement(self: *Self,target:u32,current:u32) u32 {
-            if (current==0) {
+            if (current==0)
                 return target;
-            }
             switch (self.compare(self.table[target].key,self.table[current].key)) {
                 Equal => @panic("shouldn't be inserting an existing key"),
                 Less => {
@@ -150,6 +127,20 @@ pub fn Treap(comptime K:type) type {
             self.table[y].left = x;
             self.table[x].right = t2;
             return y;
+        }
+        // Only for tests
+        pub fn depths(self: *Self, data: []u32) void {
+            self.walk(self.root(),1,data);
+        }
+        fn walk(self: *Self, pos: u32, depth: u32, data: []u32) void {
+            data[pos]=depth;
+            if (self.table[pos].left>0) {
+                self.walk(self.table[pos].left,depth+1,data);
+                if (self.table[pos].right>0)
+                    self.walk(self.table[pos].right,depth+1,data);
+            } else if (self.table[pos].right>0) {
+                self.walk(self.table[pos].right,depth+1,data);
+            }
         }
     };
 }
