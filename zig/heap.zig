@@ -301,14 +301,14 @@ const heapMethods = struct {
 };
 const Header = switch (native_endian) {
     .Big => packed struct {
-        length: u16 align(8),
+        length: u16, // align(8),
         objectFormat: Format,
         hash: u24,
         classIndex: u16,
         usingnamespace heapMethods;
     },
     .Little => packed struct {
-        classIndex: u16 align(8),
+        classIndex: u16, // align(8),
         hash: u24,
         objectFormat: Format,
         length: u16,

@@ -154,7 +154,7 @@ test "printing" {
 pub const Tag = enum(u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
-        signMantissa: u12 align(8),
+        signMantissa: u12, // align(8),
         tag: Tag,
         highHash: u17,
         nArgs : u8,
@@ -162,7 +162,7 @@ pub const Object = switch (native_endian) {
         usingnamespace objectMethods;
     },
     .Little => packed struct {
-        hash: i24 align(8),
+        hash: i24, // align(8),
         nArgs : u8,
         highHash: u17,
         tag: Tag,

@@ -4,7 +4,7 @@ const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
 pub const Thread = struct {
     id : u64,
-    stackDepth: i32;
+    stackDepth: i32,
     heap : heap.Arena,
     const Self = @This();
     pub fn init() !Self {
