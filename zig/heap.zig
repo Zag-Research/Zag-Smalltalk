@@ -148,9 +148,9 @@ test "header formats" {
     try expect(!Format.object.isWeak());
     try expect(Format.weak.isWeak());
 }
-pub const HeaderArray = [*]Header;
-pub const HeapPtr = *Header;
-pub const HeapConstPtr = *const Header;
+pub const HeaderArray = [*]align(@alignOf(u64)) Header;
+pub const HeapPtr = *align(@alignOf(u64)) Header;
+pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
     pub inline fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
         const scale = @sizeOf(Object)/@sizeOf(T);
@@ -191,8 +191,8 @@ const heapMethods = struct {
     pub inline fn cast(self: Header) Object {
         return @bitCast(Object,self);
     }
-    pub inline fn asObjectArray(self: HeapConstPtr) [*]Object {
-        return @intToPtr([*]Object,@ptrToInt(self))+1;
+    pub inline fn asObjectArray(self: HeapConstPtr) [*]align(@alignOf(u64)) Object {
+        return @intToPtr([*]align(@alignOf(u64)) Object, @ptrToInt(self)) + 1;
     }
     pub inline fn setHash(self: HeapPtr,hash: u24) Header {
         self.hash=hash;
@@ -254,7 +254,7 @@ const heapMethods = struct {
         }
         return size+1;
     }
-    pub fn format(
+    pub fn @"format FUBAR"(
         self: HeapConstPtr,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
@@ -410,7 +410,7 @@ pub const Arena = struct {
         self.collectTo = collectTo;
     }
     pub fn init(self: *const Arena) !Arena {
-        const allocated = std.heap.page_allocator.alloc(Object,self.size) catch |err| return err;
+        const allocated = std.heap.page_allocator.alignedAlloc(Object,Object.alignment,self.size) catch |err| return err;
         //try std.io.getStdOut().writer().print("allocated ptr=0x{x:0>16} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
         return Arena {
             .vtable = self.vtable,
@@ -423,7 +423,7 @@ pub const Arena = struct {
     }
     pub fn with(self: *const Arena, expected: []Object) !Arena {
         const size = expected.len+4;
-        const allocated = std.heap.page_allocator.alloc(Object,size) catch |err| return err;
+        const allocated = std.heap.page_allocator.alignedAlloc(Object,Object.alignment,size) catch |err| return err;
         //const stdout =  std.io.getStdOut().writer();
         //try stdout.print("allocated ptr=0x{x} len={}\n",.{@ptrToInt(allocated.ptr),allocated.len});
 
@@ -517,7 +517,7 @@ pub const Arena = struct {
         return self.getGlobal().allocString(source);
     }
 };
-pub fn tempArena(bytes: []align(8)u8) Arena {
+pub fn tempArena(bytes: []align(Object.alignment)u8) Arena {
     var allocated = mem.bytesAsSlice(Object,bytes);
     return Arena {
         .vtable = GlobalArena.vtable,
@@ -532,7 +532,8 @@ test "temp arena" {
     const testing = std.testing;
     var buffer: [40]u8 align(8)= undefined;
     var testArena = tempArena(&buffer);
-    const obj1 = try testArena.allocObject(42,Format.none,3,0);
+    const obj1 : HeapPtr = try testArena.allocObject(42,Format.none,3,0);
+    try testing.expectEqual(@alignOf(@TypeOf(obj1)),Object.alignment);
     try testing.expect(obj1.asObject().is_heap());
     try testing.expectEqual(obj1.totalSize(),4);
     try testing.expectError(error.HeapFull,testArena.allocObject(42,Format.none,3,0));

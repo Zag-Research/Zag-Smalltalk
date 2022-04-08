@@ -141,6 +141,7 @@ const objectMethods = struct {
             else => unreachable,
         };
     }
+    pub const alignment = @alignOf(u64);
 };
 test "printing" {
     var buf: [255]u8 = undefined;
