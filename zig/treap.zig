@@ -40,13 +40,13 @@ pub fn Treap(comptime K:type) type {
                 index += 1;
             }
         }
-        inline fn root(self: *Self) u32 {
+        inline fn root(self: *const Self) u32 {
             return self.table[0].right;
         }
         inline fn setRoot(self: *Self,r: u32) void {
             self.table[0].right=r;
         }
-        inline fn free(self: *Self) u32 {
+        inline fn free(self: *const Self) u32 {
             return self.table[0].left;
         }
         inline fn setFree(self: *Self,f: u32) void {
@@ -55,10 +55,10 @@ pub fn Treap(comptime K:type) type {
         inline fn priority(pos:u32) u32 { // "random" number based on position in the array
             return pos*%0xa1fdc7a3;
         }
-        pub inline fn lookup(self: *Self, key: K) u32 {
+        pub inline fn lookup(self: *const Self, key: K) u32 {
             return self.lookupElement(self.root(),key);
         }
-        fn lookupElement(self: *Self,current:u32,key:K) u32 {
+        fn lookupElement(self: *const Self,current:u32,key:K) u32 {
             if (current==0) {
                 return 0;
             } else switch (self.compare(self.table[current].key,key)) {
