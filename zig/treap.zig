@@ -53,7 +53,7 @@ pub fn Treap(comptime K:type) type {
             self.table[0].left=f;
         }
         inline fn priority(pos:u32) u32 { // "random" number based on position in the array
-            return pos*%0xa1fdc7a3;
+            return pos *% 0xa1fdc7a3;
         }
         pub inline fn lookup(self: *const Self, key: K) u32 {
             return self.lookupElement(self.root(),key);
