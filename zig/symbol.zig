@@ -57,10 +57,15 @@ pub const @"*" = symbol_of(44,1);
 pub const size = symbol0(45);
 pub const negated = symbol0(46);
 
-const initialSymbolTableSize = 250;
- 
-pub fn init(thr: thread.Thread) void {
-    _ = thr;
+var symbolTable : *Symbol_Table = undefined;
+
+pub fn init(thr: thread.Thread, initialSymbolTableSize:usize) void {
+    var arena = thr.getArena().getGlobal();
+    symbolTable = try Symbol_Table.init(arena,initialSymbolTableSize);
+    symbolTable.loadInitialSymbols(&arena);
+}
+pub fn deinit(thr: thread.Thread) void {
+    defer symbol.deinit();
 }
 const objectTreap = treap.Treap(object.Object);
 fn numArgs(obj: object.Object) u32 {
@@ -77,7 +82,7 @@ fn numArgs(obj: object.Object) u32 {
 const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
-    fn init(arena: *heap.Arena) !Self {
+    fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(@truncate(u16,SymbolTable.fullHash()),
                                                   heap.Format.none,0,initialSymbolTableSize*2);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
@@ -111,12 +116,11 @@ const Symbol_Table = struct {
         var tempArena = heap.tempArena(&buffer);
         const str = tempArena.allocString(string) catch unreachable;
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
-        return internDirect(arena,&trp,str.asObject());
+        return internDirect(arena.etGlobal(),&trp,str.asObject());
     }
     fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {
-        _ = thr;
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
-        const arena = thread.heap.getGlobal();
+        const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = lookupDirect(&trp,string);
             if (!lu.is_nil()) return lu;
