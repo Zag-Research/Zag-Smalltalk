@@ -8,15 +8,15 @@ const Object = O.Object;
 const Dispatch = @import("dispatch.zig");
 const returnE = Dispatch.returnE;
 const Thread = @import("thread.zig");
+const Symbol = @import("symbol.zig");
 
 test "try a thread" {
     var thread = try Thread.Thread.initForTest();
     defer thread.deinit();
-    const Symbol = struct {
-        usingnamespace @import("symbol.zig");
-        @This.init(thread,250);
-        const start = @This().symbol_of(42,0);
-        const add_ = @This().symbol_of(43,1);
-    };
+    try Symbol.init(&thread,250);
+    const _start = Symbol.internLiteral(&thread,"start");
+    const _System = Symbol.internLiteral(&thread,"start");
+    _ = _start;
+    _ = _System;
     try expect(true);
 }

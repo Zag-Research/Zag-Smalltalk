@@ -4,10 +4,10 @@ const Nil = object.Nil;
 const heap = @import("heap.zig");
 const treap = @import("treap.zig");
 const thread = @import("thread.zig");
-pub inline fn symbol_of(index: u64, arity: u64) object.Object {
+inline fn symbol_of(index: u64, arity: u64) object.Object {
     return symbol0(index|(arity<<24));
 }
-pub inline fn symbol0(index: u64) object.Object {
+inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));
 }
 pub const valueWithArguments_ = symbol_of(1,1);
@@ -57,15 +57,24 @@ pub const @"*" = symbol_of(44,1);
 pub const size = symbol0(45);
 pub const negated = symbol0(46);
 
-var symbolTable : *Symbol_Table = undefined;
+var symbolTable : Symbol_Table = undefined;
 
-pub fn init(thr: thread.Thread, initialSymbolTableSize:usize) void {
+pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize) !void {
     var arena = thr.getArena().getGlobal();
     symbolTable = try Symbol_Table.init(arena,initialSymbolTableSize);
-    symbolTable.loadInitialSymbols(&arena);
+    symbolTable.loadInitialSymbols(arena);
 }
-pub fn deinit(thr: thread.Thread) void {
-    defer symbol.deinit();
+pub fn deinit(thr: *thread.Thread) void {
+    _ = thr;
+    symbolTable.deinit();
+}
+pub fn internLiteral(thr: *thread.Thread, string: []const u8) object.Object {
+    const result = symbolTable.internLiteral(thr.getArena(), string);
+    if (!result.is_nil()) return result;
+    unreachable; // out of space
+}
+pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
+    return symbolTable.intern(thr,string);
 }
 const objectTreap = treap.Treap(object.Object);
 fn numArgs(obj: object.Object) u32 {
@@ -116,7 +125,7 @@ const Symbol_Table = struct {
         var tempArena = heap.tempArena(&buffer);
         const str = tempArena.allocString(string) catch unreachable;
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
-        return internDirect(arena.etGlobal(),&trp,str.asObject());
+        return internDirect(arena.getGlobal(),&trp,str.asObject());
     }
     fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
@@ -162,7 +171,7 @@ test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     var buffer: [6000]u8 align(8)= undefined;
     var arena = heap.tempArena(&buffer);
-    var symbol = try Symbol_Table.init(&arena);
+    var symbol = try Symbol_Table.init(&arena,250);
     symbol.loadInitialSymbols(&arena);
     defer symbol.deinit();
     try expectEqual(valueWithArguments_,symbol.lookupLiteral("valueWithArguments:"));

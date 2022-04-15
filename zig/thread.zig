@@ -11,12 +11,14 @@ pub const Thread = struct {
         defer next_thread_number += 1;
         return Self {
             .id = next_thread_number,
+            .stackDepth = 0,
             .heap = try heap.NurseryArena.init(),
         };
     }
     pub fn initForTest() !Self {
         return Self {
             .id = 0,
+            .stackDepth = 0,
             .heap = try heap.TestArena.init(),
         };
     }
