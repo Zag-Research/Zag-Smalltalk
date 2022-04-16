@@ -1,15 +1,13 @@
 const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
-pub const Start_of_Literals = 0xfff2000000000000;
+const Start_of_Heap_Objects = 0xfff2000000000000;
+const End_of_Heap_Objects = 0xfff3ffffffffffff;
 pub const False = @bitCast(Object, @as(u64, 0xfff4000000000000));
 pub const True = @bitCast(Object, @as(u64, 0xfff6000000000001));
 pub const Nil = @bitCast(Object, @as(u64, 0xfff8000000000000));
 const u64_MINVAL = 0xfffe000000000000;
 const u64_ZERO = 0xffff000000000000;
-pub const Object_MINVAL = @bitCast(Object, @as(u64, u64_MINVAL));
-pub const Object_INT_ZERO = @bitCast(Object, @as(u64, u64_ZERO));
-pub const Object_MAXVAL = @bitCast(Object, @as(u64, 0xffffffffffffffff));
 pub const ZERO = @bitCast(Object, @as(u64, 0));
 const native_endian = builtin.target.cpu.arch.endian();
 const heap = @import("heap.zig");
@@ -31,7 +29,7 @@ const objectMethods = struct {
         return @bitCast(u64, self) >= u64_MINVAL;
     }
     pub inline fn is_double(self: Object) bool {
-        return @bitCast(u64, self) < Start_of_Literals;
+        return @bitCast(u64, self) < Start_of_Heap_Objects;
     }
     pub inline fn is_bool(self: Object) bool {
         return @bitCast(u64,self) == @bitCast(u64,False) or @bitCast(u64,self) == @bitCast(u64,True);
@@ -40,8 +38,8 @@ const objectMethods = struct {
         return @bitCast(u64,self) == @bitCast(u64,Nil);
     }
     pub inline fn is_heap(self: Object) bool {
-        if (@bitCast(u64, self) < Start_of_Literals) return false;
-        return @bitCast(u64, self) < @bitCast(u64, False);
+        if (@bitCast(u64, self) < Start_of_Heap_Objects) return false;
+        return @bitCast(u64, self) <= End_of_Heap_Objects;
     }
     pub inline fn to(self: Object, comptime T:type) T {
         switch (T) {
@@ -67,7 +65,7 @@ const objectMethods = struct {
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
-        if (T==HeapConstPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Literals);
+        if (T==HeapConstPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Heap_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -87,7 +85,7 @@ const objectMethods = struct {
         }
     }
     pub inline fn fullHash(self: Object) u64 {
-        return @bitCast(u64, self) % 16777213;
+        return @bitCast(u64, self) % 16777213; // largest 24 bit prime
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         const ord = std.math.Order;
@@ -105,12 +103,11 @@ const objectMethods = struct {
         return ord.eq;
     }
     pub inline fn immediate_class(self: Object) u64 {
-        if (@bitCast(u64, self) <= Start_of_Literals) return 8;
+        if (@bitCast(u64, self) <= Start_of_Heap_Objects) return 8;
         return (@bitCast(u64, self) >> 49) & 7;
     }
     pub inline fn get_class(self: Object) u64 {
-        if (@bitCast(u64, self) <= Start_of_Literals) return 8;
-        const immediate = (@bitCast(u64, self) >> 49) & 7;
+        const immediate = self.immediate_class();
         if (immediate > 1) return immediate;
         return self.to(HeapPtr).*.get_class();
     }
