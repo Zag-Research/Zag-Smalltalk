@@ -5,10 +5,8 @@ const stdout = std.io.getStdOut().writer();
 //const expect = @import("std").testing.expect;
 const treap = @import("treap.zig");
 const stats = @import("stats.zig");
-
-const n = 0x10000;
-
-var bits: []bool = undefined;
+const utilities = @import("utilities.zig");
+const largestPrimeLessThan = utilities.largestPrimeLessThan;
 
 var prime: u32 = 0;
 fn priority(pos:u32) u32 {
@@ -22,16 +20,6 @@ const stats_u32 = stats.Stats(u32);
 
 var best = stats_u32.init(0);
 pub fn main() void {
-    var gpa = @import("std").heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const leaked = gpa.deinit();
-        if (leaked) @panic("Allocation leakage");
-    }
-    //    const allocator = @import("std").heap.page_allocator;
-    bits = allocator.alloc(bool, n) catch @panic("Failed Allocating");
-    defer allocator.free(bits);
-
     var prng = std.rand.DefaultPrng.init(blk: {
         var seed: u64 = undefined;
         std.os.getrandom(std.mem.asBytes(&seed)) catch unreachable;
@@ -39,7 +27,6 @@ pub fn main() void {
     });
     const rand = prng.random();
     
-    init_bits();
     var memory_ = [_]u8{0} ** (32767*16);
     var depths_ = [_]u32{0} ** 32767;
     var b : u5 = 5;
@@ -108,41 +95,4 @@ fn tryTreap(printAnyway: bool,i: u32, memory: []u8, depths: []u32) void {
     } else
         if (print) stdout.print("current",.{}) catch unreachable;
     if (print) stdout.print(" is {} 0x{x:0>8} with max={d:2.0} mean={d:5.2} stdev={d:5.2}\n", .{i,i,current.max(),current.mean(),current.stddev()}) catch unreachable;
-}
-fn init_bits() void {
-    var i: usize = 3;
-    while (i < n) : (i += 2) {
-        bits[i - 1] = false;
-        bits[i] = true;
-    }
-    bits[0] = false;
-    bits[1] = false;
-    bits[2] = true;
-
-    i = 3;
-    while (i < n) : (i += 2) {
-        if (bits[i]) {
-            var j: usize = i + i;
-            while (j < n) : (j += i) {
-                bits[j] = false;
-            }
-        }
-    }
-}
-fn isPrime(p: usize) bool {
-    if (p < bits.len) return bits[p];
-    if (p % 2 == 0) return false;
-    var i: usize = 3;
-    while (i * i < p) : (i += 2) {
-        if (bits[i]) {
-            if (p % i == 0) return false;
-        }
-    }
-    return true;
-}
-fn largestPrimeLessThan(max: usize) usize {
-    if (max <= 3) return max - 1;
-    var i = (max & ~@as(usize, 1)) - 1;
-    while (!isPrime(i)) : (i -= 2) {}
-    return i;
 }
