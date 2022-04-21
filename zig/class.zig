@@ -1,5 +1,8 @@
-const heap = @import("heap");
+const std = @import("std");
 const object = @import("object.zig");
+const Nil = object.Nil;
+const heap = @import("heap.zig");
+const treap = @import("treap.zig");
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has less than 18000 (including metaclasses), so shouldn't be a problem
 pub const Object: ClassIndex = 1;
 pub const False: ClassIndex = 2;

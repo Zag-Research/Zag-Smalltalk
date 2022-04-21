@@ -21,9 +21,9 @@ test "try a thread" {
     defer thread.deinit();
     try Symbol.init(&thread,250);
     const _start = Symbol.internLiteral(&thread,"start");
-    const _System = Symbol.internLiteral(&thread,"start");
+    const _System = Symbol.internLiteral(&thread,"System");
     const System = Class.getClass(_System);
     System.addMethod(_start,startMethod);
     const result = System.dispatch(&thread,_start);
-    try expect(result.isNil);
+    try expect(result.is_nil());
 }

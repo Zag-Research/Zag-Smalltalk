@@ -3,59 +3,6 @@ const std = @import("std");
 //    bits = allocator.alloc(bool, n) catch @panic("Failed Allocating");
 //    defer allocator.free(bits);
 
-const bits = init: {
-    var initial_value: [0x10000]bool = undefined;
-    init_bits(initial_value[0..]);
-    break :init initial_value;
-};
-fn init_bits(array: []bool) void {
-    @setEvalBranchQuota(300000);
-    var i: usize = 3;
-    while (i < array.len) : (i += 2) {
-        array[i - 1] = false;
-        array[i] = true;
-    }
-    array[0] = false;
-    array[1] = false;
-    array[2] = true;
-    i = 3;
-    while (i < array.len) : (i += 2) {
-        if (array[i]) {
-            var j: usize = i + i;
-            while (j < array.len) : (j += i) {
-                array[j] = false;
-            }
-        }
-    }
-}
-fn isPrime(p: u32) bool {
-    if (p < bits.len) return bits[p];
-    if (p % 2 == 0) return false;
-    var i: usize = 3;
-    while (i * i < p) : (i += 2) {
-        if (bits[i]) {
-            if (p % i == 0) return false;
-        }
-    }
-    return true;
-}
-fn largestPrimeLessThan(max: u32) u32 {
-    if (max <= 4) return max - 1;
-    var i = (max & ~@as(u32, 1)) - 1;
-    while (!isPrime(i)) : (i -= 2) {}
-    return i;
-}
-test "primes" {
-    try std.testing.expect(!isPrime(1));
-    try std.testing.expect(isPrime(2));
-    try std.testing.expect(isPrime(3));
-    try std.testing.expect(!isPrime(4));
-    try std.testing.expect(isPrime(5));
-    try std.testing.expect(!isPrime(6));
-    try std.testing.expectEqual(largestPrimeLessThan(65535),65521);
-    try std.testing.expectEqual(largestPrimeLessThan(65535*65535),4294836197);
-}
-
 // define Fibonacci sequence tables
 // almost all allocations will be for sizes <= 65535 words long
 // so define the sequence up to that size in u16s and unroll the search

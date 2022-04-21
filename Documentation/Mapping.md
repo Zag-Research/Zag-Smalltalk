@@ -25,7 +25,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF2-F    | xxxx | xxxx | xxxt | tagged literals |
+| FFF2-F    | xxxx | xxxx | xxxx | tagged literals |
 | FFF2/3      | xxxx | xxxx | xxxx | heap object |
 | FFF4      | 0000 | 0001 | 0000 | False |
 | FFF6      | 0000 | 0010 | 0001 | True |
