@@ -14,7 +14,7 @@ const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
-const dispatch = @import("dispatch.zig");
+const Dispatch = @import("dispatch.zig");
 
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
@@ -48,7 +48,13 @@ const objectMethods = struct {
             bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
-            else => {},
+            else => {
+                switch (@typeInfo(T)) {
+                    .Pointer => {if (self.is_heap() and self.to(HeapConstPtr).classIndex==T.ClassIndex)
+                                     return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));                                        },
+                    else => {},
+                }
+            },
         }
         unreachable;
     }
@@ -114,8 +120,8 @@ const objectMethods = struct {
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);
     }
-    pub inline fn call(self: Object, thread: Thread) dispatch.MethodRetruns {
-        return dispatch.call(self,thread);
+    pub inline fn dispatch(self: Object, thread: *Thread.Thread, selector: Object) Dispatch.MethodReturns {
+        return Dispatch.call(thread,self,selector);
     }
     pub fn format(
         self: Object,

@@ -6,15 +6,17 @@ const O = @import("object.zig");
 const Nil = O.Nil;
 const Object = O.Object;
 const Class = @import("class.zig");
+const Class_S = Class.Class_S;
 const Dispatch = @import("dispatch.zig");
 const MethodReturns = Dispatch.MethodReturns;
+const Normal = MethodReturns.Normal;
 const Thread = @import("thread.zig");
 const Symbol = @import("symbol.zig");
 
-fn startMethod(thread : *Thread, self: Object) MethodReturns {
+fn startMethod(thread : *Thread.Thread, self: Object) MethodReturns {
     _ = thread;
     _ = self;
-    return MethodReturns.Normal;
+    return Normal;
 }
 test "try a thread" {
     var thread = try Thread.Thread.initForTest();
@@ -23,7 +25,12 @@ test "try a thread" {
     const _start = Symbol.internLiteral(&thread,"start");
     const _System = Symbol.internLiteral(&thread,"System");
     const System = Class.getClass(_System);
-    System.addMethod(_start,startMethod);
-    const result = System.dispatch(&thread,_start);
-    try expect(result.is_nil());
+    System.to(Class_S).addMethod(_start,startMethod);
+    thread.push(System);
+    switch (System.dispatch(&thread,_start)) {
+        .Normal => {
+            try expect(thread.stack()[0].is_nil());
+        },
+        else => unreachable,
+    }
 }

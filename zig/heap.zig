@@ -507,7 +507,7 @@ pub const Arena = struct {
         return @ptrCast(HeapPtr,result);
     }
     pub inline fn allocString(self: *Self, source: []const u8) !HeapPtr {
-        const result = try self.allocRaw(class.String,source.len,u8);
+        const result = try self.allocRaw(class.String_I,source.len,u8);
         //const stdout = std.io.getStdOut().writer();
         //stdout.print("result={} ptr=0x{x:0>16} len={}\n",.{result,@ptrToInt(result.indexables(u8).ptr),result.indexables(u8).len}) catch unreachable;
         mem.copy(u8,result.indexables(u8),source);
@@ -602,8 +602,8 @@ test "four object allocator" {
 test "string allocator" {
     //const stdout = std.io.getStdOut().writer();
     const testing = std.testing;
-    const h1 = header(1,Format.none.raw(u8,5),class.String,0);
-    const h2 = header(2,Format.none.raw(u8,5),class.String,0);
+    const h1 = header(1,Format.none.raw(u8,5),class.String_I,0);
+    const h2 = header(2,Format.none.raw(u8,5),class.String_I,0);
     const expected = ([_]Object{
         h1.cast(),object.fromLE(0x0000006f6c6c6568),
         h2.cast(),object.fromLE(0x646e612073696874),object.fromLE(0x0000007461687420),

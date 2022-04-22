@@ -17,7 +17,7 @@ pub const MethodReturns = enum {
         return self>=MethodReturns.NonLocal;
     }
 };
-const methodT = fn(thread : *Thread, self: Object) MethodReturns;
+pub const methodT = fn(thread : *Thread, self: Object) MethodReturns;
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 
 const max_classes = 1000;
@@ -113,7 +113,7 @@ pub fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    addClass(&thread,class.SmallInteger,symbolMethods[0..]);
+    addClass(&thread,class.SmallInteger_I,symbolMethods[0..]);
     const t42 = Object.from(42);
     thread.push(t42);
     try expectEqual(call(&thread,t42,symbol.value),MethodReturns.Normal);
