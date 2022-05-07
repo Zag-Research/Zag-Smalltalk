@@ -10,6 +10,9 @@ inline fn symbol_of(index: u64, arity: u64) object.Object {
 inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));
 }
+pub inline fn indexOf(o:object.Object) u32 {
+    return @truncate(u32,@bitCast(u64,o)&0xffffff);
+}
 pub const valueWithArguments_ = symbol_of(1,1);
 pub const cull_ = symbol_of(2,1);
 pub const cull_cull_ = symbol_of(3,2);
@@ -92,7 +95,7 @@ const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
     fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
-        var theHeapObject = try arena.allocObject(@truncate(u16,SymbolTable.fullHash()),
+        var theHeapObject = try arena.allocObject(@truncate(u16,indexOf(SymbolTable)),
                                                   heap.Format.none,0,initialSymbolTableSize*2);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {

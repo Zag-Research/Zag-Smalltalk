@@ -494,6 +494,13 @@ pub const Arena = struct {
         var totalSize = asize+(if (size<asize) @as(usize,2) else 1);
         return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO); //,&[0]Object{});
     }
+    pub fn allocStruct(self : *Self, classIndex : class.ClassIndex, width : usize, comptime T: type) !*T {
+        const objectWidth = @sizeOf(Object);
+        const asize = (width+objectWidth-1)/objectWidth;
+        const form = Format.object;
+        var totalSize = asize+1;
+        return @ptrCast(*T,try self.alloc(classIndex, form, asize, 0, asize, totalSize, object.ZERO));
+    }
     inline fn alloc(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object) !HeapPtr {
         const result = self.heap;
         const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);

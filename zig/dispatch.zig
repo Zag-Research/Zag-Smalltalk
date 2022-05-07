@@ -1,6 +1,7 @@
 const std = @import("std");
-const Object = @import("object.zig").Object;
-const Nil = @import("object.zig").Nil;
+const object = @import("object.zig");
+const Object = object.Object;
+const Nil = object.Nil;
 const Thread = @import("thread.zig").Thread;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -95,17 +96,28 @@ test "findTableSize" {
     try expectEqual(findTableSize(symbolMethods2[0..]),11);
     try expectEqual(findTableSize(symbolMethods3[0..]),17);
 }
-pub fn addClass(thread: *const Thread, theClass: class.ClassIndex, sm: []const SymbolMethod) void {
+pub fn addClass(thread: *Thread, theClass: class.ClassIndex, symbolMethods: []const SymbolMethod) void {
     //const stdout =  std.io.getStdOut().writer();
     //stdout.print("return used {any}\n",.{used[0..size+extraSlots]}) catch unreachable;
 
-    //    const arena = thread.getArena().getGlobal();
-    //_ = arena;
-    _ = thread;
-    const dispatchSize = findTableSize(sm)+extraSlots;
-    _ = dispatchSize;
-    _ = theClass;
-    unreachable;
+    const arena = thread.getArena().getGlobal();
+    const dispatchSize = findTableSize(symbolMethods);
+    const strct = arena.allocStruct(@truncate(u16,symbol.indexOf(symbol.Dispatch)),@sizeOf(Dispatch)+dispatchSize*@sizeOf(SymbolMethod),Dispatch) catch unreachable;
+    strct.mod=dispatchSize;
+    const methods=@ptrCast([*]SymbolMethod,&strct.methods);
+    for (methods[0..dispatchSize]) |*sm| {
+        sm.selector=Nil;
+        sm.method=dnu;
+    }
+    for (symbolMethods) |*sm| {
+        var hash = randomHash(sm.selector,dispatchSize);
+        if (!methods[hash].selector.equals(Nil)) hash+=1;
+        if (extraSlots>2) {if (!methods[hash].selector.equals(Nil)) hash+=1;}
+        if (!methods[hash].selector.equals(Nil)) unreachable;
+        methods[hash].selector=sm.selector;
+        methods[hash].method=sm.method;
+    }
+    classDispatch[theClass]=strct;
 }
 pub fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
     const theClass = self.get_class();
@@ -115,7 +127,7 @@ pub fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
     if (selector.equals(symbolMethodPtr[0].selector)) return symbolMethodPtr[0].method(thread,self);
     if (selector.equals(symbolMethodPtr[1].selector)) return symbolMethodPtr[1].method(thread,self);
     if (extraSlots>1 and selector.equals(symbolMethodPtr[2].selector)) return symbolMethodPtr[2].method(thread,self);
-    return dnu(selector,thread);
+    return dnu(thread,selector);
 }
 fn dispatchTableObject(classIndex: u16) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
@@ -125,11 +137,11 @@ test "addClass and call" {
     var thread = try Thread.initForTest();
     addClass(&thread,class.SmallInteger_I,symbolMethods1[0..]);
     const t42 = Object.from(42);
-    thread.push(t42);
+    thread.push(Object.from(17));
     try expectEqual(call(&thread,t42,symbol.value),MethodReturns.Normal);
-    try expectEqual(thread.stack()[0],symbol.value);
+    try expectEqual(thread.stack()[0],t42);
 }
-fn dnu(selector: Object,thread: *Thread) MethodReturns {
+fn dnu(thread: *Thread,selector: Object) MethodReturns {
     _ = selector;
     _ = thread;
     unreachable;
