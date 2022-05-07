@@ -32,7 +32,8 @@ pub const Store_I: ClassIndex = 22;
 pub const SymbolTable_I: ClassIndex = 23;
 pub const Dispatch_I: ClassIndex = 24;
 var number_of_classes: usize = 24;
-var classes = [_]object.Object{Nil} ** 5000;
+pub const ReservedSpaceForClasses = 5000;
+var classes = [_]object.Object{Nil} ** ReservedSpaceForClasses;
 const Behavior_S = packed struct {
     superclass: Object,
     methodDict: Object,

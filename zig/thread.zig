@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
@@ -16,11 +17,14 @@ pub const Thread = struct {
         };
     }
     pub fn initForTest() !Self {
-        return Self {
-            .id = 0,
-            .stackDepth = 0,
-            .heap = try heap.TestArena.init(),
-        };
+        if (builtin.is_test) {
+            return Self {
+                .id = 0,
+                .stackDepth = 0,
+                .heap = try heap.TestArena.init(),
+            };
+        }
+        else unreachable;
     }
     pub fn deinit(self : *Self) void {
         self.heap.deinit();
