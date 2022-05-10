@@ -1,7 +1,9 @@
 const std = @import("std");
+const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
+const symbol = @import("symbol.zig");
 const dispatch = @import("dispatch.zig");
 const methodT = dispatch.methodT;
 const heap = @import("heap.zig");
@@ -31,16 +33,73 @@ pub const Load_I: ClassIndex = 21;
 pub const Store_I: ClassIndex = 22;
 pub const SymbolTable_I: ClassIndex = 23;
 pub const Dispatch_I: ClassIndex = 24;
-var number_of_classes: usize = 24;
-pub const ReservedSpaceForClasses = 5000;
-var classes = [_]object.Object{Nil} ** ReservedSpaceForClasses;
+pub const ClassTable_I: ClassIndex = 23;
+pub const Magnitude_I: ClassIndex = 24;
+pub const Number_I: ClassIndex = 25;
+
+pub const ReservedNumberOfClasses = 500;
+var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
+var classTable : Class_Table = undefined;
+const objectTreap = treap.Treap(object.Object);
+const Class_Table = struct {
+    theObject: object.Object,
+    const Self = @This();
+    fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
+        var theHeapObject = try arena.allocObject(ClassTable_I,
+                                                  heap.Format.none,0,initialSymbolTableSize*2);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
+        return Class_Table {
+            .theObject = theHeapObject.asObject(),
+        };
+    }
+    fn deinit(s: *Self) void {
+        s.*=undefined;
+    }
+    fn lookup(s: *Self,sym: object.Object) ClassIndex {
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        return @truncate(ClassIndex,trp.lookup(sym));
+    }
+    fn intern(s: *Self, sym: object.Object) ClassIndex {
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        //const arena = thr.getArena().getGlobal();
+        while (true) {
+            const lu = s.lookup(sym);
+            if (lu>0) return lu;
+            const result = @truncate(ClassIndex,trp.insert(sym) catch unreachable);
+            if (result>0) return result;
+            unreachable; // out of space
+        }
+        unreachable;
+    }
+    fn lookupLiteral(s: *Self, string: []const u8) ClassIndex {
+        return s.lookup(symbol.lookupLiteral(string));
+    }
+    fn loadInitialClassNames(s: *Self, arena: *heap.Arena) void {
+        var names = std.mem.tokenize(
+            u8,
+\\ Object False True
+\\ UndefinedObject Symbol Character SmallInteger
+\\ Float Array String Class Metaclass
+\\ Behavior BlockClosure Magnitude Number Method MethodDictionary System
+\\ Return Send Literal Load Store
+\\ SymbolTable Dispatch ClassTable
+                ," \n");
+        while(names.next()) |name| {
+            const stdout = @import("std").io.getStdOut().writer();
+            stdout.print("interning: {s}\n",.{name}) catch unreachable;
+            _ = s.intern(symbol.internLiteral(arena,name));
+        }
+    }
+};
 const Behavior_S = packed struct {
+    header: u64,
     superclass: Object,
     methodDict: Object,
     format: Object,
 };
 const ClassDescription_S = packed struct {
     super: Behavior_S,
+    index: ClassIndex,
     organization: Object,
 };
 pub const Metaclass_S = packed struct{
@@ -54,43 +113,56 @@ pub const Class_S = packed struct{
     name: Object,
     instVarNames: Object,
     classVariables: Object,
-    pub fn addMethod(self: *Class_S, name: Object, method: methodT) void {
-        _ = self;
-        _ = name;
-        _ = method;
-        unreachable;
-    }
+    subclasses: Object,
 };
 pub fn getClass(name: Object) Object {
     _ = name;
     unreachable;
 }
-pub fn init() !void {
-    const classesList = [_]ClassIndex {
-        "Object",
-        "False",
-        "True",
-        "UndefinedObject",
-        "Symbol",
-        "Character",
-        "SmallInteger",
-        "Float",
-        "Array",
-        "String",
-        "Class",
-        "Metaclass",
-        "Behavior",
-        "BlockClosure",
-        "Method",
-        "MethodDictionary",
-        "System",
-        "Return",
-        "Send",
-        "Literal",
-        "Load",
-        "Store",
-        "SymbolTable",
-        "Dispatch",
-    };
-    _ = classesList;
+pub fn addClass(_: *thread.Thread, _: Object) void {
+    // allocate nextFree location in treap (not in key structure) for metaclass
+    // intern class name, add class object at that location with metaclass as ClassIndex
+    // set up superclass on both sides
+    unreachable;
+}
+pub fn init(thr: *thread.Thread) !void {
+    var arena = thr.getArena().getGlobal();
+    classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
+    classTable.loadInitialClassNames(thr);
+}
+test "classes match initialized class table" {
+    const expectEqual = std.testing.expectEqual;
+    var thr = try thread.Thread.initForTest();
+        //var buffer: [6000]u8 align(8)= undefined;
+    var arena = thr.getArena();
+    var class = try Class_Table.init(arena,250);
+    try symbol.init(&thr,500);
+    class.loadInitialClassNames(arena);
+    defer class.deinit();
+    try expectEqual(Object_I,class.lookupLiteral("Object"));
+    try expectEqual(False_I,class.lookupLiteral("False"));
+    try expectEqual(True_I,class.lookupLiteral("True"));
+    try expectEqual(UndefinedObject_I,class.lookupLiteral("UndefinedObject"));
+    try expectEqual(SmallInteger_I,class.lookupLiteral("SmallInteger"));
+    try expectEqual(Class_I,class.lookupLiteral("Class"));
+    try expectEqual(Character_I,class.lookupLiteral("Character"));
+    try expectEqual(Float_I,class.lookupLiteral("Float"));
+    try expectEqual(Array_I,class.lookupLiteral("Array"));
+    try expectEqual(String_I,class.lookupLiteral("String"));
+    try expectEqual(Class_I,class.lookupLiteral("Class"));
+    try expectEqual(Metaclass_I,class.lookupLiteral("Metaclass"));
+    try expectEqual(Behavior_I,class.lookupLiteral("Behavior"));
+    try expectEqual(BlockClosure_I,class.lookupLiteral("BlockClosure"));
+    try expectEqual(Method_I,class.lookupLiteral("Method"));
+    try expectEqual(Number_I,class.lookupLiteral("Number"));
+    try expectEqual(System_I,class.lookupLiteral("System"));
+    try expectEqual(Return_I,class.lookupLiteral("Return"));
+    try expectEqual(Send_I,class.lookupLiteral("Send"));
+    try expectEqual(Literal_I,class.lookupLiteral("Literal"));
+    try expectEqual(Load_I,class.lookupLiteral("Load"));
+    try expectEqual(Store_I,class.lookupLiteral("Store"));
+    try expectEqual(SymbolTable_I,class.lookupLiteral("SymbolTable"));
+    try expectEqual(Dispatch_I,class.lookupLiteral("Dispatch"));
+    try expectEqual(ClassTable_I,class.lookupLiteral("ClassTable"));
+    try expectEqual(Magnitude_I,class.lookupLiteral("Magnitude"));
 }

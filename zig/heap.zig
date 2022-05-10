@@ -7,6 +7,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const class = @import("class.zig");
+const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
 pub const Format = enum(u8) {
     none = 0,
@@ -241,7 +242,7 @@ const heapMethods = struct {
     pub inline fn derefForwarded(self: HeapConstPtr) HeapPtr {
         return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
     }
-    pub inline fn get_class(self: HeapConstPtr) u16 {
+    pub inline fn get_class(self: HeapConstPtr) ClassIndex {
         return self.classIndex;
     }
     pub inline fn totalSize(self: HeapConstPtr) usize {

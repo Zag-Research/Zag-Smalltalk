@@ -15,6 +15,7 @@ const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
 const Dispatch = @import("dispatch.zig");
+const ClassIndex = @import("class.zig").ClassIndex;
 
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
@@ -94,6 +95,11 @@ const objectMethods = struct {
         return @bitCast(u64, self) % 16777213; // largest 24 bit prime
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
+        if (!self.is_heap() or !other.is_heap()) {
+            const u64s = @bitCast(u64,self);
+            const u64o = @bitCast(u64,other);
+            return std.math.order(u64s,u64o);
+        }
         const ord = std.math.Order;
         if (@bitCast(u64,self)==@bitCast(u64,other)) return ord.eq;
         if (self.immediate_class() != other.immediate_class()) unreachable;
@@ -108,11 +114,11 @@ const objectMethods = struct {
         if (sla.len>slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline fn immediate_class(self: Object) u64 {
+    pub inline fn immediate_class(self: Object) ClassIndex {
         if (@bitCast(u64, self) <= Start_of_Heap_Objects) return 8;
-        return (@bitCast(u64, self) >> 49) & 7;
+        return @truncate(ClassIndex,@bitCast(u64, self) >> 49) & 7;
     }
-    pub inline fn get_class(self: Object) u64 {
+    pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
         if (immediate > 1) return immediate;
         return self.to(HeapPtr).*.get_class();

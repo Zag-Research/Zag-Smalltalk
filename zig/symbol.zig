@@ -1,6 +1,7 @@
 const std = @import("std");
 const object = @import("object.zig");
 const Nil = object.Nil;
+const class = @import("class.zig");
 const heap = @import("heap.zig");
 const treap = @import("treap.zig");
 const thread = @import("thread.zig");
@@ -9,9 +10,6 @@ inline fn symbol_of(index: u64, arity: u64) object.Object {
 }
 inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));
-}
-pub inline fn indexOf(o:object.Object) u32 {
-    return @truncate(u32,@bitCast(u64,o)&0xffffff);
 }
 pub const valueWithArguments_ = symbol_of(1,1);
 pub const cull_ = symbol_of(2,1);
@@ -49,17 +47,17 @@ pub const Load = symbol0(33);
 pub const Store = symbol0(34);
 pub const SymbolTable = symbol0(35);
 pub const Dispatch = symbol0(36);
-pub const yourself = symbol0(37);
-pub const @"==" = symbol_of(38,1);
-pub const @"~~" = symbol_of(39,1);
-pub const @"~=" = symbol_of(40,1);
-pub const @"=" = symbol_of(41,1);
-pub const @"+" = symbol_of(42,1);
-pub const @"-" = symbol_of(43,1);
-pub const @"*" = symbol_of(44,1);
-pub const size = symbol0(45);
-pub const negated = symbol0(46);
-
+pub const ClassTable = symbol0(37);
+pub const yourself = symbol0(38);
+pub const @"==" = symbol_of(39,1);
+pub const @"~~" = symbol_of(40,1);
+pub const @"~=" = symbol_of(41,1);
+pub const @"=" = symbol_of(42,1);
+pub const @"+" = symbol_of(43,1);
+pub const @"-" = symbol_of(44,1);
+pub const @"*" = symbol_of(45,1);
+pub const size = symbol0(46);
+pub const negated = symbol0(47);
 var symbolTable : Symbol_Table = undefined;
 
 pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize) !void {
@@ -71,8 +69,11 @@ pub fn deinit(thr: *thread.Thread) void {
     _ = thr;
     symbolTable.deinit();
 }
-pub fn internLiteral(thr: *thread.Thread, string: []const u8) object.Object {
-    const result = symbolTable.internLiteral(thr.getArena(), string);
+pub fn lookupLiteral(string: []const u8) object.Object {
+    return symbolTable.lookupLiteral(string);
+}
+pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
+    const result = symbolTable.internLiteral(arena, string);
     if (!result.is_nil()) return result;
     unreachable; // out of space
 }
@@ -95,7 +96,7 @@ const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
     fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
-        var theHeapObject = try arena.allocObject(@truncate(u16,indexOf(SymbolTable)),
+        var theHeapObject = try arena.allocObject(class.SymbolTable_I,
                                                   heap.Format.none,0,initialSymbolTableSize*2);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {
@@ -161,7 +162,7 @@ const Symbol_Table = struct {
 \\ Float Array String Class Metaclass
 \\ Behavior Magnitude Number Method System
 \\ Return Send Literal Load Store
-\\ SymbolTable Dispatch
+\\ SymbolTable Dispatch ClassTable
 \\ yourself == ~~ ~= = + - * size
                 ," \n");
         while(symbols.next()) |symbol| {
@@ -222,4 +223,5 @@ test "symbols match initialized symbol table" {
     try expectEqual(@"-",symbol.lookupLiteral("-"));
     try expectEqual(@"*",symbol.lookupLiteral("*"));
     try expectEqual(size,symbol.lookupLiteral("size"));
+    try expectEqual(ClassTable,symbol.lookupLiteral("ClassTable"));
 }

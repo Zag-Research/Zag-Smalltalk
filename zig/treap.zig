@@ -46,11 +46,15 @@ pub fn Treap(comptime K:type) type {
         inline fn setRoot(self: *Self,r: u32) void {
             self.table[0].right=r;
         }
-        inline fn free(self: *const Self) u32 {
-            return self.table[0].left;
-        }
         inline fn setFree(self: *Self,f: u32) void {
             self.table[0].left=f;
+        }
+        pub fn nextFree(self: *Self) !u32 {
+            const pos = self.table[0].left;
+            if (pos>=self.table.len) return error.OutOfSpace;
+            self.setFree(self.table[pos].left);
+            self.table[pos].left=0;
+            return pos;
         }
         inline fn priority(pos:u32) u32 { // "random" number based on position in the array
             return pos *% 0xa1fdc7a3;
@@ -73,11 +77,8 @@ pub fn Treap(comptime K:type) type {
                 // might have been added while waiting for the write lock
                 return result;
             }
-            const pos = self.free();
-            if (pos>=self.table.len) return error.OutOfSpace;
-            self.setFree(self.table[pos].left);
+            const pos = try self.nextFree();
             self.table[pos].key=key;
-            self.table[pos].left=0;
             self.setRoot(self.insertElement(pos,self.root()));
             return pos;
         }
@@ -148,6 +149,17 @@ fn compareU64(l: u64, r: u64) Order {
     return math.order(l,r);
 }
 const Treap_u64 = Treap(u64);
+test "simple u64 treap alloc with nextFree" {
+    const expectEqual = @import("std").testing.expectEqual;
+    const n = 2;
+    var memory = [_]u8{0} ** (n*48);
+    var treap = Treap_u64.init(memory[0..],compareU64,0);
+    const f2 = try treap.insert(42);
+    try expectEqual(f2,1);
+    try expectEqual(treap.nextFree(),2);
+    const f1 = try treap.insert(17);
+    try expectEqual(f1,3);
+}
 test "simple u64 treap alloc" {
     const expectEqual = @import("std").testing.expectEqual;
     const n = 2;

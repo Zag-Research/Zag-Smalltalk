@@ -2,11 +2,12 @@ const std = @import("std");
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
+const class = @import("class.zig");
+const ClassIndex = class.ClassIndex;
 const Thread = @import("thread.zig").Thread;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
-const class = @import("class.zig");
 const symbol = @import("symbol.zig");
 
 pub const MethodReturns = enum {
@@ -27,7 +28,7 @@ const Dispatch = packed struct {
     super: u32,
     methods: [extraSlots]SymbolMethod,
 };
-const max_classes = class.ReservedSpaceForClasses;
+const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
 inline fn randomHash(selector: Object, size: u32) u32 {
     const random = @truncate(u32,@bitCast(u64,selector))*%0xa1fdc7a3;
@@ -64,20 +65,44 @@ fn testNonLocal(thread : *Thread, self: Object) MethodReturns {
     thread.stack()[0]=self;
     return MethodReturns.NonLocal;
 }
+fn test1(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(1);
+    return MethodReturns.Normal;
+}
+fn test2(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(2);
+    return MethodReturns.Normal;
+}
+fn test3(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(3);
+    return MethodReturns.Normal;
+}
+fn test4(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(4);
+    return MethodReturns.Normal;
+}
+fn test5(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(5);
+    return MethodReturns.Normal;
+}
+fn test6(thread : *Thread, _: Object) MethodReturns {
+    thread.stack()[0]=Object.from(6);
+    return MethodReturns.Normal;
+}
+const noMethods = [0]SymbolMethod{};
 const symbolMethods1 = [_]SymbolMethod{
     .{.selector=symbol.value,.method=testNormal},
     .{.selector=symbol.self,.method=testNormal},
     .{.selector=symbol.yourself,.method=testNormal},
     .{.selector=symbol.cull_,.method=testNormal},
-    .{.selector=symbol.value_,.method=testNonLocal},
 };
 const symbolMethods2 = [_]SymbolMethod{
-    .{.selector=symbol.value,.method=testNormal},
-    .{.selector=symbol.self,.method=testNormal},
-    .{.selector=symbol.yourself,.method=testNormal},
-    .{.selector=symbol.cull_,.method=testNormal},
-    .{.selector=symbol.value_,.method=testNonLocal},
-    .{.selector=symbol.value_value_,.method=testNormal}, // additional method forces larger hash
+    .{.selector=symbol.value,.method=test1},
+    .{.selector=symbol.self,.method=test2},
+    .{.selector=symbol.yourself,.method=test3},
+    .{.selector=symbol.cull_,.method=test4},
+    .{.selector=symbol.value_,.method=test5}, // additional method forces larger hash
+    .{.selector=symbol.cull_cull_cull_cull_,.method=test6}, // additional method forces larger hash
 };
 const symbolMethods3 = [_]SymbolMethod{
     .{.selector=symbol.value,.method=testNormal},
@@ -92,18 +117,23 @@ const symbolMethods3 = [_]SymbolMethod{
 };
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
-    try expectEqual(findTableSize(symbolMethods1[0..]),7);
-    try expectEqual(findTableSize(symbolMethods2[0..]),11);
+    try expectEqual(findTableSize(symbolMethods1[0..]),5);
+    try expectEqual(findTableSize(symbolMethods2[0..]),7);
     try expectEqual(findTableSize(symbolMethods3[0..]),17);
 }
-pub fn addClass(thread: *Thread, theClass: class.ClassIndex, symbolMethods: []const SymbolMethod) void {
-    //const stdout =  std.io.getStdOut().writer();
-    //stdout.print("return used {any}\n",.{used[0..size+extraSlots]}) catch unreachable;
-
+pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
+    _ = thread;
+    _ = className;
+    _ = instanceMethods;
+    _ = classMethods;
+    return error.UnImplemented;
+}
+pub fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
     const arena = thread.getArena().getGlobal();
     const dispatchSize = findTableSize(symbolMethods);
-    const strct = arena.allocStruct(@truncate(u16,symbol.indexOf(symbol.Dispatch)),@sizeOf(Dispatch)+dispatchSize*@sizeOf(SymbolMethod),Dispatch) catch unreachable;
-    strct.mod=dispatchSize;
+    const strct = arena.allocStruct(@truncate(ClassIndex,symbol.indexOf(symbol.Dispatch)),@sizeOf(Dispatch)+dispatchSize*@sizeOf(SymbolMethod),Dispatch) catch unreachable;
+    strct.mod = dispatchSize;
+    strct.super = superClass;
     const methods=@ptrCast([*]SymbolMethod,&strct.methods);
     for (methods[0..dispatchSize]) |*sm| {
         sm.selector=Nil;
@@ -119,8 +149,11 @@ pub fn addClass(thread: *Thread, theClass: class.ClassIndex, symbolMethods: []co
     }
     classDispatch[theClass]=strct;
 }
-pub fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
+pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
     const theClass = self.get_class();
+    return callClass(thread, theClass, self, selector);
+}
+pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: Object) MethodReturns {
     const dispatch = classDispatch[theClass];
     const hash = randomHash(selector,dispatch.mod);
     const symbolMethodPtr = @ptrCast([*]SymbolMethod,&dispatch.methods)+hash;
@@ -129,17 +162,36 @@ pub fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
     if (extraSlots>1 and selector.equals(symbolMethodPtr[2].selector)) return symbolMethodPtr[2].method(thread,self);
     return dnu(thread,selector);
 }
-fn dispatchTableObject(classIndex: u16) HeapPtr {
+fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
 }
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    addClass(&thread,class.SmallInteger_I,symbolMethods1[0..]);
+    try addClass(&thread,symbol.SmallInteger,symbolMethods1[0..],noMethods[0..]);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
     try expectEqual(call(&thread,t42,symbol.value),MethodReturns.Normal);
     try expectEqual(thread.stack()[0],t42);
+}
+test "lookups of proper methods" {
+    const expectEqual = @import("std").testing.expectEqual;
+    var thread = try Thread.initForTest();
+    try addClass(&thread,symbol.SmallInteger,symbolMethods2[0..],noMethods[0..]);
+    const t42 = Object.from(42);
+    thread.push(Object.from(17));
+    _ = call(&thread,t42,symbol.value);
+    try expectEqual(thread.stack()[0],Object.from(1));
+    _ = call(&thread,t42,symbol.self);
+    try expectEqual(thread.stack()[0],Object.from(2));
+    _ = call(&thread,t42,symbol.yourself);
+    try expectEqual(thread.stack()[0],Object.from(3));
+    _ = call(&thread,t42,symbol.cull_);
+    try expectEqual(thread.stack()[0],Object.from(4));
+    _ = call(&thread,t42,symbol.value_);
+    try expectEqual(thread.stack()[0],Object.from(5));
+    _ = call(&thread,t42,symbol.cull_cull_cull_cull_);
+    try expectEqual(thread.stack()[0],Object.from(6));
 }
 fn dnu(thread: *Thread,selector: Object) MethodReturns {
     _ = selector;
@@ -149,7 +201,7 @@ fn dnu(thread: *Thread,selector: Object) MethodReturns {
 
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
-    var possible : T = 7;
+    var possible : T = 3;
     var previous : T = 0;
     var i: usize = 0;
     if (n_primes>13) @setEvalBranchQuota(100000);
@@ -167,7 +219,7 @@ fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     }
 }
 const primes_type = u16;
-const prime_values = gen_primes(primes_type,if (builtin.is_test) 13 else 20);
+const prime_values = gen_primes(primes_type,if (builtin.is_test) 15 else 22);
 const default_prime = 11959; // max size of dispatch table - must be less than 32767
 pub fn next_prime_larger_than(n : primes_type) primes_type {
     var low : usize = 0;
@@ -186,14 +238,16 @@ pub fn next_prime_larger_than(n : primes_type) primes_type {
 test "primes" {
 //    const stdout = @import("std").io.getStdOut().writer();
 //    try stdout.print("primes: {any}\n",.{prime_values});
-    const expect = @import("std").testing.expect;
-    try expect(next_prime_larger_than(3)==7);
-    try expect(next_prime_larger_than(24)==29);
-    try expect(next_prime_larger_than(167)==167);
-    try expect(next_prime_larger_than(224)==293);
-    if (prime_values.len<20) {
-        try expect(next_prime_larger_than(294)==default_prime);
+    const expectEqual = @import("std").testing.expectEqual;
+    try expectEqual(next_prime_larger_than(1),3);
+    try expectEqual(next_prime_larger_than(3),3);
+    try expectEqual(next_prime_larger_than(6),7);
+    try expectEqual(next_prime_larger_than(24),29);
+    try expectEqual(next_prime_larger_than(167),167);
+    try expectEqual(next_prime_larger_than(224),293);
+    if (prime_values.len<22) {
+        try expectEqual(next_prime_larger_than(294),default_prime);
     } else
-        try expect(next_prime_larger_than(1889)==1889);
-    try expect(next_prime_larger_than(1890)==default_prime);
+        try expectEqual(next_prime_larger_than(1889),1889);
+    try expectEqual(next_prime_larger_than(1890),default_prime);
 }
