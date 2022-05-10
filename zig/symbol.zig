@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
 const class = @import("class.zig");

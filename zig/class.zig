@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
@@ -33,20 +34,20 @@ pub const Load_I: ClassIndex = 21;
 pub const Store_I: ClassIndex = 22;
 pub const SymbolTable_I: ClassIndex = 23;
 pub const Dispatch_I: ClassIndex = 24;
-pub const ClassTable_I: ClassIndex = 23;
-pub const Magnitude_I: ClassIndex = 24;
-pub const Number_I: ClassIndex = 25;
+pub const ClassTable_I: ClassIndex = 25;
+pub const Magnitude_I: ClassIndex = 26;
+pub const Number_I: ClassIndex = 27;
 
-pub const ReservedNumberOfClasses = 500;
+pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
 const objectTreap = treap.Treap(object.Object);
 const Class_Table = struct {
     theObject: object.Object,
     const Self = @This();
-    fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
+    fn init(arena: *heap.Arena, initialClassTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(ClassTable_I,
-                                                  heap.Format.none,0,initialSymbolTableSize*2);
+                                                  heap.Format.none,0,initialClassTableSize*2);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Class_Table {
             .theObject = theHeapObject.asObject(),
@@ -54,6 +55,10 @@ const Class_Table = struct {
     }
     fn deinit(s: *Self) void {
         s.*=undefined;
+    }
+    fn nextFree(s: *Self) ClassIndex {
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        return @truncate(ClassIndex,trp.nextFree() catch @panic("class treap full"));
     }
     fn lookup(s: *Self,sym: object.Object) ClassIndex {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
@@ -65,7 +70,7 @@ const Class_Table = struct {
         while (true) {
             const lu = s.lookup(sym);
             if (lu>0) return lu;
-            const result = @truncate(ClassIndex,trp.insert(sym) catch unreachable);
+            const result = @truncate(ClassIndex,trp.insert(sym) catch @panic("class treap full"));
             if (result>0) return result;
             unreachable; // out of space
         }
@@ -80,13 +85,11 @@ const Class_Table = struct {
 \\ Object False True
 \\ UndefinedObject Symbol Character SmallInteger
 \\ Float Array String Class Metaclass
-\\ Behavior BlockClosure Magnitude Number Method MethodDictionary System
+\\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
-\\ SymbolTable Dispatch ClassTable
+\\ SymbolTable Dispatch ClassTable Magnitude Number
                 ," \n");
         while(names.next()) |name| {
-            const stdout = @import("std").io.getStdOut().writer();
-            stdout.print("interning: {s}\n",.{name}) catch unreachable;
             _ = s.intern(symbol.internLiteral(arena,name));
         }
     }
@@ -119,26 +122,29 @@ pub fn getClass(name: Object) Object {
     _ = name;
     unreachable;
 }
-pub fn addClass(_: *thread.Thread, _: Object) void {
+pub fn addClass(_: *thread.Thread, className: Object,superclass: ClassIndex) void {
+    const metaclass = classTable.nextFree();
+    const class = classTable.intern(className);
+    _ = superclass;
+    _ = metaclass;
+    _ = class;
     // allocate nextFree location in treap (not in key structure) for metaclass
     // intern class name, add class object at that location with metaclass as ClassIndex
     // set up superclass on both sides
-    unreachable;
+    @panic("unfinished code");
 }
 pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
-    classTable.loadInitialClassNames(thr);
+    classTable.loadInitialClassNames(arena);
+    addClass(thr,symbol.Object,0);
 }
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;
     var thr = try thread.Thread.initForTest();
-        //var buffer: [6000]u8 align(8)= undefined;
-    var arena = thr.getArena();
-    var class = try Class_Table.init(arena,250);
     try symbol.init(&thr,500);
-    class.loadInitialClassNames(arena);
-    defer class.deinit();
+    try init(&thr);
+    var class = classTable;
     try expectEqual(Object_I,class.lookupLiteral("Object"));
     try expectEqual(False_I,class.lookupLiteral("False"));
     try expectEqual(True_I,class.lookupLiteral("True"));
@@ -154,7 +160,6 @@ test "classes match initialized class table" {
     try expectEqual(Behavior_I,class.lookupLiteral("Behavior"));
     try expectEqual(BlockClosure_I,class.lookupLiteral("BlockClosure"));
     try expectEqual(Method_I,class.lookupLiteral("Method"));
-    try expectEqual(Number_I,class.lookupLiteral("Number"));
     try expectEqual(System_I,class.lookupLiteral("System"));
     try expectEqual(Return_I,class.lookupLiteral("Return"));
     try expectEqual(Send_I,class.lookupLiteral("Send"));
@@ -165,4 +170,5 @@ test "classes match initialized class table" {
     try expectEqual(Dispatch_I,class.lookupLiteral("Dispatch"));
     try expectEqual(ClassTable_I,class.lookupLiteral("ClassTable"));
     try expectEqual(Magnitude_I,class.lookupLiteral("Magnitude"));
+    try expectEqual(Number_I,class.lookupLiteral("Number"));
 }
