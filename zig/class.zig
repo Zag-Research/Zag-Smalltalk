@@ -37,7 +37,7 @@ pub const Dispatch_I: ClassIndex = 24;
 pub const ClassTable_I: ClassIndex = 25;
 pub const Magnitude_I: ClassIndex = 26;
 pub const Number_I: ClassIndex = 27;
-
+pub const ClassDescription_I: ClassIndex = 28;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -87,7 +87,7 @@ const Class_Table = struct {
 \\ Float Array String Class Metaclass
 \\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
-\\ SymbolTable Dispatch ClassTable Magnitude Number
+\\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription
                 ," \n");
         while(names.next()) |name| {
             _ = s.intern(symbol.internLiteral(arena,name));
@@ -95,7 +95,7 @@ const Class_Table = struct {
     }
 };
 const Behavior_S = packed struct {
-    header: u64,
+    header: heap.Header,
     superclass: Object,
     methodDict: Object,
     format: Object,
@@ -122,12 +122,15 @@ pub fn getClass(name: Object) Object {
     _ = name;
     unreachable;
 }
-pub fn addClass(_: *thread.Thread, className: Object,superclass: ClassIndex) void {
-    const metaclass = classTable.nextFree();
-    const class = classTable.intern(className);
-    _ = superclass;
-    _ = metaclass;
-    _ = class;
+pub fn subClass(thr: *thread.Thread,superclass: Object, className: Object) void {
+    const superclass_I = classTable.lookup(superclass);
+    const metaclass_I = classTable.nextFree();
+    var metaclass = thr.getArena().getGlobal().allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S) catch unreachable;
+    classes[metaclass_I] = Object.from(metaclass);
+    const class_I = classTable.intern(className);
+    var class = thr.getArena().getGlobal().allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S) catch unreachable;
+    classes[class_I] = Object.from(class);
+    class.super.super.header.setHash(superclass_I);
     // allocate nextFree location in treap (not in key structure) for metaclass
     // intern class name, add class object at that location with metaclass as ClassIndex
     // set up superclass on both sides
@@ -137,7 +140,12 @@ pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
     classTable.loadInitialClassNames(arena);
-    addClass(thr,symbol.Object,0);
+    subClass(thr,Nil,symbol.Object);
+    subClass(thr,symbol.Object,symbol.Behavior);
+    subClass(thr,symbol.Behavior,symbol.ClassDescription);
+    subClass(thr,symbol.ClassDescription,symbol.Class);
+    subClass(thr,symbol.ClassDescription,symbol.Metaclass);
+    // set superclass of Object metaclass to Class class
 }
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;

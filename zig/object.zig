@@ -88,8 +88,17 @@ const objectMethods = struct {
             .Null => {
                 return Nil;
             },
-            else => unreachable,
+            .Pointer => |ptr_info| {
+                switch (ptr_info.size) {
+                    .One => {
+                        return @bitCast(Object, @ptrToInt(value) + Start_of_Heap_Objects);
+                    },
+                    else => {},
+                }
+            },
+            else => {},
         }
+        @compileError("Can't convert");
     }
     pub inline fn fullHash(self: Object) u64 {
         return @bitCast(u64, self) % 16777213; // largest 24 bit prime

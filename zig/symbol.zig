@@ -59,6 +59,7 @@ pub const @"-" = symbol_of(44,1);
 pub const @"*" = symbol_of(45,1);
 pub const size = symbol0(46);
 pub const negated = symbol0(47);
+pub const ClassDescription = symbol0(48);
 var symbolTable : Symbol_Table = undefined;
 
 pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize) !void {
@@ -165,6 +166,7 @@ const Symbol_Table = struct {
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable
 \\ yourself == ~~ ~= = + - * size
+\\ ClassDescription
                 ," \n");
         while(symbols.next()) |symbol| {
             _ = s.internLiteral(arena,symbol);

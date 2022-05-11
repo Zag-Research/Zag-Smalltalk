@@ -300,7 +300,7 @@ const heapMethods = struct {
         }
     }
 };
-const Header = switch (native_endian) {
+pub const Header = switch (native_endian) {
     .Big => packed struct {
         length: u16, // align(8),
         objectFormat: Format,
