@@ -106,12 +106,12 @@ const ClassDescription_S = packed struct {
     organization: Object,
 };
 pub const Metaclass_S = packed struct{
-    const ClassIndex = Metaclass_I;
+    pub const ClassIndex = Metaclass_I;
     super: ClassDescription_S,
     soleInstance: Object,
 };
 pub const Class_S = packed struct{
-    const ClassIndex = Class_I;
+    pub const ClassIndex = 0;
     super: ClassDescription_S,
     name: Object,
     instVarNames: Object,
@@ -122,30 +122,41 @@ pub fn getClass(name: Object) Object {
     _ = name;
     unreachable;
 }
-pub fn subClass(thr: *thread.Thread,superclass: Object, className: Object) void {
-    const superclass_I = classTable.lookup(superclass);
-    const metaclass_I = classTable.nextFree();
-    var metaclass = thr.getArena().getGlobal().allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S) catch unreachable;
-    classes[metaclass_I] = Object.from(metaclass);
+pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) void {
     const class_I = classTable.intern(className);
-    var class = thr.getArena().getGlobal().allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S) catch unreachable;
-    classes[class_I] = Object.from(class);
-    class.super.super.header.setHash(superclass_I);
-    // allocate nextFree location in treap (not in key structure) for metaclass
-    // intern class name, add class object at that location with metaclass as ClassIndex
-    // set up superclass on both sides
-    @panic("unfinished code");
+    var class: *Class_S = undefined;
+    var metaclass: *Metaclass_S = undefined;
+    if (classes[class_I].is_nil()) {
+        const metaclass_I = classTable.nextFree();
+        metaclass = thr.getArena().getGlobal().allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S, Nil) catch unreachable;
+        classes[metaclass_I] = Object.from(metaclass);
+        class = thr.getArena().getGlobal().allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S, Nil) catch unreachable;
+        classes[class_I] = Object.from(class);
+    } else {
+        class = classes[class_I].to(*Class_S);
+        //metaclass =
+        unreachable;
+    }
+    var superclass_I = classTable.lookup(superclassName);
+    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
+    if (superclass_I>0 and !classes[superclass_I].is_nil()) {
+        unreachable;
+    } else {
+        superclass_I = classTable.lookup(symbol.Class);
+    }
+    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
 }
 pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
     classTable.loadInitialClassNames(arena);
     subClass(thr,Nil,symbol.Object);
-    subClass(thr,symbol.Object,symbol.Behavior);
-    subClass(thr,symbol.Behavior,symbol.ClassDescription);
-    subClass(thr,symbol.ClassDescription,symbol.Class);
-    subClass(thr,symbol.ClassDescription,symbol.Metaclass);
-    // set superclass of Object metaclass to Class class
+    //subClass(thr,symbol.Object,symbol.Behavior);
+    //subClass(thr,symbol.Behavior,symbol.ClassDescription);
+    //subClass(thr,symbol.ClassDescription,symbol.Class);
+    //subClass(thr,symbol.ClassDescription,symbol.Metaclass);
+    // repeat to set metaclass superclass properly
+    subClass(thr,Nil,symbol.Object);
 }
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;

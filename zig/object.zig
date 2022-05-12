@@ -51,8 +51,11 @@ const objectMethods = struct {
             HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {
                 switch (@typeInfo(T)) {
-                    .Pointer => {if (self.is_heap() and self.to(HeapConstPtr).classIndex==T.ClassIndex)
-                                     return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));                                        },
+                    .Pointer => |ptrInfo| {
+                        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
+                        if (self.is_heap() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
+                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));
+                    },
                     else => {},
                 }
             },
