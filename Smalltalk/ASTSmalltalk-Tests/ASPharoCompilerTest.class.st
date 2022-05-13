@@ -83,11 +83,8 @@ ASPharoCompilerTest >> testPlusAndAnd [
 
 { #category : #tests }
 ASPharoCompilerTest >> testSimple1 [
-	| method |
-	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#simple1.
-	self assert: method arguments equals: #().
-	self assert: method selector equals: #simple1.
-
+	self assert: ASCompileTestClass1>>#simple1 compilesTo:
+		(ASMethodNode )
 ]
 
 { #category : #tests }

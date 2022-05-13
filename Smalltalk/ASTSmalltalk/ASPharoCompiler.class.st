@@ -6,3 +6,8 @@ Class {
 	#superclass : #ASCompiler,
 	#category : #'ASTSmalltalk-Compiler'
 }
+
+{ #category : #compiling }
+ASPharoCompiler >> compileMethod: aCompiledMethod [ 
+	^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast
+]

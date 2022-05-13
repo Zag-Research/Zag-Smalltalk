@@ -44,6 +44,18 @@ ASMethodOrBlock >> initialize [
 ]
 
 { #category : #accessing }
+ASMethodOrBlock >> locals [
+
+	^ locals
+]
+
+{ #category : #accessing }
+ASMethodOrBlock >> locals: aCollection [
+
+	locals := aCollection asArray
+]
+
+{ #category : #accessing }
 ASMethodOrBlock >> nestedScopeOf: anASClassNode [ 
 	nestedScopeOf := anASClassNode
 ]
