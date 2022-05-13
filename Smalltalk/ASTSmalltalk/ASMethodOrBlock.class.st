@@ -2,19 +2,53 @@ Class {
 	#name : #ASMethodOrBlock,
 	#superclass : #Object,
 	#instVars : [
-		'names'
+		'arguments',
+		'nestedScopeOf',
+		'body',
+		'locals'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #accessing }
+ASMethodOrBlock >> addStatement: anASStatement [
+
+	body add: anASStatement
+]
+
+{ #category : #accessing }
+ASMethodOrBlock >> arguments [
+	^ arguments
+]
+
+{ #category : #accessing }
+ASMethodOrBlock >> arguments: aCollection [ 
+	arguments := aCollection asArray
+]
+
+{ #category : #accessing }
+ASMethodOrBlock >> body [
+	^ body
+]
+
+{ #category : #accessing }
+ASMethodOrBlock >> body: anASNode [ 
+	body := anASNode
+]
+
 { #category : #initialization }
 ASMethodOrBlock >> initialize [
 	super initialize.
-	names := OrderedCollection new.
+	locals := OrderedCollection new.
 
 ]
 
 { #category : #accessing }
+ASMethodOrBlock >> nestedScopeOf: anASClassNode [ 
+	nestedScopeOf := anASClassNode
+]
+
+{ #category : #accessing }
 ASMethodOrBlock >> scope [
-	^ names
+	^ locals
 ]

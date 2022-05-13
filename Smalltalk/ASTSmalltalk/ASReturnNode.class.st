@@ -1,6 +1,6 @@
 Class {
 	#name : #ASReturnNode,
-	#superclass : #Object,
+	#superclass : #ASStatement,
 	#instVars : [
 		'expression'
 	],

@@ -1,7 +1,7 @@
-Extension { #name : #ASCompiler }
+Extension { #name : #ASSourceCompiler }
 
 { #category : #'*ASTSmalltalk-Tests' }
-ASCompiler >> statementForTest: aString [
+ASSourceCompiler >> statementForTest: aString [
 	aScanner := ASScanner new scanCode: aString readStream.
 	^ aScanner peek assignExpression: self
 ]

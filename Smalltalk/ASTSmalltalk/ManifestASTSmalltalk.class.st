@@ -19,12 +19,12 @@ ManifestASTSmalltalk class >> ruleBooleanPrecedenceRuleV1FalsePositive [
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleCollectionProtocolRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASCompiler #compileMethodInClass: #false)) #'2021-10-09T09:13:12.016388-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #compileMethodInClass: #false)) #'2021-10-09T09:13:12.016388-04:00') )
 ]
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T13:19:24.088808-04:00') #(#(#RGMethodDefinition #(#ASCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T13:19:24.088808-04:00') #(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') )
 ]
 
 { #category : #'code-critics' }

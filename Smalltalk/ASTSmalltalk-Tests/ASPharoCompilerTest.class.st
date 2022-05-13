@@ -1,97 +1,97 @@
 Class {
-	#name : #ASCompilerTest,
+	#name : #ASPharoCompilerTest,
 	#superclass : #TestCase,
 	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
 { #category : #asserting }
-ASCompilerTest >> assertEquivalent: anObject [ 
+ASPharoCompilerTest >> assert: aMethod compilesTo: ast [
 	| result |
-	result := ASCompiler new statementForTest: anObject printString.
-	self assert: result baseValue equals: anObject.
+	result := ASPharoCompiler new compileMethod: aMethod.
+	self assert: result equals: ast.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testCascade [
+ASPharoCompilerTest >> testCascade [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#cascade.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#cascade.
 	self assert: method arguments equals: #().
 	self assert: method selector equals: #cascade.
 	self assert: method scope asArray equals: #(foo).
-	self assert: method statements size equals: 17.
+	self assert: method body size equals: 17.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testGives43 [
+ASPharoCompilerTest >> testGives43 [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#gives43.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#gives43.
 	self assert: method arguments equals: #().
 	self assert: method selector equals: #gives43.
 	self assert: method scope asArray equals: #(forty2).
-	self assert: method statements size equals: 2.
+	self assert: method body size equals: 2.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testOr [
+ASPharoCompilerTest >> testOr [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#|.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#|.
 	self assert: method arguments equals: #(n1).
 	self assert: method selector equals: #|.
 	self assert: method scope asArray equals: #(n1 temp).
-	self assert: method statements size equals: 2.
+	self assert: method body size equals: 2.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testOrOr [
+ASPharoCompilerTest >> testOrOr [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#||.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#||.
 	self assert: method arguments equals: #(n1).
 	self assert: method selector equals: #||.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testPlus [
+ASPharoCompilerTest >> testPlus [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#+.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#+.
 	self assert: method arguments equals: #(n1).
 	self assert: method selector equals: #+.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testPlus1 [
+ASPharoCompilerTest >> testPlus1 [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#plus1:.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#plus1:.
 	self assert: method arguments equals: #(aNumber).
 	self assert: method selector equals: #plus1:.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testPlusAndAnd [
+ASPharoCompilerTest >> testPlusAndAnd [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#plus:and:and:.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#plus:and:and:.
 	self assert: method arguments equals: #(n1 n2 n3).
 	self assert: method selector equals: #plus:and:and:.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testSimple1 [
+ASPharoCompilerTest >> testSimple1 [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#simple1.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#simple1.
 	self assert: method arguments equals: #().
 	self assert: method selector equals: #simple1.
 
 ]
 
 { #category : #tests }
-ASCompilerTest >> testStatements [
+ASPharoCompilerTest >> testStatements [
 	self assertEquivalent: 42.
 	self assertEquivalent: #hello.
 	self assertEquivalent: 'abc'.
@@ -101,9 +101,9 @@ ASCompilerTest >> testStatements [
 ]
 
 { #category : #tests }
-ASCompilerTest >> testUnaries [
+ASPharoCompilerTest >> testUnaries [
 	| method |
-	method := ASCompiler new compileMethod: ASCompileTestClass1>>#unaries.
+	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#unaries.
 	self assert: method arguments equals: #().
 	self assert: method selector equals: #unaries.
 

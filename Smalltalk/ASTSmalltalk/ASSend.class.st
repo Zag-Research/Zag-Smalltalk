@@ -1,6 +1,6 @@
 Class {
 	#name : #ASSend,
-	#superclass : #Object,
+	#superclass : #ASExpression,
 	#instVars : [
 		'target',
 		'selector',

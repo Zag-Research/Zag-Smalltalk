@@ -1,6 +1,6 @@
 Class {
 	#name : #ASAssignment,
-	#superclass : #Object,
+	#superclass : #ASExpression,
 	#instVars : [
 		'target',
 		'value'
