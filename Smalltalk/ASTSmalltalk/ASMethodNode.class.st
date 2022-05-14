@@ -1,3 +1,6 @@
+"
+I represent a method, which is the same as a Block except that the return must be explicit
+"
 Class {
 	#name : #ASMethodNode,
 	#superclass : #ASMethodOrBlock,

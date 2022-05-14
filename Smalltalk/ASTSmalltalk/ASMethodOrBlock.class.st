@@ -1,3 +1,6 @@
+"
+I contain all the common respersentation for Methods and Blocks
+"
 Class {
 	#name : #ASMethodOrBlock,
 	#superclass : #Object,

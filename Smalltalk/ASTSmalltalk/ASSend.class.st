@@ -1,3 +1,6 @@
+"
+I represent an expression that is a message send.
+"
 Class {
 	#name : #ASSend,
 	#superclass : #ASExpression,

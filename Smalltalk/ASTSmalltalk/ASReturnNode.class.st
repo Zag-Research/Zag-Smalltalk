@@ -1,3 +1,6 @@
+"
+I am the only non-expression statement type
+"
 Class {
 	#name : #ASReturnNode,
 	#superclass : #ASStatement,
