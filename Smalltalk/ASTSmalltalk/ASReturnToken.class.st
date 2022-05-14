@@ -7,6 +7,6 @@ Class {
 { #category : #parsing }
 ASReturnToken >> statement: anASCompiler [ 
 	anASCompiler nextToken. " consume the ^ "
-	^ ASReturnNode new expression: (anASCompiler peek assignExpression: anASCompiler)
+	^ ASReturn new expression: (anASCompiler peek assignExpression: anASCompiler)
 
 ]

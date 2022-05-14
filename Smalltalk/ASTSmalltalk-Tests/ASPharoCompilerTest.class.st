@@ -13,6 +13,16 @@ ASPharoCompilerTest >> assert: aMethod compilesTo: ast [
 ]
 
 { #category : #tests }
+ASPharoCompilerTest >> assert: class equalDo: block [
+	| obj1 obj2 |
+	obj1 := class new.
+	obj2 := class new.
+	block value: obj1.
+	block value: obj2.
+	self assert: obj1 equals: obj2
+]
+
+{ #category : #tests }
 ASPharoCompilerTest >> testCascade [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#cascade.
@@ -21,6 +31,15 @@ ASPharoCompilerTest >> testCascade [
 	self assert: method scope asArray equals: #(foo).
 	self assert: method body size equals: 17.
 
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testEquals [
+
+	self assert: ASLiteral equalDo: [ :obj | obj literal: 42 ].
+	self assert: ASReturn equalDo: [ :obj | obj expression: 42 ].
+	self assert: ASRef equalDo: [ :obj | obj variable: #a ].
+	self assert: ASAssign equalDo: [ :obj | obj variable: #a expression: 42 ]
 ]
 
 { #category : #tests }
