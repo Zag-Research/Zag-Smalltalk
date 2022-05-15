@@ -13,13 +13,55 @@ ASPharoCompilerTest >> assert: aMethod compilesTo: ast [
 ]
 
 { #category : #tests }
-ASPharoCompilerTest >> assert: class equalDo: block [
+ASPharoCompilerTest >> assert: class instancesEqualAfter: block printsAs: printString [
+
 	| obj1 obj2 |
 	obj1 := class new.
 	obj2 := class new.
 	block value: obj1.
 	block value: obj2.
-	self assert: obj1 equals: obj2
+	self assert: obj1 equals: obj2.
+	self assert: obj1 printString equals: printString
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testASTNodesEqual [
+
+	self
+		assert: ASLiteral
+		instancesEqualAfter: [ :obj | obj literal: 42 ]
+		printsAs: 'ASLiteral new literal: 42'.
+	self
+		assert: ASReturn
+		instancesEqualAfter: [ :obj | obj expression: 42 ]
+		printsAs: 'ASReturn new expression: (42)'.
+	self
+		assert: ASRef
+		instancesEqualAfter: [ :obj | obj variable: #a ]
+		printsAs: 'ASRef new variable: #a'.
+	self
+		assert: ASAssign
+		instancesEqualAfter: [ :obj | obj variable: #a expression: 42 ]
+		printsAs: 'ASAssign new variable: #a expression: (42)'.
+	self
+		assert: ASMethodNode
+		instancesEqualAfter: [ :obj | 
+			obj
+				class: Object;
+				selector: #a ]
+		printsAs: 'ASMethodNode new class: #Object; selector: #a;body: {}'.
+	self
+		assert: ASMethodNode
+		instancesEqualAfter: [ :obj | 
+			obj
+				class: Object;
+				selector: #a;
+				arguments: #( a1 a2 a3 );
+				locals: #( l1 l2 );
+				addStatement: 17;
+				addStatement: 42 ]
+		printsAs:
+		'ASMethodNode new class: #Object; selector: #a;arguments: #(#a1 #a2 #a3);locals: #(#l1 #l2);body: {17 . 42}'
 ]
 
 { #category : #tests }
@@ -31,15 +73,6 @@ ASPharoCompilerTest >> testCascade [
 	self assert: method scope asArray equals: #(foo).
 	self assert: method body size equals: 17.
 
-]
-
-{ #category : #tests }
-ASPharoCompilerTest >> testEquals [
-
-	self assert: ASLiteral equalDo: [ :obj | obj literal: 42 ].
-	self assert: ASReturn equalDo: [ :obj | obj expression: 42 ].
-	self assert: ASRef equalDo: [ :obj | obj variable: #a ].
-	self assert: ASAssign equalDo: [ :obj | obj variable: #a expression: 42 ]
 ]
 
 { #category : #tests }

@@ -27,14 +27,14 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
 	selector := aRBMethodNode selector.
-	compiler class: aRBMethodNode methodClass.
-	compiler definingSelector: selector.
+	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode new
 		          selector: selector;
 		          arguments: aRBMethodNode arguments;
 						locals: (aRBMethodNode temporaries collect: [ : var | self halt.]).
+	compiler definingMethod: selector.
 	compiler
 		inScope: method
-		do: [ aRBMethodNode statements do: [ :statement |  ] ].
+		do: [ aRBMethodNode statements do: [ :statement | method addStatement: (self visit: statement) ] ].
 	^ method
 ]

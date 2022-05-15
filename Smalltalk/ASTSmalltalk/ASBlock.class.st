@@ -1,11 +1,20 @@
 "
-I am an expression that creates a block closure object (references a block and the current environment)
+I represent a BlockClosure which like a Method except that returns return from the enclosing method and self refers to the object of the enclosing method.
+
+Note that this is also an ASExpression although the class taxonomy doesn't reflect it.
 "
 Class {
 	#name : #ASBlock,
-	#superclass : #ASExpression,
+	#superclass : #ASMethodOrBlock,
 	#instVars : [
-		'value'
+		'method'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #printing }
+ASBlock >> printOn: s [
+
+	s << self className << ' new yourself'.
+	super printOn: s
+]

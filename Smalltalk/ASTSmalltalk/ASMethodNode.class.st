@@ -11,9 +11,32 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #comparing }
+ASMethodNode >> = other [
+
+	^ self class = other class and: [ 
+		  self selector = other selector and: [ 
+			  self className = other className and: [ super = other ] ] ]
+]
+
 { #category : #accessing }
 ASMethodNode >> class: anASClassNode [ 
 	class := anASClassNode
+]
+
+{ #category : #accessing }
+ASMethodNode >> className [
+	^ class name
+]
+
+{ #category : #printing }
+ASMethodNode >> printOn: s [
+
+	s << self class name << ' new class: '.
+	class name printOn: s.
+	s << '; selector: '.
+	selector printOn: s.
+	super printOn: s
 ]
 
 { #category : #accessing }
