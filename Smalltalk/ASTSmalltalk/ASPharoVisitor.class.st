@@ -1,3 +1,6 @@
+"
+I implement the visitor pattern to walk a Pharo AST and transform it to our AST.
+"
 Class {
 	#name : #ASPharoVisitor,
 	#superclass : #Object,
@@ -24,7 +27,16 @@ ASPharoVisitor >> visit: aRBNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
-	^ ASRef new variable: aRBVariableNode name
+
+	^ ASRef new
+		  variable: aRBVariableNode variable name
+
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
+
+	^ ASAssign new variable: aRBAssignmentNode variable name 		  expression: (self visit: aRBAssignmentNode value)
 ]
 
 { #category : #visiting }
@@ -64,4 +76,17 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 { #category : #visiting }
 ASPharoVisitor >> visitReturnNode: aRBReturnNode [ 
 	^ ASReturn new expression: (self visit: aRBReturnNode value)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitSelfNode: aRBVariableNode [ 
+	| result |
+	result := ASSelf new method: compiler definingMethod.
+	aRBVariableNode name = 'super' ifTrue: [ result superclass: compiler definingClass superclass ].
+	^ result
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [ 
+	^ ASRef new variable: aRBVariableNode name
 ]

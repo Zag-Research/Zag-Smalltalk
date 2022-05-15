@@ -30,6 +30,11 @@ ASCompiler >> definingClass: aClass [
 	currentScope := aClass
 ]
 
+{ #category : #accessing }
+ASCompiler >> definingMethod [
+	^ definingMethod
+]
+
 { #category : #compiling }
 ASCompiler >> definingMethod: aMethod [
 	definingMethod := aMethod.
