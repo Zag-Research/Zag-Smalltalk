@@ -23,6 +23,26 @@ ASPharoVisitor >> visit: aRBNode [
 ]
 
 { #category : #visiting }
+ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
+	^ ASRef new variable: aRBVariableNode name
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [ 
+	^ ASLiteral new literal: aRBLiteralValueNode value
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitMessageNode: aRBMessageNode [
+
+	^ ASSend new
+		  target: (self visit: aRBMessageNode receiver);
+		  selector: aRBMessageNode selector
+		  args:
+			  (aRBMessageNode arguments collect: [ :arg | self visit: arg ])
+]
+
+{ #category : #visiting }
 ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
@@ -30,11 +50,18 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode new
 		          selector: selector;
-		          arguments: aRBMethodNode arguments;
-						locals: (aRBMethodNode temporaries collect: [ : var | self halt.]).
-	compiler definingMethod: selector.
-	compiler
-		inScope: method
-		do: [ aRBMethodNode statements do: [ :statement | method addStatement: (self visit: statement) ] ].
+		          class: aRBMethodNode methodClass;
+		          arguments: (aRBMethodNode arguments collect: #name as: Array);
+		          locals:
+			          (aRBMethodNode temporaries collect: #name as: Array).
+	compiler definingMethod: method.
+	compiler inScope: method do: [ 
+		aRBMethodNode statements do: [ :statement | 
+			method addStatement: (self visit: statement) ] ].
 	^ method
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitReturnNode: aRBReturnNode [ 
+	^ ASReturn new expression: (self visit: aRBReturnNode value)
 ]

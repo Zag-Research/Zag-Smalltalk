@@ -18,7 +18,7 @@ ASMethodOrBlock >> = other [
 
 	^ self arguments = other arguments and: [ 
 		  self locals = other locals and: [ 
-			  self body = other body ] ]
+			  self body asArray = other body asArray ] ]
 ]
 
 { #category : #accessing }

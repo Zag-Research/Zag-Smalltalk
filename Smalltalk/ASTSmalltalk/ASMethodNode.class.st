@@ -29,12 +29,15 @@ ASMethodNode >> className [
 	^ class name
 ]
 
+{ #category : #comparing }
+ASMethodNode >> hash [
+	^ class hash bitXor: selector hash
+]
+
 { #category : #printing }
 ASMethodNode >> printOn: s [
 
-	s << self class name << ' new class: '.
-	class name printOn: s.
-	s << '; selector: '.
+	s << self class name << ' new class: ' << class name  << '; selector: '.
 	selector printOn: s.
 	super printOn: s
 ]

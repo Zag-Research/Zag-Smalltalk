@@ -29,13 +29,14 @@ ASSend >> args [
 ASSend >> printOn: s [
 
 	s << self className << ' new '.
-	target ifNotNil: [
+	target ifNotNil: [ 
+		s << 'target: ('.
 		target printOn: s.
-		s << '; '].
+		s << '); ' ].
 	s << 'selector: '.
 	selector printOn: s.
 	s << ' args: {'.
-	args do: [: arg | arg printOn: s ] separatedBy: [ s << '.'].
+	args do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
 	s << '}'
 ]
 
