@@ -47,7 +47,7 @@ ASSourceCompiler >> methodBody [
 	statements := OrderedCollection new.
 	self statements: statements.
 	(statements notEmpty and: [statements last isReturn]) ifFalse: [ 
-		statements add: (ASReturnNode new unaryExpression: #self asASSelf)
+		statements add: (ASReturn new unaryExpression: #self asASSelf)
 	].
 	aScanner peek expectEnd.
 	^ statements

@@ -15,8 +15,9 @@ ASClosers >> keywordExpression: anASCompiler target: target [
 ]
 
 { #category : #parsing }
-ASClosers >> keywordExpression: anASCompiler target: target selector: selector args: args [ 
-	^ ASSend new target: target selector: selector args: args
+ASClosers >> keywordExpression: anASCompiler target: target selector: selector args: args [
+
+	^ ASSend new target: target; selector: selector args: args
 ]
 
 { #category : #parsing }

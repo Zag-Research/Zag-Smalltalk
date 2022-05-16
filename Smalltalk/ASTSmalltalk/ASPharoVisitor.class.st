@@ -1,3 +1,6 @@
+"
+I implement the visitor pattern to walk a Pharo AST and transform it to our AST.
+"
 Class {
 	#name : #ASPharoVisitor,
 	#superclass : #Object,
@@ -23,18 +26,67 @@ ASPharoVisitor >> visit: aRBNode [
 ]
 
 { #category : #visiting }
+ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
+
+	^ ASRef new
+		  variable: aRBVariableNode variable name
+
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
+
+	^ ASAssign new variable: aRBAssignmentNode variable name 		  expression: (self visit: aRBAssignmentNode value)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [ 
+	^ ASLiteral new literal: aRBLiteralValueNode value
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitMessageNode: aRBMessageNode [
+
+	^ ASSend new
+		  target: (self visit: aRBMessageNode receiver);
+		  selector: aRBMessageNode selector
+		  args:
+			  (aRBMessageNode arguments collect: [ :arg | self visit: arg ])
+]
+
+{ #category : #visiting }
 ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
 	selector := aRBMethodNode selector.
-	compiler class: aRBMethodNode methodClass.
-	compiler definingSelector: selector.
+	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode new
 		          selector: selector;
-		          arguments: aRBMethodNode arguments;
-						locals: (aRBMethodNode temporaries collect: [ : var | self halt.]).
-	compiler
-		inScope: method
-		do: [ aRBMethodNode statements do: [ :statement |  ] ].
+		          class: aRBMethodNode methodClass;
+		          arguments: (aRBMethodNode arguments collect: #name as: Array);
+		          locals:
+			          (aRBMethodNode temporaries collect: #name as: Array).
+	compiler definingMethod: method.
+	compiler inScope: method do: [ 
+		aRBMethodNode statements do: [ :statement | 
+			method addStatement: (self visit: statement) ] ].
 	^ method
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitReturnNode: aRBReturnNode [ 
+	^ ASReturn new expression: (self visit: aRBReturnNode value)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitSelfNode: aRBVariableNode [ 
+	| result |
+	result := ASSelf new method: compiler definingMethod.
+	aRBVariableNode name = 'super' ifTrue: [ result superclass: compiler definingClass superclass ].
+	^ result
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [ 
+	^ ASRef new variable: aRBVariableNode name
 ]

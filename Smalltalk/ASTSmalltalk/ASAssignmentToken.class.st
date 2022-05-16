@@ -6,6 +6,9 @@ Class {
 
 { #category : #parsing }
 ASAssignmentToken >> possibleAssign: anASCompiler target: target [
+
 	anASCompiler nextToken.
-	^ ASAssignment new target: target value: (anASCompiler peek assignExpression: anASCompiler)
+	^ ASAssign new
+		  variable: target
+		  expression: (anASCompiler peek assignExpression: anASCompiler)
 ]

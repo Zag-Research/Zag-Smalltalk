@@ -1,3 +1,6 @@
+"
+I contain all the common respersentation for Methods and Blocks
+"
 Class {
 	#name : #ASMethodOrBlock,
 	#superclass : #Object,
@@ -9,6 +12,14 @@ Class {
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #comparing }
+ASMethodOrBlock >> = other [
+
+	^ self arguments = other arguments and: [ 
+		  self locals = other locals and: [ 
+			  self body asArray = other body asArray ] ]
+]
 
 { #category : #accessing }
 ASMethodOrBlock >> addStatement: anASStatement [
@@ -38,9 +49,11 @@ ASMethodOrBlock >> body: anASNode [
 
 { #category : #initialization }
 ASMethodOrBlock >> initialize [
-	super initialize.
-	locals := OrderedCollection new.
 
+	super initialize.
+	arguments := #().
+	locals := #().
+	body := OrderedCollection new
 ]
 
 { #category : #accessing }
@@ -58,6 +71,20 @@ ASMethodOrBlock >> locals: aCollection [
 { #category : #accessing }
 ASMethodOrBlock >> nestedScopeOf: anASClassNode [ 
 	nestedScopeOf := anASClassNode
+]
+
+{ #category : #printing }
+ASMethodOrBlock >> printOn: s [
+
+	arguments isEmpty ifFalse: [ 
+		s << ';arguments: '.
+		arguments printOn: s ].
+	locals isEmpty ifFalse: [ 
+		s << ';locals: '.
+		locals printOn: s ].
+	s << ';body: {'.
+	body do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
+	s << '}'
 ]
 
 { #category : #accessing }

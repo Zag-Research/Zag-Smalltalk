@@ -10,12 +10,12 @@ Object >> asASIdentifier [
 
 { #category : #'*ASTSmalltalk' }
 Object >> asASLiteral [
-	^ ASLiteral new value: self
+	^ ASLiteralToken new value: self
 ]
 
 { #category : #'*ASTSmalltalk' }
 Object >> asASSelf [
-	^ ASSelf new value: self
+	^ ASSelfToken new value: self
 ]
 
 { #category : #'*ASTSmalltalk' }

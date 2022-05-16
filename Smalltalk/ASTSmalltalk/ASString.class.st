@@ -1,6 +1,6 @@
 Class {
 	#name : #ASString,
-	#superclass : #ASLiteral,
+	#superclass : #ASLiteralToken,
 	#category : #'ASTSmalltalk-Tokens'
 }
 
