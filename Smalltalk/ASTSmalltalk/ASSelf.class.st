@@ -15,12 +15,27 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASSelf class >> method: aMethod [
+
+	^ self new method: aMethod
+]
+
+{ #category : #'instance creation' }
+ASSelf class >> method: aMethod superclass: aClass [
+
+	^ self new method: aMethod; superclass: aClass
+]
+
 { #category : #comparing }
 ASSelf >> = other [
 
 	^ self class = other class and: [ 
-		  (other method isSymbol ifTrue: [self method name] ifFalse: [self method]) = 
-		  (self method isSymbol ifTrue: [other method name] ifFalse: [other method])  and: [ 
+		  (self method isSymbol
+			   ifTrue: [ self method ]
+			   ifFalse: [ self method selector ]) = (other method isSymbol
+			   ifTrue: [ other method ]
+			   ifFalse: [ other method selector ]) and: [ 
 			  self superclass = other superclass ] ]
 ]
 
@@ -39,11 +54,9 @@ ASSelf >> method: aMethod [
 { #category : #printing }
 ASSelf >> printOn: s [
 
-	s << self className << ' new method: '.
-	method selector printOn: s.
-	superclass ifNotNil: [ 
-		s << ' superclass: '
-		<< superclass name ]
+	s << self className << ' method: '.
+	(method isSymbol ifTrue: [method] ifFalse: [method selector]) printOn: s.
+	superclass ifNotNil: [ s << ' superclass: ' << superclass name ]
 ]
 
 { #category : #accessing }
@@ -55,5 +68,5 @@ ASSelf >> superclass [
 { #category : #accessing }
 ASSelf >> superclass: aClass [
 
-	^ superclass := aClass
+	superclass := aClass
 ]

@@ -11,6 +11,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASAssign class >> variable: v expression: e [
+^ self new variable: v expression: e
+]
+
 { #category : #comparing }
 ASAssign >> = other [
 
@@ -25,7 +30,7 @@ ASAssign >> expression [
 { #category : #printing }
 ASAssign >> printOn: s [
 
-	s << self className << ' new variable: '.
+	s << self className << ' variable: '.
 	variable printOn: s.
 	s << ' expression: ('.
 	expression printOn: s.

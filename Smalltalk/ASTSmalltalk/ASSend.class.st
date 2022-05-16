@@ -12,6 +12,18 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASSend class >> selector: aSymbol args: aCollection [
+
+	^ self new selector: aSymbol args: aCollection
+]
+
+{ #category : #'instance creation' }
+ASSend class >> target: expression selector: aSymbol args: aCollection [
+
+	^ self new target: expression; selector: aSymbol args: aCollection
+]
+
 { #category : #comparing }
 ASSend >> = other [
 
@@ -28,11 +40,11 @@ ASSend >> args [
 { #category : #printing }
 ASSend >> printOn: s [
 
-	s << self className << ' new '.
+	s << self className.
 	target ifNotNil: [ 
-		s << 'target: ('.
+		s << ' target: ('.
 		target printOn: s.
-		s << '); ' ].
+		s << ') ' ].
 	s << 'selector: '.
 	selector printOn: s.
 	s << ' args: {'.
@@ -46,9 +58,9 @@ ASSend >> selector [
 ]
 
 { #category : #parsing }
-ASSend >> selector: token2 args: aCollection [
+ASSend >> selector: aSymbol args: aCollection [
 
-	selector := token2.
+	selector := aSymbol.
 	args := aCollection
 ]
 
@@ -60,6 +72,5 @@ ASSend >> target [
 
 { #category : #parsing }
 ASSend >> target: expression [
-
-	target := expression 
+	target := expression
 ]

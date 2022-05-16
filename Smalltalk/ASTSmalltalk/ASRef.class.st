@@ -10,6 +10,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASRef class >> variable: aSymbol [
+^ self new variable: aSymbol
+]
+
 { #category : #comparing }
 ASRef >> = other [
 
@@ -19,7 +24,7 @@ ASRef >> = other [
 { #category : #printing }
 ASRef >> printOn: s [
 
-	s << self className << ' new variable: '.
+	s << self className << ' variable: '.
 	variable printOn: s
 ]
 

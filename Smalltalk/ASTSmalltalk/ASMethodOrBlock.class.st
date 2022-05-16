@@ -77,12 +77,12 @@ ASMethodOrBlock >> nestedScopeOf: anASClassNode [
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 
-		s << ';arguments: '.
+		s << ' arguments: '.
 		arguments printOn: s ].
 	locals isEmpty ifFalse: [ 
-		s << ';locals: '.
+		s << ' locals: '.
 		locals printOn: s ].
-	s << ';body: {'.
+	s << ' body: {'.
 	body do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
 	s << '}'
 ]

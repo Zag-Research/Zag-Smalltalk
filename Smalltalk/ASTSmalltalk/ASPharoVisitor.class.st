@@ -34,9 +34,24 @@ ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
 ]
 
 { #category : #visiting }
+ASPharoVisitor >> visitArrayNode: aRBArrayNode [ 
+	^ ASArray statements: (aRBArrayNode statements collect: [:statement| self visit: statement])
+]
+
+{ #category : #visiting }
 ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 
 	^ ASAssign new variable: aRBAssignmentNode variable name 		  expression: (self visit: aRBAssignmentNode value)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [ 
+	self shouldBeImplemented.
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitLiteralArrayNode: aRBLiteralArrayNode [ 
+	^ ASLiteral literal: (aRBLiteralArrayNode contents collect: #value as: Array)
 ]
 
 { #category : #visiting }

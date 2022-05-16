@@ -13,10 +13,19 @@ ASCompileTestClass1 >> + n1 [
 
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> cascade [
-	| foo |
-	foo := #(abc nil 3) asOrderedCollection.
-	foo add: 4 negated; add: 3 negated + 4 abs; size; negated; + 4; + 3 negated; abs.
 
+	| foo |
+	foo := #( abc nil 3 ) asOrderedCollection.
+	foo addAll: { 3+4 . 4 factorial }.
+	(foo
+		 add: 4 negated;
+		 yourself)
+		add: 3 negated + 4 abs;
+		size;
+		negated;
+		+ 4;
+		+ 3 negated;
+		abs
 ]
 
 { #category : #'testing - examples' }

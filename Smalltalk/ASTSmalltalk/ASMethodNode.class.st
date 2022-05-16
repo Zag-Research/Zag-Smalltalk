@@ -11,6 +11,40 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'tests - instance creation' }
+ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
+
+	^ self new
+		  class: aClass;
+		  selector: aSymbol;
+		  arguments: args;
+		  body: body
+]
+
+{ #category : #'tests - instance creation' }
+ASMethodNode class >> class: aClass selector: aSymbol  arguments: args locals: locals body: body [
+^ self new class: aClass; selector: aSymbol;  arguments: args; locals: locals; body: body
+]
+
+{ #category : #'tests - instance creation' }
+ASMethodNode class >> class: aClass selector: aSymbol body: body [
+
+	^ self new
+		  class: aClass;
+		  selector: aSymbol;
+		  body: body
+]
+
+{ #category : #'tests - instance creation' }
+ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body [
+
+	^ self new
+		  class: aClass;
+		  selector: aSymbol;
+		  locals: locals;
+		  body: body
+]
+
 { #category : #comparing }
 ASMethodNode >> = other [
 
@@ -37,7 +71,8 @@ ASMethodNode >> hash [
 { #category : #printing }
 ASMethodNode >> printOn: s [
 
-	s << self class name << ' new class: ' << class name  << '; selector: '.
+	s << self class name << ' class: ' << class name
+	<< ' selector: '.
 	selector printOn: s.
 	super printOn: s
 ]

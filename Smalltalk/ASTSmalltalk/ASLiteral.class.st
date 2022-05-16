@@ -10,6 +10,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASLiteral class >> literal: aLiteralObject [
+	^ self new literal: aLiteralObject
+]
+
 { #category : #comparing }
 ASLiteral >> = other [
 
@@ -23,14 +28,14 @@ ASLiteral >> literal [
 ]
 
 { #category : #accessing }
-ASLiteral >> literal: anInteger [
+ASLiteral >> literal: aLiteralObject [
 
-	literal := anInteger
+	literal := aLiteralObject
 ]
 
 { #category : #printing }
 ASLiteral >> printOn: s [
 
-	s << self className << ' new literal: '.
+	s << self className << ' literal: '.
 	literal printOn: s
 ]

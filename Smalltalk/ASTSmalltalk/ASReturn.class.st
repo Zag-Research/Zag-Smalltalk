@@ -10,6 +10,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASReturn class >> expression: anASNode [
+^self new expression: anASNode
+]
+
 { #category : #comparing }
 ASReturn >> = other [
 
@@ -35,7 +40,7 @@ ASReturn >> isReturn [
 { #category : #printing }
 ASReturn >> printOn: s [
 
-	s << self className << ' new expression: ('.
+	s << self className << ' expression: ('.
 	expression printOn: s.
 	s << ')'
 ]

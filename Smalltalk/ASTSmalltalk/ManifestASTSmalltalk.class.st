@@ -23,6 +23,11 @@ ManifestASTSmalltalk class >> ruleCollectionProtocolRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleExcessiveArgumentsRuleV1FalsePositive [
+	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2022-05-16T09:50:39.5032-03:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T13:19:24.088808-04:00') #(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') )
 ]
