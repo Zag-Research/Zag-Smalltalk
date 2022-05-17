@@ -42,7 +42,9 @@ ASPharoVisitor >> visitArrayNode: aRBArrayNode [
 { #category : #visiting }
 ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 
-	^ ASAssign new variable: aRBAssignmentNode variable name 		  expression: (self visit: aRBAssignmentNode value)
+	^ ASAssign
+		  variable: aRBAssignmentNode variable name
+		  expression: (self visit: aRBAssignmentNode value)
 ]
 
 { #category : #visiting }
@@ -71,19 +73,19 @@ ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 { #category : #visiting }
 ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
 
-	^ ASRef new variable: aRBVariableNode name
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
 
-	^ ASRef new variable: aRBVariableNode name
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
 
-	^ ASRef new variable: aRBVariableNode name
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
@@ -92,8 +94,9 @@ ASPharoVisitor >> visitLiteralArrayNode: aRBLiteralArrayNode [
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [ 
-	^ ASLiteral new literal: aRBLiteralValueNode value
+ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [
+
+	^ ASLiteral literal: aRBLiteralValueNode value
 ]
 
 { #category : #visiting }
@@ -116,12 +119,14 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 	| selector method |
 	selector := aRBMethodNode selector.
 	compiler definingClass: aRBMethodNode methodClass.
-	method := ASMethodNode new
-		          selector: selector;
-		          class: aRBMethodNode methodClass;
-		          arguments: (aRBMethodNode arguments collect: #name as: Array);
+	method := ASMethodNode
+		          class: aRBMethodNode methodClass
+		          selector: selector
+		          arguments:
+		          (aRBMethodNode arguments collect: #name as: Array)
 		          locals:
-			          (aRBMethodNode temporaries collect: #name as: Array).
+		          (aRBMethodNode temporaries collect: #name as: Array)
+		          body: OrderedCollection new.
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
 		aRBMethodNode statements do: [ :statement | 
@@ -130,19 +135,26 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitReturnNode: aRBReturnNode [ 
-	^ ASReturn new expression: (self visit: aRBReturnNode value)
+ASPharoVisitor >> visitReturnNode: aRBReturnNode [
+
+	^ ASReturn expression: (self visit: aRBReturnNode value)
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitSelfNode: aRBVariableNode [ 
-	| result |
-	result := ASSelf new method: compiler definingMethod.
-	aRBVariableNode name = 'super' ifTrue: [ result superclass: compiler definingClass superclass ].
-	^ result
+ASPharoVisitor >> visitSelfNode: aRBVariableNode [
+
+	^ ASSelf method: compiler definingMethod.
+
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [ 
-	^ ASRef new variable: aRBVariableNode name
+ASPharoVisitor >> visitSuperNode: aRBVariableNode [
+
+		^ ASSelf method: compiler definingMethod superclass: compiler definingClass superclass 
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
+
+	^ ASRef  variable: aRBVariableNode name
 ]

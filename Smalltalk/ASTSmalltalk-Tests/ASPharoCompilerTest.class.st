@@ -104,7 +104,12 @@ ASPharoCompilerTest >> testCascade [
 { #category : #tests }
 ASPharoCompilerTest >> testClassVar [
 
-	self assert: ASCompileTestClass1 >> #classVar compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #classVar body: {ASReturn expression: (ASRef variable: #Foo)})
+	self
+		assert: ASCompileTestClass1 >> #classVar
+		compilesTo: (ASMethodNode
+				 class: ASCompileTestClass1
+				 selector: #classVar
+				 body: { (ASReturn expression: (ASRef variable: #Foo)) })
 ]
 
 { #category : #tests }
@@ -196,6 +201,14 @@ ASPharoCompilerTest >> testSimple1 [
 				 class: ASCompileTestClass1;
 				 selector: #simple1;
 				 body: { (ASReturn new expression: (ASLiteral new literal: 42)) })
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testSuper [
+
+	self
+		assert: ASCompileTestClass2 >> #classVar
+		compilesTo: (ASMethodNode class: ASCompileTestClass2 selector: #classVar body: {ASReturn expression: (ASSend target: (ASSend target: (ASSelf method: #classVar superclass: ASCompileTestClass1) selector: #classVar args: {}) selector: #negated args: {})})
 ]
 
 { #category : #tests }

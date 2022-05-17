@@ -29,6 +29,11 @@ ASCompiler >> compileMethod: aCompiledMethod [
 	^ self subclassResponsibility 
 ]
 
+{ #category : #accessing }
+ASCompiler >> definingClass [
+	^ definingClass
+]
+
 { #category : #compiling }
 ASCompiler >> definingClass: aClass [
 
