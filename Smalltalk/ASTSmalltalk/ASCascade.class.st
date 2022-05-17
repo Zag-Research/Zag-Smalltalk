@@ -11,6 +11,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'instance creation' }
+ASCascade class >> target: t sends: s [
+	^ self new target: t; sends: s
+]
+
 { #category : #comparing }
 ASCascade >> = other [
 
@@ -22,9 +27,9 @@ ASCascade >> = other [
 { #category : #printing }
 ASCascade >> printOn: s [
 
-	s << self className << ' new target: '.
+	s << self className << ' target: ('.
 	target printOn: s.
-	s << '; sends: {'.
+	s << ') sends: {'.
 	sends do: [ :send | send printOn: s ] separatedBy: [ s << '.' ].
 	s << '}'
 ]

@@ -65,15 +65,64 @@ ASPharoCompilerTest >> testASTNodesEqual [
 ]
 
 { #category : #tests }
+ASPharoCompilerTest >> testBlock [
+
+	self assert: ASCompileTestClass1 >> #block compilesTo: (ASMethodNode
+			 class: ASCompileTestClass1
+			 selector: #block
+			 body: { (ASReturn expression: (ASSend
+						   target: (ASArray statements: { 
+									    (ASSend
+										     target: (ASLiteral literal: 3)
+										     selector: #+
+										     args: { (ASLiteral literal: 4) }).
+									    (ASSend
+										     target: (ASLiteral literal: 4)
+										     selector: #factorial
+										     args: {  }) })
+						   selector: #collect:
+						   args: { (ASBlock
+								    arguments: #( #each )
+								    locals: #( #temp )
+								    body: { 
+										    (ASAssign variable: #temp expression: (ASSend
+												      target: (ASRef variable: #each)
+												      selector: #+
+												      args: { (ASLiteral literal: 5) })).
+										    (ASSend
+											     target: (ASRef variable: #temp)
+											     selector: #+
+											     args: { (ASLiteral literal: 3) }) }) })) })
+]
+
+{ #category : #tests }
 ASPharoCompilerTest >> testCascade [
 
-	self assert: ASCompileTestClass1 >> #cascade compilesTo: nil
+	self assert: ASCompileTestClass1 >> #cascade compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #cascade locals: #(#foo) body: {ASAssign variable: #foo expression: (ASSend target: (ASLiteral literal: #(#abc nil 3)) selector: #asOrderedCollection args: {}) . ASCascade target: (ASCascade target: (ASRef variable: #foo) sends: {ASSend selector: #add: args: {ASSend target: (ASLiteral literal: 4) selector: #negated args: {}}.ASSend selector: #yourself args: {}}) sends: {ASSend selector: #add: args: {ASSend target: (ASSend target: (ASLiteral literal: 3) selector: #negated args: {}) selector: #+ args: {ASSend target: (ASLiteral literal: 4) selector: #abs args: {}}}.ASSend selector: #size args: {}.ASSend selector: #negated args: {}.ASSend selector: #+ args: {ASLiteral literal: 4}.ASSend selector: #+ args: {ASSend target: (ASLiteral literal: 3) selector: #negated args: {}}.ASSend selector: #abs args: {}}})
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testClassVar [
+
+	self assert: ASCompileTestClass1 >> #classVar compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #classVar body: {ASReturn expression: (ASRef variable: #Foo)})
 ]
 
 { #category : #tests }
 ASPharoCompilerTest >> testGives43 [
 
 	self assert: ASCompileTestClass1 >> #gives43 compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #gives43 locals: #(#forty2) body: {ASAssign variable: #forty2 expression: (ASSend target: (ASSend target: (ASSelf method: #gives43) selector: #unaries args: {}) selector: #* args: {ASLiteral literal: 2}) . ASReturn expression: (ASSend target: (ASSelf method: #gives43) selector: #plus1: args: {ASSend target: (ASRef variable: #forty2) selector: #- args: {ASLiteral literal: 4}})})
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testInstVar [
+
+	self assert: ASCompileTestClass1 >> #instVar compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #instVar body: {ASReturn expression: (ASRef variable: #foo)})
+]
+
+{ #category : #tests }
+ASPharoCompilerTest >> testObject [
+
+	self assert: ASCompileTestClass1 >> #object compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #object body: {ASReturn expression: (ASSend target: (ASRef variable: #Object) selector: #new args: {})})
 ]
 
 { #category : #tests }

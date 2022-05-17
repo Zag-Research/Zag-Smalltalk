@@ -28,14 +28,15 @@ ASPharoVisitor >> visit: aRBNode [
 { #category : #visiting }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
 
-	^ ASRef new
-		  variable: aRBVariableNode variable name
-
+	^ ASRef new variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitArrayNode: aRBArrayNode [ 
-	^ ASArray statements: (aRBArrayNode statements collect: [:statement| self visit: statement])
+ASPharoVisitor >> visitArrayNode: aRBArrayNode [
+
+	^ ASArray statements:
+		  (aRBArrayNode statements collect: [ :statement | 
+			   self visit: statement ] as: Array)
 ]
 
 { #category : #visiting }
@@ -45,8 +46,44 @@ ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [ 
-	self shouldBeImplemented.
+ASPharoVisitor >> visitBlockNode: aRBBlockNode [
+
+	^ ASBlock
+		  arguments: aRBBlockNode argumentNames
+		  locals: aRBBlockNode temporaryNames
+		  body: (aRBBlockNode statements collect: [ :statement | 
+				   self visit: statement ] as: Array)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
+
+	^ ASCascade
+		  target: (self visit: aRBCascadeNode receiver)
+		  sends: (aRBCascadeNode messages
+				   collect: [ :message | 
+					   ASSend
+						   selector: message selector
+						   args: (message arguments collect: [: arg| self visit: arg  ] as: Array) ]
+				   as: Array)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
+
+	^ ASRef new variable: aRBVariableNode name
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
+
+	^ ASRef new variable: aRBVariableNode name
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
+
+	^ ASRef new variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
@@ -66,7 +103,7 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 		  target: (self visit: aRBMessageNode receiver);
 		  selector: aRBMessageNode selector
 		  args:
-			  (aRBMessageNode arguments collect: [ :arg | self visit: arg ])
+			  (aRBMessageNode arguments collect: [ :arg | self visit: arg ] as: Array)
 ]
 
 { #category : #visiting }

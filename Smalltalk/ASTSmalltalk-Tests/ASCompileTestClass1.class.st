@@ -1,6 +1,15 @@
+"
+I contain methods that are used as exemplars for tests.
+"
 Class {
 	#name : #ASCompileTestClass1,
 	#superclass : #Object,
+	#instVars : [
+		'bar'
+	],
+	#classVars : [
+		'Foo'
+	],
 	#category : #'ASTSmalltalk-Tests-Code'
 }
 
@@ -12,11 +21,18 @@ ASCompileTestClass1 >> + n1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> block [
+
+	^ { 
+		  (3 + 4).
+		  4 factorial } collect: [ :each | |temp| temp := each + 5. temp + 3 ]
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |
 	foo := #( abc nil 3 ) asOrderedCollection.
-	foo addAll: { 3+4 . 4 factorial }.
 	(foo
 		 add: 4 negated;
 		 yourself)
@@ -29,10 +45,28 @@ ASCompileTestClass1 >> cascade [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> classVar [
+
+	^ Foo
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
 	^ self plus1: (forty2 - 4)
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> instVar [
+
+	^ bar
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> object [
+
+^ Object new
 ]
 
 { #category : #'testing - examples' }

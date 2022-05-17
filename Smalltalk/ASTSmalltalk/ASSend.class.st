@@ -44,8 +44,8 @@ ASSend >> printOn: s [
 	target ifNotNil: [ 
 		s << ' target: ('.
 		target printOn: s.
-		s << ') ' ].
-	s << 'selector: '.
+		s << ')' ].
+	s << ' selector: '.
 	selector printOn: s.
 	s << ' args: {'.
 	args do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
