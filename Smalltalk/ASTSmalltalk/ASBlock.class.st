@@ -6,6 +6,8 @@ Note that this is also an ASExpression although the class taxonomy doesn't refle
 Class {
 	#name : #ASBlock,
 	#superclass : #ASMethodOrBlock,
+	#traits : 'ASValue',
+	#classTraits : 'ASValue classTrait',
 	#instVars : [
 		'method'
 	],
@@ -42,4 +44,10 @@ ASBlock >> printOn: s [
 
 	s << self className.
 	super printOn: s
+]
+
+{ #category : #compiling }
+ASBlock >> tell: aCompiler youAreSent: aSymbol [
+
+	^ aCompiler block: self isSent: aSymbol
 ]

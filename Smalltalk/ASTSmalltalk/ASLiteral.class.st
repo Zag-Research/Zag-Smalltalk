@@ -39,3 +39,9 @@ ASLiteral >> printOn: s [
 	s << self className << ' literal: '.
 	literal printOn: s
 ]
+
+{ #category : #compiling }
+ASLiteral >> tell: aCompiler youAreSent: aSymbol [
+
+	^ aCompiler literal: self isSent: aSymbol
+]

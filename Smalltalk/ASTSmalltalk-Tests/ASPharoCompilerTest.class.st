@@ -116,7 +116,12 @@ ASPharoCompilerTest >> testGives43 [
 { #category : #tests }
 ASPharoCompilerTest >> testInstVar [
 
-	self assert: ASCompileTestClass1 >> #instVar compilesTo: (ASMethodNode class: ASCompileTestClass1 selector: #instVar body: {ASReturn expression: (ASRef variable: #foo)})
+	self
+		assert: ASCompileTestClass1 >> #instVar
+		compilesTo: (ASMethodNode
+				 class: ASCompileTestClass1
+				 selector: #instVar
+				 body: { (ASReturn expression: (ASRef variable: #bar)) })
 ]
 
 { #category : #tests }

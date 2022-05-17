@@ -17,6 +17,13 @@ Class {
 	#category : #'ASTSmalltalk-Compiler'
 }
 
+{ #category : #building }
+ASCompiler >> buildFromClass: aClass method: aSymbol [
+
+	self compileMethod: (self method: aSymbol fromClass: aClass class).
+	self transitiveClosure
+]
+
 { #category : #compiling }
 ASCompiler >> compileMethod: aCompiledMethod [
 	^ self subclassResponsibility 
@@ -56,4 +63,30 @@ ASCompiler >> initialize [
 	classes := Set new.
 	selectors := Set new.
 	methods := Set new.
+]
+
+{ #category : #building }
+ASCompiler >> literal: anASLiteral isSent: aString [ 
+	self flag: #todo
+]
+
+{ #category : #building }
+ASCompiler >> method: aSymbol fromClass: aClass [
+
+	^ aClass >> aSymbol
+]
+
+{ #category : #building }
+ASCompiler >> self: anASSelf isSent: aString [ 
+	self flag: #todo
+]
+
+{ #category : #building }
+ASCompiler >> transitiveClosure [
+	self flag: #ToDo
+]
+
+{ #category : #building }
+ASCompiler >> unknownObjectIsSent: aString [ 
+	self flag: #todo
 ]

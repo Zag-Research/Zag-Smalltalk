@@ -6,5 +6,13 @@ Note that ASBlock is also an ASExpression although the class taxonomy doesn't re
 Class {
 	#name : #ASExpression,
 	#superclass : #ASStatement,
+	#traits : 'ASValue',
+	#classTraits : 'ASValue classTrait',
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #compiling }
+ASExpression >> tell: aCompiler youAreSent: aSymbol [
+
+	^ aCompiler unknownObjectIsSent: aSymbol
+]

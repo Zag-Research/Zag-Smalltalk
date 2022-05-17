@@ -99,11 +99,15 @@ ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [
 { #category : #visiting }
 ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 
-	^ ASSend new
-		  target: (self visit: aRBMessageNode receiver);
-		  selector: aRBMessageNode selector
-		  args:
-			  (aRBMessageNode arguments collect: [ :arg | self visit: arg ] as: Array)
+	| target selector |
+	target := self visit: aRBMessageNode receiver.
+	selector := aRBMessageNode selector.
+	target tell: compiler youAreSent: selector.
+	^ ASSend
+		  target: target
+		  selector: selector args: (aRBMessageNode arguments
+				   collect: [ :arg | self visit: arg ]
+				   as: Array)
 ]
 
 { #category : #visiting }

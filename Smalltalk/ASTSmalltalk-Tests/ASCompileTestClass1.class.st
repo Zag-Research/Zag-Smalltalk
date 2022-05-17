@@ -13,6 +13,11 @@ Class {
 	#category : #'ASTSmalltalk-Tests-Code'
 }
 
+{ #category : #starting }
+ASCompileTestClass1 class >> start42 [
+	^ 42
+]
+
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> + n1 [
 	| temp |

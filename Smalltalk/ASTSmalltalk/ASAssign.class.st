@@ -37,6 +37,12 @@ ASAssign >> printOn: s [
 	s << ')'
 ]
 
+{ #category : #compiling }
+ASAssign >> tell: aCompiler youAreSent: aSymbol [
+
+	^ expression tell: aCompiler youAreSent: aSymbol
+]
+
 { #category : #comparing }
 ASAssign >> variable [
 	^ variable

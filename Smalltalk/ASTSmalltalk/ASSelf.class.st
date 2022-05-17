@@ -70,3 +70,9 @@ ASSelf >> superclass: aClass [
 
 	superclass := aClass
 ]
+
+{ #category : #compiling }
+ASSelf >> tell: aCompiler youAreSent: aSymbol [
+
+	^ aCompiler self: self isSent: aSymbol
+]
