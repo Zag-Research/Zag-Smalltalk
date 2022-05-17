@@ -6,3 +6,8 @@ Class {
 	#superclass : #ASCompileTestClass1,
 	#category : #'ASTSmalltalk-Tests-Code'
 }
+
+{ #category : #'testing - examples' }
+ASCompileTestClass2 >> classVar [
+	^ super classVar negated
+]
