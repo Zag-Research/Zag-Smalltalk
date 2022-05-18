@@ -34,10 +34,12 @@ ASCompiler class >> initialize [
 	                   Dispatch ClassTable Magnitude Number ClassDescription
 	                   Boolean ).
 	ClassMap := Dictionary new.
+	ClassMap at: ByteString put: ASTString.
+	ClassMap at: ByteString class put: ASTString class.
 	ASTObject withAllSubclassesDo: [ :class | 
-		(Smalltalk at: (class name allButFirst: 3) asSymbol ifAbsent: [ 
-			 
-			 nil ]) ifNotNil: [ :pharoClass | 
+		(Smalltalk
+			 at: (class name allButFirst: 3) asSymbol
+			 ifAbsent: [ nil ]) ifNotNil: [ :pharoClass | 
 			ClassMap at: pharoClass instanceSide put: class instanceSide.
 			ClassMap at: pharoClass classSide put: class classSide ] ]
 ]
@@ -124,6 +126,8 @@ ASCompiler >> initialize [
 	methods := Set new.
 	methodsAlreadyProcessed := Set new.
 	methodsToProcess := Set new.
+	self addClass: True.
+	self addClass: False.
 ]
 
 { #category : #accessing }
@@ -156,9 +160,9 @@ ASCompiler >> send: selector toClass: aClass [
 ]
 
 { #category : #notifying }
-ASCompiler >> sent: aSymbol toBlock: anASBlock [
+ASCompiler >> sent: selector toBlock: anASBlock [
 
-	self flag: #todo
+		self send: selector toClass: BlockClosure 
 ]
 
 { #category : #notifying }
@@ -168,13 +172,16 @@ ASCompiler >> sent: selector toLiteral: aLiteral [
 ]
 
 { #category : #notifying }
-ASCompiler >> sent: aString toSelf: anASSelf [ 
-	self flag: #todo
+ASCompiler >> sent: selector toSelf: unused [
+
+		self send: selector toClass: definingClass
 ]
 
 { #category : #notifying }
-ASCompiler >> sentToUnknownObject: aString [ 
-	self flag: #todo
+ASCompiler >> sentToUnknownObject: selector [
+
+	freeSelectors add: selector.
+	classes do: [ : aClass | 	self send: selector toClass: aClass ]
 ]
 
 { #category : #building }

@@ -180,28 +180,30 @@ ASTObject >> copy [
 
 { #category : #'as yet unclassified' }
 ASTObject >> doesNotUnderstand: aMessage [
+
 	"Handle a failed attempt to send the given message to the receiver because the receiver does not implement or inherit a method for the message selector. The 'doesNotUnderstand:' message is sent by the virtual machine when a message send fails. If the receiver has an error handling block, invoke it. Otherwise, report an error."
 
 	"ASTObject new argh"
-
-	| errorString handler |
+<primitive: 'doesNotUnderstand:'>
+"	| errorString handler |
 	errorString := 'Message not understood: ' , aMessage selector.
 	(handler := Processor activeProcess errorHandler)
 		ifNil: [ self handleExceptionName: errorString context: thisContext ]
 		ifNotNil: [ handler value: errorString value: self ].
-	^ aMessage sentTo: self	"resend the message if the user proceeds from the debugger"
+	^ aMessage sentTo: self ""resend the message if the user proceeds from the debugger"""
 ]
 
 { #category : #'as yet unclassified' }
 ASTObject >> error: aString [
+
 	"The default behavior for error: is the same as halt:. The code is replicated in order to avoid having an extra message send on the stack. This additional message is the one a subclass should override in order to change the error handling behavior."
 
-	"ASTPbject new error: 'test error'"
-
-	| handler |
+	"ASTObject new error: 'test error'"
+<primitive: 'error:'>
+"	| handler |
 	(handler := Processor activeProcess errorHandler)
 		ifNil: [ self handleExceptionName: aString context: thisContext ]
-		ifNotNil: [ handler value: aString value: self ]
+		ifNotNil: [ handler value: aString value: self ]"
 ]
 
 { #category : #'as yet unclassified' }
