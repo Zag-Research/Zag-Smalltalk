@@ -193,6 +193,16 @@ ASPharoCompilerTest >> testPlusAndAnd [
 ]
 
 { #category : #tests }
+ASPharoCompilerTest >> testPool [
+
+" pool variable counts as a class variable "
+	self assert: ASCompileTestClass3 >> #pool compilesTo: (ASMethodNode
+			 class: ASCompileTestClass3
+			 selector: #pool
+			 body: { (ASReturn expression: (ASRef variable: #Foo)) })
+]
+
+{ #category : #tests }
 ASPharoCompilerTest >> testSimple1 [
 
 	self
@@ -208,7 +218,17 @@ ASPharoCompilerTest >> testSuper [
 
 	self
 		assert: ASCompileTestClass2 >> #classVar
-		compilesTo: (ASMethodNode class: ASCompileTestClass2 selector: #classVar body: {ASReturn expression: (ASSend target: (ASSend target: (ASSelf method: #classVar superclass: ASCompileTestClass1) selector: #classVar args: {}) selector: #negated args: {})})
+		compilesTo: (ASMethodNode
+				 class: ASCompileTestClass2
+				 selector: #classVar
+				 body: { (ASReturn expression: (ASSend
+							   target: (ASSend
+									    target:
+									    (ASSelf method: #classVar superclass: ASCompileTestClass1)
+									    selector: #classVar
+									    args: {  })
+							   selector: #negated
+							   args: {  })) })
 ]
 
 { #category : #tests }

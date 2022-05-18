@@ -43,5 +43,5 @@ ASLiteral >> printOn: s [
 { #category : #compiling }
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
-	^ aCompiler literal: self isSent: aSymbol
+	^ aCompiler sent: aSymbol toLiteral: literal
 ]

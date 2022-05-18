@@ -74,5 +74,5 @@ ASSelf >> superclass: aClass [
 { #category : #compiling }
 ASSelf >> tell: aCompiler youAreSent: aSymbol [
 
-	^ aCompiler self: self isSent: aSymbol
+	^ aCompiler sent: aSymbol toSelf: self
 ]

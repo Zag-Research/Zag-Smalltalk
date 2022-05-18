@@ -12,16 +12,68 @@ Class {
 		'selectors',
 		'definingClass',
 		'definingMethod',
-		'currentScope'
+		'currentScope',
+		'freeSelectors',
+		'methodsAlreadyProcessed',
+		'methodsToProcess'
+	],
+	#classVars : [
+		'ClassIndices',
+		'ClassMap'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
 
-{ #category : #building }
-ASCompiler >> buildFromClass: aClass method: aSymbol [
+{ #category : #'class initialization' }
+ASCompiler class >> initialize [
 
-	self compileMethod: (self method: aSymbol fromClass: aClass class).
+	ClassIndices := #( Object False True UndefinedObject Symbol Character
+	                   SmallInteger Float Array String Class Metaclass
+	                   Behavior BlockClosure Method MethodDictionary
+	                   System Return Send Literal Load Store SymbolTable
+	                   Dispatch ClassTable Magnitude Number ClassDescription
+	                   Boolean ).
+	ClassMap := Dictionary new.
+	ASTObject withAllSubclassesDo: [ :class | 
+		(Smalltalk at: (class name allButFirst: 3) asSymbol ifAbsent: [ 
+			 
+			 nil ]) ifNotNil: [ :pharoClass | 
+			ClassMap at: pharoClass instanceSide put: class instanceSide.
+			ClassMap at: pharoClass classSide put: class classSide ] ]
+]
+
+{ #category : #building }
+ASCompiler >> addClass: aClass [
+
+	| astClass |
+	astClass := ClassMap at: aClass ifAbsent: [ 
+		            aClass ].
+	(classes includes: astClass) ifTrue: [ ^ astClass ].
+	classes add: astClass.
+	astClass isClassSide
+		ifTrue: [ classes add: astClass instanceSide ]
+		ifFalse: [ classes add: astClass classSide ].
+	freeSelectors do: [ :selector | 
+		self send: selector toClass: astClass ].
+	^ astClass
+]
+
+{ #category : #building }
+ASCompiler >> addMethod: method [
+	(methodsAlreadyProcessed includes: method) ifFalse: [ methodsToProcess add: method ]
+]
+
+{ #category : #building }
+ASCompiler >> buildFromClass: aClass selector: selector [
+
+	self send: selector toClass: aClass.
 	self transitiveClosure
+]
+
+{ #category : #accessing }
+ASCompiler >> classes [
+
+	^ classes collect: #instanceSide
 ]
 
 { #category : #compiling }
@@ -38,7 +90,8 @@ ASCompiler >> definingClass [
 ASCompiler >> definingClass: aClass [
 
 	definingClass := aClass.
-	classes add: aClass.
+	classes add: aClass instanceSide.
+	classes add: aClass classSide.
 	currentScope := aClass
 ]
 
@@ -67,31 +120,72 @@ ASCompiler >> initialize [
 	super initialize.
 	classes := Set new.
 	selectors := Set new.
+	freeSelectors := Set with: #initialize.
 	methods := Set new.
+	methodsAlreadyProcessed := Set new.
+	methodsToProcess := Set new.
+]
+
+{ #category : #accessing }
+ASCompiler >> methods [
+	^ methods
 ]
 
 { #category : #building }
-ASCompiler >> literal: anASLiteral isSent: aString [ 
+ASCompiler >> selector: selector fromClass: aClass [
+
+	^ aClass methodDictionary
+		  at: selector
+		  ifPresent: [ aClass >> selector ]
+		  ifAbsent: [ 
+			  aClass superclass ifNotNil: [ :sc | 
+				  self selector: selector fromClass: (self addClass: sc) ] ]
+]
+
+{ #category : #accessing }
+ASCompiler >> selectors [
+	^ selectors
+]
+
+{ #category : #building }
+ASCompiler >> send: selector toClass: aClass [
+
+	(self selector: selector fromClass: (self addClass: aClass)) ifNotNil: [ :method | 
+		selectors add: selector.
+		self addMethod: method ]
+]
+
+{ #category : #notifying }
+ASCompiler >> sent: aSymbol toBlock: anASBlock [
+
 	self flag: #todo
 ]
 
-{ #category : #building }
-ASCompiler >> method: aSymbol fromClass: aClass [
+{ #category : #notifying }
+ASCompiler >> sent: selector toLiteral: aLiteral [
 
-	^ aClass >> aSymbol
+	self send: selector toClass: aLiteral class
 ]
 
-{ #category : #building }
-ASCompiler >> self: anASSelf isSent: aString [ 
+{ #category : #notifying }
+ASCompiler >> sent: aString toSelf: anASSelf [ 
+	self flag: #todo
+]
+
+{ #category : #notifying }
+ASCompiler >> sentToUnknownObject: aString [ 
 	self flag: #todo
 ]
 
 { #category : #building }
 ASCompiler >> transitiveClosure [
-	self flag: #ToDo
-]
 
-{ #category : #building }
-ASCompiler >> unknownObjectIsSent: aString [ 
-	self flag: #todo
+	| toProcess |
+	[ methodsToProcess isEmpty ] whileFalse: [ 
+		toProcess := methodsToProcess.
+		methodsToProcess := Set new.
+				methodsAlreadyProcessed addAll: toProcess.
+		toProcess do: [: method |
+			self compileMethod: method ].
+		]
 ]

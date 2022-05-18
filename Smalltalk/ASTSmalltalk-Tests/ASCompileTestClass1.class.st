@@ -15,7 +15,8 @@ Class {
 
 { #category : #starting }
 ASCompileTestClass1 class >> start42 [
-	^ 42
+
+	^ 42 negated
 ]
 
 { #category : #'testing - examples' }

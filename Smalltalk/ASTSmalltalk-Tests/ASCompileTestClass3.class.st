@@ -9,3 +9,8 @@ Class {
 	],
 	#category : #'ASTSmalltalk-Tests-Code'
 }
+
+{ #category : #'as yet unclassified' }
+ASCompileTestClass3 >> pool [
+	^ Foo
+]

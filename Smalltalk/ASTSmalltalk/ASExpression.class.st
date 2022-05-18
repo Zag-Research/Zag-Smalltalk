@@ -14,5 +14,5 @@ Class {
 { #category : #compiling }
 ASExpression >> tell: aCompiler youAreSent: aSymbol [
 
-	^ aCompiler unknownObjectIsSent: aSymbol
+	^ aCompiler sentToUnknownObject: aSymbol
 ]

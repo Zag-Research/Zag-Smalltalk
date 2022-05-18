@@ -49,5 +49,5 @@ ASBlock >> printOn: s [
 { #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
-	^ aCompiler block: self isSent: aSymbol
+	^ aCompiler sent: aSymbol toBlock: self
 ]
