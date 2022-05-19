@@ -53,6 +53,11 @@ ASMethodNode >> = other [
 			  self className = other className and: [ super = other ] ] ]
 ]
 
+{ #category : #visiting }
+ASMethodNode >> acceptVisitor: anASZigGenerator [ 
+	^ anASZigGenerator visitMethodNode: self
+]
+
 { #category : #accessing }
 ASMethodNode >> class: anASClassNode [ 
 	class := anASClassNode

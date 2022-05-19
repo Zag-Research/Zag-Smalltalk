@@ -39,6 +39,12 @@ ASSelf >> = other [
 			  self superclass = other superclass ] ]
 ]
 
+{ #category : #visiting }
+ASSelf >> acceptVisitor: anASZigGenerator [
+
+	^ anASZigGenerator visitSelfNode: self
+]
+
 { #category : #accessing }
 ASSelf >> method [
 

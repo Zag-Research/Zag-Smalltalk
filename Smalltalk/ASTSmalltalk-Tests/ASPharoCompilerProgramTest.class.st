@@ -10,6 +10,27 @@ ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 	^ ASPharoCompiler new buildFromClass: class selector: method
 ]
 
+{ #category : #script }
+ASPharoCompilerProgramTest >> codeStart42 [
+
+	<script>
+	| result |
+	result := self
+		          buildFromClass: ASCompileTestClass1 class
+		          selector: #start42.
+	^ result zigString
+]
+
+{ #category : #script }
+ASPharoCompilerProgramTest >> testCodeStart42 [
+
+	| result |
+	result := self
+		          buildFromClass: ASCompileTestClass1 class
+		          selector: #start42.
+	self assert: result zigString equals: ''
+]
+
 { #category : #tests }
 ASPharoCompilerProgramTest >> testStart42 [
 

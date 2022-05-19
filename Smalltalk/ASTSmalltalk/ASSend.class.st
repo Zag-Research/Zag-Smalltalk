@@ -32,6 +32,11 @@ ASSend >> = other [
 			  self target = other target and: [ self args = other args ] ] ]
 ]
 
+{ #category : #visiting }
+ASSend >> acceptVisitor: anASZigGenerator [
+	^ anASZigGenerator visitSend: self
+]
+
 { #category : #parsing }
 ASSend >> args [
 	^ args

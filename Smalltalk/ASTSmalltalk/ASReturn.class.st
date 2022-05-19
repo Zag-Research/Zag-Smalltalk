@@ -21,6 +21,11 @@ ASReturn >> = other [
 	^ self class = other class and: [ self expression = other expression ]
 ]
 
+{ #category : #visiting }
+ASReturn >> acceptVisitor: anASZigGenerator [ 
+	^ anASZigGenerator visitReturn: self
+]
+
 { #category : #accessing }
 ASReturn >> expression [
 

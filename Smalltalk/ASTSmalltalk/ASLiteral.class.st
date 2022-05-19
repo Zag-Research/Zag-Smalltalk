@@ -21,6 +21,11 @@ ASLiteral >> = other [
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
+{ #category : #visiting }
+ASLiteral >> acceptVisitor: anASZigGenerator [ 
+	^ anASZigGenerator visitLiteral: self
+]
+
 { #category : #accessing }
 ASLiteral >> literal [
 
