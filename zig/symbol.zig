@@ -12,16 +12,17 @@ inline fn symbol_of(index: u64, arity: u64) object.Object {
 inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));
 }
-pub const valueWithArguments_ = symbol_of(1,1);
-pub const cull_ = symbol_of(2,1);
-pub const cull_cull_ = symbol_of(3,2);
-pub const cull_cull_cull_ = symbol_of(4,3);
-pub const cull_cull_cull_cull_ = symbol_of(5,4);
+pub const symbols = struct {
+    pub const @"valueWithArguments:" = symbol_of(1,1);
+pub const @"cull:" = symbol_of(2,1);
+pub const @"cull:cull:" = symbol_of(3,2);
+pub const @"cull:cull:cull:" = symbol_of(4,3);
+pub const @"cull:cull:cull:cull:" = symbol_of(5,4);
 pub const value = symbol0(6);
-pub const value_ = symbol_of(7,1);
-pub const value_value_ = symbol_of(8,2);
-pub const value_value_value_ = symbol_of(9,3);
-pub const value_value_value_value_ = symbol_of(10,4);
+pub const @"value:" = symbol_of(7,1);
+pub const @"value:value:" = symbol_of(8,2);
+pub const @"value:value:value:" = symbol_of(9,3);
+pub const @"value:value:value:value:" = symbol_of(10,4);
 pub const self = symbol0(11);
 pub const Object = symbol0(12);
 pub const BlockClosure = symbol0(13);
@@ -60,6 +61,7 @@ pub const @"*" = symbol_of(45,1);
 pub const size = symbol0(46);
 pub const negated = symbol0(47);
 pub const ClassDescription = symbol0(48);
+};
 var symbolTable : Symbol_Table = undefined;
 
 pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize) !void {
@@ -154,7 +156,7 @@ const Symbol_Table = struct {
         return symbol_of(index,nArgs);
     }
     fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
-        var symbols = std.mem.tokenize(
+        var symbolsToDefine = std.mem.tokenize(
             u8,
 \\ valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: 
 \\ value value: value:value: value:value:value: value:value:value:value:
@@ -168,7 +170,7 @@ const Symbol_Table = struct {
 \\ yourself == ~~ ~= = + - * size
 \\ ClassDescription
                 ," \n");
-        while(symbols.next()) |symbol| {
+        while(symbolsToDefine.next()) |symbol| {
             _ = s.internLiteral(arena,symbol);
         }
     }
@@ -181,50 +183,50 @@ test "symbols match initialized symbol table" {
     var symbol = try Symbol_Table.init(&arena,250);
     symbol.loadInitialSymbols(&arena);
     defer symbol.deinit();
-    try expectEqual(valueWithArguments_,symbol.lookupLiteral("valueWithArguments:"));
-    try expectEqual(cull_,symbol.lookupLiteral("cull:"));
-    try expectEqual(cull_cull_,symbol.lookupLiteral("cull:cull:"));
-    try expectEqual(cull_cull_cull_,symbol.lookupLiteral("cull:cull:cull:"));
-    try expectEqual(cull_cull_cull_cull_,symbol.lookupLiteral("cull:cull:cull:cull:"));
-    try expectEqual(value,symbol.lookupLiteral("value"));
-    try expectEqual(value_,symbol.lookupLiteral("value:"));
-    try expectEqual(value_value_,symbol.lookupLiteral("value:value:"));
-    try expectEqual(value_value_value_,symbol.lookupLiteral("value:value:value:"));
-    try expectEqual(value_value_value_value_,symbol.lookupLiteral("value:value:value:value:"));
-    try expectEqual(self,symbol.lookupLiteral("self"));
-    try expectEqual(Object,symbol.lookupLiteral("Object"));
-    try expectEqual(BlockClosure,symbol.lookupLiteral("BlockClosure"));
-    try expectEqual(False,symbol.lookupLiteral("False"));
-    try expectEqual(True,symbol.lookupLiteral("True"));
-    try expectEqual(UndefinedObject,symbol.lookupLiteral("UndefinedObject"));
-    try expectEqual(SmallInteger,symbol.lookupLiteral("SmallInteger"));
-    try expectEqual(Symbol,symbol.lookupLiteral("Symbol"));
-    try expectEqual(Character,symbol.lookupLiteral("Character"));
-    try expectEqual(Float,symbol.lookupLiteral("Float"));
-    try expectEqual(Array,symbol.lookupLiteral("Array"));
-    try expectEqual(String,symbol.lookupLiteral("String"));
-    try expectEqual(Class,symbol.lookupLiteral("Class"));
-    try expectEqual(Metaclass,symbol.lookupLiteral("Metaclass"));
-    try expectEqual(Behavior,symbol.lookupLiteral("Behavior"));
-    try expectEqual(Method,symbol.lookupLiteral("Method"));
-    try expectEqual(Magnitude,symbol.lookupLiteral("Magnitude"));
-    try expectEqual(Number,symbol.lookupLiteral("Number"));
-    try expectEqual(System,symbol.lookupLiteral("System"));
-    try expectEqual(Return,symbol.lookupLiteral("Return"));
-    try expectEqual(Send,symbol.lookupLiteral("Send"));
-    try expectEqual(Literal,symbol.lookupLiteral("Literal"));
-    try expectEqual(Load,symbol.lookupLiteral("Load"));
-    try expectEqual(Store,symbol.lookupLiteral("Store"));
-    try expectEqual(SymbolTable,symbol.lookupLiteral("SymbolTable"));
-    try expectEqual(Dispatch,symbol.lookupLiteral("Dispatch"));
-    try expectEqual(yourself,symbol.lookupLiteral("yourself"));
-    try expectEqual(@"==",symbol.lookupLiteral("=="));
-    try expectEqual(@"~~",symbol.lookupLiteral("~~"));
-    try expectEqual(@"~=",symbol.lookupLiteral("~="));
-    try expectEqual(@"=",symbol.lookupLiteral("="));
-    try expectEqual(@"+",symbol.lookupLiteral("+"));
-    try expectEqual(@"-",symbol.lookupLiteral("-"));
-    try expectEqual(@"*",symbol.lookupLiteral("*"));
-    try expectEqual(size,symbol.lookupLiteral("size"));
-    try expectEqual(ClassTable,symbol.lookupLiteral("ClassTable"));
+    try expectEqual(symbols.@"valueWithArguments:",symbol.lookupLiteral("valueWithArguments:"));
+    try expectEqual(symbols.@"cull:",symbol.lookupLiteral("cull:"));
+    try expectEqual(symbols.@"cull:cull:",symbol.lookupLiteral("cull:cull:"));
+    try expectEqual(symbols.@"cull:cull:cull:",symbol.lookupLiteral("cull:cull:cull:"));
+    try expectEqual(symbols.@"cull:cull:cull:cull:",symbol.lookupLiteral("cull:cull:cull:cull:"));
+    try expectEqual(symbols.value,symbol.lookupLiteral("value"));
+    try expectEqual(symbols.@"value:",symbol.lookupLiteral("value:"));
+    try expectEqual(symbols.@"value:value:",symbol.lookupLiteral("value:value:"));
+    try expectEqual(symbols.@"value:value:value:",symbol.lookupLiteral("value:value:value:"));
+    try expectEqual(symbols.@"value:value:value:value:",symbol.lookupLiteral("value:value:value:value:"));
+    try expectEqual(symbols.self,symbol.lookupLiteral("self"));
+    try expectEqual(symbols.Object,symbol.lookupLiteral("Object"));
+    try expectEqual(symbols.BlockClosure,symbol.lookupLiteral("BlockClosure"));
+    try expectEqual(symbols.False,symbol.lookupLiteral("False"));
+    try expectEqual(symbols.True,symbol.lookupLiteral("True"));
+    try expectEqual(symbols.UndefinedObject,symbol.lookupLiteral("UndefinedObject"));
+    try expectEqual(symbols.SmallInteger,symbol.lookupLiteral("SmallInteger"));
+    try expectEqual(symbols.Symbol,symbol.lookupLiteral("Symbol"));
+    try expectEqual(symbols.Character,symbol.lookupLiteral("Character"));
+    try expectEqual(symbols.Float,symbol.lookupLiteral("Float"));
+    try expectEqual(symbols.Array,symbol.lookupLiteral("Array"));
+    try expectEqual(symbols.String,symbol.lookupLiteral("String"));
+    try expectEqual(symbols.Class,symbol.lookupLiteral("Class"));
+    try expectEqual(symbols.Metaclass,symbol.lookupLiteral("Metaclass"));
+    try expectEqual(symbols.Behavior,symbol.lookupLiteral("Behavior"));
+    try expectEqual(symbols.Method,symbol.lookupLiteral("Method"));
+    try expectEqual(symbols.Magnitude,symbol.lookupLiteral("Magnitude"));
+    try expectEqual(symbols.Number,symbol.lookupLiteral("Number"));
+    try expectEqual(symbols.System,symbol.lookupLiteral("System"));
+    try expectEqual(symbols.Return,symbol.lookupLiteral("Return"));
+    try expectEqual(symbols.Send,symbol.lookupLiteral("Send"));
+    try expectEqual(symbols.Literal,symbol.lookupLiteral("Literal"));
+    try expectEqual(symbols.Load,symbol.lookupLiteral("Load"));
+    try expectEqual(symbols.Store,symbol.lookupLiteral("Store"));
+    try expectEqual(symbols.SymbolTable,symbol.lookupLiteral("SymbolTable"));
+    try expectEqual(symbols.Dispatch,symbol.lookupLiteral("Dispatch"));
+    try expectEqual(symbols.yourself,symbol.lookupLiteral("yourself"));
+    try expectEqual(symbols.@"==",symbol.lookupLiteral("=="));
+    try expectEqual(symbols.@"~~",symbol.lookupLiteral("~~"));
+    try expectEqual(symbols.@"~=",symbol.lookupLiteral("~="));
+    try expectEqual(symbols.@"=",symbol.lookupLiteral("="));
+    try expectEqual(symbols.@"+",symbol.lookupLiteral("+"));
+    try expectEqual(symbols.@"-",symbol.lookupLiteral("-"));
+    try expectEqual(symbols.@"*",symbol.lookupLiteral("*"));
+    try expectEqual(symbols.size,symbol.lookupLiteral("size"));
+    try expectEqual(symbols.ClassTable,symbol.lookupLiteral("ClassTable"));
 }
