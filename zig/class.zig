@@ -38,6 +38,7 @@ pub const ClassTable_I: ClassIndex = 25;
 pub const Magnitude_I: ClassIndex = 26;
 pub const Number_I: ClassIndex = 27;
 pub const ClassDescription_I: ClassIndex = 28;
+pub const Boolean_I: ClassIndex = 29;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -88,6 +89,7 @@ const Class_Table = struct {
 \\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription
+\\ Boolean
                 ," \n");
         while(names.next()) |name| {
             _ = s.intern(symbol.internLiteral(arena,name));
@@ -142,7 +144,7 @@ pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) v
     if (superclass_I>0 and !classes[superclass_I].is_nil()) {
         unreachable;
     } else {
-        superclass_I = classTable.lookup(symbol.Class);
+        superclass_I = classTable.lookup(symbol.symbols.Class);
     }
     _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
 }
@@ -150,13 +152,13 @@ pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
     classTable.loadInitialClassNames(arena);
-    subClass(thr,Nil,symbol.Object);
+    subClass(thr,Nil,symbol.symbols.Object);
     //subClass(thr,symbol.Object,symbol.Behavior);
     //subClass(thr,symbol.Behavior,symbol.ClassDescription);
     //subClass(thr,symbol.ClassDescription,symbol.Class);
     //subClass(thr,symbol.ClassDescription,symbol.Metaclass);
     // repeat to set metaclass superclass properly
-    subClass(thr,Nil,symbol.Object);
+    subClass(thr,Nil,symbol.symbols.Object);
 }
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;
@@ -167,6 +169,7 @@ test "classes match initialized class table" {
     try expectEqual(Object_I,class.lookupLiteral("Object"));
     try expectEqual(False_I,class.lookupLiteral("False"));
     try expectEqual(True_I,class.lookupLiteral("True"));
+    try expectEqual(Boolean_I,class.lookupLiteral("Boolean"));
     try expectEqual(UndefinedObject_I,class.lookupLiteral("UndefinedObject"));
     try expectEqual(SmallInteger_I,class.lookupLiteral("SmallInteger"));
     try expectEqual(Class_I,class.lookupLiteral("Class"));

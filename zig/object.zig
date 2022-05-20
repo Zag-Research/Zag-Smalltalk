@@ -170,7 +170,7 @@ test "printing" {
     const stream = fbs.writer();
     const symbol = @import("symbol.zig");
     try stream.print("{}\n",.{Object.from(42)});
-    try stream.print("{}\n",.{symbol.yourself});
+    try stream.print("{}\n",.{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#dummy string\n", fbs.getWritten());
 }
 pub const Tag = enum(u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger };
