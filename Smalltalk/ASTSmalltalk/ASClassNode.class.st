@@ -11,9 +11,26 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
-{ #category : #initialization }
-ASClassNode >> from: aClass [ 
-	name := aClass name.
-	classVariables := aClass classPool keys.
+{ #category : #comparing }
+ASClassNode >> = other [
+	^ name = other name
+]
 
+{ #category : #initialization }
+ASClassNode >> from: aClass [
+
+	name := aClass name.
+	self halt.
+	classVariables := aClass classPool keys
+]
+
+{ #category : #comparing }
+ASClassNode >> hash [
+	^ name hash
+]
+
+{ #category : #accessing }
+ASClassNode >> name [
+
+	^ name
 ]

@@ -108,6 +108,19 @@ ASCompiler >> definingMethod: aMethod [
 	methods add: aMethod
 ]
 
+{ #category : #building }
+ASCompiler >> findClass: aClass [
+
+	| astClass |
+	astClass := ClassMap at: aClass ifAbsent: [ aClass ].
+	(classes includes: astClass) ifTrue: [ ^ astClass ].
+	classes add: astClass.
+	astClass isClassSide
+		ifTrue: [ classes add: astClass instanceSide ]
+		ifFalse: [ classes add: astClass classSide ].
+	^ astClass
+]
+
 { #category : #compiling }
 ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [ 
 	| savedScope |
@@ -128,6 +141,11 @@ ASCompiler >> initialize [
 	methodsToProcess := Set new.
 	self addClass: True.
 	self addClass: False.
+]
+
+{ #category : #compiling }
+ASCompiler >> lookup: aSymbol [
+	^ currentScope lookup: aSymbol
 ]
 
 { #category : #accessing }

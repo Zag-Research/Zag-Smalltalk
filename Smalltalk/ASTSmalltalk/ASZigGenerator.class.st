@@ -59,11 +59,6 @@ ASZigGenerator >> visitMethodNode: anASMethodNode [
 ]
 
 { #category : #visiting }
-ASZigGenerator >> visitRef: anASRef [ 
-	self shouldBeImplemented.
-]
-
-{ #category : #visiting }
 ASZigGenerator >> visitReturn: anASReturn [
 	self visit: anASReturn expression.
 	self flag: #todo.

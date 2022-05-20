@@ -33,8 +33,10 @@ ASMethodOrBlock >> arguments [
 ]
 
 { #category : #accessing }
-ASMethodOrBlock >> arguments: aCollection [ 
-	arguments := aCollection asArray
+ASMethodOrBlock >> arguments: aCollection [
+
+	arguments := aCollection		          collect: [ :symbol | ASArg name: symbol ]
+		          as: Array
 ]
 
 { #category : #accessing }
@@ -65,10 +67,15 @@ ASMethodOrBlock >> locals [
 { #category : #accessing }
 ASMethodOrBlock >> locals: aCollection [
 
-	locals := aCollection asArray
+	locals := aCollection collect: [: symbol | ASLocal name: symbol] as: Array
 ]
 
-{ #category : #accessing }
+{ #category : #scopes }
+ASMethodOrBlock >> lookup: symbol [
+	self halt.
+]
+
+{ #category : #scopes }
 ASMethodOrBlock >> nestedScopeOf: anASClassNode [ 
 	nestedScopeOf := anASClassNode
 ]

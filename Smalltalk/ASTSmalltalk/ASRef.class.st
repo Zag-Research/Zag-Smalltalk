@@ -5,7 +5,7 @@ Class {
 	#name : #ASRef,
 	#superclass : #ASExpression,
 	#instVars : [
-		'variable'
+		'name'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -26,20 +26,21 @@ ASRef >> acceptVisitor: anASZigGenerator [
 	^ anASZigGenerator visitRef: self
 ]
 
+{ #category : #comparing }
+ASRef >> name [
+
+	^ name
+]
+
+{ #category : #comparing }
+ASRef >> name: aSymbol [
+
+	name := aSymbol
+]
+
 { #category : #printing }
 ASRef >> printOn: s [
 
 	s << self className << ' variable: '.
-	variable printOn: s
-]
-
-{ #category : #comparing }
-ASRef >> variable [
-	^ variable
-]
-
-{ #category : #comparing }
-ASRef >> variable: aSymbol [
-
-	variable := aSymbol
+	name printOn: s
 ]
