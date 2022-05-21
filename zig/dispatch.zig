@@ -9,7 +9,7 @@ const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
-
+const symbols = symbol.symbols;
 pub const MethodReturns = enum {
     Normal,
     PrimitiveFailed,
@@ -89,31 +89,31 @@ fn test6(thread : *Thread, _: Object) MethodReturns {
     thread.stack()[0]=Object.from(6);
     return MethodReturns.Normal;
 }
-const noMethods = [0]SymbolMethod{};
+pub const noMethods = [0]SymbolMethod{};
 const symbolMethods1 = [_]SymbolMethod{
-    .{.selector=symbol.value,.method=testNormal},
-    .{.selector=symbol.self,.method=testNormal},
-    .{.selector=symbol.yourself,.method=testNormal},
-    .{.selector=symbol.cull_,.method=testNormal},
+    .{.selector=symbols.value,.method=testNormal},
+    .{.selector=symbols.self,.method=testNormal},
+    .{.selector=symbols.yourself,.method=testNormal},
+    .{.selector=symbols.@"cull:",.method=testNormal},
 };
 const symbolMethods2 = [_]SymbolMethod{
-    .{.selector=symbol.value,.method=test1},
-    .{.selector=symbol.self,.method=test2},
-    .{.selector=symbol.yourself,.method=test3},
-    .{.selector=symbol.cull_,.method=test4},
-    .{.selector=symbol.value_,.method=test5}, // additional method forces larger hash
-    .{.selector=symbol.cull_cull_cull_cull_,.method=test6}, // additional method forces larger hash
+    .{.selector=symbols.value,.method=test1},
+    .{.selector=symbols.self,.method=test2},
+    .{.selector=symbols.yourself,.method=test3},
+    .{.selector=symbols.@"cull:",.method=test4},
+    .{.selector=symbols.@"value:",.method=test5}, // additional method forces larger hash
+    .{.selector=symbols.@"cull:cull:cull:cull:",.method=test6}, // additional method forces larger hash
 };
 const symbolMethods3 = [_]SymbolMethod{
-    .{.selector=symbol.value,.method=testNormal},
-    .{.selector=symbol.value,.method=testNormal},
-    .{.selector=symbol.self,.method=testNormal},
-    .{.selector=symbol.yourself,.method=testNormal},
-    .{.selector=symbol.cull_,.method=testNormal},
-    .{.selector=symbol.value_,.method=testNonLocal},
-    .{.selector=symbol.value_value_,.method=testNormal},
-    .{.selector=symbol.value_value_value_,.method=testNormal},
-    .{.selector=symbol.value_value_value_value_,.method=testNormal},
+    .{.selector=symbols.value,.method=testNormal},
+    .{.selector=symbols.value,.method=testNormal},
+    .{.selector=symbols.self,.method=testNormal},
+    .{.selector=symbols.yourself,.method=testNormal},
+    .{.selector=symbols.@"cull:",.method=testNormal},
+    .{.selector=symbols.@"value:",.method=testNonLocal},
+    .{.selector=symbols.@"value:value:",.method=testNormal},
+    .{.selector=symbols.@"value:value:value:",.method=testNormal},
+    .{.selector=symbols.@"value:value:value:value:",.method=testNormal},
 };
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -168,29 +168,29 @@ fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    try addClass(&thread,symbol.SmallInteger,symbolMethods1[0..],noMethods[0..]);
+    try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods[0..]);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
-    try expectEqual(call(&thread,t42,symbol.value),MethodReturns.Normal);
+    try expectEqual(call(&thread,t42,symbols.value),MethodReturns.Normal);
     try expectEqual(thread.stack()[0],t42);
 }
 test "lookups of proper methods" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    try addClass(&thread,symbol.SmallInteger,symbolMethods2[0..],noMethods[0..]);
+    try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods[0..]);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
-    _ = call(&thread,t42,symbol.value);
+    _ = call(&thread,t42,symbols.value);
     try expectEqual(thread.stack()[0],Object.from(1));
-    _ = call(&thread,t42,symbol.self);
+    _ = call(&thread,t42,symbols.self);
     try expectEqual(thread.stack()[0],Object.from(2));
-    _ = call(&thread,t42,symbol.yourself);
+    _ = call(&thread,t42,symbols.yourself);
     try expectEqual(thread.stack()[0],Object.from(3));
-    _ = call(&thread,t42,symbol.cull_);
+    _ = call(&thread,t42,symbols.@"cull:");
     try expectEqual(thread.stack()[0],Object.from(4));
-    _ = call(&thread,t42,symbol.value_);
+    _ = call(&thread,t42,symbols.@"value:");
     try expectEqual(thread.stack()[0],Object.from(5));
-    _ = call(&thread,t42,symbol.cull_cull_cull_cull_);
+    _ = call(&thread,t42,symbols.@"cull:cull:cull:cull:");
     try expectEqual(thread.stack()[0],Object.from(6));
 }
 fn dnu(thread: *Thread,selector: Object) MethodReturns {

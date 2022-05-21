@@ -9,20 +9,32 @@ const thread = @import("thread.zig");
 inline fn symbol_of(index: u64, arity: u64) object.Object {
     return symbol0(index|(arity<<24));
 }
-inline fn symbol0(index: u64) object.Object {
+pub inline fn symbol0(index: u64) object.Object {
     return @bitCast(object.Object,index|(0x7ffd<<49));
 }
+pub inline fn symbol1(index: u64) object.Object {
+    return symbol0(index|(1<<24));
+}
+pub inline fn symbol2(index: u64) object.Object {
+    return symbol0(index|(2<<24));
+}
+pub inline fn symbol3(index: u64) object.Object {
+    return symbol0(index|(3<<24));
+}
+pub inline fn symbol4(index: u64) object.Object {
+    return symbol0(index|(4<<24));
+}
 pub const symbols = struct {
-    pub const @"valueWithArguments:" = symbol_of(1,1);
-pub const @"cull:" = symbol_of(2,1);
-pub const @"cull:cull:" = symbol_of(3,2);
-pub const @"cull:cull:cull:" = symbol_of(4,3);
-pub const @"cull:cull:cull:cull:" = symbol_of(5,4);
+    pub const @"valueWithArguments:" = symbol1(1);
+pub const @"cull:" = symbol1(2);
+pub const @"cull:cull:" = symbol2(3);
+pub const @"cull:cull:cull:" = symbol3(4);
+pub const @"cull:cull:cull:cull:" = symbol4(5);
 pub const value = symbol0(6);
-pub const @"value:" = symbol_of(7,1);
-pub const @"value:value:" = symbol_of(8,2);
-pub const @"value:value:value:" = symbol_of(9,3);
-pub const @"value:value:value:value:" = symbol_of(10,4);
+pub const @"value:" = symbol1(7);
+pub const @"value:value:" = symbol2(8);
+pub const @"value:value:value:" = symbol3(9);
+pub const @"value:value:value:value:" = symbol4(10);
 pub const self = symbol0(11);
 pub const Object = symbol0(12);
 pub const BlockClosure = symbol0(13);
@@ -51,23 +63,24 @@ pub const SymbolTable = symbol0(35);
 pub const Dispatch = symbol0(36);
 pub const ClassTable = symbol0(37);
 pub const yourself = symbol0(38);
-pub const @"==" = symbol_of(39,1);
-pub const @"~~" = symbol_of(40,1);
-pub const @"~=" = symbol_of(41,1);
-pub const @"=" = symbol_of(42,1);
-pub const @"+" = symbol_of(43,1);
-pub const @"-" = symbol_of(44,1);
-pub const @"*" = symbol_of(45,1);
+pub const @"==" = symbol1(39);
+pub const @"~~" = symbol1(40);
+pub const @"~=" = symbol1(41);
+pub const @"=" = symbol1(42);
+pub const @"+" = symbol1(43);
+pub const @"-" = symbol1(44);
+pub const @"*" = symbol1(45);
 pub const size = symbol0(46);
 pub const negated = symbol0(47);
 pub const ClassDescription = symbol0(48);
 };
 var symbolTable : Symbol_Table = undefined;
 
-pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize) !void {
+pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !void {
     var arena = thr.getArena().getGlobal();
     symbolTable = try Symbol_Table.init(arena,initialSymbolTableSize);
     symbolTable.loadInitialSymbols(arena);
+    symbolTable.loadSymbols(arena,str);
 }
 pub fn deinit(thr: *thread.Thread) void {
     _ = thr;
@@ -156,8 +169,8 @@ const Symbol_Table = struct {
         return symbol_of(index,nArgs);
     }
     fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
-        var symbolsToDefine = std.mem.tokenize(
-            u8,
+        s.loadSymbols(
+            arena,
 \\ valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: 
 \\ value value: value:value: value:value:value: value:value:value:value:
 \\ self
@@ -169,7 +182,10 @@ const Symbol_Table = struct {
 \\ SymbolTable Dispatch ClassTable
 \\ yourself == ~~ ~= = + - * size
 \\ ClassDescription
-                ," \n");
+        );
+    }
+    fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {
+        var symbolsToDefine = std.mem.tokenize(u8,str," \n");
         while(symbolsToDefine.next()) |symbol| {
             _ = s.internLiteral(arena,symbol);
         }

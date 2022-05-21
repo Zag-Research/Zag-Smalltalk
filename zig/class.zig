@@ -163,7 +163,7 @@ pub fn init(thr: *thread.Thread) !void {
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;
     var thr = try thread.Thread.initForTest();
-    try symbol.init(&thr,500);
+    try symbol.init(&thr,500,"");
     try init(&thr);
     var class = classTable;
     try expectEqual(Object_I,class.lookupLiteral("Object"));
