@@ -35,13 +35,19 @@ test "try a thread" {
     try _Symbol.init(&thread,250,
 \\ start
                      );
+    try std.io.getStdOut().writer().print("before getClass\n",.{});
     const System = Class.getClass(_s.System);
+    try std.io.getStdOut().writer().print("before addClass\n",.{});
     try Dispatch.addClass(&thread,_s.System,System_dispatch[0..],Dispatch.noMethods[0..]);
     thread.push(System);
+    try std.io.getStdOut().writer().print("before dispatch\n",.{});
     switch (System.dispatch(&thread,_s.start)) {
         .Normal => {
             try expect(thread.stack()[0].is_nil());
         },
-        else => unreachable,
+        else => |result| {
+            try std.io.getStdOut().writer().print("result={}\n",.{result});
+            unreachable;
+        },
     }
 }
