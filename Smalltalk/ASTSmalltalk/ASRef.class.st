@@ -21,11 +21,6 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
-{ #category : #visiting }
-ASRef >> acceptVisitor: anASZigGenerator [ 
-	^ anASZigGenerator visitRef: self
-]
-
 { #category : #comparing }
 ASRef >> name [
 

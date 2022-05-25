@@ -54,8 +54,9 @@ ASMethodNode >> = other [
 ]
 
 { #category : #visiting }
-ASMethodNode >> acceptVisitor: anASZigGenerator [ 
-	^ anASZigGenerator visitMethodNode: self
+ASMethodNode >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitMethodNode: self
 ]
 
 { #category : #accessing }

@@ -22,8 +22,9 @@ ASReturn >> = other [
 ]
 
 { #category : #visiting }
-ASReturn >> acceptVisitor: anASZigGenerator [ 
-	^ anASZigGenerator visitReturn: self
+ASReturn >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitReturn: self
 ]
 
 { #category : #accessing }

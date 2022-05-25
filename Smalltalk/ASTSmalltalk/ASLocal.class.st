@@ -1,3 +1,6 @@
+"
+I represent a local (temporary) variable
+"
 Class {
 	#name : #ASLocal,
 	#superclass : #ASRef,

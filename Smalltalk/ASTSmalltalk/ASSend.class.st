@@ -33,8 +33,9 @@ ASSend >> = other [
 ]
 
 { #category : #visiting }
-ASSend >> acceptVisitor: anASZigGenerator [
-	^ anASZigGenerator visitSend: self
+ASSend >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitSend: self
 ]
 
 { #category : #parsing }

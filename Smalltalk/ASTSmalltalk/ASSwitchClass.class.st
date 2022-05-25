@@ -6,3 +6,8 @@ Class {
 	#superclass : #ASSwitch,
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #testing }
+ASSwitchClass >> isClass [
+	^ true
+]

@@ -22,8 +22,9 @@ ASLiteral >> = other [
 ]
 
 { #category : #visiting }
-ASLiteral >> acceptVisitor: anASZigGenerator [ 
-	^ anASZigGenerator visitLiteral: self
+ASLiteral >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitLiteral: self
 ]
 
 { #category : #'as yet unclassified' }

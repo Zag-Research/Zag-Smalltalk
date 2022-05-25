@@ -40,9 +40,9 @@ ASSelf >> = other [
 ]
 
 { #category : #visiting }
-ASSelf >> acceptVisitor: anASZigGenerator [
+ASSelf >> acceptVisitor: aVisitor [
 
-	^ anASZigGenerator visitSelfNode: self
+	^ aVisitor visitSelfNode: self
 ]
 
 { #category : #accessing }
