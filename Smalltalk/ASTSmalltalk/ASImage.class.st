@@ -28,7 +28,7 @@ Class {
 		'SizeMask',
 		'SizeShift'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Image'
 }
 
 { #category : #export }

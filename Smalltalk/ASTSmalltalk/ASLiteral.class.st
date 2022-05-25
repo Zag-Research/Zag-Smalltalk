@@ -26,6 +26,11 @@ ASLiteral >> acceptVisitor: anASZigGenerator [
 	^ anASZigGenerator visitLiteral: self
 ]
 
+{ #category : #'as yet unclassified' }
+ASLiteral >> baseValue [
+	^ value
+]
+
 { #category : #accessing }
 ASLiteral >> literal [
 

@@ -48,9 +48,9 @@ ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body 
 { #category : #comparing }
 ASMethodNode >> = other [
 
-	^ self class = other class and: [ 
-		  self selector = other selector and: [ 
-			  self className = other className and: [ super = other ] ] ]
+	^ super = other and: [ 
+			  self selector = other selector and: [ 
+				  self className = other className ] ]
 ]
 
 { #category : #visiting }

@@ -18,7 +18,7 @@ Class {
 		'address',
 		'extra'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Image'
 }
 
 { #category : #accessing }

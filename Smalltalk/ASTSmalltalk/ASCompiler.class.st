@@ -143,6 +143,18 @@ ASCompiler >> initialize [
 	self addClass: False.
 ]
 
+{ #category : #inlining }
+ASCompiler >> inlineMethods [
+	methods do: [ : aMethod |
+		ASCheckMethodVisitor new visit: aMethod ]
+]
+
+{ #category : #inlining }
+ASCompiler >> inlineTraditionalMethods [
+
+	methods do: [ :aMethod | ASCheckTraditionalMethodVisitor new visit: aMethod ]
+]
+
 { #category : #compiling }
 ASCompiler >> lookup: aSymbol [
 	^ currentScope lookup: aSymbol
