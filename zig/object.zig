@@ -1,21 +1,30 @@
 const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
-const Start_of_Heap_Objects = 0xfff2000000000000;
-const End_of_Heap_Objects = 0xfff3ffffffffffff;
-pub const False = @bitCast(Object, @as(u64, 0xfff4000000000000));
-pub const True = @bitCast(Object, @as(u64, 0xfff6000000000001));
-pub const Nil = @bitCast(Object, @as(u64, 0xfff8000000000000));
-const u64_MINVAL = 0xfffe000000000000;
-const u64_ZERO = 0xffff000000000000;
-pub const ZERO = @bitCast(Object, @as(u64, 0));
+inline fn of(comptime v: u64) Object {
+    return @bitCast(Object,v);
+}
+pub const ZERO              = of(0);
+const Negative_Infinity     =    0xfff0000000000000;
+pub const False             = of(0xfff0_0200_0001_0000);
+pub const True              = of(0xfff0030000100001);
+pub const Nil               = of(0xfff0040001000002);
+const Symbol_Base           =    0xfff0050000000000;
+const Character_Base        =    0xfff0060000000000;
+pub const ThisContext       = of(0xfff0070010000003);
+// unused NaN fff08-fff5f
+const Start_of_Heap_Objects =    0xfff6000000000000;
+const End_of_Heap_Objects   =    0xfff7ffffffffffff;
+const u64_MINVAL            =    0xfff8000000000000;
+const u64_ZERO              =    0xfffc000000000000;
 const native_endian = builtin.target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
 const Dispatch = @import("dispatch.zig");
-const ClassIndex = @import("class.zig").ClassIndex;
+const class = @import("class.zig");
+const ClassIndex = class.ClassIndex;
 
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
@@ -30,7 +39,7 @@ const objectMethods = struct {
         return @bitCast(u64, self) >= u64_MINVAL;
     }
     pub inline fn is_double(self: Object) bool {
-        return @bitCast(u64, self) < Start_of_Heap_Objects;
+        return @bitCast(u64, self) <= Negative_Infinity;
     }
     pub inline fn is_bool(self: Object) bool {
         return @bitCast(u64,self) == @bitCast(u64,False) or @bitCast(u64,self) == @bitCast(u64,True);
@@ -46,7 +55,7 @@ const objectMethods = struct {
         switch (T) {
             i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
-            bool=> {if (self.is_bool()) return @bitCast(u64, self) == @bitCast(u64, True);},
+            bool=> {if (self.is_bool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {
@@ -54,7 +63,7 @@ const objectMethods = struct {
                     .Pointer => |ptrInfo| {
                         @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
                         if (self.is_heap() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
-                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));
+                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 15 >> 15)+@sizeOf(Object));
                     },
                     else => {},
                 }
@@ -127,8 +136,10 @@ const objectMethods = struct {
         return ord.eq;
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
-        if (@bitCast(u64, self) <= Start_of_Heap_Objects) return 8;
-        return @truncate(ClassIndex,@bitCast(u64, self) >> 49) & 7;
+        if (self.is_int()) return class.SmallInteger_I;
+        if (self.is_double()) return class.Float_I;
+        if (@bitCast(u64, self) >= Start_of_Heap_Objects) return class.Object_I;
+        return @truncate(ClassIndex,@bitCast(u64, self) >> 40) & 255;
     }
     pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
@@ -151,44 +162,33 @@ const objectMethods = struct {
         _ = options;
         
         try switch (self.immediate_class()) {
-            1 => writer.print("object:0x{x:>16}", .{@bitCast(u64,self)}), //,as_pointer(x));
-            2 => writer.print("false", .{}),
-            3 => writer.print("true", .{}),
-            4 => writer.print("nil", .{}),
-            5 => writer.print("#{s}", .{self.as_string()}),
-            6 => writer.print("${c}", .{self.to(u8)}),
-            7 => writer.print("{d}", .{self.to(i64)}),
-            8 => writer.print("{}", .{self.to(f64)}),
+            class.Object_I => writer.print("object:0x{x:>16}", .{@bitCast(u64,self)}), //,as_pointer(x));
+            class.False_I => writer.print("false", .{}),
+            class.True_I => writer.print("true", .{}),
+            class.UndefinedObject_I => writer.print("nil", .{}),
+            class.Symbol_I => writer.print("#{s}", .{self.as_string()}),
+            class.Character_I => writer.print("${c}", .{self.to(u8)}),
+            class.SmallInteger_I => writer.print("{d}", .{self.to(i64)}),
+            class.Float_I => writer.print("{}", .{self.to(f64)}),
             else => unreachable,
         };
     }
     pub const alignment = @alignOf(u64);
 };
-test "printing" {
-    var buf: [255]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const stream = fbs.writer();
-    const symbol = @import("symbol.zig");
-    try stream.print("{}\n",.{Object.from(42)});
-    try stream.print("{}\n",.{symbol.symbols.yourself});
-    try std.testing.expectEqualSlices(u8, "42\n#dummy string\n", fbs.getWritten());
-}
-pub const Tag = enum(u3) { Object = 1, False, True, UndefinedObject, Symbol, Character, SmallInteger };
+pub const Tag = enum(u8) { Object = 1, False, True, UndefinedObject, Symbol, Character, Context };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
-        signMantissa: u12, // align(8),
+        signMantissa: u16, // align(8),
         tag: Tag,
-        highHash: u17,
         nArgs : u8,
-        hash: i24,
+        hash: i32,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
-        hash: i24, // align(8),
+        hash: i32, // align(8),
         nArgs : u8,
-        highHash: u17,
         tag: Tag,
-        signMantissa: u12,
+        signMantissa: u16,
         usingnamespace objectMethods;
     },
 };
@@ -198,9 +198,19 @@ test "slicing" {
     try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
 }
 test "from conversion" {
-    const expect = std.testing.expect;
-    try expect(@bitCast(f64, Object.from(3.14)) == 3.14);
-    try expect(@bitCast(u64, Object.from(42)) == u64_ZERO +% 42);
+    const testing = std.testing;
+    try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
+    try testing.expectEqual(@bitCast(u64, Object.from(42)), u64_ZERO +% 42);
+    try testing.expectEqual(Object.from(3.14).immediate_class(),class.Float_I);
+    try testing.expect(Object.from(3.14).is_double());
+    try testing.expectEqual(Object.from(3).immediate_class(),class.SmallInteger_I);
+    try testing.expect(Object.from(3).is_int());
+    try testing.expect(Object.from(false).is_bool());
+    try testing.expectEqual(Object.from(false).immediate_class(),class.False_I);
+    try testing.expectEqual(Object.from(true).immediate_class(),class.True_I);
+    try testing.expect(Object.from(true).is_bool());
+    try testing.expectEqual(Object.from(null).immediate_class(),class.UndefinedObject_I);
+    try testing.expect(Object.from(null).is_nil());
 }
 test "to conversion" {
     const testing = std.testing;
@@ -208,4 +218,13 @@ test "to conversion" {
     try testing.expectEqual(Object.from(42).to(i64), 42);
     try testing.expect(Object.from(42).is_int());
     try testing.expectEqual(Object.from(true).to(bool), true);
+}
+test "printing" {
+    var buf: [255]u8 = undefined;
+    var fbs = std.io.fixedBufferStream(&buf);
+    const stream = fbs.writer();
+    const symbol = @import("symbol.zig");
+    try stream.print("{}\n",.{Object.from(42)});
+    try stream.print("{}\n",.{symbol.symbols.yourself});
+    try std.testing.expectEqualSlices(u8, "42\n#dummy string\n", fbs.getWritten());
 }
