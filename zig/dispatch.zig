@@ -19,73 +19,100 @@ pub const MethodReturns = enum {
         return self>=MethodReturns.NonLocal;
     }
 };
-pub const methodT = fn(thread : *Thread, self: Object) MethodReturns;
+pub const DNUState = enum {
+    First,
+};
+const DNUFirst = DNUState.First;
+pub const methodT = fn(thread : *Thread, self: Object, selector: Object,dnu: DNUState,classI: ClassIndex) MethodReturns;
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
-const extraSlots = 3;
 const Dispatch = packed struct {
     header: u64, //Header,
     mod: u32,
     super: u32,
-    methods: [extraSlots]SymbolMethod,
+    methods: [1]methodT,
 };
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
+const TS = enum { prime, any, odd, po2 };
+const tableStyle = TS.any;
 inline fn randomHash(selector: Object, size: u32) u32 {
-    const random = @truncate(u32,@bitCast(u64,selector))*%0xa1fdc7a3;
-    return random%size;
+    const random = @truncate(u32,@bitCast(u64,selector));//*%0xa1fdc7a3;
+    return switch (tableStyle) {
+        . po2 => random & (size-1),
+        else => random%size,
+    };
+}
+fn bumpSize(size:u16) u16 {
+    return switch (tableStyle) {
+        .prime => next_prime_larger_than(size+1),
+        .any => size+1,
+        .odd => (size+2)|1,
+        .po2 => size*2,
+    };
+}
+fn initialSize(size:usize) u16 {
+    var n = @intCast(u16,size);
+    return switch (tableStyle) {
+        .prime => next_prime_larger_than(n),
+        .any => n,
+        .odd => n|1,
+        .po2 => blk: {
+            n -= 1;
+            n |= n>>8;
+            n |= n>>4;
+            n |= n>>2;
+            n |= n>>1;
+            break :blk n+1;
+    }};
 }
 fn findTableSize(sm: []const SymbolMethod) u16 {
-    var used : [default_prime+extraSlots]bool = undefined;
-    var size = @intCast(u16,sm.len);
-    outer: while (size<default_prime) : (size += 1) {
-        size = next_prime_larger_than(size);
+    var used : [default_prime]bool = undefined;
+    var size = initialSize(sm.len);
+    outer: while (size<default_prime) {
         for (used[0..size+1]) |*b| b.* = false;
-        for (used[size+1..size+extraSlots]) |*b| b.* = true;
         for (sm) |aSymbolMethod| {
             var hash = randomHash(aSymbolMethod.selector,size);
             if (used[hash]) {
-                hash += 1;
-                if (used[hash]) {
-                    if (extraSlots>2) hash += 1;
-                    if (used[hash]) {
-                        continue :outer;
-            }}}
+                size = bumpSize(size);
+                continue :outer;
+            }
             used[hash] = true;
         }
+        @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {}\n",.{sm.len,size}) catch unreachable;
         return size;
     }
     unreachable;
 }
 
-fn testNormal(thread : *Thread, self: Object) MethodReturns {
+fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
     return MethodReturns.Normal;
 }
-fn testNonLocal(thread : *Thread, self: Object) MethodReturns {
+fn testNonLocal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
     return MethodReturns.NonLocal;
 }
-fn test1(thread : *Thread, _: Object) MethodReturns {
+fn test1(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(1);
     return MethodReturns.Normal;
 }
-fn test2(thread : *Thread, _: Object) MethodReturns {
+fn test2(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(2);
     return MethodReturns.Normal;
 }
-fn test3(thread : *Thread, _: Object) MethodReturns {
+fn test3(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(3);
     return MethodReturns.Normal;
 }
-fn test4(thread : *Thread, _: Object) MethodReturns {
+fn test4(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(4);
     return MethodReturns.Normal;
 }
-fn test5(thread : *Thread, _: Object) MethodReturns {
+fn test5(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(5);
     return MethodReturns.Normal;
 }
-fn test6(thread : *Thread, _: Object) MethodReturns {
+fn test6(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(6);
     return MethodReturns.Normal;
 }
@@ -106,7 +133,6 @@ const symbolMethods2 = [_]SymbolMethod{
 };
 const symbolMethods3 = [_]SymbolMethod{
     .{.selector=symbols.value,.method=testNormal},
-    .{.selector=symbols.value,.method=testNormal},
     .{.selector=symbols.self,.method=testNormal},
     .{.selector=symbols.yourself,.method=testNormal},
     .{.selector=symbols.@"cull:",.method=testNormal},
@@ -117,9 +143,9 @@ const symbolMethods3 = [_]SymbolMethod{
 };
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
-    try expectEqual(findTableSize(symbolMethods1[0..]),5);
+    try expectEqual(findTableSize(symbolMethods1[0..]),7);
     try expectEqual(findTableSize(symbolMethods2[0..]),7);
-    try expectEqual(findTableSize(symbolMethods3[0..]),17);
+    try expectEqual(findTableSize(symbolMethods3[0..]),11);
 }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
     _ = thread;
@@ -141,8 +167,6 @@ pub fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex
     }
     for (symbolMethods) |*sm| {
         var hash = randomHash(sm.selector,dispatchSize);
-        if (!methods[hash].selector.equals(Nil)) hash+=1;
-        if (extraSlots>2) {if (!methods[hash].selector.equals(Nil)) hash+=1;}
         if (!methods[hash].selector.equals(Nil)) unreachable;
         methods[hash].selector=sm.selector;
         methods[hash].method=sm.method;
@@ -157,10 +181,7 @@ pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: 
     const dispatch = classDispatch[theClass];
     const hash = randomHash(selector,dispatch.mod);
     const symbolMethodPtr = @ptrCast([*]SymbolMethod,&dispatch.methods)+hash;
-    if (selector.equals(symbolMethodPtr[0].selector)) return symbolMethodPtr[0].method(thread,self);
-    if (selector.equals(symbolMethodPtr[1].selector)) return symbolMethodPtr[1].method(thread,self);
-    if (extraSlots>1 and selector.equals(symbolMethodPtr[2].selector)) return symbolMethodPtr[2].method(thread,self);
-    return dnu(thread,selector);
+    return symbolMethodPtr[0].method(thread,self,selector,DNUFirst,theClass);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
