@@ -95,7 +95,7 @@ pub fn main() !void {
     }}
     try stdout.print("mod:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
-    start=ts()+base;
+    start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
         while (size>0) : (size-=1) {
@@ -103,7 +103,7 @@ pub fn main() !void {
     }}
     try stdout.print("xor:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
-    start=ts()+base;
+    start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
         while (size>0) : (size-=1) {
@@ -113,7 +113,7 @@ pub fn main() !void {
     }}
     try stdout.print("xor=: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
-    start=ts()+base;
+    start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
         const sh:u5 = @truncate(u5,size);
