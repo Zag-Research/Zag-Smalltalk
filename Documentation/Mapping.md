@@ -25,34 +25,34 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF0-F    | xxxx | xxxx | xxxx | NaN (tagged literals) |
-| FFF0      | 00-1xx | xxxx | xxxx | unused |
-| FFF0      | 0200 | 0001 | 0000 | False |
-| FFF0      | 0300 | 0010 | 0001 | True |
-| FFF0      | 0400 | 0100 | 0002 | UndefinedObject |
-| FFF0      | 05aa | xxxx | xxxx | Symbol |
-| FFF0      | 0600 | xxxx | xxxx | Character |
-| FFF0      | 0700 | 0000 | 0003 | Context |
-| FFF0      | 0800-Fxxx | xxxx | xxxx | unused |
-| FFF1-5      | xxxx | xxxx | xxxx | unused |
-| FFF6/7      | xxxx | xxxx | xxxx | heap object |
+| FFF0      | xxxx | xxxx | xxxx | unused |
+| FFF1      | 0000 | 0100 | 0002 | UndefinedObject |
+| FFF2      | 0000 | 0001 | 0000 | False |
+| FFF3      | 0000 | 0010 | 0001 | True |
+| FFF4      | xxxx | xxxx | xxxx | Context |
+| FFF5      | 05aa | xxxx | xxxx | Symbol |
+| FFF6      | 0600 | xxxx | xxxx | Character |
+| FFF7      | xxxx | xxxx | xxxx | heap object |
 | FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
+| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
+| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
+| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. **Not correct:** Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.
 
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 4 bits and the hash code is 44 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 4 bits and the hash code is 48 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
-1. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures.
+1. UndefinedObject: This encodes the value `nil` with all zero hash code.
 2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 3. True: This only encodes the single value `true`
-4. UndefinedObject: This encodes the value `nil` with all zero hash code.
+4. Context: A `thisContext` value
 5. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 6. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-7. Context: A `thisContext` value
+7. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures.
 8. SmallInteger: This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 9. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF).
 

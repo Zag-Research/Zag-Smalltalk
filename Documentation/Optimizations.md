@@ -27,7 +27,7 @@
 - exporter has map of Pharo primitives to AST primitive numbers - signals error for any unmapped ones
 - if my class is <= 8 I can check with an AND and comparison. Use for `nil`, `true`, and `false` rather than compare the value. Can also check for the special return value
 - `at:`, `at:put:` and `instVarAt:`,`instVarAt:put:` are opposite for most classes; e.g. Array has the former, but the latter signal an error, whereas Point has the opposite behavior. Therefore, when looking up one of these on a failed dispatch, we can choose the appropriate implementations of these depending on the format of the class. Ditto for ByteArray/String, Symbol, format 9.
-- by making SmallInteger be tag 7, they are the last values in the 64-but values. By coding them as 49-bit values and with the negative integers first it means several optimizations fall out:
+- by making SmallInteger be tag 7, they are the last values in the 64-but values. By coding them as 51-bit values and with the negative integers first it means several optimizations fall out:
 	- comparisons
 		1. a u64 comparison will give the correct signed comparison for 2 tagged values. Testing if the other is larger than self doesn't even have to check if it's an integer... it has to be (though if it's less, we have to check and may fail the primitive)
 		2. anding with 1 will correctly test for odd/even
@@ -38,7 +38,7 @@
 		4. `or`, `xor`, etc. with positive untagged integers will work correctly
 		5. `or`, `and` with *tagged* positive integers will work correctly
 	- conversion
-		1.  subtracting a tagged 0 (0xffff000000000000) will give an untagged 49-bit integer
+		1.  subtracting a tagged 0 (0xfffc000000000000) will give an untagged 51-bit integer
 		2. adding an untagged 49-bit integer to a tagged 0 will give the correctly tagged SmallInteger
 		3. For any immediate value (class 2-8) taking a remainder of the whole u64 with a large prime (4294967291 (0xfffffffb) is the largest 32-bit prime) should give an excellent hash. Doing a 64-bit multiply wouldn't work well for e.g. floating point or true/false/nil. Remainder with 16777213 (0xfffffd) - the largest 24 bit prime - might be better as it will keep all the hashes in the same range.
 - error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure - update: the primitives, as methods will simply push an ec on the stack (if appropriate) and return a PrimitiveFailed
