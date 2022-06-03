@@ -1,12 +1,19 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const TS = enum { prime, any, odd, po2 };
-const tableStyle = TS.po2;
+const TS = enum { prime, any, odd, po2, phi };
+const tableStyle = TS.phi;
+const shift = [_]u5{ 0,
+                     31,31,30,30,29,29,29,29,28,28,28,28,28,28,28,28,
+                     27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,
+                     26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
+                     26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
+};
 inline fn randomHash(key: u32, size: u32) u32 {
     const random = switch (tableStyle) {
         . po2 => (key^(key>>5)^(key>>3)) & (size-1),
-//        . po2 => (key*%(size-3)) & (size-1),
-//        . po2 => key*%0xa1fdc7a3 & (size-1),
+        // . po2 => (key*%(size-3)) & (size-1),
+        // . po2 => key*%0xa1fdc7a3 & (size-1),
+        . phi => key*%2654435769 >> shift[size],
         else => key%size,
     };
     @import("std").io.getStdOut().writer().print("key: {any} random: {any}\n",.{key,random}) catch unreachable;
@@ -17,7 +24,7 @@ fn bumpSize(size:u16) u16 {
         .prime => next_prime_larger_than(size+1),
         .any => size+1,
         .odd => (size+2)|1,
-        .po2 => size*2,
+        .po2,.phi => size*2,
     };
 }
 fn initialSize(size:usize) u16 {
@@ -26,7 +33,7 @@ fn initialSize(size:usize) u16 {
         .prime => next_prime_larger_than(n),
         .any => n,
         .odd => n|1,
-        .po2 => blk: {
+        .po2,.phi => blk: {
             n -= 1;
             n |= n>>8;
             n |= n>>4;
@@ -92,7 +99,7 @@ pub fn main() !void {
     while (loop>0) : (loop-=1) {
         size=1000;
         while (size>0) : (size-=1) {
-            key= (key^(key>>5)^(key>>3)) & (size-1);
+            key= (key^(key>>5)^(key>>3)) & size;
     }}
     try stdout.print("xor:  {d:12} {any}\n",.{ts()-start,key});
     loop=count;
@@ -102,9 +109,18 @@ pub fn main() !void {
         while (size>0) : (size-=1) {
             key=key^(key>>5);
             key=key^(key>>3);
-            key= key & (size-1);
+            key= key & size;
     }}
     try stdout.print("xor=: {d:12} {any}\n",.{ts()-start,key});
+    loop=count;
+    start=ts()+base;
+    while (loop>0) : (loop-=1) {
+        size=1000;
+        const sh:u5 = @truncate(u5,size);
+        while (size>0) : (size-=1) {
+            key= key*%2654435769 >> sh;
+    }}
+    try stdout.print("phi:  {d:12} {any}\n",.{ts()-start,key});
 }
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
