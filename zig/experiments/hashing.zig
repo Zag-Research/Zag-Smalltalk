@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const TS = enum { prime, any, odd, po2, phi };
+const TS = enum { prime, any, odd, po2, phi, phi2};
 const tableStyle = TS.phi;
 const shift = [_]u5{ 0,
                      31,31,30,30,29,29,29,29,28,28,28,28,28,28,28,28,
@@ -8,12 +8,14 @@ const shift = [_]u5{ 0,
                      26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
                      26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
 };
+const u32_phi_inverse=2654435769;
 inline fn randomHash(key: u32, size: u32) u32 {
     const random = switch (tableStyle) {
-        . po2 => (key^(key>>5)^(key>>3)) & (size-1),
+         . po2 => (key^(key>>5)^(key>>3)) & (size-1),
         // . po2 => (key*%(size-3)) & (size-1),
         // . po2 => key*%0xa1fdc7a3 & (size-1),
-        . phi => key*%2654435769 >> shift[size],
+        . phi => key*%u32_phi_inverse >> shift[size],
+        . phi2 => (key^(key>>shift[size]))*%u32_phi_inverse >> shift[size],
         else => key%size,
     };
     @import("std").io.getStdOut().writer().print("key: {any} random: {any}\n",.{key,random}) catch unreachable;
@@ -24,7 +26,7 @@ fn bumpSize(size:u16) u16 {
         .prime => next_prime_larger_than(size+1),
         .any => size+1,
         .odd => (size+2)|1,
-        .po2,.phi => size*2,
+        .po2,.phi,.phi2 => size*2,
     };
 }
 fn initialSize(size:usize) u16 {
@@ -33,7 +35,7 @@ fn initialSize(size:usize) u16 {
         .prime => next_prime_larger_than(n),
         .any => n,
         .odd => n|1,
-        .po2,.phi => blk: {
+        .po2,.phi,.phi2 => blk: {
             n -= 1;
             n |= n>>8;
             n |= n>>4;
@@ -112,6 +114,14 @@ pub fn main() !void {
             key= key & size;
     }}
     try stdout.print("xor=: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
+    loop=count;
+    start=ts();
+    while (loop>0) : (loop-=1) {
+        size=1000;
+        while (size>0) : (size-=1) {
+            key= key*%12345 & size;
+    }}
+    try stdout.print("mult: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
