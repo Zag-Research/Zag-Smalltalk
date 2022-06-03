@@ -2,23 +2,17 @@ const std = @import("std");
 const builtin = @import("builtin");
 const TS = enum { prime, any, odd, po2, phi, phi2};
 const tableStyle = TS.phi;
-const shift = [_]u5{ 0,
-                     31,31,30,30,29,29,29,29,28,28,28,28,28,28,28,28,
-                     27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27,
-                     26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
-                     26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,26,
-};
 const u32_phi_inverse=2654435769;
-inline fn randomHash(key: u32, size: u32) u32 {
+inline fn randomHash(key: u32, size: u32,shift:u5) u32 {
     const random = switch (tableStyle) {
          . po2 => (key^(key>>5)^(key>>3)) & (size-1),
         // . po2 => (key*%(size-3)) & (size-1),
         // . po2 => key*%0xa1fdc7a3 & (size-1),
-        . phi => key*%u32_phi_inverse >> shift[size],
-        . phi2 => (key^(key>>shift[size]))*%u32_phi_inverse >> shift[size],
+        . phi => key*%u32_phi_inverse >> shift,
+        . phi2 => (key^(key>>8))*%u32_phi_inverse >> shift,
         else => key%size,
     };
-    @import("std").io.getStdOut().writer().print("key: {any} random: {any}\n",.{key,random}) catch unreachable;
+    //@import("std").io.getStdOut().writer().print("key: {any} random: {any}\n",.{key,random}) catch unreachable;
     return random;
 }
 fn bumpSize(size:u16) u16 {
@@ -50,7 +44,7 @@ fn findTableSize(sm: []const u32) u16 {
     outer: while (size<default_prime) {
         for (used[0..size+1]) |*b| b.* = false;
         for (sm) |aSymbolMethod| {
-            var hash = randomHash(aSymbolMethod,size);
+            var hash = randomHash(aSymbolMethod,size,@truncate(u5,@clz(u32,size)+1));
             if (used[hash]) {
                 size = bumpSize(size);
                 continue :outer;
@@ -58,6 +52,36 @@ fn findTableSize(sm: []const u32) u16 {
             used[hash] = true;
         }
         @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {}\n",.{sm.len,size}) catch unreachable;
+          return size;
+    }
+    unreachable;
+}
+fn findTableSize2(sm: []const u32) u16 {
+    var used : [default_prime]bool = undefined;
+    var tries: u32 = undefined;
+    var size = initialSize(sm.len);
+    var rand : u32 = default_prime;
+    outer: while (size<default_prime) {
+        tries = 1;
+        @import("std").io.getStdOut().writer().print("size={}\n",.{size}) catch unreachable;
+        findMultiplier: while (tries<=10) : (tries += 1) {
+            rand = rand *%0xa1fdc7a3;
+            @import("std").io.getStdOut().writer().print("  try={} rand={}\n",.{tries,rand}) catch unreachable;
+            for (used[0..size+1]) |*b| b.* = false;
+            for (sm) |key| {
+                // var hash = randomHash(aSymbolMethod,size,@truncate(u5,@clz(u32,size)+1));
+                const hash1 = ((key ^ 12345) *% rand) >> 3;
+                const hash = hash1 & (size-1);
+                @import("std").io.getStdOut().writer().print("    key={} hash={} hash1={}\n",.{key,hash,hash1}) catch unreachable;
+                if (used[hash]) continue :findMultiplier;
+                used[hash] = true;
+            }
+            break :outer;
+        }
+        size = bumpSize(size);
+    }
+    if (size<default_prime) {
+        @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {} after {} tries\n",.{sm.len,size,tries}) catch unreachable;
         return size;
     }
     unreachable;
@@ -79,7 +103,13 @@ pub fn main() !void {
     var key:u32 = 12345;
     var count:u64 = 1_000_000;
     var size:u32 = 0;
-    var loop=count;
+    var loop=count*10;
+    while (loop>0) : (loop-=1) {
+        size=1000;
+        while (size>0) : (size-=1) {
+            key = key&size;
+    }}
+    loop=count;
     var start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
@@ -126,11 +156,20 @@ pub fn main() !void {
     start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
-        const sh:u5 = @truncate(u5,size);
+        const sh:u5 = @truncate(u5,@clz(u32,size));
         while (size>0) : (size-=1) {
             key= key*%2654435769 >> sh;
     }}
     try stdout.print("phi:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
+    loop=count;
+    start=ts();
+    while (loop>0) : (loop-=1) {
+        size=1000;
+        const sh:u5 = @truncate(u5,@clz(u32,size));
+        while (size>0) : (size-=1) {
+            key= randomHash(key,size,sh);
+    }}
+    try stdout.print("phi+: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
 }
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
