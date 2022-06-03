@@ -82,10 +82,10 @@ pub fn main() !void {
     while (loop>0) : (loop-=1) {
         size=1000;
         while (size>0) : (size-=1) {
-            key = key+%size;
+            key = key&size;
     }}
     const base = ts()-start;
-    try stdout.print("base: {d:12} {any}\n",.{base,key});
+    try stdout.print("base: {d:12}\n",.{base});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
