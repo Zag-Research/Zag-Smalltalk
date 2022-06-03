@@ -78,7 +78,7 @@ pub fn main() !void {
             key = key+%size;
     }}
     const base = ts()-start;
-    try stdout.print("base:  {any} {any}\n",.{base,key});
+    try stdout.print("base: {d:12} {any}\n",.{base,key});
     loop=count;
     start=ts()+base;
     while (loop>0) : (loop-=1) {
@@ -86,7 +86,7 @@ pub fn main() !void {
         while (size>0) : (size-=1) {
             key = key%size;
     }}
-    try stdout.print("mod:  {any} {any}\n",.{ts()-start,key});
+    try stdout.print("mod:  {d:12} {any}\n",.{ts()-start,key});
     loop=count;
     start=ts()+base;
     while (loop>0) : (loop-=1) {
@@ -94,7 +94,7 @@ pub fn main() !void {
         while (size>0) : (size-=1) {
             key= (key^(key>>5)^(key>>3)) & (size-1);
     }}
-    try stdout.print("xor:  {any} {any}\n",.{ts()-start,key});
+    try stdout.print("xor:  {d:12} {any}\n",.{ts()-start,key});
     loop=count;
     start=ts()+base;
     while (loop>0) : (loop-=1) {
@@ -104,7 +104,7 @@ pub fn main() !void {
             key=key^(key>>3);
             key= key & (size-1);
     }}
-    try stdout.print("xor=: {any} {any}\n",.{ts()-start,key});
+    try stdout.print("xor=: {d:12} {any}\n",.{ts()-start,key});
 }
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
