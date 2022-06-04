@@ -60,29 +60,20 @@ fn findTableSize2(sm: []const u32) u16 {
     var used : [default_prime]bool = undefined;
     var tries: u32 = undefined;
     var size = initialSize(sm.len);
-    var rand : u32 = default_prime;
-    outer: while (size<default_prime) {
+    while (size<default_prime) {
         tries = 1;
-        @import("std").io.getStdOut().writer().print("size={}\n",.{size}) catch unreachable;
-        findMultiplier: while (tries<=10) : (tries += 1) {
-            rand = rand *%0xa1fdc7a3;
-            @import("std").io.getStdOut().writer().print("  try={} rand={}\n",.{tries,rand}) catch unreachable;
+        findMultiplier: while (tries<=64) : (tries += 1) {
+            const rand = tries *%u32_phi_inverse;
             for (used[0..size+1]) |*b| b.* = false;
             for (sm) |key| {
-                // var hash = randomHash(aSymbolMethod,size,@truncate(u5,@clz(u32,size)+1));
-                const hash1 = ((key ^ 12345) *% rand) >> 3;
-                const hash = hash1 & (size-1);
-                @import("std").io.getStdOut().writer().print("    key={} hash={} hash1={}\n",.{key,hash,hash1}) catch unreachable;
+                const hash = (key *% rand) >> @truncate(u5,@clz(u32,size)+1);
                 if (used[hash]) continue :findMultiplier;
                 used[hash] = true;
             }
-            break :outer;
+            @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {} after {} tries with rand={}\n",.{sm.len,size,tries,rand}) catch unreachable;
+            return size;
         }
         size = bumpSize(size);
-    }
-    if (size<default_prime) {
-        @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {} after {} tries\n",.{sm.len,size,tries}) catch unreachable;
-        return size;
     }
     unreachable;
 }
@@ -93,9 +84,9 @@ const e2 = [_]u32{6, 518, 38, 2, 7, 5};
 const e3 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47};
 test "timing" {
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("e1: {any}\n",.{findTableSize(e1[0..])});
-    try stdout.print("e2: {any}\n",.{findTableSize(e2[0..])});
-    try stdout.print("e3: {any}\n",.{findTableSize(e3[0..])});
+    try stdout.print("e1: {any}\n",.{findTableSize2(e1[0..])});
+    try stdout.print("e2: {any}\n",.{findTableSize2(e2[0..])});
+    try stdout.print("e3: {any}\n",.{findTableSize2(e3[0..])});
 }
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -161,6 +152,15 @@ pub fn main() !void {
             key= key*%2654435769 >> sh;
     }}
     try stdout.print("phi:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
+    loop=count;
+    start=ts();
+    while (loop>0) : (loop-=1) {
+        size=1000;
+        const sh:u5 = @truncate(u5,@clz(u32,size));
+        while (size>0) : (size-=1) {
+            key= (key )*%u32_phi_inverse >> sh;
+    }}
+    try stdout.print("phix: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
