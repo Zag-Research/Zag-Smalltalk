@@ -32,27 +32,25 @@ Even if we somehow knew the class of the object, the tables would still be exces
 #### Our approach
 We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
 
-
-| Dispatch table entry for a class                   |                                      |
-| ---------------------------------------- | ---------------- |
-| Pointer to the class                     |  a HeapObject
-| Pointer to an array of MethodMatch values | on the Rust heap
-
-| MethodMatch array entry                  |                                      |
-| ---------------------------------------- | ----------------- |
-| hashed symbol | immediate object shifted to remove type |
-| pointer to a MethodType | either a function (primitive) or a method or none
+| Dispatch table entry for a class |                        |
+| -------------------------------- | ---------------------- |
+| Hash multiplier                  | a u32                  |
+| second hash multiplier | a u16                                 |                        |
+| superclass index                 | a u16                  |
+| method pointers                  | an array of MethodType |
 
 The sequence to look up a method is:
-1. use the entire literal (treated as a u64) as the selector hash value - the raw value (usually symbols, but could be integers for `super` dispatches)
-2. calculate the remainder with the hash table size (less the overflow)
-3. scan linearly (from that point )through the table looking for a match
-	1. if found, use the MethodType to access the primitive or method code
-	2. if the MethodType is `NoType`, then this symbol isn't in the table, fire off a DNU
+1. use the selector hash
+2. multiply with wrap by the hash multiplier
+3. shift right by the low 5 bits of the multiplier
+4. use that as the index into the array
+5. call the method
 
-Although we're doing a linear scan the design of the table will mean that only very rarely will we have to search beyond 2 entries. There will be `NoType` entries in the original table (including at least one overflow past the last direct-hash value), but they may be filled in over time. This will mean that DNUs may have to search a little longer in some circumstances, but the cost of this search will be swamped by the other requirements of a DNU.
+This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
-The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class.
+The tables are built as a near-perfect for power-of-2 tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to some kind of second-level lookup - could be an and, could be linear scan with symbols - for any, the data will follow the first-level method pointers in the table.
+
+The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
 
 ## Interpretation Classes
 These are classes that the interpreter understands for execution. These are the names in Pharo - the AS prefix is removed in the ASTSmalltalk image.

@@ -27,61 +27,118 @@ pub const methodT = fn(thread : *Thread, self: Object, selector: Object,dnu: DNU
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 const Dispatch = packed struct {
     header: u64, //Header,
-    mod: u32,
+    hash: u32,
     super: u32,
     methods: [1]methodT,
 };
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
-const TS = enum { prime, any, odd, po2 };
-const tableStyle = TS.any;
-inline fn randomHash(selector: Object, size: u32) u32 {
-    const random = @truncate(u32,@bitCast(u64,selector));//*%0xa1fdc7a3;
-    return switch (tableStyle) {
-        . po2 => random & (size-1),
-        else => random%size,
-    };
+const u32_phi_inverse=2654435769;
+inline fn bumpSize(size:u16) u16 {
+    return size*2;
 }
-fn bumpSize(size:u16) u16 {
-    return switch (tableStyle) {
-        .prime => next_prime_larger_than(size+1),
-        .any => size+1,
-        .odd => (size+2)|1,
-        .po2 => size*2,
-    };
-}
-fn initialSize(size:usize) u16 {
+inline fn initialSize(size:usize) u16 {
     var n = @intCast(u16,size);
-    return switch (tableStyle) {
-        .prime => next_prime_larger_than(n),
-        .any => n,
-        .odd => n|1,
-        .po2 => blk: {
-            n -= 1;
-            n |= n>>8;
-            n |= n>>4;
-            n |= n>>2;
-            n |= n>>1;
-            break :blk n+1;
-    }};
+    n -= 1;
+    n |= n>>8;
+    n |= n>>4;
+    n |= n>>2;
+    n |= n>>1;
+    return n+1;
 }
-fn findTableSize(sm: []const SymbolMethod) u16 {
-    var used : [default_prime]bool = undefined;
-    var size = initialSize(sm.len);
-    outer: while (size<default_prime) {
-        for (used[0..size+1]) |*b| b.* = false;
-        for (sm) |aSymbolMethod| {
-            var hash = randomHash(aSymbolMethod.selector,size);
-            if (used[hash]) {
-                size = bumpSize(size);
-                continue :outer;
-            }
-            used[hash] = true;
-        }
-        @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {}\n",.{sm.len,size}) catch unreachable;
-        return size;
+const CF = struct{size:u16,hash:u32};
+const WC = struct{size:u16,hash:u32,fix:[]u32};
+const TableStructureResult = union(enum) {
+    conflictFree: CF,
+    withConflicts: WC,
+    const Self = TableStructureResult;
+    inline fn hash(self: Self) u32 {
+        return switch (dispatchSize) {
+            .conflictFree => |cf| cf.hash,
+            .withConflicts => |wc| wc.hash,
+        };
     }
-    unreachable;
+    inline fn size(self: Self) u16 {
+        return switch (dispatchSize) {
+            .conflictFree => |cf| cf.size,
+            .withConflicts => |wc| wc.size,
+        };
+    }
+};
+fn findTableSize(sm: []const SymbolMethod,fix: *[256]u16) TableStructureResult {
+    // const stdout = @import("std").io.getStdOut().writer();
+    const maxSize = 2050;
+    var minSizeConflicts: u32 = maxSize;
+    var conflictSize: u16 = 0;
+    var bestConflictRand: u32 = 0;
+    var used : [maxSize]u8 = undefined;
+    var size = initialSize(sm.len);
+    const limitSize = @minimum(@maximum(initialSize(sm.len*4),17),maxSize);
+    while (size<limitSize) {
+        var minConflicts: u32 = maxSize;
+        var bestRand: u32 = 0;
+        var tries: u32 = 1;
+        while (tries<=65) : (tries += 1) {
+            const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
+            for (used[0..size]) |*b| b.* = 0;
+            for (sm) |aSymbolMethod| {
+                const hash = aSymbolMethod.selector.hash *% rand >> @truncate(u5,rand);
+                used[hash] += 1;
+            }
+            var conflicts: u32 = 0;
+            for (used[0..size]) |count| {
+                if (count>1) conflicts += count;
+            }
+            if (conflicts>0) {
+                if (minConflicts > conflicts) {
+                    minConflicts = conflicts;
+                    bestRand = rand;
+                }
+            } else {
+                // stdout.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries}) catch unreachable;
+                return TableStructureResult{.conflictFree=.{.size=size,.hash=rand}};
+            }
+        }
+        if (minSizeConflicts > minConflicts) {
+            minSizeConflicts = minConflicts;
+            conflictSize = size;
+            bestConflictRand = bestRand;
+        }
+        size = bumpSize(size);
+    }
+    for (used[0..size]) |*b| b.* = 0;
+    for (sm) |aSymbolMethod| {
+        const hash = aSymbolMethod.selector.hash *% bestConflictRand >> @truncate(u5,bestConflictRand);
+        used[hash] += 1;
+        if (used[hash]>3) @panic("can't handle more than 3-way hash conflicts");
+    }
+    var i: u8 = 2;
+    var numConflictSites: u32 = 0;
+    var extra: u32 = 1;
+    for (sm) |aSymbolMethod,index| {
+        const key = aSymbolMethod.selector.hash;
+        const hash = key *% bestConflictRand >> @truncate(u5,bestConflictRand);
+        switch (used[hash]) {
+            0,1 => {},
+            2,3 => |s| {
+                fix[i] = hash;
+                fix[i+1] = s;
+                fix[i+2] = @truncate(u16,index);
+                used[hash] = i+3;
+                i += 2+s;
+                extra += s;
+                numConflictSites += s-1;
+                if (numConflictSites>12) @panic("can't handle more than 12 distinct hash conflicts");
+            },
+            else => |s| {
+                fix[s] = @truncate(u16,index);
+                used[hash] += 1;
+            },
+        }
+    }
+//    const fixup = fix[2..i];
+//    stdout.print("table of size {}({}) has {} conflicts ({any}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,bestConflictRand}) catch unreachable;
+    return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fix[2..i]}};
 }
 
 fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
@@ -140,7 +197,17 @@ const symbolMethods3 = [_]SymbolMethod{
     .{.selector=symbols.@"value:value:",.method=testNormal},
     .{.selector=symbols.@"value:value:value:",.method=testNormal},
     .{.selector=symbols.@"value:value:value:value:",.method=testNormal},
+    .{.selector=symbols.@"=",.method=testNormal},
+    .{.selector=symbols.size,.method=testNormal},
+    .{.selector=symbols.negated,.method=testNormal},
 };
+test "timing" {
+    const stdout = @import("std").io.getStdOut().writer();
+    try stdout.print("methods1: {any}\n",.{findTableSize(symbolMethods1[0..])});
+    try stdout.print("methods2: {any}\n",.{findTableSize(symbolMethods2[0..])});
+    try stdout.print("methods3: {any}\n",.{findTableSize(symbolMethods3[0..])});
+
+}
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
     try expectEqual(findTableSize(symbolMethods1[0..]),7);
@@ -157,19 +224,48 @@ pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const Sym
 pub fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
     const arena = thread.getArena().getGlobal();
     const dispatchSize = findTableSize(symbolMethods);
-    const strct = arena.allocStruct(@truncate(ClassIndex,symbol.indexOf(symbol.Dispatch)),@sizeOf(Dispatch)+dispatchSize*@sizeOf(SymbolMethod),Dispatch) catch unreachable;
-    strct.mod = dispatchSize;
+    const rand = dispatchSize.hash();
+    const size = dispatchSize.size();
+    const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(methodT),Dispatch) catch unreachable;
+    strct.hash = rand;
     strct.super = superClass;
     const methods=@ptrCast([*]SymbolMethod,&strct.methods);
     for (methods[0..dispatchSize]) |*sm| {
-        sm.selector=Nil;
         sm.method=dnu;
     }
     for (symbolMethods) |*sm| {
-        var hash = randomHash(sm.selector,dispatchSize);
-        if (!methods[hash].selector.equals(Nil)) unreachable;
-        methods[hash].selector=sm.selector;
-        methods[hash].method=sm.method;
+        const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
+        methods[hash] = sm.method;
+    }
+    switch (dispatchSize) {
+        .conflictFree => {},
+        .withConflicts => |wc| {
+            const fix = wc.fix;
+            var i: u8 = 0;
+            var shifts: u64 = 0;
+            var shift: u6 = 0;
+            while (i<fix.len) : (shift+=5) {
+                const hash = fix.ptr[i];
+                switch (fix.prt[i+1]) {
+                    2 => {
+                        const left = fix.ptr[i+2];
+                        const right = fix.ptr[i+3];
+                        const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash
+                        const sh = @ctz(u5,xor);
+                        shifts |= sh << shift;
+                        if (((fix.ptr[i+2]>>sh)&1)==0) {
+                            methods[next] = symbolMethods[left].method;
+                            methods[next+1] = symbolMethods[right].method;
+                        } else {
+
+                        }
+                        next += 2;
+                    },
+                    else => @panic("Not implemented"),
+                }
+            }
+            
+        },
     }
     classDispatch[theClass]=strct;
 }
@@ -179,7 +275,7 @@ pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturn
 }
 pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: Object) MethodReturns {
     const dispatch = classDispatch[theClass];
-    const hash = randomHash(selector,dispatch.mod);
+    const hash = selector *% rand >> @truncate(u5,rand);
     const symbolMethodPtr = @ptrCast([*]SymbolMethod,&dispatch.methods)+hash;
     return symbolMethodPtr[0].method(thread,self,selector,DNUFirst,theClass);
 }

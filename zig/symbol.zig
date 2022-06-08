@@ -25,6 +25,19 @@ pub inline fn symbol4(index: u64) object.Object {
     return symbol0(index|(4<<32));
 }
 pub const symbols = struct {
+    pub const yourself = symbol0(38);
+    pub const @"doesNotUnderstand:" = symbol1(39);
+    pub const @"==" = symbol1(40);
+    pub const @"~~" = symbol1(41);
+    pub const @"~=" = symbol1(42);
+    pub const @"=" = symbol1(43);
+    pub const @"+" = symbol1(44);
+    pub const @"-" = symbol1(45);
+    pub const @"*" = symbol1(46);
+    pub const size = symbol0(47);
+    pub const @"at:" = symbol0(48);
+    pub const @"at:put:" = symbol0(49);
+
     pub const @"valueWithArguments:" = symbol1(1);
     pub const @"cull:" = symbol1(2);
     pub const @"cull:cull:" = symbol2(3);
@@ -62,17 +75,8 @@ pub const symbols = struct {
     pub const SymbolTable = symbol0(35);
     pub const Dispatch = symbol0(36);
     pub const ClassTable = symbol0(37);
-    pub const yourself = symbol0(38);
-    pub const @"==" = symbol1(39);
-    pub const @"~~" = symbol1(40);
-    pub const @"~=" = symbol1(41);
-    pub const @"=" = symbol1(42);
-    pub const @"+" = symbol1(43);
-    pub const @"-" = symbol1(44);
-    pub const @"*" = symbol1(45);
-    pub const size = symbol0(46);
-    pub const negated = symbol0(47);
-    pub const ClassDescription = symbol0(48);
+    pub const negated = symbol0(50);
+    pub const ClassDescription = symbol0(51);
 };
 var symbolTable : Symbol_Table = undefined;
 
@@ -180,8 +184,8 @@ const Symbol_Table = struct {
 \\ Behavior Magnitude Number Method System
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable
-\\ yourself == ~~ ~= = + - * size
-\\ ClassDescription
+\\ yourself doseNotUnderstand: == ~~ ~= = + - * size at: at:put:
+\\ negated ClassDescription
         );
     }
     fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {

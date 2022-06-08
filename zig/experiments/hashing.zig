@@ -1,42 +1,17 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const TS = enum { prime, any, odd, po2, phi, phi2};
-const tableStyle = TS.phi;
 const u32_phi_inverse=2654435769;
-inline fn randomHash(key: u32, size: u32,shift:u5) u32 {
-    const random = switch (tableStyle) {
-         . po2 => (key^(key>>5)^(key>>3)) & (size-1),
-        // . po2 => (key*%(size-3)) & (size-1),
-        // . po2 => key*%0xa1fdc7a3 & (size-1),
-        . phi => key*%u32_phi_inverse >> shift,
-        . phi2 => (key^(key>>8))*%u32_phi_inverse >> shift,
-        else => key%size,
-    };
-    //@import("std").io.getStdOut().writer().print("key: {any} random: {any}\n",.{key,random}) catch unreachable;
-    return random;
+inline fn bumpSize(size:u16) u16 {
+    return size*2;
 }
-fn bumpSize(size:u16) u16 {
-    return switch (tableStyle) {
-        .prime => next_prime_larger_than(size+1),
-        .any => size+1,
-        .odd => (size+2)|1,
-        .po2,.phi,.phi2 => size*2,
-    };
-}
-fn initialSize(size:usize) u16 {
+inline fn initialSize(size:usize) u16 {
     var n = @intCast(u16,size);
-    return switch (tableStyle) {
-        .prime => next_prime_larger_than(n),
-        .any => n,
-        .odd => n|1,
-        .po2,.phi,.phi2 => blk: {
-            n -= 1;
-            n |= n>>8;
-            n |= n>>4;
-            n |= n>>2;
-            n |= n>>1;
-            break :blk n+1;
-    }};
+    n -= 1;
+    n |= n>>8;
+    n |= n>>4;
+    n |= n>>2;
+    n |= n>>1;
+    return n+1;
 }
 fn findTableSize(sm: []const u32) u16 {
     var used : [default_prime]bool = undefined;
@@ -44,7 +19,7 @@ fn findTableSize(sm: []const u32) u16 {
     outer: while (size<default_prime) {
         for (used[0..size+1]) |*b| b.* = false;
         for (sm) |aSymbolMethod| {
-            var hash = randomHash(aSymbolMethod,size,@truncate(u5,@clz(u32,size)+1));
+            var hash = aSymbolMethod*%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
             if (used[hash]) {
                 size = bumpSize(size);
                 continue :outer;
@@ -56,43 +31,125 @@ fn findTableSize(sm: []const u32) u16 {
     }
     unreachable;
 }
-fn findTableSize2(sm: []const u32) u16 {
-    var used : [default_prime]bool = undefined;
-    var tries: u32 = undefined;
+const Fix = struct {index:u16,a:u16,b:u16,c:u16};
+const CF = struct{size:u16,hash:u32};
+const WC = struct{size:u16,hash:u32,fix:[]Fix};
+const TableStructureResult = union(enum) {
+    conflictFree: CF,
+    withConflicts: WC,
+};
+fn findTableSize2(sm: []const u32,fix: *[12]Fix) !TableStructureResult {
+    // const stdout = @import("std").io.getStdOut().writer();
+    const maxSize = 2050;
+    var minSizeConflicts: u32 = maxSize;
+    var conflictSize: u16 = 0;
+    var bestConflictRand: u32 = 0;
+    var used : [maxSize]u8 = undefined;
     var size = initialSize(sm.len);
-    while (size<default_prime) {
-        tries = 1;
-        findMultiplier: while (tries<=64) : (tries += 1) {
-            const rand = tries *%u32_phi_inverse;
-            for (used[0..size+1]) |*b| b.* = false;
+    const limitSize = @minimum(@maximum(initialSize(sm.len*4),17),maxSize);
+    while (size<limitSize) : (size = bumpSize(size)) {
+        var minConflicts: u32 = maxSize;
+        var bestRand: u32 = 0;
+        var tries: u32 = 1;
+        while (tries<=65) : (tries += 1) {
+            const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
+            for (used[0..size]) |*b| b.* = 0;
             for (sm) |key| {
-                const hash = (key *% rand) >> @truncate(u5,@clz(u32,size)+1);
-                if (used[hash]) continue :findMultiplier;
-                used[hash] = true;
+                const hash = key *% rand >> @truncate(u5,rand);
+                used[hash] += 1;
             }
-            @import("std").io.getStdOut().writer().print("for table of size {} tablesize is {} after {} tries with rand={}\n",.{sm.len,size,tries,rand}) catch unreachable;
-            return size;
+            var conflicts: u32 = 0;
+            for (used[0..size]) |count| {
+                if (count>1) conflicts += count;
+            }
+            if (conflicts>0) {
+                if (minConflicts > conflicts) {
+                    minConflicts = conflicts;
+                    bestRand = rand;
+                }
+            } else {
+                // stdout.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries}) catch unreachable;
+                return TableStructureResult{.conflictFree=.{.size=size,.hash=rand}};
+            }
         }
-        size = bumpSize(size);
+        if (minSizeConflicts > minConflicts) {
+            minSizeConflicts = minConflicts;
+            conflictSize = size;
+            bestConflictRand = bestRand;
+        }
     }
-    unreachable;
+    for (used[0..conflictSize]) |*b| b.* = 0;
+    for (sm) |key| {
+        const hash = key *% bestConflictRand >> @truncate(u5,bestConflictRand);
+        used[hash] += 1;
+        if (used[hash]>3) return error.moreThan3WayConflict;
+    }
+    var i: u8 = 0;
+    var conflicts: u8=0;
+    var extra: u16 = 1;
+    for (sm) |key,index| {
+        const hash = key *% bestConflictRand >> @truncate(u5,bestConflictRand);
+        switch (used[hash]) {
+            0,1 => {},
+            2,3 => |s| {
+                conflicts += s-1;
+                if (conflicts>12) return error.moreThan12Conflicts;
+                fix[i]=Fix{.index=@truncate(u16,hash),
+                           .a=@truncate(u16,index),
+                           .b=0,
+                           .c=0,};
+                used[hash] = i+16;
+                i += 1;
+                extra += (s+1)&0xFE;
+            },
+            else => |s| {
+                switch (s>>4) {
+                    1 => fix[s&15].b = @truncate(u16,index),
+                    else => fix[s&15].c = @truncate(u16,index),
+                }
+                used[hash] += 16;
+            },
+        }
+    }
+    const fixup = fix[0..i];
+    // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
+    return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fixup}};
 }
 
 pub const noMethods = [0]u32{};
 const e1 = [_]u32{6, 518, 38, 2};
 const e2 = [_]u32{6, 518, 38, 2, 7, 5};
 const e3 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47};
-test "timing" {
+const e4 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47,
+                  4518, 438, 49, 410, 442, 446, 447};
+const e5 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47,
+                  4518, 438, 49, 410, 442, 446, 447,
+                  36, 3518, 338, 32, 37, 39, 310, 342, 346, 347,
+                  26, 2518, 238, 22, 27, 28, 29, 210, 242, 246, 247,
+                  16, 1518, 138, 12, 17, 18, 19, 110, 142, 146, 147};
+test "tablesize" {
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("e1: {any}\n",.{findTableSize2(e1[0..])});
-    try stdout.print("e2: {any}\n",.{findTableSize2(e2[0..])});
-    try stdout.print("e3: {any}\n",.{findTableSize2(e3[0..])});
+    var fix: [12]Fix = undefined;
+    try stdout.print("\n",.{});
+    try stdout.print("e1: {any}\n",.{try findTableSize2(e1[0..],&fix)});
+    try stdout.print("e2: {any}\n",.{try findTableSize2(e2[0..],&fix)});
+    try stdout.print("e3: {any}\n",.{try findTableSize2(e3[0..],&fix)});
+    try stdout.print("e4: {any}\n",.{try findTableSize2(e4[0..],&fix)});
+    try stdout.print("e5: {any}\n",.{try findTableSize2(e5[0..],&fix)});
+    var e6: [2040]u32 = undefined;
+    for (e6) |*v,i| v.*=@truncate(u32,i);
+    try stdout.print("e5: {any}\n",.{try findTableSize2(e6[0..],&fix)});
+}
+test "timing" {
+    try time(400_000);
 }
 pub fn main() !void {
+    time(1_000_000);
+}
+fn time(count: u64) !void {
     const stdout = std.io.getStdOut().writer();
     const ts=std.time.nanoTimestamp;
     var key:u32 = 12345;
-    var count:u64 = 1_000_000;
     var size:u32 = 0;
     var loop=count*10;
     while (loop>0) : (loop-=1) {
@@ -156,18 +213,18 @@ pub fn main() !void {
     start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
-        const sh:u5 = @truncate(u5,@clz(u32,size));
+        const rand =u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
         while (size>0) : (size-=1) {
-            key= (key )*%u32_phi_inverse >> sh;
+            key= key *% rand >> @truncate(u5,rand);
     }}
     try stdout.print("phix: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
         size=1000;
-        const sh:u5 = @truncate(u5,@clz(u32,size));
+        const rand = u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
         while (size>0) : (size-=1) {
-            key= randomHash(key,size,sh);
+            key = key *% rand >> @truncate(u5,rand);
     }}
     try stdout.print("phi+: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
 }
