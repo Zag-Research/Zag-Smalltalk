@@ -25,20 +25,23 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF0      | xxxx | xxxx | xxxx | unused |
-| FFF1      | 0000 | 0100 | 0002 | UndefinedObject |
-| FFF2      | 0000 | 0001 | 0000 | False |
-| FFF3      | 0000 | 0010 | 0001 | True |
-| FFF4      | xxxx | xxxx | xxxx | Context |
-| FFF5      | 05aa | xxxx | xxxx | Symbol |
-| FFF6      | 0600 | xxxx | xxxx | Character |
-| FFF7      | xxxx | xxxx | xxxx | heap object |
+| FFF0      | xxxx | xxxx | xxxx | heap object |
+| FFF1      | 00xx | xxxx | xxxx | reserved (tag = unused) |
+| FFF1      | 01xx | xxxx | xxxx | reserved (tag = Object) |
+| FFF1      | 02xx | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF1      | 03xx | xxxx | xxxx | reserved (tag = Double) |
+| FFF1      | 0400 | 0001 | 0000 | False |
+| FFF1      | 0500 | 0010 | 0001 | True |
+| FFF1      | 0600 | 0100 | 0002 | UndefinedObject |
+| FFF1      | 07aa | xxxx | xxxx | Symbol |
+| FFF1      | 0800 | xxxx | xxxx | Character |
+| FFF1      | 09xx | xxxx | xxxx | Context |
 | FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. **Not correct:** Else, the top 3 bits of the fraction  are a class tag, so the first 7 classes have a compressed representation.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 1, the next 8 bits are a class number so the first 7 classes have a compressed representation.
 
 ### Literals
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.

@@ -29,7 +29,7 @@ const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
     super: u32,
-    methods: [1]methodT,
+    methods: [1]SymbolMethod,
 };
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
@@ -53,93 +53,184 @@ const TableStructureResult = union(enum) {
     withConflicts: WC,
     const Self = TableStructureResult;
     inline fn hash(self: Self) u32 {
-        return switch (dispatchSize) {
+        return switch (self) {
             .conflictFree => |cf| cf.hash,
             .withConflicts => |wc| wc.hash,
         };
     }
     inline fn size(self: Self) u16 {
-        return switch (dispatchSize) {
+        return switch (self) {
             .conflictFree => |cf| cf.size,
             .withConflicts => |wc| wc.size,
         };
     }
 };
-fn findTableSize(sm: []const SymbolMethod,fix: *[256]u16) TableStructureResult {
-    // const stdout = @import("std").io.getStdOut().writer();
-    const maxSize = 2050;
-    var minSizeConflicts: u32 = maxSize;
-    var conflictSize: u16 = 0;
-    var bestConflictRand: u32 = 0;
-    var used : [maxSize]u8 = undefined;
-    var size = initialSize(sm.len);
-    const limitSize = @minimum(@maximum(initialSize(sm.len*4),17),maxSize);
-    while (size<limitSize) {
-        var minConflicts: u32 = maxSize;
-        var bestRand: u32 = 0;
-        var tries: u32 = 1;
-        while (tries<=65) : (tries += 1) {
-            const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
-            for (used[0..size]) |*b| b.* = 0;
-            for (sm) |aSymbolMethod| {
-                const hash = aSymbolMethod.selector.hash *% rand >> @truncate(u5,rand);
-                used[hash] += 1;
-            }
-            var conflicts: u32 = 0;
-            for (used[0..size]) |count| {
-                if (count>1) conflicts += count;
-            }
-            if (conflicts>0) {
-                if (minConflicts > conflicts) {
-                    minConflicts = conflicts;
-                    bestRand = rand;
+fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
+    return struct{
+        const Self = @This;
+        fn findTableSize(sm: []const T,fix: *[256]u16) TableStructureResult {
+            // const stdout = @import("std").io.getStdOut().writer();
+            var minSizeConflicts: u32 = maxSize;
+            var conflictSize: u16 = 0;
+            var bestConflictRand: u32 = 0;
+            var used : [maxSize]u8 = undefined;
+            var size = initialSize(sm.len);
+            const limitSize = @minimum(@maximum(initialSize(sm.len*4),17),maxSize);
+            while (size<limitSize) : (size = bumpSize(size)) {
+                var minConflicts: u32 = maxSize;
+                var bestRand: u32 = 0;
+                var tries: u32 = 1;
+                while (tries<=65) : (tries += 1) {
+                    const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
+                    for (used[0..size]) |*b| b.* = 0;
+                    for (sm) |key| {
+                        const hash = extractHash(key) *% rand >> @truncate(u5,rand);
+                        used[hash] += 1;
+                    }
+                    var conflicts: u32 = 0;
+                    for (used[0..size]) |count| {
+                        if (count>1) conflicts += count;
+                    }
+                    if (conflicts>0) {
+                        if (minConflicts > conflicts) {
+                            minConflicts = conflicts;
+                            bestRand = rand;
+                        }
+                    } else {
+                        // stdout.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries}) catch unreachable;
+                        return TableStructureResult{.conflictFree=.{.size=size,.hash=rand}};
+                    }
                 }
-            } else {
-                // stdout.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries}) catch unreachable;
-                return TableStructureResult{.conflictFree=.{.size=size,.hash=rand}};
+                if (minSizeConflicts > minConflicts) {
+                    minSizeConflicts = minConflicts;
+                    conflictSize = size;
+                    bestConflictRand = bestRand;
+                }
             }
-        }
-        if (minSizeConflicts > minConflicts) {
-            minSizeConflicts = minConflicts;
-            conflictSize = size;
-            bestConflictRand = bestRand;
-        }
-        size = bumpSize(size);
-    }
-    for (used[0..size]) |*b| b.* = 0;
-    for (sm) |aSymbolMethod| {
-        const hash = aSymbolMethod.selector.hash *% bestConflictRand >> @truncate(u5,bestConflictRand);
-        used[hash] += 1;
-        if (used[hash]>3) @panic("can't handle more than 3-way hash conflicts");
-    }
-    var i: u8 = 2;
-    var numConflictSites: u32 = 0;
-    var extra: u32 = 1;
-    for (sm) |aSymbolMethod,index| {
-        const key = aSymbolMethod.selector.hash;
-        const hash = key *% bestConflictRand >> @truncate(u5,bestConflictRand);
-        switch (used[hash]) {
-            0,1 => {},
-            2,3 => |s| {
-                fix[i] = hash;
-                fix[i+1] = s;
-                fix[i+2] = @truncate(u16,index);
-                used[hash] = i+3;
-                i += 2+s;
-                extra += s;
-                numConflictSites += s-1;
-                if (numConflictSites>12) @panic("can't handle more than 12 distinct hash conflicts");
-            },
-            else => |s| {
-                fix[s] = @truncate(u16,index);
+            for (used[0..conflictSize]) |*b| b.* = 0;
+            for (sm) |key| {
+                const hash = extractHash(key) *% bestConflictRand >> @truncate(u5,bestConflictRand);
                 used[hash] += 1;
-            },
+                if (used[hash]>3) return error.moreThan3WayConflict;
+            }
+            var i: u8 = 0;
+            var conflicts: u8=0;
+            var extra: u16 = 1;
+            for (sm) |key,index| {
+                const hash = extractHash(key) *% bestConflictRand >> @truncate(u5,bestConflictRand);
+                switch (used[hash]) {
+                    0,1 => {},
+                    2,3 => |s| {
+                        conflicts += s-1;
+                        if (conflicts>12) return error.moreThan12Conflicts;
+                        fix[i]=Fix{.index=@truncate(u16,hash),
+                                   .a=@truncate(u16,index),
+                                   .b=0,
+                                   .c=0,};
+                        used[hash] = i+16;
+                        i += 1;
+                        extra += (s+1)&0xFE;
+                    },
+                    else => |s| {
+                        switch (s>>4) {
+                            1 => fix[s&15].b = @truncate(u16,index),
+                            else => fix[s&15].c = @truncate(u16,index),
+                        }
+                        used[hash] += 16;
+                    },
+                }
+            }
+            const fixup = fix[0..i];
+            // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
+            return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fixup}};
         }
-    }
-//    const fixup = fix[2..i];
-//    stdout.print("table of size {}({}) has {} conflicts ({any}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,bestConflictRand}) catch unreachable;
-    return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fix[2..i]}};
+        fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
+            const arena = thread.getArena().getGlobal();
+            const dispatchSize = Self.findTableSize(symbolMethods);
+            const rand = dispatchSize.hash();
+            const size = dispatchSize.size();
+            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(methodT),Dispatch) catch unreachable;
+            strct.hash = rand;
+            strct.super = superClass;
+            const methods=@ptrCast([*]SymbolMethod,&strct.methods);
+            for (methods[0..dispatchSize]) |*sm| {
+                sm.method=dnu;
+            }
+            for (symbolMethods) |*sm| {
+                const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
+                methods[hash] = sm.method;
+            }
+            switch (dispatchSize) {
+                .conflictFree => {},
+                .withConflicts => |wc| {
+                    const fix = wc.fix;
+                    var i: u8 = 0;
+                    var shifts: u64 = 0;
+                    var shift: u6 = 0;
+                    while (i<fix.len) : (shift+=5) {
+                        const hash = fix.ptr[i];
+                        switch (fix.prt[i+1]) {
+                            2 => {
+                                const left = fix.ptr[i+2];
+                                const right = fix.ptr[i+3];
+                                const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash
+                                    const sh = @ctz(u5,xor);
+                                shifts |= sh << shift;
+                                if (((fix.ptr[i+2]>>sh)&1)==0) {
+                                    methods[next] = symbolMethods[left].method;
+                                    methods[next+1] = symbolMethods[right].method;
+                                } else {
+                                    
+                                }
+                                next += 2;
+                            },
+                            else => @panic("Not implemented"),
+                        }
+                    }
+                    
+                },
+            }
+            classDispatch[theClass]=strct;
+        }
+    };
 }
+
+fn id_u32(x:u32) u32 {return x;}
+test "tablesize" {
+    const noMethods = [0]u32{};
+    const e1 = [_]u32{6, 518, 38, 2};
+    const e2 = [_]u32{6, 518, 38, 2, 7, 5};
+    const e3 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47};
+    const e4 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47,
+                      4518, 438, 49, 410, 442, 446, 447};
+    const e5 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47,
+                      4518, 438, 49, 410, 442, 446, 447,
+                      36, 3518, 338, 32, 37, 39, 310, 342, 346, 347,
+                      26, 2518, 238, 22, 27, 28, 29, 210, 242, 246, 247,
+                      16, 1518, 138, 12, 17, 18, 19, 110, 142, 146, 147};
+    const stdout = std.io.getStdOut().writer();
+    var fix: [12]Fix = undefined;
+    {
+        const findTableSize2=DispatchMethods(u32,id_u32,35).findTableSize;
+        try stdout.print("\n",.{});
+        try stdout.print("e1: {any}\n",.{try findTableSize2(e1[0..],&fix)});
+        try stdout.print("e2: {any}\n",.{try findTableSize2(e2[0..],&fix)});
+        try stdout.print("e3: {any}\n",.{try findTableSize2(e3[0..],&fix)});
+        try stdout.print("e4: {any}\n",.{try findTableSize2(e4[0..],&fix)});
+    }
+    {
+        const findTableSize2=DispatchMethods(u32,id_u32,128).findTableSize;
+        try stdout.print("e5: {any}\n",.{try findTableSize2(e5[0..],&fix)});
+    }
+    {
+        const findTableSize2=DispatchMethods(u32,id_u32,17).findTableSize;
+        var e6: [15]u32 = undefined;
+        for (e6) |*v,i| v.*=@truncate(u32,i);
+        try stdout.print("e6: {any}\n",.{try findTableSize2(e6[0..],&fix)});
+    }
+}
+fn id_sm(x:SymbolMethod) SymbolMethod {return x;}
+const dispatch=DispatchMethods(u32,id_sm,2050);
 
 fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
@@ -220,54 +311,6 @@ pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const Sym
     _ = instanceMethods;
     _ = classMethods;
     return error.UnImplemented;
-}
-pub fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
-    const arena = thread.getArena().getGlobal();
-    const dispatchSize = findTableSize(symbolMethods);
-    const rand = dispatchSize.hash();
-    const size = dispatchSize.size();
-    const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(methodT),Dispatch) catch unreachable;
-    strct.hash = rand;
-    strct.super = superClass;
-    const methods=@ptrCast([*]SymbolMethod,&strct.methods);
-    for (methods[0..dispatchSize]) |*sm| {
-        sm.method=dnu;
-    }
-    for (symbolMethods) |*sm| {
-        const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
-        methods[hash] = sm.method;
-    }
-    switch (dispatchSize) {
-        .conflictFree => {},
-        .withConflicts => |wc| {
-            const fix = wc.fix;
-            var i: u8 = 0;
-            var shifts: u64 = 0;
-            var shift: u6 = 0;
-            while (i<fix.len) : (shift+=5) {
-                const hash = fix.ptr[i];
-                switch (fix.prt[i+1]) {
-                    2 => {
-                        const left = fix.ptr[i+2];
-                        const right = fix.ptr[i+3];
-                        const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash
-                        const sh = @ctz(u5,xor);
-                        shifts |= sh << shift;
-                        if (((fix.ptr[i+2]>>sh)&1)==0) {
-                            methods[next] = symbolMethods[left].method;
-                            methods[next+1] = symbolMethods[right].method;
-                        } else {
-
-                        }
-                        next += 2;
-                    },
-                    else => @panic("Not implemented"),
-                }
-            }
-            
-        },
-    }
-    classDispatch[theClass]=strct;
 }
 pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
     const theClass = self.get_class();

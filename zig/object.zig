@@ -5,18 +5,19 @@ inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
 pub const ZERO              = of(0);
-const Negative_Infinity     =    0xfff0000000000000;
-pub const False             = of(0xfff0_0200_0001_0000);
-pub const True              = of(0xfff0030000100001);
-pub const Nil               = of(0xfff0040001000002);
-const Symbol_Base           =    0xfff0050000000000;
-const Character_Base        =    0xfff0060000000000;
-pub const ThisContext       = of(0xfff0070010000003);
+const Negative_Infinity     =    0xfff0000000000000; // class 3
 // unused NaN fff08-fff5f
-const Start_of_Heap_Objects =    0xfff6000000000000;
-const End_of_Heap_Objects   =    0xfff7ffffffffffff;
-const u64_MINVAL            =    0xfff8000000000000;
-const u64_ZERO              =    0xfffc000000000000;
+pub const False             = of(0xfff6_04_0000010000);
+pub const True              = of(0xfff6_05_0000100001);
+pub const Nil               = of(0xfff6_06_0001000002);
+const Symbol_Base           =    0xfff6_07_0000000000;
+const Character_Base        =    0xfff6_08_0000000000;
+pub const ThisContext       = of(0xfff6_09_0010000003);
+const Start_of_Heap_Objects =    0xfff7_000000000000;
+const End_of_Heap_Objects   =    0xfff7_ffffffffffff;
+const u64_MINVAL            =    0xfff8_000000000000; // class 2
+const u64_ZERO              =    0xfffc_000000000000;
+const u64_MAXVAL            =    0xffff_ffffffffffff;
 const native_endian = builtin.target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -48,7 +49,7 @@ const objectMethods = struct {
         return @bitCast(u64,self) == @bitCast(u64,Nil);
     }
     pub inline fn is_heap(self: Object) bool {
-        if (@bitCast(u64, self) < Start_of_Heap_Objects) return false;
+        if (@bitCast(u64, self) <= Start_of_Heap_Objects) return false;
         return @bitCast(u64, self) <= End_of_Heap_Objects;
     }
     pub inline fn to(self: Object, comptime T:type) T {
@@ -137,9 +138,11 @@ const objectMethods = struct {
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
-        if (self.is_double()) return class.Float_I;
-        if (@bitCast(u64, self) >= Start_of_Heap_Objects) return class.Object_I;
-        return @truncate(ClassIndex,@bitCast(u64, self) >> 40) & 255;
+        if (@bitCast(u64, self) <= End_of_Heap_Objects) {
+            if (self.is_double()) return class.Float_I;
+            return class.Object_I;
+        }
+        return @truncate(ClassIndex,@bitCast(u64, self) >> 36) & 255;
     }
     pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
