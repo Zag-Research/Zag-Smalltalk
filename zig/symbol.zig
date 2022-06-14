@@ -10,19 +10,19 @@ inline fn symbol_of(index: u64, arity: u64) object.Object {
     return symbol0(index|(arity<<24));
 }
 pub inline fn symbol0(index: u64) object.Object {
-    return @bitCast(object.Object,index|( 0xfff005<<40));
+    return @bitCast(object.Object,index|((@as(u64,0xfff700)+class.Symbol_I)<<40));
 }
 pub inline fn symbol1(index: u64) object.Object {
-    return symbol0(index|(1<<32));
+    return symbol_of(index,1);
 }
 pub inline fn symbol2(index: u64) object.Object {
-    return symbol0(index|(2<<32));
+    return symbol_of(index,2);
 }
 pub inline fn symbol3(index: u64) object.Object {
-    return symbol0(index|(3<<32));
+    return symbol_of(index,3);
 }
 pub inline fn symbol4(index: u64) object.Object {
-    return symbol0(index|(4<<32));
+    return symbol_of(index,4);
 }
 pub const symbols = struct {
     pub const yourself = symbol0(38);

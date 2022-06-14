@@ -25,17 +25,17 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF0      | xxxx | xxxx | xxxx | heap object |
-| FFF1      | 00xx | xxxx | xxxx | reserved (tag = unused) |
-| FFF1      | 01xx | xxxx | xxxx | reserved (tag = Object) |
-| FFF1      | 02xx | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF1      | 03xx | xxxx | xxxx | reserved (tag = Double) |
-| FFF1      | 0400 | 0001 | 0000 | False |
-| FFF1      | 0500 | 0010 | 0001 | True |
-| FFF1      | 0600 | 0100 | 0002 | UndefinedObject |
-| FFF1      | 07aa | xxxx | xxxx | Symbol |
-| FFF1      | 0800 | xxxx | xxxx | Character |
-| FFF1      | 09xx | xxxx | xxxx | Context |
+| FFF6      | xxxx | xxxx | xxxx | heap object |
+| FFF7      | 00xx | xxxx | xxxx | reserved (tag = unused) |
+| FFF7      | 01xx | xxxx | xxxx | reserved (tag = Object) |
+| FFF7      | 02xx | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF7      | 03xx | xxxx | xxxx | reserved (tag = Double) |
+| FFF7      | 0400 | 0001 | 0000 | False |
+| FFF7      | 0500 | 0010 | 0001 | True |
+| FFF7      | 0600 | 0100 | 0002 | UndefinedObject |
+| FFF7      | 07aa | xxxx | xxxx | Symbol |
+| FFF7      | 0800 | 00xx | xxxx | Character |
+| FFF7      | 09xx | xxxx | xxxx | Context |
 | FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|

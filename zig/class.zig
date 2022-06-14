@@ -11,35 +11,37 @@ const heap = @import("heap.zig");
 const treap = @import("treap.zig");
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has less than 18000 (including metaclasses), so shouldn't be a problem
 pub const Object_I: ClassIndex = 1;
-pub const False_I: ClassIndex = 2;
-pub const True_I: ClassIndex = 3;
-pub const UndefinedObject_I: ClassIndex = 4;
-pub const Symbol_I: ClassIndex = 5;
-pub const Character_I: ClassIndex = 6;
-pub const Context_I: ClassIndex = 7;
-pub const SmallInteger_I: ClassIndex = 8;
-pub const Float_I: ClassIndex = 9;
-pub const Array_I: ClassIndex = 10;
-pub const String_I: ClassIndex = 11;
-pub const Class_I: ClassIndex = 12;
-pub const Metaclass_I: ClassIndex = 13;
-pub const Behavior_I: ClassIndex = 14;
-pub const BlockClosure_I: ClassIndex = 15;
-pub const Method_I: ClassIndex = 16;
-pub const MethodDictionary_I: ClassIndex = 17;
-pub const System_I: ClassIndex = 18;
-pub const Return_I: ClassIndex = 19;
-pub const Send_I: ClassIndex = 20;
-pub const Literal_I: ClassIndex = 21;
-pub const Load_I: ClassIndex = 22;
-pub const Store_I: ClassIndex = 23;
-pub const SymbolTable_I: ClassIndex = 24;
-pub const Dispatch_I: ClassIndex = 25;
-pub const ClassTable_I: ClassIndex = 26;
-pub const Magnitude_I: ClassIndex = 27;
-pub const Number_I: ClassIndex = 28;
-pub const ClassDescription_I: ClassIndex = 29;
-pub const Boolean_I: ClassIndex = 30;
+pub const SmallInteger_I: ClassIndex = 2;
+pub const Float_I: ClassIndex = 3;
+const c2o: ClassIndex = 4;
+pub const False_I = c2o+0;
+pub const True_I = c2o+ 1;
+pub const UndefinedObject_I = c2o+ 2;
+pub const Symbol_I = c2o+ 3;
+pub const Character_I = c2o+ 4;
+pub const Context_I = c2o+ 5;
+const c3o = c2o+6;
+pub const Array_I = c3o+ 0;
+pub const String_I = c3o+ 1;
+pub const Class_I = c3o+ 2;
+pub const Metaclass_I = c3o+ 3;
+pub const Behavior_I = c3o+ 4;
+pub const BlockClosure_I = c3o+ 5;
+pub const Method_I = c3o+ 6;
+pub const MethodDictionary_I = c3o+ 7;
+pub const System_I = c3o+ 8;
+pub const Return_I = c3o+ 9;
+pub const Send_I = c3o+ 10;
+pub const Literal_I = c3o+ 11;
+pub const Load_I = c3o+ 12;
+pub const Store_I = c3o+ 13;
+pub const SymbolTable_I = c3o+ 14;
+pub const Dispatch_I = c3o+ 15;
+pub const ClassTable_I = c3o+ 16;
+pub const Magnitude_I = c3o+ 17;
+pub const Number_I = c3o+ 18;
+pub const ClassDescription_I = c3o+ 19;
+pub const Boolean_I = c3o+ 20;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -84,9 +86,10 @@ const Class_Table = struct {
     fn loadInitialClassNames(s: *Self, arena: *heap.Arena) void {
         var names = std.mem.tokenize(
             u8,
-\\ Object False True
-\\ UndefinedObject Symbol Character Context SmallInteger
-\\ Float Array String Class Metaclass
+\\ Object SmallInteger Float
+\\ False True
+\\ UndefinedObject Symbol Character Context
+\\ Array String Class Metaclass
 \\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription

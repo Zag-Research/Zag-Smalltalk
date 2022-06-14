@@ -46,6 +46,7 @@ inline fn initialSize(size:usize) u16 {
     n |= n>>1;
     return n+1;
 }
+const Fix = struct {index:u16,a:u16,b:u16,c:u16};
 const CF = struct{size:u16,hash:u32};
 const WC = struct{size:u16,hash:u32,fix:[]u32};
 const TableStructureResult = union(enum) {
@@ -65,9 +66,13 @@ const TableStructureResult = union(enum) {
         };
     }
 };
+fn stage2a(thread : *Thread, self: Object, selector: Object, dnuS:DNUState, ci:ClassIndex) MethodReturns {
+    testNormal(thread, self, selector, dnuS, ci);
+    @panic("stage2a");
+}
 fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
     return struct{
-        const Self = @This;
+        const Self = @This();
         fn findTableSize(sm: []const T,fix: *[256]u16) TableStructureResult {
             // const stdout = @import("std").io.getStdOut().writer();
             var minSizeConflicts: u32 = maxSize;
@@ -144,6 +149,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
             return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fixup}};
         }
+        const stage2 = [_]methodT{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
             const dispatchSize = Self.findTableSize(symbolMethods);
@@ -163,31 +169,33 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             switch (dispatchSize) {
                 .conflictFree => {},
                 .withConflicts => |wc| {
+                    var next = wc.size;
                     const fix = wc.fix;
                     var i: u8 = 0;
                     var shifts: u64 = 0;
                     var shift: u6 = 0;
-                    while (i<fix.len) : (shift+=5) {
-                        const hash = fix.ptr[i];
+                    while (i<fix.len) : (shift+=1) {
                         switch (fix.prt[i+1]) {
                             2 => {
                                 const left = fix.ptr[i+2];
                                 const right = fix.ptr[i+3];
-                                const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash
-                                    const sh = @ctz(u5,xor);
-                                shifts |= sh << shift;
+                                const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash;
+                                const sh = @ctz(u5,xor);
+                                shifts |= sh << shift*5;
                                 if (((fix.ptr[i+2]>>sh)&1)==0) {
                                     methods[next] = symbolMethods[left].method;
                                     methods[next+1] = symbolMethods[right].method;
                                 } else {
-                                    
+                                    methods[next] = symbolMethods[right].method;
+                                    methods[next+1] = symbolMethods[left].method;
                                 }
                                 next += 2;
+                                shift += 1;
                             },
                             else => @panic("Not implemented"),
                         }
+                        methods[wc.hash]=stage2[shift];
                     }
-                    
                 },
             }
             classDispatch[theClass]=strct;
@@ -197,7 +205,6 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
 
 fn id_u32(x:u32) u32 {return x;}
 test "tablesize" {
-    const noMethods = [0]u32{};
     const e1 = [_]u32{6, 518, 38, 2};
     const e2 = [_]u32{6, 518, 38, 2, 7, 5};
     const e3 = [_]u32{6, 518, 38, 2, 7, 8, 9, 10, 42, 46, 47};
@@ -230,7 +237,7 @@ test "tablesize" {
     }
 }
 fn id_sm(x:SymbolMethod) SymbolMethod {return x;}
-const dispatch=DispatchMethods(u32,id_sm,2050);
+const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
 
 fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
@@ -294,6 +301,7 @@ const symbolMethods3 = [_]SymbolMethod{
 };
 test "timing" {
     const stdout = @import("std").io.getStdOut().writer();
+    const findTableSize=dispatch.findTableSize;
     try stdout.print("methods1: {any}\n",.{findTableSize(symbolMethods1[0..])});
     try stdout.print("methods2: {any}\n",.{findTableSize(symbolMethods2[0..])});
     try stdout.print("methods3: {any}\n",.{findTableSize(symbolMethods3[0..])});
@@ -301,6 +309,7 @@ test "timing" {
 }
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
+    const findTableSize=dispatch.findTableSize;
     try expectEqual(findTableSize(symbolMethods1[0..]),7);
     try expectEqual(findTableSize(symbolMethods2[0..]),7);
     try expectEqual(findTableSize(symbolMethods3[0..]),11);
@@ -317,9 +326,10 @@ pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturn
     return callClass(thread, theClass, self, selector);
 }
 pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: Object) MethodReturns {
-    const dispatch = classDispatch[theClass];
+    const disp = classDispatch[theClass];
+    const rand = disp.hash;
     const hash = selector *% rand >> @truncate(u5,rand);
-    const symbolMethodPtr = @ptrCast([*]SymbolMethod,&dispatch.methods)+hash;
+    const symbolMethodPtr = @ptrCast([*]SymbolMethod,&disp.methods)+hash;
     return symbolMethodPtr[0].method(thread,self,selector,DNUFirst,theClass);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {

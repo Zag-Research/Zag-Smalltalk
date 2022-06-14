@@ -1,23 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
-inline fn of(comptime v: u64) Object {
-    return @bitCast(Object,v);
-}
-pub const ZERO              = of(0);
-const Negative_Infinity     =    0xfff0000000000000; // class 3
-// unused NaN fff08-fff5f
-pub const False             = of(0xfff6_04_0000010000);
-pub const True              = of(0xfff6_05_0000100001);
-pub const Nil               = of(0xfff6_06_0001000002);
-const Symbol_Base           =    0xfff6_07_0000000000;
-const Character_Base        =    0xfff6_08_0000000000;
-pub const ThisContext       = of(0xfff6_09_0010000003);
-const Start_of_Heap_Objects =    0xfff7_000000000000;
-const End_of_Heap_Objects   =    0xfff7_ffffffffffff;
-const u64_MINVAL            =    0xfff8_000000000000; // class 2
-const u64_ZERO              =    0xfffc_000000000000;
-const u64_MAXVAL            =    0xffff_ffffffffffff;
 const native_endian = builtin.target.cpu.arch.endian();
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -26,6 +9,27 @@ const Thread = @import("thread.zig");
 const Dispatch = @import("dispatch.zig");
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
+inline fn of(comptime v: u64) Object {
+    return @bitCast(Object,v);
+}
+inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
+    return ((@as(u64,0xfff7)<<8)+c<<40)+h;
+}
+pub const ZERO              = of(0);
+const Negative_Infinity     =    0xfff0000000000000; // class 3
+// unused NaN fff08-fff5f
+const Start_of_Heap_Objects =    0xfff6_000000000000;
+const End_of_Heap_Objects   =    0xfff6_ffffffffffff;
+const c2Base = o2(0,0);
+pub const False             = of(o2(class.False_I,0x0000010000));
+pub const True              = of(o2(class.True_I,0x0000100001));
+pub const Nil               = of(o2(class.UndefinedObject_I,0x0001000002));
+const Symbol_Base           =    o2(class.Symbol_I,0);
+const Character_Base        =    o2(class.Character_I,0);
+pub const ThisContext       = of(o2(class.Context_I,0x0010000003));
+const u64_MINVAL            =    0xfff8_000000000000; // class 2
+const u64_ZERO              =    0xfffc_000000000000;
+const u64_MAXVAL            =    0xffff_ffffffffffff;
 
 pub fn fromLE(v: u64) Object {
     const val = @ptrCast(*const [8]u8,&v);
@@ -138,11 +142,10 @@ const objectMethods = struct {
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
-        if (@bitCast(u64, self) <= End_of_Heap_Objects) {
-            if (self.is_double()) return class.Float_I;
-            return class.Object_I;
-        }
-        return @truncate(ClassIndex,@bitCast(u64, self) >> 36) & 255;
+        if (@bitCast(u64, self) >= c2Base) return @truncate(ClassIndex,@bitCast(u64, self) >> 40) & 255;
+        if (@bitCast(u64, self) >= Start_of_Heap_Objects) return class.Object_I;
+        if (self.is_double()) return class.Float_I;
+        @panic("unknown immediate");
     }
     pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
@@ -173,7 +176,7 @@ const objectMethods = struct {
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
             class.SmallInteger_I => writer.print("{d}", .{self.to(i64)}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
-            else => unreachable,
+            else => @panic("format for unknown class"),
         };
     }
     pub const alignment = @alignOf(u64);
