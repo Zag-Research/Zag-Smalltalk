@@ -129,7 +129,9 @@ pub fn getClass(name: Object) Object {
     unreachable;
 }
 pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !void {
+    const stdout = std.io.getStdOut().writer();
     const class_I = classTable.intern(className);
+    try stdout.print("subClass 0x{x:0>16} {} 0x{x:0>16}\n", .{@bitCast(u64,className),class_I,@bitCast(u64,classes[class_I])});
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].is_nil()) {

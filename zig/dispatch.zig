@@ -38,7 +38,7 @@ inline fn bumpSize(size:u16) u16 {
     return size*2;
 }
 inline fn initialSize(size:usize) u16 {
-    var n = @intCast(u16,size);
+    var n = @maximum(@intCast(u16,size),4);
     n -= 1;
     n |= n>>8;
     n |= n>>4;
@@ -48,7 +48,7 @@ inline fn initialSize(size:usize) u16 {
 }
 const Fix = struct {index:u16,a:u16,b:u16,c:u16};
 const CF = struct{size:u16,hash:u32};
-const WC = struct{size:u16,hash:u32,fix:[]u32};
+const WC = struct{size:u16,hash:u32,fix:[]Fix};
 const TableStructureResult = union(enum) {
     conflictFree: CF,
     withConflicts: WC,
@@ -73,7 +73,7 @@ fn stage2a(thread : *Thread, self: Object, selector: Object, dnuS:DNUState, ci:C
 fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
     return struct{
         const Self = @This();
-        fn findTableSize(sm: []const T,fix: *[256]u16) TableStructureResult {
+        fn findTableSize(sm: []const T, extra: ?T,fix: *[12]Fix) !TableStructureResult {
             // const stdout = @import("std").io.getStdOut().writer();
             var minSizeConflicts: u32 = maxSize;
             var conflictSize: u16 = 0;
@@ -88,6 +88,10 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                 while (tries<=65) : (tries += 1) {
                     const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
                     for (used[0..size]) |*b| b.* = 0;
+                    if (extra) |key| {
+                        const hash = extractHash(key) *% rand >> @truncate(u5,rand);
+                        used[hash] = 1;
+                    }
                     for (sm) |key| {
                         const hash = extractHash(key) *% rand >> @truncate(u5,rand);
                         used[hash] += 1;
@@ -120,7 +124,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             }
             var i: u8 = 0;
             var conflicts: u8=0;
-            var extra: u16 = 1;
+            var level2: u16 = 1;
             for (sm) |key,index| {
                 const hash = extractHash(key) *% bestConflictRand >> @truncate(u5,bestConflictRand);
                 switch (used[hash]) {
@@ -134,7 +138,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                                    .c=0,};
                         used[hash] = i+16;
                         i += 1;
-                        extra += (s+1)&0xFE;
+                        level2 += (s+1)&0xFE;
                     },
                     else => |s| {
                         switch (s>>4) {
@@ -147,12 +151,12 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             }
             const fixup = fix[0..i];
             // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
-            return TableStructureResult{.withConflicts=.{.size=conflictSize+extra,.hash=bestConflictRand,.fix=fixup}};
+            return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
         const stage2 = [_]methodT{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
-            const dispatchSize = Self.findTableSize(symbolMethods);
+            const dispatchSize = Self.findTableSize(symbolMethods,null);
             const rand = dispatchSize.hash();
             const size = dispatchSize.size();
             const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(methodT),Dispatch) catch unreachable;
@@ -220,23 +224,23 @@ test "tablesize" {
     {
         const findTableSize2=DispatchMethods(u32,id_u32,35).findTableSize;
         try stdout.print("\n",.{});
-        try stdout.print("e1: {any}\n",.{try findTableSize2(e1[0..],&fix)});
-        try stdout.print("e2: {any}\n",.{try findTableSize2(e2[0..],&fix)});
-        try stdout.print("e3: {any}\n",.{try findTableSize2(e3[0..],&fix)});
-        try stdout.print("e4: {any}\n",.{try findTableSize2(e4[0..],&fix)});
+        try stdout.print("e1: {any}\n",.{try findTableSize2(e1[0..],null,&fix)});
+        try stdout.print("e2: {any}\n",.{try findTableSize2(e2[0..],null,&fix)});
+        try stdout.print("e3: {any}\n",.{try findTableSize2(e3[0..],null,&fix)});
+        try stdout.print("e4: {any}\n",.{try findTableSize2(e4[0..],null,&fix)});
     }
     {
         const findTableSize2=DispatchMethods(u32,id_u32,128).findTableSize;
-        try stdout.print("e5: {any}\n",.{try findTableSize2(e5[0..],&fix)});
+        try stdout.print("e5: {any}\n",.{try findTableSize2(e5[0..],null,&fix)});
     }
     {
         const findTableSize2=DispatchMethods(u32,id_u32,17).findTableSize;
         var e6: [15]u32 = undefined;
         for (e6) |*v,i| v.*=@truncate(u32,i);
-        try stdout.print("e6: {any}\n",.{try findTableSize2(e6[0..],&fix)});
+        try stdout.print("e6: {any}\n",.{try findTableSize2(e6[0..],null,&fix)});
     }
 }
-fn id_sm(x:SymbolMethod) SymbolMethod {return x;}
+fn id_sm(x:SymbolMethod) u32 {return x.selector.hash;}
 const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
 
 fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
@@ -302,17 +306,19 @@ const symbolMethods3 = [_]SymbolMethod{
 test "timing" {
     const stdout = @import("std").io.getStdOut().writer();
     const findTableSize=dispatch.findTableSize;
-    try stdout.print("methods1: {any}\n",.{findTableSize(symbolMethods1[0..])});
-    try stdout.print("methods2: {any}\n",.{findTableSize(symbolMethods2[0..])});
-    try stdout.print("methods3: {any}\n",.{findTableSize(symbolMethods3[0..])});
+    var fix: [12]Fix = undefined;
+    try stdout.print("methods1: {any}\n",.{(try findTableSize(symbolMethods1[0..],null,&fix))});
+    try stdout.print("methods2: {any}\n",.{(try findTableSize(symbolMethods2[0..],null,&fix))});
+    try stdout.print("methods3: {any}\n",.{(try findTableSize(symbolMethods3[0..],null,&fix))});
 
 }
 test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
     const findTableSize=dispatch.findTableSize;
-    try expectEqual(findTableSize(symbolMethods1[0..]),7);
-    try expectEqual(findTableSize(symbolMethods2[0..]),7);
-    try expectEqual(findTableSize(symbolMethods3[0..]),11);
+    var fix: [12]Fix = undefined;
+    try expectEqual((try findTableSize(symbolMethods1[0..],null,&fix)).size(),7);
+    try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),7);
+    try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),11);
 }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
     _ = thread;
@@ -328,8 +334,8 @@ pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturn
 pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: Object) MethodReturns {
     const disp = classDispatch[theClass];
     const rand = disp.hash;
-    const hash = selector *% rand >> @truncate(u5,rand);
-    const symbolMethodPtr = @ptrCast([*]SymbolMethod,&disp.methods)+hash;
+    const index = selector.hash *% rand >> @truncate(u5,rand);
+    const symbolMethodPtr = @ptrCast([*]SymbolMethod,&disp.methods)+index;
     return symbolMethodPtr[0].method(thread,self,selector,DNUFirst,theClass);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {

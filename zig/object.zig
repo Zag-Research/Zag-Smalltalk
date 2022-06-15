@@ -66,15 +66,15 @@ const objectMethods = struct {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
+                        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self),@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
                         if (self.is_heap() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
-                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 15 >> 15)+@sizeOf(Object));
+                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));
                     },
                     else => {},
                 }
             },
         }
-        unreachable;
+        @panic("Trying to convert Object to unknown type");
     }
     pub inline fn as_string(self: Object) []const u8 {
         //
@@ -187,11 +187,11 @@ pub const Object = switch (native_endian) {
         signMantissa: u16, // align(8),
         tag: Tag,
         nArgs : u8,
-        hash: i32,
+        hash: u32,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
-        hash: i32, // align(8),
+        hash: u32, // align(8),
         nArgs : u8,
         tag: Tag,
         signMantissa: u16,
