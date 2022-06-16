@@ -25,6 +25,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
+| FFF5      | xxxx | xxxx | xxxx | non-heap object |
 | FFF6      | xxxx | xxxx | xxxx | heap object |
 | FFF7      | 00xx | xxxx | xxxx | reserved (tag = unused) |
 | FFF7      | 01xx | xxxx | xxxx | reserved (tag = Object) |
@@ -35,29 +36,27 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF7      | 0600 | 0100 | 0002 | UndefinedObject |
 | FFF7      | 07aa | xxxx | xxxx | Symbol |
 | FFF7      | 0800 | 00xx | xxxx | Character |
-| FFF7      | 09xx | xxxx | xxxx | Context |
 | FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 1, the next 8 bits are a class number so the first 7 classes have a compressed representation.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 8 bits are a class number so the first 8 classes have a compressed representation. This could be extended to 255 compressed representations
 
-### Literals
+### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Literals are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 4 bits and the hash code is 48 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 8 bits and the hash code is 40-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
-1. UndefinedObject: This encodes the value `nil` with all zero hash code.
-2. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
-3. True: This only encodes the single value `true`
-4. Context: A `thisContext` value
-5. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
-6. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-7. Heap object addresses: This is an address of a heap object, so sign-extending the address is all that is required. This gives us 49-bit addresses, which is beyond current architectures.
-8. SmallInteger: This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
-9. Float: This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF).
+1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and non-heap objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF).
+4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
+5. True: This only encodes the single value `true`
+6. UndefinedObject: This encodes the value `nil` with all zero hash code.
+7. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
+8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
@@ -66,6 +65,8 @@ There are a few significant changes:
 1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the negation of the pointer as the forward.
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
+
+This coding is used for heap and non-heap objects. They are treated exactly the same, except that non-heap are not collected or moved.
 
 First we have the object format tag. The low 5 bits code the following:
 - bit 0: = 1 means the object contains instance variables

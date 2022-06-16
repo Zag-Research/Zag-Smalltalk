@@ -10,8 +10,9 @@ const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
-pub const MethodReturns = enum {
-    Normal,
+pub const MethodReturns = union(enum) {
+    Normal: Object,
+    PrimitiveFailedWithError: Object,
     PrimitiveFailed,
     NonLocal,
     ExceptionSignaled,
@@ -24,6 +25,14 @@ pub const DNUState = enum {
 };
 const DNUFirst = DNUState.First;
 pub const methodT = fn(thread : *Thread, self: Object, selector: Object,dnu: DNUState,classI: ClassIndex) MethodReturns;
+const noArgs = ([0]Object{})[0..];
+const Context = struct {
+    previous: *Context,
+    thread: *Thread,
+    objects: []Object,
+};
+// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from args if needed thereafter
+pub const methodT2 = fn(selector: Object, self: Object, other: Object, context : *Context, args: []Object, dnu: DNUState, classI: ClassIndex) MethodReturns;
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 const Dispatch = packed struct {
     header: u64, //Header,
@@ -245,7 +254,7 @@ const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
 
 fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=self};
 }
 fn testNonLocal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=self;
@@ -253,27 +262,27 @@ fn testNonLocal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIn
 }
 fn test1(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(1);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(1)};
 }
 fn test2(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(2);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(2)};
 }
 fn test3(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(3);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(3)};
 }
 fn test4(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(4);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(4)};
 }
 fn test5(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(5);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(5)};
 }
 fn test6(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
     thread.stack()[0]=Object.from(6);
-    return MethodReturns.Normal;
+    return MethodReturns{.Normal=Object.from(6)};
 }
 pub const noMethods = [0]SymbolMethod{};
 const symbolMethods1 = [_]SymbolMethod{
@@ -316,9 +325,9 @@ test "findTableSize" {
     const expectEqual = @import("std").testing.expectEqual;
     const findTableSize=dispatch.findTableSize;
     var fix: [12]Fix = undefined;
-    try expectEqual((try findTableSize(symbolMethods1[0..],null,&fix)).size(),7);
-    try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),7);
-    try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),11);
+    try expectEqual((try findTableSize(symbolMethods1[0..],null,&fix)).size(),4);
+    try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),8);
+    try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),16);
 }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
     _ = thread;
@@ -347,7 +356,7 @@ test "addClass and call" {
     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods[0..]);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
-    try expectEqual(call(&thread,t42,symbols.value),MethodReturns.Normal);
+    try expectEqual(call(&thread,t42,symbols.value),MethodReturns{.Normal=Nil});
     try expectEqual(thread.stack()[0],t42);
 }
 test "lookups of proper methods" {
