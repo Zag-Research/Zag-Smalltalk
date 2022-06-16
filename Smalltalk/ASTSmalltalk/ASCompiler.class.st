@@ -196,6 +196,12 @@ ASCompiler >> sent: selector toBlock: anASBlock [
 ]
 
 { #category : #notifying }
+ASCompiler >> sent: selector toGlobal: string [
+
+		self send: selector toClass: (Smalltalk at: string asSymbol)
+]
+
+{ #category : #notifying }
 ASCompiler >> sent: selector toLiteral: aLiteral [
 
 	self send: selector toClass: aLiteral class

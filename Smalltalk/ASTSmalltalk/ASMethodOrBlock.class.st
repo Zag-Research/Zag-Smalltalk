@@ -25,8 +25,13 @@ ASMethodOrBlock >> arguments [
 { #category : #accessing }
 ASMethodOrBlock >> arguments: aCollection [
 
-	arguments := aCollection		          collect: [ :symbol | ASArg name: symbol ]
-		          as: Array
+	arguments := aCollection
+		collect: [ :symbol | 
+			| arg |
+			arg := ASArg name: symbol.
+			scope at: symbol put: arg.
+			arg ]
+		as: Array
 ]
 
 { #category : #initialization }
@@ -36,16 +41,12 @@ ASMethodOrBlock >> initialize [
 	arguments := #(  )
 ]
 
-{ #category : #scopes }
-ASMethodOrBlock >> lookup: symbol [
-	self halt.
-]
-
 { #category : #printing }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 
-		s << ' arguments: '.
-		arguments printOn: s ].
-super printOn: s
+		s << ' arguments: #('.
+		arguments do: [ :arg| s<< arg name] separatedBy: [ s<<' ' ].
+		s<< ')' ].
+	super printOn: s
 ]
