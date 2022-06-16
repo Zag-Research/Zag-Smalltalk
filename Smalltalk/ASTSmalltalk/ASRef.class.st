@@ -5,7 +5,7 @@ Class {
 	#name : #ASRef,
 	#superclass : #ASExpression,
 	#instVars : [
-		'name'
+		'variable'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -21,21 +21,22 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
-{ #category : #comparing }
-ASRef >> name [
-
-	^ name
-]
-
-{ #category : #comparing }
-ASRef >> name: aSymbol [
-
-	name := aSymbol
-]
-
 { #category : #printing }
 ASRef >> printOn: s [
 
-	s << self className << ' variable: '.
-	name printOn: s
+	s << self className << ' variable: ('.
+	variable printOn: s.
+	s << ')'
+]
+
+{ #category : #comparing }
+ASRef >> variable [
+
+	^ variable
+]
+
+{ #category : #comparing }
+ASRef >> variable: aSymbol [
+
+	variable := aSymbol
 ]

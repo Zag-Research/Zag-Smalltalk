@@ -3,6 +3,6 @@ I represent a local (temporary) variable
 "
 Class {
 	#name : #ASLocal,
-	#superclass : #ASRef,
+	#superclass : #ASVariable,
 	#category : #'ASTSmalltalk-AST'
 }

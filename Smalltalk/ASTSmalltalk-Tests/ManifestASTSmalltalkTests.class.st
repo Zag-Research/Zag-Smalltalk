@@ -53,6 +53,16 @@ ManifestASTSmalltalkTests class >> ruleReVariableAssignedLiteralRuleV1FalsePosit
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleSendsUnknownMessageToGlobalRuleV1FalsePositive [
+	^ #(#(#(#RGClassDefinition #(#ASPharoCompilerTest)) #'2022-05-26T11:58:53.101937-04:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleSentNotImplementedRuleV1FalsePositive [
+	^ #(#(#(#RGClassDefinition #(#ASPharoCompilerTest)) #'2022-05-26T11:59:00.854075-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalkTests class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-19T09:17:06.696728-04:00') )
 ]

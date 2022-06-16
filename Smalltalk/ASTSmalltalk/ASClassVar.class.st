@@ -3,6 +3,6 @@ I represent a class variable
 "
 Class {
 	#name : #ASClassVar,
-	#superclass : #ASRef,
+	#superclass : #ASVariable,
 	#category : #'ASTSmalltalk-AST'
 }

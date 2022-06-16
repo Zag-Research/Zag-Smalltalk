@@ -34,7 +34,7 @@ ASCompilerInlineTest >> testGives43 [
 								   target: (ASSelf method: #gives43)
 								   selector: #plus1:
 								   args: { (ASSend
-										    target: (ASRef variable: #forty2)
+										    target: (ASLocal name: #forty2)
 										    selector: #-
 										    args: { (ASLiteral literal: 4) }) })) })
 ]

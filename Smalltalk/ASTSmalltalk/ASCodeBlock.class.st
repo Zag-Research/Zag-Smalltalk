@@ -8,7 +8,8 @@ Class {
 	#instVars : [
 		'nestedScopeOf',
 		'body',
-		'locals'
+		'locals',
+		'scope'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -16,7 +17,7 @@ Class {
 { #category : #comparing }
 ASCodeBlock >> = other [
 
-	self class = other class and: [ 
+	^ self class = other class and: [ 
 		locals = other locals and: [ body asArray = other body asArray ] ]
 ]
 
@@ -38,9 +39,11 @@ ASCodeBlock >> body: anASNode [
 
 { #category : #initialization }
 ASCodeBlock >> initialize [
+
 	super initialize.
-		locals := #().
-	body := OrderedCollection new
+	locals := #(  ).
+	body := OrderedCollection new.
+	scope := Dictionary new
 ]
 
 { #category : #accessing }
@@ -52,7 +55,18 @@ ASCodeBlock >> locals [
 { #category : #accessing }
 ASCodeBlock >> locals: aCollection [
 
-	locals := aCollection collect: [: symbol | ASLocal name: symbol] as: Array
+	locals := aCollection
+		          collect: [ :symbol | 
+			          | local |
+			          local := ASLocal name: symbol.
+			          scope at: symbol put: local.
+			local ]
+		          as: Array
+]
+
+{ #category : #scopes }
+ASCodeBlock >> lookup: symbol [
+	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
 ]
 
 { #category : #scopes }
@@ -64,8 +78,9 @@ ASCodeBlock >> nestedScopeOf: anASClassNode [
 ASCodeBlock >> printOn: s [
 
 	locals isEmpty ifFalse: [ 
-		s << ' locals: '.
-		locals printOn: s ].
+		s << ' locals: #('.
+		locals do: [ :local | s << local name ] separatedBy: [ s << ' ' ].
+		s<<')' ].
 	s << ' body: {'.
 	body do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
 	s << '}'
@@ -73,5 +88,5 @@ ASCodeBlock >> printOn: s [
 
 { #category : #accessing }
 ASCodeBlock >> scope [
-	^ locals
+	^ scope
 ]
