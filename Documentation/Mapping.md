@@ -8,7 +8,7 @@
 The IEEE 754 64-bit binary number is encoded as follows:
 	![IEEE 754 Binary-64](../images/Pasted%20image%2020210311212924.png)
 
-When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 51 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
+When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
 So we have 52 bits to play with, as long as the number is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
 
@@ -41,7 +41,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 8 bits are a class number so the first 8 classes have a compressed representation. This could be extended to 255 compressed representations
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 8 bits are a class number so the first 8 classes have a compressed representation. This could be extended to 255 compressed representations. There is also room in the FFF0-FFF4 groups for encodings of new classes.
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.

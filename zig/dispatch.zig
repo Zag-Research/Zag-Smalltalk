@@ -26,13 +26,30 @@ pub const DNUState = enum {
 const DNUFirst = DNUState.First;
 pub const methodT = fn(thread : *Thread, self: Object, selector: Object,dnu: DNUState,classI: ClassIndex) MethodReturns;
 const noArgs = ([0]Object{})[0..];
-const Context = struct {
+pub const Context = struct { // this will be the start of a packed struct that will contain space for all the required fields
     previous: *Context,
     thread: *Thread,
     objects: []Object,
+    object: packed struct {
+        header: heap.Header, // this is what `thisContext` will point to
+        name: Object, // this field is the symbol with the name of the method
+        fields: [1]Object,
+    },
+    inline fn headerPtr(self: *Context) u64 {
+        return @ptrToInt(&self.object.header);
+    }
+//    inline fn headerPtr(header: u64) *Context {
+//        return @intToPtr(*Context,&self.header);
+//    }
+    inline fn at(self: *Context,index: usize) Object {
+        return @ptrCast([*]Object,&self.object.header)[index];
+    }
+    inline fn atPut(self: *Context,index: usize,value: Object) void {
+        @ptrCast([*]Object,&self.object.header)[index]=value;
+    }
 };
-// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from args if needed thereafter
-pub const methodT2 = fn(selector: Object, self: Object, other: Object, context : *Context, args: []Object, dnu: DNUState, classI: ClassIndex) MethodReturns;
+// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
+pub const methodT2 = fn(selector: Object, self: Object, other: Object, callingContext : *Context, dnu: DNUState, lookupClass: ClassIndex) MethodReturns;
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 const Dispatch = packed struct {
     header: u64, //Header,

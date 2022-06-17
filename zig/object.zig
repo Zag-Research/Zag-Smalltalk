@@ -7,6 +7,7 @@ const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
 const Dispatch = @import("dispatch.zig");
+const Context = Dispatch.Context;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 inline fn of(comptime v: u64) Object {
@@ -16,8 +17,9 @@ inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
     return ((@as(u64,0xfff7)<<8)+c<<40)+h;
 }
 pub const ZERO              = of(0);
-const Negative_Infinity     =    0xfff0000000000000; // class 3
+const Negative_Infinity     =    0xfff0000000000000;
 // unused NaN fff08-fff5f
+const Start_of_Pointer_Objects = 0xfff5_000000000000;
 const Start_of_Heap_Objects =    0xfff6_000000000000;
 const End_of_Heap_Objects   =    0xfff6_ffffffffffff;
 const c2Base = o2(0,0);
@@ -27,7 +29,7 @@ pub const Nil               = of(o2(class.UndefinedObject_I,0x0001000002));
 const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
 pub const ThisContext       = of(o2(class.Context_I,0x0010000003));
-const u64_MINVAL            =    0xfff8_000000000000; // class 2
+const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
 
@@ -56,18 +58,22 @@ const objectMethods = struct {
         if (@bitCast(u64, self) <= Start_of_Heap_Objects) return false;
         return @bitCast(u64, self) <= End_of_Heap_Objects;
     }
+    pub inline fn is_memory(self: Object) bool {
+        if (@bitCast(u64, self) <= Start_of_Pointer_Objects) return false;
+        return @bitCast(u64, self) <= End_of_Heap_Objects;
+    }
     pub inline fn to(self: Object, comptime T:type) T {
         switch (T) {
             i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPtr,HeapConstPtr => {if (self.is_heap()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
+            HeapPtr,HeapConstPtr,*Context => {if (self.is_memory()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
                         @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self),@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
-                        if (self.is_heap() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
+                        if (self.is_memory() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
                             return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));
                     },
                     else => {},
@@ -84,12 +90,13 @@ const objectMethods = struct {
         return "dummy string";
     }
     pub inline fn arrayAsSlice(self: Object, comptime T:type) []T {
-        if (self.is_heap()) return self.to(HeapPtr).arrayAsSlice(T);
+        if (self.is_memory()) return self.to(HeapPtr).arrayAsSlice(T);
         return &[0]T{};
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==HeapConstPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Heap_Objects);
+        if (T==*Context) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -121,14 +128,13 @@ const objectMethods = struct {
         return @bitCast(u64, self) % 16777213; // largest 24 bit prime
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
-        if (!self.is_heap() or !other.is_heap()) {
+        if (!self.is_memory() or !other.is_memory()) {
             const u64s = @bitCast(u64,self);
             const u64o = @bitCast(u64,other);
             return std.math.order(u64s,u64o);
         }
         const ord = std.math.Order;
         if (@bitCast(u64,self)==@bitCast(u64,other)) return ord.eq;
-        if (self.immediate_class() != other.immediate_class()) unreachable;
         const sla = self.arrayAsSlice(u8);
         const slb = other.arrayAsSlice(u8);
         for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
@@ -143,7 +149,7 @@ const objectMethods = struct {
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
         if (@bitCast(u64, self) >= c2Base) return @truncate(ClassIndex,@bitCast(u64, self) >> 40) & 255;
-        if (@bitCast(u64, self) >= Start_of_Heap_Objects) return class.Object_I;
+        if (@bitCast(u64, self) >= Start_of_Pointer_Objects) return class.Object_I;
         if (self.is_double()) return class.Float_I;
         @panic("unknown immediate");
     }

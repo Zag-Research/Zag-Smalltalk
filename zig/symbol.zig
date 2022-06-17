@@ -25,58 +25,59 @@ pub inline fn symbol4(index: u64) object.Object {
     return symbol_of(index,4);
 }
 pub const symbols = struct {
-    pub const yourself = symbol0(38);
-    pub const @"doesNotUnderstand:" = symbol1(39);
-    pub const @"==" = symbol1(40);
-    pub const @"~~" = symbol1(41);
-    pub const @"~=" = symbol1(42);
-    pub const @"=" = symbol1(43);
-    pub const @"+" = symbol1(44);
-    pub const @"-" = symbol1(45);
-    pub const @"*" = symbol1(46);
-    pub const size = symbol0(47);
-    pub const @"at:" = symbol0(48);
-    pub const @"at:put:" = symbol0(49);
-
-    pub const @"valueWithArguments:" = symbol1(1);
-    pub const @"cull:" = symbol1(2);
-    pub const @"cull:cull:" = symbol2(3);
-    pub const @"cull:cull:cull:" = symbol3(4);
-    pub const @"cull:cull:cull:cull:" = symbol4(5);
-    pub const value = symbol0(6);
-    pub const @"value:" = symbol1(7);
-    pub const @"value:value:" = symbol2(8);
-    pub const @"value:value:value:" = symbol3(9);
-    pub const @"value:value:value:value:" = symbol4(10);
-    pub const self = symbol0(11);
-    pub const Object = symbol0(12);
-    pub const BlockClosure = symbol0(13);
-    pub const False = symbol0(14);
-    pub const True = symbol0(15);
-    pub const UndefinedObject = symbol0(16);
-    pub const SmallInteger = symbol0(17);
-    pub const Symbol = symbol0(18);
-    pub const Character = symbol0(19);
-    pub const Float = symbol0(20);
-    pub const Array = symbol0(21);
-    pub const String = symbol0(22);
-    pub const Class = symbol0(23);
-    pub const Metaclass = symbol0(24);
-    pub const Behavior = symbol0(25);
-    pub const Magnitude = symbol0(26);
-    pub const Number = symbol0(27);
-    pub const Method = symbol0(28);
-    pub const System = symbol0(29);
-    pub const Return = symbol0(30);
-    pub const Send = symbol0(31);
-    pub const Literal = symbol0(32);
-    pub const Load = symbol0(33);
-    pub const Store = symbol0(34);
-    pub const SymbolTable = symbol0(35);
-    pub const Dispatch = symbol0(36);
-    pub const ClassTable = symbol0(37);
-    pub const negated = symbol0(50);
-    pub const ClassDescription = symbol0(51);
+    pub const yourself = symbol0(1);
+    pub const @"doesNotUnderstand:" = symbol1(2);
+    pub const @"=" = symbol1(3);
+    pub const @"+" = symbol1(4);
+    pub const @"-" = symbol1(5);
+    pub const @"*" = symbol1(6);
+    pub const size = symbol0(7);
+    pub const @"at:" = symbol0(8);
+    pub const @"at:put:" = symbol0(9);
+    pub const @"~=" = symbol1(10);
+    pub const @"==" = symbol1(11);
+    pub const @"~~" = symbol1(12);
+    pub const value = symbol0(13);
+    pub const @"value:" = symbol1(14);
+    pub const @"value:value:" = symbol2(15);
+    pub const negated = symbol0(16);
+    pub const new = symbol0(17);
+    pub const @"new:" = symbol0(18);
+    pub const @"cull:" = symbol1(19);
+    pub const @"value:value:value:" = symbol3(20);
+    pub const @"value:value:value:value:" = symbol4(21);
+    pub const @"valueWithArguments:" = symbol1(22);
+    pub const @"cull:cull:" = symbol2(23);
+    pub const @"cull:cull:cull:" = symbol3(24);
+    pub const @"cull:cull:cull:cull:" = symbol4(25);
+    pub const self = symbol0(26);
+    pub const Object = symbol0(27);
+    pub const BlockClosure = symbol0(28);
+    pub const False = symbol0(29);
+    pub const True = symbol0(30);
+    pub const UndefinedObject = symbol0(31);
+    pub const SmallInteger = symbol0(32);
+    pub const Symbol = symbol0(33);
+    pub const Character = symbol0(34);
+    pub const Float = symbol0(35);
+    pub const Array = symbol0(36);
+    pub const String = symbol0(37);
+    pub const Class = symbol0(38);
+    pub const Metaclass = symbol0(39);
+    pub const Behavior = symbol0(40);
+    pub const Magnitude = symbol0(41);
+    pub const Number = symbol0(42);
+    pub const Method = symbol0(43);
+    pub const System = symbol0(44);
+    pub const Return = symbol0(45);
+    pub const Send = symbol0(46);
+    pub const Literal = symbol0(47);
+    pub const Load = symbol0(48);
+    pub const Store = symbol0(49);
+    pub const SymbolTable = symbol0(50);
+    pub const Dispatch = symbol0(51);
+    pub const ClassTable = symbol0(52);
+    pub const ClassDescription = symbol0(53);
 };
 var symbolTable : Symbol_Table = undefined;
 
@@ -89,6 +90,10 @@ pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !v
 pub fn deinit(thr: *thread.Thread) void {
     _ = thr;
     symbolTable.deinit();
+}
+pub fn loadSymbols(thr: *thread.Thread,str:[]const u8) void {
+    var arena = thr.getArena().getGlobal();
+    symbolTable.loadSymbols(arena,str);
 }
 pub fn lookupLiteral(string: []const u8) object.Object {
     return symbolTable.lookupLiteral(string);
@@ -175,17 +180,13 @@ const Symbol_Table = struct {
     fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
         s.loadSymbols(
             arena,
-\\ valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: 
-\\ value value: value:value: value:value:value: value:value:value:value:
-\\ self
-\\ Object BlockClosure False True
-\\ UndefinedObject SmallInteger Symbol Character
-\\ Float Array String Class Metaclass
-\\ Behavior Magnitude Number Method System
-\\ Return Send Literal Load Store
-\\ SymbolTable Dispatch ClassTable
-\\ yourself doseNotUnderstand: == ~~ ~= = + - * size at: at:put:
-\\ negated ClassDescription
+\\  yourself doesNotUnderstand: = + - * size at: at:put: ~= == ~~ value
+\\ value: value:value: negated new new: cull: value:value:value:
+\\ value:value:value:value: valueWithArguments: cull:cull:
+\\ cull:cull:cull: cull:cull:cull:cull: self Object BlockClosure False
+\\ True UndefinedObject SmallInteger Symbol Character Float Array String
+\\ Class Metaclass Behavior Magnitude Number Method System Return Send
+\\ Literal Load Store SymbolTable Dispatch ClassTable ClassDescription
         );
     }
     fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {

@@ -5,6 +5,7 @@ const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const symbol = @import("symbol.zig");
+const symbols = symbol.symbols;
 const dispatch = @import("dispatch.zig");
 const methodT = dispatch.methodT;
 const heap = @import("heap.zig");
@@ -19,8 +20,7 @@ pub const True_I = c2o+ 1;
 pub const UndefinedObject_I = c2o+ 2;
 pub const Symbol_I = c2o+ 3;
 pub const Character_I = c2o+ 4;
-pub const Context_I = c2o+ 5;
-const c3o = c2o+6;
+const c3o = c2o+5;
 pub const Array_I = c3o+ 0;
 pub const String_I = c3o+ 1;
 pub const Class_I = c3o+ 2;
@@ -42,6 +42,7 @@ pub const Magnitude_I = c3o+ 17;
 pub const Number_I = c3o+ 18;
 pub const ClassDescription_I = c3o+ 19;
 pub const Boolean_I = c3o+ 20;
+pub const Context_I = c2o+ 21;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -88,12 +89,12 @@ const Class_Table = struct {
             u8,
 \\ Object SmallInteger Float
 \\ False True
-\\ UndefinedObject Symbol Character Context
+\\ UndefinedObject Symbol Character
 \\ Array String Class Metaclass
 \\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription
-\\ Boolean
+\\ Boolean Context
                 ," \n");
         while(names.next()) |name| {
             _ = s.intern(symbol.internLiteral(arena,name));
@@ -135,10 +136,11 @@ pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].is_nil()) {
+        const arena = thr.getArena().getGlobal();
         const metaclass_I = classTable.nextFree();
-        metaclass = thr.getArena().getGlobal().allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S, Nil) catch unreachable;
+        metaclass = arena.allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S, Nil) catch @panic("No space");
         classes[metaclass_I] = Object.from(metaclass);
-        class = thr.getArena().getGlobal().allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S, Nil) catch unreachable;
+        class = arena.allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S, Nil) catch @panic("No space");
         classes[class_I] = Object.from(class);
     } else {
         class = classes[class_I].to(*Class_S);
@@ -150,7 +152,7 @@ pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !
     if (superclass_I>0 and !classes[superclass_I].is_nil()) {
         return error.SuperclassAlreadyDefined;
     } else {
-        superclass_I = classTable.lookup(symbol.symbols.Class);
+        superclass_I = classTable.lookup(symbols.Class);
     }
     _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
 }
@@ -158,13 +160,13 @@ pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
     classTable.loadInitialClassNames(arena);
-    try subClass(thr,Nil,symbol.symbols.Object);
-    //subClass(thr,symbol.Object,symbol.Behavior);
-    //subClass(thr,symbol.Behavior,symbol.ClassDescription);
-    //subClass(thr,symbol.ClassDescription,symbol.Class);
-    //subClass(thr,symbol.ClassDescription,symbol.Metaclass);
+    try subClass(thr,Nil,symbols.Object);
+    try subClass(thr,symbols.Object,symbols.Behavior);
+    try subClass(thr,symbols.Behavior,symbols.ClassDescription);
+    try subClass(thr,symbols.ClassDescription,symbols.Class);
+    try subClass(thr,symbols.ClassDescription,symbols.Metaclass);
     // repeat to set metaclass superclass properly
-    try subClass(thr,Nil,symbol.symbols.Object);
+    try subClass(thr,Nil,symbols.Object);
 }
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;
