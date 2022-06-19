@@ -25,7 +25,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0   |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF5      | xxxx | xxxx | xxxx | non-heap object |
+| FFF5      | xxxx | xxxx | xxxx | thread-local object |
 | FFF6      | xxxx | xxxx | xxxx | heap object |
 | FFF7      | 00xx | xxxx | xxxx | reserved (tag = unused) |
 | FFF7      | 01xx | xxxx | xxxx | reserved (tag = Object) |
@@ -49,7 +49,7 @@ All zero-sized objects could be encoded in the Object value if they had unique h
 Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 8 bits and the hash code is 40-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
-1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and non-heap objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
+1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
 2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF).
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
@@ -66,7 +66,7 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-This coding is used for heap and non-heap objects. They are treated exactly the same, except that non-heap are not collected or moved.
+This coding is used for heap and thread-local objects. They are treated exactly the same, except that thread-local are not collected or moved.
 
 First we have the object format tag. The low 5 bits code the following:
 - bit 0: = 1 means the object contains instance variables
@@ -124,7 +124,7 @@ The remaining format bits encode:
 - bit 6: = 64 means that the object is in a global heap. If a value is being assigned that is a heap object but is not global, that value will have to be promoted to the global heap first because otherwise other threads could not access it. Note that this doesn't differentiate between nursery and young generations, so copying from nursery to young generations will have to start the scan at the beginning of the young generation - rather than the current end of heap as would be used for other promotion copies.
 - bit 7: - 128 is currently unused
 
-For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code.
+For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
 
 #### Examples `need update`
 

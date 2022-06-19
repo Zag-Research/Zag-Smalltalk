@@ -17,11 +17,11 @@ inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
     return ((@as(u64,0xfff7)<<8)+c<<40)+h;
 }
 pub const ZERO              = of(0);
-const Negative_Infinity     =    0xfff0000000000000;
-// unused NaN fff08-fff5f
-const Start_of_Pointer_Objects = 0xfff5_000000000000;
-const Start_of_Heap_Objects =    0xfff6_000000000000;
-const End_of_Heap_Objects   =    0xfff6_ffffffffffff;
+const Negative_Infinity: u64     =    0xfff0000000000000;
+// unused NaN fff00-fff4f
+const Start_of_Pointer_Objects: u64 = 0xfff5_000000000000;
+const Start_of_Heap_Objects: u64 =    0xfff6_000000000000;
+const End_of_Heap_Objects: u64   =    0xfff6_ffffffffffff;
 const c2Base = o2(0,0);
 pub const False             = of(o2(class.False_I,0x0000010000));
 pub const True              = of(o2(class.True_I,0x0000100001));
@@ -68,7 +68,7 @@ const objectMethods = struct {
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPtr,HeapConstPtr,*Context => {if (self.is_memory()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
+            HeapPtr,HeapConstPtr,*Context,*Thread => {if (self.is_memory()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
@@ -95,8 +95,8 @@ const objectMethods = struct {
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
-        if (T==HeapConstPtr) return @bitCast(Object, @ptrToInt(value) + Start_of_Heap_Objects);
-        if (T==*Context) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
+        if (T==HeapConstPtr) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
+        if (T==*Context or T==*Thread) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {

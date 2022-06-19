@@ -78,6 +78,7 @@ pub const symbols = struct {
     pub const Dispatch = symbol0(51);
     pub const ClassTable = symbol0(52);
     pub const ClassDescription = symbol0(53);
+    pub const Constrained = symbol0(54);
 };
 var symbolTable : Symbol_Table = undefined;
 
@@ -187,6 +188,7 @@ const Symbol_Table = struct {
 \\ True UndefinedObject SmallInteger Symbol Character Float Array String
 \\ Class Metaclass Behavior Magnitude Number Method System Return Send
 \\ Literal Load Store SymbolTable Dispatch ClassTable ClassDescription
+\\ Constrained
         );
     }
     fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {

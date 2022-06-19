@@ -127,7 +127,7 @@ pub const Class_S = packed struct{
 };
 pub fn getClass(name: Object) Object {
     _ = name;
-    unreachable;
+    @panic("unimplemented");
 }
 pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !void {
     const stdout = std.io.getStdOut().writer();

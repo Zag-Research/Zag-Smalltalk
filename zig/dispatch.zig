@@ -24,32 +24,47 @@ pub const MethodReturns = union(enum) {
 pub const methodT = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr) MethodReturns;
 const noArgs = ([0]Object{})[0..];
 pub const Context = packed struct { // this will be the start of a packed struct that will contain space for all the required fields
-    previous: *Context,
-    thread: *Thread,
-    object: packed struct {
-        header: heap.Header, // this is what `thisContext` will point to
-        name: Object, // this field is the symbol with the name of the method
-        fields: [1]Object,
-    },
-    inline fn headerPtr(self: *Context) u64 {
-        return @ptrToInt(&self.object.header);
-    }
-//    inline fn headerPtr(header: u64) *Context {
-//        return @intToPtr(*Context,&self.header);
-//    }
+    header: Object, // heap.Header
+    _name: Object, // this field is the symbol with the name of the method
+    _previous: Object, // *Context as non-heap object (or nil if no previous)
+    _thread: Object, // *Thread as non-heap object (or nil if not yet needed)
+    // fields: [...]Object, indexable as 1..
     inline fn at(self: *Context,index: usize) Object {
-        return @ptrCast([*]Object,&self.object.header)[index];
+        return @ptrCast([*]Object,&self.header)[index];
     }
     inline fn atPut(self: *Context,index: usize,value: Object) void {
-        @ptrCast([*]Object,&self.object.header)[index]=value;
+        @ptrCast([*]Object,&self.header)[index]=value;
+    }
+    pub inline fn previous(self: *Context) ?*Context {
+        if (self._previous.is_nil()) return null;
+        return self._previous.to(*Context);
+    }
+    pub inline fn thread(self: *Context) *Thread {
+        if (self._thread.is_nil()) self.update_thread();
+        return self._thread.to(*Thread);
+    }
+    fn update_thread(self: *Context) *Thread {
+        if (self._thread.is_nil()) {
+            self._thread = self.previous().update_thread();
+        }
+        return self._thread;
+    }
+    pub fn add_context(context: *Context, objects: []Object, _ :Object) *Context {
+        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).cast(); // header
+        // name stays as initialized
+        objects[2] = Object.from(context); // previous
+        // thread stays nil
+        return @intToPtr(*Context,@ptrToInt(objects.ptr));
+    }
+    fn make_init_cxt(objects: []Object,t: *Thread) *Context {
+        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).cast(); // header
+        // name stays as initialized
+        // previous stays nil
+        objects[3] = Object.from(t);// thread
+        return @intToPtr(*Context,@ptrToInt(objects.ptr));
     }
 };
-pub fn make_init_cxt(objects: []Object,thread: *Thread) *Context {
-    objects[1] = @bitCast(Object,@ptrToInt(thread));
-    objects[2] = @bitCast(Object,@ptrToInt(thread));//
-    objects[3] = Nil;
-    return @intToPtr(*Context,@ptrToInt(objects.ptr));
-}
+pub const make_init_cxt = Context.make_init_cxt;
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 const Dispatch = packed struct {
     header: u64, //Header,

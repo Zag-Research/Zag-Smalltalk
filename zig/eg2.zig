@@ -8,6 +8,7 @@ const _dispatch = @import("dispatch.zig");
 const _thread = @import("thread.zig");
 const _symbol = @import("symbol.zig");
 const _O = _object.Object;
+const _nil = _object.Nil;
 const _c = struct {
     const _class_S = _class.Class_S;
 };
@@ -16,16 +17,17 @@ const _DP = _dispatch.DispatchPtr;
 const _CXT = _dispatch.Context;
 const _dnu = _dispatch.dnu;
 const _s = struct {
-    const nil = _object.Nil;
+    const nil = _nil;
     const @"true" = _object.True;
     const @"false" = _object.False;
     const _s0 = _symbol.symbol0;
-    const start = _s0(49);
+    const start = _s0(55);
+    const main = _s0(56);
     usingnamespace _symbol.symbols;
 };
 fn _init_symbolTable(thread: *_thread.Thread) void {
     _symbol.init(thread,250,
-\\ start
+\\ start main
                  ) catch @panic("_init_symbolTable failed");
 }
 const System_defs = struct {
@@ -50,7 +52,7 @@ test "try a thread" {
     var thread = try _thread.Thread.initForTest();
     defer thread.deinit();
     _init_symbolTable(&thread);
-    var cxt: [4]_O=undefined;
+    var cxt = [_]_O{_s.main}++[_]_O{_nil}**3;
     var context = _dispatch.make_init_cxt(cxt[0..],&thread);
     const System = try System_defs.init(&thread);
     thread.push(System);
@@ -61,7 +63,7 @@ test "try a thread" {
         },
         else => |result| {
             try _stdout.writer().print("result={}\n",.{result});
-            unreachable;
+            return error.Fail;
         },
     }
 }
