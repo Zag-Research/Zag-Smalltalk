@@ -161,8 +161,8 @@ const objectMethods = struct {
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);
     }
-    pub inline fn dispatch(self: Object, thread: *Thread.Thread, selector: Object) Dispatch.MethodReturns {
-        return Dispatch.call(thread,self,selector);
+    pub inline fn send(self: Object, selector: Object, other: Object, cp: *Dispatch.Context) Dispatch.MethodReturns {
+        return Dispatch.call(selector, self, other, cp);
     }
     pub fn format(
         self: Object,

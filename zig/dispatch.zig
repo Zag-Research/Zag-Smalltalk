@@ -20,16 +20,12 @@ pub const MethodReturns = union(enum) {
         return self>=MethodReturns.NonLocal;
     }
 };
-pub const DNUState = enum {
-    First,
-};
-const DNUFirst = DNUState.First;
-pub const methodT = fn(thread : *Thread, self: Object, selector: Object,dnu: DNUState,classI: ClassIndex) MethodReturns;
+// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
+pub const methodT = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr) MethodReturns;
 const noArgs = ([0]Object{})[0..];
-pub const Context = struct { // this will be the start of a packed struct that will contain space for all the required fields
+pub const Context = packed struct { // this will be the start of a packed struct that will contain space for all the required fields
     previous: *Context,
     thread: *Thread,
-    objects: []Object,
     object: packed struct {
         header: heap.Header, // this is what `thisContext` will point to
         name: Object, // this field is the symbol with the name of the method
@@ -48,8 +44,12 @@ pub const Context = struct { // this will be the start of a packed struct that w
         @ptrCast([*]Object,&self.object.header)[index]=value;
     }
 };
-// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
-pub const methodT2 = fn(selector: Object, self: Object, other: Object, callingContext : *Context, dnu: DNUState, lookupClass: ClassIndex) MethodReturns;
+pub fn make_init_cxt(objects: []Object,thread: *Thread) *Context {
+    objects[1] = @bitCast(Object,@ptrToInt(thread));
+    objects[2] = @bitCast(Object,@ptrToInt(thread));//
+    objects[3] = Nil;
+    return @intToPtr(*Context,@ptrToInt(objects.ptr));
+}
 pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
 const Dispatch = packed struct {
     header: u64, //Header,
@@ -57,6 +57,7 @@ const Dispatch = packed struct {
     super: u32,
     methods: [1]SymbolMethod,
 };
+pub const DispatchPtr = *Dispatch;
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
 const u32_phi_inverse=2654435769;
@@ -92,8 +93,8 @@ const TableStructureResult = union(enum) {
         };
     }
 };
-fn stage2a(thread : *Thread, self: Object, selector: Object, dnuS:DNUState, ci:ClassIndex) MethodReturns {
-    testNormal(thread, self, selector, dnuS, ci);
+fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) MethodReturns {
+    testNormal(thread, self, selector, ci);
     @panic("stage2a");
 }
 fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
@@ -269,39 +270,31 @@ test "tablesize" {
 fn id_sm(x:SymbolMethod) u32 {return x.selector.hash;}
 const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
 
-fn testNormal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=self;
+fn testNormal(_: Object, self: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=self};
 }
-fn testNonLocal(thread : *Thread, self: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=self;
+fn testNonLocal(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns.NonLocal;
 }
-fn test1(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(1);
+fn test1(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(1)};
 }
-fn test2(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(2);
+fn test2(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(2)};
 }
-fn test3(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(3);
+fn test3(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(3)};
 }
-fn test4(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(4);
+fn test4(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(4)};
 }
-fn test5(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(5);
+fn test5(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(5)};
 }
-fn test6(thread : *Thread, _: Object, _: Object, _:DNUState, _:ClassIndex) MethodReturns {
-    thread.stack()[0]=Object.from(6);
+fn test6(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
     return MethodReturns{.Normal=Object.from(6)};
 }
-pub const noMethods = [0]SymbolMethod{};
+pub const noMethods = ([0]SymbolMethod{})[0..];
 const symbolMethods1 = [_]SymbolMethod{
     .{.selector=symbols.value,.method=testNormal},
     .{.selector=symbols.self,.method=testNormal},
@@ -353,16 +346,16 @@ pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const Sym
     _ = classMethods;
     return error.UnImplemented;
 }
-pub inline fn call(thread: *Thread, self: Object, selector: Object) MethodReturns {
+pub inline fn call(selector: Object, self: Object, other: Object, cp: *Context) MethodReturns {
     const theClass = self.get_class();
-    return callClass(thread, theClass, self, selector);
+    return callClass(selector, self, other, cp, theClass);
 }
-pub fn callClass(thread: *Thread, theClass: ClassIndex, self: Object, selector: Object) MethodReturns {
+pub inline fn callClass(selector: Object, self: Object, other: Object, cp: *Context, theClass: ClassIndex) MethodReturns {
     const disp = classDispatch[theClass];
     const rand = disp.hash;
     const index = selector.hash *% rand >> @truncate(u5,rand);
     const symbolMethodPtr = @ptrCast([*]SymbolMethod,&disp.methods)+index;
-    return symbolMethodPtr[0].method(thread,self,selector,DNUFirst,theClass);
+    return symbolMethodPtr[0].method(selector, self, other, cp, disp);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
@@ -370,35 +363,32 @@ fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods[0..]);
+    try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
-    try expectEqual(call(&thread,t42,symbols.value),MethodReturns{.Normal=Nil});
+    try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Nil});
     try expectEqual(thread.stack()[0],t42);
 }
 test "lookups of proper methods" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
-    try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods[0..]);
+    try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
-    _ = call(&thread,t42,symbols.value);
-    try expectEqual(thread.stack()[0],Object.from(1));
-    _ = call(&thread,t42,symbols.self);
-    try expectEqual(thread.stack()[0],Object.from(2));
-    _ = call(&thread,t42,symbols.yourself);
-    try expectEqual(thread.stack()[0],Object.from(3));
-    _ = call(&thread,t42,symbols.@"cull:");
-    try expectEqual(thread.stack()[0],Object.from(4));
-    _ = call(&thread,t42,symbols.@"value:");
-    try expectEqual(thread.stack()[0],Object.from(5));
-    _ = call(&thread,t42,symbols.@"cull:cull:cull:cull:");
-    try expectEqual(thread.stack()[0],Object.from(6));
+    try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Object.from(1)});
+    try expectEqual(t42.send(symbols.self,Nil,undefined),MethodReturns{.Normal=Object.from(2)});
+    try expectEqual(t42.send(symbols.yourself,Nil,undefined),MethodReturns{.Normal=Object.from(3)});
+    try expectEqual(t42.send(symbols.@"cull:",Nil,undefined),MethodReturns{.Normal=Object.from(4)});
+    try expectEqual(t42.send(symbols.@"value:",Nil,undefined),MethodReturns{.Normal=Object.from(5)});
+    try expectEqual(t42.send(symbols.@"cull:cull:cull:cull:",Nil,undefined),MethodReturns{.Normal=Object.from(6)});
 }
-fn dnu(thread: *Thread,selector: Object) MethodReturns {
+pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr) MethodReturns {
     _ = selector;
-    _ = thread;
-    unreachable;
+    _ = self;
+    _ = other;
+    _ = callingContext;
+    _ = disp;
+    @panic("dnu");
 }
 
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
