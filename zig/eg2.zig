@@ -36,9 +36,9 @@ const System_defs = struct {
         return _MR{.Normal=self};
     }
     const instance_methods = ([_]_dispatch.SymbolMethod{
-        .{.selector=_s.start,.method=startMethod},
     })[0..];
     const class_methods = ([0]_dispatch.SymbolMethod{
+        .{.selector=_s.start,.method=startMethod},
     })[0..];
     fn init(t:*_thread.Thread) !_O {
         try _stdout.writer().print("before getClass\n",.{});

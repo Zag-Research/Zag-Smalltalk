@@ -27,21 +27,21 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0000 | 0000 | 0000 | -inf            |
 | FFF5      | xxxx | xxxx | xxxx | thread-local object |
 | FFF6      | xxxx | xxxx | xxxx | heap object |
-| FFF7      | 00xx | xxxx | xxxx | reserved (tag = unused) |
-| FFF7      | 01xx | xxxx | xxxx | reserved (tag = Object) |
-| FFF7      | 02xx | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF7      | 03xx | xxxx | xxxx | reserved (tag = Double) |
-| FFF7      | 0400 | 0001 | 0000 | False |
-| FFF7      | 0500 | 0010 | 0001 | True |
-| FFF7      | 0600 | 0100 | 0002 | UndefinedObject |
-| FFF7      | 07aa | xxxx | xxxx | Symbol |
-| FFF7      | 0800 | 00xx | xxxx | Character |
+| FFF7      | 0000 | xxxx | xxxx | reserved (tag = unused) |
+| FFF7      | 0001 | xxxx | xxxx | reserved (tag = Object) |
+| FFF7      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Double) |
+| FFF7      | 0004 | 0001 | 0000 | False |
+| FFF7      | 0005 | 0010 | 0001 | True |
+| FFF7      | 0006 | 0100 | 0002 | UndefinedObject |
+| FFF7      | 0007 | axxx | xxxx | Symbol |
+| FFF7      | 0008 | 00xx | xxxx | Character |
 | FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 8 bits are a class number so the first 8 classes have a compressed representation. This could be extended to 255 compressed representations. There is also room in the FFF0-FFF4 groups for encodings of new classes.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF4 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
