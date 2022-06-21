@@ -148,7 +148,7 @@ const objectMethods = struct {
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
-        if (@bitCast(u64, self) >= c2Base) return @truncate(ClassIndex,@bitCast(u64, self) >> 40) & 255;
+        if (@bitCast(u64, self) >= c2Base) return @truncate(ClassIndex,@bitCast(u64, self) >> 32);
         if (@bitCast(u64, self) >= Start_of_Pointer_Objects) return class.Object_I;
         if (self.is_double()) return class.Float_I;
         @panic("unknown immediate");

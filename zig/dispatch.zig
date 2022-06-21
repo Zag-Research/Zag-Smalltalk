@@ -12,8 +12,6 @@ const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 pub const MethodReturns = union(enum) {
     Normal: Object,
-    PrimitiveFailedWithError: Object,
-    PrimitiveFailed,
     NonLocal,
     ExceptionSignaled,
     pub fn nonLocal(self : MethodReturns) bool {
@@ -70,7 +68,9 @@ const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
     super: u32,
-    methods: [1]SymbolMethod,
+    methods: [1]SymbolMethod, // normally this is many elements, overwriting the remaining fields
+    altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
+    altMethods: [1]SymbolMethod, // altMethods as the many elements dispatch table if the constraints are met
 };
 pub const DispatchPtr = *Dispatch;
 const max_classes = class.ReservedNumberOfClasses;
@@ -366,11 +366,11 @@ pub inline fn call(selector: Object, self: Object, other: Object, cp: *Context) 
     return callClass(selector, self, other, cp, theClass);
 }
 pub inline fn callClass(selector: Object, self: Object, other: Object, cp: *Context, theClass: ClassIndex) MethodReturns {
+    @setRuntimeSafety(false);
     const disp = classDispatch[theClass];
     const rand = disp.hash;
     const index = selector.hash *% rand >> @truncate(u5,rand);
-    const symbolMethodPtr = @ptrCast([*]SymbolMethod,&disp.methods)+index;
-    return symbolMethodPtr[0].method(selector, self, other, cp, disp);
+    return disp.methods[index].method(selector, self, other, cp, disp, null);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
@@ -397,12 +397,13 @@ test "lookups of proper methods" {
     try expectEqual(t42.send(symbols.@"value:",Nil,undefined),MethodReturns{.Normal=Object.from(5)});
     try expectEqual(t42.send(symbols.@"cull:cull:cull:cull:",Nil,undefined),MethodReturns{.Normal=Object.from(6)});
 }
-pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr) MethodReturns {
+pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, expectedSelector: Objct) MethodReturns {
     _ = selector;
     _ = self;
     _ = other;
     _ = callingContext;
     _ = disp;
+    _ = expectedSelector;
     @panic("dnu");
 }
 

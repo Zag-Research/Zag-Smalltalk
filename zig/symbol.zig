@@ -79,7 +79,10 @@ pub const symbols = struct {
     pub const ClassTable = symbol0(52);
     pub const ClassDescription = symbol0(53);
     pub const Constrained = symbol0(54);
+    pub const class = symbol0(55);
+    pub const name = symbol0(56);
 };
+pub const predefinedSymbols = 57;
 var symbolTable : Symbol_Table = undefined;
 
 pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !void {

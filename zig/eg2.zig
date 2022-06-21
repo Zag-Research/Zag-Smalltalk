@@ -4,9 +4,11 @@ const _assert = _std.debug.assert;
 const _stdout = _std.io.getStdOut();
 const _object = @import("object.zig");
 const _class = @import("class.zig");
+const _init = _class.init_class;
 const _dispatch = @import("dispatch.zig");
 const _thread = @import("thread.zig");
 const _symbol = @import("symbol.zig");
+const _prim = @import("primitives.zig");
 const _O = _object.Object;
 const _nil = _object.Nil;
 const _c = struct {
@@ -21,8 +23,9 @@ const _s = struct {
     const @"true" = _object.True;
     const @"false" = _object.False;
     const _s0 = _symbol.symbol0;
-    const start = _s0(55);
-    const main = _s0(56);
+    const _n = _symbol.predefinedSymbols;
+    const start = _s0(_n+0);
+    const main = _s0(_n+2);
     usingnamespace _symbol.symbols;
 };
 fn _init_symbolTable(thread: *_thread.Thread) void {
@@ -30,23 +33,29 @@ fn _init_symbolTable(thread: *_thread.Thread) void {
 \\ start main
                  ) catch @panic("_init_symbolTable failed");
 }
+const Object_defs = struct {
+    fn class_MI(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
+        if (!selector.equals(_s.class)) return _dnu(selector,self,other,_cc,_dp,_do,_s.class);
+        return _MR{.Normal=_prim.prim_111_class(self,other,_cc) catch unreachable};
+    }
+    const instance_methods = ([_]_dispatch.SymbolMethod{
+    })[0..];
+    const class_methods = ([_]_dispatch.SymbolMethod{
+        .{.selector=_s.class,.method=class_MI},
+    })[0..];
+    inline fn init(t:*_thread.Thread) !_O { return _init(t,_s.System,instance_methods,class_methods);}
+};
 const System_defs = struct {
-    fn startMethod(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP) _MR {
-        if (!selector.equals(_s.start)) return _dnu(selector,self,other,_cc,_dp);
+    fn start_MC(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
+        if (!selector.equals(_s.start)) return _dnu(selector,self,other,_cc,_dp,_do,_s.start);
         return _MR{.Normal=self};
     }
     const instance_methods = ([_]_dispatch.SymbolMethod{
     })[0..];
-    const class_methods = ([0]_dispatch.SymbolMethod{
-        .{.selector=_s.start,.method=startMethod},
+    const class_methods = ([_]_dispatch.SymbolMethod{
+        .{.selector=_s.start,.method=start_MC},
     })[0..];
-    fn init(t:*_thread.Thread) !_O {
-        try _stdout.writer().print("before getClass\n",.{});
-        const class = _class.getClass(_s.System);
-        try _stdout.writer().print("before addClass\n",.{});
-        try _dispatch.addClass(t,_s.System,instance_methods,class_methods);
-        return class;
-    }
+    fn init(t:*_thread.Thread) !_O { return _init(t,_s.System,instance_methods,class_methods);}
 };
 test "try a thread" {
     var thread = try _thread.Thread.initForTest();

@@ -125,6 +125,14 @@ pub const Class_S = packed struct{
     classVariables: Object,
     subclasses: Object,
 };
+pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print("before addClass\n",.{});
+    try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
+    try stdout.print("before getClass\n",.{});
+    return getClass(className);
+}
+
 pub fn getClass(name: Object) Object {
     _ = name;
     @panic("unimplemented");

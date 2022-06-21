@@ -1,36 +1,26 @@
-const MethodReturns = @import("dispatch.zig").MethodReturns;
-const Normal = MethodReturns.Normal;
-const PrimitiveFailed = MethodReturns.PrimitiveFailed;
-const NonLocal = MethodReturns.NonLocal;
-const ExceptionSignaled = MethodReturns.ExceptionSignaled;
-
-const Thread = @import("thread.zig").Thread;
+const _MR = @import("dispatch.zig").MethodReturns;
+const Context = @import("dispatch.zig").Context;
 const object = @import("object.sig");
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-pub const PrimitiveErrors = error {Failure, WithArg};
 
-pub inline fn @"prim_1_+"(thread: *Thread) PrimitiveErrors!MethodReturns {
-    const stack = thread.stack();
-    if (stack[0].is_int()) {
-        const other = stack[0].to(i64);
-        stack[1]+=@bitCast(Object,@bitCast(i64,stack[1])+other);
-        thread.pop(1);
-        return .Normal;
+pub inline fn @"prim_1_+"(self: Object, other: Object, _: *Context) !_MR {
+    if (other.is_int()) {
+        const o = other.to(i64);
+        const result = @bitCast(Object,@bitCast(i64,self)+o);
+        if (result.is_int()) return _MR{.Normal=result};
     }
-    return .Failure;
+    return error.Failure;
 }
-pub inline fn @"prim_110_=="(thread: *Thread) PrimitiveErrors!MethodReturns { // ProtoObject>>==
-    const stack = thread.stack();
-    stack[1] = if (stack[0].equals(stack[1])) True else False;
-    thread.pop(1);
-    return .Normal;
+pub inline fn @"prim_110_=="(self: Object, other: Object, _: *Context) !_MR { // ProtoObject>>==
+    return _MR{.Normal=Object.from(self.equals(other))};
 }
-pub inline fn @"prim_169_~~"(thread: *Thread) PrimitiveErrors!MethodReturns { // ProtoObject>>~~
-    const stack = thread.stack();
-    stack[1] = if (stack[0].equals(stack[1])) False else True;
-    thread.pop(1);
-    return .Normal;
+pub inline fn @"prim_169_~~"(self: Object, other: Object, _: *Context) !_MR { // ProtoObject>>~~
+    return _MR{.Normal=Object.from(!self.equals(other))};
+}
+pub inline fn prim_111_class(self: Object, _: Object, _: *Context) !_MR { // ProtoObject>>class
+    _ = self;
+    return Nil;
 }

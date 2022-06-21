@@ -13,7 +13,7 @@
 - use a perfect hash for dispatch, since all symbol hashes are unique, and have the target method verify the hash match else call DNU (where the dynamic version DNU code will see if there is a method to fill in, and do that, else real DNU). because it's a perfect hash, don't need keys, and size doesn't need to be prime (just odd? experiment for size and speed with prime, any, odd, power of 2 (which could be significantly faster))
 - hashing
 	- for literal values basicIdentityHash (primitive 171) will just be the values or'ed with 0xFFF8000...0, which will turn it into an integer. For in-memory objects (primitive75), it will be the header word or'ed with 0xFFFBFF000...00, which will turn it into an integer, masking out the length and format bits
-	- tagged address for objects (tag 1) mod 16777213 will give a good 24 bit hash value. Better would muliply by 2^40/phi
+	- tagged address for objects (tag 1) mod 16777213 will give a good 24 bit hash value. Better would muliply by 2^24/phi
 - the object header for BlockClosure will have the number of parameters encoded in the  hash value and BlockClosure as the class, This will be followed by code address (which would look like a double, if anyone could see it), then `self`, a reference to the indirect vector if any, and the closure fields.
 - when code is generated for a method, any messages that are inlined must be noted so that if any of them are replaced, the generated code can be invalidated so that it can be regenerated - likely do this conservatively
 - some thoughts on handling primitives, that don't seem relevant now: dispatch handles special symbol values that can't come from Smalltalk code
