@@ -31,26 +31,26 @@
 - `at:`, `at:put:` and `instVarAt:`,`instVarAt:put:` are opposite for most classes; e.g. Array has the former, but the latter signal an error, whereas Point has the opposite behavior. Therefore, when looking up one of these on a failed dispatch, we can choose the appropriate implementations of these depending on the format of the class. Ditto for ByteArray/String, Symbol, format 9.
 - by making SmallInteger be groups 8-F, they are the last values in the 64-but values. By coding them as 51-bit values and with the negative integers first it means several optimizations fall out:
 	- comparisons
-		1. a u64 comparison will give the correct signed comparison for 2 tagged values. Testing if the other is larger than self doesn't even have to check if it's an integer... it has to be (though if it's less, we have to check and may fail the primitive)
+		1. a u64 comparison will give the correct signed comparison for 2 tagged values. Testing if the other is larger than or equal to self doesn't even have to check if it's an integer... it has to be (though if it's less, we have to check and may fail the primitive)
 		2. anding with 1 will correctly test for odd/even
 	- arithmetic
-		1. adding untagged positive integers to a tagged integer treated as a signed integer will always stay in the range of SmallInteger unless the result is positive, in which case there has just been overflow
-		2. adding a small positive value, say less than 4 to a value for which the only other assignment is less than say 4 (including all negative) we don't need to check for overflow as we'd have to do it 2^47 times or so to overflow
-		3. similarly subtracting  an untagged positive integer is in overflow if the result is less than (0xfff8000000000000) (treated as a u64)
-		4. `or`, `xor`, etc. with positive untagged integers will work correctly
-		5. `or`, `and` with *tagged* positive integers will work correctly
+		1. adding/subtracting untagged 50-bit integers to a tagged integer will always stay in the range of SmallInteger unless the result is less than u64_MINVAL, in which case there has just been overflow
+		2. adding a small positive value, say less than 4 to a value for which the only other assignment is less than say 4 (including all negative) we don't need to check for overflow as we'd have to do it 2^48 times or so to overflow
+		3. `or`, `xor`, etc. with positive untagged integers will work correctly
+		4. `or`, `and` with *tagged* positive integers will work correctly
 	- conversion
 		1.  subtracting a tagged 0 (0xfffc000000000000) will give an untagged 51-bit integer
 		2. adding an untagged 51-bit integer to a tagged 0 will give the correctly tagged SmallInteger. if the result is less than u64_MINVAL, there was overflow
-		3. **I have better hash now** For any immediate value (class 2-8) taking a remainder of the whole u64 with a large prime (4294967291 (0xfffffffb) is the largest 32-bit prime) should give an excellent hash. Doing a 64-bit multiply wouldn't work well for e.g. floating point or true/false/nil. Remainder with 16777213 (0xfffffd) - the largest 24 bit prime - might be better as it will keep all the hashes in the same range.
-		- hashing - `or` any immediate (including doubles) with 0xfffdffff00000000 will give a 32-bit positive (`xor` with >>32 first would be even better)
+	- hashing
+		1. `or` any immediate (including doubles) with 0xfffdffff00000000 will give a 32-bit positive (`xor` with >>32 first would be even better)
+		2. any in memory, take the low 32 bits of the address, multiply by 2^32/phi and shift right 8 bits. xor with the high bits wouldn't increase randomness.
 - error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure - update: the primitives, as methods will simply push an ec on the stack (if appropriate) and return a PrimitiveFailed
 - become: /elementsExchangeIdentityWith: need to preserve/swap hash values so that dictionaries continue to work correctly
 - DNU goes to class initial lookup class - e.g. super, not starting at the object
 - if parameters and local values are immediates we don't need to keep them on the stack, because they won't be affected by garbage collection. If there are non-local-return blocks, then self will need to be maintained and values referenced by escaping blocks will have to reside in the closure as tagged values.
 -  For closures, the high 8 bits of the hash is the number of parameters for that closure. When exiting a method, any block closure that has a non-local return should have its parameter count set to 255. Then when any `value`, `value:`, etc. is sent, those methods in `BlockClosure` will be called and will fail
 - convert all `<primitive: 42>` pragmas to a send to `primitive_42` with appropriate parameters and possibly an error block. Then they can be inlined specially, even for low-optimized compilers/tests
-- If a value from the stack isn't a heap object, then it can be copied to a local variable (in Zig) of the appropriate type and removed from the stack, but any heap object (including block closure) created in a method has to be added to the stack, and any such values created must be copied to the stack (and re-loaded from the stack following any actual send, because a GC might have happened - ditto for any forced GC)
+- **This has changed** If a value from the stack isn't a heap object, then it can be copied to a local variable (in Zig) of the appropriate type and removed from the stack, but any heap object (including block closure) created in a method has to be added to the stack, and any such values created must be copied to the stack (and re-loaded from the stack following any actual send, because a GC might have happened - ditto for any forced GC)
 - For each heap, keep the address of the bottom & top of the heap arena as tagged object pointers so that when scanning, for each object, if (obj<obj_high and obj>obj_low) then it's in this arena so copy it - otherwise treat it as a literal
 - `on:do:` adds to a linked list through the runtime stack of the thread so that a subsequent signal can evaluate the do block if the exception matches, so it is possible to resume. If it doesn't resume, unwind the stack to the calling point, handling `ensure:`s on the way.
 - non-local returns will similarly unwind the stack to the appropriate method, handling `ensure:`s on the way.

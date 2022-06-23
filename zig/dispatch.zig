@@ -10,6 +10,7 @@ const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
+pub const u32_phi_inverse=2654435769;
 pub const MethodReturns = union(enum) {
     Normal: Object,
     NonLocal,
@@ -19,14 +20,14 @@ pub const MethodReturns = union(enum) {
     }
 };
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
-pub const methodT = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr) MethodReturns;
+pub const MethodType = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, dnuOption: DNUOption) MethodReturns;
 const noArgs = ([0]Object{})[0..];
 pub const Context = packed struct { // this will be the start of a packed struct that will contain space for all the required fields
     header: Object, // heap.Header
     _name: Object, // this field is the symbol with the name of the method
     _previous: Object, // *Context as non-heap object (or nil if no previous)
     _thread: Object, // *Thread as non-heap object (or nil if not yet needed)
-    // fields: [...]Object, indexable as 1..
+    // fields: [...]Object, indexable as 4..
     inline fn at(self: *Context,index: usize) Object {
         return @ptrCast([*]Object,&self.header)[index];
     }
@@ -63,19 +64,18 @@ pub const Context = packed struct { // this will be the start of a packed struct
     }
 };
 pub const make_init_cxt = Context.make_init_cxt;
-pub const SymbolMethod = packed struct{ selector: Object, method: methodT};
+pub const SymbolMethod = packed struct{ selector: Object, method: MethodType};
 const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
     super: u32,
-    methods: [1]SymbolMethod, // normally this is many elements, overwriting the remaining fields
+    methods: [1]MethodType, // normally this is many elements, overwriting the remaining fields
     altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
-    altMethods: [1]SymbolMethod, // altMethods as the many elements dispatch table if the constraints are met
+    altMethods: [1]MethodType, // altMethods as the many elements dispatch table if the constraints are met
 };
 pub const DispatchPtr = *Dispatch;
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]*Dispatch = undefined;
-const u32_phi_inverse=2654435769;
 inline fn bumpSize(size:u16) u16 {
     return size*2;
 }
@@ -195,18 +195,18 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
-        const stage2 = [_]methodT{stage2a};
+        const stage2 = [_]MethodType{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
             const dispatchSize = Self.findTableSize(symbolMethods,null);
             const rand = dispatchSize.hash();
             const size = dispatchSize.size();
-            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(methodT),Dispatch) catch unreachable;
+            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;
-            const methods=@ptrCast([*]SymbolMethod,&strct.methods);
-            for (methods[0..dispatchSize]) |*sm| {
-                sm.method=dnu;
+            const methods=@ptrCast([*]MethodType,&strct.methods);
+            for (methods[0..dispatchSize]) |*method| {
+                method.*=dnu;
             }
             for (symbolMethods) |*sm| {
                 const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
@@ -285,28 +285,28 @@ test "tablesize" {
 fn id_sm(x:SymbolMethod) u32 {return x.selector.hash;}
 const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
 
-fn testNormal(_: Object, self: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn testNormal(_: Object, self: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=self};
 }
-fn testNonLocal(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn testNonLocal(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns.NonLocal;
 }
-fn test1(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test1(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(1)};
 }
-fn test2(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test2(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(2)};
 }
-fn test3(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test3(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(3)};
 }
-fn test4(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test4(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(4)};
 }
-fn test5(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test5(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(5)};
 }
-fn test6(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr) MethodReturns {
+fn test6(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
     return MethodReturns{.Normal=Object.from(6)};
 }
 pub const noMethods = ([0]SymbolMethod{})[0..];
@@ -370,7 +370,7 @@ pub inline fn callClass(selector: Object, self: Object, other: Object, cp: *Cont
     const disp = classDispatch[theClass];
     const rand = disp.hash;
     const index = selector.hash *% rand >> @truncate(u5,rand);
-    return disp.methods[index].method(selector, self, other, cp, disp, null);
+    return disp.methods[index](selector, self, other, cp, disp, null);
 }
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
@@ -397,16 +397,18 @@ test "lookups of proper methods" {
     try expectEqual(t42.send(symbols.@"value:",Nil,undefined),MethodReturns{.Normal=Object.from(5)});
     try expectEqual(t42.send(symbols.@"cull:cull:cull:cull:",Nil,undefined),MethodReturns{.Normal=Object.from(6)});
 }
-pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, expectedSelector: Objct) MethodReturns {
+pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, expectedSelector: Object, dnuOption: DNUOption) MethodReturns {
     _ = selector;
     _ = self;
     _ = other;
     _ = callingContext;
     _ = disp;
     _ = expectedSelector;
+    _ = dnuOption;
     @panic("dnu");
 }
-
+const DNU = struct{};
+pub const DNUOption = ?*DNU;
 fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     var p : [n_primes]T = undefined;
     var possible : T = 3;

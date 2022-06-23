@@ -6,6 +6,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const dispatch = @import("dispatch.zig");
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
@@ -492,7 +493,7 @@ pub const Arena = struct {
         const asize = (array_size*width+objectWidth-width)/objectWidth;
         const form = Format.none.raw(T,array_size);
         const size = @minimum(asize,32767);
-        var totalSize = asize+(if (size<asize) @as(usize,2) else 1);
+        var totalSize = asize+@as(usize,if (size<asize) 2 else 1);
         return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO); //,&[0]Object{});
     }
     pub fn allocStruct(self : *Self, classIndex : class.ClassIndex, width : usize, comptime T: type, fill: Object) !*T {
@@ -507,7 +508,7 @@ pub const Arena = struct {
         const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
         if (@ptrToInt(end)>@ptrToInt(self.tos)) return error.HeapFull;
         self.heap = end;
-        const hash = if (builtin.is_test) 0 else @intCast(u24,@ptrToInt(result)%16777213);
+        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%dispatch.u32_phi_inverse>>8);
         const head = header(@intCast(u16,size),form,classIndex,hash);
         result.* = @bitCast(Object,head);
         mem.set(Object,@ptrCast([*]Object,result)[1..totalSize],fill);

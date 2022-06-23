@@ -18,6 +18,8 @@ const _MR = _dispatch.MethodReturns;
 const _DP = _dispatch.DispatchPtr;
 const _CXT = _dispatch.Context;
 const _dnu = _dispatch.dnu;
+const _SM = _dispatch.SymbolMethod;
+const _DO = _dispatch.DNUOption;
 const _s = struct {
     const nil = _nil;
     const @"true" = _object.True;
@@ -38,16 +40,16 @@ const Object_defs = struct {
         if (!selector.equals(_s.class)) return _dnu(selector,self,other,_cc,_dp,_do,_s.class);
         return _MR{.Normal=_prim.prim_111_class(self,other,_cc) catch unreachable};
     }
-    const instance_methods = ([_]_dispatch.SymbolMethod{
+    const instance_methods = ([_]_SM{
     })[0..];
-    const class_methods = ([_]_dispatch.SymbolMethod{
+    const class_methods = ([_]_SM{
         .{.selector=_s.class,.method=class_MI},
     })[0..];
     inline fn init(t:*_thread.Thread) !_O { return _init(t,_s.System,instance_methods,class_methods);}
 };
 const System_defs = struct {
     fn start_MC(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
-        if (!selector.equals(_s.start)) return _dnu(selector,self,other,_cc,_dp,_do,_s.start);
+        if (!selector.equals(_s.start)) return _dnu(selector,self,other,_cc,_dp,_s.start,_do);
         return _MR{.Normal=self};
     }
     const instance_methods = ([_]_dispatch.SymbolMethod{
