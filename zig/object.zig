@@ -73,13 +73,8 @@ const objectMethods = struct {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (self.is_memory() 
-                                //)
-                                //switch (ptrInfo.child) {
-                                //    .Struct => |structInfo| {
-                                //        indexOfScalar([]u8,structInfo.
-                                and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
-                            if (ptrInfo.child.includesHeader) {
+                        if (self.is_memory() and (!@hasField(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
+                            if (@hasField(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(heap.Header));

@@ -1,4 +1,5 @@
 const std = @import("std");
+const os = std.os;
 const builtin = @import("builtin");
 const u32_phi_inverse=2654435769;
 inline fn bumpSize(size:u16) u16 {
@@ -156,7 +157,7 @@ test "timing" {
     try time(400_000);
 }
 pub fn main() !void {
-    time(1_000_000);
+    try time(1_000_000*os.argv.len);
 }
 fn time(count: u64) !void {
     const stdout = std.io.getStdOut().writer();
@@ -164,41 +165,51 @@ fn time(count: u64) !void {
     var key:u32 = 12345;
     var size:u32 = 0;
     var loop=count*10;
+    const mask = initialSize(@truncate(u16,count));
     while (loop>0) : (loop-=1) {
-        size=1000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
-            key = key&size;
+            key +=size;
+            key = key&mask;
     }}
     loop=count;
     var start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
-            key = key&size;
+            key +=size;
+            key = key&mask;
     }}
     const base = ts()-start;
     try stdout.print("base: {d:12}\n",.{base});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
-            key = key%size;
+            key +=size;
+            key = key%mask;
     }}
     try stdout.print("mod:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
+            key +=size;
             key= (key^(key>>5)^(key>>3)) & size;
     }}
     try stdout.print("xor:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
+            key +=size;
             key=key^(key>>5);
             key=key^(key>>3);
             key= key & size;
@@ -207,35 +218,43 @@ fn time(count: u64) !void {
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         while (size>0) : (size-=1) {
+            key +=size;
             key= key*%12345 & size;
     }}
     try stdout.print("mult: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         const sh:u5 = @truncate(u5,@clz(u32,size));
         while (size>0) : (size-=1) {
+            key +=size;
             key= key*%2654435769 >> sh;
     }}
     try stdout.print("phi:  {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         const rand =u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
         while (size>0) : (size-=1) {
+            key +=size;
             key= key *% rand >> @truncate(u5,rand);
     }}
     try stdout.print("phix: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});
     loop=count;
     start=ts();
     while (loop>0) : (loop-=1) {
-        size=1000;
+        size=@truncate(u32,loop)%2000;
+        key ^= @truncate(u32,loop)^mask;
         const rand = u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
         while (size>0) : (size-=1) {
+            key +=size;
             key = key *% rand >> @truncate(u5,rand);
     }}
     try stdout.print("phi+: {d:12} {d:12} {any}\n",.{ts()-start,ts()-start-base,key});

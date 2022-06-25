@@ -120,7 +120,6 @@ pub const Metaclass_S = packed struct{
     soleInstance: Object,
 };
 pub const Class_S = packed struct{
-    pub const ClassIndex = 0;
     pub const includesHeader = true;
     const size =  @sizeOf(Class_S)-@sizeOf(Object);
     super: ClassDescription_S,
