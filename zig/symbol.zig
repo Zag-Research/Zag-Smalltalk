@@ -1,4 +1,5 @@
 const std = @import("std");
+const mem = std.mem;
 const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
@@ -10,7 +11,7 @@ inline fn symbol_of(index: u64, arity: u64) object.Object {
     return symbol0(index|(arity<<24));
 }
 pub inline fn symbol0(index: u64) object.Object {
-    return @bitCast(object.Object,index|((@as(u64,0xfff700)+class.Symbol_I)<<40));
+    return @bitCast(object.Object,index|((@as(u64,0xfff70000)+class.Symbol_I)<<32));
 }
 pub inline fn symbol1(index: u64) object.Object {
     return symbol_of(index,1);
@@ -83,32 +84,37 @@ pub const symbols = struct {
     pub const name = symbol0(56);
 };
 pub const predefinedSymbols = 57;
-var symbolTable : Symbol_Table = undefined;
+var symbolTable : ?Symbol_Table = null;
 
-pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !void {
+pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !Symbol_Table {
     var arena = thr.getArena().getGlobal();
-    symbolTable = try Symbol_Table.init(arena,initialSymbolTableSize);
-    symbolTable.loadInitialSymbols(arena);
-    symbolTable.loadSymbols(arena,str);
+    var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
+    symbolTable = st;
+    st.loadInitialSymbols(arena);
+    st.loadSymbols(arena,str);
+    return st;
 }
 pub fn deinit(thr: *thread.Thread) void {
     _ = thr;
-    symbolTable.deinit();
+    (symbolTable orelse unreachable).deinit();
+}
+pub fn asString(string: object.Object) object.Object {
+    return (symbolTable orelse unreachable).asString(string);
 }
 pub fn loadSymbols(thr: *thread.Thread,str:[]const u8) void {
     var arena = thr.getArena().getGlobal();
-    symbolTable.loadSymbols(arena,str);
+    (symbolTable orelse unreachable).loadSymbols(arena,str);
 }
 pub fn lookupLiteral(string: []const u8) object.Object {
-    return symbolTable.lookupLiteral(string);
+    return (symbolTable orelse unreachable).lookupLiteral(string);
 }
 pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
-    const result = symbolTable.internLiteral(arena, string);
+    const result = (symbolTable orelse unreachable).internLiteral(arena, string);
     if (!result.is_nil()) return result;
     unreachable; // out of space
 }
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
-    return symbolTable.intern(thr,string);
+    return (symbolTable orelse unreachable).intern(thr,string);
 }
 const objectTreap = treap.Treap(object.Object);
 fn numArgs(obj: object.Object) u32 {
@@ -135,6 +141,10 @@ const Symbol_Table = struct {
     }
     fn deinit(s: *Self) void {
         s.*=undefined;
+    }
+    fn asString(s: *Self,string: object.Object) object.Object {
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        return trp.at(@truncate(u24,string.hash));
     }
     fn lookupLiteral(s: *Self, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
@@ -204,10 +214,9 @@ const Symbol_Table = struct {
 
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
-    var buffer: [6000]u8 align(8)= undefined;
-    var arena = heap.tempArena(&buffer);
-    var symbol = try Symbol_Table.init(&arena,250);
-    symbol.loadInitialSymbols(&arena);
+    const expect = std.testing.expect;
+    var thr = try thread.Thread.initForTest();
+    var symbol = symbolTable orelse try init(&thr,250,"");
     defer symbol.deinit();
     try expectEqual(symbols.@"valueWithArguments:",symbol.lookupLiteral("valueWithArguments:"));
     try expectEqual(symbols.@"cull:",symbol.lookupLiteral("cull:"));
@@ -255,4 +264,6 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbols.@"*",symbol.lookupLiteral("*"));
     try expectEqual(symbols.size,symbol.lookupLiteral("size"));
     try expectEqual(symbols.ClassTable,symbol.lookupLiteral("ClassTable"));
+    try expect(mem.eql(u8,"valueWithArguments:"[0..],symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+    try expect(mem.eql(u8,"value:"[0..],symbols.@"value:".as_string()));
 }

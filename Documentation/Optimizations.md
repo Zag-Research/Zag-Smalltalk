@@ -44,7 +44,7 @@
 	- hashing
 		1. `or` any immediate (including doubles) with 0xfffdffff00000000 will give a 32-bit positive (`xor` with >>32 first would be even better)
 		2. any in memory, take the low 32 bits of the address, multiply by 2^32/phi and shift right 8 bits. xor with the high bits wouldn't increase randomness.
-- error codes in <primitive:ec:> are usually symbols, nil, or occasionally integers - need to find a good way to handle primitive failure - update: the primitives, as methods will simply push an ec on the stack (if appropriate) and return a PrimitiveFailed
+- primitives will fail with a Zig error. if the primitive is supposed to return an error code, it will be passed a pointer to an Object to store the code.
 - become: /elementsExchangeIdentityWith: need to preserve/swap hash values so that dictionaries continue to work correctly
 - DNU goes to class initial lookup class - e.g. super, not starting at the object
 - if parameters and local values are immediates we don't need to keep them on the stack, because they won't be affected by garbage collection. If there are non-local-return blocks, then self will need to be maintained and values referenced by escaping blocks will have to reside in the closure as tagged values.

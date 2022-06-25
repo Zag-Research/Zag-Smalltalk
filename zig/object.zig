@@ -2,6 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
+const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
@@ -14,7 +15,7 @@ inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
 inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
-    return ((@as(u64,0xfff7)<<8)+c<<40)+h;
+    return ((@as(u64,0xfff7)<<16)+c<<32)+h;
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    0xfff0000000000000;
@@ -62,7 +63,7 @@ const objectMethods = struct {
         if (@bitCast(u64, self) <= Start_of_Pointer_Objects) return false;
         return @bitCast(u64, self) <= End_of_Heap_Objects;
     }
-    pub inline fn to(self: Object, comptime T:type) T {
+    pub  fn to(self: Object, comptime T:type) T {
         switch (T) {
             i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
@@ -72,24 +73,29 @@ const objectMethods = struct {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} 0x{x:0>16} 0x{x}\n",.{@bitCast(u64,self),@bitCast(u64,self.to(HeapConstPtr).*),ptrInfo.child.ClassIndex}) catch unreachable;
-                        if (self.is_memory() and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))
-                            return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(Object));
+                        if (self.is_memory() 
+                                //)
+                                //switch (ptrInfo.child) {
+                                //    .Struct => |structInfo| {
+                                //        indexOfScalar([]u8,structInfo.
+                                and (ptrInfo.child.ClassIndex==0 or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
+                            if (ptrInfo.child.includesHeader) {
+                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
+                            } else
+                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(heap.Header));
+                        }
                     },
                     else => {},
                 }
             },
         }
+        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} {}\n",.{@bitCast(u64,self),T}) catch unreachable;
         @panic("Trying to convert Object to unknown type");
     }
-    pub inline fn as_string(self: Object) []const u8 {
-        //
-        // symbol handling broken
-        //
-        _ = self;
-        return "dummy string";
+    pub  fn as_string(self: Object) []const u8 {
+        return symbol.asString(self).arrayAsSlice(u8);
     }
-    pub inline fn arrayAsSlice(self: Object, comptime T:type) []T {
+    pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
         if (self.is_memory()) return self.to(HeapPtr).arrayAsSlice(T);
         return &[0]T{};
     }
@@ -187,18 +193,16 @@ const objectMethods = struct {
     }
     pub const alignment = @alignOf(u64);
 };
-pub const Tag = enum(u8) { Object = 1, False, True, UndefinedObject, Symbol, Character, Context };
+pub const Tag = enum(u16) { Object = 1, False, True, UndefinedObject, Symbol, Character, Context };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
         signMantissa: u16, // align(8),
         tag: Tag,
-        nArgs : u8,
         hash: u32,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
         hash: u32, // align(8),
-        nArgs : u8,
         tag: Tag,
         signMantissa: u16,
         usingnamespace objectMethods;
@@ -235,8 +239,7 @@ test "printing" {
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    const symbol = @import("symbol.zig");
     try stream.print("{}\n",.{Object.from(42)});
     try stream.print("{}\n",.{symbol.symbols.yourself});
-    try std.testing.expectEqualSlices(u8, "42\n#dummy string\n", fbs.getWritten());
+    try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }

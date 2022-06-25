@@ -378,6 +378,8 @@ fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
+    _ = try symbol.init(&thread,250,"");
+    try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
     const t42 = Object.from(42);
     thread.push(Object.from(17));
@@ -387,6 +389,8 @@ test "addClass and call" {
 test "lookups of proper methods" {
     const expectEqual = @import("std").testing.expectEqual;
     var thread = try Thread.initForTest();
+    _ = try symbol.init(&thread,250,"");
+    try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);
     const t42 = Object.from(42);
     thread.push(Object.from(17));

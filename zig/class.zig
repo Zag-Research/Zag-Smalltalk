@@ -109,60 +109,75 @@ const Behavior_S = packed struct {
 };
 const ClassDescription_S = packed struct {
     super: Behavior_S,
-    index: ClassIndex,
+    index: Object,
     organization: Object,
 };
 pub const Metaclass_S = packed struct{
     pub const ClassIndex = Metaclass_I;
+    pub const includesHeader = true;
+    const size = @sizeOf(Metaclass_S)-@sizeOf(Object);
     super: ClassDescription_S,
     soleInstance: Object,
 };
 pub const Class_S = packed struct{
     pub const ClassIndex = 0;
+    pub const includesHeader = true;
+    const size =  @sizeOf(Class_S)-@sizeOf(Object);
     super: ClassDescription_S,
     name: Object,
     instVarNames: Object,
     classVariables: Object,
     subclasses: Object,
 };
+
+pub inline fn getClassIndex(className: Object) ClassIndex {
+   return classTable.intern(className);
+}
+pub fn getClass(className: Object) Object {
+    return classes[getClassIndex(className)];
+}
+pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !void {
+//    const stdout = std.io.getStdOut().writer();
+    const class_I = getClassIndex(className);
+    var class: *Class_S = undefined;
+    var metaclass: *Metaclass_S = undefined;
+    if (classes[class_I].is_nil()) {
+        const arena = thr.getArena().getGlobal();
+        const metaclass_I = classTable.nextFree();
+        metaclass = arena.allocStruct(Metaclass_I, Metaclass_S.size, Metaclass_S, Nil) catch @panic("No space");
+        classes[metaclass_I] = Object.from(metaclass);
+        class = arena.allocStruct(metaclass_I, Class_S.size, Class_S, Nil) catch @panic("No space");
+        const class_O = Object.from(class);
+        metaclass.super.index=Object.from(class_I);
+        metaclass.soleInstance=class_O;
+        class.super.index=Object.from(class_I);
+        class.name=className;
+        classes[class_I] = class_O;
+//        try stdout.print("\nnew ", .{});
+    } else {
+        class = classes[class_I].to(*Class_S);
+//        try stdout.print("\nexisting ", .{});
+        metaclass = classes[class.super.super.header.classIndex].to(*Metaclass_S);
+    }
+//    try stdout.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,@bitCast(u64,classes[class_I])});
+    var superclass_I = classTable.lookup(superclassName);
+    if (superclass_I==0)
+        superclass_I = classTable.lookup(symbols.Class);
+    // *****************************
+    // * This is not correct
+    // *****************************
+//    try stdout.print("superclass:{}\n", .{superclass_I});
+    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
+    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
+//    try stdout.print(" class:{}\n", .{class});
+//    try stdout.print(" metaclass:{}\n", .{metaclass});
+}
 pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("before addClass\n",.{});
     try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
     try stdout.print("before getClass\n",.{});
     return getClass(className);
-}
-
-pub fn getClass(name: Object) Object {
-    _ = name;
-    @panic("unimplemented");
-}
-pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !void {
-    const stdout = std.io.getStdOut().writer();
-    const class_I = classTable.intern(className);
-    try stdout.print("subClass 0x{x:0>16} {} 0x{x:0>16}\n", .{@bitCast(u64,className),class_I,@bitCast(u64,classes[class_I])});
-    var class: *Class_S = undefined;
-    var metaclass: *Metaclass_S = undefined;
-    if (classes[class_I].is_nil()) {
-        const arena = thr.getArena().getGlobal();
-        const metaclass_I = classTable.nextFree();
-        metaclass = arena.allocStruct(metaclass_I, @sizeOf(Metaclass_S)-@sizeOf(Object), Metaclass_S, Nil) catch @panic("No space");
-        classes[metaclass_I] = Object.from(metaclass);
-        class = arena.allocStruct(class_I, @sizeOf(Class_S)-@sizeOf(Object), Class_S, Nil) catch @panic("No space");
-        classes[class_I] = Object.from(class);
-    } else {
-        class = classes[class_I].to(*Class_S);
-        //metaclass =
-        return error.UnImplemented;
-    }
-    var superclass_I = classTable.lookup(superclassName);
-    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
-    if (superclass_I>0 and !classes[superclass_I].is_nil()) {
-        return error.SuperclassAlreadyDefined;
-    } else {
-        superclass_I = classTable.lookup(symbols.Class);
-    }
-    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
 }
 pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
@@ -179,7 +194,7 @@ pub fn init(thr: *thread.Thread) !void {
 test "classes match initialized class table" {
     const expectEqual = std.testing.expectEqual;
     var thr = try thread.Thread.initForTest();
-    try symbol.init(&thr,500,"");
+    _ = try symbol.init(&thr,500,"");
     try init(&thr);
     var class = classTable;
     try expectEqual(Object_I,class.lookupLiteral("Object"));

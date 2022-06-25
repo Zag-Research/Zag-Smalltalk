@@ -56,6 +56,9 @@ pub fn Treap(comptime K:type) type {
             self.table[pos].left=0;
             return pos;
         }
+        pub fn at(self: *Self,index: u32) K {
+            return self.table[index].key;
+        }
         inline fn priority(pos:u32) u32 { // "random" number based on position in the array
             return pos *% 0xa1fdc7a3;
         }
@@ -169,12 +172,14 @@ test "simple u64 treap alloc" {
     const f2 = try treap.insert(42);
     try expectEqual(f2,1);
     try expectEqual(treap.lookup(42),1);
+    try expectEqual(treap.at(f2),42);
     const f1 = try treap.insert(17);
     try expectEqual(f1,2);
     const f3 = try treap.insert(94);
     const t3 = try treap.insert(94);
     try expectEqual(f3,3);
     try expectEqual(f3,t3);
+    try expectEqual(treap.at(f3),94);
     _ = try treap.insert(43);
     _ = try treap.insert(44);
     try expectEqual(treap.lookup(44),5);
