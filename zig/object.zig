@@ -69,15 +69,15 @@ const objectMethods = struct {
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
-            HeapPtr,HeapConstPtr,*Context,*Thread => {if (self.is_memory()) return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));},
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (self.is_memory() and (!@hasField(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
-                            if (@hasField(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
+                        if (self.is_memory() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
+                            if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
-                            } else
+                            } else {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(heap.Header));
+                            }
                         }
                     },
                     else => {},

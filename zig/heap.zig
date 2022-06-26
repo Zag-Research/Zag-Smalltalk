@@ -308,6 +308,7 @@ pub const Header = switch (native_endian) {
         hash: u24,
         classIndex: u16,
         usingnamespace heapMethods;
+        pub const includesHeader = true;
     },
     .Little => packed struct {
         classIndex: u16, // align(8),
@@ -315,6 +316,7 @@ pub const Header = switch (native_endian) {
         objectFormat: Format,
         length: u16,
         usingnamespace heapMethods;
+        pub const includesHeader = true;
     },
 };
 pub inline fn header(length : u16, format : Format, classIndex : u16, hash: u24) Header {
@@ -375,7 +377,7 @@ pub const TestArena = Arena {
     .tos = undefined,
     .allocated = undefined,
     .collectTo = undefined,
-    .size = 2048,
+    .size = 32768,
 };
 const testVtable =  Arena.Vtable {
     .getGlobal = getGlobalSelf,
@@ -503,10 +505,14 @@ pub const Arena = struct {
         var totalSize = asize+1;
         return @ptrCast(*T,@alignCast(8,try self.alloc(classIndex, form, asize, 0, asize, totalSize, fill)));
     }
-    inline fn alloc(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object) !HeapPtr {
+    fn alloc(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object) !HeapPtr {
         const result = self.heap;
         const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
-        if (@ptrToInt(end)>@ptrToInt(self.tos)) return error.HeapFull;
+        if (@ptrToInt(end)>@ptrToInt(self.tos)) {
+            const stdout = std.io.getStdOut().writer();
+            stdout.print("classIndex={} totalSize={} end=0x{X:0>16} tos=0x{X:0>16}\n",.{classIndex,totalSize,@ptrToInt(end),@ptrToInt(self.tos)}) catch unreachable;
+            return error.HeapFull;
+        }
         self.heap = end;
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%dispatch.u32_phi_inverse>>8);
         const head = header(@intCast(u16,size),form,classIndex,hash);
@@ -515,7 +521,7 @@ pub const Arena = struct {
         if (totalSize>size+1) @ptrCast([*]Object,result)[iv_size+1] = @bitCast(Object,asize);
         return @ptrCast(HeapPtr,result);
     }
-    pub inline fn allocString(self: *Self, source: []const u8) !HeapPtr {
+    pub  fn allocString(self: *Self, source: []const u8) !HeapPtr {
         const result = try self.allocRaw(class.String_I,source.len,u8);
         //const stdout = std.io.getStdOut().writer();
         //stdout.print("result={} ptr=0x{x:0>16} len={}\n",.{result,@ptrToInt(result.indexables(u8).ptr),result.indexables(u8).len}) catch unreachable;

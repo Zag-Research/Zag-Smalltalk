@@ -28,6 +28,7 @@ pub const Context = packed struct { // this will be the start of a packed struct
     _previous: Object, // *Context as non-heap object (or nil if no previous)
     _thread: Object, // *Thread as non-heap object (or nil if not yet needed)
     // fields: [...]Object, indexable as 4..
+    pub const includesHeader = true;
     inline fn at(self: *Context,index: usize) Object {
         return @ptrCast([*]Object,&self.header)[index];
     }
@@ -355,10 +356,9 @@ test "findTableSize" {
     try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),16);
 }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
-    _ = thread;
-    _ = className;
-    _ = instanceMethods;
-    _ = classMethods;
+    const theClass_I = class.getClassIndex(className);
+    dispatch.addDispatch(thread, theClass_I, superClass, instanceMethods);
+    dispatch.addDispatch(thread, theMetaclass_I, superClass, classMethods);
     return error.UnImplemented;
 }
 pub inline fn call(selector: Object, self: Object, other: Object, cp: *Context) MethodReturns {
