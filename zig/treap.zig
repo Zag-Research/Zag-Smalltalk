@@ -3,13 +3,19 @@ const std = @import("std");
 const math = std.math;
 const Order = math.Order;
 const mem = std.mem;
-pub fn Treap(comptime K:type) type {
+pub fn Treap(comptime Key:type, comptime Index:type) type {
     const Element = packed struct {
-        left: u32,
-        right: u32,
-        key: K,
+        left: Index,
+        right: Index,
+        key: Key,
     };
-    const Compare = fn (K,K) Order;
+    const randomizer = switch (Index) { // these are all 2^size/phi
+        u32 => 2654435769, // was 2717763491
+        u16 => 40503,
+        u8 => 158,
+        else => 11400714819323197440,
+    };        
+    const Compare = fn (Key,Key) Order;
     return struct {
         table: []Element,
         compare: Compare,
@@ -17,7 +23,7 @@ pub fn Treap(comptime K:type) type {
         const Equal = Order.eq;
         const Less = Order.lt;
         const Greater = Order.gt;
-        pub fn init(memory: []u8, compare: Compare, empty: K) Self {
+        pub fn init(memory: []u8, compare: Compare, empty: Key) Self {
             // if this is allocated on an object heap, left,right as an object will together look like an f64 so it will be ignored by garbage collection
             var treap = ref(memory,compare);
             treap.setRoot(0);
@@ -30,7 +36,7 @@ pub fn Treap(comptime K:type) type {
                 .compare = compare,
             };
         }
-        pub fn extend(self: *Self, start: u32, empty: K) void {
+        pub fn extend(self: *Self, start: Index, empty: Key) void {
             self.setFree(start);
             var index = start+1;
             for (self.table[start..]) |*element| {
@@ -40,32 +46,32 @@ pub fn Treap(comptime K:type) type {
                 index += 1;
             }
         }
-        inline fn root(self: *const Self) u32 {
+        inline fn root(self: *const Self) Index {
             return self.table[0].right;
         }
-        inline fn setRoot(self: *Self,r: u32) void {
+        inline fn setRoot(self: *Self,r: Index) void {
             self.table[0].right=r;
         }
-        inline fn setFree(self: *Self,f: u32) void {
+        inline fn setFree(self: *Self,f: Index) void {
             self.table[0].left=f;
         }
-        pub fn nextFree(self: *Self) !u32 {
+        pub fn nextFree(self: *Self) !Index {
             const pos = self.table[0].left;
             if (pos>=self.table.len) return error.OutOfSpace;
             self.setFree(self.table[pos].left);
             self.table[pos].left=0;
             return pos;
         }
-        pub fn at(self: *Self,index: u32) K {
+        pub fn at(self: *Self,index: Index) Key {
             return self.table[index].key;
         }
-        inline fn priority(pos:u32) u32 { // "random" number based on position in the array
-            return pos *% 0xa1fdc7a3;
+        inline fn priority(pos:Index) Index { // "random" number based on position in the array
+            return pos *% randomizer;
         }
-        pub inline fn lookup(self: *const Self, key: K) u32 {
+        pub inline fn lookup(self: *const Self, key: Key) Index {
             return self.lookupElement(self.root(),key);
         }
-        fn lookupElement(self: *const Self,current:u32,key:K) u32 {
+        fn lookupElement(self: *const Self,current:Index,key:Key) Index {
             if (current==0) {
                 return 0;
             } else switch (self.compare(self.table[current].key,key)) {
@@ -74,7 +80,7 @@ pub fn Treap(comptime K:type) type {
                 Greater => return self.lookupElement(self.table[current].left ,key),
             }
         }
-        pub fn insert(self: *Self,key: K) !u32 {
+        pub fn insert(self: *Self,key: Key) !Index {
             const result = self.lookup(key);
             if (result>0) {
                 // might have been added while waiting for the write lock
@@ -85,7 +91,7 @@ pub fn Treap(comptime K:type) type {
             self.setRoot(self.insertElement(pos,self.root()));
             return pos;
         }
-        fn insertElement(self: *Self,target:u32,current:u32) u32 {
+        fn insertElement(self: *Self,target:Index,current:Index) Index {
             if (current==0)
                 return target;
             switch (self.compare(self.table[target].key,self.table[current].key)) {
@@ -116,7 +122,7 @@ pub fn Treap(comptime K:type) type {
         //        / \       < - - - - - - -            / \
         //       T1  T2     Left Rotation            T2  T3
         //
-        fn rightRotate(self: *Self,y:u32) u32 {
+        fn rightRotate(self: *Self,y:Index) Index {
             const x = self.table[y].left;
             const t2 = self.table[x].right;
             // Perform rotation
@@ -124,7 +130,7 @@ pub fn Treap(comptime K:type) type {
             self.table[y].left = t2;
             return x;
         }
-        fn leftRotate(self: *Self,x:u32) u32 {
+        fn leftRotate(self: *Self,x:Index) Index {
             const y = self.table[x].right;
             const t2 = self.table[y].left;
             // Perform rotation
@@ -133,10 +139,10 @@ pub fn Treap(comptime K:type) type {
             return y;
         }
         // Only for tests
-        pub fn depths(self: *Self, data: []u32) void {
+        pub fn depths(self: *Self, data: []Index) void {
             self.walk(self.root(),1,data);
         }
-        fn walk(self: *Self, pos: u32, depth: u32, data: []u32) void {
+        fn walk(self: *Self, pos: Index, depth: Index, data: []Index) void {
             data[pos]=depth;
             if (self.table[pos].left>0) {
                 self.walk(self.table[pos].left,depth+1,data);
@@ -151,7 +157,7 @@ pub fn Treap(comptime K:type) type {
 fn compareU64(l: u64, r: u64) Order {
     return math.order(l,r);
 }
-const Treap_u64 = Treap(u64);
+const Treap_u64 = Treap(u64,u32);
 test "simple u64 treap alloc with nextFree" {
     const expectEqual = @import("std").testing.expectEqual;
     const n = 2;
