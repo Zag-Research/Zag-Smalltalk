@@ -199,16 +199,14 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
         const stage2 = [_]MethodType{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
-            const dispatchSize = Self.findTableSize(symbolMethods,null);
+            var fixup: [12]Fix = undefined;
+            const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
             const rand = dispatchSize.hash();
             const size = dispatchSize.size();
-            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch) catch unreachable;
+            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch,@bitCast(Object,@ptrToInt(dnu))) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;
             const methods=@ptrCast([*]MethodType,&strct.methods);
-            for (methods[0..dispatchSize]) |*method| {
-                method.*=dnu;
-            }
             for (symbolMethods) |*sm| {
                 const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
                 methods[hash] = sm.method;
@@ -357,6 +355,8 @@ test "findTableSize" {
 }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
     const theClass_I = class.getClassIndex(className);
+    const superClass = 0;
+    const theMetaclass_I = 0;
     dispatch.addDispatch(thread, theClass_I, superClass, instanceMethods);
     dispatch.addDispatch(thread, theMetaclass_I, superClass, classMethods);
     return error.UnImplemented;

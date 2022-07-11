@@ -46,14 +46,17 @@ pub const Context_I = c2o+ 21;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
-const objectTreap = treap.Treap(object.Object);
+const objectTreap = treap.Treap(u32,ClassIndex);
 const Class_Table = struct {
     theObject: object.Object,
     const Self = @This();
+    fn compareU32(l: u32, r: u32) std.math.Order {
+        return std.math.order(l,r);
+    }
     fn init(arena: *heap.Arena, initialClassTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(ClassTable_I,
                                                   heap.Format.none,0,initialClassTableSize*2);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareU32,0);
         return Class_Table {
             .theObject = theHeapObject.asObject(),
         };
@@ -62,20 +65,20 @@ const Class_Table = struct {
         s.*=undefined;
     }
     fn nextFree(s: *Self) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
         return @truncate(ClassIndex,trp.nextFree() catch @panic("class treap full"));
     }
     fn lookup(s: *Self,sym: object.Object) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
-        return @truncate(ClassIndex,trp.lookup(sym));
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
+        return @truncate(ClassIndex,trp.lookup(sym.hash));
     }
     fn intern(s: *Self, sym: object.Object) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
         //const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = s.lookup(sym);
             if (lu>0) return lu;
-            const result = @truncate(ClassIndex,trp.insert(sym) catch @panic("class treap full"));
+            const result = @truncate(ClassIndex,trp.insert(sym.hash) catch @panic("class treap full"));
             if (result>0) return result;
             unreachable; // out of space
         }

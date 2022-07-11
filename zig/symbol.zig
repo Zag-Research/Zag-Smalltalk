@@ -116,7 +116,7 @@ pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
     return (symbolTable orelse unreachable).intern(thr,string);
 }
-const objectTreap = treap.Treap(object.Object);
+const objectTreap = treap.Treap(object.Object,u32);
 fn numArgs(obj: object.Object) u32 {
     const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
