@@ -47,13 +47,13 @@ test "hashes" {
     const from = Object.from;
     const bigPrime : u64 = 16777213;//4294967291;
     const mod : u64 = 128;
-    try stdout.print("42 {}\n",.{@bitCast(u64,from(42))%bigPrime%mod});
-    try stdout.print("-17 {}\n",.{@bitCast(u64,from(-17))%bigPrime%mod});
-    try stdout.print("3.14 {}\n",.{@bitCast(u64,from(3.14))%bigPrime%mod});
-    try stdout.print("1.0 {}\n",.{@bitCast(u64,from(1.0))%bigPrime%mod});
-    try stdout.print("2.0 {}\n",.{@bitCast(u64,from(2.0))%bigPrime%mod});
-    try stdout.print("true {}\n",.{@bitCast(u64,from(true))%bigPrime%mod});
-    try stdout.print("false {}\n",.{@bitCast(u64,from(false))%bigPrime%mod});
-    try stdout.print("nil {}\n",.{@bitCast(u64,Nil)%bigPrime%mod});
-    try expect(@bitCast(u64,Nil)%bigPrime%mod != @bitCast(u64,from(false))%bigPrime%mod);
+    try stdout.print("42 {}\n",.{from(42).u()%bigPrime%mod});
+    try stdout.print("-17 {}\n",.{from(-17).u()%bigPrime%mod});
+    try stdout.print("3.14 {}\n",.{from(3.14).u()%bigPrime%mod});
+    try stdout.print("1.0 {}\n",.{from(1.0).u()%bigPrime%mod});
+    try stdout.print("2.0 {}\n",.{from(2.0).u()%bigPrime%mod});
+    try stdout.print("true {}\n",.{from(true).u()%bigPrime%mod});
+    try stdout.print("false {}\n",.{from(false).u()%bigPrime%mod});
+    try stdout.print("nil {}\n",.{Nil.u()%bigPrime%mod});
+    try expect(Nil).u()%bigPrime%mod != from(false).u()%bigPrime%mod);
 }

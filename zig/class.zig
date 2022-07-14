@@ -161,7 +161,7 @@ pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !
 //        try stdout.print("\nexisting ", .{});
         metaclass = classes[class.super.super.header.classIndex].to(*Metaclass_S);
     }
-//    try stdout.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,@bitCast(u64,classes[class_I])});
+//    try stdout.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
     var superclass_I = classTable.lookup(superclassName);
     if (superclass_I==0)
         superclass_I = classTable.lookup(symbols.Class);

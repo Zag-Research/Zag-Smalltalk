@@ -40,32 +40,35 @@ pub fn fromLE(v: u64) Object {
 }
 pub const compareObject = objectMethods.compare;
 const objectMethods = struct {
+    pub inline fn u(self: Object) u64 {
+        return @bitCast(u64,self);
+    }
     pub inline fn equals(self: Object,other: Object) bool {
-        return @bitCast(u64, self) == @bitCast(u64,other);
+        return self.u() == other.u();
     }
     pub inline fn is_int(self: Object) bool {
-        return @bitCast(u64, self) >= u64_MINVAL;
+        return self.u() >= u64_MINVAL;
     }
     pub inline fn is_double(self: Object) bool {
-        return @bitCast(u64, self) <= Negative_Infinity;
+        return self.u() <= Negative_Infinity;
     }
     pub inline fn is_bool(self: Object) bool {
-        return @bitCast(u64,self) == @bitCast(u64,False) or @bitCast(u64,self) == @bitCast(u64,True);
+        return self.equals(False) or self.equals(True);
     }
     pub inline fn is_nil(self: Object) bool {
-        return @bitCast(u64,self) == @bitCast(u64,Nil);
+        return self.equals(Nil);
     }
     pub inline fn is_heap(self: Object) bool {
-        if (@bitCast(u64, self) <= Start_of_Heap_Objects) return false;
-        return @bitCast(u64, self) <= End_of_Heap_Objects;
+        if (self.u() <= Start_of_Heap_Objects) return false;
+        return self.u() <= End_of_Heap_Objects;
     }
     pub inline fn is_memory(self: Object) bool {
-        if (@bitCast(u64, self) <= Start_of_Pointer_Objects) return false;
-        return @bitCast(u64, self) <= End_of_Heap_Objects;
+        if (self.u() <= Start_of_Pointer_Objects) return false;
+        return self.u() <= End_of_Heap_Objects;
     }
     pub  fn to(self: Object, comptime T:type) T {
         switch (T) {
-            i64 => {if (self.is_int()) return @bitCast(i64, @bitCast(u64, self) - u64_ZERO);},
+            i64 => {if (self.is_int()) return @bitCast(i64, self.u() - u64_ZERO);},
             f64 => {if (self.is_double()) return @bitCast(f64, self);},
             bool=> {if (self.is_bool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
@@ -84,7 +87,7 @@ const objectMethods = struct {
                 }
             },
         }
-        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} {}\n",.{@bitCast(u64,self),T}) catch unreachable;
+        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} {}\n",.{self.u(),T}) catch unreachable;
         @panic("Trying to convert Object to unknown type");
     }
     pub  fn as_string(self: Object) []const u8 {
@@ -126,16 +129,16 @@ const objectMethods = struct {
         @compileError("Can't convert");
     }
     pub inline fn fullHash(self: Object) u64 {
-        return @bitCast(u64, self) % 16777213; // largest 24 bit prime
+        return self.u() % 16777213; // largest 24 bit prime
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         if (!self.is_memory() or !other.is_memory()) {
-            const u64s = @bitCast(u64,self);
-            const u64o = @bitCast(u64,other);
+            const u64s = self.u();
+            const u64o = other.u();
             return std.math.order(u64s,u64o);
         }
         const ord = std.math.Order;
-        if (@bitCast(u64,self)==@bitCast(u64,other)) return ord.eq;
+        if (self.equals(other)) return ord.eq;
         const sla = self.arrayAsSlice(u8);
         const slb = other.arrayAsSlice(u8);
         for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
@@ -149,8 +152,8 @@ const objectMethods = struct {
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
-        if (@bitCast(u64, self) >= c2Base) return @truncate(ClassIndex,@bitCast(u64, self) >> 32);
-        if (@bitCast(u64, self) >= Start_of_Pointer_Objects) return class.Object_I;
+        if (self.u() >= c2Base) return @truncate(ClassIndex,self.u() >> 32);
+        if (self.u() >= Start_of_Pointer_Objects) return class.Object_I;
         if (self.is_double()) return class.Float_I;
         @panic("unknown immediate");
     }
@@ -175,7 +178,7 @@ const objectMethods = struct {
         _ = options;
         
         try switch (self.immediate_class()) {
-            class.Object_I => writer.print("object:0x{x:>16}", .{@bitCast(u64,self)}), //,as_pointer(x));
+            class.Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             class.False_I => writer.print("false", .{}),
             class.True_I => writer.print("true", .{}),
             class.UndefinedObject_I => writer.print("nil", .{}),
@@ -211,7 +214,7 @@ test "slicing" {
 test "from conversion" {
     const testing = std.testing;
     try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
-    try testing.expectEqual(@bitCast(u64, Object.from(42)), u64_ZERO +% 42);
+    try testing.expectEqual(Object.from(42).u(), u64_ZERO +% 42);
     try testing.expectEqual(Object.from(3.14).immediate_class(),class.Float_I);
     try testing.expect(Object.from(3.14).is_double());
     try testing.expectEqual(Object.from(3).immediate_class(),class.SmallInteger_I);

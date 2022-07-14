@@ -30,20 +30,6 @@ pub const Thread = struct {
         self.heap.deinit();
         self.* = undefined;
     }
-    pub inline fn stack(self: Self) [*]Object {
-        return self.heap.tos;
-    }
-    pub inline fn push(self: *Self, obj: Object) void {
-        if (self.heap.space()<1) unreachable;
-        self.heap.tos -= 1;
-        self.heap.tos[0]=obj;
-        self.stackDepth += 1;
-    }
-    pub inline fn pop(self: *Self, n: u8) void {
-        self.stackDepth -= n;
-        if (self.stackDepth<0) unreachable;
-        self.heap.tos += n;
-    }
     pub inline fn getArena(self: *Self) *heap.Arena {
         return &self.heap;
     }

@@ -190,7 +190,7 @@ const heapMethods = struct {
     pub inline fn asObject(self: HeapConstPtr) Object {
         return Object.from(self);
     }
-    pub inline fn cast(self: Header) Object {
+    pub inline fn o(self: Header) Object {
         return @bitCast(Object,self);
     }
     pub inline fn asObjectArray(self: HeapConstPtr) [*]align(@alignOf(u64)) Object {
@@ -250,9 +250,9 @@ const heapMethods = struct {
         const form = self.objectFormat;
         var size : usize = self.length;
         if (form.isRaw()) {
-            if (size>=32767) size += @bitCast(u64,self.asObjectArray()[0])+1;
+            if (size>=32767) size += self.asObjectArray()[0].u()+1;
         } else if (form.hasBoth()) {
-            size += @bitCast(u64,self.asObjectArray()[size])+1;
+            size += self.asObjectArray()[size].u()+1;
         }
         return size+1;
     }
@@ -331,7 +331,7 @@ test "Header structure" {
     const expect = std.testing.expect;
     try expect(@sizeOf(Header) == 8);
     const hdr = header(17, Format.object, 35,0x123);
-    try expect(@bitCast(u64, hdr) == 0x0011010001230023);
+    try expect(hdr.o().u() == 0x0011010001230023);
 }
 const nurserySize = 2048;
 pub const NurseryArena = Arena {
@@ -455,10 +455,10 @@ pub const Arena = struct {
         }
         var ok=true;
         for (expected) |item, index| {
-            if (@bitCast(u64,self.allocated[index+1]) != @bitCast(u64,item)) {
+            if (self.allocated[index+1].u() != item.u()) {
                 if (item.is_double() and std.math.fabs(item.to(f64))<0.00001) {
                     try stdout.print("comparing[{}] expected=0x{x:0>16} output=0x{x:0>16}\n",
-                                 .{index,@bitCast(u64,item),@bitCast(u64,self.allocated[index+1])});
+                                 .{index,item.u(),self.allocated[index+1].u()});
                 } else try stdout.print("comparing[{}] expected={} output={}\n",.{index,item,self.allocated[index+1]});
                 ok = false;
             }

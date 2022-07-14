@@ -50,14 +50,14 @@ pub const Context = packed struct { // this will be the start of a packed struct
         return self._thread;
     }
     pub fn add_context(context: *Context, objects: []Object, _ :Object) *Context {
-        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).cast(); // header
+        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).o(); // header
         // name stays as initialized
         objects[2] = Object.from(context); // previous
         // thread stays nil
         return @intToPtr(*Context,@ptrToInt(objects.ptr));
     }
     fn make_init_cxt(objects: []Object,t: *Thread) *Context {
-        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).cast(); // header
+        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).o(); // header
         // name stays as initialized
         // previous stays nil
         objects[3] = Object.from(t);// thread

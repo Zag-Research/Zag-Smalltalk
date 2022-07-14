@@ -63,10 +63,9 @@ test "try a thread" {
     var thread = try _thread.Thread.initForTest();
     defer thread.deinit();
     _init_symbolTable(&thread);
-    var cxt = [_]_O{_s.main}++[_]_O{_nil}**3;
+    var cxt = [_]_O{_nil,_s.main}++[_]_O{_nil}**3;
     var context = _dispatch.make_init_cxt(cxt[0..],&thread);
     const System = try System_defs.init(&thread);
-    thread.push(System);
     try _stdout.writer().print("before dispatch\n",.{});
     switch (System.send(_s.start,_s.nil,context)) {
         .Normal => {
