@@ -11,6 +11,7 @@ const Dispatch = @import("dispatch.zig");
 const Context = Dispatch.Context;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
+pub const u32_phi_inverse=2654435769;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
@@ -160,7 +161,7 @@ const objectMethods = struct {
     pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
         if (immediate > 1) return immediate;
-        return self.to(HeapPtr).*.get_class();
+        return self.to(HeapPtr).*.getClass();
     }
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);

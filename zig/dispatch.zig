@@ -10,7 +10,7 @@ const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
-pub const u32_phi_inverse=2654435769;
+const u32_phi_inverse=object.u32_phi_inverse;
 pub const MethodReturns = union(enum) {
     Normal: Object,
     NonLocal,
@@ -110,7 +110,8 @@ const TableStructureResult = union(enum) {
     }
 };
 fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) MethodReturns {
-    testNormal(thread, self, selector, ci);
+    //    testNormal(_: Object, self: Object, _: Object, _ : *Context, null, null);
+    _ = .{thread,self,selector,ci};
     @panic("stage2a");
 }
 fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
@@ -196,7 +197,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
-        const stage2 = [_]MethodType{stage2a};
+//        const stage2 = [_]MethodType{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
             var fixup: [12]Fix = undefined;
@@ -206,7 +207,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch,@bitCast(Object,@ptrToInt(dnu))) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;
-            const methods=@ptrCast([*]MethodType,&strct.methods);
+            const methods=@ptrCast([*]MethodType,@alignCast(@alignOf([*]MethodType),&strct.methods));
             for (symbolMethods) |*sm| {
                 const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
                 methods[hash] = sm.method;
@@ -214,32 +215,32 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             switch (dispatchSize) {
                 .conflictFree => {},
                 .withConflicts => |wc| {
-                    var next = wc.size;
+                    //var next = wc.size;
                     const fix = wc.fix;
                     var i: u8 = 0;
-                    var shifts: u64 = 0;
+                    //var shifts: u64 = 0;
                     var shift: u6 = 0;
                     while (i<fix.len) : (shift+=1) {
-                        switch (fix.prt[i+1]) {
-                            2 => {
-                                const left = fix.ptr[i+2];
-                                const right = fix.ptr[i+3];
-                                const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash;
-                                const sh = @ctz(u5,xor);
-                                shifts |= sh << shift*5;
-                                if (((fix.ptr[i+2]>>sh)&1)==0) {
-                                    methods[next] = symbolMethods[left].method;
-                                    methods[next+1] = symbolMethods[right].method;
-                                } else {
-                                    methods[next] = symbolMethods[right].method;
-                                    methods[next+1] = symbolMethods[left].method;
-                                }
-                                next += 2;
-                                shift += 1;
-                            },
-                            else => @panic("Not implemented"),
-                        }
-                        methods[wc.hash]=stage2[shift];
+                        // switch (fix.ptr[i+1]) {
+                        //     2 => {
+                        //         const left = fix.ptr[i+2];
+                        //         const right = fix.ptr[i+3];
+                        //         const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash;
+                        //         const sh = @ctz(u5,xor);
+                        //         shifts |= sh << shift*5;
+                        //         if (((fix.ptr[i+2]>>sh)&1)==0) {
+                        //             methods[next] = symbolMethods[left].method;
+                        //             methods[next+1] = symbolMethods[right].method;
+                        //         } else {
+                        //             methods[next] = symbolMethods[right].method;
+                        //             methods[next+1] = symbolMethods[left].method;
+                        //         }
+                        //         next += 2;
+                        //         shift += 1;
+                        //     },
+                        //     else => @panic("Not implemented"),
+                        // }
+                        //methods[wc.hash]=stage2[shift];
                     }
                 },
             }
@@ -382,9 +383,7 @@ test "addClass and call" {
     try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
     const t42 = Object.from(42);
-    thread.push(Object.from(17));
     try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Nil});
-    try expectEqual(thread.stack()[0],t42);
 }
 test "lookups of proper methods" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -393,7 +392,7 @@ test "lookups of proper methods" {
     try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);
     const t42 = Object.from(42);
-    thread.push(Object.from(17));
+//    thread.push(Object.from(17));
     try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Object.from(1)});
     try expectEqual(t42.send(symbols.self,Nil,undefined),MethodReturns{.Normal=Object.from(2)});
     try expectEqual(t42.send(symbols.yourself,Nil,undefined),MethodReturns{.Normal=Object.from(3)});
