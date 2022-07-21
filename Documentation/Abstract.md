@@ -14,7 +14,7 @@ The system is being developed on https://github.com/dvmason/AST-Smalltalk
 
 ## The [interpreter](Interpreter.md) is described here, including message dispatch.
 
-## The [memory structure](Mapping.md), [garbage collector](Garbage_Collection.md), and [image format](ImageFormat.md) are described here.
+## The [memory structure](Mapping.md), [garbage collector](MemoryManagement.md), and [image format](ImageFormat.md) are described here.
 
 ## [Optimization opportunities](Optimizations.md) are described here.
 

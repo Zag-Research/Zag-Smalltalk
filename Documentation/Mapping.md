@@ -94,30 +94,30 @@ For 1, 2, 9, 10, the size is determined by the length field. The only difference
 
 For 3, 7, 11 the length field is the number of instVars (possibly 0) which are followed by a word containing the size of the indexable portion, which follows. Weak objects are rare enough that we don't bother to handle cases with no instance variables or no indexable values separately.
 
-For 17-31 the length field is the number of words of the array, unless it is 32767, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format. Also the objects are initialized with zeros, rather than the `nil` for all < 16.
+For 17-31 the length field is the number of words of the array, unless it is 8190, in which case the values are preceded by a size which is the number of additional words. They are assumed to never be interpreted as objects, so update never considers promoting to a pointer-containing format. Also the objects are initialized with zeros, rather than the `nil` for all < 16.
 
 This is the header-word for an object:
 
-| Bits | What         | Characteristics                                              |
-| ---- | ------------ | ------------------------------------------------------------ |
-| 1    | isForward    | if set, negation of long-word is address of forwarded object |
-| 15   | length       | number of long-words beyond the header                       |
-| 1    | unused       | \                                                           |
-| 1    | isGlobal     |  !                                                            |
-| 1    | isImmutable  |  !                                                           |
-| 1    | isRawData    |  !                                                            |
-| 1    | isPointerFree|  + format(see above)                                                  |
-| 1    | isWeak       |  !                                                            |
-| 1    | isIndexable  |  !                                                           |
-| 1    | hasInstVars  | /                                                           |
-| 24   | identityHash |                                                              |
-| 16   | classIndex   | LSB                                                          |
+| Bits | What          | Characteristics                        |
+| ---- | ------------- | -------------------------------------- |
+| 3    | age           | number of times object has been copied |
+| 13   | length        | number of long-words beyond the header |
+| 1    | unused        | \                                      |
+| 1    | isGlobal      | !                                      |
+| 1    | isImmutable   | !                                      |
+| 1    | isRawData     | !                                      |
+| 1    | isPointerFree | + format(see above)                    |
+| 1    | isWeak        | !                                      |
+| 1    | isIndexable   | !                                      |
+| 1    | hasInstVars   | /                                      |
+| 24   | identityHash  |                                        |
+| 16   | classIndex    | LSB                                    |
 
-Unless format=3,7,11, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 32766, it can be encoded in the header length field.
+Unless format=3,7,11, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 8189, it can be encoded in the header length field.
 
-For formats >= 17, if the length field=32767, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
+For formats >= 17, if the length field=8190, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
 
-If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 32K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 32766 indexable elements.
+If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 8K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 8189 indexable elements.
 
 The remaining format bits encode:
 - bit 5: = 32 means that the object is immutable, so any assignments will signal an exception

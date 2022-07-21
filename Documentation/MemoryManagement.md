@@ -1,12 +1,13 @@
-# Garbage Collection
+# Memory Management
 
-Garbage collection is an essential part of a Smalltalk system. While the original Smalltalk system approach of creating activation records as heap objects has been replaced with stack allocation, idiomatic Smalltalk still creates a lot of short-term objects that need to be collected.
+
+Safe and efficient memory management is an essential part of a Smalltalk system. While the original Smalltalk system approach of creating activation records as heap objects has been replaced with stack allocation, idiomatic Smalltalk still creates a lot of short-term objects that need to be collected.
 
 AST Smalltalk has several features that minimize garbage creation:
 - activation records (contexts) are stack allocated
 - `nil`, `true`, `false`, Symbols, Characters, SmallIntegers and Floats are all encoded as immediate values
 - SmallIntegers have a wide range (2^51) so extension to BigIntegers (which would be heap-allocated) is rare
-- non-escaping BlockClosures are stack allocated
+- BlockClosures are stack allocated
 - code blocks are generated outside the heap
 
 AST Smalltalk has several features that minimize the amount of work required by garbage collection:
@@ -21,7 +22,7 @@ AST Smalltalk has several features that minimize the amount of work required by 
 The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself and the global collector thread) and a global arena accessible by all threads.
 
 ## Per-Thread Arenas
-Each thread/process has its own nursery heap, typically 8kib. All allocations are done in the nursery except for large objects that would not fit. This is allocated in the nursery arena. The heap grows up. When there is no room for the current allocation, the heap will be collected to the teen arena. Because these are thread-private, there is no locking required for allocation in the nursery or teen arenas. The teen arena is several times larger than the nursery.
+Each thread/process has its own nursery heap, typically about 8kib. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the teen arena. Because these are thread-private, there is no locking required for allocation in the nursery or teen arenas. The teen arena is several times larger than the nursery.
 
 The nursery and teen arenas are both collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack of contexts.
 

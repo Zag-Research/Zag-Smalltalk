@@ -56,23 +56,29 @@ pub const Format = enum(u8) {
     }
     const fieldPartials = [_]u8{calcPartials()};
     pub inline fn weak(self: Self) Self {
-        return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + InstVars + Indexable + Weak);
+        return @intToEnum(Self,self.nonBase() + InstVars + Indexable + Weak);
     }
     pub inline fn noBase(self: Self) Self {
-        return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat));
+        return @intToEnum(Self,self.nonBase());
     }
     pub inline fn object(self: Self) Self {
         return @intToEnum(Self,@bitCast(u8,self) | InstVars);
+    }
+    pub inline fn nonBase(self: Self) Self {
+        return @bitCast(u8,self) & ~BaseFormat;
+    }
+    pub inline fn base(self: Self) Self {
+        return @bitCast(u8,self) & BaseFormat;
     }
     pub inline fn array(self: Self) Self {
         return @intToEnum(Self,@bitCast(u8,self) | Indexable);
     }
     pub inline fn raw(self: Self, comptime T : type, size : usize) Self {
         switch (T) {
-            u8,i8 => {return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + Indexable_8 + ((-@intCast(isize,size))&7));},
-            u16,i16 => {return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + Indexable_16 + ((-@intCast(isize,size))&3));},
-            u32,i32,f32 => {return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + Indexable_32 + ((-@intCast(isize,size))&1));},
-            u64,i64,f64 => {return @intToEnum(Self,(@bitCast(u8,self) & ~BaseFormat) + Indexable_64);},
+            u8,i8 => {return @intToEnum(Self,self.nonBase() + Indexable_8 + ((-@intCast(isize,size))&7));},
+            u16,i16 => {return @intToEnum(Self,self.nonBase() + Indexable_16 + ((-@intCast(isize,size))&3));},
+            u32,i32,f32 => {return @intToEnum(Self,self.nonBase() + Indexable_32 + ((-@intCast(isize,size))&1));},
+            u64,i64,f64 => {return @intToEnum(Self,self.nonBase() + Indexable_64);},
             else => {return self;},
         }
     }
@@ -89,31 +95,25 @@ pub const Format = enum(u8) {
         return @bitCast(u8, self) & Weak+RawData == Weak;
     }
     pub inline fn isPointerFree(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base >= PointerFree;
+        return self.base() >= PointerFree;
     }
     pub inline fn hasPointers(self: Self) bool {
         return ~self.isPointerFree();
     }
     pub inline fn isRaw(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base >= RawData;
+        return self.base() >= RawData;
     }
     pub inline fn is64(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base == Indexable_64;
+        return self.base() == Indexable_64;
     }
     pub inline fn is32(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base >= Indexable_32 and base <= Indexable_32 + 1;
+        return self.base() >= Indexable_32 and self.base() <= Indexable_32 + 1;
     }
     pub inline fn is16(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base >= Indexable_16 and base <= Indexable_16 + 3;
+        return self.base() >= Indexable_16 and self.base() <= Indexable_16 + 3;
     }
     pub inline fn is8(self: Self) bool {
-        const base = @bitCast(u8, self) & BaseFormat;
-        return base >= Indexable_8 and base <= Indexable_8 + 7;
+        return self.base() >= Indexable_8 and self.base() <= Indexable_8 + 7;
     }
     pub inline fn isImmutable(self: Self) bool {
         return @bitCast(u8, self) & Immutable != 0;
