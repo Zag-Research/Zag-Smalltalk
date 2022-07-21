@@ -342,19 +342,23 @@ test "simple u64 treap alloc" {
     // try std.io.getStdOut().writer().print("depths={any}\n",.{depths});
 }
 test "full u64 treap alloc" {
-    const expectEqual = @import("std").testing.expectEqual;
-    const n = 21;
-    var memory = [_]u8{0} ** (n*48);
-    var treap = Treap_u64.init(memory[0..],compareU64,0);
-    var index : u64 = 1;
-    while (index<n*3) : (index += 1) {
-        _ = try treap.insert(index);
+    if (includeStdTest) {
+        try std.io.getStdOut().writer().print(" - Set includeStdTest=false to include this test ",.{});
+    } else {
+        const expectEqual = @import("std").testing.expectEqual;
+        const n = 21;
+        var memory = [_]u8{0} ** (n*48);
+        var treap = Treap_u64.init(memory[0..],compareU64,0);
+        var index : u64 = 1;
+        while (index<n*3) : (index += 1) {
+            _ = try treap.insert(index);
+        }
+        try expectEqual(treap.lookup(44),44);
+        var depths = [_]u32{0} ** (n*3);
+        treap.depths(depths[0..]);
+        // try std.io.getStdOut().writer().print("depths={any}\n",.{depths});
+        // try std.io.getStdOut().writer().print("treap={}\n",.{treap});
     }
-    try expectEqual(treap.lookup(44),44);
-    var depths = [_]u32{0} ** (n*3);
-    treap.depths(depths[0..]);
-    // try std.io.getStdOut().writer().print("depths={any}\n",.{depths});
-    // try std.io.getStdOut().writer().print("treap={}\n",.{treap});
 }
 test "randomness of /phi - all values enumerated" {
     var data = [_]u16{0} ** 65536;
