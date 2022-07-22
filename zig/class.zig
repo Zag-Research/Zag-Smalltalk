@@ -46,7 +46,7 @@ pub const Context_I = c2o+ 21;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
-const objectTreap = treap.Treap(u32,ClassIndex);
+const objectTreap = treap.Treap(u32,ClassIndex,u0);
 const Class_Table = struct {
     theObject: object.Object,
     const Self = @This();
@@ -65,15 +65,15 @@ const Class_Table = struct {
         s.*=undefined;
     }
     fn nextFree(s: *Self) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32,0);
         return @truncate(ClassIndex,trp.nextFree() catch @panic("class treap full"));
     }
     fn lookup(s: *Self,sym: object.Object) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32,0);
         return @truncate(ClassIndex,trp.lookup(sym.hash));
     }
     fn intern(s: *Self, sym: object.Object) ClassIndex {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32,0);
         //const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = s.lookup(sym);

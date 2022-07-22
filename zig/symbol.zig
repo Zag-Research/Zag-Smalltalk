@@ -116,7 +116,7 @@ pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
     return (symbolTable orelse unreachable).intern(thr,string);
 }
-const objectTreap = treap.Treap(object.Object,u32);
+const objectTreap = treap.Treap(object.Object,u32,u0);
 fn numArgs(obj: object.Object) u32 {
     const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
@@ -143,8 +143,8 @@ const Symbol_Table = struct {
         s.*=undefined;
     }
     fn asString(s: *Self,string: object.Object) object.Object {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
-        return trp.at(@truncate(u24,string.hash));
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
+        return trp.getKey(@truncate(u24,string.hash));
     }
     fn lookupLiteral(s: *Self, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
@@ -153,7 +153,7 @@ const Symbol_Table = struct {
         return s.lookup(str.asObject());
     }
     fn lookup(s: *Self,string: object.Object) object.Object {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         return lookupDirect(&trp,string);
     }
     fn lookupDirect(trp: *objectTreap, string: object.Object) object.Object {
@@ -168,7 +168,7 @@ const Symbol_Table = struct {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
         const str = tempArena.allocString(string) catch unreachable;
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         return internDirect(arena.getGlobal(),&trp,str.asObject());
     }
     fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {

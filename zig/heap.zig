@@ -56,29 +56,32 @@ pub const Format = enum(u8) {
     }
     const fieldPartials = [_]u8{calcPartials()};
     pub inline fn weak(self: Self) Self {
-        return @intToEnum(Self,self.nonBase() + InstVars + Indexable + Weak);
+        return self.nonBasePlus(InstVars + Indexable + Weak);
     }
     pub inline fn noBase(self: Self) Self {
-        return @intToEnum(Self,self.nonBase());
+        return self.nonBase();
     }
     pub inline fn object(self: Self) Self {
         return @intToEnum(Self,@bitCast(u8,self) | InstVars);
     }
     pub inline fn nonBase(self: Self) Self {
-        return @bitCast(u8,self) & ~BaseFormat;
+        return @intToEnum(Self,@bitCast(u8,self) & ~BaseFormat);
+    }
+    pub inline fn nonBasePlus(self: Self, n: isize) Self {
+        return @intToEnum(Self,@bitCast(u8,self.nonBase())+@truncate(u8,@intCast(usize,n)));
     }
     pub inline fn base(self: Self) Self {
-        return @bitCast(u8,self) & BaseFormat;
+        return @intToEnum(Self,@bitCast(u8,self) & BaseFormat);
     }
     pub inline fn array(self: Self) Self {
         return @intToEnum(Self,@bitCast(u8,self) | Indexable);
     }
     pub inline fn raw(self: Self, comptime T : type, size : usize) Self {
         switch (T) {
-            u8,i8 => {return @intToEnum(Self,self.nonBase() + Indexable_8 + ((-@intCast(isize,size))&7));},
-            u16,i16 => {return @intToEnum(Self,self.nonBase() + Indexable_16 + ((-@intCast(isize,size))&3));},
-            u32,i32,f32 => {return @intToEnum(Self,self.nonBase() + Indexable_32 + ((-@intCast(isize,size))&1));},
-            u64,i64,f64 => {return @intToEnum(Self,self.nonBase() + Indexable_64);},
+            u8,i8 => {return self.nonBasePlus(Indexable_8 + ((-@intCast(isize,size))&7));},
+        u16,i16 => {return self.nonBasePlus(Indexable_16 + ((-@intCast(isize,size))&3));},
+            u32,i32,f32 => {return self.nonBasePlus(Indexable_32 + ((-@intCast(isize,size))&1));},
+            u64,i64,f64 => {return self.nonBasePlus(Indexable_64);},
             else => {return self;},
         }
     }
@@ -95,13 +98,13 @@ pub const Format = enum(u8) {
         return @bitCast(u8, self) & Weak+RawData == Weak;
     }
     pub inline fn isPointerFree(self: Self) bool {
-        return self.base() >= PointerFree;
+        return @bitCast(u8,self.base()) >= PointerFree;
     }
     pub inline fn hasPointers(self: Self) bool {
         return ~self.isPointerFree();
     }
     pub inline fn isRaw(self: Self) bool {
-        return self.base() >= RawData;
+        return @bitCast(u8,self.base()) >= RawData;
     }
     pub inline fn is64(self: Self) bool {
         return self.base() == Indexable_64;
@@ -637,11 +640,12 @@ const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+l
                          6, 6, 6, 6, 6, 6, 6, 6,
                          7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 fn findAllocationList(target: u64) ?usize {
-    if (target<=34) return fib_index[target];
+    if (target<=34) return allocIndex[target];
     if (target>allocationUnit) return null;
-    return @import("utility.zig").findFib(target);
+    return @import("utilities.zig").findFib(target);
 }
 fn findContainedList(target: u64) ?usize {
+    _ = target;
     unreachable;
 }
 const Allocation = packed struct {
@@ -653,8 +657,9 @@ const FreeList = packed struct {
 };
 var normalAllocations : ?Allocation = null;
 var bigAllocations : ?Allocation = null;
-fn alloc(const header: Header) HeaderPtr {
-    if (findAllocationList(header.totalSize())) |listNumber| {
+fn alloc(h: Header) *Header {
+    if (findAllocationList(h.totalSize())) |listNumber| {
+        _ = listNumber;
         unreachable;
     } else {
         unreachable;
