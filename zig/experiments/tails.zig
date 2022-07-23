@@ -1,10 +1,7 @@
 const std = @import("std");
 const math = std.math;
-const builtin = std.builtin;
-const _CO: builtin.CallOptions = .{.modifier = .always_tail};
-const Order = math.Order;
+const _CO: std.builtin.CallOptions = .{.modifier = .always_tail};
 const stdout = std.io.getStdOut().writer();
-//const expect = @import("std").testing.expect;
 
 fn loop1(cur: u64, limit: u64) void {
     if (cur % 1000000 == 0) stdout.print("cur: {}\n",.{cur}) catch unreachable;
