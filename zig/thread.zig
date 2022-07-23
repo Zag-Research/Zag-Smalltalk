@@ -4,19 +4,20 @@ var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
 test "sizes" {
-    try std.testing.expectEqual(Thread.size,42);
+    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
 }
 pub const Thread = struct {
-//    header: heap.Header,
+    header: heap.Header,
     id : u64,
     nursery : heap.Arena,
 //    tean1 : heap.Arena,
 //    teen2 : heap.Arena,
     next: ?*Thread,
     const psm1 = std.mem.page_size-1;
-    const size = (@sizeOf(Thread)+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
-    const nursery_size = (size-@sizeOf(Thread))/6;
-    const teen_size = nursery_size*5/2; 
+    const thread_size = Object.sizeU8(Thread);
+    const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
+    const teen_size = size*5/12/@sizeOf(Object)*@sizeOf(Object); 
+    const nursery_size = (size-thread_size-teen_size*2)/@sizeOf(Object)*@sizeOf(Object);
     const Self = @This();
     pub fn init() !Self {
         defer next_thread_number += 1;

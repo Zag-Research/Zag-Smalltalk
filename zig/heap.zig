@@ -9,6 +9,12 @@ const False = object.False;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
+pub const externalPageSize = 3100;
+test "size assertions" {
+    try std.testing.expect(externalPageSize<forwardedObject);
+}
+const forwardedObject = 8191;
+const objectAllocationSize = (externalPageSize*@sizeOf(Object)*2+mem.page_size-1) & -mem.page_size;
 pub const Format = enum(u8) {
     none = 0,
     object = InstVars,
