@@ -6,9 +6,9 @@ const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
-const Thread = @import("thread.zig");
-const Dispatch = @import("dispatch.zig");
-const Context = Dispatch.Context;
+//const Thread = @import("thread.zig");
+//const Dispatch = @import("dispatch.zig");
+//const Context = Dispatch.Context;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 pub const u32_phi_inverse=2654435769;
@@ -25,12 +25,12 @@ const Start_of_Pointer_Objects: u64 = 0xfff5_000000000000;
 const Start_of_Heap_Objects: u64 =    0xfff6_000000000000;
 const End_of_Heap_Objects: u64   =    0xfff6_ffffffffffff;
 const c2Base = o2(0,0);
-pub const False             = of(o2(class.False_I,0x0000010000));
-pub const True              = of(o2(class.True_I,0x0000100001));
-pub const Nil               = of(o2(class.UndefinedObject_I,0x0001000002));
+pub const False             = of(o2(class.False_I,0x00010000));
+pub const True              = of(o2(class.True_I,0x00100001));
+pub const Nil               = of(o2(class.UndefinedObject_I,0x01000002));
+pub const NilFlag           = of(o2(class.UndefinedObject_I,0x01000003));
 const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
-pub const ThisContext       = of(o2(class.Context_I,0x0010000003));
 const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
@@ -101,7 +101,7 @@ const objectMethods = struct {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==HeapConstPtr) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
-        if (T==*Context or T==*Thread) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
+//        if (T==*Context or T==*Thread) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -166,9 +166,9 @@ const objectMethods = struct {
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);
     }
-    pub inline fn send(self: Object, selector: Object, other: Object, cp: *Dispatch.Context) Dispatch.MethodReturns {
-        return Dispatch.call(selector, self, other, cp);
-    }
+//    pub inline fn send(self: Object, selector: Object, other: Object, cp: *Dispatch.Context) Dispatch.MethodReturns {
+//        return Dispatch.call(selector, self, other, cp);
+//    }
     pub fn format(
         self: Object,
         comptime fmt: []const u8,

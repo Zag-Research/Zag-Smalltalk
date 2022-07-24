@@ -7,14 +7,14 @@ test "sizes" {
     try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
 }
 pub const Thread = struct {
-    header: heap.Header,
+//    header: heap.Header,
     id : u64,
     nursery : heap.Arena,
 //    tean1 : heap.Arena,
 //    teen2 : heap.Arena,
     next: ?*Thread,
     const psm1 = std.mem.page_size-1;
-    const thread_size = Object.sizeU8(Thread);
+    const thread_size = @sizeOf(Thread);
     const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
     const teen_size = size*5/12/@sizeOf(Object)*@sizeOf(Object); 
     const nursery_size = (size-thread_size-teen_size*2)/@sizeOf(Object)*@sizeOf(Object);
