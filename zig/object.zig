@@ -88,8 +88,18 @@ const objectMethods = struct {
                 }
             },
         }
-        @import("std").io.getStdOut().writer().print("to type 0x{x:0>16} {}\n",.{self.u(),T}) catch unreachable;
-        @panic("Trying to convert Object to unknown type");
+        @panic("Trying to convert Object to "++@typeName(T));
+    }
+    pub  fn toUnchecked(self: Object, comptime T:type) T {
+        switch (T) {
+            i64 => {return @bitCast(i64, self.u() - u64_ZERO);},
+            f64 => {return @bitCast(f64, self);},
+            bool=> {return self.equals(True);},
+            //u8  => {return @intCast(u8, self.hash & 0xff);},
+            else => {
+                @panic("Trying to convert Object to "++@typeName(T));
+            },
+        }
     }
     pub  fn as_string(self: Object) []const u8 {
         return symbol.asString(self).arrayAsSlice(u8);
