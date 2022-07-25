@@ -1,11 +1,25 @@
 const std = @import("std");
-const object = @import("object.zig");
-const Object = object.Object;
-const Nil = object.Nil;
-const NilFlag = object.NilFlag;
-const True = object.True;
-const False = object.False;
-const Thread = @import("thread.zig").Thread;
+const sources=enum{godbolt,normal};
+const source=sources.godbolt;
+const ns = switch (source) {
+    .normal => struct {
+        const Thread = @import("thread.zig").Thread;
+        const object = @import("object.zig");
+        const Object = object.Object;
+        const Nil = object.Nil;
+        const NilFlag = object.NilFlag;
+        const True = object.True;
+        const False = object.False;
+    },
+    .godbolt => struct {
+    },
+};
+const Nil=ns.Nil;
+const Object=ns.Object;
+const True=ns.True;
+const False=ns.False;
+const Thread=ns.Thread;
+const NilFlag=ns.NilFlag;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 
 pub const Context = [*]Object;
@@ -27,7 +41,7 @@ pub const Code = packed union {
         return Code{.prim=pp};
     }
 };
-const PrimitivePtr = fn(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object;
+const PrimitivePtr = fn(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object;
 fn countNonLabels(comptime tup: anytype) usize {
     var n = 0;
     inline for (tup) |field| {
@@ -83,16 +97,16 @@ fn compileTuple(name: Object, comptime tup: anytype) [countNonLabels(tup)+2]Code
     return result;
 }
 const stdout = std.io.getStdOut().writer();
-fn return_tos(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+fn return_tos(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
     _ = thread;
-    _ = next;
+    _ = pc;
     _ = heap;
     _ = caller;
     return tos[0];
 }
-fn failed_test(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+fn failed_test(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
     _ = thread;
-    _ = next;
+    _ = pc;
     _ = heap;
     _ = caller;
     _ = tos;
@@ -111,9 +125,9 @@ test "compiling tuple" {
     try expectEqual(t[6].object,Nil);
     try expectEqual(t[t.len-1].object,NilFlag);
 }
-pub inline fn checkSpace(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context, needed: usize) void {
+pub inline fn checkSpace(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context, needed: usize) void {
     _ = thread;
-    _ = next;
+    _ = pc;
     _ = heap;
     _ = caller;
     _ = tos;
@@ -126,50 +140,50 @@ fn testExecute(code: [] const Code) Object {
     var thread = Thread.initForTest() catch unreachable;
     return execute(code.ptr,memPtr+998,memPtr,&thread,memPtr+998);
 }
-fn execute(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    return @call(tailCall,next[1].prim,.{next+2,tos,heap,thread,caller});
-}
-pub fn branch(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    const offset = next[0].int;
-    const target = next+@intCast(u64,if (offset>=0) offset else -offset);
-    return @call(tailCall,target[0].prim,.{target+1,tos,heap,thread,caller});
-}
-fn if_true(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    const v = tos[0];
-    if (True.equals(v)) return @call(tailCall,branch,.{next,tos,heap,thread,caller});
-    if (False.equals(v)) return @call(tailCall,next[1].prim,.{next+2,tos+1,heap,thread,caller});
-    @panic("non boolean");
-}
-fn if_false(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    const v = tos[0];
-    if (False.equals(v)) return @call(tailCall,branch,.{next,tos,heap,thread,caller});
-    if (True.equals(v)) return @call(tailCall,next[1].prim,.{next+2,tos+1,heap,thread,caller});
-    @panic("non boolean");
+fn execute(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    return @call(tailCall,pc[1].prim,.{pc+2,tos,heap,thread,caller});
 }
 pub const p = struct {
-    fn pushConst(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-        checkSpace(next,tos,heap,thread,caller,1);
-        const newTos = tos-1;
-        newTos[0]=next[0].object;
-        return @call(tailCall,next[1].prim,.{next+2,newTos,heap,thread,caller});
+    pub fn branch(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        const offset = pc[0].int;
+        const target = pc+@intCast(u64,if (offset>=0) offset else -offset);
+        return @call(tailCall,target[0].prim,.{target+1,tos,heap,thread,caller});
     }
-    fn pushConst0(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-        checkSpace(next,tos,heap,thread,caller,1);
+    fn if_true(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        const v = tos[0];
+        if (True.equals(v)) return @call(tailCall,branch,.{pc,tos,heap,thread,caller});
+        if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,tos+1,heap,thread,caller});
+        @panic("non boolean");
+    }
+    fn if_false(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        const v = tos[0];
+        if (False.equals(v)) return @call(tailCall,branch,.{pc,tos,heap,thread,caller});
+        if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,tos+1,heap,thread,caller});
+        @panic("non boolean");
+    }
+    fn pushConst(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        checkSpace(pc,tos,heap,thread,caller,1);
+        const newTos = tos-1;
+        newTos[0]=pc[0].object;
+        return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
+    }
+    fn pushConst0(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(0);
-        return @call(tailCall,next[1].prim,.{next+2,newTos,heap,thread,caller});
+        return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
     }
-    fn pushConst1(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-        checkSpace(next,tos,heap,thread,caller,1);
+    fn pushConst1(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(1);
-        return @call(tailCall,next[1].prim,.{next+2,newTos,heap,thread,caller});
+        return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
     }
-    fn push1Nil(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-        checkSpace(next,tos,heap,thread,caller,1);
+    fn push1Nil(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Nil;
-        return @call(tailCall,next[0].prim,.{next+1,newTos,heap,thread,caller});
+        return @call(tailCall,pc[0].prim,.{pc+1,newTos,heap,thread,caller});
     }
     usingnamespace @import("primitives.zig");
 };
@@ -218,9 +232,9 @@ test "simple compare and don't branch" {
         p.pushConst,3,
         p.pushConst,4,            
         p.p110,
-        if_true,"true",
+        p.if_true,"true",
         p.pushConst,17,
-        branch,"common",
+        p.branch,"common",
         "true:",
         p.pushConst,42,
         "common:", return_tos,
@@ -233,9 +247,9 @@ test "simple compare and branch" {
         p.pushConst,3,
         p.pushConst,4,            
         p.p169,
-        if_true,"true",
+        p.if_true,"true",
         p.pushConst,17,
-        branch,"common",
+        p.branch,"common",
         "true:",
         p.pushConst,42,
         "common:", return_tos,
