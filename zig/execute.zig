@@ -1,6 +1,6 @@
 const std = @import("std");
 const sources=enum{godbolt,normal};
-const source=sources.godbolt;
+const source=sources.normal;//godbolt;
 const ns = switch (source) {
     .normal => struct {
         const Thread = @import("thread.zig").Thread;
@@ -52,7 +52,7 @@ fn countNonLabels(comptime tup: anytype) usize {
     }
     return n;
 }
-fn compileTuple(name: Object, comptime tup: anytype) [countNonLabels(tup)+2]Code {
+pub fn compileTuple(name: Object, comptime tup: anytype) [countNonLabels(tup)+2]Code {
     var result: [countNonLabels(tup)+2]Code = undefined;
     result[0] = Code.object(name);
     comptime var n = 1;
@@ -97,27 +97,12 @@ fn compileTuple(name: Object, comptime tup: anytype) [countNonLabels(tup)+2]Code
     return result;
 }
 const stdout = std.io.getStdOut().writer();
-fn return_tos(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    _ = thread;
-    _ = pc;
-    _ = heap;
-    _ = caller;
-    return tos[0];
-}
-fn failed_test(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
-    _ = thread;
-    _ = pc;
-    _ = heap;
-    _ = caller;
-    _ = tos;
-    @panic("failed_test");
-}
 test "compiling tuple" {
     const expectEqual = std.testing.expectEqual;
-    var t = compileTuple(Nil,.{"abc:", return_tos, "def", True, 42, "def:", "abc", null});
+    var t = compileTuple(Nil,.{"abc:", testing.return_tos, "def", True, 42, "def:", "abc", null});
     try expectEqual(t.len,8);
     try expectEqual(t[0].object,Nil);
-    try expectEqual(t[1].prim,return_tos);
+    try expectEqual(t[1].prim,testing.return_tos);
     try expectEqual(t[2].int,3);
     try expectEqual(t[3].object,True);
     try expectEqual(t[4].object,Object.from(42));
@@ -125,134 +110,89 @@ test "compiling tuple" {
     try expectEqual(t[6].object,Nil);
     try expectEqual(t[t.len-1].object,NilFlag);
 }
-pub inline fn checkSpace(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context, needed: usize) void {
-    _ = thread;
-    _ = pc;
-    _ = heap;
-    _ = caller;
-    _ = tos;
-    _ = needed;
-}
-fn testExecute(code: [] const Code) Object {
-    var mem = [_]Object{Nil}**1000;
-    const memSlice: []Object = mem[0..];
-    const memPtr = memSlice.ptr;
-    var thread = Thread.initForTest() catch unreachable;
-    return execute(code.ptr,memPtr+998,memPtr,&thread,memPtr+998);
-}
 fn execute(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
     return @call(tailCall,pc[1].prim,.{pc+2,tos,heap,thread,caller});
 }
-pub const p = struct {
+pub const controlPrimitives = struct {
+    pub inline fn checkSpace(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context, needed: usize) void {
+        _ = thread;
+        _ = pc;
+        _ = heap;
+        _ = caller;
+        _ = tos;
+        _ = needed;
+    }
     pub fn branch(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         const offset = pc[0].int;
         const target = pc+@intCast(u64,if (offset>=0) offset else -offset);
         return @call(tailCall,target[0].prim,.{target+1,tos,heap,thread,caller});
     }
-    fn if_true(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn if_true(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         const v = tos[0];
         if (True.equals(v)) return @call(tailCall,branch,.{pc,tos,heap,thread,caller});
         if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,tos+1,heap,thread,caller});
         @panic("non boolean");
     }
-    fn if_false(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn if_false(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         const v = tos[0];
         if (False.equals(v)) return @call(tailCall,branch,.{pc,tos,heap,thread,caller});
         if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,tos+1,heap,thread,caller});
         @panic("non boolean");
     }
-    fn pushConst(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn pushConst(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=pc[0].object;
         return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
     }
-    fn pushConst0(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn pushConst0(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(0);
         return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
     }
-    fn pushConst1(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn pushConst1(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(1);
         return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
     }
-    fn push1Nil(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+    pub fn push1Nil(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Nil;
         return @call(tailCall,pc[0].prim,.{pc+1,newTos,heap,thread,caller});
     }
-    usingnamespace @import("primitives.zig");
 };
+pub const testing = struct {
+    pub fn return_tos(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        _ = thread;
+        _ = pc;
+        _ = heap;
+        _ = caller;
+        return tos[0];
+    }
+    pub fn failed_test(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
+        _ = thread;
+        _ = pc;
+        _ = heap;
+        _ = caller;
+        _ = tos;
+        @panic("failed_test");
+    }
+    pub fn testExecute(code: [] const Code) Object {
+        var mem = [_]Object{Nil}**1000;
+        const memSlice: []Object = mem[0..];
+        const memPtr = memSlice.ptr;
+        var thread = Thread.initForTest() catch unreachable;
+        return execute(code.ptr,memPtr+998,memPtr,&thread,memPtr+998);
+    }
+};
+
 test "simple return via execute" {
     const expectEqual = std.testing.expectEqual;
     const prog = compileTuple(Nil,.{
-        return_tos,
+        testing.return_tos,
     });
-    try expectEqual(testExecute(prog[0..]),Nil);
-}
-test "simple add" {
-    const expectEqual = std.testing.expectEqual;
-    const prog = compileTuple(Nil,.{
-        p.pushConst,3,
-        p.pushConst,4,            
-        p.p1,"fail",
-        return_tos,
-        "fail:", failed_test,
-    });
-    try expectEqual(testExecute(prog[0..]).to(i64),7);
-}
-test "simple add with overflow" {
-    const expectEqual = std.testing.expectEqual;
-    const prog = compileTuple(Nil,.{
-        p.pushConst, 0x3_ffffffffffff,
-        p.pushConst,4,            
-        p.p1,"fail",
-        failed_test,
-        "fail:", return_tos,
-    });
-    try expectEqual(testExecute(prog[0..]).to(i64),4);
-}
-test "simple compare" {
-    const expectEqual = std.testing.expectEqual;
-    const prog = compileTuple(Nil,.{
-        p.pushConst,3,
-        p.pushConst,4,            
-        p.p110,
-        return_tos,
-    });
-    try expectEqual(testExecute(prog[0..]),False);
-}
-test "simple compare and don't branch" {
-    const expectEqual = std.testing.expectEqual;
-    const prog = compileTuple(Nil,.{
-        p.pushConst,3,
-        p.pushConst,4,            
-        p.p110,
-        p.if_true,"true",
-        p.pushConst,17,
-        p.branch,"common",
-        "true:",
-        p.pushConst,42,
-        "common:", return_tos,
-    });
-    try expectEqual(testExecute(prog[0..]).to(i64),17);
-}
-test "simple compare and branch" {
-    const expectEqual = std.testing.expectEqual;
-    const prog = compileTuple(Nil,.{
-        p.pushConst,3,
-        p.pushConst,4,            
-        p.p169,
-        p.if_true,"true",
-        p.pushConst,17,
-        p.branch,"common",
-        "true:",
-        p.pushConst,42,
-        "common:", return_tos,
-    });
-    try expectEqual(testExecute(prog[0..]).to(i64),42);
+    try expectEqual(testing.testExecute(prog[0..]),Nil);
 }

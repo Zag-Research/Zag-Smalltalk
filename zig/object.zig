@@ -34,10 +34,12 @@ const Character_Base        =    o2(class.Character_I,0);
 const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
+pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
+pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
 
-pub fn fromLE(v: u64) Object {
-    const val = @ptrCast(*const [8]u8,&v);
-    return @bitCast(Object,mem.readIntLittle(u64,val));
+pub fn fromLE(comptime T: type, v: T) Object {
+    const val = @ptrCast(*const [@sizeOf(T)]u8,&v);
+    return @bitCast(Object,mem.readIntLittle(T,val));
 }
 pub const compareObject = objectMethods.compare;
 const objectMethods = struct {
@@ -138,9 +140,6 @@ const objectMethods = struct {
             else => {},
         }
         @compileError("Can't convert");
-    }
-    pub inline fn fullHash(self: Object) u64 {
-        return self.u() % 16777213; // largest 24 bit prime
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         if (!self.is_memory() or !other.is_memory()) {

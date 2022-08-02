@@ -626,8 +626,11 @@ test "string allocator" {
     const h1 = header(1,Format.none.raw(u8,5),class.String_I,0);
     const h2 = header(2,Format.none.raw(u8,5),class.String_I,0);
     const expected = ([_]Object{
-        h1.o(),object.fromLE(0x0000006f6c6c6568),
-        h2.o(),object.fromLE(0x646e612073696874),object.fromLE(0x0000007461687420),
+        h1.o(),
+        object.fromLE(u64,0x0000006f6c6c6568),
+        h2.o(),
+        object.fromLE(u64,0x646e612073696874),
+        object.fromLE(u64,0x0000007461687420),
     })[0..];
     var testArena = try TestArena.with(expected);
     const obj1 = try testArena.allocGlobalString("hello"[0..]);
@@ -648,7 +651,7 @@ const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+l
 fn findAllocationList(target: u64) ?usize {
     if (target<=34) return allocIndex[target];
     if (target>allocationUnit) return null;
-    return @import("utilities.zig").findFib(target);
+    return @import("utilities/fibonacci.zig").findFib(target);
 }
 fn findContainedList(target: u64) ?usize {
     _ = target;
