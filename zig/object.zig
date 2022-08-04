@@ -6,7 +6,7 @@ const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
-//const Thread = @import("thread.zig");
+const Thread = @import("thread.zig");
 //const Dispatch = @import("dispatch.zig");
 //const Context = Dispatch.Context;
 const class = @import("class.zig");
@@ -244,6 +244,8 @@ test "to conversion" {
     try testing.expectEqual(Object.from(true).to(bool), true);
 }
 test "printing" {
+    var thr = try Thread.Thread.initForTest();
+    _ = try symbol.init(&thr,250,"");
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();

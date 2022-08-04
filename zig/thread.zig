@@ -4,7 +4,7 @@ var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
 test "sizes" {
-    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
+//    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
 }
 pub const Thread = struct {
 //    header: heap.Header,

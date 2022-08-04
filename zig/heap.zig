@@ -160,16 +160,36 @@ pub const HeaderArray = [*]align(@alignOf(u64)) Header;
 pub const HeapPtr = *align(@alignOf(u64)) Header;
 pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
-    pub inline fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
+    const forwardLength : u16 = 4095 << 4;
+    const indirectLength : u16 = 4094 << 4;
+    inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
+        return @intToPtr(HeapConstPtr,@intCast(i64,@bitCast(u64,self.*)<<16)>>16);
+    }
+    inline fn isForwarded(self: HeapConstPtr) bool {
+        return self.length>=forwardLength;
+    }
+    pub inline fn forwarded(self: HeapConstPtr) HeapConstPtr {
+        var ptr = self;
+        while (ptr.isForwarded()) {
+            ptr = ptr.forwardedTo();
+        }
+        return ptr;
+    }
+    inline fn isIndirect(self: HeapConstPtr) bool {
+        return self.length>=indirectLength and self.length<forwardLength;
+    }
+    pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
         const scale = @sizeOf(Object)/@sizeOf(T);
-        const form = self.objectFormat;
+        const ptr = self.forwarded();
+        const form = ptr.objectFormat;
         if (form.isRaw()) {
             const formi = @enumToInt(form);
-            var size :usize = self.length;
-            var oa = self.asObjectArray();
-            if (size==32767) {
+            var size :usize = ptr.length;
+            var oa = ptr.asObjectArray();
+            if (ptr.isIndirect()) {
                 size = @bitCast(usize,oa[0]);
                 oa += 1;
+                @panic("incomplete");
             }
             return mem.bytesAsSlice(
                 T,
@@ -178,8 +198,8 @@ const heapMethods = struct {
                     else if (formi>=Format.Indexable_32) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
                     else @ptrCast([*]T,oa)[0..size*scale]);
         } else {
-            const size = self.length;
-            const oa = self.asObjectArray();
+            const size = ptr.length;
+            const oa = ptr.asObjectArray();
             return mem.bytesAsSlice(
                 T,
                 if (!form.isIndexable()) (&[0]T{})
@@ -246,9 +266,6 @@ const heapMethods = struct {
         }
         unreachable;
     }
-    pub inline fn derefForwarded(self: HeapConstPtr) HeapPtr {
-        return @intToPtr(HeapPtr,-@bitCast(i64,self.*));
-    }
     pub inline fn getClass(self: HeapConstPtr) ClassIndex {
         return self.classIndex;
     }
@@ -260,7 +277,8 @@ const heapMethods = struct {
         } else if (form.hasBoth()) {
             size += self.asObjectArray()[size].u()+1;
         }
-        return size+1;
+        @panic("incomplete");
+//        return size+1;
     }
     fn @"format FUBAR"(
         self: HeapConstPtr,
