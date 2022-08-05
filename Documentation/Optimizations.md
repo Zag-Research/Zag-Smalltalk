@@ -61,4 +61,5 @@
 -  generate a runtime with the (Smalltalk) compiler code included, so that we don't have to have an interpreter. Or possibly generate a runtime with the (Smalltalk) interpreter code (might )
 -  every class that is created gets the same entry in the dispatch table - a dispatch to a single method that goes to the class and find which methods exist and create a dispatch table for them full of entries to compile that method
 -  can further parameterize Treap by size of index (instead of always 32-bit), then the class treap can have 32-bit keys (the symbol hashes) and 16-bit indices, halving the size of the table. Use hash multiplier of 2^n/phi.
+- when an object is promoted (or allocated) in global space, send it a `#becameShared` message so it can, for example change its class to one that locks the object for mutation operations (e.g. a WriteStream)
 - other...
