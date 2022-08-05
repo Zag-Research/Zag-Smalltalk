@@ -11,9 +11,8 @@ const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
 pub const externalPageSize = 3100;
 test "size assertions" {
-    try std.testing.expect(externalPageSize<forwardedObject);
+    try std.testing.expect(externalPageSize<heapMethods.maxLength);
 }
-const forwardedObject = 8191;
 const objectAllocationSize = (externalPageSize*@sizeOf(Object)*2+mem.page_size-1) & -mem.page_size;
 pub const Format = enum(u8) {
     none = 0,
@@ -162,10 +161,11 @@ pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
     const forwardLength : u16 = 4095 << 4;
     const indirectLength : u16 = 4094 << 4;
-    inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
-        return @intToPtr(HeapConstPtr,@intCast(i64,@bitCast(u64,self.*)<<16)>>16);
+    const maxLength = 4093;
+    pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
+        return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
-    inline fn isForwarded(self: HeapConstPtr) bool {
+    pub inline fn isForwarded(self: HeapConstPtr) bool {
         return self.length>=forwardLength;
     }
     pub inline fn forwarded(self: HeapConstPtr) HeapConstPtr {
@@ -175,7 +175,7 @@ const heapMethods = struct {
         }
         return ptr;
     }
-    inline fn isIndirect(self: HeapConstPtr) bool {
+    pub inline fn isIndirect(self: HeapConstPtr) bool {
         return self.length>=indirectLength and self.length<forwardLength;
     }
     pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
@@ -518,7 +518,7 @@ pub const Arena = struct {
         const width = @sizeOf(T);
         const asize = (array_size*width+objectWidth-width)/objectWidth;
         const form = Format.none.raw(T,array_size);
-        const size = @minimum(asize,32767);
+        const size = @minimum(asize,heapMethods.maxLength);
         var totalSize = asize+@as(usize,if (size<asize) 2 else 1);
         return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO); //,&[0]Object{});
     }
@@ -659,7 +659,7 @@ test "string allocator" {
     //try stdout.print("obj2*=0x{x:0>16}: \"{}\"\n",.{@ptrToInt(obj2),obj2});
     try testArena.verify(expected);
 }
-const allocationUnit = 8190; // size in u64 units including the header - must be <= 32766
+const allocationUnit = heapMethods.maxLength; // size in u64 units including the header
 const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+link in free list
                          2, 3, 3,
                          4, 4, 4,
@@ -669,7 +669,7 @@ const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+l
 fn findAllocationList(target: u64) ?usize {
     if (target<=34) return allocIndex[target];
     if (target>allocationUnit) return null;
-    return @import("utilities/fibonacci.zig").findFib(target);
+    return @import("utilities.zig").findFib(target);
 }
 fn findContainedList(target: u64) ?usize {
     _ = target;

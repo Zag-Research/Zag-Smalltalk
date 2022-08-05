@@ -167,7 +167,7 @@ fn gen_primes(comptime T : type, n_primes: usize) [n_primes]T {
     }
 }
 const primes_type = u16;
-const prime_values = gen_primes(primes_type,if (builtin.is_test) 15 else 22);
+const prime_values = gen_primes(primes_type,if (@import("builtin").is_test) 15 else 22);
 const default_prime = 11959; // max size of dispatch table - must be less than 32767
 pub fn next_prime_larger_than(n : primes_type) primes_type {
     var low : usize = 0;

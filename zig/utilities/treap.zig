@@ -30,12 +30,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             inline fn priority(pos:Index) Index { // "random" number based on position in the array
                 return pos *% randomizer;
             }
-            const randomizer = switch (Index) { // these are all 2^size/phi
-                u32 => 2654435769, // was 2717763491
-                u16 => 40503,
-                u8 => 158,
-                else => 11400714819323197440,
-            };
+            const randomizer = @import("general.zig").inversePhi(Index);
         };
         const priority = _priority.priority;
         pub fn init(memory: []u8, compare: Compare, empty: Key) Self {

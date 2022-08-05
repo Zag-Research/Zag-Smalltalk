@@ -9,7 +9,7 @@ const symbols = symbol.symbols;
 const dispatch = @import("dispatch.zig");
 const methodT = dispatch.methodT;
 const heap = @import("heap.zig");
-const treap = @import("treap.zig");
+const Treap = @import("utilities.zig").Treap;
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has fewer than 18000 (including metaclasses), so shouldn't be a problem
 pub const Object_I: ClassIndex = 1;
 pub const SmallInteger_I: ClassIndex = 2;
@@ -46,7 +46,7 @@ pub const Context_I = c2o+ 21;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
-const objectTreap = treap.Treap(u32,ClassIndex,u0);
+const objectTreap = Treap(u32,ClassIndex,u0);
 const Class_Table = struct {
     theObject: object.Object,
     const Self = @This();

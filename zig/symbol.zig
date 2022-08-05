@@ -5,7 +5,7 @@ const object = @import("object.zig");
 const Nil = object.Nil;
 const class = @import("class.zig");
 const heap = @import("heap.zig");
-const treap = @import("treap.zig");
+const Treap = @import("utilities.zig").Treap;
 const thread = @import("thread.zig");
 inline fn symbol_of(index: u64, arity: u64) object.Object {
     return symbol0(index|(arity<<24));
@@ -116,7 +116,7 @@ pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
     return (symbolTable orelse unreachable).intern(thr,string);
 }
-const objectTreap = treap.Treap(object.Object,u32,u0);
+const objectTreap = Treap(object.Object,u32,u0);
 fn numArgs(obj: object.Object) u32 {
     const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
