@@ -16,42 +16,43 @@ There are several ways to do NaN tagging/encoding. You can choose integers, poin
 
 So this leaves us with the following encoding based on the **S**ign+**E**xponent and **F**raction bits:
 
-| S+E       | F    | F    | F    | Type            |
-| --------- | ---- | ---- | ---- | --------------- |
-| 0000      | 0000 | 0000 | 0000 | double  +0      |
-| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)         |
-| 7FF0      | 0000 | 0000 | 0000 | +inf            |
-| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)    |
-| 8000      | 0000 | 0000 | 0000 | double     -0   |
-| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)         |
-| FFF0      | 0000 | 0000 | 0000 | -inf            |
-| FFF5      | xxxx | xxxx | xxxx | thread-local object |
-| FFF6      | xxxx | xxxx | xxxx | heap object |
-| FFF7      | 0000 | xxxx | xxxx | reserved (tag = unused) |
-| FFF7      | 0001 | xxxx | xxxx | reserved (tag = Object) |
+| S+E       | F    | F    | F    | Type                          |
+| --------- | ---- | ---- | ---- | ----------------------------- |
+| 0000      | 0000 | 0000 | 0000 | double  +0                    |
+| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)             |
+| 7FF0      | 0000 | 0000 | 0000 | +inf                          |
+| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                  |
+| 8000      | 0000 | 0000 | 0000 | double     -0                 |
+| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
+| FFF0      | 0000 | 0000 | 0000 | -inf                         |
+| FFF0      | xxxx | xxxx | xxxx | header for a context                         |
+| FFF5      | xxxx | xxxx | xxxx | thread-local object           |
+| FFF6      | xxxx | xxxx | xxxx | heap object                   |
+| FFF7      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
+| FFF7      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
 | FFF7      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Double) |
-| FFF7      | 0004 | 0001 | 0000 | False |
-| FFF7      | 0005 | 0010 | 0001 | True |
-| FFF7      | 0006 | 0100 | 0002 | UndefinedObject |
-| FFF7      | 0007 | axxx | xxxx | Symbol |
-| FFF7      | 0008 | 00xx | xxxx | Character |
-| FFF8-F      | xxxx | xxxx | xxxx | SmallInteger |
-| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal|
-| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0|
-| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal|
+| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Double)       |
+| FFF7      | 0004 | 0001 | 0000 | False                         |
+| FFF7      | 0005 | 0010 | 0001 | True                          |
+| FFF7      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF7      | 0007 | axxx | xxxx | Symbol                        |
+| FFF7      | 0008 | 00xx | xxxx | Character                     |
+| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
+| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
+| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
+| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF4 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF1-FFF4 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 8 bits and the hash code is 40-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
 
 #### Tag values
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
 2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
-3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF).
+3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
 5. True: This only encodes the single value `true`
 6. UndefinedObject: This encodes the value `nil` with all zero hash code.
@@ -62,7 +63,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
 
 There are a few significant changes:
-1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with the sign-bit of the header word, so a negative object is a forward. Rather than masking the value we store the negation of the pointer as the forward.
+1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
@@ -100,8 +101,8 @@ This is the header-word for an object:
 
 | Bits | What          | Characteristics                        |
 | ---- | ------------- | -------------------------------------- |
-| 3    | age           | number of times object has been copied |
-| 13   | length        | number of long-words beyond the header |
+| 12   | length        | number of long-words beyond the header |
+| 4    | age           | number of times object has been copied |
 | 1    | unused        | \                                      |
 | 1    | isGlobal      | !                                      |
 | 1    | isImmutable   | !                                      |
@@ -115,9 +116,9 @@ This is the header-word for an object:
 
 Unless format=3,7,11, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 8189, it can be encoded in the header length field.
 
-For formats >= 17, if the length field=8190, the header word is followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the index allocation word.
+For formats >= 17, if the length field=4094, the header word is followed by 3 words with the index allocation, a pointer to the data page, and a link for a list through all the large-allocation objects. In this case the total number of words allocated to the object is 3.
 
-If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 8K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 8189 indexable elements.
+If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 plus the value of the length field (for the instance variables which can't be 4K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 4093 indexable elements. If the index allocation is greater than or equal to 4094, then the indexable elements are allocated on a separate data page, and replaced in the object with a pointer to that page and a link for the list of large-allocation objects..
 
 The remaining format bits encode:
 - bit 5: = 32 means that the object is immutable, so any assignments will signal an exception

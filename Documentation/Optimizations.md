@@ -63,4 +63,5 @@
 -  can further parameterize Treap by size of index (instead of always 32-bit), then the class treap can have 32-bit keys (the symbol hashes) and 16-bit indices, halving the size of the table. Use hash multiplier of 2^n/phi. **Done**
 - when an object is promoted (or allocated) in global space, send it a `#becameShared` message so it can, for example change its class to one that locks the object for mutation operations (e.g. a WriteStream)
 - tail-sends may not reuse the `Context` if it's not on the stack (because it might have been captured by, e.g. `call/cc`)
+- For the large-data allocation, an auto-treap could used to do the mark/sweep for these values rather than a linked list. This would allow multiple references into an object, but to be useful this would have to encode indirection elsewhere than the size field. It also has the potential to lead to large chunks of memory being held onto even though only a tiny part of it is being accessed. But 
 - other...
