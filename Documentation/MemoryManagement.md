@@ -52,17 +52,19 @@ If you have an arena that is accessible to multiple threads, then moving becomes
 
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
 
+When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
+
 ### Global Arena Structure
 The Global Arena uses a Fibonacci heap
 
 #### Free-space allocation
 Free-space is split up into fibonacci-number-sized pieces and put on the appropriate queue:
-- 1-word free-space is not allocated on any queue. 
+- 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word is stored) 
 - 4-word free-space is allocated as 2 entries on the 2-queue. 
 - Otherwise, free-space is split into two pieces: the largest fibonacci number that will fit, which is put on the appropriate queue, and loop to allocate the rest.
 
 ## Large data allocation
-For objects of 4094^[this exact size will be tuned with experience and may become smaller] words or more, separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
+For objects of 4094^[this exact size will be tuned with experience and may become smaller] words or more (32KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
 
 The objects with large allocations are linked together so that at the start of the sweep of the global arena we can go though this list finding all the unused objects that have large allocations and free up their allocation.
 
