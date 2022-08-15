@@ -21,9 +21,10 @@ pub const Thread = struct {
     const Self = @This();
     pub fn init() !Self {
         defer next_thread_number += 1;
+        const arena = try heap.NurseryArena.init();
         return Self {
             .id = next_thread_number,
-            .nursery = try heap.NurseryArena.init(),
+            .nursery = arena,
             .next = null,
         };
     }
@@ -43,5 +44,8 @@ pub const Thread = struct {
     }
     pub inline fn getArena(self: *Self) *heap.Arena {
         return &self.nursery;
+    }
+    pub inline fn endOfStack(self: *Self) [*]Object {
+        return self.getArena().toh;
     }
 };

@@ -17,29 +17,29 @@ const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
 pub const primitives = struct {
-    pub fn p1(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {//SmallInteger>>#+
-        const other = tos[0];
+    pub fn p1(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, thread: *Thread, caller: Context) Object {//SmallInteger>>#+
+        const other = sp[0];
         if (other.is_int()) {
             const o = other.toUnchecked(i64);
-            const result = @bitCast(Object,@bitCast(i64,tos[1])+o);
+            const result = @bitCast(Object,@bitCast(i64,sp[1])+o);
             if (result.is_int()) {
-                tos[1]=result;
-                return @call(tailCall,next[1].prim,.{next+2,tos+1,heap,thread,caller});
+                sp[1]=result;
+                return @call(tailCall,pc[1].prim,.{pc+2,sp+1,heap,thread,caller});
             }
         }
-        return @call(tailCall,p.branch,.{next,tos,heap,thread,caller});
+        return @call(tailCall,p.branch,.{pc,sp,heap,thread,caller});
     }
-    pub fn p110(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object { // ProtoObject>>==
-        const result = Object.from(tos[1].equals(tos[0]));
-        tos[1]=result;
-        return @call(tailCall,next[0].prim,.{next+1,tos+1,heap,thread,caller});
+    pub fn p110(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, thread: *Thread, caller: Context) Object { // ProtoObject>>==
+        const result = Object.from(sp[1].equals(sp[0]));
+        sp[1]=result;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,heap,thread,caller});
     }
-    pub fn p169(next: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object { // ProtoObject>>!!
-        const result = Object.from(!tos[1].equals(tos[0]));
-        tos[1]=result;
-        return @call(tailCall,next[0].prim,.{next+1,tos+1,heap,thread,caller});
+    pub fn p169(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, thread: *Thread, caller: Context) Object { // ProtoObject>>!!
+        const result = Object.from(!sp[1].equals(sp[0]));
+        sp[1]=result;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,heap,thread,caller});
     }
-    // pub inline fn p111(thread: *Thread, next: [*]const Code, heap: [*]Object, tos: [*]Object, caller: Context) Object { // ProtoObject>>class
+    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, thread: *Thread, caller: Context) Object { // ProtoObject>>class
 };
 const p = struct {
     usingnamespace @import("execute.zig").controlPrimitives;
