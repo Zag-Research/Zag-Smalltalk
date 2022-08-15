@@ -149,13 +149,13 @@ pub const controlPrimitives = struct {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(0);
-        return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
+        return @call(tailCall,pc[1].prim,.{pc+1,newTos,heap,thread,caller});
     }
     pub fn pushConst1(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
         const newTos = tos-1;
         newTos[0]=Object.from(1);
-        return @call(tailCall,pc[1].prim,.{pc+2,newTos,heap,thread,caller});
+        return @call(tailCall,pc[1].prim,.{pc+1,newTos,heap,thread,caller});
     }
     pub fn push1Nil(pc: [*]const Code, tos: [*]Object, heap: [*]Object, thread: *Thread, caller: Context) Object {
         checkSpace(pc,tos,heap,thread,caller,1);
