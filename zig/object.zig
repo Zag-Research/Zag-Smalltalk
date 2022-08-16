@@ -42,11 +42,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return @bitCast(Object,mem.readIntLittle(T,val));
 }
 pub const compareObject = objectMethods.compare;
-pub const spaceAbove = objectMethods.spaceAbove;
 const objectMethods = struct {
-    pub inline fn spaceAbove(stackPointer: [*]const Object, heapPointer: [*]const Object) isize {
-        return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
-    }
     pub inline fn u(self: Object) u64 {
         return @bitCast(u64,self);
     }
@@ -224,15 +220,6 @@ pub const Object = switch (native_endian) {
 test "slicing" {
     const testing = std.testing;
     try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
-}
-test "spaceAbove" {
-    const testing = std.testing;
-    const stack: [10]Object=undefined;
-    const s5: [*]const Object = @ptrCast([*]const Object,&stack[5]);
-    const s2: [*]const Object = @ptrCast([*]const Object,&stack[2]);
-    try testing.expectEqual(spaceAbove(&stack,&stack),0);
-    try testing.expectEqual(spaceAbove(s5,s2),3);
-    try testing.expectEqual(spaceAbove(s2,s5),-3);
 }
 test "from conversion" {
     const testing = std.testing;

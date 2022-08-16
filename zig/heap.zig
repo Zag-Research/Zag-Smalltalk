@@ -216,6 +216,12 @@ const heapMethods = struct {
     pub inline fn asObject(self: HeapConstPtr) Object {
         return Object.from(self);
     }
+    pub inline fn asObjectPtr(self: HeapConstPtr) [*]Object {
+        return @bitCast([*]Object,self);
+    }
+    pub inline fn fromObjectPtr(op:  [*]const Object) HeapConstPtr {
+        return @bitCast(HeapPtr,op);
+    }
     pub inline fn o(self: Header) Object {
         return @bitCast(Object,self);
     }
@@ -356,6 +362,18 @@ test "Header structure" {
     try expect(@sizeOf(Header) == 8);
     const hdr = header(17, Format.object, 35,0x123);
     try expect(hdr.o().u() == 0x0011010001230023);
+}
+pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeapConstPtr) isize {
+    return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
+    }
+test "arenaFree" {
+    const testing = std.testing;
+    const stack: [10]Object=undefined;
+    const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
+    const s5 = s1+4;
+    const hp: HeapPtr = Header.fromObjectPtr(s1+2);
+    try testing.expectEqual(arenaFree(s5,hp),2);
+    try testing.expectEqual(arenaFree(s1,hp),-2);
 }
 const nurserySize = 2048;
 pub const NurseryArena = Arena {
