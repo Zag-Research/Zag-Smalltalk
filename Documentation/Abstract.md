@@ -12,7 +12,7 @@ The system is being developed on https://github.com/dvmason/AST-Smalltalk
 
 ## The [AST class structure](AST_Classes.md) is described here.
 
-## The [interpreter](Interpreter.md) is described here, including message dispatch.
+## The [interpreter](Execution.md) is described here, including message dispatch.
 
 ## The [memory structure](Mapping.md), [garbage collector](MemoryManagement.md), and [image format](ImageFormat.md) are described here.
 
