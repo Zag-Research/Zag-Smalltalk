@@ -24,10 +24,10 @@ pub const primitives = struct {
             const result = @bitCast(Object,@bitCast(i64,sp[1])+o);
             if (result.is_int()) {
                 sp[1]=result;
-                return @call(tailCall,pc[1].prim,.{pc+2,sp+1,heap,rpc,thread,caller});
+                return @call(tailCall,p.branch,.{pc+2,sp+1,heap,rpc,thread,caller});
             }
         }
-        return @call(tailCall,p.branch,.{pc,sp,heap,rpc,thread,caller});
+        return @call(tailCall,pc[1].prim,.{pc,sp,heap,rpc,thread,caller});
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>==
         const result = Object.from(sp[1].equals(sp[0]));
@@ -50,9 +50,9 @@ test "simple add" {
     const prog = compileTuple(Nil,.{
         p.pushConst,3,
         p.pushConst,4,            
-        p.p1,"fail",
-        return_tos,
-        "fail:", failed_test,
+        p.p1,"success",
+        failed_test,
+        "success:", return_tos,
     });
     try expectEqual(testExecute(prog[0..]).to(i64),7);
 }
@@ -61,11 +61,17 @@ test "simple add with overflow" {
     const prog = compileTuple(Nil,.{
         p.pushConst, 0x3_ffffffffffff,
         p.pushConst,4,            
-        p.p1,"fail",
-        failed_test,
-        "fail:", return_tos,
+        p.p1,"success",
+        return_tos,
+        "success:",failed_test,
     });
     try expectEqual(testExecute(prog[0..]).to(i64),4);
+}
+// fibonacci
+//	self < 2 ifTrue: [ ^ 1 ].
+//	^ (self - 1) fibonacci + (self - 2) fibonacci
+test "fibonacci" {
+    return error.not_implemented;
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
