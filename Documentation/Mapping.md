@@ -24,14 +24,15 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                  |
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
-| FFF0      | 0000 | 0000 | 0000 | -inf                         |
-| FFF0      | xxxx | xxxx | xxxx | header for a context                         |
+| FFF0      | 0000 | 0000 | 0000 | -inf                          |
+| FFF0-3    | xxxx | xxxx | xxxx | NaN (unused)                  |
+| FFF4      | xxxx | xxxx | xxxx | code reference                |
 | FFF5      | xxxx | xxxx | xxxx | thread-local object           |
 | FFF6      | xxxx | xxxx | xxxx | heap object                   |
 | FFF7      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
 | FFF7      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
 | FFF7      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Double)       |
+| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Float (double))       |
 | FFF7      | 0004 | 0001 | 0000 | False                         |
 | FFF7      | 0005 | 0010 | 0001 | True                          |
 | FFF7      | 0006 | 0100 | 0002 | UndefinedObject               |
@@ -42,12 +43,12 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF1-FFF4 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF3 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being literal values and having separate classes.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
 
 #### Tag values
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)

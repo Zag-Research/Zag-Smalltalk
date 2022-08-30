@@ -13,6 +13,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const sym = @import("symbol.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
@@ -68,7 +69,7 @@ test "simple add with overflow" {
     try expectEqual(testExecute(prog[0..]).to(i64),4);
 }
 // fibonacci
-//	self < 2 ifTrue: [ ^ 1 ].
+//	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
 test "fibonacci" {
     return error.not_implemented;
@@ -112,4 +113,7 @@ test "simple compare and branch" {
         "common:", return_tos,
     });
     try expectEqual(testExecute(prog[0..]).to(i64),42);
+}
+
+test "dispatch3" {
 }

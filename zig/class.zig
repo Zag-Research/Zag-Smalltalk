@@ -42,7 +42,8 @@ pub const Magnitude_I = c3o+ 17;
 pub const Number_I = c3o+ 18;
 pub const ClassDescription_I = c3o+ 19;
 pub const Boolean_I = c3o+ 20;
-pub const Context_I = c2o+ 21;
+pub const Context_I = c3o+ 21;
+pub const CodeReference_I = c3o+22;
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -97,7 +98,7 @@ const Class_Table = struct {
 \\ Behavior BlockClosure Method MethodDictionary System
 \\ Return Send Literal Load Store
 \\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription
-\\ Boolean Context
+\\ Boolean Context CodeReference
                 ," \n");
         while(names.next()) |name| {
             _ = s.intern(symbol.internLiteral(arena,name));

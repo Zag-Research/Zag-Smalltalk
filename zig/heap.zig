@@ -159,9 +159,10 @@ pub const HeaderArray = [*]align(@alignOf(u64)) Header;
 pub const HeapPtr = *align(@alignOf(u64)) Header;
 pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
-    const forwardLength : u16 = 4095 << 4;
-    const indirectLength : u16 = 4094 << 4;
-    const maxLength = 4093;
+    const _reservedLength = 4095; // so that embedded headers look like doubles
+    const forwardLength : u16 = 4094 << 4;
+    const indirectLength : u16 = 4093 << 4;
+    const maxLength = 4092;
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
@@ -220,7 +221,7 @@ const heapMethods = struct {
         return @bitCast([*]Object,self);
     }
     pub inline fn fromObjectPtr(op:  [*]const Object) HeapConstPtr {
-        return @bitCast(HeapPtr,op);
+        return @intToPtr(HeapConstPtr,@ptrToInt(op));
     }
     pub inline fn o(self: Header) Object {
         return @bitCast(Object,self);
@@ -371,7 +372,7 @@ test "arenaFree" {
     const stack: [10]Object=undefined;
     const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
     const s5 = s1+4;
-    const hp: HeapPtr = Header.fromObjectPtr(s1+2);
+    const hp: HeapConstPtr = Header.fromObjectPtr(s1+2);
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }

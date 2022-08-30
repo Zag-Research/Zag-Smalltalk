@@ -77,13 +77,18 @@ pub const symbols = struct {
     pub const Store = symbol0(49);
     pub const SymbolTable = symbol0(50);
     pub const Dispatch = symbol0(51);
-    pub const ClassTable = symbol0(52);
-    pub const ClassDescription = symbol0(53);
-    pub const Constrained = symbol0(54);
-    pub const class = symbol0(55);
-    pub const name = symbol0(56);
+    pub const ClassDescription = symbol0(52);
+    pub const Constrained = symbol0(53);
+    pub const class = symbol0(54);
+    pub const name = symbol0(55);
+    pub const @"<" = symbol1(56);
+    pub const @"<=" = symbol1(57);
+    pub const @">=" = symbol1(58);
+    pub const @">" = symbol1(59);
+    // define any new symbols here
+    pub const ClassTable = symbol0(60); // always have this the last initial symbol so the tests verify all the counts are correct
 };
-pub const predefinedSymbols = 57;
+pub const predefinedSymbols = 61;
 var symbolTable : ?Symbol_Table = null;
 
 pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !Symbol_Table {
@@ -194,14 +199,16 @@ const Symbol_Table = struct {
     fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
         s.loadSymbols(
             arena,
-\\  yourself doesNotUnderstand: = + - * size at: at:put: ~= == ~~ value
-\\ value: value:value: negated new new: cull: value:value:value:
-\\ value:value:value:value: valueWithArguments: cull:cull:
-\\ cull:cull:cull: cull:cull:cull:cull: self Object BlockClosure False
-\\ True UndefinedObject SmallInteger Symbol Character Float Array String
-\\ Class Metaclass Behavior Magnitude Number Method System Return Send
-\\ Literal Load Store SymbolTable Dispatch ClassTable ClassDescription
-\\ Constrained
+            \\  yourself doesNotUnderstand: = + - * size at: at:put: ~= == ~~ value
+                \\ value: value:value: negated new new: cull: value:value:value:
+                \\ value:value:value:value: valueWithArguments: cull:cull:
+                \\ cull:cull:cull: cull:cull:cull:cull: self Object BlockClosure False
+                \\ True UndefinedObject SmallInteger Symbol Character Float Array String
+                \\ Class Metaclass Behavior Magnitude Number Method System Return Send
+                \\ Literal Load Store SymbolTable Dispatch ClassDescription
+                \\ Constrained < <= >= >
+                // add any new values here
+                \\ ClassTable
         );
     }
     fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {

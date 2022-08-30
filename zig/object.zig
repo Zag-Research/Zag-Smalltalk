@@ -9,6 +9,7 @@ const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
 //const Dispatch = @import("dispatch.zig");
 //const Context = Dispatch.Context;
+const Code = @import("execute.zig").Code;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 pub const u32_phi_inverse=2654435769;
@@ -21,6 +22,7 @@ inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    0xfff0000000000000;
 // unused NaN fff00-fff4f
+const Start_of_Code_References: u64 = 0xfff4_000000000000;
 const Start_of_Pointer_Objects: u64 = 0xfff5_000000000000;
 const Start_of_Heap_Objects: u64 =    0xfff6_000000000000;
 const End_of_Heap_Objects: u64   =    0xfff6_ffffffffffff;
@@ -28,7 +30,7 @@ const c2Base = o2(0,0);
 pub const False             = of(o2(class.False_I,0x00010000));
 pub const True              = of(o2(class.True_I,0x00100001));
 pub const Nil               = of(o2(class.UndefinedObject_I,0x01000002));
-pub const NilFlag           = of(o2(class.UndefinedObject_I,0x01000003));
+pub const NotAnObject       = of(o2(class.UndefinedObject_I,0x01000003)); // never a valid object... should never be visible to managed language
 const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
 const u64_MINVAL            =    0xfff8_000000000000;
@@ -43,6 +45,15 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = objectMethods.compare;
 const objectMethods = struct {
+    pub inline fn hash(self: Object) Object {
+        return @bitCast(Object,self.u()|u64_ZERO);
+    }
+    pub inline fn hash_u24(self: Object) u24 {
+        return @truncate(u24,self.u());
+    }
+    pub inline fn numArgs(self: Object) u8 {
+        return @truncate(u8,self.u()>>24);
+    }
     pub inline fn u(self: Object) u64 {
         return @bitCast(u64,self);
     }
@@ -66,7 +77,7 @@ const objectMethods = struct {
         return self.u() <= End_of_Heap_Objects;
     }
     pub inline fn is_memory(self: Object) bool {
-        if (self.u() <= Start_of_Pointer_Objects) return false;
+        if (self.u() <= Start_of_Code_References) return false;
         return self.u() <= End_of_Heap_Objects;
     }
     pub  fn to(self: Object, comptime T:type) T {
@@ -113,7 +124,7 @@ const objectMethods = struct {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==HeapConstPtr) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
-//        if (T==*Context or T==*Thread) return @bitCast(Object, Context.headerPtr(value) + Start_of_Pointer_Objects);
+        if (T==[*]Code) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Code_references);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -132,14 +143,14 @@ const objectMethods = struct {
             .Pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
-                        return @bitCast(Object, @ptrToInt(value) + Start_of_Heap_Objects);
+                        return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
                     },
                     else => {},
                 }
             },
             else => {},
         }
-        @compileError("Can't convert");
+        @compileError("Can't convert \""++@typeName(@TypeOf(value))++"\"");
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         if (!self.is_memory() or !other.is_memory()) {
@@ -163,7 +174,10 @@ const objectMethods = struct {
     pub inline fn immediate_class(self: Object) ClassIndex {
         if (self.is_int()) return class.SmallInteger_I;
         if (self.u() >= c2Base) return @truncate(ClassIndex,self.u() >> 32);
-        if (self.u() >= Start_of_Pointer_Objects) return class.Object_I;
+        if (self.u() >= Start_of_Code_References) {
+            if (self.u() >= End_of_Code_References) return class.Object_I;
+            return class.CodeReference_I;
+        }
         if (self.is_double()) return class.Float_I;
         @panic("unknown immediate");
     }
@@ -175,9 +189,6 @@ const objectMethods = struct {
     pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
         return arena.promote(self);
     }
-//    pub inline fn send(self: Object, selector: Object, other: Object, cp: *Dispatch.Context) Dispatch.MethodReturns {
-//        return Dispatch.call(selector, self, other, cp);
-//    }
     pub fn format(
         self: Object,
         comptime fmt: []const u8,
@@ -201,7 +212,8 @@ const objectMethods = struct {
     }
     pub const alignment = @alignOf(u64);
 };
-pub const Tag = enum(u16) { Object = 1, False, True, UndefinedObject, Symbol, Character, Context };
+pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context };
+pub const ClassGrouping = enum(u16) {CodeReference = 0xfff4, ThreadLocal, Heap, Level2, SmallInt };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
         signMantissa: u16, // align(8),
