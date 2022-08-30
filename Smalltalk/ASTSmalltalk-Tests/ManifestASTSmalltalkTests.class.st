@@ -8,6 +8,16 @@ Class {
 }
 
 { #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleBadMessageRule2V1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleBooleanPrecedenceRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#ASTimings #dispatch3b #false)) #'2022-08-25T23:29:40.915297+02:00') #(#(#RGMethodDefinition #(#ASTimings #dispatch3 #false)) #'2022-08-30T18:32:01.571322-03:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalkTests class >> ruleClassNotReferencedRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-18T15:12:51.324071-04:00') )
 ]

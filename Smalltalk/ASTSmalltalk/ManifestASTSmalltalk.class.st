@@ -33,6 +33,11 @@ ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleMinMaxRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-03-28T13:56:56.834147-04:00') )
 ]

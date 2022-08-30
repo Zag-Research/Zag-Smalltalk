@@ -9,3 +9,9 @@ UndefinedObject >> astImageObject: anASImage [
 UndefinedObject >> astObject: anASImage [ 
 	^ self
 ]
+
+{ #category : #'*ASTSmalltalk' }
+UndefinedObject >> threadFormatOn: threadPrinter [
+
+	
+]
