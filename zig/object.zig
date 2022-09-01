@@ -23,6 +23,7 @@ pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    0xfff0000000000000;
 // unused NaN fff00-fff4f
 const Start_of_Code_References: u64 = 0xfff4_000000000000;
+const End_of_Code_References: u64   = 0xfff4_ffffffffffff;
 const Start_of_Pointer_Objects: u64 = 0xfff5_000000000000;
 const Start_of_Heap_Objects: u64 =    0xfff6_000000000000;
 const End_of_Heap_Objects: u64   =    0xfff6_ffffffffffff;
@@ -124,7 +125,7 @@ const objectMethods = struct {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==HeapConstPtr) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
-        if (T==[*]Code) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Code_references);
+        if (T==[*]Code) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Code_References);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -217,13 +218,13 @@ pub const ClassGrouping = enum(u16) {CodeReference = 0xfff4, ThreadLocal, Heap, 
 pub const Object = switch (native_endian) {
     .Big => packed struct {
         signMantissa: u16, // align(8),
-        tag: Tag,
+        tag: ClassGrouping,
         hash: u32,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
         hash: u32, // align(8),
-        tag: Tag,
+        tag: ClassGrouping,
         signMantissa: u16,
         usingnamespace objectMethods;
     },

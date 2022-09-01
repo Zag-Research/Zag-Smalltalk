@@ -130,7 +130,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                 var bestRand: u32 = 0;
                 var tries: u32 = 1;
                 while (tries<=65) : (tries += 1) {
-                    const rand = tries *%u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
+                    const rand = tries *% u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
                     for (used[0..size]) |*b| b.* = 0;
                     if (extra) |key| {
                         const hash = extractHash(key) *% rand >> @truncate(u5,rand);

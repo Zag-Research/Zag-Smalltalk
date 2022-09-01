@@ -3,6 +3,11 @@ const builtin = @import("builtin");
 var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
+const HeapPtr = heap.HeapPtr;
+const ex = @import("execute.zig");
+const Code = ex.Code;
+const ContextPtr = ex.ContextPtr;
+const tailCall = ex.tailCall;
 test "sizes" {
 //    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
 }
@@ -47,5 +52,18 @@ pub const Thread = struct {
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
         return self.getArena().toh;
+    }
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr) void {
+        _ = pc;
+        _ = sp;
+        _ = hp;
+        _ = doCheck;
+        _ = thread;
+        _ = context;
+        @panic("thread check");
+    }
+    pub fn check1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr) void {
+        // I am the same as check, except the thread just executed had 1 parameter, so debug should see pc-2
+        return @call(tailCall,Thread.check,.{pc,sp,hp,doCheck,thread,context});
     }
 };

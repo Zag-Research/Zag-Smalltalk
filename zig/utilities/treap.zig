@@ -5,7 +5,7 @@ const Order = math.Order;
 const mem = std.mem;
 const includeStdTest = false;
 pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
-    const Element = packed struct {
+    const ElementS = packed struct {
         key: Key,
         left: Index,
         right: Index,
@@ -13,11 +13,11 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
     };
     const Compare = fn (Key,Key) Order;
     return struct {
-        table: []Element,
+        table: []ElementS,
         compare: Compare,
         empty: Key,
+        const Element = ElementS;
         const Self = @This();
-        const Element = Element;
         const Equal = Order.eq;
         const Less = Order.lt;
         const Greater = Order.gt;
