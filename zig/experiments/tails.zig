@@ -639,7 +639,7 @@ test "n" {
 }
 pub fn main() !void {
     const ts=std.time.nanoTimestamp;
-    const runs = 100_000_000;
+    const runs = 1_000_000_000;
     const warmup = 1_000_000;
     try stdout.print("for {} runs\n",.{runs});
     _ = R.run(warmup);
