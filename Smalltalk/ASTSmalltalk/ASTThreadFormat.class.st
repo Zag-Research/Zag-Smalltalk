@@ -17,22 +17,23 @@ ASTThreadFormat >> cr [
 ]
 
 { #category : #'printing/formatting' }
-ASTThreadFormat >> ir: anIRMethod [
+ASTThreadFormat >> ir: anIrMethod [
 
 	| prevBranchLabel |
 	stream := WriteStream with: ''.
-	method := anIRMethod.
-	anIRMethod compiledMethod primitive ~= 0 ifTrue: [ 
+	method := anIrMethod asAST.
+	method primitive ifNotNil: [ :primitive | 
 		stream
-			nextPutAll: 'p.p';
-			nextPutAll: anIRMethod compiledMethod primitive asString;
+			nextPutAll: '&p.p';
+			nextPutAll: primitive asString;
 			nextPutAll: ',Code.int(-1),';
 			cr ].
-	stream
-		nextPutAll: 'p.pushContext,"^",';
-		cr.
+	method needsContext ifTrue: [ 
+		stream
+			nextPutAll: '&p.pushContext,"^",';
+			cr ].
 	prevBranchLabel := nil.
-	anIRMethod startSequence withAllSuccessorsDo: [ :irSequence | 
+	method allSequencesDo: [ :irSequence | 
 		prevBranchLabel == irSequence ifFalse: [ 
 			prevBranchLabel threadFormatOn: stream.
 			stream cr ].
@@ -48,15 +49,15 @@ ASTThreadFormat >> ir: anIRMethod [
 	^ String streamContents: [ :s | 
 		  s
 			  nextPutAll: 'const prog = compileTuple(sym.';
-			  nextPutAll: anIRMethod sourceNode selector;
+			  nextPutAll: method selector;
 			  nextPut: $,;
-			  nextPutAll: anIRMethod numArgs asString;
+			  nextPutAll: method numArgs asString;
 			  nextPut: $,;
-			  nextPutAll: anIRMethod tempMap size asString;
+			  nextPutAll: method tempMap size asString;
 			  nextPutAll: ',.{';
 			  cr;
 			  nextPutAll: stream contents;
-			cr;	
+			  cr;
 			  nextPutAll: '};';
 			  cr ]
 ]
@@ -65,7 +66,7 @@ ASTThreadFormat >> ir: anIRMethod [
 ASTThreadFormat >> loop [
 
 	| x |
-	x := 100000000.
+	x := 1000000000.
 	[ (x := x - 1) > 0 ] whileTrue: [ 
 		x even
 			ifTrue: [ x * 2 + 3 ]
