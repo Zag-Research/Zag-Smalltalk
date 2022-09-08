@@ -33,4 +33,9 @@
 - [labguage doc](https://doc.rust-lang.org/nightly/reference/expressions/if-expr.html)
 - [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html)
 - [UTF8 strings](https://github.com/svenvc/UTF8String)
+- [Writing AArch64 code for Apple](https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms) and [Code in ARM Assembly (for Apple)](https://eclecticlight.co/2021/06/16/code-in-arm-assembly-registers-explained/)
+- [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
+- [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
+- [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))
+- [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
 - 

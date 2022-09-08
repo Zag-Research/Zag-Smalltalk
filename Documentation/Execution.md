@@ -1,33 +1,40 @@
-## The Interpreter
+## Execution
+
+### The "Interpreter"
 
 Ideally the interpreter (and [the JIT](JIT.md)) are defined within [AST Classes](AST_Classes.md). The trick is to get enough bootstrap in place that the interpreter can run.
 
 ### The stack and Contexts
-When m3 has called m2 has called m1 has called m0, the stack looks like:
+When m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like:
 
-| Stack  | Description              | Pointers                                                       | 
-| ------ | ------------------------ | -------------------------------------------------------------- |
-| ...    | m3 temps                 |                                                                |     
-| object | m2 self                  |                                                                |     
-| object | m2 parameters and locals |                                                                |     
-| ...    |                          |                                                                |     
-| pc     | m2 pc to return to       |                                                                |     
-| ctxt   | m2 ContextPtr            | ---> m3 header (which could be above this or on the heap) |     
-| header | m2 header                | <--- m1 ctxt                                              |     
-| ...    | m2 temps                 |                                                               |     
-| object | m1 self                  |                                                               |     
-| object | m1 parameters and locals |                                                               |     
-| ...    |                          |                                                               |     
-| pc     | m1 pc to return to       |                                                                |     
-| ctxt   | m1 ContextPtr            | ---> m2 header                                                  |     
-| header | m1 header                | <--- aContext                                             |     
-| ...    | m1 temps                 |                                                                |     
-| object | m0 self                  |                                                                |     
-| object | m0 parameters            |                                                                |     
-| ...    | m0 temps| <--- sp                                                                             |     
-Note that the Context headers are defined lazily because while they are on the stack, they are chained and physically contiguous. They need be created only if they are promoted to the heap (via a spill or explicit reference).
+| Stack  | Description              | Pointers                                                  |
+| ------ | ------------------------ | --------------------------------------------------------- |
+| ...    | m3 stack                 |                                                           |
+| object | m2 self                  |                                                           |
+| object | m2 parameters and locals |                                                           |
+| ...    |                          |                                                           |
+| size   | # m2 locals              |                                                           |
+| method | m2 method                |                                                           |
+| ctxt   | m2 ContextPtr            | ---> m3 header (which could be above this or on the heap) |
+| pc     | m2 pc to return to       |                                                           |
+| header | m2 header                | <--- m1 ctxt                                              |
+| ...    | m2 stack                 |                                                           |
+| object | m1 self                  |                                                           |
+| object | m1 parameters and locals |                                                           |
+| ...    |                          |                                                           |
+| size   | # m1 locals              |                                                           |
+| method | m1 method                |                                                           |
+| ctxt   | m1 ContextPtr            | ---> m2 header                                            |
+| pc     | m1 pc to return to       | (threaded or after m0 context created)                                                        |
+| header | m1 header                | <--- aContext                                             |
+| ...    | m1 stack                 |                                                           |
+| object | m0 self                  |                                                           |
+| object | m0 parameters            |                                                           |
+| pc     | m1 pc to return to       | (native unless/until m0 context created)                                                        |
+| ...    | m0 temps                 | <--- sp                                                   |
+Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The header/size need be created only if they are promoted to the heap (via a spill or explicit reference).
 
-A method will only create a Context if `thisContext` is referenced, or if a non-tail message send is performed. In particular, this is only done after `<primitive>` is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success.
+A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success. This will be followed by the thread-code to create the context.
 
 ### Method dispatch
 One of the defining aspects of object-oriented programming is that methods are customized to the object (or class). This requires dispatching to various code, dependent on the class of the object^[This is for class-based OOP like Smalltalk, Java, C++, Python, Ruby, etc.; for the much less common prototype-based OOP like Javascript or Self, there is still dispatch, but based on the object, not its class.]. Since this happens so frequently, optimizing the message dispatch is critical to performance.

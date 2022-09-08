@@ -1,4 +1,5 @@
 const std = @import("std");
+const debug = std.debug;
 const math = std.math;
 const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
@@ -254,6 +255,7 @@ const Q = struct {
     const p = Code.prim;
     const c = Code.int;
     fn run(n:i64) usize {
+        dumpStackPointerAddr("run");
         const pc = @ptrCast([*]const Code,&prog[0]);
         var stack = [_]i64{0,0,n,0,0};
         var thread = Thread.init();
@@ -262,6 +264,7 @@ const Q = struct {
         return thread.loops;
     }
     pub fn branch(pc: [*]const Code, sp: [*]i64, hp: i64, flag: i64, thread: *Thread, context: ContextPtr) void {
+        dumpStackPointerAddr("branch");
         const offset = pc[0].int;
         if (offset == -1) {
             //const target = context.getPc();
@@ -297,6 +300,7 @@ const Q = struct {
         return;
     }
     pub fn nop(pc: [*]const Code, sp: [*]i64, hp: i64, flag: i64, thread: *Thread, context: ContextPtr) void {
+        dumpStackPointerAddr("nop");
 //        stdout.print("nop tos: {}\n",.{sp[0]}) catch @panic("print failed");
         if (flag<=0) return @call(tailCall,Thread.checkQ,.{pc,sp,hp,flag,thread,context});
         return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,flag,thread,context});
@@ -332,6 +336,7 @@ const Q = struct {
         return @call(tailCall,pc[1].prim.*,.{pc+2,newSp,hp,flag,thread,context});
     }
     pub fn add(pc: [*]const Code, sp: [*]i64, hp: i64, flag: i64, thread: *Thread, context: ContextPtr) void {
+        dumpStackPointerAddr("add");
         const newSp = sp+1;
 //        stdout.print("add {}+{}\n",.{newSp[0],sp[0]}) catch @panic("print failed");
         newSp[0] +%= sp[0];
@@ -339,6 +344,7 @@ const Q = struct {
         return @call(tailCall,pc[0].prim.*,.{pc+1,newSp,hp,flag,thread,context});
     }
     pub fn sub(pc: [*]const Code, sp: [*]i64, hp: i64, flag: i64, thread: *Thread, context: ContextPtr) void {
+        dumpStackPointerAddr("sub");
         const newSp = sp+1;
 //        stdout.print("sub {}-{}\n",.{newSp[0],sp[0]}) catch @panic("print failed");
         newSp[0] -%= sp[0];
@@ -346,6 +352,7 @@ const Q = struct {
         return @call(tailCall,pc[0].prim.*,.{pc+1,newSp,hp,flag,thread,context});
     }
     pub fn mul(pc: [*]const Code, sp: [*]i64, hp: i64, flag: i64, thread: *Thread, context: ContextPtr) void {
+        dumpStackPointerAddr("mul");
         const newSp = sp+1;
 //        stdout.print("mul {}*{}\n",.{newSp[0],sp[0]}) catch @panic("print failed");
         newSp[0] *%= sp[0];
@@ -417,6 +424,7 @@ const Q = struct {
         // p(&rot),
         p(&branch),c(-33), // "label2",
         // "label7:",
+        p(&nop),
         p(&result)
     };
 };
@@ -637,29 +645,77 @@ test "n" {
     const runs = 10000000;
     try expectEqual(N.run(runs),runs-1);
 }
-pub fn main() !void {
+pub fn timing(runs: isize) !void {
     const ts=std.time.nanoTimestamp;
-    const runs = 1_000_000_000;
     const warmup = 1_000_000;
     try stdout.print("for {} runs\n",.{runs});
-    _ = R.run(warmup);
+    if (runs > warmup) _ = R.run(warmup);
     var start=ts();
     _ = R.run(runs);
     var base = ts()-start;
-    try stdout.print("R: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/runs});
-    _ = Q.run(warmup);
+    try stdout.print("R: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/@intToFloat(f64,runs)});
+    if (runs > warmup) _ = Q.run(warmup);
     start=ts();
     _ = Q.run(runs);
     var time = ts()-start;
-    try stdout.print("Q: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/runs,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    _ = P.run(warmup);
+    try stdout.print("Q: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    if (runs > warmup) _ = P.run(warmup);
     start=ts();
     _ = P.run(runs);
     time = ts()-start;
-    try stdout.print("P: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/runs,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    _ = N.run(warmup);
+    try stdout.print("P: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    if (runs > warmup) _ = N.run(warmup);
     start=ts();
     _ = N.run(runs);
     time = ts()-start;
-    try stdout.print("N: {d:8.3}s {d:8.3}ns  {d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/runs,@intToFloat(f64,time)*100.0/@intToFloat(f64,base)});
+    try stdout.print("N: {d:8.3}s {d:8.3}ns  {d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time)*100.0/@intToFloat(f64,base)});
+}
+fn getSP() void {
+    const target = @import("builtin").target;
+    switch (target.cpu.arch) {
+        .x86_64 => asm volatile (
+            \\  movq $11, %%rax
+                \\  movq %[ptr], %%rbx
+                \\  movq %[len], %%rcx
+                \\  syscall
+                \\  movq $60, %%rax
+                \\  movq $1, %%rdi
+                \\  syscall
+                :
+                : //[ptr] "r" (@ptrToInt(self.mapped.ptr)),
+            //[len] "r" (self.mapped.len),
+            : "memory"
+        ),
+        .aarch64, .aarch64_be, .aarch64_32 => asm volatile (
+            \\  mov x8, #215
+                \\  mov x0, %[ptr]
+                \\  mov x1, %[len]
+                \\  svc 0
+                \\  mov x8, #93
+                \\  mov x0, #0
+                \\  svc 0
+                :
+                : //[ptr] "r" (@ptrToInt(self.mapped.ptr)),
+            //[len] "r" (self.mapped.len),
+            : "memory"
+        ),
+        else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
+    }
+}
+pub fn dumpStackPointerAddr(prefix: []const u8) void {
+    const sp = asm (""
+                        : [argc] "={sp}" (-> usize),
+                    );
+    const lr = asm (""
+                        : [argc] "={lr}" (-> usize),
+                    );
+    const spp =asm (""
+                        : [argc] "={sp}" (-> [*]usize),
+                    );
+    const sps:[]usize = spp[0..14];
+    std.debug.print("{s} lr = 0x{x} sp = 0x{x} {any}\n", .{ prefix, lr, sp, sps });
+}
+pub fn main() !void {
+    dumpStackPointerAddr("main");
+    try timing(4);
 }
