@@ -1,8 +1,10 @@
 ## Execution
 
-### The "Interpreter"
+This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
 
-Ideally the interpreter (and [the JIT](JIT.md)) are defined within [AST Classes](AST_Classes.md). The trick is to get enough bootstrap in place that the interpreter can run.
+### Threaded Method Implementation
+
+The threaded implementation is a sequence of addresses of functions implementing primitives  and control operations. Every method has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every control operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method.
 
 ### The stack and Contexts
 When m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like:
@@ -16,7 +18,8 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | size   | # m2 locals              |                                                           |
 | method | m2 method                |                                                           |
 | ctxt   | m2 ContextPtr            | ---> m3 header (which could be above this or on the heap) |
-| pc     | m2 pc to return to       |                                                           |
+| npc    | m2 native pc to return to       |                                                           |
+| tpc    | m2 threaded pc to return to       |                                                           |
 | header | m2 header                | <--- m1 ctxt                                              |
 | ...    | m2 stack                 |                                                           |
 | object | m1 self                  |                                                           |
@@ -25,12 +28,12 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | size   | # m1 locals              |                                                           |
 | method | m1 method                |                                                           |
 | ctxt   | m1 ContextPtr            | ---> m2 header                                            |
-| pc     | m1 pc to return to       | (threaded or after m0 context created)                                                        |
+| npc    | m1 native pc to return to       |                                                           |
+| tpc    | m1 threaded pc to return to       |                                                           |
 | header | m1 header                | <--- aContext                                             |
 | ...    | m1 stack                 |                                                           |
 | object | m0 self                  |                                                           |
 | object | m0 parameters            |                                                           |
-| pc     | m1 pc to return to       | (native unless/until m0 context created)                                                        |
 | ...    | m0 temps                 | <--- sp                                                   |
 Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The header/size need be created only if they are promoted to the heap (via a spill or explicit reference).
 
