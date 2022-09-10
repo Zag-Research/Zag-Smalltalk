@@ -34,7 +34,7 @@ pub const Nil               = of(o2(class.UndefinedObject_I,0x01000002));
 pub const NotAnObject       = of(o2(class.UndefinedObject_I,0x01000003)); // never a valid object... should never be visible to managed language
 const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
-const u64_MINVAL            =    0xfff8_000000000000;
+pub const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
@@ -61,19 +61,19 @@ const objectMethods = struct {
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
-    pub inline fn is_int(self: Object) bool {
-        return self.u() >= u64_MINVAL;
+    pub inline fn isInt(self: Object, intBase: u64) bool {
+        return self.u() >= intBase;
     }
-    pub inline fn is_double(self: Object) bool {
+    pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;
     }
-    pub inline fn is_bool(self: Object) bool {
+    pub inline fn isBool(self: Object) bool {
         return self.equals(False) or self.equals(True);
     }
-    pub inline fn is_nil(self: Object) bool {
+    pub inline fn isNil(self: Object) bool {
         return self.equals(Nil);
     }
-    pub inline fn is_heap(self: Object) bool {
+    pub inline fn isHeap(self: Object) bool {
         if (self.u() <= Start_of_Heap_Objects) return false;
         return self.u() <= End_of_Heap_Objects;
     }
@@ -81,16 +81,19 @@ const objectMethods = struct {
         if (self.u() <= Start_of_Code_References) return false;
         return self.u() <= End_of_Heap_Objects;
     }
-    pub  fn to(self: Object, comptime T:type) T {
+    pub  fn toInt(self: Object, intBase: u64) i64 {
+        if (self.isInt(intBase)) return @bitCast(i64, self.u() - u64_ZERO);
+        @panic("Trying to convert Object to i64");
+    }
+    pub  fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
         switch (T) {
-            i64 => {if (self.is_int()) return @bitCast(i64, self.u() - u64_ZERO);},
-            f64 => {if (self.is_double()) return @bitCast(f64, self);},
-            bool=> {if (self.is_bool()) return self.equals(True);},
+            f64 => {if (check and self.isDouble()) return @bitCast(f64, self);},
+            bool=> {if (check and self.isBool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (self.is_memory() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex)) {
+                        if (check and (self.is_memory() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
@@ -104,16 +107,12 @@ const objectMethods = struct {
         }
         @panic("Trying to convert Object to "++@typeName(T));
     }
+    pub  fn to(self: Object, comptime T:type) T {
+        return self.toWithCheck(T,true);
+    }
     pub  fn toUnchecked(self: Object, comptime T:type) T {
-        switch (T) {
-            i64 => {return @bitCast(i64, self.u() - u64_ZERO);},
-            f64 => {return @bitCast(f64, self);},
-            bool=> {return self.equals(True);},
-            //u8  => {return @intCast(u8, self.hash & 0xff);},
-            else => {
-                @panic("Trying to convert Object to "++@typeName(T));
-            },
-        }
+        if (T == i64) return @bitCast(i64, self.u() - u64_ZERO);
+        return self.toWithCheck(T,false);
     }
     pub  fn as_string(self: Object) []const u8 {
         return symbol.asString(self).arrayAsSlice(u8);
@@ -172,18 +171,18 @@ const objectMethods = struct {
         if (sla.len>slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline fn immediate_class(self: Object) ClassIndex {
-        if (self.is_int()) return class.SmallInteger_I;
+    pub inline fn immediate_class(self: Object, intBase: u64) ClassIndex {
+        if (self.isInt(intBase)) return class.SmallInteger_I;
+        if (self.isDouble()) return class.Float_I;
         if (self.u() >= c2Base) return @truncate(ClassIndex,self.u() >> 32);
         if (self.u() >= Start_of_Code_References) {
-            if (self.u() >= End_of_Code_References) return class.Object_I;
+            if (self.u() > End_of_Code_References) return class.Object_I;
             return class.CodeReference_I;
         }
-        if (self.is_double()) return class.Float_I;
-        @panic("unknown immediate");
+            @panic("unknown immediate");
     }
     pub inline fn get_class(self: Object) ClassIndex {
-        const immediate = self.immediate_class();
+        const immediate = self.immediate_class(u64_MINVAL);
         if (immediate > 1) return immediate;
         return self.to(HeapPtr).*.getClass();
     }
@@ -199,14 +198,14 @@ const objectMethods = struct {
         _ = fmt;
         _ = options;
         
-        try switch (self.immediate_class()) {
+        try switch (self.immediate_class(u64_MINVAL)) {
             class.Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             class.False_I => writer.print("false", .{}),
             class.True_I => writer.print("true", .{}),
             class.UndefinedObject_I => writer.print("nil", .{}),
             class.Symbol_I => writer.print("#{s}", .{self.as_string()}),
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
-            class.SmallInteger_I => writer.print("{d}", .{self.to(i64)}),
+            class.SmallInteger_I => writer.print("{d}", .{self.toInt(u64_MINVAL)}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
             else => @panic("format for unknown class"),
         };
@@ -238,22 +237,22 @@ test "from conversion" {
     const testing = std.testing;
     try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
     try testing.expectEqual(Object.from(42).u(), u64_ZERO +% 42);
-    try testing.expectEqual(Object.from(3.14).immediate_class(),class.Float_I);
-    try testing.expect(Object.from(3.14).is_double());
-    try testing.expectEqual(Object.from(3).immediate_class(),class.SmallInteger_I);
-    try testing.expect(Object.from(3).is_int());
-    try testing.expect(Object.from(false).is_bool());
-    try testing.expectEqual(Object.from(false).immediate_class(),class.False_I);
-    try testing.expectEqual(Object.from(true).immediate_class(),class.True_I);
-    try testing.expect(Object.from(true).is_bool());
-    try testing.expectEqual(Object.from(null).immediate_class(),class.UndefinedObject_I);
-    try testing.expect(Object.from(null).is_nil());
+    try testing.expectEqual(Object.from(3.14).immediate_class(u64_MINVAL),class.Float_I);
+    try testing.expect(Object.from(3.14).isDouble());
+    try testing.expectEqual(Object.from(3).immediate_class(u64_MINVAL),class.SmallInteger_I);
+    try testing.expect(Object.from(3).isInt(u64_MINVAL));
+    try testing.expect(Object.from(false).isBool());
+    try testing.expectEqual(Object.from(false).immediate_class(u64_MINVAL),class.False_I);
+    try testing.expectEqual(Object.from(true).immediate_class(u64_MINVAL),class.True_I);
+    try testing.expect(Object.from(true).isBool());
+    try testing.expectEqual(Object.from(null).immediate_class(u64_MINVAL),class.UndefinedObject_I);
+    try testing.expect(Object.from(null).isNil());
 }
 test "to conversion" {
     const testing = std.testing;
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
-    try testing.expectEqual(Object.from(42).to(i64), 42);
-    try testing.expect(Object.from(42).is_int());
+    try testing.expectEqual(Object.from(42).toInt(u64_MINVAL), 42);
+    try testing.expect(Object.from(42).isInt(u64_MINVAL));
     try testing.expectEqual(Object.from(true).to(bool), true);
 }
 test "printing" {

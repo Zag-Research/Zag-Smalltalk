@@ -115,7 +115,7 @@ pub fn lookupLiteral(string: []const u8) object.Object {
 }
 pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
     const result = (symbolTable orelse unreachable).internLiteral(arena, string);
-    if (!result.is_nil()) return result;
+    if (!result.isNil()) return result;
     unreachable; // out of space
 }
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
@@ -181,16 +181,16 @@ const Symbol_Table = struct {
         const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = lookupDirect(&trp,string);
-            if (!lu.is_nil()) return lu;
+            if (!lu.isNil()) return lu;
             const result = s.internDirect(arena,&trp,string);
-            if (!result.is_nil()) return result;
+            if (!result.isNil()) return result;
             unreachable; // out of space
         }
         unreachable;
     }
     fn internDirect(arena: *heap.Arena, trp: *objectTreap, string: object.Object) object.Object {
         const result = lookupDirect(trp,string);
-        if (!result.is_nil()) return result;
+        if (!result.isNil()) return result;
         const str = string.promoteTo(arena) catch return Nil;
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);

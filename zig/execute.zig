@@ -184,7 +184,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
                 .code = undefined,
             };
         }
-        fn asMethodPtr(self: *Self) * const Method {
+        pub fn asMethodPtr(self: *const Self) * const Method {
             return @ptrCast(* const Method,self);
         }
         fn headerOffset(_: *Self, codeIndex: usize) Code {

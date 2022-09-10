@@ -6,6 +6,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const u64_MINVAL = object.u64_MINVAL;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
@@ -499,7 +500,7 @@ pub const Arena = struct {
         var ok=true;
         for (expected) |item, index| {
             if (self.allocated[index+1].u() != item.u()) {
-                if (item.is_double() and std.math.fabs(item.to(f64))<0.00001) {
+                if (item.isDouble() and std.math.fabs(item.to(f64))<0.00001) {
                     try stdout.print("comparing[{}] expected=0x{x:0>16} output=0x{x:0>16}\n",
                                  .{index,item.u(),self.allocated[index+1].u()});
                 } else try stdout.print("comparing[{}] expected={} output={}\n",.{index,item,self.allocated[index+1]});
@@ -509,7 +510,7 @@ pub const Arena = struct {
         if (!ok) return error.OutputDiffered;
     }
     pub fn promote(self: *Self, obj: Object) !Object {
-        if (!obj.is_heap()) return obj;
+        if (!obj.isHeap()) return obj;
         const result = self.heap;
         const ptr = obj.to(HeapConstPtr);
         const totalSize = ptr.totalSize();
@@ -592,7 +593,7 @@ test "temp arena" {
     var testArena = tempArena(&buffer);
     const obj1 : HeapPtr = try testArena.allocObject(42,Format.none,3,0);
     try testing.expectEqual(@alignOf(@TypeOf(obj1)),Object.alignment);
-    try testing.expect(obj1.asObject().is_heap());
+    try testing.expect(obj1.asObject().isHeap());
     try testing.expectEqual(obj1.totalSize(),4);
     try testing.expectError(error.HeapFull,testArena.allocObject(42,Format.none,3,0));
 }

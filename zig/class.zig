@@ -4,6 +4,7 @@ const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
+const u64_MINVAL = object.u64_MINVAL;
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 const dispatch = @import("dispatch.zig");
@@ -144,7 +145,7 @@ pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !
     const class_I = getClassIndex(className);
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
-    if (classes[class_I].is_nil()) {
+    if (classes[class_I].isNil()) {
         const arena = thr.getArena().getGlobal();
         const metaclass_I = classTable.nextFree();
         metaclass = arena.allocStruct(Metaclass_I, Metaclass_S.size, Metaclass_S, Nil) catch @panic("No space");
