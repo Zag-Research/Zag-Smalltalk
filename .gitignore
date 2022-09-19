@@ -42,3 +42,9 @@ zig/zig-cache/*
 zig/*/zig-cache/*
 *.o
 *.s
+*.sample*
+*.dmp
+*.log
+*.sources
+pharo-local
+log1.txt

@@ -82,7 +82,7 @@ const objectMethods = struct {
         return self.u() <= End_of_Heap_Objects;
     }
     pub  fn toInt(self: Object, intBase: u64) i64 {
-        if (self.isInt(intBase)) return @bitCast(i64, self.u() - u64_ZERO);
+        if (self.isInt(intBase)) return @bitCast(i64, self.u() -% u64_ZERO);
         @panic("Trying to convert Object to i64");
     }
     pub  fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
@@ -111,7 +111,10 @@ const objectMethods = struct {
         return self.toWithCheck(T,true);
     }
     pub  fn toUnchecked(self: Object, comptime T:type) T {
-        if (T == i64) return @bitCast(i64, self.u() - u64_ZERO);
+        //const pr = std.io.getStdOut().writer().print;
+        //pr("0x{X:0>16}\n",.{self.u()}) catch unreachable;
+        if (T == i64) return @bitCast(i64, self.u() -% u64_ZERO);
+        if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T,false);
     }
     pub  fn as_string(self: Object) []const u8 {
@@ -254,9 +257,11 @@ test "to conversion" {
     try testing.expectEqual(Object.from(42).toInt(u64_MINVAL), 42);
     try testing.expect(Object.from(42).isInt(u64_MINVAL));
     try testing.expectEqual(Object.from(true).to(bool), true);
+    try testing.expectEqual(of(u64_MAXVAL).toUnchecked(i64),0x3_ffffffffffff);
+    try testing.expectEqual(Object.from(-0x400000).toUnchecked(i64),-0x400000);
 }
 test "printing" {
-    var thr = try Thread.Thread.initForTest();
+    var thr = try Thread.Thread.initForTest(null);
     _ = try symbol.init(&thr,250,"");
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);

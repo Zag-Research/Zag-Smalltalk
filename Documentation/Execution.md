@@ -15,7 +15,6 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | object | m2 self                  |                                                           |
 | object | m2 parameters and locals |                                                           |
 | ...    |                          |                                                           |
-| size   | # m2 locals              |                                                           |
 | method | m2 method                |                                                           |
 | ctxt   | m2 ContextPtr            | ---> m3 header (which could be above this or on the heap) |
 | npc    | m2 native pc to return to       |                                                           |
@@ -25,7 +24,6 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | object | m1 self                  |                                                           |
 | object | m1 parameters and locals |                                                           |
 | ...    |                          |                                                           |
-| size   | # m1 locals              |                                                           |
 | method | m1 method                |                                                           |
 | ctxt   | m1 ContextPtr            | ---> m2 header                                            |
 | npc    | m1 native pc to return to       |                                                           |
@@ -35,7 +33,7 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | object | m0 self                  |                                                           |
 | object | m0 parameters            |                                                           |
 | ...    | m0 temps                 | <--- sp                                                   |
-Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The header/size need be created only if they are promoted to the heap (via a spill or explicit reference).
+Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The header need be created only if they are promoted to the heap (via a spill or explicit reference).
 
 A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success. This will be followed by the thread-code to create the context.
 

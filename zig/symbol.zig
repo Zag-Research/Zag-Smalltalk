@@ -222,7 +222,7 @@ const Symbol_Table = struct {
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
-    var thr = try thread.Thread.initForTest();
+    var thr = try thread.Thread.initForTest(null);
     var symbol = symbolTable orelse try init(&thr,250,"");
     defer symbol.deinit();
     try expectEqual(symbols.@"valueWithArguments:",symbol.lookupLiteral("valueWithArguments:"));

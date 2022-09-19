@@ -1,0 +1,3 @@
+			commonSendOrdinary:
+				/* commonSendOrdinary */
+                                write(2,"01234567*"+(lkupClassTag<8?lkupClassTag:8),1);

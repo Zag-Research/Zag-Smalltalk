@@ -18,6 +18,7 @@ pub const Thread = struct {
 //    tean1 : heap.Arena,
 //    teen2 : heap.Arena,
     next: ?*Thread,
+    debug: ?ex.PrimitivePtr,
     const psm1 = std.mem.page_size-1;
     const thread_size = @sizeOf(Thread);
     const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
@@ -31,14 +32,16 @@ pub const Thread = struct {
             .id = next_thread_number,
             .nursery = arena,
             .next = null,
+            .debug = null,
         };
     }
-    pub fn initForTest() !Self {
+    pub fn initForTest(debugger: ?ex.PrimitivePtr) !Self {
         if (builtin.is_test) {
             return Self {
                 .id = 0,
                 .nursery = try heap.TestArena.init(),
                 .next = null,
+                .debug = debugger,
             };
         }
         else unreachable;
@@ -53,17 +56,12 @@ pub const Thread = struct {
     pub inline fn endOfStack(self: *Self) [*]Object {
         return self.getArena().toh;
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = doCheck;
-        _ = thread;
-        _ = context;
-        @panic("thread check");
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, self: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
+        if (self.debug) |debugger|
+            return  @call(tailCall,debugger.*,.{pc,sp,hp,doCheck,self,context,intBase,selector});
+        @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,1000,self,context,intBase,selector});
     }
-    pub fn check1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr) void {
-        // I am the same as check, except the thread just executed had 1 parameter, so debug should see pc-2
-        return @call(tailCall,Thread.check,.{pc,sp,hp,doCheck,thread,context});
+    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
+        return @call(tailCall,Thread.check,.{pc,sp,hp,doCheck,thread,context,intBase,selector});
     }
 };

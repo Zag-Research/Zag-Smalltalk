@@ -68,6 +68,14 @@ For objects of 4094^[this exact size will be tuned with experience and may becom
 
 The objects with large allocations are linked together so that at the start of the sweep of the global arena we can go though this list finding all the unused objects that have large allocations and free up their allocation.
 
+## `become:`
+The become instruction swaps the two heap-objects, so that all existing references to object A reference object B and all existing references to object B reference object A. In the original Smalltalk an object table was used to allow objects to be moved around (a compacting collector) and so `become` was simply a swap of the two pointers. It's hard to do this cheaply if you don't have an object table.
+
+The way we do it has 3 cases:
+1. if both of the objects are in the nursery, the objects are simply copied to the teen arena, and the forwarding pointers are swapped, and then a nursery collection is performed. At the end of the collection, all pointers will have been updated correctly.
+2. If at least one of the objects is in the teen arena (but none are in the global arena), then the two objects are copied to the target teen arena, and a teen collection is performed.
+3. If at least one of the objects is in the global arena, if the other isn't it is copied to the global arena (leaving a forwarding pointer to the other) and a teen or nursery collection is performed. Now both objects are in the global arena, and the global collector is asked to do the `become` whereby it creates a become structure which identifies the change of identities and changes both header words to be forwarding pointers. This unfortunately means that all pointers to the global arena are required to check for forwarding pointers, whereas for local arenas, this can never happen (forwarding pointers only exist during copying collection).
+
 ## Notes
 - when the stack is being copied, 
 ## Web resources
