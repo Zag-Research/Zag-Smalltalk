@@ -48,3 +48,4 @@ zig/*/zig-cache/*
 *.sources
 pharo-local
 log1.txt
+zig/execute
