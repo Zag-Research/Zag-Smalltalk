@@ -12,6 +12,7 @@ const HeapPtr = heap.HeapPtr;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
+const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 pub const PrimitivePtr = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, pauseFlag: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void;
 
 pub const ContextPtr = *Context;
@@ -175,19 +176,19 @@ fn CompileTimeMethod(comptime tup: anytype) type {
         header: heap.Header,
         name: Object,
         class: Object,
-        stackInfo: Object,
+        stackStructure: Object,
         size: u64,
         code: [codeSize] Code,
         const pr = std.io.getStdOut().writer().print;
         const codeOffset = @sizeOf(CompiledMethod)/@sizeOf(Code)-1;
         const methodIVars = codeOffset-2;
         const Self = @This();
-        fn init(name: Object, comptime stackInfo: comptime_int) Self {
+        fn init(name: Object, comptime locals: comptime_int) Self {
             return .{
-                .header = heap.header(methodIVars,heap.Format.both,class.CompiledMethod_I,name.hash_u24()),
+                .header = heap.header(methodIVars,heap.Format.both,class.CompiledMethod_I,name.hash24()),
                 .name = name,
                 .class = Nil,
-                .stackInfo = Object.from(stackInfo),
+                .stackStructure = Object.packedInt(locals,locals+name.numArgs(),0),
                 .size = codeSize,
                 .code = undefined,
             };
@@ -202,7 +203,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
             return codeSize;
         }
         fn print(self: *Self) void {
-            pr("Method: {} {} {} {} (",.{self.header,self.name,self.class,self.stackInfo}) catch @panic("io");
+            pr("Method: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
             for (self.code[0..]) |c| {
                 pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
             }
@@ -506,4 +507,59 @@ test "simple executable" {
         "label4",
     });
     _ = method;
+}
+inline fn dumpStackPointerAddr(prefix: []const u8) void {
+    const target = @import("builtin").target;
+    const sp = asm (""
+                        : [argc] "={sp}" (-> usize),
+                    );
+    const lr = switch (target.cpu.arch) { //
+        .x86_64 => asm volatile (
+            ""
+        ),
+        .aarch64, .aarch64_be, .aarch64_32 => asm volatile ( // +34*8 for releaseFast, +44*8 for debug
+            ""
+                : [argc] "={lr}" (-> usize),
+        ),
+//        switch (builtin.mode) {
+//            .Debug, .ReleaseSafe => true,
+//            .ReleaseFast, .ReleaseSmall => false,
+//        }
+        else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
+    };
+    const fp = asm (""
+                        : [argc] "={fp}" (-> usize),
+                    );
+    const spp =asm (""
+                        : [argc] "={sp}" (-> [*]usize),
+                    );
+    std.debug.print("{s}\n    lr: 0x{x:0>16}\n    sp: 0x{x:0>16}\n    fp: 0x{x:0>16}\n", .{ prefix, lr, sp, fp});
+    for (spp[0..125]) | spv,idx | {
+        std.debug.print("    sp[{any:2}]({x:0>8}):  0x{x:0>16}\n",.{idx,sp+idx*8,spv});
+    }
+}
+pub fn foo() void {
+    dumpStackPointerAddr("foo<");
+    @call(noInlineCall,blat,.{});
+    dumpStackPointerAddr("foo>");
+}
+pub fn blat() void {
+    dumpStackPointerAddr("blat<");
+    @call(noInlineCall,bar,.{});
+    dumpStackPointerAddr("blat>");
+}
+pub fn bar() void {
+    dumpStackPointerAddr("bar");
+}
+test "frame structure" {
+    std.debug.print(" foo={x} bar={x}\n",.{@ptrToInt(foo),@ptrToInt(bar)});
+    dumpStackPointerAddr("test<");
+    @call(noInlineCall,foo,.{});
+    dumpStackPointerAddr("test>");
+}
+pub fn main() void {
+    std.debug.print(" main={x} foo={x} bar={x}\n",.{@ptrToInt(main),@ptrToInt(foo),@ptrToInt(bar)});
+    dumpStackPointerAddr("main<");
+    @call(noInlineCall,foo,.{});
+    dumpStackPointerAddr("main>");
 }

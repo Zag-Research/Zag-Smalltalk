@@ -12,7 +12,6 @@ const Thread = @import("thread.zig");
 const Code = @import("execute.zig").Code;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
-pub const u32_phi_inverse=2654435769;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
@@ -49,8 +48,11 @@ const objectMethods = struct {
     pub inline fn hash(self: Object) Object {
         return @bitCast(Object,self.u()|u64_ZERO);
     }
-    pub inline fn hash_u24(self: Object) u24 {
+    pub inline fn hash24(self: Object) u24 {
         return @truncate(u24,self.u());
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(u32,self.u());
     }
     pub inline fn numArgs(self: Object) u8 {
         return @truncate(u8,self.u()>>24);
@@ -58,11 +60,20 @@ const objectMethods = struct {
     pub inline fn u(self: Object) u64 {
         return @bitCast(u64,self);
     }
+    pub inline fn tagbits(self: Object) u16 {
+        return @bitCast(u16,@truncate(i16,@bitCast(i64,self)>>48));
+    }
+    pub inline fn tagbitsL(self: Object) u32 {
+        return @bitCast(u32,@truncate(i32,@bitCast(i64,self)>>32));
+    }
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object, intBase: u64) bool {
         return self.u() >= intBase;
+    }
+    pub inline fn isIntA(self: Object) bool {
+        return self.flagbits() >= u64_MINVAL>>48;
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;
@@ -73,9 +84,15 @@ const objectMethods = struct {
     pub inline fn isNil(self: Object) bool {
         return self.equals(Nil);
     }
+    pub inline fn isNilA(self: Object) bool {
+        return self.tagbitsL() == Nil.tagbitsL();
+    }
     pub inline fn isHeap(self: Object) bool {
         if (self.u() <= Start_of_Heap_Objects) return false;
         return self.u() <= End_of_Heap_Objects;
+    }
+    pub inline fn isHeapA(self: Object) bool {
+        return self.tagbits() == Start_of_Heap_Objects>>48;
     }
     pub inline fn is_memory(self: Object) bool {
         if (self.u() <= Start_of_Code_References) return false;
@@ -210,24 +227,30 @@ const objectMethods = struct {
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
             class.SmallInteger_I => writer.print("{d}", .{self.toInt(u64_MINVAL)}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
-            else => @panic("format for unknown class"),
+            else => { try writer.print("0x{x:>16}", .{self.u()});@panic("format for unknown class");},
         };
     }
     pub const alignment = @alignOf(u64);
+    pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
+        return Object{.signMantissa =.SmallInt0, .h0 = f0, .h1 = f1, .l2 = @intToEnum(Level2,f2)};
+    }
+
 };
-pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context };
-pub const ClassGrouping = enum(u16) {CodeReference = 0xfff4, ThreadLocal, Heap, Level2, SmallInt };
+pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
+pub const ClassGrouping = enum(u16) {CodeReference = 0xfff5, Local2, Heap, SmallIntMin, SmallInt0 = 0xfffc, _ };
 pub const Object = switch (native_endian) {
     .Big => packed struct {
-        signMantissa: u16, // align(8),
-        tag: ClassGrouping,
-        hash: u32,
+        signMantissa: ClassGrouping, // align(8),
+        l2: Level2,
+        h1: u16,
+        h0: u16,
         usingnamespace objectMethods;
     },
     .Little => packed struct {
-        hash: u32, // align(8),
-        tag: ClassGrouping,
-        signMantissa: u16,
+        h0: u16, // align(8),
+        h1: u16,
+        l2: Level2,
+        signMantissa: ClassGrouping,
         usingnamespace objectMethods;
     },
 };
@@ -238,6 +261,7 @@ test "slicing" {
 }
 test "from conversion" {
     const testing = std.testing;
+    try testing.expectEqual(@bitCast(u64, Object.packedInt(1,2,3)), 0xfffc000300020001);
     try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
     try testing.expectEqual(Object.from(42).u(), u64_ZERO +% 42);
     try testing.expectEqual(Object.from(3.14).immediate_class(u64_MINVAL),class.Float_I);

@@ -26,18 +26,16 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
 | FFF0-3    | xxxx | xxxx | xxxx | NaN (unused)                  |
-| FFF4      | xxxx | xxxx | xxxx | code reference                |
-| FFF5      | xxxx | xxxx | xxxx | thread-local object           |
-| FFF6      | xxxx | xxxx | xxxx | heap object                   |
-| FFF7      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
-| FFF7      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF7      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF7      | 0003 | xxxx | xxxx | reserved (tag = Float (double))       |
-| FFF7      | 0004 | 0001 | 0000 | False                         |
-| FFF7      | 0005 | 0010 | 0001 | True                          |
-| FFF7      | 0006 | 0100 | 0002 | UndefinedObject               |
-| FFF7      | 0007 | axxx | xxxx | Symbol                        |
-| FFF7      | 0008 | 00xx | xxxx | Character                     |
+| FFF6      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
+| FFF6      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
+| FFF6      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF6      | 0003 | xxxx | xxxx | reserved (tag = Float (double))       |
+| FFF6      | 0004 | 0001 | 0000 | False                         |
+| FFF6      | 0005 | 0010 | 0001 | True                          |
+| FFF6      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF6      | 0007 | axxx | xxxx | Symbol                        |
+| FFF6      | 0008 | 00xx | xxxx | Character                     |
+| FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |

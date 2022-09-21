@@ -73,7 +73,7 @@ const Class_Table = struct {
     }
     fn lookup(s: *Self,sym: object.Object) ClassIndex {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32,0);
-        return @truncate(ClassIndex,trp.lookup(sym.hash));
+        return @truncate(ClassIndex,trp.lookup(sym.hash32()));
     }
     fn intern(s: *Self, sym: object.Object) ClassIndex {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),compareU32,0);
@@ -81,7 +81,7 @@ const Class_Table = struct {
         while (true) {
             const lu = s.lookup(sym);
             if (lu>0) return lu;
-            const result = @truncate(ClassIndex,trp.insert(sym.hash) catch @panic("class treap full"));
+            const result = @truncate(ClassIndex,trp.insert(sym.hash32()) catch @panic("class treap full"));
             if (result>0) return result;
             unreachable; // out of space
         }

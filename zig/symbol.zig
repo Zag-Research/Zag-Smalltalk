@@ -149,7 +149,7 @@ const Symbol_Table = struct {
     }
     fn asString(s: *Self,string: object.Object) object.Object {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
-        return trp.getKey(@truncate(u24,string.hash));
+        return trp.getKey(@truncate(u24,string.hash32()));
     }
     fn lookupLiteral(s: *Self, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
