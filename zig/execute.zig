@@ -330,6 +330,9 @@ pub const controlPrimitives = struct {
         if (True.equals(v)) return @call(tailCall,pc[1].prim.*,.{pc+2,sp+1,hp,doCheck,thread,context,intBase,selector});
         @panic("non boolean");
     }
+    pub fn nop(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
+        return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,doCheck,thread,context,intBase,selector});
+    }
     pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=pc[0].object;
@@ -516,6 +519,7 @@ inline fn dumpStackPointerAddr(prefix: []const u8) void {
     const lr = switch (target.cpu.arch) { //
         .x86_64 => asm volatile (
             ""
+                : [argc] "={sp}" (-> usize),
         ),
         .aarch64, .aarch64_be, .aarch64_32 => asm volatile ( // +34*8 for releaseFast, +44*8 for debug
             ""
@@ -527,9 +531,17 @@ inline fn dumpStackPointerAddr(prefix: []const u8) void {
 //        }
         else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
     };
-    const fp = asm (""
-                        : [argc] "={fp}" (-> usize),
-                    );
+    const fp = switch (target.cpu.arch) { //
+        .x86_64 => asm volatile (
+            ""
+                : [argc] "={bp}" (-> usize),
+        ),
+        .aarch64, .aarch64_be, .aarch64_32 => asm volatile (
+            ""
+                : [argc] "={fp}" (-> usize),
+        ),
+        else => 0
+    };
     const spp =asm (""
                         : [argc] "={sp}" (-> [*]usize),
                     );
@@ -537,6 +549,26 @@ inline fn dumpStackPointerAddr(prefix: []const u8) void {
     for (spp[0..125]) | spv,idx | {
         std.debug.print("    sp[{any:2}]({x:0>8}):  0x{x:0>16}\n",.{idx,sp+idx*8,spv});
     }
+}
+pub inline fn return_address() PrimitivePtr {
+        const lr = switch (@import("builtin").target.cpu.arch) { //
+        .x86_64 => asm volatile (
+            \\      mov RSP,RBP
+                \\ pop RBP
+                \\ pop 
+                : [argc] "={sp}" (-> PrimitivePtr),
+        ),
+        .aarch64, .aarch64_be, .aarch64_32 => asm volatile ( // +34*8 for releaseFast, +44*8 for debug
+            ""
+                : [argc] "={lr}" (-> PrimitivePtr),
+        ),
+//        switch (builtin.mode) {
+//            .Debug, .ReleaseSafe => true,
+//            .ReleaseFast, .ReleaseSmall => false,
+//        }
+        else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
+    };
+    return lr;
 }
 pub fn foo() void {
     dumpStackPointerAddr("foo<");
