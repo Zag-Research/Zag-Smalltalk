@@ -13,7 +13,7 @@ const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
-pub const PrimitivePtr = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void;
+pub const PrimitivePtr = fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void;
 
 pub const ContextPtr = *Context;
 const Context = struct {
@@ -99,7 +99,7 @@ const Context = struct {
         ctxt.method = Object.from(method);
         for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
         if (thread.needsCheck()) @panic("grow heap2");//return @call(tailCall,Thread.checkStack,.{pc+1,sp,hp,@as(i64,5+maxStackNeeded),thread,context,intBase,selector});
-        return @call(tailCall,pc[1].prim.*,.{pc+2,newSp,hp,thread.decCheck(),context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread.decCheck(),context,selector});
     }
 };
 
@@ -286,7 +286,7 @@ test "compiling method" {
     try expectEqual(t[7].object,Nil);
 }
 fn execute(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-    return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,thread,context,selector});
+    return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
 }
 pub const controlPrimitives = struct {
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: Context, needed: usize) void {
@@ -298,74 +298,74 @@ pub const controlPrimitives = struct {
         _ = needed;
     }
     pub fn noop(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-        return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
     }
     pub fn branch(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const offset = pc[0].int;
         if (offset>=0) {
             const target = pc+1+@intCast(u64, offset);
             if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selector});
-            return @call(tailCall,target[0].prim.*,.{target+1,sp,hp,thread,context,selector});
+            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context,selector});
         }
         if (offset == -1) {
             const target = context.getPc();
             if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selector});
-            return @call(tailCall,target[0].prim.*,.{target+1,sp,hp,thread,context,selector});
+            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context,selector});
         }
         const target = pc+1-@intCast(u64, -offset);
         if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selector});
-        return @call(tailCall,target[0].prim.*,.{target+1,sp,hp,thread.decCheck(),context,selector});
+        return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread.decCheck(),context,selector});
     }
     pub fn ifTrue(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const v = sp[0];
         if (True.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context,selector});
         if (thread.needsCheck()) return @call(tailCall,Thread.check,.{pc+2,sp,hp,thread,context,selector});
-        if (False.equals(v)) return @call(tailCall,pc[1].prim.*,.{pc+2,sp+1,hp,thread,context,selector});
+        if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selector});
         @panic("non boolean");
     }
     pub fn ifFalse(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const v = sp[0];
         if (False.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context,selector});
-        if (True.equals(v)) return @call(tailCall,pc[1].prim.*,.{pc+2,sp+1,hp,thread,context,selector});
+        if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selector});
         @panic("non boolean");
     }
     pub fn nop(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-        return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
     }
     pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=pc[0].object;
-        return @call(tailCall,pc[1].prim.*,.{pc+2,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context,selector});
     }
     pub fn pushLiteral0(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=Object.from(0);
-        return @call(tailCall,pc[1].prim.*,.{pc+1,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+1,newSp,hp,thread,context,selector});
     }
     pub fn pushLiteral1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=Object.from(1);
-        return @call(tailCall,pc[1].prim.*,.{pc+1,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+1,newSp,hp,thread,context,selector});
     }
     pub fn push1Nil(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=Nil;
-        return @call(tailCall,pc[0].prim.*,.{pc+1,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selector});
     }
     pub fn push2Nil(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-2;
         newSp[0]=Nil;
         newSp[1]=Nil;
-        return @call(tailCall,pc[0].prim.*,.{pc+1,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selector});
     }
     pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         context.setTemp(pc[0].uint,sp[0]);
-        return @call(tailCall,pc[1].prim.*,.{pc+2,sp+1,hp,thread,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selector});
     }
     pub fn pushTemp(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(pc[0].uint);
-        return @call(tailCall,pc[1].prim.*,.{pc+2,newSp,hp,thread,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context,selector});
     }
     fn lookupMethod(cls: class.ClassIndex,selector: Object) CompiledMethodPtr {
         _ = cls;
@@ -377,12 +377,12 @@ pub const controlPrimitives = struct {
         const numArgs = selector.numArgs();
         const newPc = lookupMethod(sp[numArgs].get_class(),selector).codePtr();
         context.setPc(pc+1);
-        return @call(tailCall,newPc[0].prim.*,.{newPc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selector});
     }
     pub fn call(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         context.setReturn(pc+1);
         const newPc = pc[0].method.codePtr();
-        return @call(tailCall,newPc[0].prim.*,.{newPc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selector});
     }
     pub fn returnWithContext(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         _ = pc;
@@ -394,7 +394,7 @@ pub const controlPrimitives = struct {
 //        const result = sp[0];
 //        context.setReturn(pc+1);
 //        const newPc = pc[0].method.codePtr();
-//        return @call(tailCall,newPc[0].prim.*,.{newPc+1,sp,hp,thread,context,selector});
+//        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selector});
         @panic("unimplemented");
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -410,7 +410,7 @@ pub const controlPrimitives = struct {
         // this assumes it is the first function in a thread (which will be after the noop that may be replaced by the native code version)
         if (!CompiledMethod.matchedSelector(pc-1,selector))
                 return @call(tailCall,dnu,.{pc,sp,hp,thread,context,selector});
-        return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
     }
 };
 const p = struct {
@@ -448,7 +448,7 @@ pub const testing = struct {
     pub fn dumpContext(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         print("pc: 0x{x:0>16} sp: 0x{x:0>16} hp: 0x{x:0>16}",.{pc,sp,hp});
         context.print(sp,thread);
-        return @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,thread,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
     }
     pub fn testExecute(method: * const CompiledMethod) Object {
         const code = method.codeSlice();
@@ -473,29 +473,29 @@ pub const testing = struct {
 test "simple return via execute" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
-        &p.noop,
-        &p.verifySelector,
+        p.noop,
+        p.verifySelector,
         &testing.return_tos,
     });
     try expectEqual(testing.testExecute(method.asCompiledMethodPtr()),Nil);
 }
 test "simple executable" {
     const method = compileMethod(Nil,0,1,.{
-        &p.pushContext,"^",
+        p.pushContext,"^",
         "label1:",
-        &p.pushLiteral,42,
-        &p.popIntoTemp,1,
-        &p.pushTemp,1,
-        &p.pushLiteral0,
-        &p.send,sym.@"<",
-        &p.ifFalse,"label3",
+        p.pushLiteral,42,
+        p.popIntoTemp,1,
+        p.pushTemp,1,
+        p.pushLiteral0,
+        p.send,sym.@"<",
+        p.ifFalse,"label3",
         "label2",
         "label3:",
-        &p.pushTemp,1,
+        p.pushTemp,1,
         "label4:",
-        &p.returnWithContext,
+        p.returnWithContext,
         "label2:",
-        &p.pushLiteral0,
+        p.pushLiteral0,
         "label4",
     });
     _ = method;
@@ -579,8 +579,28 @@ test "frame structure" {
     dumpStackPointerAddr("test>");
 }
 pub fn main() void {
-    std.debug.print(" main={x} foo={x} bar={x}\n",.{@ptrToInt(main),@ptrToInt(foo),@ptrToInt(bar)});
-    dumpStackPointerAddr("main<");
-    @call(noInlineCall,foo,.{});
-    dumpStackPointerAddr("main>");
+    const method = compileMethod(Nil,0,1,.{
+        p.pushContext,"^",
+        "label1:",
+        p.pushLiteral,42,
+        p.popIntoTemp,1,
+        p.pushTemp,1,
+        p.pushLiteral0,
+        p.send,sym.@"<",
+        p.ifFalse,"label3",
+        "label2",
+        "label3:",
+        p.pushTemp,1,
+        "label4:",
+        p.returnWithContext,
+        "label2:",
+        p.pushLiteral0,
+        "label4",
+    });
+    _ = testing.testExecute(method.asCompiledMethodPtr());
+    
+//    std.debug.print(" main={x} foo={x} bar={x}\n",.{@ptrToInt(main),@ptrToInt(foo),@ptrToInt(bar)});
+//    dumpStackPointerAddr("main<");
+//    @call(noInlineCall,foo,.{});
+//    dumpStackPointerAddr("main>");
 }

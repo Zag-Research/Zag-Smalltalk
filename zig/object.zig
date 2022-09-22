@@ -70,7 +70,7 @@ const objectMethods = struct {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object) bool {
-        return self.u() >= u64_MAXVAL;
+        return self.u() >= u64_MINVAL;
     }
     pub inline fn isIntA(self: Object) bool {
         return self.flagbits() >= u64_MINVAL>>48;
@@ -202,7 +202,7 @@ const objectMethods = struct {
             @panic("unknown immediate");
     }
     pub inline fn get_class(self: Object) ClassIndex {
-        const immediate = self.immediate_class(u64_MINVAL);
+        const immediate = self.immediate_class();
         if (immediate > 1) return immediate;
         return self.to(HeapPtr).*.getClass();
     }
@@ -218,14 +218,14 @@ const objectMethods = struct {
         _ = fmt;
         _ = options;
         
-        try switch (self.immediate_class(u64_MINVAL)) {
+        try switch (self.immediate_class()) {
             class.Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             class.False_I => writer.print("false", .{}),
             class.True_I => writer.print("true", .{}),
             class.UndefinedObject_I => writer.print("nil", .{}),
             class.Symbol_I => writer.print("#{s}", .{self.as_string()}),
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
-            class.SmallInteger_I => writer.print("{d}", .{self.toInt(u64_MINVAL)}),
+            class.SmallInteger_I => writer.print("{d}", .{self.toInt()}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
             else => { try writer.print("0x{x:>16}", .{self.u()});@panic("format for unknown class");},
         };
@@ -264,21 +264,21 @@ test "from conversion" {
     try testing.expectEqual(@bitCast(u64, Object.packedInt(1,2,3)), 0xfffc000300020001);
     try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
     try testing.expectEqual(Object.from(42).u(), u64_ZERO +% 42);
-    try testing.expectEqual(Object.from(3.14).immediate_class(u64_MINVAL),class.Float_I);
+    try testing.expectEqual(Object.from(3.14).immediate_class(),class.Float_I);
     try testing.expect(Object.from(3.14).isDouble());
-    try testing.expectEqual(Object.from(3).immediate_class(u64_MINVAL),class.SmallInteger_I);
+    try testing.expectEqual(Object.from(3).immediate_class(),class.SmallInteger_I);
     try testing.expect(Object.from(3).isInt());
     try testing.expect(Object.from(false).isBool());
-    try testing.expectEqual(Object.from(false).immediate_class(u64_MINVAL),class.False_I);
-    try testing.expectEqual(Object.from(true).immediate_class(u64_MINVAL),class.True_I);
+    try testing.expectEqual(Object.from(false).immediate_class(),class.False_I);
+    try testing.expectEqual(Object.from(true).immediate_class(),class.True_I);
     try testing.expect(Object.from(true).isBool());
-    try testing.expectEqual(Object.from(null).immediate_class(u64_MINVAL),class.UndefinedObject_I);
+    try testing.expectEqual(Object.from(null).immediate_class(),class.UndefinedObject_I);
     try testing.expect(Object.from(null).isNil());
 }
 test "to conversion" {
     const testing = std.testing;
     try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
-    try testing.expectEqual(Object.from(42).toInt(u64_MINVAL), 42);
+    try testing.expectEqual(Object.from(42).toInt(), 42);
     try testing.expect(Object.from(42).isInt());
     try testing.expectEqual(Object.from(true).to(bool), true);
     try testing.expectEqual(of(u64_MAXVAL).toUnchecked(i64),0x3_ffffffffffff);

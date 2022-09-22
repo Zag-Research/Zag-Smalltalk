@@ -75,8 +75,8 @@ pub const Thread = struct {
     }
     pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, self: *Thread, context: ContextPtr, selector: Object) void {
         if (self.ptr().debug) |debugger|
-            return  @call(tailCall,debugger.*,.{pc,sp,hp,self,context,selector});
-        @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,self,context,selector});
+            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
+        @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selector});
     }
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context,selector});
