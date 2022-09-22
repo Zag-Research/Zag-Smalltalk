@@ -13,7 +13,7 @@ const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
-pub const PrimitivePtr = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, pauseFlag: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void;
+pub const PrimitivePtr = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void;
 
 pub const ContextPtr = *Context;
 const Context = struct {

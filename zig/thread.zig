@@ -46,18 +46,35 @@ pub const Thread = struct {
         }
         else unreachable;
     }
+    const checkType = u5;
+    const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);
+    pub inline fn needsCheck(self: *const Self) bool {
+        return @truncate(checkType,@ptrToInt(self))==0;
+    }
+    pub inline fn decCheck(self: *const Self) *const Self {
+        if (self.needsCheck()) return self;
+        @setRuntimeSafety(false);
+        return @intToPtr(*Self,@ptrToInt(self)-1);
+    }
+    pub inline fn maxCheck(self: *const Self) *Self {
+        @setRuntimeSafety(false);
+        return @intToPtr(*Self,@ptrToInt(self)|checkMax);
+    }
+    pub inline fn ptr(self: *const Self) *Self {
+        return @intToPtr(*Self,@ptrToInt(self)&~@as(u64,checkMax));
+    }
     pub fn deinit(self : *Self) void {
-        self.heap.deinit();
-        self.* = undefined;
+        self.ptr().heap.deinit();
+        self.ptr().* = undefined;
     }
-    pub inline fn getArena(self: *Self) *heap.Arena {
-        return &self.nursery;
+    pub inline fn getArena(self: *const Self) *heap.Arena {
+        return &(self.ptr()).nursery;
     }
-    pub inline fn endOfStack(self: *Self) [*]Object {
-        return self.getArena().toh;
+    pub inline fn endOfStack(self: *const Self) [*]Object {
+        return self.ptr().getArena().toh;
     }
     pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, self: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
-        if (self.debug) |debugger|
+        if (self.ptr().debug) |debugger|
             return  @call(tailCall,debugger.*,.{pc,sp,hp,doCheck,self,context,intBase,selector});
         @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,1000,self,context,intBase,selector});
     }
@@ -65,3 +82,20 @@ pub const Thread = struct {
         return @call(tailCall,Thread.check,.{pc,sp,hp,doCheck,thread,context,intBase,selector});
     }
 };
+test "check flag" {
+    const testing = std.testing;
+    const thread = Thread.initForTest(null) catch unreachable;
+    var thr = &thread;
+    try testing.expect(thr.needsCheck());
+    const origEOS = thr.endOfStack();
+    thr = thr.maxCheck();
+    try testing.expect(!thr.needsCheck());
+    var count = Thread.checkMax-1;
+    while (count>0) : (count -= 1) {
+        thr = thr.decCheck();
+    }
+    try testing.expect(!thr.needsCheck());
+    try testing.expectEqual(thr.endOfStack(),origEOS);
+    thr = thr.decCheck();
+    try testing.expect(thr.needsCheck());
+}
