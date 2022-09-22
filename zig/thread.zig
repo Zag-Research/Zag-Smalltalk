@@ -51,7 +51,7 @@ pub const Thread = struct {
     pub inline fn needsCheck(self: *const Self) bool {
         return @truncate(checkType,@ptrToInt(self))==0;
     }
-    pub inline fn decCheck(self: *const Self) *const Self {
+    pub inline fn decCheck(self: *Self) *Self {
         if (self.needsCheck()) return self;
         @setRuntimeSafety(false);
         return @intToPtr(*Self,@ptrToInt(self)-1);
@@ -60,7 +60,7 @@ pub const Thread = struct {
         @setRuntimeSafety(false);
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
-    pub inline fn ptr(self: *const Self) *Self {
+    inline fn ptr(self: *const Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self)&~@as(u64,checkMax));
     }
     pub fn deinit(self : *Self) void {
@@ -73,18 +73,18 @@ pub const Thread = struct {
     pub inline fn endOfStack(self: *const Self) [*]Object {
         return self.ptr().getArena().toh;
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, self: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, self: *Thread, context: ContextPtr, selector: Object) void {
         if (self.ptr().debug) |debugger|
-            return  @call(tailCall,debugger.*,.{pc,sp,hp,doCheck,self,context,intBase,selector});
-        @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,1000,self,context,intBase,selector});
+            return  @call(tailCall,debugger.*,.{pc,sp,hp,self,context,selector});
+        @call(tailCall,pc[0].prim.*,.{pc+1,sp,hp,self,context,selector});
     }
-    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {
-        return @call(tailCall,Thread.check,.{pc,sp,hp,doCheck,thread,context,intBase,selector});
+    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
+        return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context,selector});
     }
 };
 test "check flag" {
     const testing = std.testing;
-    const thread = Thread.initForTest(null) catch unreachable;
+    var thread = Thread.initForTest(null) catch unreachable;
     var thr = &thread;
     try testing.expect(thr.needsCheck());
     const origEOS = thr.endOfStack();

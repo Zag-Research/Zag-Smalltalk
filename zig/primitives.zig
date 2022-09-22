@@ -27,60 +27,60 @@ pub const inlines = struct {
     pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
         return !self.equals(other);
     }
-    pub inline fn p1(self: Object, other: Object, intBase: u64) !Object { // Add
-        if (other.isInt(intBase)) {
+    pub inline fn p1(self: Object, other: Object) !Object { // Add
+        if (other.isInt()) {
             const result = @bitCast(Object,self.u()+%@bitCast(u64,other.toUnchecked(i64)));
-            if (result.isInt(intBase)) {
+            if (result.isInt()) {
                 return result;
             }
         }
         return error.primitiveError;
     }
-    pub inline fn p2(self: Object, other: Object, intBase: u64) !Object { // Subtract
-        if (other.isInt(intBase)) {
+    pub inline fn p2(self: Object, other: Object) !Object { // Subtract
+        if (other.isInt()) {
             const result = @bitCast(Object,self.i()-%other.toUnchecked(i64));
-            if (result.isInt(intBase)) {
+            if (result.isInt()) {
                 return result;
             }
         }
         return error.primitiveError;
     }
-    pub inline fn p3(self: Object, other: Object, intBase: u64) !bool { // LessThan
+    pub inline fn p3(self: Object, other: Object) !bool { // LessThan
         if (self<other) return true;
-        if (other.isInt(intBase)) return false;
+        if (other.isInt()) return false;
         return error.primitiveError;
     }
-    pub inline fn p4(self: Object, other: Object, intBase: u64) !bool { // GreaterThan
+    pub inline fn p4(self: Object, other: Object) !bool { // GreaterThan
         if (self<=other) return false;
-        if (other.isInt(intBase)) return true;
+        if (other.isInt()) return true;
         return error.primitiveError;
     }
-    pub inline fn p5(self: Object, other: Object, intBase: u64) !bool { // LessOrEqual
+    pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
         if (self<=other) return true;
-        if (other.isInt(intBase)) return false;
+        if (other.isInt()) return false;
         return error.primitiveError;
     }
-    pub inline fn p6(self: Object, other: Object, intBase: u64) !bool { // GreaterOrEqual
+    pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (self<other) return false;
-        if (other.isInt(intBase)) return true;
+        if (other.isInt()) return true;
         return error.primitiveError;
     }
-    pub inline fn p7(self: Object, other: Object, intBase: u64) !bool { // Equal
+    pub inline fn p7(self: Object, other: Object) !bool { // Equal
         if (self==other) return true;
-        if (other.isInt(intBase)) return false;
+        if (other.isInt()) return false;
         return error.primitiveError;
     }
-    pub inline fn p8(self: Object, other: Object, intBase: u64) !bool { // NotEqual
+    pub inline fn p8(self: Object, other: Object) !bool { // NotEqual
         if (self==other) return false;
-        if (other.isInt(intBase)) return true;
+        if (other.isInt()) return true;
         return error.primitiveError;
     }
     inline fn unsafeAbs(x: i64) u64 {
         @setRuntimeSafety(false);
         return @intCast(u64,if (x < 0) -x else x);
     }
-    pub inline fn p9(self: Object, other: Object, intBase: u64) !Object { // Multiply
-        if (other.isInt(intBase)) {
+    pub inline fn p9(self: Object, other: Object) !Object { // Multiply
+        if (other.isInt()) {
             const s = @truncate(i51,self.toUnchecked(i64));
             const o = @truncate(i51,other.toUnchecked(i64));
             var result: i51 = undefined;
@@ -89,8 +89,8 @@ pub const inlines = struct {
         }
         return error.primitiveError;
     }
-    pub inline fn p9Orig(self: Object, other: Object, intBase: u64) !Object { // Multiply
-        if (other.isInt(intBase)) {
+    pub inline fn p9Orig(self: Object, other: Object) !Object { // Multiply
+        if (other.isInt()) {
             const s = self.toUnchecked(i64);
             const sBits = @clz(u64,unsafeAbs(s));
             const o = other.toUnchecked(i64);
@@ -106,8 +106,8 @@ pub const inlines = struct {
 };
 test "inline primitives" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual((try inlines.p9(Object.from(3),Object.from(4),u64_MINVAL)).toInt(u64_MINVAL),12);
-    try expectEqual(inlines.p9(Object.from(0x10000000),Object.from(0x1000000),u64_MINVAL),error.primitiveError);
+    try expectEqual((try inlines.p9(Object.from(3),Object.from(4))).toInt(u64_MINVAL),12);
+    try expectEqual(inlines.p9(Object.from(0x10000000),Object.from(0x1000000)),error.primitiveError);
     try expectEqual(inlines.p9(Object.from(0x10000000),Object.from(0x800000),u64_MINVAL),error.primitiveError);
     try expectEqual((try inlines.p9(Object.from(0x1000_0000),Object.from(0x20_0000),u64_MINVAL)).toInt(u64_MINVAL),0x2_0000_0000_0000);
     try expectEqual((try inlines.p9(Object.from(0x1000_0000),Object.from(0x3f_ffff),u64_MINVAL)).toInt(u64_MINVAL),0x3_ffff_f000_0000);
@@ -116,25 +116,25 @@ test "inline primitives" {
 }
 
 pub const primitives = struct {
-    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0],intBase) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,doCheck,thread,context,intBase,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,doCheck,thread,context,intBase,selector});
+    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p9(sp[1],sp[0],intBase) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,doCheck,thread,context,intBase,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,doCheck,thread,context,intBase,selector});
+    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p9Orig(sp[1],sp[0],intBase) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,doCheck,thread,context,intBase,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,doCheck,thread,context,intBase,selector});
+    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void { // ProtoObject>>#==
+    pub fn p110(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,doCheck,thread,context,intBase,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, doCheck: i64, thread: *Thread, context: ContextPtr, intBase: u64, selector: Object) void { // ProtoObject>>#~~
+    pub fn p169(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#~~
         sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,doCheck,thread,context,intBase,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
     // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>class
 };
