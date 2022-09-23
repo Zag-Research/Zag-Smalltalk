@@ -19,7 +19,7 @@ pub const ContextPtr = *Context;
 const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
-    npc: ?PrimitivePtr, // native PC
+    npc: ?PrimitivePtr, // native PC - in Continuation Passing Style
     prevCtxt: ?Object,
     method: Object,
     temps: [1]Object,
@@ -85,11 +85,11 @@ const Context = struct {
         return @call(tailCall,push,.{pc,sp,hp,thread,context,selector});
     }
     fn push(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-        const method = pc[0].method;
-        const stackInfo = method.stackInfo.toUnchecked(u64);
-        const locals = stackInfo & 255;
+        const method = CompiledMethod.methodFromCodeOffset(pc);
+        const stackStructure = method.stackStructure;
+        const locals = stackStructure.h0;
         const newSp = sp - 5 - locals;
-        const maxStackNeeded = @truncate(u32,stackInfo>>8);
+        const maxStackNeeded = stackStructure.h1;
         if (heap.arenaFree(newSp,hp)<5+maxStackNeeded)
             @panic("grow heap"); //return @call(tailCall,Thread.checkStack,.{pc-1,sp,hp,thread,context,selector}); // redo this instruction after collect
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Context),newSp));
@@ -108,20 +108,36 @@ pub const CompiledMethod = struct {
     header: heap.Header,
     name: Object,
     class: Object,
-    stackInfo: Object, // number of local values beyond the parameters
-    size: u64, // number of code values (i.e. size of the array portion of the method)
+    stackStructure: Object, // number of local values beyond the parameters
     code: [1] Code,
+    const Self = @This();
+    const pr = std.io.getStdOut().writer().print;
     fn codeSlice(self: * const CompiledMethod) [] const Code{
         @setRuntimeSafety(false);
-        return self.code[0..self.size];
+        return self.code[0..self.codeSize()];
     }
     fn codePtr(self: * const CompiledMethod) [*] const Code {
         return @ptrCast([*]const Code,&self.code[0]);
+    }
+    inline fn codeSize(self: * const CompiledMethod) usize {
+        return @alignCast(8,&self.header).totalSize()-@sizeOf(Self)/@sizeOf(Object)+1;
     }
     fn matchedSelector(pc: [*] const Code, selector: Object) bool {
         _ = pc;
         _ = selector;
         return true;
+    }
+    fn methodFromCodeOffset(pc: [*] const Code) CompiledMethodPtr {
+        const method = @intToPtr(CompiledMethodPtr,@ptrToInt(pc)-@sizeOf(Self)-(pc[0].uint-1)*@sizeOf(Code));
+        method.print();
+        return method;
+    }
+    fn print(self: *Self) void {
+        pr("Method: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
+//            for (self.code[0..]) |c| {
+//                pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
+//            }
+        pr(")\n",.{}) catch @panic("io");
     }
 };
 pub const Code = packed union {
@@ -130,7 +146,7 @@ pub const Code = packed union {
     uint: u64,
     object: Object,
     header: heap.Header,
-    method: CompiledMethodPtr,
+//    method: CompiledMethodPtr,
     fn prim(pp: PrimitivePtr) Code {
         return Code{.prim=pp};
     }
@@ -146,9 +162,9 @@ pub const Code = packed union {
     fn header(h: heap.Header) Code {
         return Code{.header=h};
     }
-    fn method(m: CompiledMethodPtr) Code {
-        return Code{.method=m};
-    }
+//    fn method(m: CompiledMethodPtr) Code {
+//        return Code{.method=m};
+//    }
     fn end() Code {
         return Code{.object=NotAnObject};
     }
@@ -272,7 +288,7 @@ const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(Nil,0,0,.{"abc:", &testing.return_tos, "def", True, 42, "def:", "abc", "*", "^", null});
+    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, 42, "def:", "abc", "*", "^", null});
     var t = m.code[0..];
 //    for (t[0..]) |code| { try print(" {}",.{code.int}); }
     try expectEqual(t.len,8);
@@ -475,7 +491,7 @@ test "simple return via execute" {
     var method = compileMethod(Nil,0,0,.{
         p.noop,
         p.verifySelector,
-        &testing.return_tos,
+        testing.return_tos,
     });
     try expectEqual(testing.testExecute(method.asCompiledMethodPtr()),Nil);
 }
