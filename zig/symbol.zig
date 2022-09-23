@@ -138,7 +138,7 @@ const Symbol_Table = struct {
     const Self = @This();
     fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(class.SymbolTable_I,
-                                                  heap.Format.none,0,initialSymbolTableSize*2);
+                                                  heap.Format.none,0,initialSymbolTableSize*2,0);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {
             .theObject = theHeapObject.asObject(),
@@ -154,7 +154,7 @@ const Symbol_Table = struct {
     fn lookupLiteral(s: *Self, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
-        var str = tempArena.allocString(string) catch unreachable;
+        var str = tempArena.allocString(string,8) catch unreachable;
         return s.lookup(str.asObject());
     }
     fn lookup(s: *Self,string: object.Object) object.Object {
@@ -172,7 +172,7 @@ const Symbol_Table = struct {
     fn internLiteral(s: *Self,arena: *heap.Arena, string: []const u8) object.Object {
         var buffer: [200]u8 align(8)= undefined;
         var tempArena = heap.tempArena(&buffer);
-        const str = tempArena.allocString(string) catch unreachable;
+        const str = tempArena.allocString(string,8) catch unreachable;
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         return internDirect(arena.getGlobal(),&trp,str.asObject());
     }

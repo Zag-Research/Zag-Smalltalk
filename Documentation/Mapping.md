@@ -69,18 +69,20 @@ There are a few significant changes:
 This coding is used for heap and thread-local objects. They are treated exactly the same, except that thread-local are not collected or moved.
 
 First we have the object format tag. The bits code the following:
-- bit 0-4: encode indexable fields
+- bit 0-3: encode indexable fields
 	- 0: no indexable fields
-	- 1: 64-bit indexable no pointers - native words (DoubleWordArray,DoubleArray,) or non-pointer Objects (Array)
+	- 1: 64-bit indexable - native words (DoubleWordArray,DoubleArray,) or Objects (Array)
 	- 2-3: 32-bit indexable - low bit encodes unused half-words at end (WordArray, IntegerArray, FloatArray, WideString)
 	- 4-7: 16-bit indexable - low 2 bits encode unused quarter-words at end (DoubleByteArray)
 	- 8-15: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
-	- 17: 64-bit indexable with some pointers - (Array)
+- bit 4: encode indexable have pointers
+	-  0: no indexable pointers
+	- 16: indexable pointers
 - bit 5-6: encode instance variables
 	-  0: no instance variable
 	- 32: instance variables - no pointers
-	- 64: instance variables - pointers
-	- 96: weak (implying instance variables) - pointers - even if there aren't, because weak values are rare, and they only exist to hold pointers
+	- 64: weak (implying instance variables) - pointers - even if there aren't, because weak values are rare, and they only exist to hold pointers
+	- 96: instance variables have pointers
 - bit 7: = 1 says the value is immutable
 
 Therefore, only the following values currently have meaning:
