@@ -24,6 +24,7 @@ pub const Format = enum(u8) {
     objectNP = InstVars,
     arrayNP = Indexable_64,
     bothNP = InstVars + Indexable_64,
+    immutable = Immutable,
     _,
     const Self = @This();
     const InstVars : u8 = 32;
@@ -66,16 +67,16 @@ pub const Format = enum(u8) {
         return @intToEnum(Self,@enumToInt(self) & ~InstVars | Weak);
     }
     pub inline fn object(self: Self) Self {
-        return @intToEnum(Self,@bitCast(u8,self) | InstVars);
+        return @intToEnum(Self,@enumToInt(self) | InstVars);
     }
     pub inline fn withoutIndexable(self: Self) Self {
-        return @intToEnum(Self,@bitCast(u8,self) & ~IndexableFormat);
+        return @intToEnum(Self,@enumToInt(self) & ~IndexableFormat);
     }
     pub inline fn plusIndexable(self: Self, n: u8) Self {
-        return @intToEnum(Self,@bitCast(u8,self.withoutIndexable())+n);
+        return @intToEnum(Self,@enumToInt(self.withoutIndexable())+n);
     }
     pub inline fn justIndexable(self: Self) Self {
-        return @intToEnum(Self,@bitCast(u8,self) & (IndexableFormat+Immutable));
+        return @intToEnum(Self,@enumToInt(self) & (IndexableFormat+Immutable));
     }
     pub inline fn array(self: Self) Self {
         return self.plusIndexable(IndexableWithPtrs);
@@ -83,23 +84,23 @@ pub const Format = enum(u8) {
     pub inline fn raw(self: Self, comptime T : type, size : usize) Self {
         switch (T) {
             u8,i8 => return self.plusIndexable(Indexable_8 + @intCast(u8,(-@intCast(isize,size))&7)),
-            u16,i16 => return self.plusIndexable(Indexable_16 + ((-@intCast(isize,size))&3)),
-            u32,i32,f32 => return self.plusIndexable(Indexable_32 + ((-@intCast(isize,size))&1)),
+            u16,i16 => return self.plusIndexable(Indexable_16 + @intCast(u8,(-@intCast(isize,size))&3)),
+            u32,i32,f32 => return self.plusIndexable(Indexable_32 + @intCast(u8,(-@intCast(isize,size))&1)),
             u64,i64,f64 => return self.plusIndexable(Indexable_64),
             else => return self,
         }
     }
     pub inline fn hasInstVars(self: Self) bool {
-        return @bitCast(u8, self) & InstVars != 0;
+        return @enumToInt(self) & InstVars != 0;
     }
     pub inline fn isIndexable(self: Self) bool {
-        return @bitCast(u8, self) & IndexableFormat != 0;
+        return @enumToInt(self) & IndexableFormat != 0;
     }
     pub inline fn hasBoth(self: Self) bool {
-        return @bitCast(u8, self) & InstVars+IndexableFormat == InstVars+Indexable_64;
+        return @enumToInt(self) & InstVars+IndexableFormat == InstVars+Indexable_64;
     }
     pub inline fn isWeak(self: Self) bool {
-        return @bitCast(u8, self) & Weak+InstVars == Weak;
+        return @enumToInt(self) & Weak+InstVars == Weak;
     }
     pub inline fn isPointerFree(self: Self) bool {
         return @enumToInt(self) & InstVarsPtrs+IndexablePtrs == 0;
@@ -108,22 +109,22 @@ pub const Format = enum(u8) {
         return ~self.isPointerFree();
     }
     pub inline fn isRaw(self: Self) bool {
-        return @bitCast(u8,self.justIndexable()) >= Indexable_64 and  @bitCast(u8,self.justIndexable()) < IndexablePtrs;
+        return @enumToInt(self.justIndexable()) >= Indexable_64 and  @enumToInt(self.justIndexable()) < IndexablePtrs;
     }
     pub inline fn is64(self: Self) bool {
-        return self.justIndexable() == Indexable_64;
+        return @enumToInt(self.justIndexable()) == Indexable_64;
     }
     pub inline fn is32(self: Self) bool {
-        return self.justIndexable() >= Indexable_32 and self.base() <= Indexable_32 + 1;
+        return @enumToInt(self.justIndexable()) >= Indexable_32 and @enumToInt(self.justIndexable()) <= Indexable_32 + 1;
     }
     pub inline fn is16(self: Self) bool {
-        return self.justIndexable() >= Indexable_16 and self.base() <= Indexable_16 + 3;
+        return @enumToInt(self.justIndexable()) >= Indexable_16 and @enumToInt(self.justIndexable()) <= Indexable_16 + 3;
     }
     pub inline fn is8(self: Self) bool {
-        return self.justIndexable() >= Indexable_8 and self.base() <= Indexable_8 + 7;
+        return @enumToInt(self.justIndexable()) >= Indexable_8 and @enumToInt(self.justIndexable()) <= Indexable_8 + 7;
     }
     pub inline fn isImmutable(self: Self) bool {
-        return @bitCast(u8, self) & Immutable != 0;
+        return @enumToInt(self) & Immutable != 0;
     }
     pub inline fn noBase(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) & Immutable);
@@ -142,6 +143,20 @@ test "raw formats" {
     try Format.none.raw(u8,6).eq(Format.Indexable_8+2);
     try Format.none.raw(u8,7).eq(Format.Indexable_8+1);
     try Format.none.raw(u8,8).eq(Format.Indexable_8+0);
+    try std.testing.expect(Format.none.raw(u8,0).is8());
+    try Format.none.raw(u16,0).eq(Format.Indexable_16+0);
+    try Format.none.raw(u16,1).eq(Format.Indexable_16+3);
+    try Format.none.raw(u16,2).eq(Format.Indexable_16+2);
+    try Format.none.raw(u16,3).eq(Format.Indexable_16+1);
+    try Format.none.raw(u16,4).eq(Format.Indexable_16+0);
+    try std.testing.expect(Format.none.raw(u16,0).is16());
+    try Format.none.raw(u32,0).eq(Format.Indexable_32+0);
+    try Format.none.raw(u32,1).eq(Format.Indexable_32+1);
+    try Format.none.raw(u32,2).eq(Format.Indexable_32+0);
+    try std.testing.expect(Format.none.raw(u32,0).is32());
+    try Format.none.raw(u64,0).eq(Format.Indexable_64+0);
+    try Format.none.raw(u64,1).eq(Format.Indexable_64+0);
+    try std.testing.expect(Format.none.raw(u64,0).is64());
 }
 test "header formats" {
     const expect = std.testing.expect;
@@ -359,11 +374,11 @@ test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
     const hdr = header(17, Format.object, 35,0x123,4);
-    try testing.expectEqual(hdr.o().u(),0x0114010001230023);
+    try testing.expectEqual(hdr.o().u(),0x0114600001230023);
 }
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeapConstPtr) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
-    }
+}
 test "arenaFree" {
     const testing = std.testing;
     const stack: [10]Object=undefined;
