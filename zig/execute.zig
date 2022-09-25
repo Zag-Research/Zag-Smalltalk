@@ -16,7 +16,7 @@ const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 pub const PrimitivePtr = fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void;
 
 pub const ContextPtr = *Context;
-const Context = struct {
+pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
     npc: ?PrimitivePtr, // native PC - in Continuation Passing Style
@@ -59,6 +59,10 @@ const Context = struct {
         @setRuntimeSafety(false);
         self.temps[n] = v;
     }
+    pub inline fn previous(self: *Context) ?*Context {
+        if (self._previous.is_nil()) return null;
+        return self._previous.to(*Context);
+    }
     fn pop(self: ContextPtr, sp: [*]Object, thread: *Thread) struct {
         sp: [*]Object,
         ctxt: ContextPtr,
@@ -100,6 +104,13 @@ const Context = struct {
         for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
         if (thread.needsCheck()) @panic("grow heap2");//return @call(tailCall,Thread.checkStack,.{pc+1,sp,hp,@as(i64,5+maxStackNeeded),thread,context,intBase,selector});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread.decCheck(),context,selector});
+    }
+    fn make_init_cxt(objects: []Object,t: *Thread) *Context {
+        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).o(); // header
+        // name stays as initialized
+        // previous stays nil
+        _ = t;
+        @panic("incomplete");
     }
 };
 

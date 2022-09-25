@@ -10,7 +10,8 @@ const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
-const u32_phi_inverse=object.u32_phi_inverse;
+const Context = @import("execute.zig").Context;
+const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
 pub const MethodReturns = union(enum) {
     Normal: Object,
     NonLocal,
@@ -22,49 +23,6 @@ pub const MethodReturns = union(enum) {
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 pub const MethodType = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, dnuOption: DNUOption) MethodReturns;
 const noArgs = ([0]Object{})[0..];
-pub const Context = packed struct { // this will be the start of a packed struct that will contain space for all the required fields
-    header: Object, // heap.Header
-    _name: Object, // this field is the symbol with the name of the method
-    _previous: Object, // *Context as non-heap object (or nil if no previous)
-    _thread: Object, // *Thread as non-heap object (or nil if not yet needed)
-    // fields: [...]Object, indexable as 4..
-    pub const includesHeader = true;
-    inline fn at(self: *Context,index: usize) Object {
-        return @ptrCast([*]Object,&self.header)[index];
-    }
-    inline fn atPut(self: *Context,index: usize,value: Object) void {
-        @ptrCast([*]Object,&self.header)[index]=value;
-    }
-    pub inline fn previous(self: *Context) ?*Context {
-        if (self._previous.is_nil()) return null;
-        return self._previous.to(*Context);
-    }
-    pub inline fn thread(self: *Context) *Thread {
-        if (self._thread.is_nil()) self.update_thread();
-        return self._thread.to(*Thread);
-    }
-    fn update_thread(self: *Context) *Thread {
-        if (self._thread.is_nil()) {
-            self._thread = self.previous().update_thread();
-        }
-        return self._thread;
-    }
-    pub fn add_context(context: *Context, objects: []Object, _ :Object) *Context {
-        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).o(); // header
-        // name stays as initialized
-        objects[2] = Object.from(context); // previous
-        // thread stays nil
-        return @intToPtr(*Context,@ptrToInt(objects.ptr));
-    }
-    fn make_init_cxt(objects: []Object,t: *Thread) *Context {
-        objects[0] = heap.header(@truncate(u16,objects.len-1),heap.Format.object,class.Context_I,@truncate(u24,@ptrToInt(objects.ptr))).o(); // header
-        // name stays as initialized
-        // previous stays nil
-        objects[3] = Object.from(t);// thread
-        return @intToPtr(*Context,@ptrToInt(objects.ptr));
-    }
-};
-pub const make_init_cxt = Context.make_init_cxt;
 pub const SymbolMethod = packed struct{ selector: Object, method: MethodType};
 const Dispatch = packed struct {
     header: u64, //Header,
@@ -204,7 +162,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
             const rand = dispatchSize.hash();
             const size = dispatchSize.size();
-            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch,@bitCast(Object,@ptrToInt(dnu))) catch unreachable;
+            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch,@bitCast(Object,@ptrToInt(dnu)),8) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;
             const methods=@ptrCast([*]MethodType,@alignCast(@alignOf([*]MethodType),&strct.methods));
@@ -378,7 +336,7 @@ fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
 }
 test "addClass and call" {
     const expectEqual = @import("std").testing.expectEqual;
-    var thread = try Thread.initForTest();
+    var thread = try Thread.initForTest(null);
     _ = try symbol.init(&thread,250,"");
     try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
@@ -387,7 +345,7 @@ test "addClass and call" {
 }
 test "lookups of proper methods" {
     const expectEqual = @import("std").testing.expectEqual;
-    var thread = try Thread.initForTest();
+    var thread = try Thread.initForTest(null);
     _ = try symbol.init(&thread,250,"");
     try class.init(&thread);
     try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);

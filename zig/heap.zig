@@ -751,13 +751,21 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
         fn h(self: * const Self) []const u8 {
             return @ptrCast([*]const u8,self)[0..(size+15)/8*8];
         }
-        pub fn o(self: * const Self) Object {
+        pub fn asObject(self: * const Self) Object {
             return Object.from(@ptrCast(*const Header,self));
         }
     };
 }
+pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
+    comptime var result : [tup.len] HeapConstPtr = undefined;
+    inline for (tup) |name,idx| {
+        result[idx] = comptime @ptrCast(HeapConstPtr,@alignCast(8,&CompileTimeString(name).init()));
+    }
+    return result;
+}
+
 const abcde = CompileTimeString("abcde").init();
 test "compile time" {
     std.debug.print("abcde: {any}\n",.{abcde.h()});
-    std.debug.print("abcde: {any}\n",.{abcde.o()});
+    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
 }
