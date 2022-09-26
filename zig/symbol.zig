@@ -52,50 +52,38 @@ pub const symbols = struct {
     pub const @"cull:cull:cull:" = symbol3(24);
     pub const @"cull:cull:cull:cull:" = symbol4(25);
     pub const self = symbol0(26);
-    pub const Object = symbol0(27);
-    pub const BlockClosure = symbol0(28);
-    pub const False = symbol0(29);
-    pub const True = symbol0(30);
-    pub const UndefinedObject = symbol0(31);
-    pub const SmallInteger = symbol0(32);
-    pub const Symbol = symbol0(33);
-    pub const Character = symbol0(34);
-    pub const Float = symbol0(35);
-    pub const Array = symbol0(36);
-    pub const String = symbol0(37);
-    pub const Class = symbol0(38);
-    pub const Metaclass = symbol0(39);
-    pub const Behavior = symbol0(40);
-    pub const Magnitude = symbol0(41);
-    pub const Number = symbol0(42);
-    pub const Method = symbol0(43);
-    pub const System = symbol0(44);
-    pub const Return = symbol0(45);
-    pub const Send = symbol0(46);
-    pub const Literal = symbol0(47);
-    pub const Load = symbol0(48);
-    pub const Store = symbol0(49);
-    pub const SymbolTable = symbol0(50);
-    pub const Dispatch = symbol0(51);
-    pub const ClassDescription = symbol0(52);
-    pub const Constrained = symbol0(53);
-    pub const class = symbol0(54);
-    pub const name = symbol0(55);
-    pub const @"<" = symbol1(56);
-    pub const @"<=" = symbol1(57);
-    pub const @">=" = symbol1(58);
-    pub const @">" = symbol1(59);
+    pub const name = symbol0(27);
+    pub const @"<" = symbol1(28);
+    pub const @"<=" = symbol1(29);
+    pub const @">=" = symbol1(30);
+    pub const @">" = symbol1(31);
+    pub const class = symbol0(32);
+    pub const Class = symbol0(33);
+    pub const Behavior = symbol0(34);
+    pub const ClassDescription = symbol0(35);
+    pub const Metaclass = symbol0(36);
     // define any new symbols here
-    pub const ClassTable = symbol0(60); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(37); // always have this the last initial symbol so the tests verify all the counts are correct
 };
-pub const predefinedSymbols = 61;
+pub const predefinedSymbols = 37;
+const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
+    "yourself", "doesNotUnderstand:", "=", "+", "-", "*", "size",
+    "at:", "at:put:", "~=", "==", "~~", "value", "value:",
+    "value:value:", "negated", "new", "new:", "cull:",
+    "value:value:value:", "value:value:value:value:",
+    "valueWithArguments:", "cull:cull:", "cull:cull:cull:",
+    "cull:cull:cull:cull:", "self", "name", "<", "<=", ">=", ">",
+    "class", "Class", "Behavior", "ClassDescription", "Metaclass",
+    // add any new values here
+    "Object"
+});
 var symbolTable : ?Symbol_Table = null;
 
-pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const u8) !Symbol_Table {
+pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
     var arena = thr.getArena().getGlobal();
     var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
     symbolTable = st;
-    st.loadInitialSymbols(arena);
+    st.loadSymbols(arena,initialSymbolStrings[0..]);
     st.loadSymbols(arena,str);
     return st;
 }
@@ -106,17 +94,20 @@ pub fn deinit(thr: *thread.Thread) void {
 pub fn asString(string: object.Object) object.Object {
     return (symbolTable orelse unreachable).asString(string);
 }
-pub fn loadSymbols(thr: *thread.Thread,str:[]const u8) void {
+pub fn loadSymbols(thr: *thread.Thread,str:[]const heap.HeapConstPtr) void {
     var arena = thr.getArena().getGlobal();
     (symbolTable orelse unreachable).loadSymbols(arena,str);
 }
-pub fn lookupLiteral(string: []const u8) object.Object {
-    return (symbolTable orelse unreachable).lookupLiteral(string);
-}
-pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
-    const result = (symbolTable orelse unreachable).internLiteral(arena, string);
-    if (!result.isNil()) return result;
-    unreachable; // out of space
+// pub fn lookupLiteral(string: []const u8) object.Object {
+//     return (symbolTable orelse unreachable).lookupLiteral(string);
+// }
+// pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
+//     const result = (symbolTable orelse unreachable).internLiteral(arena, string);
+//     if (!result.isNil()) return result;
+//     unreachable; // out of space
+// }
+pub fn lookup(_: *thread.Thread,string: object.Object) object.Object {
+    return (symbolTable orelse unreachable).lookup(string);
 }
 pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
     return (symbolTable orelse unreachable).intern(thr,string);
@@ -151,12 +142,6 @@ const Symbol_Table = struct {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         return trp.getKey(@truncate(u24,string.hash32()));
     }
-    fn lookupLiteral(s: *Self, string: []const u8) object.Object {
-        var buffer: [200]u8 align(8)= undefined;
-        var tempArena = heap.tempArena(&buffer);
-        var str = tempArena.allocString(string,8) catch unreachable;
-        return s.lookup(str.asObject());
-    }
     fn lookup(s: *Self,string: object.Object) object.Object {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         return lookupDirect(&trp,string);
@@ -169,20 +154,13 @@ const Symbol_Table = struct {
         }
         return Nil;
     }
-    fn internLiteral(s: *Self,arena: *heap.Arena, string: []const u8) object.Object {
-        var buffer: [200]u8 align(8)= undefined;
-        var tempArena = heap.tempArena(&buffer);
-        const str = tempArena.allocString(string,8) catch unreachable;
+    fn intern(s: *Self,thr: *thread.Thread,string: object.Object) object.Object {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
-        return internDirect(arena.getGlobal(),&trp,str.asObject());
-    }
-    fn intern(s: *Self,thr: thread.Thread,string: object.Object) object.Object {
-        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject);
         const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = lookupDirect(&trp,string);
             if (!lu.isNil()) return lu;
-            const result = s.internDirect(arena,&trp,string);
+            const result = internDirect(arena,&trp,string);
             if (!result.isNil()) return result;
             unreachable; // out of space
         }
@@ -196,81 +174,32 @@ const Symbol_Table = struct {
         const nArgs = numArgs(string);
         return symbol_of(index,nArgs);
     }
-    fn loadInitialSymbols(s: *Self, arena: *heap.Arena) void {
-        s.loadSymbols(
-            arena,
-            \\  yourself doesNotUnderstand: = + - * size at: at:put: ~= == ~~ value
-                \\ value: value:value: negated new new: cull: value:value:value:
-                \\ value:value:value:value: valueWithArguments: cull:cull:
-                \\ cull:cull:cull: cull:cull:cull:cull: self Object BlockClosure False
-                \\ True UndefinedObject SmallInteger Symbol Character Float Array String
-                \\ Class Metaclass Behavior Magnitude Number Method System Return Send
-                \\ Literal Load Store SymbolTable Dispatch ClassDescription
-                \\ Constrained < <= >= >
-                // add any new values here
-                \\ ClassTable
-        );
-    }
-    fn loadSymbols(s: *Self, arena: *heap.Arena,str:[]const u8) void {
-        var symbolsToDefine = std.mem.tokenize(u8,str," \n");
-        while(symbolsToDefine.next()) |symbol| {
-            _ = s.internLiteral(arena,symbol);
-        }
+    fn loadSymbols(s: *Self, arena: *heap.Arena, strings: [] const heap.HeapConstPtr) void {
+        var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
+        for (strings) |string|
+            _ = internDirect(arena,&trp,string.asObject());
     }
 };
-
+pub const noStrings = &[0]heap.HeapConstPtr{};
+fn verify(symbol: object.Object) !void {
+    try std.testing.expectEqual(symbol,(symbolTable orelse unreachable).lookup(initialSymbolStrings[symbol.hash24()].asObject()));
+}
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     var thr = try thread.Thread.initForTest(null);
-    var symbol = symbolTable orelse try init(&thr,250,"");
+    var symbol = symbolTable orelse try init(&thr,250,noStrings);
     defer symbol.deinit();
-    try expectEqual(symbols.@"valueWithArguments:",symbol.lookupLiteral("valueWithArguments:"));
-    try expectEqual(symbols.@"cull:",symbol.lookupLiteral("cull:"));
-    try expectEqual(symbols.@"cull:cull:",symbol.lookupLiteral("cull:cull:"));
-    try expectEqual(symbols.@"cull:cull:cull:",symbol.lookupLiteral("cull:cull:cull:"));
-    try expectEqual(symbols.@"cull:cull:cull:cull:",symbol.lookupLiteral("cull:cull:cull:cull:"));
-    try expectEqual(symbols.value,symbol.lookupLiteral("value"));
-    try expectEqual(symbols.@"value:",symbol.lookupLiteral("value:"));
-    try expectEqual(symbols.@"value:value:",symbol.lookupLiteral("value:value:"));
-    try expectEqual(symbols.@"value:value:value:",symbol.lookupLiteral("value:value:value:"));
-    try expectEqual(symbols.@"value:value:value:value:",symbol.lookupLiteral("value:value:value:value:"));
-    try expectEqual(symbols.self,symbol.lookupLiteral("self"));
-    try expectEqual(symbols.Object,symbol.lookupLiteral("Object"));
-    try expectEqual(symbols.BlockClosure,symbol.lookupLiteral("BlockClosure"));
-    try expectEqual(symbols.False,symbol.lookupLiteral("False"));
-    try expectEqual(symbols.True,symbol.lookupLiteral("True"));
-    try expectEqual(symbols.UndefinedObject,symbol.lookupLiteral("UndefinedObject"));
-    try expectEqual(symbols.SmallInteger,symbol.lookupLiteral("SmallInteger"));
-    try expectEqual(symbols.Symbol,symbol.lookupLiteral("Symbol"));
-    try expectEqual(symbols.Character,symbol.lookupLiteral("Character"));
-    try expectEqual(symbols.Float,symbol.lookupLiteral("Float"));
-    try expectEqual(symbols.Array,symbol.lookupLiteral("Array"));
-    try expectEqual(symbols.String,symbol.lookupLiteral("String"));
-    try expectEqual(symbols.Class,symbol.lookupLiteral("Class"));
-    try expectEqual(symbols.Metaclass,symbol.lookupLiteral("Metaclass"));
-    try expectEqual(symbols.Behavior,symbol.lookupLiteral("Behavior"));
-    try expectEqual(symbols.Method,symbol.lookupLiteral("Method"));
-    try expectEqual(symbols.Magnitude,symbol.lookupLiteral("Magnitude"));
-    try expectEqual(symbols.Number,symbol.lookupLiteral("Number"));
-    try expectEqual(symbols.System,symbol.lookupLiteral("System"));
-    try expectEqual(symbols.Return,symbol.lookupLiteral("Return"));
-    try expectEqual(symbols.Send,symbol.lookupLiteral("Send"));
-    try expectEqual(symbols.Literal,symbol.lookupLiteral("Literal"));
-    try expectEqual(symbols.Load,symbol.lookupLiteral("Load"));
-    try expectEqual(symbols.Store,symbol.lookupLiteral("Store"));
-    try expectEqual(symbols.SymbolTable,symbol.lookupLiteral("SymbolTable"));
-    try expectEqual(symbols.Dispatch,symbol.lookupLiteral("Dispatch"));
-    try expectEqual(symbols.yourself,symbol.lookupLiteral("yourself"));
-    try expectEqual(symbols.@"==",symbol.lookupLiteral("=="));
-    try expectEqual(symbols.@"~~",symbol.lookupLiteral("~~"));
-    try expectEqual(symbols.@"~=",symbol.lookupLiteral("~="));
-    try expectEqual(symbols.@"=",symbol.lookupLiteral("="));
-    try expectEqual(symbols.@"+",symbol.lookupLiteral("+"));
-    try expectEqual(symbols.@"-",symbol.lookupLiteral("-"));
-    try expectEqual(symbols.@"*",symbol.lookupLiteral("*"));
-    try expectEqual(symbols.size,symbol.lookupLiteral("size"));
-    try expectEqual(symbols.ClassTable,symbol.lookupLiteral("ClassTable"));
+    for(initialSymbolStrings) |string,idx|
+        try expectEqual(idx+1,symbol.lookup(string.asObject()).hash24());
+    // test a few at random to verify arity
+    try verify(symbols.@"cull:");
+    try verify(symbols.@"cull:cull:");
+    try verify(symbols.@"cull:cull:cull:");
+    try verify(symbols.@"cull:cull:cull:cull:");
+    try verify(symbols.value);
+    try verify(symbols.@"+");
+    try verify(symbols.size);
+    try verify(symbols.Object);
     try expect(mem.eql(u8,"valueWithArguments:"[0..],symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
-    try expect(mem.eql(u8,"value:"[0..],symbols.@"value:".as_string()));
 }

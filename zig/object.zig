@@ -286,7 +286,7 @@ test "to conversion" {
 }
 test "printing" {
     var thr = try Thread.Thread.initForTest(null);
-    _ = try symbol.init(&thr,250,"");
+    _ = try symbol.init(&thr,250,symbol.noStrings);
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();

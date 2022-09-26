@@ -46,6 +46,15 @@ pub const Boolean_I = c3o + 20;
 pub const Context_I = c3o + 21;
 pub const CodeReference_I = c3o + 22;
 pub const CompiledMethod_I = c3o + 23;
+const initialClassStrings = heap.compileStrings(.{ // must be in same order as above
+    "Object", "SmallInteger", "Float", "False", "True",
+    "UndefinedObject", "Symbol", "Character", "Array", "String",
+    "Class", "Metaclass", "Behavior", "BlockClosure", "Method",
+    "MethodDictionary", "System", "Return", "Send", "Literal", "Load",
+    "Store", "SymbolTable", "Dispatch", "ClassTable", "Magnitude",
+    "Number", "ClassDescription", "Boolean", "Context",
+    "CodeReference", "CompiledMethod",
+});
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
 var classTable : Class_Table = undefined;
@@ -87,23 +96,9 @@ const Class_Table = struct {
         }
         unreachable;
     }
-    fn lookupLiteral(s: *Self, string: []const u8) ClassIndex {
-        return s.lookup(symbol.lookupLiteral(string));
-    }
-    fn loadInitialClassNames(s: *Self, arena: *heap.Arena) void {
-        var names = std.mem.tokenize(
-            u8,
-\\ Object SmallInteger Float
-\\ False True
-\\ UndefinedObject Symbol Character
-\\ Array String Class Metaclass
-\\ Behavior BlockClosure Method MethodDictionary System
-\\ Return Send Literal Load Store
-\\ SymbolTable Dispatch ClassTable Magnitude Number ClassDescription
-\\ Boolean Context CodeReference CompiledMethod
-                ," \n");
-        while(names.next()) |name| {
-            _ = s.intern(symbol.internLiteral(arena,name));
+    fn loadInitialClassNames(s: *Self, thr: *thread.Thread) void {
+        for(initialClassStrings) |name| {
+            _ = s.intern(symbol.intern(thr,name.asObject()));
         }
     }
 };
@@ -187,7 +182,7 @@ pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []cons
 pub fn init(thr: *thread.Thread) !void {
     var arena = thr.getArena().getGlobal();
     classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
-    classTable.loadInitialClassNames(arena);
+    classTable.loadInitialClassNames(thr);
     try subClass(thr,Nil,symbols.Object);
     try subClass(thr,symbols.Object,symbols.Behavior);
     try subClass(thr,symbols.Behavior,symbols.ClassDescription);
@@ -197,36 +192,9 @@ pub fn init(thr: *thread.Thread) !void {
     try subClass(thr,Nil,symbols.Object);
 }
 test "classes match initialized class table" {
-    const expectEqual = std.testing.expectEqual;
     var thr = try thread.Thread.initForTest(null);
-    _ = try symbol.init(&thr,500,"");
+    _ = try symbol.init(&thr,500,symbol.noStrings);
     try init(&thr);
-    var class = classTable;
-    try expectEqual(Object_I,class.lookupLiteral("Object"));
-    try expectEqual(False_I,class.lookupLiteral("False"));
-    try expectEqual(True_I,class.lookupLiteral("True"));
-    try expectEqual(Boolean_I,class.lookupLiteral("Boolean"));
-    try expectEqual(UndefinedObject_I,class.lookupLiteral("UndefinedObject"));
-    try expectEqual(SmallInteger_I,class.lookupLiteral("SmallInteger"));
-    try expectEqual(Class_I,class.lookupLiteral("Class"));
-    try expectEqual(Character_I,class.lookupLiteral("Character"));
-    try expectEqual(Float_I,class.lookupLiteral("Float"));
-    try expectEqual(Array_I,class.lookupLiteral("Array"));
-    try expectEqual(String_I,class.lookupLiteral("String"));
-    try expectEqual(Class_I,class.lookupLiteral("Class"));
-    try expectEqual(Metaclass_I,class.lookupLiteral("Metaclass"));
-    try expectEqual(Behavior_I,class.lookupLiteral("Behavior"));
-    try expectEqual(BlockClosure_I,class.lookupLiteral("BlockClosure"));
-    try expectEqual(Method_I,class.lookupLiteral("Method"));
-    try expectEqual(System_I,class.lookupLiteral("System"));
-    try expectEqual(Return_I,class.lookupLiteral("Return"));
-    try expectEqual(Send_I,class.lookupLiteral("Send"));
-    try expectEqual(Literal_I,class.lookupLiteral("Literal"));
-    try expectEqual(Load_I,class.lookupLiteral("Load"));
-    try expectEqual(Store_I,class.lookupLiteral("Store"));
-    try expectEqual(SymbolTable_I,class.lookupLiteral("SymbolTable"));
-    try expectEqual(Dispatch_I,class.lookupLiteral("Dispatch"));
-    try expectEqual(ClassTable_I,class.lookupLiteral("ClassTable"));
-    try expectEqual(Magnitude_I,class.lookupLiteral("Magnitude"));
-    try expectEqual(Number_I,class.lookupLiteral("Number"));
+    for(initialClassStrings) |string,idx|
+        try std.testing.expectEqual(idx+1,classTable.lookup(symbol.lookup(&thr,string.asObject())));
 }

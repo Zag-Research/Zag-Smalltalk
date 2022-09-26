@@ -757,6 +757,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
     };
 }
 pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
+    @setEvalBranchQuota(3000);
     comptime var result : [tup.len] HeapConstPtr = undefined;
     inline for (tup) |name,idx| {
         result[idx] = comptime @ptrCast(HeapConstPtr,@alignCast(8,&CompileTimeString(name).init()));
