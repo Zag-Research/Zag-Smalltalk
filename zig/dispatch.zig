@@ -10,27 +10,21 @@ const HeapPtr = heap.HeapPtr;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
-const Context = @import("execute.zig").Context;
+const execute = @import("execute.zig");
+const Context = execute.Context;
+const MethodReturns = execute.MethodReturns;
+const CompiledMethodPtr = execute.CompiledMethodPtr;
 const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
-pub const MethodReturns = union(enum) {
-    Normal: Object,
-    NonLocal,
-    ExceptionSignaled,
-    pub fn nonLocal(self : MethodReturns) bool {
-        return self>=MethodReturns.NonLocal;
-    }
-};
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
-pub const MethodType = fn(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, dnuOption: DNUOption) MethodReturns;
 const noArgs = ([0]Object{})[0..];
-pub const SymbolMethod = packed struct{ selector: Object, method: MethodType};
+pub const SymbolMethod = packed struct{ selector: Object, method: CompiledMethodPtr};
 const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
     super: u32,
-    methods: [1]MethodType, // normally this is many elements, overwriting the remaining fields
+    methods: [1]CompiledMethodPtr, // normally this is many elements, overwriting the remaining fields
     altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
-    altMethods: [1]MethodType, // altMethods as the many elements dispatch table if the constraints are met
+    altMethods: [1]CompiledMethodPtr, // altMethods as the many elements dispatch table if the constraints are met
 };
 pub const DispatchPtr = *Dispatch;
 const max_classes = class.ReservedNumberOfClasses;
@@ -75,7 +69,7 @@ fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) Meth
 fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
     return struct{
         const Self = @This();
-        fn findTableSize(sm: []const T, extra: ?T,fix: *[12]Fix) !TableStructureResult {
+        fn findTableSize(sm: []const T, extra: ?T,fix: *[15]Fix) !TableStructureResult {
             // const stdout = @import("std").io.getStdOut().writer();
             var minSizeConflicts: u32 = maxSize;
             var conflictSize: u16 = 0;
@@ -108,7 +102,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                             bestRand = rand;
                         }
                     } else {
-                        // stdout.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries}) catch unreachable;
+                        std.debug.print("table of size {} is {}% efficient with rand={} on try {}\n",.{sm.len,sm.len*100/size,rand,tries});
                         return TableStructureResult{.conflictFree=.{.size=size,.hash=rand}};
                     }
                 }
@@ -133,7 +127,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                     0,1 => {},
                     2,3 => |s| {
                         conflicts += s-1;
-                        if (conflicts>12) return error.moreThan12Conflicts;
+                        if (conflicts>15) return error.moreThan15Conflicts;
                         fix[i]=Fix{.index=@truncate(u16,hash),
                                    .a=@truncate(u16,index),
                                    .b=0,
@@ -152,20 +146,19 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                 }
             }
             const fixup = fix[0..i];
-            // stdout.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand}) catch unreachable;
+            std.debug.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand});
             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
-//        const stage2 = [_]MethodType{stage2a};
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
             const arena = thread.getArena().getGlobal();
-            var fixup: [12]Fix = undefined;
+            var fixup: [15]Fix = undefined;
             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
             const rand = dispatchSize.hash();
             const size = dispatchSize.size();
-            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(MethodType),Dispatch,@bitCast(Object,@ptrToInt(dnu)),8) catch unreachable;
+            const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(CompiledMethodPtr),Dispatch,@bitCast(Object,@ptrToInt(dnu)),8) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;
-            const methods=@ptrCast([*]MethodType,@alignCast(@alignOf([*]MethodType),&strct.methods));
+            const methods=@ptrCast([*]CompiledMethodPtr,@alignCast(@alignOf([*]CompiledMethodPtr),&strct.methods));
             for (symbolMethods) |*sm| {
                 const hash = sm.selector.hash *% rand >> @truncate(u5,rand);
                 methods[hash] = sm.method;
@@ -179,13 +172,13 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                     //var shifts: u64 = 0;
                     var shift: u6 = 0;
                     while (i<fix.len) : (shift+=1) {
-                        // switch (fix.ptr[i+1]) {
+                        switch (fix.ptr[i+1]) {
                         //     2 => {
                         //         const left = fix.ptr[i+2];
                         //         const right = fix.ptr[i+3];
                         //         const xor = symbolMethods[left].selector.hash^symbolMethods[right].selector.hash;
                         //         const sh = @ctz(u5,xor);
-                        //         shifts |= sh << shift*5;
+                        //         shifts |= sh << shift45;
                         //         if (((fix.ptr[i+2]>>sh)&1)==0) {
                         //             methods[next] = symbolMethods[left].method;
                         //             methods[next+1] = symbolMethods[right].method;
@@ -196,8 +189,8 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                         //         next += 2;
                         //         shift += 1;
                         //     },
-                        //     else => @panic("Not implemented"),
-                        // }
+                            else => @panic("Not implemented"),
+                        }
                         //methods[wc.hash]=stage2[shift];
                     }
                 },
@@ -220,7 +213,7 @@ test "tablesize" {
                       26, 2518, 238, 22, 27, 28, 29, 210, 242, 246, 247,
                       16, 1518, 138, 12, 17, 18, 19, 110, 142, 146, 147};
     const stdout = std.io.getStdOut().writer();
-    var fix: [12]Fix = undefined;
+    var fix: [15]Fix = undefined;
     {
         const findTableSize2=DispatchMethods(u32,id_u32,35).findTableSize;
         try stdout.print("\n",.{});
@@ -240,78 +233,26 @@ test "tablesize" {
         try stdout.print("e6: {any}\n",.{try findTableSize2(e6[0..],null,&fix)});
     }
 }
-fn id_sm(x:SymbolMethod) u32 {return x.selector.hash;}
-const dispatch=DispatchMethods(SymbolMethod,id_sm,2050);
+fn id_cm(x:CompiledMethodPtr) u32 {return x.name.hash32();}
+const dispatch=DispatchMethods(CompiledMethodPtr,id_cm,2050);
 
-fn testNormal(_: Object, self: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=self};
-}
-fn testNonLocal(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns.NonLocal;
-}
-fn test1(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(1)};
-}
-fn test2(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(2)};
-}
-fn test3(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(3)};
-}
-fn test4(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(4)};
-}
-fn test5(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(5)};
-}
-fn test6(_: Object, _: Object, _: Object, _ : *Context, _: DispatchPtr, _: DNUOption) MethodReturns {
-    return MethodReturns{.Normal=Object.from(6)};
-}
-pub const noMethods = ([0]SymbolMethod{})[0..];
-const symbolMethods1 = [_]SymbolMethod{
-    .{.selector=symbols.value,.method=testNormal},
-    .{.selector=symbols.self,.method=testNormal},
-    .{.selector=symbols.yourself,.method=testNormal},
-    .{.selector=symbols.@"cull:",.method=testNormal},
-};
-const symbolMethods2 = [_]SymbolMethod{
-    .{.selector=symbols.value,.method=test1},
-    .{.selector=symbols.self,.method=test2},
-    .{.selector=symbols.yourself,.method=test3},
-    .{.selector=symbols.@"cull:",.method=test4},
-    .{.selector=symbols.@"value:",.method=test5}, // additional method forces larger hash
-    .{.selector=symbols.@"cull:cull:cull:cull:",.method=test6}, // additional method forces larger hash
-};
-const symbolMethods3 = [_]SymbolMethod{
-    .{.selector=symbols.value,.method=testNormal},
-    .{.selector=symbols.self,.method=testNormal},
-    .{.selector=symbols.yourself,.method=testNormal},
-    .{.selector=symbols.@"cull:",.method=testNormal},
-    .{.selector=symbols.@"value:",.method=testNonLocal},
-    .{.selector=symbols.@"value:value:",.method=testNormal},
-    .{.selector=symbols.@"value:value:value:",.method=testNormal},
-    .{.selector=symbols.@"value:value:value:value:",.method=testNormal},
-    .{.selector=symbols.@"=",.method=testNormal},
-    .{.selector=symbols.size,.method=testNormal},
-    .{.selector=symbols.negated,.method=testNormal},
-};
-test "timing" {
-    const stdout = @import("std").io.getStdOut().writer();
-    const findTableSize=dispatch.findTableSize;
-    var fix: [12]Fix = undefined;
-    try stdout.print("methods1: {any}\n",.{(try findTableSize(symbolMethods1[0..],null,&fix))});
-    try stdout.print("methods2: {any}\n",.{(try findTableSize(symbolMethods2[0..],null,&fix))});
-    try stdout.print("methods3: {any}\n",.{(try findTableSize(symbolMethods3[0..],null,&fix))});
+// test "timing" {
+//     const stdout = @import("std").io.getStdOut().writer();
+//     const findTableSize=dispatch.findTableSize;
+//     var fix: [12]Fix = undefined;
+//     try stdout.print("methods1: {any}\n",.{(try findTableSize(symbolMethods1[0..],null,&fix))});
+//     try stdout.print("methods2: {any}\n",.{(try findTableSize(symbolMethods2[0..],null,&fix))});
+//     try stdout.print("methods3: {any}\n",.{(try findTableSize(symbolMethods3[0..],null,&fix))});
 
-}
-test "findTableSize" {
-    const expectEqual = @import("std").testing.expectEqual;
-    const findTableSize=dispatch.findTableSize;
-    var fix: [12]Fix = undefined;
-    try expectEqual((try findTableSize(symbolMethods1[0..],null,&fix)).size(),4);
-    try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),8);
-    try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),16);
-}
+// }
+// test "findTableSize" {
+//     const expectEqual = @import("std").testing.expectEqual;
+//     const findTableSize=dispatch.findTableSize;
+//     var fix: [12]Fix = undefined;
+//     try expectEqual((try findTableSize(symbolMethods1[0..],null,&fix)).size(),4);
+//     try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),8);
+//     try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),16);
+// }
 pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
     const theClass_I = class.getClassIndex(className);
     const superClass = 0;
@@ -334,30 +275,30 @@ pub inline fn callClass(selector: Object, self: Object, other: Object, cp: *Cont
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
 }
-test "addClass and call" {
-    const expectEqual = @import("std").testing.expectEqual;
-    var thread = try Thread.initForTest(null);
-    _ = try symbol.init(&thread,250,"");
-    try class.init(&thread);
-    try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
-    const t42 = Object.from(42);
-    try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Nil});
-}
-test "lookups of proper methods" {
-    const expectEqual = @import("std").testing.expectEqual;
-    var thread = try Thread.initForTest(null);
-    _ = try symbol.init(&thread,250,"");
-    try class.init(&thread);
-    try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);
-    const t42 = Object.from(42);
-//    thread.push(Object.from(17));
-    try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Object.from(1)});
-    try expectEqual(t42.send(symbols.self,Nil,undefined),MethodReturns{.Normal=Object.from(2)});
-    try expectEqual(t42.send(symbols.yourself,Nil,undefined),MethodReturns{.Normal=Object.from(3)});
-    try expectEqual(t42.send(symbols.@"cull:",Nil,undefined),MethodReturns{.Normal=Object.from(4)});
-    try expectEqual(t42.send(symbols.@"value:",Nil,undefined),MethodReturns{.Normal=Object.from(5)});
-    try expectEqual(t42.send(symbols.@"cull:cull:cull:cull:",Nil,undefined),MethodReturns{.Normal=Object.from(6)});
-}
+// test "addClass and call" {
+//     const expectEqual = @import("std").testing.expectEqual;
+//     var thread = try Thread.initForTest(null);
+//     _ = try symbol.init(&thread,250,"");
+//     try class.init(&thread);
+//     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
+//     const t42 = Object.from(42);
+//     try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Nil});
+// }
+// test "lookups of proper methods" {
+//     const expectEqual = @import("std").testing.expectEqual;
+//     var thread = try Thread.initForTest(null);
+//     _ = try symbol.init(&thread,250,"");
+//     try class.init(&thread);
+//     try addClass(&thread,symbols.SmallInteger,symbolMethods2[0..],noMethods);
+//     const t42 = Object.from(42);
+// //    thread.push(Object.from(17));
+//     try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Object.from(1)});
+//     try expectEqual(t42.send(symbols.self,Nil,undefined),MethodReturns{.Normal=Object.from(2)});
+//     try expectEqual(t42.send(symbols.yourself,Nil,undefined),MethodReturns{.Normal=Object.from(3)});
+//     try expectEqual(t42.send(symbols.@"cull:",Nil,undefined),MethodReturns{.Normal=Object.from(4)});
+//     try expectEqual(t42.send(symbols.@"value:",Nil,undefined),MethodReturns{.Normal=Object.from(5)});
+//     try expectEqual(t42.send(symbols.@"cull:cull:cull:cull:",Nil,undefined),MethodReturns{.Normal=Object.from(6)});
+// }
 pub fn dnu(selector: Object, self: Object, other: Object, callingContext : *Context, disp: DispatchPtr, expectedSelector: Object, dnuOption: DNUOption) MethodReturns {
     _ = selector;
     _ = self;

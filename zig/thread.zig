@@ -18,7 +18,7 @@ pub const Thread = struct {
 //    tean1 : heap.Arena,
 //    teen2 : heap.Arena,
     next: ?*Thread,
-    debug: ?ex.PrimitivePtr,
+    debug: ?ex.ThreadedFn,
     const psm1 = std.mem.page_size-1;
     const thread_size = @sizeOf(Thread);
     const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
@@ -35,7 +35,7 @@ pub const Thread = struct {
             .debug = null,
         };
     }
-    pub fn initForTest(debugger: ?ex.PrimitivePtr) !Self {
+    pub fn initForTest(debugger: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
             return Self {
                 .id = 0,
@@ -73,12 +73,12 @@ pub const Thread = struct {
     pub inline fn endOfStack(self: *const Self) [*]Object {
         return self.ptr().getArena().toh;
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, self: *Thread, context: ContextPtr, selector: Object) void {
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, self: *Thread, context: ContextPtr, selector: u64) void {
         if (self.ptr().debug) |debugger|
             return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
         @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selector});
     }
-    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
+    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: u64) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context,selector});
     }
 };
