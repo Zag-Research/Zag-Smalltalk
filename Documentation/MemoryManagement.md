@@ -28,8 +28,15 @@ The nursery and teen arenas are both collected using a copying collector. Copyin
 
 If, after an allocation in the teen arena (from a nursery collection, or a large-object allocation), there is not enough free space in the teen arena for a full nursery collection, then the nursery arena will be collected into the teen arena and then the teen arena will be collected. This is collected into the other teen arena, and if there still isn't enough space for a full copy from the nursery, then the teen arena will be copied into the shared GlobalArena, so it must obtain a lock. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the nursery.
 
+### Stack of Contexts
+The execution stack is allocated at the top of the nursery arena, and grows down. This means that for both heap and stack allocation, the space between the heap pointer and the stack pointer is what is available. If insufficient space is available then either the contexts will be reified and copied to the teen arena, or the nursery will be collected to the teen arena (which is done depends on what percentage of the nursery arena is currently taken up by the stack).
+
+The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the top of the nursery arena.
+
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
+
 ### Copying Collector
-Copying collectors are much faster if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data ^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-thread arena, where no locks are required. This is why Zag uses this for per-thread arenas.
+Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-thread arena, where no locks are required. This is why Zag uses this for per-thread arenas.
 
 ## Global Arena
 The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery or teen arena, so such objects must be promoted to the GlobalArena (this is the reason for a nursery collection before any teen collection). There are several sources of this data:
@@ -40,7 +47,7 @@ The GlobalArena is the eventual repository for all live data. One invariant is t
 5. class objects
 6. large allocations
 7. setting a field in an existing global object to a reference to a local object requires that the local object be promoted (leaving behind forwarding pointers)
-8. Contexts spilled from the stack (from deep recursion)
+8. Contexts spilled from the stack (e.g., from deep recursion)
 
 Roots for the GlobalArena include:
 1. the symbol table reference
@@ -48,7 +55,7 @@ Roots for the GlobalArena include:
 3. roots from all threads
 4. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
 
-If you have an arena that is accessible to multiple threads, then moving becomes a big deal - you'd have to stop all threads to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist) - just using Fibonacci numbers instead of powers of 2. This means almost no space is wasted, versus with powers-of-2 (like Mist), on average 1/4 of memory is wasted. Free space is easily coalesced in the sweep phase.
+If you have an arena that is accessible to multiple threads, then moving becomes a big deal - you'd have to stop all threads to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist) - just using Fibonacci numbers instead of powers of 2. Free space is easily coalesced in the sweep phase.
 
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
 
@@ -64,7 +71,7 @@ Free-space is split up into fibonacci-number-sized pieces and put on the appropr
 - Otherwise, free-space is split into two pieces: the largest fibonacci number that will fit, which is put on the appropriate queue, and loop to allocate the rest.
 
 ## Large data allocation
-For objects of 4094^[this exact size will be tuned with experience and may become smaller] words or more (32KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
+For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
 
 The objects with large allocations are linked together so that at the start of the sweep of the global arena we can go though this list finding all the unused objects that have large allocations and free up their allocation.
 
@@ -72,9 +79,10 @@ The objects with large allocations are linked together so that at the start of t
 The become instruction swaps the two heap-objects, so that all existing references to object A reference object B and all existing references to object B reference object A. In the original Smalltalk an object table was used to allow objects to be moved around (a compacting collector) and so `become` was simply a swap of the two pointers. It's hard to do this cheaply if you don't have an object table.
 
 The way we do it has 3 cases:
-1. if both of the objects are in the nursery, the objects are simply copied to the teen arena, and the forwarding pointers are swapped, and then a nursery collection is performed. At the end of the collection, all pointers will have been updated correctly.
-2. If at least one of the objects is in the teen arena (but none are in the global arena), then the two objects are copied to the target teen arena, and a teen collection is performed.
-3. If at least one of the objects is in the global arena, if the other isn't it is copied to the global arena (leaving a forwarding pointer to the other) and a teen or nursery collection is performed. Now both objects are in the global arena, and the global collector is asked to do the `become` whereby it creates a become structure which identifies the change of identities and changes both header words to be forwarding pointers. This unfortunately means that all pointers to the global arena are required to check for forwarding pointers, whereas for local arenas, this can never happen (forwarding pointers only exist during copying collection).
+1. if it's a one-way become, the source header is replaced with with a simple forwarding pointer (length of 4072)
+2. if both objects are thread-local and of the same size, then the contents are swapped (thread local guarantees "small")
+3. If at least one of the objects is in the global arena, if the other isn't it is promoted to the global arena (leaving a forwarding pointer behind). Now both objects are in the global arena, and the global collector is asked to do the `become`.
+4. the default handling is to create a become structure which is a table of header+address pairs for the objects from the `become`. Then each header is replaced with a 'become' forwarding pointer. The 'become' forwarding pointer is a length of 4080+offset, where offset is the position in the become structure that should now be used for this object, and the address portion is the address of the become structure. Become structures disappear when the arena in which they reside is collected.
 
 ## Notes
 - when the stack is being copied, 

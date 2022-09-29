@@ -98,7 +98,7 @@ If there are both instVars and indexable fields, the length field is the number 
 
 If there aren't both  instVars and indexable fields, the size is determined by the length field. The only difference between instVars and indexables is whether `at:`, `size`, etc. should work or give an error.
 
-If the array length is >= 4094 (whether in the length field or the additional size word), the values are preceded by a size which is the number of additional words. 
+If the array length is >= 2048 (whether in the length field or the additional size word), the values are preceded by a size which is the number of additional words. 
 
 This is the header-word for an object:
 
@@ -123,12 +123,9 @@ For formats >= 17, if the length field=4094, the header word is followed by 3 wo
 
 If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 or 4 plus the value of the length field (for the instance variables which can't be 4K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 4093 indexable elements. If the index allocation is greater than or equal to 4094, then the indexable elements are allocated on a separate data page, and replaced in the object with a pointer to that page and a link for the list of large-allocation objects..
 
-The remaining format bits encode:
-- bit 5: = 32 means that the object is immutable, so any assignments will signal an exception
-- bit 6: = 64 is currently unused
-- bit 7: - 128 is currently unused
+The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
 
-The age field encodes the number of times the object has been copied. Nursery object will always have an age of 0. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see[[MemoryManagement]]).
+The age field encodes the number of times the object has been copied. Stack objects (only Contexts) will always have an age of 0. Nursery heap objects have an age of 1. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see[[MemoryManagement]]).
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
 
