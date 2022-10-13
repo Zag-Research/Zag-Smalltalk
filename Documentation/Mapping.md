@@ -33,7 +33,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF6      | 0004 | 0001 | 0000 | False                         |
 | FFF6      | 0005 | 0010 | 0001 | True                          |
 | FFF6      | 0006 | 0100 | 0002 | UndefinedObject               |
-| FFF6      | 0007 | axxx | xxxx | Symbol                        |
+| FFF6      | 0007 | aaxx | xxxx | Symbol                        |
 | FFF6      | 0008 | 00xx | xxxx | Character                     |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
