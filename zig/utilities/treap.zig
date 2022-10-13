@@ -104,6 +104,18 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
                 Greater => return self.lookupElement(self.table[current].left ,key),
             }
         }
+        pub inline fn greaterEqual(self: *const Self, key: Key) Index {
+            return self.lookupElementGE(self.root(),key,0);
+        }
+        fn lookupElementGE(self: *const Self,current:Index,key:Key,left:Index) Index {
+            if (current==0) {
+                return left;
+            } else switch (self.compare(self.table[current].key,key)) {
+                Equal => return current,
+                Less => return self.lookupElementGE(self.table[current].right,key,current),
+                Greater => return self.lookupElementGE(self.table[current].left,key,left),
+            }
+        }
         pub fn insert(self: *Self,key: Key) !Index {
             const result = self.lookup(key);
             if (result>0) {
@@ -355,16 +367,20 @@ test "full u64 treap alloc" {
         // try std.io.getStdOut().writer().print("treap={}\n",.{treap});
     }
 }
-test "randomness of /phi - all values enumerated" {
-    var data = [_]u16{0} ** 65536;
-    var counts = [_]u32{0} ** 2;
-    for (data) |_,index| {
-        data[(index*40503)&65535] += 1;
-    }
-    for (data) |count| {
-        counts[count] += 1;
-    }
-    //try std.io.getStdOut().writer().print("\n counts: {any}",.{counts});
+test "simple u64 treap range" {
     const expectEqual = @import("std").testing.expectEqual;
-    try expectEqual(counts[1],65536);
+    const n = 2;
+    var memory = [_]u8{0} ** (n*48);
+    var treap = Treap_u64.init(memory[0..],compareU64,0);
+    const f10 = try treap.insert(10);
+    const f20 = try treap.insert(20);
+    _ = try treap.insert(30);
+    const f40 = try treap.insert(40);
+    try expectEqual(treap.greaterEqual(10),f10);
+    try expectEqual(treap.greaterEqual(20),f20);
+    try expectEqual(treap.greaterEqual(11),f10);
+    try expectEqual(treap.greaterEqual(29),f20);
+    try expectEqual(treap.greaterEqual(9),0);
+    try expectEqual(treap.greaterEqual(100),f40);
+
 }
