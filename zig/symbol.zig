@@ -129,7 +129,7 @@ const Symbol_Table = struct {
     const Self = @This();
     fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(class.SymbolTable_I,
-                                                  heap.Format.none,0,initialSymbolTableSize*2,0);
+                                                  heap.Format.none,0,initialSymbolTableSize*2,heap.Age.stack);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {
             .theObject = theHeapObject.asObject(),

@@ -106,7 +106,7 @@ pub const Context = struct {
         if (heap.arenaFree(newSp,hp)<5+maxStackNeeded)
             @panic("grow heap"); //return @call(tailCall,Thread.checkStack,.{pc-1,sp,hp,thread,context,selector}); // redo this instruction after collect
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Context),newSp));
-        ctxt.header = heap.header(3, heap.Format.both, class.Context_I,0,0);
+        ctxt.header = heap.header(3, heap.Format.both, class.Context_I,0,heap.Age.stack);
 //        ctxt.setTpc(Nil);
         ctxt.prevCtxt = Object.from(context);
         ctxt.method = Object.from(method);
@@ -140,7 +140,7 @@ pub const CompiledMethod = struct {
         return @ptrCast([*]const Code,&self.code[0]);
     }
     inline fn codeSize(self: * const CompiledMethod) usize {
-        return @alignCast(8,&self.header).totalSize()-@sizeOf(Self)/@sizeOf(Object)+1;
+        return @alignCast(8,&self.header).inHeapSize()-@sizeOf(Self)/@sizeOf(Object)+1;
     }
     fn matchedSelector(pc: [*] const Code, selector: u64) bool {
         _ = pc;
@@ -221,7 +221,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
         const Self = @This();
         fn init(name: Object, comptime locals: comptime_int) Self {
             return .{
-                .header = heap.header(methodIVars,heap.Format.both,class.CompiledMethod_I,name.hash24(),15),
+                .header = heap.header(methodIVars,heap.Format.both,class.CompiledMethod_I,name.hash24(),heap.Age.static),
                 .name = name,
                 .class = Nil,
                 .stackStructure = Object.packedInt(locals,locals+name.numArgs(),0),

@@ -69,11 +69,11 @@ const objectMethods = struct {
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
-    pub inline fn isInt(self: Object) bool {
+    pub inline fn isIntA(self: Object) bool {
         return self.u() >= u64_MINVAL;
     }
-    pub inline fn isIntA(self: Object) bool {
-        return self.flagbits() >= u64_MINVAL>>48;
+    pub inline fn isInt(self: Object) bool {
+        return self.tagbits() >= u64_MINVAL>>48;
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;
@@ -81,17 +81,17 @@ const objectMethods = struct {
     pub inline fn isBool(self: Object) bool {
         return self.equals(False) or self.equals(True);
     }
-    pub inline fn isNil(self: Object) bool {
+    pub inline fn isNilA(self: Object) bool {
         return self.equals(Nil);
     }
-    pub inline fn isNilA(self: Object) bool {
+    pub inline fn isNil(self: Object) bool {
         return self.tagbitsL() == Nil.tagbitsL();
     }
-    pub inline fn isHeap(self: Object) bool {
+    pub inline fn isHeapA(self: Object) bool {
         if (self.u() <= Start_of_Heap_Objects) return false;
         return self.u() <= End_of_Heap_Objects;
     }
-    pub inline fn isHeapA(self: Object) bool {
+    pub inline fn isHeap(self: Object) bool {
         return self.tagbits() == Start_of_Heap_Objects>>48;
     }
     pub inline fn is_memory(self: Object) bool {
@@ -110,7 +110,7 @@ const objectMethods = struct {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (check and (self.is_memory() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
+                        if (check and (self.isHeap() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
@@ -138,7 +138,7 @@ const objectMethods = struct {
         return symbol.asString(self).arrayAsSlice(u8);
     }
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
-        if (self.is_memory()) return self.to(HeapPtr).arrayAsSlice(T);
+        if (self.isHeap()) return self.to(HeapPtr).arrayAsSlice(T);
         return &[0]T{};
     }
     pub inline fn from(value: anytype) Object {
@@ -173,7 +173,7 @@ const objectMethods = struct {
         @compileError("Can't convert \""++@typeName(@TypeOf(value))++"\"");
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
-        if (!self.is_memory() or !other.is_memory()) {
+        if (!self.isHeap() or !other.isHeap()) {
             const u64s = self.u();
             const u64o = other.u();
             return std.math.order(u64s,u64o);

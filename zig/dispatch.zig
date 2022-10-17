@@ -33,13 +33,7 @@ inline fn bumpSize(size:u16) u16 {
     return size*2;
 }
 inline fn initialSize(size:usize) u16 {
-    var n = @maximum(@intCast(u16,size),4);
-    n -= 1;
-    n |= n>>8;
-    n |= n>>4;
-    n |= n>>2;
-    n |= n>>1;
-    return n+1;
+    return @import("utilities.zig").largerPowerOf2(@maximum(@intCast(u16,size),4));
 }
 const Fix = struct {index:u16,a:u16,b:u16,c:u16};
 const CF = struct{size:u16,hash:u32};

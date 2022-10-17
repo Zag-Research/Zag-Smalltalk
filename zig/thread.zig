@@ -39,7 +39,7 @@ pub const Thread = struct {
         if (builtin.is_test) {
             return Self {
                 .id = 0,
-                .nursery = try heap.TestArena.init(),
+                .nursery = try heap.TestArena.init(null),
                 .next = null,
                 .debug = debugger,
             };
