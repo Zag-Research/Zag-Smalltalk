@@ -171,10 +171,8 @@ pub const HeaderArray = [*]align(@alignOf(u64)) Header;
 pub const HeapPtr = *align(@alignOf(u64)) Header;
 pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
-    const _reservedLength = 4095; // so that embedded headers look like doubles
-    const exchangeLength : u16 = 4080;
-    const forwardLength : u16 = 4079;
-    const indirectLength : u16 = 4064;
+    const forwardLength : u16 = 4095;
+    const indirectLength : u16 = 4094;
     const maxLength = indirectLength-1;
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
@@ -712,16 +710,24 @@ const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+l
                          5, 5, 5, 5, 5,
                          6, 6, 6, 6, 6, 6, 6, 6,
                          7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-fn findAllocationList(target: u64) ?usize {
-    if (target<=34) return allocIndex[target];
-    if (target>allocationUnit) return null;
-    return @import("utilities.zig").findFib(target);
+fn findAllocationList(target: u16) ?usize {
+    const pow2 = @import("utilities.zig").largerPowerOf2;
+    return @ctz(u16,pow2(u16,target));
 }
+test "findAllocationList" {
+    const ee = std.testing.expectEqual;
+    try ee(findAllocationList(1),1);
+    try ee(findAllocationList(2),1);
+    try ee(findAllocationList(3),2);
+    try ee(findAllocationList(4),2);
+    try ee(findAllocationList(400),9);
+}
+
 fn hash24(str: [] const u8) u24 {
     const phi: u32 = @import("utilities.zig").inversePhi(u24);
     var hash = phi*%@truncate(u32,str.len+%1);
     for (str) |c,idx| {
-        if (idx>9) return @truncate(u24,hash);
+        if (idx>9) break;
         hash +%= phi*%c;
     }
     return @truncate(u24,hash);
