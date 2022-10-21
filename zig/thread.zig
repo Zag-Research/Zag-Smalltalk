@@ -11,29 +11,28 @@ const tailCall = ex.tailCall;
 test "sizes" {
 //    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
 }
-pub const Thread = struct {
-//    header: heap.Header,
+pub const Thread = packed struct {
+    header: heap.Header,
     id : u64,
-    nursery : heap.Arena,
-//    tean1 : heap.Arena,
-//    teen2 : heap.Arena,
     next: ?*Thread,
     debug: ?ex.ThreadedFn,
+    nursery : heap.NurseryArena,
+    tean1 : heap.TeanArena,
+    teen2 : heap.TeanArena,
     const psm1 = std.mem.page_size-1;
     const thread_size = @sizeOf(Thread);
     const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
     const teen_size = size*5/12/@sizeOf(Object)*@sizeOf(Object); 
     const nursery_size = (size-thread_size-teen_size*2)/@sizeOf(Object)*@sizeOf(Object);
     const Self = @This();
-    pub fn init() !Self {
+    pub fn init(self: *Self) !void {
         defer next_thread_number += 1;
-        const arena = try heap.NurseryArena.init();
-        return Self {
-            .id = next_thread_number,
-            .nursery = arena,
-            .next = null,
-            .debug = null,
-        };
+        self.id = next_thread_number;
+        self.next = null;
+        self.debug = null;
+        self.nursery = try heap.NurseryArena.init(self);
+        self.teen1 = try heap.TeenArena.init(&self.teen2);
+        self.teen2 = try heap.TeenArena.init(&self.teen1);
     }
     pub fn initForTest(debugger: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
