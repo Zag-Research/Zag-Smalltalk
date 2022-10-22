@@ -31,7 +31,7 @@ test "randomness of /phi - all values enumerated" {
     const expectEqual = @import("std").testing.expectEqual;
     try expectEqual(counts[1],65536);
 }
-inline fn largerPowerOf2(comptime T: type,size:T) T {
+pub inline fn largerPowerOf2(comptime T: type,size:T) T {
     var n = size-1;
     const bits = @typeInfo(T).bits;
     if (comptime bits>32) n |= n>>32;
