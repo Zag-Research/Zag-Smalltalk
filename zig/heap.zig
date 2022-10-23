@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
+const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -416,14 +417,38 @@ test "arenaFree" {
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
-const nurserySize = 2048;
-pub const NurseryArena = Arena {
-    .vtable = nurseryVtable,
-    .heap = undefined,
-    .toh = undefined,
-    .allocated = undefined,
-    .collectTo = null,
-    .size = nurserySize,
+fn instead(int: u32,int2: u32, buf: []u8) []const u8 {
+    return std.fmt.bufPrint(buf, "{} instead of {}", .{int,int2}) catch unreachable;
+}
+const threadAvail = thread.avail_size;
+const nursery_size = threadAvail/7/@sizeOf(Object);
+const teen_size = (threadAvail-@sizeOf(NurseryArena))/2;
+pub const NurseryArena = extern struct {
+    vtable:  Arena.Vtable,
+    hp: [*]Header,
+    sp: [*]Object,
+    heap: [nursery_size-field_size/@sizeOf(Header)]Header,
+    const field_size = @sizeOf(Arena.Vtable)-@sizeOf([*]Header)-@sizeOf([*]Object);
+    comptime {
+        if (@sizeOf(NurseryArena) != nursery_size) {
+            const s = blk: {
+                var buf: [20]u8 = undefined;
+                break :blk instead(nursery_size,@sizeOf(NurseryArena), &buf);
+                };
+            @compileError("Modify NurseryArena.heap to make @sizeOf(NurseryArena) == " ++ s);
+        }
+    }
+    pub fn init(_: thread) NurseryArena {
+        var result = NurseryArena {
+            .vtable = nurseryVtable,
+            .heap = undefined,
+            .hp = undefined,
+            .sp = undefined,
+        };
+        result.hp = &result.heap[0];
+        result.sp = @intToPtr([*]Object,@ptrToInt(result.hp))+nursery_size;
+        return result;
+    }
 };
 const nurseryVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
@@ -432,13 +457,19 @@ fn getGlobalNext(self: *const Arena) *Arena {
     if (self.collectTo) | ptr | return ptr.getGlobal();
     @panic("nothing to collect to");
 }
-pub const TeenArena = Arena {
-    .vtable = teenVtable,
-    .heap = undefined,
-    .toh = undefined,
-    .allocated = undefined,
-    .collectTo = null,
-    .size = nurserySize*3,
+pub const TeenArena = extern struct {
+    vtable:  Arena.Vtable,
+    heap: [teen_size-field_size/@sizeOf(Header)]Header,
+    const field_size = @sizeOf(Arena.Vtable);
+    comptime {
+        if (@sizeOf(TeenArena) != teen_size) {
+            const s = blk: {
+                var buf: [20]u8 = undefined;
+                break :blk instead(teen_size,@sizeOf(TeenArena), &buf);
+                };
+            @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
+        }
+    }
 };
 const teenVtable =  Arena.Vtable {
     .getGlobal = getGlobalNext,
@@ -488,10 +519,10 @@ const FreeList = struct {
 const pageSize = std.mem.page_size;
 const nFreeLists = @ctz(u64,pageSize);
 const FreeListPtr = ?*FreeList;
-pub const Arena = struct {
+pub const Arena = packed struct {
     vtable: Vtable,
     const Self = Arena;
-    const Vtable = struct {
+    const Vtable = packed struct {
         getGlobal : arenaStar_to_arenaStar,
     };
     const arenaStar_to_arenaStar = fn (self: *const Arena) *Arena;

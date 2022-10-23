@@ -9,39 +9,41 @@ const Code = ex.Code;
 const ContextPtr = ex.ContextPtr;
 const tailCall = ex.tailCall;
 test "sizes" {
-//    try std.testing.expect(Thread.size/@sizeOf(Object)<heap.externalPageSize);
+    try std.testing.expectEqual(thread_size+(nursery_size+2*teen_size)*@sizeOf(Object),thread_total_size);
 }
-pub const Thread = packed struct {
-    header: heap.Header,
+const thread_total_size = std.mem.page_size;
+const thread_size = @sizeOf(_Thread);
+pub const teen_size = thread_total_size*3/7/@sizeOf(Object);
+pub const nursery_size = (thread_total_size-thread_size-2*teen_size*@sizeOf(Object))/@sizeOf(Object);
+
+const _Thread = packed struct {
     id : u64,
-    next: ?*Thread,
+    next: ?*_Thread,
     debug: ?ex.ThreadedFn,
+};
+pub const Thread = packed struct {
+    thread: _Thread,
     nursery : heap.NurseryArena,
-    tean1 : heap.TeanArena,
-    teen2 : heap.TeanArena,
-    const psm1 = std.mem.page_size-1;
-    const thread_size = @sizeOf(Thread);
-    const size = (thread_size+3000*@sizeOf(Object)+psm1)&-std.mem.page_size;
-    const teen_size = size*5/12/@sizeOf(Object)*@sizeOf(Object); 
-    const nursery_size = (size-thread_size-teen_size*2)/@sizeOf(Object)*@sizeOf(Object);
+    teen1 : heap.TeenArena,
+    teen2 : heap.TeenArena,
     const Self = @This();
-    pub fn init(self: *Self) !void {
+    pub fn init(self: *Self) void {
         defer next_thread_number += 1;
-        self.id = next_thread_number;
-        self.next = null;
-        self.debug = null;
-        self.nursery = try heap.NurseryArena.init(self);
-        self.teen1 = try heap.TeenArena.init(&self.teen2);
-        self.teen2 = try heap.TeenArena.init(&self.teen1);
+        self.thread = .{
+            .id = next_thread_number,
+            .next = null,
+            .debug = null,
+        };
+        self.nursery = heap.NurseryArena.init(self);
+        self.teen1 = heap.TeenArena.init(&self.teen2);
+        self.teen2 = heap.TeenArena.init(&self.teen1);
     }
     pub fn initForTest(debugger: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
-            return Self {
-                .id = 0,
-                .nursery = try heap.TestArena.init(null),
-                .next = null,
-                .debug = debugger,
-            };
+            var thr : Self = undefined;
+            thr.init();
+            thr.thread.debug=debugger;
+            return thr;
         }
         else unreachable;
     }
