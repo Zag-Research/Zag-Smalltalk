@@ -16,7 +16,7 @@ But it _is_ information about the design of Mist. Primarily the design of Mist�
 
   
 
-**Project Values and Strategies/Tactics**
+### Project Values and Strategies/Tactics
 
 The Mist project is guided by a set of values. The values are:
 
@@ -28,7 +28,7 @@ The Mist project is guided by a set of values. The values are:
 
 We have strategies and tactics to help promote some of these values. Let’s look at each value in turn.
 
-**Simplicity**
+##### Simplicity
 
 Simplicity is very difficult to achieve, but is very valuable. A major goal of the Mist project is to build a system that is significantly less complex than other Smalltalk and Smalltalk-like systems of similar power. Tactics:
 
@@ -37,43 +37,43 @@ Simplicity is very difficult to achieve, but is very valuable. A major goal of t
 -   When possible, **measure the payoff** of increased functionality. If the payoff is insufficient relative to the complexity cost, go back to the simple way. This is especially relevant for trading complexity for speed – speed is measurable, and so is complexity (up to a point).
 -   **Spend memory freely**. Memory is not free, but it is orders of magnitude less expensive than it was when most Smalltalks were designed. We do not want to _waste_ memory, but if we can _buy_ simplicity (or another value, such as speed) by _spending_ a reasonable amount of memory, we will do so.
 
-**Consistency**
+##### Consistency
 
 The desire for simplicity leads us to have a small number of design rules. The desire for consistency leads us to try to apply those rules uniformly across the entireMistImplementationDesign.MITE.odt system, avoiding special cases in which the usual rules don’t apply. In particular:
 
 -   Mist will **not have reserved selectors**. Most Smalltalk implementations optimize sends of #==, #ifTrue:, #to:by:do:, and others. Mist will not do this. This conceptual simplicity comes at the cost of some implementation complexity, which is covered later in this document.
 
-Self-sufficiency
+##### Self-sufficiency
 
 The project slogan, “There is no ‘C’ in ‘Smalltalk’” refers to this value. Most Smalltalk implementations use a virtual machine that is either written in C or uses a C compiler to build it. Mist will not. On Mist’s initial platform (X_64 Linux) the only external software dependency is the Linux kernel. For core functions, Mist does not even require libc.
 
 Note that not _requiring_ anything from the user-space C world does not mean that Mist should not inter-operate with that world. In fact, we want Mist to be very friendly with that world. Mist should eventually be able to easily call out to foreign functions and use foreign data, accept call-ins, and be packaged as a shared library.
 
-**Speed**
+##### Speed
 
 We want Mist to be usable, so it **should be fast**, at least as fast as popular Smalltalk implementations. Since we want to keep complexity to a minimum, this means concentrating on optimizations that yield the biggest improvements relative to the added complexity. Tactics:
 
 -   **Accept some complexity if the speed reward is big enough.** We want to keep the entire system considerably simpler than systems of comparable functionality and speed, but do not want it to be as slow as it would be if it was limited to the simplest possible implementation. Therefore, we try to use  optimization techniques that we suspect will yield the **biggest gains for the least complexity**. And once again, **measure the payoff** and back it out if the gains are not large relative to the complexity.
 -   Push complexity **out of runtime into compile time**. An example of this is method lookup, where at runtime Mist’s worst case to find the method for a message send is a lookup in a single dictionary, as compared to Smalltalk’s traditional looking up the chain of superclasses, one dictionary lookup per class in that chain. This runtime cost lets traditional Smalltalk implementations update only a single entry in a single dictionary when one method is compiled. Mist may have to update a number of entries in a dictionary, or even more than one dictionary in some cases.
 
-**Craziness**
+##### Craziness
 
 Larry Page has said, “If you aren’t doing some things that are crazy, you’re doing the wrong things.” We interpret this as meaning that if no one thinks anything you’re doing is crazy, then you aren’t being innovative enough. However, if you get so crazy that _everyone_ thinks _everything_ you’re doing is crazy, you’re probably too far from the current state of the art to succeed. Tactics:
 
 -   **Do the unconventional thing first**. In selected areas of the design (_not_ everywhere), if we see an unconventional way to do something, and it looks like it might have some advantage over the conventional way, we’ll try the unconventional way. We won’t always know how that will turn out, but if it doesn’t work out well we can always retreat to the conventional path, since we have a very good idea of how well that works.
 
-**General Notes**
+#### General Notes
 
 Mist initially runs only on x86_64 Linux. Anything that looks platform-specific in this document probably is. The architecture of Mist includes the ability to support other platforms, but that will come later.
 
-**Language Differences**
+##### Language Differences
 
 Mist is mostly Smalltalk. Right now, this document is almost completely about implementation, so I'm not going to go into detail about the differences at the language level, except as they affect implementation. But there are a few things that affect the implementation:
 
 -   Single-threaded. Mist (initially) has no concurrency mechanism. There will be something later, likely a variant of the Actor model based on asynchronous message sending (see, for instance, E or Erlang).
 -   Super/self. Mist has no super send, but there are somewhat similar special rules for self sends. In some cases, this allows self sends to be early-bound – that is, the invoked method can be determined at compile time.
 
-**Deployment Models**
+##### Deployment Models
 
 Mist runs directly on the X86_64 architecture, without a virtual machine. Thus, the traditional Smalltalk model of an executable VM file plus a data file containing the image of all objects in the system does not apply to Mist. Mist aims to support a variety of different deployment models:
 
@@ -84,11 +84,11 @@ Mist runs directly on the X86_64 architecture, without a virtual machine. Thus, 
 
 The executable image is the first model to be implemented, and the one covered in the most detail in this document.
 
-**Image Format**
+##### Image Format
 
 A Mist executable image is (for X86_64 Linux) a file in legal ELF64 format. The ELF header specifies that the entire file be loaded into memory at a specific address, and that control then be transferred to the machine code of an initialization method (see the _Image Startup_ section). Every byte of the entire file is part of some object. The first object in the file is an instance of ElfHeader. Instances of ElfHeader have an atypical memory layout that allows the object pointer to an instance to point to an address in the middle of the object's allocated memory. The beginning of the object contains byte-indexed instance variables, allowing the object to construct a valid ELF header without restriction.
 
-**Methods**
+##### Methods
 
 In a traditional Smalltalk implementation, most of the code of the system exists as bytecodes in instances of CompiledMethod. The virtual machine provides the rest of the code: 
 
@@ -100,7 +100,7 @@ In Mist, there is no VM. All of the code in a standalone image resides in Mist m
 
 Mist methods are first compiled from source code to an intermediate code known as Fog. The Fog code is then compiled to machine code, which can then be run directly by the machine's CPU. Fog is a tree-structured low-level architecture-independent code form. At least it's intended to be architecture-independent; at this writing it's only been implemented for x86_64, but it should be reasonably compatible with other major CPU architectures such as ARM or SPARC. It's certainly not going to be compatible with every imaginable architecture. Most compiler optimizations are done by manipulation of the Fog tree before translation to machine code, so much of the code that does this should be reusable with other architectures.
 
-**Primitive Methods**
+##### Primitive Methods
 
 Mist, like Smalltalk, only supports a very few basic operations at the language level. All the language lets you do is:
 
@@ -123,9 +123,11 @@ Fog does not have a syntax. Primitives are assembled by writing Mist code that b
 
 In Mist, there is no notion equivalent to the “primitive failure” of Smalltalk-80 and most Smalltalk implementations since. A primitive is just a method that happens to contain some Fog nodes that can't be generated from Mist source code. If a primitive detects a condition that it cannot handle, it can send messages just as easily as any other method can send messages, so no special mechanism is required.
 
->>><insert example primitive here>
+```
+<insert example primitive here>
+```
 
-**Memory Management**
+##### Memory Management
 
 Details of Mist's memory management – object allocation and garbage collection – can be gleaned from the slides and video of the Mist talk at the November 2012 Smalltalks conference, which are available at the mist-project.org website. For now, this document only has the highlights.
 
@@ -133,26 +135,26 @@ Mist's garbage collector is a non-compacting multi-pool allocator. Once an objec
 
 Object allocation and garbage collection are handled by sending messages to the objects involved. When an object realizes that it is garbage, its response is to change its class to the FreeSpace class for its physical size and send a message to the memory manager singleton asking to be linked into the appropriate free list. Thus, a garbage-collected object does not cease being an object, it just becomes a free object awaiting re-allocation. FreeSpace instances respond to messages sensibly, having behavior appropriate for free objects. This behavior is pretty much limited to participating in being linked to and unlinked from free lists, strategically ignoring requests to participate in garbage collection, splitting themselves into two smaller FreeSpace instances, and changing their class to a non-free-space class during object allocation. Free objects don't really need to do much more than that. 
 
-**No-Virtual-Machine Gotchas**
+##### No-Virtual-Machine Gotchas
 
 Mist does not run on a software virtual machine, but on a hardware machine (initially, just X86_64). The only external software requirement is an operating system (initially, the Linux kernel), though some applications will want to load external user-space libraries. Mist has some primitive methods, but they are small and simple. Everything else is written in Mist. This conceptual self-recursion can, if care is not taken, lead to actual runtime infinite recursion. For instance:
 
--   Method lookup is done by executing Mist code. Therefore, to avoid infinite recursion, the Mist code that is used to look up methods in dictionaries must _not_ do any method lookups, even though it does (of course) send messages. See the Method Lookup section.
+-   Method lookup is done by executing Mist code. Therefore, to avoid infinite recursion, the Mist code that is used to look up methods in dictionaries must _not_ do any method lookups, even though it does (of course) send messages. See the [[Method Lookup]]  [[MistDesign#Method]]section.
 -   Blocks are Mist’s only mechanism for control structures such as conditionals and loops. In the general case, block execution requires allocation of a closure object at runtime of the method that contains the block literal. Object allocation is done by Mist code, which must contain blocks in order to evaluate conditional expressions. To avoid infinite recursion, the Mist code for object allocation must not itself require any object allocation to execute. Therefore, some way must be provided for the object allocation code to execute without creating closure instances. See the section on Blocks.
 
 These requirements can get a little tricky, but there are solutions. See the sections referenced above.
 
-**Blocks**
+##### Blocks
 
 Starting with Smalltalk-80, messages to code _blocks_ have been used to implement the flow-of-control operations that in most other languages are part of the language itself. Mist follows in this tradition. In Smalltalk-80, blocks were not closures. Most modern Smalltalk implementations implement blocks as closures, as does Mist. A _closure_, in general, is a function that captures the variables in its environment. To see what that means in the context of Mist, let’s look at an example.
 
 Block example 1
 
+```
 gcMark
-
    isGcMarked ifFalse: [isGcMarked := true.
-
                         self allReferencesDo: [:each | each gcMark]].
+```
 
 This, incidentally, is the heart of the “mark” part of a mark-sweep garbage collector such as Mist’s. The method sends one message, #ifFalse:, to an instance variable of the receiver, isGcMarked. The argument to the message is given as a _block constructor_, some code delimited with square brackets. The block constructor specifies what kind of block (a closure instance) should actually be passed to the message send at runtime. This particular block constructor contains another block constructor. The inner block takes a single argument, each, and sends that argument one message, gcMark. It does not make reference to any other variables. The outer block, however, does reference variables from the environment in which it is defined. It references self, and an instance variable of self, isGcMarked. In general, code within a block constructor may refer to any of the following variables and constants in its environment:
 
@@ -169,16 +171,14 @@ A reference to a variable var may consist of an assignment to another variable (
 Since a block constructor specifies the creation of a block at runtime, all of these variables in its environment must be available to a block. To complicate matters, the variables in the environment must remain available after the enclosing method activation has returned.
 
 Block example 2
-
+```
 newCounter
-
   | count |
-
   count := 0.
-
   ^[count := count + 1].
+```
 
-When you send #newCounter, what is answered is a block which closes over the variable count, with the value of count initialized to zero. Subsequently, each time you send #value to this block, it increments count and answers the incremented value. Each time you send #newCounter, you get back a new block with its own value of count. The variable count, although a temporary variable of #newCounter, has its life extended through its use in a block closure. It must survive until the block is garbage collected.
+When you send `#newCounter`, what is answered is a block which closes over the variable count, with the value of count initialized to zero. Subsequently, each time you send `#value` to this block, it increments count and answers the incremented value. Each time you send `#newCounter`, you get back a new block with its own value of count. The variable count, although a temporary variable of `#newCounter`, has its life extended through its use in a block closure. It must survive until the block is garbage collected.
 
 Most Smalltalk implementations have special bytecodes and virtual machine support for implementing blocks. Mist does not have these options, so it relies on mechanisms it already has – classes, objects, and messages. And it turns out that these constructs are quite sufficient to do what must be done. The compiler must do some extra work to specify those objects and messages. In the general case, the compiler must do the following to compile each method or block constructor which contains a block constructor:
 
@@ -193,48 +193,35 @@ Most Smalltalk implementations have special bytecodes and virtual machine suppor
 
 Block example 2, then, would be transformed by the compiler into something like this:
 
-Methods in the <sharedVariableClass> for #newCounter. This class has at least two instance variables: slf and count. (self from the outer context is represented as slf since self is one of the few reserved words in Mist and therefore cannot be used to name an instance variable.)
-
+Methods in the `<sharedVariableClass>` for `#newCounter`. This class has at least two instance variables: slf and count. (self from the outer context is represented as slf since self is one of the few reserved words in Mist and therefore cannot be used to name an instance variable.)
+```
 slf
-
    ^slf.
-
-  
 
 slf: anObject
-
    slf := anObject.
-
    ^slf.
 
-  
-
 count
-
    ^count.
-
-  
 
 count: anObject
-
    count := anObject.
-
    ^count.
+```
 
-Methods in the <closureClass> for the block in #newCounter. This class has one instance variable, sharedContext.
+Methods in the `<closureClass>` for the block in `#newCounter`. This class has one instance variable, sharedContext.
 
+```
 sharedContext: anObject
-
    sharedContext := anObject.
 
-  
-
 value
-
    ^sharedContext count: sharedContext count + 1.
+```
 
 And #newCounter itself ends up looking something like this (though it never takes this form in source code – the transformation is done in Fog):
-
+```
 newCounter
 
    | sharedContext block1 |
@@ -250,43 +237,46 @@ newCounter
    sharedContext count: 0.
 
    ^block1.
+```
 
 The class references here are represented as references in angle brackets <>. Since these classes have no name, there is no way to directly refer to them in source code. The compiler inserts references to the class objects directly into the method as it compiles it.
 
 Note that the block answered by newCounter responds to #value because its body (after transformation) is compiled into the closure class with #value as its selector, so normal message dispatch can be used. This contrasts with Smalltalk implementations which use a primitive to invoke a closure’s behavior.
 
-**Block optimizations**
+##### Block optimizations
 
 Blocks, as described above, are rather expensive. (And we haven’t even talked about non-local returns yet!) However, their use is mandatory in all control-flow constructs. Thus, blocks are very widely used. Various Smalltalk resources contain advice on how to avoid using blocks, or to use ones that are less expensive. Since one of the Mist project’s values is “speed,” it’s worth taking a look at what optimizations could be done to reduce the cost of block usage.
 
-**Block elimination**
+##### Block elimination
 
 The most effective way to reduce the cost of a block might be to eliminate the block altogether, as long as what you replace it with is less costly. 
 
 Most (if not all) Smalltalk implementations do static block elimination, eliminating some blocks at compile time when certain “restricted selectors” are used. For instance, #ifTrue: is typically restricted, so when the compiler is presented with code like this:
-
+```
    isActive ifTrue: [self deactivate].
-
+```
 it does not compile a block, but assumes that it knows what #ifTrue: means and compiles the body of the block in-line with the containing block or method, conditionally executed using whatever low-level conditional mechanism the VM provides (typically a conditional jump bytecode).
 
 This approach has several drawbacks
 
--   If #ifTrue: is sent to some object other than true or false, the response is typically not the doesNotUnderstand: one would expect, but some other error such as mustBeBoolean.
--   Worse, if you define #ifTrue: in some other class, this definition may be ignored, and you find that sending #ifTrue: to an instance results in a mustBeBoolean error instead of invocation of your #ifTrue: method. Even though the circumstances where it would be good programming practice to implement your own #ifTrue: method are vanishingly small, this exception to the normal language rules can be confusing, and clearly conflicts with the Mist project value of consistency.
+-   If `#ifTrue:` is sent to some object other than true or false, the response is typically not the doesNotUnderstand: one would expect, but some other error such as mustBeBoolean.
+-   Worse, if you define `#ifTrue:` in some other class, this definition may be ignored, and you find that sending `#ifTrue:` to an instance results in a mustBeBoolean error instead of invocation of your `#ifTrue:` method. Even though the circumstances where it would be good programming practice to implement your own `#ifTrue:` method are vanishingly small, this exception to the normal language rules can be confusing, and clearly conflicts with the Mist project value of consistency.
 -   More pragmatically, this approach does not apply to all of the cases in which blocks can be eliminated. It only works for specific selectors that the compiler has been designed to optimize. It provides no help at all for user-defined selectors. For instance, if you were to add a new “short circuit” logical operation:
--   nand: aBlock
--     ^(self and: aBlock) not.
--   The compiler would not be able to eliminate the block, since the block is not a block constructor, but a block passed in as an argument.
+```
+nand: aBlock
+     ^(self and: aBlock) not.
+```
+   The compiler would not be able to eliminate the block, since the block is not a block constructor, but a block passed in as an argument.
 
 Because there are both philosophical and pragmatic drawbacks to this scheme, and because we have a better scheme in mind, Mist will not initially use static block elimination. Mist will be able to eliminate blocks in more situations through the use of dynamic inlining and subsequent code analysis. See the (alas, not yet written) major section on code optimizations.
 
-**Blocks and the object allocation conundrum**
+##### Blocks and the object allocation conundrum
 
 Even when you can’t eliminate blocks, there are techniques available to reduce the cost of some blocks. In keeping with Mist’s “do the simple thing first” strategy, we normally wouldn’t be looking at ways of reducing the cost of non-eliminated blocks until we were able to measure the cost of the blocks that remained after block elimination. However, it turns out that block implementation poses a problem for Mist that requires some kind of solution in the first running version of Mist.
 
 The heart of the problem is this: executing a method that contains blocks requires, as seen above, that objects be allocated by sending #new to a closure class and to a shared variable class. Object allocation, in the absence of a VM, is implemented in Mist code. Object allocation can, if no free objects are available, trigger garbage collection. The object allocation code and garbage collection code (collectively, memory management code) need to use flow-of-control constructs. Those constructs are implemented using blocks. And executing a method that contains blocks requires that objects be allocated. This is a recipe for infinite recursion. So _something_ must be done to break this cycle. One possibility is the...
 
-**Clean block optimization**
+##### Clean block optimization
 
 One fairly obvious change that seems likely to improve the performance of the block implementation scheme shown above is to only share through a shared variable object those temporary variables that are actually _referenced_ within a block. Method temporaries that are only referenced by the method itself can remain ordinary temporaries. This optimization is fairly easy for the compiler to do, though it does make the compiler more complex. Since the compiler must examine each variable name used to determine if it is in scope, it can mark each variable that must be shared.
 
@@ -297,34 +287,29 @@ A block closure created from a clean block constructor has no shared state. Thus
 This gives us a clue to a possible solution to the object allocation conundrum. If all memory management code was written to use only clean blocks, the “we’re trying to allocate an object while allocating an object” recursion could be avoided. 
 
 However, the traditional flow-of-control messages like #ifTrue: take a nilary (zero-argument) block. With no arguments, such a block is very limited in what it can do. One solution to this is to implement a very small set of rather inelegant messages like #ifTrue:arg1:arg2:arg3:, which would be implemented in class True like this:
-
--   ifTrue: aBlock arg1: arg1 arg2: arg2 arg3: arg3
--     ^aBlock
-
+```
+ ifTrue: aBlock arg1: arg1 arg2: arg2 arg3: arg3
+    ^aBlock
       value: arg1
-
       value: arg2
-
       value: arg3.
-
+```
 And whose implementation in class False would be just:
-
--   ifTrue: aBlock arg1: arg1 arg2: arg2 arg3: arg3
--     ^nil.
-
+```
+ ifTrue: aBlock arg1: arg1 arg2: arg2 arg3: arg3
+     ^nil.
+```
 This would work, although it’s a bit clunky. The above methods might be all that are required. We’d have to be careful to write all memory management code using only clean blocks.
 
 We could also reconsider static inlining of blocks that are arguments to certain messages, such as #ifTrue:. The philosophical objections to this could be addressed by changing how the inlined code reacts to a non-Boolean receiver. Instead of a mustBeBoolean error, it could actually create a block and send #ifTrue: to the receiver with the block as the argument. This may be a better long-term solution, but I think I want to wait until dynamic inlining of blocks is implemented to see how static inlining might fit into that.
 
 Therefore, the initial plan is to go with the clunky clean blocks in memory management code.
 
-**Copying block optimization**
+##### Copying block optimization
 
 Some Smalltalks implement another block optimization, the _copying block_ optimization. (See [http://www.esug.org/data/Articles/misc/oopsla99-contexts.pdf](http://www.esug.org/data/Articles/misc/oopsla99-contexts.pdf) for one such implementation.) In this optimization, if the compiler can statically prove that a variable from an outer scope cannot be modified after the creation of a closure instance that references that variable, then the value of the variable can be copied into the closure at its creation. This avoids the creation and use of some shared variable objects. This optimization could be applied to Mist. However, it does not appear to be necessary at the outset, like the clean block optimization is. Also, eliminating blocks through dynamic inlining seems like it may be a bigger win, so I want to wait until that’s working, then look to see how many frequently-evaluated blocks remain that could benefit from a copying block optimization.
 
-**Compiler phases**
-
-  
+##### Compiler phases
 
 In Smalltalk, the unit of compilation is the method. In Mist, methods may be individually compiled during interactive development, but because there can be interdependencies between the classes and methods in a module the unit of compilation is more accurately described as the module. However, all code resides in methods which are independent of each other in much the same way as Smalltalk's methods, but which are compiled in the context of the Module and its imports.
 
@@ -341,7 +326,7 @@ The code of a method can exist in four forms:
 
 Compilation thus has three primary phases, the front end, the middle end, and the back end, each taking one form as input and producing output of the next form. Each phase is pluggable.
 
-**Front end – source to Macro Fog (and back again)**
+##### Front end – source to Macro Fog (and back again)
 
 Parses the source code into a tree, then does semantic analysis on the tree to verify such things as variable references and compile-time self sends. The output contains enough information to allow a pretty-printer to produce code that resembles the original input reformatted. Thus, this phase is more or less reversible. 
 
@@ -382,13 +367,13 @@ Code in blocks within a method has access to all of the names that code in the m
 
   
 
-**Middle end – Macro Fog to Micro Fog**
+##### Middle end – Macro Fog to Micro Fog
 
 The middle end is a process of macro expansion, expanding each Macro Fog node to zero or more Micro Fog nodes. Comment nodes are an example of macro nodes that expand to zero micro nodes. Since this compilation step is not expected to be reversible, the comments are no longer needed after this step.
 
 The macro expansions are pluggable by specifying an implementation strategy object. For instance, a macro node for “instance variable assign” would expand to a single memory write if using the initial Mist mark-sweep garbage-collector, but would expand to also include a reference count update if using a reference-counting collector. Similarly, the macro expansion for “send a message” includes the code for method lookup and in-line caching if it is used by the implementation strategy.
 
-**Back end – Micro Fog to machine code**
+##### Back end – Micro Fog to machine code
 
 Micro Fog nodes are simple operations that typically take one or two instructions on popular CISC architectures, and simple control structures such as if-then-else, basic loops, and call/return. This phase is pluggable by the instruction set architecture of the target processor.
 
@@ -396,7 +381,7 @@ Vocabularies
 
 Each code form has some vocabulary in which it is expressed.
 
-Source code's vocabulary is linear text, though the content of that text will vary based on the grammer being used.
+Source code's vocabulary is linear text, though the content of that text will vary based on the grammar being used.
 
 Macro Fog's vocabulary is chosen to represent operations with semantic meaning in Mist. Two methods that do the same thing using the same algorithm will tend to have very similar Macro Fog representations, regardless of the syntax, implementation strategy, or target instruction set architecture.
 
@@ -430,21 +415,21 @@ Mist primitives are written directly in Fog, by writing Mist code that assembles
 
 Various optimizations may be added to the compiler in the future. Some of these may manipulate Fog between the front end and the back end (forming what is sometimes called a “middle end”). Initially, in keeping with Mist’s “do the simple thing first” philosophy, only the optimizations actually needed to make things work will be included. But the first version may look something like this:
 
-**Front end**
+##### Front end
 
 -   Parse the source into an AST. This pass just checks for legal syntax. The AST is essentially Fog, but not yet in a form that can be accepted by the back end. Each remaining pass transforms the Fog tree into something more closely resembling the final machine code.
 -   Replace textual names with references to actual variables (each variable is represented by an object). This pass checks that every variable name references a legally reachable variable.
 -   Process block literals. This might actually take more than one pass. A class needs to be created for each block literal, and a method compiled into that class, and you might need a shared variable class for the method and/or blocks, and accessor methods for those, and possibly private accessors on the method’s class so the block(s) can access instance variables...
 -   Early-bind self sends. In Mist, syntactic self-sends (those with a receiver that is the pseudo-variable self) of a selector that is implemented in the class of a method can be early-bound, that is, compiled as a simple call rather than as a method lookup with in-line cache. This pass marks each qualifying self-send node as early-bound, and adds a reference to the method it is bound to. During a module load, this pass is done across all methods in the module after the previous passes are complete for all methods, so that all possible target methods exist before the pass starts.
 
-**Back end**
+##### Back end
 
 -   Expand Fog macro nodes. The main anticipated use of macro nodes is for message sends. Each message send node expands into a tree of roughly a dozen lower-level Fog nodes. These nodes remember which macro they came from, largely to help in debugging.
 -   Traverse the Fog tree from right to left, assigning locations to temporary and implicit variables. Locations for these variables can be registers or stack frame locations. Instance variables are always in memory, within the receiver object.
 -   Traverse the Fog tree from left to right, emitting machine code. This, finally, translates the tree structure of Fog into the linear structure of machine code.
 -   Populate each inline cache with a reasonable guess as to which receiver class and method will be used at that send site. If this method is being compiled in isolation, this will be done immediately. If a module is being loaded, this step is done in a final pass across all methods in the module, at which time the machine code address of all methods in the module is known.
 
-**Method lookup**
+### Method lookup
 
 Whenever a message is sent, the system must determine which method to execute. As in Smalltalk, which method to execute is a function of the class of the receiver and the message’s selector. At each _send site_ (place in code where a message is sent) the selector is known, since it is a constant. (I’m ignoring #perform: here, but it’s a much less common case that can be handled differently.) The class of the receiver, on the other hand, cannot usually be determined at compile time. Note that “compile time” for a dynamically-changeable language like Mist includes the addition, modification, or removal of any method in the system.
 
@@ -456,41 +441,36 @@ But _wait_, you might say! If you’re sending a message to a method dictionary 
 
 In order to avoid infinite recursion, we must be careful to write all message sends that can be executed during the dictionary lookup in such a way that they are early-bound self sends, or that their receivers are SmallIntegers. The reason why SmallIntegers work is covered in the section on inline caching.
 
-**Inline caching**
+##### Inline caching
 
 Mist uses inline caching. Inline caching is a long-known technique (see “Efficient Implementation of the Smalltalk-80 System” L. Peter Deutsch and Allan M. Schiffman, POPL 1984) for avoiding method lookup on every method send. The technique is based on the observation that 90%-95% of send sites in Smalltalk _always_ have the same receiver class. It is hard, however, to statically predict which sites must actually handle multiple receiver classes. The idea, therefore, is to cache the result of the most recent method lookup, along with the receiver class for which it is known to be correct. In Smalltalk implementations that use this technique, at each send site native code is compiled that is more or less the logical equivalent of this Smalltalk pseudocode:
-
+```
 actualReceiverClass := receiver class.
-
 expectedReceiverClass == actualRecieverClass 
-
   ifFalse: [expectedReceiverClass := actualReceiverClass.
-
             methodAddress := expectedReceiverClass 
-
                               methodAddressFor: selector].
-
 methodAddress call.
-
+```
 In this fragment, selector is a compile-time constant. The variables expectedReceiverClass and methodAddress are traditionally stored directly into the machine code as immediate values in a compare instruction (expectedReceiverClass) and the call instruction (methodAddress). Due to the cache-invalidation penalties paid for self-modifying code in modern x86 processors, this may no longer be the highest-performing place to store these values. In Mist, they could be stored either in the code as is traditional, or alternately in instance variables of the method, and the address of those instvars compiled into the machine code.
 
 There’s one other wrinkle in Mist’s implementation of inline caching – the handling of SmallInteger receivers. For all other classes, the receiver’s behavior token (usually the class, but could be any other object, as long as it uniquely identifies the behavior of the receiver) is obtained by fetching the 64-bit word that is pointed to by the object pointer. SmallIntegers, however, encode both their class and state into the object pointer itself, which is then not a memory address. So before we attempt to fetch the behavior token of an object we must first check to see whether it’s a SmallInteger. Since we must determine this, we go ahead and cache the method address for SmallInteger receivers as well as a method address for non-SmallInteger receivers. The SmallInteger method’s value can be determined at compile time. Recall that “compile time” includes the addition, removal, or modification of any method in the system. Adding, removing, or modifying a method in SmallInteger requires updating all send sites of that selector in the entire system to update this cache. Changes to SmallInteger methods are rare, so for most purposes the cached SmallInteger method address is static. 
 
-**Messages that are not understood**
+##### Messages that are not understood
 
 As in Smalltalk, a Mist message that is sent to an object that does not understand that message (because the selector of the message is not implemented in the class of the receiver) is made the argument of a #doesNotUnderstand message, which is then sent to the receiver of the original message. All objects must understand #doesNotUnderstand, which sounds a bit like an oxymoron.
 
 Mist’s message-sending machinery expects to find a method in a dictionary and execute it. Rather than have an exceptional path for what happens if no such method exists, we make sure that an appropriate method is always found. Recall that a message send is implemented by a method dictionary answering the address to call, and that there is a method dictionary for each selector. Each dictionary has a default answer which is answered if the lookup key is a class in which there is no method with that selector. That default answer is the address of a special method that handles not-understood messages that use that selector. There is one of these methods for each selector sent in normal code anywhere in the system. (#perform:, as usual, is a special case that is handled altogether differently.) The method for #at:put: would look something like this:
-
--   at: offset put: value
--     ^self doesNotUnderstand: 
--       (Message selector: #at:put: arguments: {offset. Value}).
-
+```
+ at: offset put: value
+     ^self doesNotUnderstand: 
+       (Message selector: #at:put: arguments: {offset. Value}).
+```
 Because this method is invoked as if it was defined in the class of the receiver, self is bound to the object that received the original message.
 
 There’s also the question of what to do if the receiver does not understand #doesNotUnderstand:. According to the language definition, it is an error condition to not understand #doesNotUnderstand:, so the method dictionary for #doesNotUnderstand: has a special method for its default answer. This method signals an exception, which is handled (or not) by the normal mechanisms.
 
-**Private methods**
+##### Private methods
 
 Mist allows methods to be declared private to the class in which the method is defined. Such methods can only be invoked through a _self-send_ (a send to the pseudo-variable self) within a method defined within that class. Note that a send that is syntactically sent to another variable does not count as a self-send for this purpose, even if that variable happens to refer to the receiver. 
 
@@ -499,10 +479,10 @@ When composing classes into a new class, a method defined in one of the componen
 Like other self-sends in Mist where the selector is locally defined, private self-sends can be (and are) bound to a method at compile time, so no method lookup or inline caching needs to be compiled into the send site. Since the address of the method is known at compile time, the message send can be compiled more simply as a procedure call.
 
 **Teams**
-
+```
 >>>Needs to be written
-
-**Fog**
+```
+### Fog
 
 Fog is the intermediate representation of the Mist compiler, and is also the form in which Mist primitive methods are written. Fog is an object structure, a tree of nodes.  Mist primitive methods are written by writing Mist code that assembles a Fog tree for that method. Non-primitive methods are written in textual Mist, which the Mist compiler front-end parses and compiles into Macro Fog. Macro Fog is macro-expanded into Micro Fog. The back end of the Mist compiler then compiles the Micro Fog tree into an executable machine code representation of the method.
 
@@ -567,7 +547,7 @@ In the initial x64 implementation of Mist, the message send macro node is expand
   
 
 *** This tree needs updating to current design, which is less optimized but requires fewer special Fog node classes. ***
-
+```
 sequence (special?)
 
 if c
@@ -629,15 +609,14 @@ pop N arguments
 call address
 
 constant lookedUpMethod
-
+```
   
-
 One key to understanding how this works is to realize that #cacheMissExpectedBehaviorAt:actualBehavior:methodAt:andAt: both looks up the method to be executed and patches the three constants in the send site to form a (monomorphic) inline cache. It is, of course, vital that the cache miss lookup and patching code use only self sends or sends to SmallIntegers, or otherwise ensure that there is never a cache miss during cache miss handling.
 
 **Message send generated code**
 
 When Fog generates a message send, this is an approximate disassembly of the generated machine code. The code shown here is actually a bit more optimized than Fog will probably be able to produce from the nodes above.
-
+```
   <move arguments to registers and stack>
 
   bt   rdi, 0
@@ -691,12 +670,10 @@ Continue
   add rsp, 16r10
 
   ret
-
+```
   
 
-**Register Allocation**
-
-  
+##### Register Allocation
 
 Micro Fog-to-machine-code translation uses a (hopefully) simple algorithm. Here I'll explain the simple part, then go over the complicating factors.
 
@@ -739,7 +716,7 @@ A ReturnPoint contains an address within the hardware stack. To perform a non-lo
 An UnwindBlock specifies a block that must be evaluated during a non-local return that will discard its point on the stack. An UnwindBlock is put on the NLR stack during the evaluation of the specified code.
 
 Implementation of #ensure: and #ifCurtailed: is fairly simple. Approximate implementations:
-
+```
   ifCurtailed: terminationBlock
 
     | stackElement result |
@@ -769,9 +746,9 @@ Implementation of #ensure: and #ifCurtailed: is fairly simple. Approximate imple
     terminationBlock value.
 
     ^ result.
-
+```
 Implementation of a method and a block containing a non-local return is more interesting. On entry to any method that contains a block with a non-local return, a ReturnPoint must be pushed on the NLR stack. That ReturnPoint must then be given to the block upon its creation, and the non-local return in the block translates to a message sent to the ReturnPoint. Consider this simple method:
-
+```
   foo
 
     self isBar ifTrue: [^ 'yep'].
@@ -779,9 +756,9 @@ Implementation of a method and a block containing a non-local return is more int
     self beBar.
 
     ^ 'converted'.
-
+```
 This would be translated by the compiler to the Fog equivalent of something like:
-
+```
   foo
 
     | stackPointerValue returnPoint |
@@ -797,13 +774,13 @@ This would be translated by the compiler to the Fog equivalent of something like
     returnPoint invalidateAndPop.
 
     ^ 'converted'.
-
+```
 The #pointerValueLess: method is a primitive that answers the address of the stack pointer as it was upon entry to the calling method. It needs the constant argument (3 in this case, though that may well not be the true value for this example method) since the #foo method has decremented the stack pointer on entry to make room for some number of stack-based temporary variables, and #pointerValueLess: must correct for that, as well as for the procedure call to #pointerValueLess:. The compiler knows how many stack-based temporaries it has allocated space for, so it can use that value as the constant argument.
 
 The #returningTo: message creates a ReturnPoint instance with the given value for the stack pointer, and pushes it onto the NLR stack. Sending #invalidateAndPop to the ReturnPoint lets it know that it should signal an error on any attempt to return through it, since the context it would return from is no longer valid, and pops it from the NLR stack.
 
 The remaining piece of the non-local-return puzzle is the implementation of #return: in ReturnPoint. It might look something like this:
-
+```
   return: anObject
 
     isValid 
@@ -817,19 +794,18 @@ The remaining piece of the non-local-return puzzle is the implementation of #ret
                     andReturn: anObject].
 
     "The send above does not return to here."
-
+```
  Here,  #setStackPointerTo:andReturn: is a primitive that sets the hardware stack pointer to the given integer, puts the given return value into the correct register for a returned value, and returns. This truncates the stack and actually accomplishes the non-local return.
 
 Some more approximate code to help visualize how this all fits together...
 
 In NlrStack class:
-
+```
   unwindTo: anNlrStackElement
-
     topElement unwindTo: anNlrStackElement.
-
+```
 In ReturnPoint:
-
+```
   unwindTo: anNlrStackElement
 
     self invalidateAndPop.
@@ -837,9 +813,9 @@ In ReturnPoint:
     ^anNlrStackElement == self
 
       ifFalse: [nextElement unwindTo: anNlrStackElement].
-
+```
 In UnwindBlock:
-
+```
   unwindTo: anNlrStackElement
 
     self invalidateAndPop.
@@ -849,8 +825,8 @@ In UnwindBlock:
     ^anNlrStackElement == self
 
       ifFalse: [nextElement unwindTo: anNlrStackElement].
-
-**Exceptions**
+```
+### Exceptions
 
 >>>Note: I think this section is _almost_ complete and _almost_ correct. Hopefully it is close enough to communicate the implementation strategy. Bug-finding is left as an exercise for the reader. :-)
 
@@ -888,132 +864,83 @@ An instance of DefaultActionHandler is always at the root of the handler tree, a
 Exception handlers are established by sending #on:do: to a _protected block_. For the duration of the evaluation of the protected block, the exceptions specified by the argument to on: will be handled by the block sent as an argument to do:. This would be implemented something like this:
 
 In closure classes: 
-
+```
 on: exceptionSelector do: actionBlock
-
     | handler |
-
     handler := ExceptionHandler
-
                  withExceptionSelector: exceptionSelector
-
                  actionBlock: actionBlock
-
                  protectedBlock: self.
-
     handler push.
-
     ^[handler evaluateProtectedBlock] ensure: [handler pop].
-
+```
 In ExceptionHandler:
-
+```
 evaluateProtectedBlock
-
   | result |
-
   needsRetry := true.
-
   [needsRetry] whileTrue: [result := self innerEvaluate].
-
   ^result.
 
-  
-
 innerEvaluate
-
    needsRetry := false.
-
    returnBlock := [:returnValue | ^ returnValue].
-
    ^ protectedBlock value.
 
-  
-
 push
-
-nextHandler := ExceptionHandler exceptionEnvironment.
-
-ExceptionHandler exceptionEnvironment: self.
-
-  
+   nextHandler := ExceptionHandler exceptionEnvironment.
+   ExceptionHandler exceptionEnvironment: self.
 
 pop
-
-ExceptionHandler exceptionEnvironment: nextHandler.
-
+  cExceptionHandler exceptionEnvironment: nextHandler.
+```
 During the evaluation of the protected block (the receiver of #on:do:) the ExceptionHandler is in the handler search tree, with an action block to evaluate in case one of the exceptions in the exceptionSelector is signaled. It also has a returnBlock which the handler can use to terminate evaluation of the protected block if it likes.
 
-**Signaling an exception**
+##### Signaling an exception
 
 An exception is signaled by sending it #signal. Its response is to search up the handler tree for a handler, and to evaluate that handler’s action block. If no handler for this exception’s class is found, the exception is sent #defaultAction. It could be implemented something like this:
 
 In exceptions:
-
+```
   signal
-
     | result |
-
     handler := ExceptionHandler findHandlerFor: self.
-
     result := [handler handle: self] ensure: [handler := nil].
-
     “If we reach here, the handler has resumed.”
-
     self isResumable ifFalse: [self error].
-
     ^ result.
-
+```
 In ExceptionHandler:
-
+```
   handle: anException
-
 | returnValue |
-
     returnValue := self innerHandle: anException.
-
 exceptionToResignal ifNotNil: 
-
 [:ex | | newHandler | newHandler := 
-
   ExceptionHandler exceptionEnvironment: signalingEnvironment;   findHandlerFor: ex.
-
   exceptionToResignal := nil.
-
 newHandler handle: ex ].
 
-  
-
   innerHandle: anException
-
     exception := anException.
-
     signalingEnvironment := ExceptionHandler exceptionEnvironment.
-
     self pop.
-
     actionUnwindBlock := [:returnValue | ^ returnValue].
-
     “The actionBlock may not return. If it does, the value 
-
      it answers must be answered from the #on:do: that established
-
      my actionBlock.”
-
     [self return: (actionBlock value: anException)] ensure: [self reset].
-
     “Flow of control never gets here.”
-
+```
 reset needs to set isOuter to false, exception to nil, etc.
 
 In DefaultActionHandler:
-
+```
 handle: anException
-
 ^ anException defaultAction.
-
 “This may or may not return, depending on the defaultAction”
-
-**Finding a handler**
+```
+##### Finding a handler
 
 To find a handler for a signaled exception, the ExceptionHandler class sends #findHandlerFor:ifNone: to the handler that is the first handler to search in the current exception environment. In the general case handlers form a tree. In simple cases, the tree has no branches and degenerates to a stack. In either case, each handler has a nextHandler instance variable that points to the next handler to search, which is one level closer to the root of the tree. Each element asks itself whether it handles the given exception. If so, it answers itself; if not it sends the message on to the next element. If no handler in the path from current exception environment to the root handles the exception, this processing gets to the root of the handler tree, the unhandled exception handler. This handler will agree to handle anything, but will send #defaultAction to the exception instead of having an action block to evaluate.
 
