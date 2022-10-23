@@ -33,7 +33,7 @@ test "randomness of /phi - all values enumerated" {
 }
 pub inline fn largerPowerOf2(comptime T: type,size:T) T {
     var n = size-1;
-    const bits = @typeInfo(T).bits;
+    const bits = @typeInfo(T).Int.bits;
     if (comptime bits>32) n |= n>>32;
     if (comptime bits>16) n |= n>>16;
     if (comptime bits>8) n |= n>>8;
