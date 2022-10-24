@@ -139,7 +139,7 @@ Object allocation and garbage collection are handled by sending messages to the 
 
 Mist does not run on a software virtual machine, but on a hardware machine (initially, just X86_64). The only external software requirement is an operating system (initially, the Linux kernel), though some applications will want to load external user-space libraries. Mist has some primitive methods, but they are small and simple. Everything else is written in Mist. This conceptual self-recursion can, if care is not taken, lead to actual runtime infinite recursion. For instance:
 
--   Method lookup is done by executing Mist code. Therefore, to avoid infinite recursion, the Mist code that is used to look up methods in dictionaries must _not_ do any method lookups, even though it does (of course) send messages. See the [[Method Lookup]]  [[MistDesign#Method]]section.
+-   Method lookup is done by executing Mist code. Therefore, to avoid infinite recursion, the Mist code that is used to look up methods in dictionaries must _not_ do any method lookups, even though it does (of course) send messages. See the [[MistDesign#Method lookup]]section.
 -   Blocks are Mist’s only mechanism for control structures such as conditionals and loops. In the general case, block execution requires allocation of a closure object at runtime of the method that contains the block literal. Object allocation is done by Mist code, which must contain blocks in order to evaluate conditional expressions. To avoid infinite recursion, the Mist code for object allocation must not itself require any object allocation to execute. Therefore, some way must be provided for the object allocation code to execute without creating closure instances. See the section on Blocks.
 
 These requirements can get a little tricky, but there are solutions. See the sections referenced above.
@@ -220,28 +220,20 @@ value
    ^sharedContext count: sharedContext count + 1.
 ```
 
-And #newCounter itself ends up looking something like this (though it never takes this form in source code – the transformation is done in Fog):
+And `#newCounter` itself ends up looking something like this (though it never takes this form in source code – the transformation is done in Fog):
 ```
 newCounter
-
    | sharedContext block1 |
-
    sharedContext := <sharedVariableClass> new.
-
    sharedContext slf: self.
-
    block1 := <closureClass> new.
-
    block1 sharedContext: sharedContext.
-
    sharedContext count: 0.
-
    ^block1.
 ```
-
 The class references here are represented as references in angle brackets <>. Since these classes have no name, there is no way to directly refer to them in source code. The compiler inserts references to the class objects directly into the method as it compiles it.
 
-Note that the block answered by newCounter responds to #value because its body (after transformation) is compiled into the closure class with #value as its selector, so normal message dispatch can be used. This contrasts with Smalltalk implementations which use a primitive to invoke a closure’s behavior.
+Note that the block answered by newCounter responds to `#value` because its body (after transformation) is compiled into the closure class with `#value` as its selector, so normal message dispatch can be used. This contrasts with Smalltalk implementations which use a primitive to invoke a closure’s behavior.
 
 ##### Block optimizations
 
@@ -251,11 +243,11 @@ Blocks, as described above, are rather expensive. (And we haven’t even talked 
 
 The most effective way to reduce the cost of a block might be to eliminate the block altogether, as long as what you replace it with is less costly. 
 
-Most (if not all) Smalltalk implementations do static block elimination, eliminating some blocks at compile time when certain “restricted selectors” are used. For instance, #ifTrue: is typically restricted, so when the compiler is presented with code like this:
+Most (if not all) Smalltalk implementations do static block elimination, eliminating some blocks at compile time when certain “restricted selectors” are used. For instance, `#ifTrue:` is typically restricted, so when the compiler is presented with code like this:
 ```
    isActive ifTrue: [self deactivate].
 ```
-it does not compile a block, but assumes that it knows what #ifTrue: means and compiles the body of the block in-line with the containing block or method, conditionally executed using whatever low-level conditional mechanism the VM provides (typically a conditional jump bytecode).
+it does not compile a block, but assumes that it knows what `#ifTrue:` means and compiles the body of the block in-line with the containing block or method, conditionally executed using whatever low-level conditional mechanism the VM provides (typically a conditional jump bytecode).
 
 This approach has several drawbacks
 
@@ -274,7 +266,7 @@ Because there are both philosophical and pragmatic drawbacks to this scheme, and
 
 Even when you can’t eliminate blocks, there are techniques available to reduce the cost of some blocks. In keeping with Mist’s “do the simple thing first” strategy, we normally wouldn’t be looking at ways of reducing the cost of non-eliminated blocks until we were able to measure the cost of the blocks that remained after block elimination. However, it turns out that block implementation poses a problem for Mist that requires some kind of solution in the first running version of Mist.
 
-The heart of the problem is this: executing a method that contains blocks requires, as seen above, that objects be allocated by sending #new to a closure class and to a shared variable class. Object allocation, in the absence of a VM, is implemented in Mist code. Object allocation can, if no free objects are available, trigger garbage collection. The object allocation code and garbage collection code (collectively, memory management code) need to use flow-of-control constructs. Those constructs are implemented using blocks. And executing a method that contains blocks requires that objects be allocated. This is a recipe for infinite recursion. So _something_ must be done to break this cycle. One possibility is the...
+The heart of the problem is this: executing a method that contains blocks requires, as seen above, that objects be allocated by sending `#new` to a closure class and to a shared variable class. Object allocation, in the absence of a VM, is implemented in Mist code. Object allocation can, if no free objects are available, trigger garbage collection. The object allocation code and garbage collection code (collectively, memory management code) need to use flow-of-control constructs. Those constructs are implemented using blocks. And executing a method that contains blocks requires that objects be allocated. This is a recipe for infinite recursion. So _something_ must be done to break this cycle. One possibility is the...
 
 ##### Clean block optimization
 
@@ -282,11 +274,11 @@ One fairly obvious change that seems likely to improve the performance of the bl
 
 Of particular interest is the case where a block references _no_ variables that must be accessed through a shared variable object. This is the case if the block references only module constants, its own formal parameters, and the temporary variables declared within the block itself. Such blocks are sometimes called _clean blocks_. Any reference to self,  or a formal parameter or temporary variable from an outer context, disqualifies a block from being considered clean.
 
-A block closure created from a clean block constructor has no shared state. Thus, all blocks created from a clean block constructor are equivalent. And if they’re all equivalent, we can get away with only having one instance of that closure class – a singleton. And instead of compiling into the outer context of the block a message send of #new to the closure class, we can compile in a reference to the singleton  block instance of that class.
+A block closure created from a clean block constructor has no shared state. Thus, all blocks created from a clean block constructor are equivalent. And if they’re all equivalent, we can get away with only having one instance of that closure class – a singleton. And instead of compiling into the outer context of the block a message send of `#new` to the closure class, we can compile in a reference to the singleton  block instance of that class.
 
 This gives us a clue to a possible solution to the object allocation conundrum. If all memory management code was written to use only clean blocks, the “we’re trying to allocate an object while allocating an object” recursion could be avoided. 
 
-However, the traditional flow-of-control messages like #ifTrue: take a nilary (zero-argument) block. With no arguments, such a block is very limited in what it can do. One solution to this is to implement a very small set of rather inelegant messages like #ifTrue:arg1:arg2:arg3:, which would be implemented in class True like this:
+However, the traditional flow-of-control messages like `#ifTrue:` take a nilary (zero-argument) block. With no arguments, such a block is very limited in what it can do. One solution to this is to implement a very small set of rather inelegant messages like `#ifTrue:arg1:arg2:arg3:`, which would be implemented in class True like this:
 ```
  ifTrue: aBlock arg1: arg1 arg2: arg2 arg3: arg3
     ^aBlock
@@ -301,7 +293,7 @@ And whose implementation in class False would be just:
 ```
 This would work, although it’s a bit clunky. The above methods might be all that are required. We’d have to be careful to write all memory management code using only clean blocks.
 
-We could also reconsider static inlining of blocks that are arguments to certain messages, such as #ifTrue:. The philosophical objections to this could be addressed by changing how the inlined code reacts to a non-Boolean receiver. Instead of a mustBeBoolean error, it could actually create a block and send #ifTrue: to the receiver with the block as the argument. This may be a better long-term solution, but I think I want to wait until dynamic inlining of blocks is implemented to see how static inlining might fit into that.
+We could also reconsider static inlining of blocks that are arguments to certain messages, such as `#ifTrue:`. The philosophical objections to this could be addressed by changing how the inlined code reacts to a non-Boolean receiver. Instead of a mustBeBoolean error, it could actually create a block and send `#ifTrue:` to the receiver with the block as the argument. This may be a better long-term solution, but I think I want to wait until dynamic inlining of blocks is implemented to see how static inlining might fit into that.
 
 Therefore, the initial plan is to go with the clunky clean blocks in memory management code.
 
@@ -431,7 +423,7 @@ Various optimizations may be added to the compiler in the future. Some of these 
 
 ### Method lookup
 
-Whenever a message is sent, the system must determine which method to execute. As in Smalltalk, which method to execute is a function of the class of the receiver and the message’s selector. At each _send site_ (place in code where a message is sent) the selector is known, since it is a constant. (I’m ignoring #perform: here, but it’s a much less common case that can be handled differently.) The class of the receiver, on the other hand, cannot usually be determined at compile time. Note that “compile time” for a dynamically-changeable language like Mist includes the addition, modification, or removal of any method in the system.
+Whenever a message is sent, the system must determine which method to execute. As in Smalltalk, which method to execute is a function of the class of the receiver and the message’s selector. At each _send site_ (place in code where a message is sent) the selector is known, since it is a constant. (I’m ignoring `#perform:` here, but it’s a much less common case that can be handled differently.) The class of the receiver, on the other hand, cannot usually be determined at compile time. Note that “compile time” for a dynamically-changeable language like Mist includes the addition, modification, or removal of any method in the system.
 
 In Mist, syntactic self sends for which a method with that selector exists in the defining class always invoke that method, ignoring the class of the receiver. In this case, the receiver is early-bound, compiled to a simple call of the target method, with no lookup at runtime required. This places a _dependency_ on the target method. For instance, if the target method is recompiled, the address of its machine code may change, and the machine code of the call at the send site will have to change to match. Or if the target method is deleted, the simple call will have to be converted to a method lookup.
 
@@ -458,9 +450,9 @@ There’s one other wrinkle in Mist’s implementation of inline caching – the
 
 ##### Messages that are not understood
 
-As in Smalltalk, a Mist message that is sent to an object that does not understand that message (because the selector of the message is not implemented in the class of the receiver) is made the argument of a #doesNotUnderstand message, which is then sent to the receiver of the original message. All objects must understand #doesNotUnderstand, which sounds a bit like an oxymoron.
+As in Smalltalk, a Mist message that is sent to an object that does not understand that message (because the selector of the message is not implemented in the class of the receiver) is made the argument of a `#doesNotUnderstand` message, which is then sent to the receiver of the original message. All objects must understand `#doesNotUnderstand`, which sounds a bit like an oxymoron.
 
-Mist’s message-sending machinery expects to find a method in a dictionary and execute it. Rather than have an exceptional path for what happens if no such method exists, we make sure that an appropriate method is always found. Recall that a message send is implemented by a method dictionary answering the address to call, and that there is a method dictionary for each selector. Each dictionary has a default answer which is answered if the lookup key is a class in which there is no method with that selector. That default answer is the address of a special method that handles not-understood messages that use that selector. There is one of these methods for each selector sent in normal code anywhere in the system. (#perform:, as usual, is a special case that is handled altogether differently.) The method for #at:put: would look something like this:
+Mist’s message-sending machinery expects to find a method in a dictionary and execute it. Rather than have an exceptional path for what happens if no such method exists, we make sure that an appropriate method is always found. Recall that a message send is implemented by a method dictionary answering the address to call, and that there is a method dictionary for each selector. Each dictionary has a default answer which is answered if the lookup key is a class in which there is no method with that selector. That default answer is the address of a special method that handles not-understood messages that use that selector. There is one of these methods for each selector sent in normal code anywhere in the system. (`#perform:`, as usual, is a special case that is handled altogether differently.) The method for `#at:put:` would look something like this:
 ```
  at: offset put: value
      ^self doesNotUnderstand: 
@@ -468,7 +460,7 @@ Mist’s message-sending machinery expects to find a method in a dictionary and 
 ```
 Because this method is invoked as if it was defined in the class of the receiver, self is bound to the object that received the original message.
 
-There’s also the question of what to do if the receiver does not understand #doesNotUnderstand:. According to the language definition, it is an error condition to not understand #doesNotUnderstand:, so the method dictionary for #doesNotUnderstand: has a special method for its default answer. This method signals an exception, which is handled (or not) by the normal mechanisms.
+There’s also the question of what to do if the receiver does not understand `#doesNotUnderstand:`. According to the language definition, it is an error condition to not understand `#doesNotUnderstand:`, so the method dictionary for ``#doesNotUnderstand: has a special method for its default answer. This method signals an exception, which is handled (or not) by the normal mechanisms.
 
 ##### Private methods
 
