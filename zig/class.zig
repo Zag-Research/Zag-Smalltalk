@@ -65,8 +65,8 @@ const Class_Table = struct {
     fn compareU32(l: u32, r: u32) std.math.Order {
         return std.math.order(l,r);
     }
-    fn init(arena: *heap.Arena, initialClassTableSize:usize) !Self {
-        var theHeapObject = try arena.getGlobal().allocObject(ClassTable_I,
+    fn init(initialClassTableSize:usize) !Self {
+        var theHeapObject = try heap.globalArena.asArena().allocObject(ClassTable_I,
                                                   heap.Format.none,0,initialClassTableSize*2,heap.Age.global);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareU32,0);
         return Class_Table {
@@ -96,9 +96,9 @@ const Class_Table = struct {
         }
         unreachable;
     }
-    fn loadInitialClassNames(s: *Self, thr: *thread.Thread) void {
+    fn loadInitialClassNames(s: *Self) void {
         for(initialClassStrings) |name| {
-            _ = s.intern(symbol.intern(thr,name.asObject()));
+            _ = s.intern(symbol.intern(name.asObject()));
         }
     }
 };
@@ -136,13 +136,13 @@ pub inline fn getClassIndex(className: Object) ClassIndex {
 pub fn getClass(className: Object) Object {
     return classes[getClassIndex(className)];
 }
-pub fn subClass(thr: *thread.Thread,superclassName: Object, className: Object) !void {
+pub fn subClass(superclassName: Object, className: Object) !void {
 //    const stdout = std.io.getStdOut().writer();
     const class_I = getClassIndex(className);
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].isNil()) {
-        const arena = thr.getArena().getGlobal();
+        const arena = heap.globalArena.asArena();
         const metaclass_I = classTable.nextFree();
         metaclass = arena.allocStruct(Metaclass_I, Metaclass_S.size, Metaclass_S, Nil,heap.Age.global) catch @panic("No space");
         classes[metaclass_I] = Object.from(metaclass);
@@ -179,22 +179,21 @@ pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []cons
     try stdout.print("before getClass\n",.{});
     return getClass(className);
 }
-pub fn init(thr: *thread.Thread) !void {
-    var arena = thr.getArena().getGlobal();
-    classTable = try Class_Table.init(arena,ReservedNumberOfClasses);
-    classTable.loadInitialClassNames(thr);
-    try subClass(thr,Nil,symbols.Object);
-    try subClass(thr,symbols.Object,symbols.Behavior);
-    try subClass(thr,symbols.Behavior,symbols.ClassDescription);
-    try subClass(thr,symbols.ClassDescription,symbols.Class);
-    try subClass(thr,symbols.ClassDescription,symbols.Metaclass);
+pub fn init() !void {
+    classTable = try Class_Table.init(ReservedNumberOfClasses);
+    classTable.loadInitialClassNames();
+    try subClass(Nil,symbols.Object);
+    try subClass(symbols.Object,symbols.Behavior);
+    try subClass(symbols.Behavior,symbols.ClassDescription);
+    try subClass(symbols.ClassDescription,symbols.Class);
+    try subClass(symbols.ClassDescription,symbols.Metaclass);
     // repeat to set metaclass superclass properly
-    try subClass(thr,Nil,symbols.Object);
+    try subClass(Nil,symbols.Object);
 }
 test "classes match initialized class table" {
     var thr = try thread.Thread.initForTest(null);
-    _ = try symbol.init(&thr,500,symbol.noStrings);
-    try init(&thr);
+    _ = try symbol.init(500,symbol.noStrings);
+    try init();
     for(initialClassStrings) |string,idx|
         try std.testing.expectEqual(idx+1,classTable.lookup(symbol.lookup(&thr,string.asObject())));
 }

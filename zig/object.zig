@@ -206,8 +206,8 @@ const objectMethods = struct {
         if (immediate > 1) return immediate;
         return self.to(HeapPtr).*.getClass();
     }
-    pub inline fn promoteTo(self: Object, arena: *heap.Arena) !Object {
-        return arena.promote(self);
+    pub inline fn promoteTo(self: Object) !Object {
+        return heap.GlobalArena.promote(self);
     }
     pub fn format(
         self: Object,
@@ -285,8 +285,7 @@ test "to conversion" {
     try testing.expectEqual(Object.from(-0x400000).toUnchecked(i64),-0x400000);
 }
 test "printing" {
-    var thr = try Thread.Thread.initForTest(null);
-    _ = try symbol.init(&thr,250,symbol.noStrings);
+    _ = try symbol.init(250,symbol.noStrings);
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();

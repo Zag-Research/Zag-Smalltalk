@@ -79,12 +79,12 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
 });
 var symbolTable : ?Symbol_Table = null;
 
-pub fn init(thr: *thread.Thread, initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
-    var arena = thr.getArena().getGlobal();
+pub fn init(initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
+    var arena = heap.globalArena.asArena();
     var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
     symbolTable = st;
-    st.loadSymbols(arena,initialSymbolStrings[0..]);
-    st.loadSymbols(arena,str);
+    st.loadSymbols(initialSymbolStrings[0..]);
+    st.loadSymbols(str);
     return st;
 }
 pub fn deinit(thr: *thread.Thread) void {
@@ -109,8 +109,8 @@ pub fn loadSymbols(thr: *thread.Thread,str:[]const heap.HeapConstPtr) void {
 pub fn lookup(_: *thread.Thread,string: object.Object) object.Object {
     return (symbolTable orelse unreachable).lookup(string);
 }
-pub fn intern(thr: *thread.Thread,string: object.Object) object.Object {
-    return (symbolTable orelse unreachable).intern(thr,string);
+pub fn intern(string: object.Object) object.Object {
+    return (symbolTable orelse unreachable).intern(string);
 }
 const objectTreap = Treap(object.Object,u32,u0);
 fn numArgs(obj: object.Object) u32 {
@@ -154,30 +154,29 @@ const Symbol_Table = struct {
         }
         return Nil;
     }
-    fn intern(s: *Self,thr: *thread.Thread,string: object.Object) object.Object {
+    fn intern(s: *Self,string: object.Object) object.Object {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
-        const arena = thr.getArena().getGlobal();
         while (true) {
             const lu = lookupDirect(&trp,string);
             if (!lu.isNil()) return lu;
-            const result = internDirect(arena,&trp,string);
+            const result = internDirect(&trp,string);
             if (!result.isNil()) return result;
             unreachable; // out of space
         }
         unreachable;
     }
-    fn internDirect(arena: *heap.Arena, trp: *objectTreap, string: object.Object) object.Object {
+    fn internDirect(trp: *objectTreap, string: object.Object) object.Object {
         const result = lookupDirect(trp,string);
         if (!result.isNil()) return result;
-        const str = string.promoteTo(arena) catch return Nil;
+        const str = string.promoteTo() catch return Nil;
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
         return symbol_of(index,nArgs);
     }
-    fn loadSymbols(s: *Self, arena: *heap.Arena, strings: [] const heap.HeapConstPtr) void {
+    fn loadSymbols(s: *Self, strings: [] const heap.HeapConstPtr) void {
         var trp = objectTreap.ref(s.theObject.arrayAsSlice(u8),object.compareObject,Nil);
         for (strings) |string|
-            _ = internDirect(arena,&trp,string.asObject());
+            _ = internDirect(&trp,string.asObject());
     }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
@@ -187,8 +186,7 @@ fn verify(symbol: object.Object) !void {
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
-    var thr = try thread.Thread.initForTest(null);
-    var symbol = symbolTable orelse try init(&thr,250,noStrings);
+    var symbol = symbolTable orelse try init(250,noStrings);
     defer symbol.deinit();
     for(initialSymbolStrings) |string,idx|
         try expectEqual(idx+1,symbol.lookup(string.asObject()).hash24());

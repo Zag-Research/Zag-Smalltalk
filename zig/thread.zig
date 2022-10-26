@@ -5,44 +5,42 @@ const Object = @import("object.zig").Object;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const ex = @import("execute.zig");
+const Hp = ex.Hp;
 const Code = ex.Code;
 const ContextPtr = ex.ContextPtr;
 const tailCall = ex.tailCall;
-test "sizes" {
-    try std.testing.expectEqual(thread_size+(nursery_size+2*teen_size)*@sizeOf(Object),thread_total_size);
-}
-const thread_total_size = std.mem.page_size;
-const thread_size = @sizeOf(_Thread);
-pub const teen_size = thread_total_size*3/7/@sizeOf(Object);
-pub const nursery_size = (thread_total_size-thread_size-2*teen_size*@sizeOf(Object))/@sizeOf(Object);
 
-const _Thread = packed struct {
-    id : u64,
-    next: ?*_Thread,
-    debug: ?ex.ThreadedFn,
-};
+const thread_total_size = std.mem.page_size;
+const thread_size = @sizeOf(u64)+@sizeOf(usize)*2;
+pub const avail_size = thread_total_size-thread_size;
+
 pub const Thread = packed struct {
-    thread: _Thread,
-    nursery : heap.NurseryArena,
+    id : u64,
+    next: ?*Thread,
+    debug: ?ex.ThreadedFn,
+    nursery : heap.NurseryArena align(@alignOf(heap.NurseryArena)),
     teen1 : heap.TeenArena,
     teen2 : heap.TeenArena,
     const Self = @This();
-    pub fn init(self: *Self) void {
+    pub fn init() Self {
         defer next_thread_number += 1;
-        self.thread = .{
+        var result = Self {
             .id = next_thread_number,
             .next = null,
             .debug = null,
+            .nursery = heap.NurseryArena.init(),
+            .teen1 = heap.TeenArena.init(),
+            .teen2 = heap.TeenArena.init(),
         };
-        self.nursery = heap.NurseryArena.init(self);
-        self.teen1 = heap.TeenArena.init(&self.teen2);
-        self.teen2 = heap.TeenArena.init(&self.teen1);
+        result.nursery.setThread(&result);
+        result.teen1.setOther(&result.teen2);
+        result.teen2.setOther(&result.teen1);
+        return result;
     }
     pub fn initForTest(debugger: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
-            var thr : Self = undefined;
-            thr.init();
-            thr.thread.debug=debugger;
+            var thr = Self.init();
+            thr.debug=debugger;
             return thr;
         }
         else unreachable;
@@ -61,25 +59,28 @@ pub const Thread = packed struct {
         @setRuntimeSafety(false);
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
-    inline fn ptr(self: *const Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self)&~@as(u64,checkMax));
+    inline fn ptr(self: *Self) *Self {
+        return self;
     }
     pub fn deinit(self : *Self) void {
         self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
-    pub inline fn getArena(self: *const Self) *heap.Arena {
-        return &(self.ptr()).nursery;
+    pub inline fn getHeap(self: *Self) [*]heap.Header {
+        return self.nursery.getHp();
     }
-    pub inline fn endOfStack(self: *const Self) [*]Object {
-        return self.ptr().getArena().toh;
+    pub inline fn getArena(self: *Self) *heap.Arena {
+        return self.nursery.asArena();
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, self: *Thread, context: ContextPtr, selector: u64) void {
+    pub inline fn endOfStack(self: *Self) [*]Object {
+        return self.ptr().nursery.endOfStack();
+    }
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr, selector: u64) void {
         if (self.ptr().debug) |debugger|
             return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
         @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selector});
     }
-    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: u64) void {
+    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selector: u64) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context,selector});
     }
 };

@@ -235,8 +235,8 @@ const heapMethods = struct {
     pub inline fn asObjectPtr(self: HeapConstPtr) [*]Object {
         return @bitCast([*]Object,self);
     }
-    pub inline fn fromObjectPtr(op:  [*]const Object) HeapConstPtr {
-        return @intToPtr(HeapConstPtr,@ptrToInt(op));
+    pub inline fn fromObjectPtr(op:  [*]const Object) [*]Header {
+        return @intToPtr([*]Header,@ptrToInt(op));
     }
     pub inline fn o(self: Header) Object {
         return @bitCast(Object,self);
@@ -405,7 +405,7 @@ test "Header structure" {
     const hdr = header(17, Format.object, 35,0x123,Age.teen);
     try testing.expectEqual(hdr.o().u(),0x0112600001230023);
 }
-pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeapConstPtr) isize {
+pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: [*]Header) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
 }
 test "arenaFree" {
@@ -413,56 +413,68 @@ test "arenaFree" {
     const stack: [10]Object align(8) =undefined;
     const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
     const s5 = s1+4;
-    const hp: HeapConstPtr = Header.fromObjectPtr(s1+2);
+    const hp: [*]Header = Header.fromObjectPtr(s1+2);
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
 fn instead(int: u32,int2: u32, buf: []u8) []const u8 {
     return std.fmt.bufPrint(buf, "{} instead of {}", .{int,int2}) catch unreachable;
 }
+fn checkEqual(int: u32,int2: u32) ?[]const u8 {
+    if (int==int2) return null;
+    var buf: [20]u8 = undefined;
+    return std.fmt.bufPrint(buf[0..], "{} instead of {}", .{int,int2}) catch unreachable;
+}
+
 const threadAvail = thread.avail_size;
 const nursery_size = threadAvail/7/@sizeOf(Object);
-const teen_size = (threadAvail-@sizeOf(NurseryArena))/2;
+const teen_size = (threadAvail-@sizeOf(NurseryArena))/2/@sizeOf(Object);
 pub const NurseryArena = extern struct {
     const Self = @This();
     vtable:  Arena.Vtable,
     hp: [*]Header,
     sp: [*]Object,
-    heap: [nursery_size-field_size/@sizeOf(Header)]Header,
-    const field_size = @sizeOf(Arena.Vtable)-@sizeOf([*]Header)-@sizeOf([*]Object);
+    heapArea: [nursery_size-field_size/@sizeOf(Header)]Header,
+    const field_size = @sizeOf(Arena.Vtable)+@sizeOf([*]Header)+@sizeOf([*]Object);
     comptime {
-        if (@sizeOf(NurseryArena) != nursery_size) {
-            const s = blk: {
-                var buf: [20]u8 = undefined;
-                break :blk instead(nursery_size,@sizeOf(NurseryArena), &buf);
-                };
+        if (checkEqual(@sizeOf(NurseryArena),nursery_size*@sizeOf(Header))) |s|
             @compileError("Modify NurseryArena.heap to make @sizeOf(NurseryArena) == " ++ s);
-        }
     }
-    pub fn init(_: thread) NurseryArena {
+    pub fn setThread(_: *Self, _: *thread.Thread) void {
+    }
+    pub fn init() NurseryArena {
         var result = NurseryArena {
             .vtable = vtable,
-            .heap = undefined,
+            .heapArea = undefined,
             .hp = undefined,
             .sp = undefined,
         };
-        result.hp = &result.heap[0];
-        result.sp = @intToPtr([*]Object,@ptrToInt(result.hp))+nursery_size;
+        result.hp = @ptrCast([*]Header,&result.heapArea[0]);
+        result.sp = result.endOfStack();
         return result;
     }
+    pub inline fn endOfStack(self: *Self) [*]Object {
+        return @intToPtr([*]Object,@ptrToInt(self.hp))+nursery_size;
+    }
     const vtable =  Arena.Vtable {
-        .getGlobal = getGlobalNext,
         .alloc = alloc,
     };
-    fn alloc(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
-        const result = self.heap;
-        const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
+    pub inline fn asArena(self: *Self) *Arena {
+        return @ptrCast(*Arena,self);
+    }
+    pub inline fn getHp(self: *Self) [*]Header {
+        return self.hp;
+    }
+    fn alloc(arena: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
+        const self = @ptrCast(*Self,@alignCast(@alignOf(Self),arena));
+        const result = @alignCast(@alignOf([*]Header),self.hp);
+        const end = @ptrCast(HeapPtr,result + totalSize);
         if (self.space()<0) {
             const stdout = std.io.getStdOut().writer();
             stdout.print("classIndex={} totalSize={} end=0x{X:0>16} toh=0x{X:0>16}\n",.{classIndex,totalSize,@ptrToInt(end),@ptrToInt(self.toh)}) catch unreachable;
             return error.HeapFull;
         }
-        self.heap = end;
+        self.hp = end;
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
         const head = header(@intCast(u12,size),form,classIndex,hash,age);
         result.* = @bitCast(Object,head);
@@ -472,56 +484,62 @@ pub const NurseryArena = extern struct {
     }
 };
 
-fn getGlobalNext(self: *const Arena) *Arena {
-    if (self.collectTo) | ptr | return ptr.getGlobal();
-    @panic("nothing to collect to");
-}
 pub const TeenArena = extern struct {
+    const Self = @This();
     vtable:  Arena.Vtable,
     heap: [teen_size-field_size/@sizeOf(Header)]Header,
     const field_size = @sizeOf(Arena.Vtable);
     comptime {
-        if (@sizeOf(TeenArena) != teen_size) {
-            const s = blk: {
-                var buf: [20]u8 = undefined;
-                break :blk instead(teen_size,@sizeOf(TeenArena), &buf);
-                };
+        if (checkEqual(@sizeOf(TeenArena),teen_size*@sizeOf(Header))) |s|
             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
-        }
+    }
+    pub fn init() TeenArena {
+        var result = TeenArena {
+            .vtable = vtable,
+            .heap = undefined,
+        };
+        return result;
+    }
+    pub fn setOther(_: *Self, _: *Self) void {
+    }
+    const vtable =  Arena.Vtable {
+        .alloc = alloc,
+    };
+    pub inline fn asArena(self: *Self) *Arena {
+        return @ptrCast(Arena,self);
+    }
+    fn alloc(arena: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
+        _ = arena; _ = classIndex; _ = form; _ = iv_size; _ = asize; _ = size; _ = totalSize; _ = fill; _ = age;
+        unreachable;
     }
 };
-const teenVtable =  Arena.Vtable {
-    .getGlobal = getGlobalNext,
+pub var globalArena = GlobalArena.init();
+pub const GlobalArena = struct {
+    const Self = @This();
+    vtable:  Arena.Vtable,
+    pub fn init() GlobalArena {
+        var result = GlobalArena {
+            .vtable = vtable,
+        };
+        return result;
+    }
+    const vtable =  Arena.Vtable {
+        .alloc = alloc,
+    };
+    pub inline fn asArena(self: *Self) *Arena {
+        return @ptrCast(*Arena,self);
+    }
+    fn alloc(arena: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
+        _ = arena; _ = classIndex; _ = form; _ = iv_size; _ = asize; _ = size; _ = totalSize; _ = fill; _ = age;
+        unreachable;
+    }
+   pub fn promote(obj: Object) !Object {
+       if (!obj.isHeap()) return obj;
+       unreachable;
+//       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
+//       return result.asObject();
+    }
 };
-const GlobalArena = struct {};
-const TestArena = struct {};
-// const GlobalArena = Arena {
-//     .vtable = globalVtable,
-//     .heap = undefined,
-//     .toh = undefined,
-//     .allocated = undefined,
-//     .collectTo = null,
-//     .size = 32768,
-// };
-// const globalVtable =  Arena.Vtable {
-//     .getGlobal = getGlobalSelf,
-// };
-// pub const TestArena = Arena {
-//     .vtable = testVtable,
-//     .collectTo = null,
-//     .kind = CopyingArena {
-//         .heap = undefined,
-//         .toh = undefined,
-//         .allocated = undefined,
-//         .size = 32768,
-//     },
-// };
-// const testVtable =  Arena.Vtable {
-//     .getGlobal = getGlobalSelf,
-// };
-fn getGlobalSelf(self: *const Arena) *Arena {
-    return @intToPtr(*Arena,@ptrToInt(self));
-}
 const CopyingArena = packed struct {
     arena: Arena,
     heap: HeapPtr,
@@ -544,26 +562,18 @@ pub const Arena = packed struct {
     vtable: Vtable,
     const Self = Arena;
     const Vtable = packed struct {
-        getGlobal : arenaStar_to_arenaStar,
         alloc: fn(self: *Self, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) anyerror!HeapPtr,
     };
     const arenaStar_to_arenaStar = fn (self: *const Arena) *Arena;
     const vtable = Vtable {
-        .getGlobal = getGlobalV,
-        
+        .alloc = undefined,
     };
-    fn getGlobalV(_: *const Arena) *Arena {
-        @panic("missing vtable:getGlobal");
-    }
-    pub inline fn getGlobal(self: *const Arena) *Arena {
-        return self.vtable.getGlobal(self);
-    }
-    pub fn space(self: *const Arena) isize {
-        return @intCast(i64,@ptrToInt(self.toh))-@intCast(i64,@ptrToInt(self.heap));
-    }
-    pub fn setCollectTo(self: *Arena, collectTo: ?*Arena) void {
-        self.collectTo = collectTo;
-    }
+    // pub fn space(self: *const Arena) isize {
+    //     return @intCast(i64,@ptrToInt(self.toh))-@intCast(i64,@ptrToInt(self.heap));
+    // }
+    // pub fn setCollectTo(self: *Arena, collectTo: ?*Arena) void {
+    //     self.collectTo = collectTo;
+    // }
     // pub fn init(self: *const Arena, preAllocated: ?[] align(@alignOf(HeapPtr)) Object) !Arena {
     //     const allocated = if (preAllocated)
     //         |pre| pre
@@ -617,17 +627,6 @@ pub const Arena = packed struct {
     //     }
     //     if (!ok) return error.OutputDiffered;
     // }
-    pub fn promote(self: *Self, obj: Object) !Object {
-        if (!obj.isHeap()) return obj;
-        const result = self.heap;
-        const ptr = obj.to(HeapConstPtr);
-        const totalSize = ptr.inHeapSize();
-        const end = @ptrCast(HeapPtr,@ptrCast([*]Header,self.heap) + totalSize);
-        if (@ptrToInt(end)>@ptrToInt(self.toh)) return error.HeapFull;
-        self.heap = end;
-        @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
-        return result.asObject();
-    }
     pub fn allocObject(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, age: Age) !HeapPtr {
         var form = format.noBase();
         var totalSize = iv_size + array_size + 1;
@@ -658,15 +657,10 @@ pub const Arena = packed struct {
         return @ptrCast(*T,@alignCast(8,try self.vtable.alloc(self,classIndex, form, asize, 0, asize, totalSize, fill,age)));
     }
 };
-pub fn tempArena(bytes: []align(Object.alignment)u8) Arena {
-    var allocated = mem.bytesAsSlice(Object,bytes);
+pub fn tempArena(_: []align(Object.alignment)u8) Arena {
+    //var allocated = mem.bytesAsSlice(Object,bytes);
     return Arena {
         .vtable = undefined, //GlobalArena.vtable,
-        .heap = @ptrCast(HeapPtr,allocated.ptr),
-        .toh = allocated.ptr+allocated.len,
-        .collectTo = undefined,
-        .allocated = allocated,
-        .size = allocated.len,
     };
 }
 test "temp arena" {
@@ -703,7 +697,7 @@ test "four object allocator" {
         h2.o(),True,@bitCast(Object,@as(u64,1)),False,
         h3.o(),Nil,True,
     })[0..];
-    var testArena = try TestArena.with(expected);
+    var testArena = NurseryArena.init().asArena();//with(expected);
     const obj1 = try testArena.allocObject(42,Format.none,3,0,Age.stack);
     try testing.expectEqual(obj1.inHeapSize(),4);
     const obj2 = try testArena.allocObject(43,Format.none,1,1,Age.stack);
