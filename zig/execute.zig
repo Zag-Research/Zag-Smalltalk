@@ -366,9 +366,6 @@ pub const controlPrimitives = struct {
         if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selector});
         @panic("non boolean");
     }
-    pub fn nop(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selector: u64) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selector});
-    }
     pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selector: u64) void {
         const newSp = sp-1;
         newSp[0]=pc[0].object;

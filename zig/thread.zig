@@ -14,10 +14,10 @@ const thread_total_size = std.mem.page_size;
 const thread_size = @sizeOf(u64)+@sizeOf(usize)*2;
 pub const avail_size = thread_total_size-thread_size;
 
-pub const Thread = packed struct {
-    id : u64,
+pub const Thread = extern struct {
     next: ?*Thread,
-    debug: ?ex.ThreadedFn,
+    id : u64,
+//    debug: ?ex.ThreadedFn,
     nursery : heap.NurseryArena align(@alignOf(heap.NurseryArena)),
     teen1 : heap.TeenArena,
     teen2 : heap.TeenArena,
@@ -27,7 +27,7 @@ pub const Thread = packed struct {
         var result = Self {
             .id = next_thread_number,
             .next = null,
-            .debug = null,
+//            .debug = null,
             .nursery = heap.NurseryArena.init(),
             .teen1 = heap.TeenArena.init(),
             .teen2 = heap.TeenArena.init(),
@@ -37,10 +37,10 @@ pub const Thread = packed struct {
         result.teen2.setOther(&result.teen1);
         return result;
     }
-    pub fn initForTest(debugger: ?ex.ThreadedFn) !Self {
+    pub fn initForTest(_: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
             var thr = Self.init();
-            thr.debug=debugger;
+//            thr.debug=debugger;
             return thr;
         }
         else unreachable;
@@ -76,8 +76,8 @@ pub const Thread = packed struct {
         return self.ptr().nursery.endOfStack();
     }
     pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr, selector: u64) void {
-        if (self.ptr().debug) |debugger|
-            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
+//        if (self.ptr().debug) |debugger|
+//            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
         @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selector});
     }
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selector: u64) void {

@@ -174,7 +174,7 @@ pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
     const forwardLength : u16 = 4095;
     const indirectLength : u16 = 4094;
-    const maxLength = indirectLength-1;
+    const maxLength = @minimum(indirectLength-1,HeapAllocation.maxObjects);
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
@@ -466,21 +466,23 @@ pub const NurseryArena = extern struct {
         return self.hp;
     }
     fn alloc(arena: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
-        const self = @ptrCast(*Self,@alignCast(@alignOf(Self),arena));
-        const result = @alignCast(@alignOf([*]Header),self.hp);
-        const end = @ptrCast(HeapPtr,result + totalSize);
-        if (self.space()<0) {
-            const stdout = std.io.getStdOut().writer();
-            stdout.print("classIndex={} totalSize={} end=0x{X:0>16} toh=0x{X:0>16}\n",.{classIndex,totalSize,@ptrToInt(end),@ptrToInt(self.toh)}) catch unreachable;
-            return error.HeapFull;
-        }
-        self.hp = end;
-        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
-        const head = header(@intCast(u12,size),form,classIndex,hash,age);
-        result.* = @bitCast(Object,head);
-        mem.set(Object,@ptrCast([*]Object,result)[1..totalSize],fill);
-        if (totalSize>size+1) @ptrCast([*]Object,result)[iv_size+1] = @bitCast(Object,asize);
-        return @ptrCast(HeapPtr,result);
+        _ = arena; _ = classIndex; _ = form; _ = iv_size; _ = asize; _ = size; _ = totalSize; _ = fill; _ = age;
+        unreachable;
+        // const self = @ptrCast(*Self,@alignCast(@alignOf(Self),arena));
+        // const result = @alignCast(@alignOf([*]Header),self.hp);
+        // const end = @ptrCast(HeapPtr,result + totalSize);
+        // if (self.space()<0) {
+        //     const stdout = std.io.getStdOut().writer();
+        //     stdout.print("classIndex={} totalSize={} end=0x{X:0>16} toh=0x{X:0>16}\n",.{classIndex,totalSize,@ptrToInt(end),@ptrToInt(self.toh)}) catch unreachable;
+        //     return error.HeapFull;
+        // }
+        // self.hp = end;
+        // const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
+        // const head = header(@intCast(u12,size),form,classIndex,hash,age);
+        // result.* = @bitCast(Object,head);
+        // mem.set(Object,@ptrCast([*]Object,result)[1..totalSize],fill);
+        // if (totalSize>size+1) @ptrCast([*]Object,result)[iv_size+1] = @bitCast(Object,asize);
+        // return @ptrCast(HeapPtr,result);
     }
 };
 
@@ -511,6 +513,20 @@ pub const TeenArena = extern struct {
     fn alloc(arena: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr {
         _ = arena; _ = classIndex; _ = form; _ = iv_size; _ = asize; _ = size; _ = totalSize; _ = fill; _ = age;
         unreachable;
+    }
+};
+const HeapAllocation = extern struct {
+    next: ?*HeapAllocation,
+    mem: [size]u8,
+    const Self = @This();
+    const size = std.mem.page_size - @sizeOf(?*u8);
+    const maxObjects = size/@sizeOf(Header);
+    fn sweep(self: *Self) void {
+        var ptr = @ptrCast([*]Header,&self.mem[0]);
+        const end = ptr+maxObjects;
+        while (ptr<end) {
+            unreachable;
+        }
     }
 };
 pub var globalArena = GlobalArena.init();
@@ -657,7 +673,11 @@ pub const Arena = packed struct {
         return @ptrCast(*T,@alignCast(8,try self.vtable.alloc(self,classIndex, form, asize, 0, asize, totalSize, fill,age)));
     }
 };
-pub fn tempArena(_: []align(Object.alignment)u8) Arena {
+fn tempArena(_: []align(Object.alignment)u8)  type {
+    return extern struct{
+        const Self = @This();
+        vtable : Arena.vtable,
+        {
     //var allocated = mem.bytesAsSlice(Object,bytes);
     return Arena {
         .vtable = undefined, //GlobalArena.vtable,

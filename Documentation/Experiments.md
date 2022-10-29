@@ -6,7 +6,7 @@ Generate stand-alone Zig program with the appropriate dispatch
 2. Deutsch cache as per OpenSmalltalk
 3. Flat dispatch, no inlining
 4. Our dispatch, self/super inlining
-5. Out dispatch, full inlining 1/2/3 instances of methods
+5. Our dispatch, full inlining 1/2/3 instances of methods
 
 ### Dispatch options for interpreter
 This is for the "bytecode" executer
