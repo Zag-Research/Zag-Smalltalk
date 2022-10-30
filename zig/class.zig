@@ -144,9 +144,9 @@ pub fn subClass(superclassName: Object, className: Object) !void {
     if (classes[class_I].isNil()) {
         const arena = heap.globalArena.asArena();
         const metaclass_I = classTable.nextFree();
-        metaclass = arena.allocStruct(Metaclass_I, Metaclass_S.size, Metaclass_S, Nil,heap.Age.global) catch @panic("No space");
+        metaclass = arena.allocStruct(Metaclass_I, Metaclass_S, Nil,heap.Age.global) catch @panic("No space");
         classes[metaclass_I] = Object.from(metaclass);
-        class = arena.allocStruct(metaclass_I, Class_S.size, Class_S, Nil,heap.Age.global) catch @panic("No space");
+        class = arena.allocStruct(metaclass_I, Class_S, Nil,heap.Age.global) catch @panic("No space");
         const class_O = Object.from(class);
         metaclass.super.index=Object.from(class_I);
         metaclass.soleInstance=class_O;
