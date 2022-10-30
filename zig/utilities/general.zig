@@ -42,3 +42,29 @@ pub inline fn largerPowerOf2(size:anytype) @TypeOf(size) {
     n |= n>>1;
     return n+1;
 }
+test "check largerPowerOf2" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(largerPowerOf2(@as(u16,1)),1);
+    try expectEqual(largerPowerOf2(@as(u16,16)),16);
+    try expectEqual(largerPowerOf2(@as(u16,33)),64);
+    try expectEqual(largerPowerOf2(@as(u16,255)),256);
+}
+pub inline fn largerPowerOf2Not1(size:anytype) @TypeOf(size) {
+    var n = (size-1)|1;
+    const bits = @typeInfo(@TypeOf(size)).Int.bits;
+    if (comptime bits>32) n |= n>>32;
+    if (comptime bits>16) n |= n>>16;
+    if (comptime bits>8) n |= n>>8;
+    if (comptime bits>4) n |= n>>4;
+    n |= n>>2;
+    n |= n>>1;
+    return n+1;
+}
+test "check largerPowerOf2" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(largerPowerOf2Not1(@as(u16,1)),2);
+    try expectEqual(largerPowerOf2Not1(@as(u16,2)),2);
+    try expectEqual(largerPowerOf2Not1(@as(u16,16)),16);
+    try expectEqual(largerPowerOf2Not1(@as(u16,33)),64);
+    try expectEqual(largerPowerOf2Not1(@as(u16,255)),256);
+}
