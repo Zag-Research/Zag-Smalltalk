@@ -11,6 +11,7 @@ const u64_MINVAL = object.u64_MINVAL;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const native_endian = builtin.target.cpu.arch.endian();
+const pow2 = @import("utilities.zig").largerPowerOf2;
 
 pub const Format = enum(u8) {
     none = 0,
@@ -170,7 +171,7 @@ pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
     const forwardLength : u16 = 4095;
     const indirectLength : u16 = 4094;
-    const maxLength = @minimum(indirectLength-1,HeapAllocation.maxObjects);
+    const maxLength = @minimum(indirectLength-1,pow2(@as(u16,HeapAllocation.maxObjects/2)));
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
@@ -512,6 +513,7 @@ pub const TeenArena = extern struct {
     }
 };
 const HeapAllocation = extern struct {
+    flags: u64,
     next: ?*HeapAllocation,
     mem: [size]u8,
     const Self = @This();
@@ -529,15 +531,16 @@ pub var globalArena = GlobalArena.init();
 pub const GlobalArena = struct {
     const Self = @This();
     vtable:  Arena.Vtable,
+    freeLists: [nFreeLists]FreeListPtr,
     pub fn init() GlobalArena {
         var result = GlobalArena {
-            .vtable = vtable,
+            .vtable = Arena.Vtable {
+                .alloc = alloc,
+            },
+            .freeLists = [_]FreeListPtr{null}**nFreeLists,
         };
         return result;
     }
-    const vtable =  Arena.Vtable {
-        .alloc = alloc,
-    };
     pub inline fn asArena(self: *Self) *Arena {
         return @ptrCast(*Arena,self);
     }
@@ -551,25 +554,27 @@ pub const GlobalArena = struct {
 //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
 //       return result.asObject();
     }
+    const FreeList = struct {
+        header: Header,
+        next: FreeListPtr,
+    };
+    const FreeListPtr = ?*FreeList;
+    const nFreeLists = @ctz(u16,heapMethods.maxLength)+1;
+    const allocationUnit = heapMethods.maxLength; // size in u64 units including the header
+    fn findAllocationList(target: u16) usize {
+        if (target > 1<<(nFreeLists-1)) return 0;
+        return @maximum(1,@ctz(u16,pow2(target)));
+    }
 };
-const CopyingArena = packed struct {
-    arena: Arena,
-    heap: HeapPtr,
-    toh: [*]Object,
-    allocated: []Object,
-    size: usize,
-};
-const NonCopyingArena = packed struct {
-    arena: Arena,
-    freelists: [nFreeLists]FreeListPtr,
-};
-const FreeList = struct {
-    header: Header,
-    next: FreeListPtr,
-};
-const pageSize = std.mem.page_size;
-const nFreeLists = @ctz(u64,pageSize);
-const FreeListPtr = ?*FreeList;
+test "findAllocationList" {
+    const ee = std.testing.expectEqual;
+    const findAllocationList = GlobalArena.findAllocationList;
+    try ee(findAllocationList(1),1);
+    try ee(findAllocationList(2),1);
+    try ee(findAllocationList(3),2);
+    try ee(findAllocationList(4),2);
+    try ee(findAllocationList(400),0);
+}
 pub const Arena = packed struct {
     vtable: Vtable,
     const Self = Arena;
@@ -666,7 +671,10 @@ fn TempArena(size: usize) type {
         }
         fn alloc(arena: *Arena, totalSize: usize) !HeapPtr {
             const self = @ptrCast(*Self,@alignCast(@alignOf(Self),arena));
-            if (self.ptr+totalSize>size) return error.HeapFull;
+            if (self.ptr+totalSize>size) {
+                std.debug.print("ptr = {} totalSize = {} size = {}\n",.{self.ptr,totalSize,size});
+                return error.HeapFull;
+            }
             const result = @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),&self.heap[self.ptr]));
             self.ptr += totalSize;
             return result;
@@ -712,15 +720,20 @@ test "slicing" {
 }
     
 test "four object allocator" {
-    // const stdout = std.io.getStdOut().writer();
     const testing = std.testing;
     const h1 = header(3,Format.object,42,0,Age.stack);
+    try testing.expectEqual(@alignCast(8,&h1).inHeapSize(),4);
     const h2 = header(1,Format.both,43,0,Age.stack);
+    try testing.expectEqual(@alignCast(8,&h2).inHeapSize(),4);
     const h3 = header(2,Format.array,44,0,Age.stack);
+    try testing.expectEqual(@alignCast(8,&h3).inHeapSize(),3);
+    const h4 = header(2,Format.array,44,0,Age.stack);
+    try testing.expectEqual(@alignCast(8,&h3).inHeapSize(),3);
     const expected = ([_]Object{
         h1.o(),True,Nil,False,
         h2.o(),True,@bitCast(Object,@as(u64,1)),False,
         h3.o(),Nil,True,
+        h4.o(),@bitCast(Object,@as(u64,0)),@bitCast(Object,@as(u64,1)),
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
@@ -757,25 +770,6 @@ test "four object allocator" {
     // try stdout.print("obj3*=0x{x:0>16}: {}\n",.{@ptrToInt(obj3),obj3});
     // try stdout.print("obj4*=0x{x:0>16}: {}\n",.{@ptrToInt(obj4),obj4});
     try arena.verify(expected);
-}
-const allocationUnit = heapMethods.maxLength; // size in u64 units including the header
-const allocIndex = [_]u8{1, 1, 1, // minimum allocation is 2 - room for header+link in free list
-                         2, 3, 3,
-                         4, 4, 4,
-                         5, 5, 5, 5, 5,
-                         6, 6, 6, 6, 6, 6, 6, 6,
-                         7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-fn findAllocationList(target: u16) ?usize {
-    const pow2 = @import("utilities.zig").largerPowerOf2;
-    return @ctz(u16,pow2(u16,target));
-}
-test "findAllocationList" {
-    const ee = std.testing.expectEqual;
-    try ee(findAllocationList(1),1);
-    try ee(findAllocationList(2),1);
-    try ee(findAllocationList(3),2);
-    try ee(findAllocationList(4),2);
-    try ee(findAllocationList(400),9);
 }
 
 fn hash24(str: [] const u8) u24 {
