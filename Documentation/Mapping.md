@@ -6,8 +6,7 @@
 
 ### Object encoding
 The IEEE 754 64-bit binary number is encoded as follows:
-	![IEEE 754 Binary-64]()
-![[Pasted image 20210311212924.png]]
+	![IEEE 754 Binary-64](images/Pasted%20image%2020210311212924.png)
 When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
 So we have 52 bits to play with, as long as the number is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
