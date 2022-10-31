@@ -6,7 +6,7 @@
 
 ### Object encoding
 The IEEE 754 64-bit binary number is encoded as follows:
-	![IEEE 754 Binary-64](../images/Pasted%20image%2020210311212924.png)
+	![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
 
 When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
@@ -184,5 +184,5 @@ And a format 24 object with 2 instance variables and 3 indexable elements would 
 | 6548 6c6c 006f 0000 | Hello               |
 
 
-![Stats from Pharo Image](../images/Pasted%20image%2020210320170341.png)
+![Stats from Pharo Image](Pasted%20image%2020210320170341.png)
 

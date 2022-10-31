@@ -1,4 +1,33 @@
 ## Reference
+
+### Smalltalk
+
+- [Blue Book](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
+- [Jecel's list of Smalltalks](https://github.com/jeceljr/SmalltalkSurvey)
+- [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
+
+
+### Architectures
+#### x86-64
+- [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
+- [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 
+#### ARM
+- [Writing AArch64 code for Apple](https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms) and [Code in ARM Assembly (for Apple)](https://eclecticlight.co/2021/06/16/code-in-arm-assembly-registers-explained/)
+- [More AArch64 coding advice](https://thinkingeek.com/2016/10/23/exploring-aarch64-assembler-chapter-3/)
+- [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
+- [Application Binary Interface for the Arm® Architecture](https://github.com/ARM-software/abi-aa/) including [Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
+- [AArch64 encoding literals](https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/)
+- [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))
+#### LLVM
+- [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
+#### IEEE Floating point
+- 64 bit floating point ![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
+- [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754)
+
+### Zig
+- [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
+
+### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
 - [Rust docs](https://doc.rust-lang.org/)
 	- [Rust Reference](https://doc.rust-lang.org/reference/)
@@ -16,8 +45,6 @@
 - [24 Days of Rust - interesting libraries](http://siciarz.net/)
 - [Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)
 - [Dangerust](http://cliffle.com/p/dangerust/1/)
-- ![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
-- [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
 - [How to properly wrap a C function pointer in Rust?](https://stackoverflow.com/questions/60969071/how-to-properly-wrap-a-c-function-pointer-in-rust)
 - [How do I convert a Rust closure to a C-style callback?](https://stackoverflow.com/questions/32270030/how-do-i-convert-a-rust-closure-to-a-c-style-callback)
 - [How do Rust closures work and how does it execute a closure?](https://stackoverflow.com/questions/45935100/how-do-rust-closures-work-and-how-does-it-execute-a-closure)
@@ -32,16 +59,7 @@
 - [libc](https://docs.rs/libc/0.2.68/libc/)
 - [labguage doc](https://doc.rust-lang.org/nightly/reference/expressions/if-expr.html)
 - [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html)
-- [UTF8 strings](https://github.com/svenvc/UTF8String)
-- [Writing AArch64 code for Apple](https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms) and [Code in ARM Assembly (for Apple)](https://eclecticlight.co/2021/06/16/code-in-arm-assembly-registers-explained/)
-- [More AArch64 coding advice](https://thinkingeek.com/2016/10/23/exploring-aarch64-assembler-chapter-3/)
-- [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
-- [Application Binary Interface for the Arm® Architecture](https://github.com/ARM-software/abi-aa/) including [Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
-- [AArch64 encoding literals](https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/)
-- [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 
-- [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
-- [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))
-- [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
+
 - Build [pharo-vm](https://github.com/pharo-project/pharo-vm) command: `cmake -DFLAVOUR=StackVM -S pharo-vm -B build`
 - **Building C object CMakeFiles/PharoVMCore.dir/generated/64/vm/src/gcc3x-interp.c.o**
 ```
@@ -54,4 +72,3 @@
 
 /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc  -g -stdlib=libc++ -mmacosx-version-min=10.7 -O2 -Wall -Werror=implicit-function-declaration  -DNDEBUG -DDEBUGVM=0 -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/Pharo.dir/src/unixMain.c.o -o build/vm/Debug/Pharo.app/Contents/MacOS/Pharo  build/vm/Debug/Pharo.app/Contents/MacOS/Plugins/libPharoVMCore.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk/usr/lib/libffi.tbd -framework AppKit -framework CoreGraphics
 ```
-- 
