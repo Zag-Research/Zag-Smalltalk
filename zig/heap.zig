@@ -452,7 +452,7 @@ pub const NurseryArena = extern struct {
         return result;
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
-        return @intToPtr([*]Object,@ptrToInt(self.hp))+nursery_size;
+        return @intToPtr([*]Object,@ptrToInt(&self.heapArea[0]))+nursery_size;
     }
     const vtable =  Arena.Vtable {
         .alloc = alloc,
@@ -487,8 +487,9 @@ pub const NurseryArena = extern struct {
 pub const TeenArena = extern struct {
     const Self = @This();
     vtable:  Arena.Vtable,
+    free: [*]Header,
     heap: [teen_size-field_size/@sizeOf(Header)]Header,
-    const field_size = @sizeOf(Arena.Vtable);
+    const field_size = @sizeOf(Arena.Vtable)+@sizeOf([*]Header);
     comptime {
         if (checkEqual(@sizeOf(TeenArena),teen_size*@sizeOf(Header))) |s|
             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
@@ -496,8 +497,10 @@ pub const TeenArena = extern struct {
     pub fn init() TeenArena {
         var result = TeenArena {
             .vtable = vtable,
+            .free = undefined,
             .heap = undefined,
         };
+        result.free = @ptrCast([*]Header,&result.free[0]);
         return result;
     }
     pub fn setOther(_: *Self, _: *Self) void {
@@ -574,7 +577,12 @@ test "findAllocationList" {
     try ee(findAllocationList(2),1);
     try ee(findAllocationList(3),2);
     try ee(findAllocationList(4),2);
-    try ee(findAllocationList(400),0);
+    if (std.mem.page_size < 8192)
+        {try ee(findAllocationList(400),0);}
+    else if (std.mem.page_size < 16384)
+        {try ee(findAllocationList(800),0);}
+    else
+        try ee(findAllocationList(1400),0);
 }
 pub const Arena = packed struct {
     vtable: Vtable,
@@ -669,19 +677,19 @@ test "temp arena" {
     const testing = std.testing;
     var arena = TempArena(5).init();
     const testArena = arena.asArena();
-    const obj1 : HeapPtr = try testArena.allocObject(42,Format.none,3,0,Age.stack);
+    const obj1 : HeapPtr = try testArena.allocObject(42,3,0,Object,Age.stack);
     try testing.expectEqual(@alignOf(@TypeOf(obj1)),Object.alignment);
     try testing.expect(obj1.asObject().isHeap());
     try testing.expectEqual(obj1.inHeapSize(),4);
-    try testing.expectError(error.HeapFull,testArena.allocObject(42,Format.none,3,0,Age.stack));
+    try testing.expectError(error.HeapFull,testArena.allocObject(42,3,0,Object,Age.stack));
 }
 test "slicing" {
     const testing = std.testing;
     var arena = TempArena(16).init();
     const testArena = arena.asArena();
-    const hp0 = try testArena.allocObject(42,Format.none,1,0,Age.stack);
+    const hp0 = try testArena.allocObject(42,1,0,Object,Age.stack);
     try testing.expectEqual(hp0.arrayAsSlice(u8).len,0);
-    const hp1 = try testArena.allocObject(42,Format.none,1,2,Age.stack);
+    const hp1 = try testArena.allocObject(42,1,2,Object,Age.stack);
     const obj1 = hp1.asObject();
     try testing.expectEqual(hp1.arrayAsSlice(u8).len,16);
     try testing.expectEqual(obj1.arrayAsSlice(u8).len,16);
@@ -697,7 +705,7 @@ test "one object #1 allocator" {
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
-    const obj1 = try testArena.allocObject(42,Format.none,3,0,Age.stack);
+    const obj1 = try testArena.allocObject(42,3,0,Object,Age.stack);
     try testing.expectEqual(obj1.inHeapSize(),4);
     const ivs1 = obj1.instVars();
     try testing.expectEqual(ivs1.len,3);
@@ -714,7 +722,7 @@ test "one object #2 allocator" {
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
-    const obj2 = try testArena.allocObject(43,Format.none,2,3,Age.stack);
+    const obj2 = try testArena.allocObject(43,2,3,Object,Age.stack);
     try testing.expectEqual(obj2.inHeapSize(),7);
     const ivs2 = obj2.instVars();
     try testing.expectEqual(ivs2.len,2);
@@ -733,7 +741,7 @@ test "one object #3 allocator" {
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
-    const obj3 = try testArena.allocObject(44,Format.none,0,2,Age.stack);
+    const obj3 = try testArena.allocObject(44,0,2,Object,Age.stack);
     try testing.expectEqual(obj3.inHeapSize(),3);
     const ivs3 = obj3.instVars();
     try testing.expectEqual(ivs3.len,0);
@@ -751,7 +759,7 @@ test "one object #4 allocator" {
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
-    const obj4 = try testArena.allocRaw(45,2,u64,Age.stack);
+    const obj4 = try testArena.allocObject(45,0,2,u64,Age.stack);
     try testing.expectEqual(obj4.inHeapSize(),3);
     const ivs4 = obj4.instVars();
     try testing.expectEqual(ivs4.len,0);
@@ -778,13 +786,13 @@ test "four object allocator" {
     })[0..];
     var arena = TempArena(expected.len).init();
     const testArena = arena.asArena();
-    const obj1 = try testArena.allocObject(42,Format.none,3,0,Age.stack);
+    const obj1 = try testArena.allocObject(42,3,0,Object,Age.stack);
     try testing.expectEqual(obj1.inHeapSize(),4);
-    const obj2 = try testArena.allocObject(43,Format.none,1,1,Age.stack);
+    const obj2 = try testArena.allocObject(43,1,1,Object,Age.stack);
     try testing.expectEqual(obj2.inHeapSize(),4);
-    const obj3 = try testArena.allocObject(44,Format.none,0,2,Age.stack);
+    const obj3 = try testArena.allocObject(44,0,2,Object,Age.stack);
     try testing.expectEqual(obj3.inHeapSize(),3);
-    const obj4 = try testArena.allocRaw(45,2,u64,Age.stack);
+    const obj4 = try testArena.allocObject(45,0,2,u64,Age.stack);
     try testing.expectEqual(obj4.inHeapSize(),3);
     const ivs4 = obj4.instVars();
     try testing.expectEqual(ivs4.len,0);

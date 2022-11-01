@@ -67,7 +67,7 @@ const Class_Table = struct {
     }
     fn init(initialClassTableSize:usize) !Self {
         var theHeapObject = try heap.globalArena.asArena().allocObject(ClassTable_I,
-                                                  heap.Format.none,0,initialClassTableSize*2,heap.Age.global);
+                                                  0,initialClassTableSize*2,Object,heap.Age.global);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareU32,0);
         return Class_Table {
             .theObject = theHeapObject.asObject(),

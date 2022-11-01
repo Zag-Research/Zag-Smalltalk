@@ -1,6 +1,6 @@
-# Description of AST Smalltalk
+# Description of Zag Smalltalk
 ### Abstract
-AST-Smalltalk is a principle-based Smalltalk VM. "Principled" means that the only 3 operations are: message send, assignment, and return. There is no special-casing of methods like `ifTrue:ifFalse` or `whileTrue:`, although of course some methods are implemented by primitive methods.
+Zag-Smalltalk is a principle-based Smalltalk VM. "Principled" means that the only 3 operations are: message send, assignment, and return. There is no special-casing of methods like `ifTrue:ifFalse` or `whileTrue:`, although of course some methods are implemented by primitive methods.
 
 The research question is, "Can this be made fast enough to be competitive?"
 
@@ -8,19 +8,22 @@ The basic idea is that methods are maintained in their AST form. An editor might
 
 Another goal is be be as compatible as possible with [Pharo](https://pharo.org) so that we can leverage most of the rich ecosystem!
 
-The system is being developed on https://github.com/dvmason/AST-Smalltalk
+The system is being developed on https://github.com/dvmason/Zag-Smalltalk
 
-## The [AST class structure](AST_Classes.md) is described here.
-
-## The [interpreter](Execution.md) is described here, including message dispatch.
+## [Execution](Execution.md) is described here, including message dispatch.
 
 ## The [memory structure](Mapping.md), [garbage collector](MemoryManagement.md), and [image format](ImageFormat.md) are described here.
 
 ## [Optimization opportunities](Optimizations.md) are described here.
 
+## [Experiments](Experiments.md)
+
+Everything below here is out of date
+
+## The [AST class structure](AST_Classes.md) is described here.
+
 ## The [Just In Time compiler](JIT.md) is described here.
 
-## [Experiments](Experiments.md)
 <!--
 | Start | Fibonacci |
 | ----- | --------- |

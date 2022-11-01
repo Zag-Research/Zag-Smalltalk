@@ -3,10 +3,23 @@
 This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
 
 ### Threaded Method Implementation
-
 The threaded implementation is a sequence of addresses of functions implementing primitives  and control operations. Every method has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every control operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method.
 
-### The stack and Contexts
+### Native Method Implementation
+The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
+
+When sending a message, the current Context will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to a trampoline function that will execute the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the trampoline function.
+
+When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. If we are executing in native mode, the first threaded address will simply point to the address of the first native function. Or, if there is no native version, the first address will point to a primitive to schedule compilation of this method. If we are executing in threaded mode (single-stepping, for example) we will skip the first word and thereby execute the first real instruction of the threaded implementation of the method.
+
+## The stack and Contexts
+
+The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the top of the Nursery for a Thread (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be copied to the Thread's Teen arena (and potentially to the Global arena). Similarly, if `thisContext` is referenced, the Context (and ones it links to) will be copied to the heap.
+
+There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context; and b) switching between interpreter and native implementation is seamless.
+
+#### Stack example
+
 When m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like:
 
 | Stack  | Description              | Pointers                                                  |
@@ -37,7 +50,7 @@ Note that the Context headers/size are set lazily because while they are on the 
 
 A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success. This will be followed by the thread-code to create the context.
 
-### Method dispatch
+## Method dispatch
 One of the defining aspects of object-oriented programming is that methods are customized to the object (or class). This requires dispatching to various code, dependent on the class of the object^[This is for class-based OOP like Smalltalk, Java, C++, Python, Ruby, etc.; for the much less common prototype-based OOP like Javascript or Self, there is still dispatch, but based on the object, not its class.]. Since this happens so frequently, optimizing the message dispatch is critical to performance.
 
 #### Classic Smalltalk dispatch
@@ -88,7 +101,10 @@ The tables are built as a near-perfect for power-of-2 tables, so there will be v
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
 
 ## Interpretation Classes
-These are classes that the interpreter understands for execution. These are the names in Pharo - the AS prefix is removed in the ASTSmalltalk image.
+
+**This hasn't been updated in a while... so may not be accurate**
+
+These are classes that the interpreter understands for execution. These are the names in Pharo - the AS prefix is removed in the ZagSmalltalk image.
 ### ASSend
 Fields:
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
