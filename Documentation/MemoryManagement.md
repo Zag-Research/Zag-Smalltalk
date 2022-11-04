@@ -55,20 +55,19 @@ Roots for the GlobalArena include:
 3. roots from all threads
 4. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
 
-If you have an arena that is accessible to multiple threads, then moving becomes a big deal - you'd have to stop all threads to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist) - just using Fibonacci numbers instead of powers of 2. Free space is easily coalesced in the sweep phase.
+If you have an arena that is accessible to multiple threads, then moving becomes a big deal - you'd have to stop all threads to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
 
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
 
 When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
 
 ### Global Arena Structure
-The Global Arena uses a Fibonacci heap
+The Global Arena uses a 
 
 #### Free-space allocation
-Free-space is split up into fibonacci-number-sized pieces and put on the appropriate queue:
+Free-space is split up into power-of-2-sized pieces and put on the appropriate queue:
 - 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word is stored) 
-- 4-word free-space is allocated as 2 entries on the 2-queue. 
-- Otherwise, free-space is split into two pieces: the largest fibonacci number that will fit, which is put on the appropriate queue, and loop to allocate the rest.
+- Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate queue, and loop to allocate the rest.
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.

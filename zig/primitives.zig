@@ -120,11 +120,11 @@ pub const primitives = struct {
         sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#*
         sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
-    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#*
         sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
@@ -179,12 +179,6 @@ test "simple add with overflow" {
         "succeeded:",&failed_test,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(u64_MINVAL),4);
-}
-// fibonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) fibonacci + (self - 2) fibonacci
-test "fibonacci" {
-    return error.not_implemented;
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;

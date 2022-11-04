@@ -29,8 +29,8 @@ pub const ContextPtr = *Context;
 pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
-    npc: ?ThreadedFn, // native PC - in Continuation Passing Style
-    prevCtxt: ?Object,
+    npc: ThreadedFn, // native PC - in Continuation Passing Style
+    prevCtxt: Object,
     method: Object,
     temps: [1]Object,
     fn print(self: ContextPtr,sp: [*]Object, thread: *Thread) void {
@@ -69,9 +69,8 @@ pub const Context = struct {
         @setRuntimeSafety(false);
         self.temps[n] = v;
     }
-    pub inline fn previous(self: *Context) ?*Context {
-        if (self._previous.is_nil()) return null;
-        return self._previous.to(*Context);
+    pub inline fn previous(self: ContextPtr) ContextPtr {
+        return self.prevCtxt.to(ContextPtr);
     }
     fn pop(self: ContextPtr, sp: [*]Object, thread: *Thread) struct {
         sp: [*]Object,
@@ -82,10 +81,10 @@ pub const Context = struct {
             return .{.sp=self.asObjectPtr()-1,.ctxt=self.ctxt,.pc=self.getPc()};
         @panic("restore remote Context");
     }
-    fn asObjectPtr(self : *Context) [*]Object {
+    fn inline asObjectPtr(self : ContextPtr) [*]Object {
         return @ptrCast([*]Object,self);
     }
-    fn fromObjectPtr(op: [*]Object) *Context {
+    fn inline fromObjectPtr(op: [*]Object) *Context {
         return @ptrCast(*Context,op);
     }
     fn size(self: ContextPtr, sp: [*]Object, thread: *Thread) usize {
