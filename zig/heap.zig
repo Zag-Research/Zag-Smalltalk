@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
+const checkEqual = @import("utilities.zig").checkEqual;
 const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
@@ -415,14 +416,6 @@ test "arenaFree" {
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
-fn instead(int: u32,int2: u32, buf: []u8) []const u8 {
-    return std.fmt.bufPrint(buf, "{} instead of {}", .{int,int2}) catch unreachable;
-}
-fn checkEqual(int: u32,int2: u32) ?[]const u8 {
-    if (int==int2) return null;
-    var buf: [20]u8 = undefined;
-    return std.fmt.bufPrint(buf[0..], "{} instead of {}", .{int,int2}) catch unreachable;
-}
 
 const threadAvail = thread.avail_size;
 const nursery_size = threadAvail/7/@sizeOf(Object);
@@ -495,12 +488,12 @@ pub const TeenArena = extern struct {
             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
     }
     pub fn init() TeenArena {
-        var result = TeenArena {
+        var result = Self {
             .vtable = vtable,
             .free = undefined,
             .heap = undefined,
         };
-        result.free = @ptrCast([*]Header,&result.free[0]);
+        result.free = @ptrCast([*]Header,&result.heap[0]);
         return result;
     }
     pub fn setOther(_: *Self, _: *Self) void {

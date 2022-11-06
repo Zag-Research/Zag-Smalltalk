@@ -4,6 +4,7 @@ const math = std.math;
 const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 const stdout = std.io.getStdOut().writer();
+const Object = @import("../object.zig").Object;
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
@@ -12,8 +13,8 @@ fn fibNative(self: u64) u64 {
     return fibNative(self-1) + fibNative(self-2);
 }
 const i = struct {
-    usingnamespace @import("execute.zig").inlines;
-    usingnamespace @import("primitives.zig").inlines;
+    usingnamespace @import("../execute.zig").inlines;
+    usingnamespace @import("../primitives.zig").inlines;
 };
 const p = struct {
     usingnamespace @import("execute.zig").controlPrimitives;

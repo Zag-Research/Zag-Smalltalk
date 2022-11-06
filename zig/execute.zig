@@ -1,4 +1,5 @@
 const std = @import("std");
+const checkEqual = @import("utilities.zig").checkEqual;
 const Thread = @import("thread.zig").Thread;
 const object = @import("object.zig");
 const Object = object.Object;
@@ -81,10 +82,10 @@ pub const Context = struct {
             return .{.sp=self.asObjectPtr()-1,.ctxt=self.ctxt,.pc=self.getPc()};
         @panic("restore remote Context");
     }
-    fn inline asObjectPtr(self : ContextPtr) [*]Object {
+    inline fn asObjectPtr(self : ContextPtr) [*]Object {
         return @ptrCast([*]Object,self);
     }
-    fn inline fromObjectPtr(op: [*]Object) *Context {
+    inline fn fromObjectPtr(op: [*]Object) *Context {
         return @ptrCast(*Context,op);
     }
     fn size(self: ContextPtr, sp: [*]Object, thread: *Thread) usize {
@@ -124,13 +125,20 @@ pub const Context = struct {
 };
 
 pub const CompiledMethodPtr = *CompiledMethod;
-pub const CompiledMethod = struct {
+pub const CompiledMethod = extern struct {
     header: heap.Header,
     name: Object,
     class: Object,
     stackStructure: Object, // number of local values beyond the parameters
+    size: u64,
     code: [1] Code,
     const Self = @This();
+    const codeOffset = @offsetOf(CompiledMethod,"code");
+    const nIVars = codeOffset/@sizeOf(Object);
+    comptime {
+        if (checkEqual(codeOffset,@offsetOf(CompileTimeMethod(.{0}),"code"))) |s|
+            @compileError("CompileMethod prefix not the same as CompileTimeMethod == " ++ s);
+    }
     const pr = std.io.getStdOut().writer().print;
     fn codeSlice(self: * const CompiledMethod) [] const Code{
         @setRuntimeSafety(false);
@@ -208,7 +216,7 @@ fn countNonLabels(comptime tup: anytype) usize {
 }
 fn CompileTimeMethod(comptime tup: anytype) type {
     const codeSize = countNonLabels(tup);
-    return struct { // structure must exactly match CompiledMethod
+    return extern struct { // structure must exactly match CompiledMethod
         header: heap.Header,
         name: Object,
         class: Object,
@@ -216,8 +224,8 @@ fn CompileTimeMethod(comptime tup: anytype) type {
         size: u64,
         code: [codeSize] Code,
         const pr = std.io.getStdOut().writer().print;
-        const codeOffset = @sizeOf(CompiledMethod)/@sizeOf(Code)-1;
-        const methodIVars = codeOffset-2;
+        const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
+        const methodIVars = CompiledMethod.nIVars;
         const Self = @This();
         fn init(name: Object, comptime locals: comptime_int) Self {
             return .{
@@ -233,7 +241,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
             return @ptrCast(* const CompiledMethod,self);
         }
         fn headerOffset(_: *Self, codeIndex: usize) Code {
-            return Code.uint(codeIndex+codeOffset);
+            return Code.uint(codeIndex+codeOffsetInUnits);
         }
         fn getCodeSize(_: *Self) usize {
             return codeSize;
@@ -532,108 +540,4 @@ test "simple executable" {
         "label4",
     });
     _ = method;
-}
-inline fn dumpStackPointerAddr(prefix: []const u8) void {
-    const target = @import("builtin").target;
-    const sp = asm (""
-                        : [argc] "={sp}" (-> usize),
-                    );
-    const lr = switch (target.cpu.arch) { //
-        .x86_64 => asm volatile (
-            ""
-                : [argc] "={sp}" (-> usize),
-        ),
-        .aarch64, .aarch64_be, .aarch64_32 => asm volatile ( // +34*8 for releaseFast, +44*8 for debug
-            ""
-                : [argc] "={lr}" (-> usize),
-        ),
-//        switch (builtin.mode) {
-//            .Debug, .ReleaseSafe => true,
-//            .ReleaseFast, .ReleaseSmall => false,
-//        }
-        else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
-    };
-    const fp = switch (target.cpu.arch) { //
-        .x86_64 => asm volatile (
-            ""
-                : [argc] "={bp}" (-> usize),
-        ),
-        .aarch64, .aarch64_be, .aarch64_32 => asm volatile (
-            ""
-                : [argc] "={fp}" (-> usize),
-        ),
-        else => 0
-    };
-    const spp =asm (""
-                        : [argc] "={sp}" (-> [*]usize),
-                    );
-    std.debug.print("{s}\n    lr: 0x{x:0>16}\n    sp: 0x{x:0>16}\n    fp: 0x{x:0>16}\n", .{ prefix, lr, sp, fp});
-    for (spp[0..125]) | spv,idx | {
-        std.debug.print("    sp[{any:2}]({x:0>8}):  0x{x:0>16}\n",.{idx,sp+idx*8,spv});
-    }
-}
-pub inline fn return_address() ThreadedFn {
-        const lr = switch (@import("builtin").target.cpu.arch) { //
-        .x86_64 => asm volatile (
-            \\      mov RSP,RBP
-                \\ pop RBP
-                \\ pop 
-                : [argc] "={sp}" (-> ThreadedFn),
-        ),
-        .aarch64, .aarch64_be, .aarch64_32 => asm volatile ( // +34*8 for releaseFast, +44*8 for debug
-            ""
-                : [argc] "={lr}" (-> ThreadedFn),
-        ),
-//        switch (builtin.mode) {
-//            .Debug, .ReleaseSafe => true,
-//            .ReleaseFast, .ReleaseSmall => false,
-//        }
-        else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
-    };
-    return lr;
-}
-pub fn foo() void {
-    dumpStackPointerAddr("foo<");
-    @call(noInlineCall,blat,.{});
-    dumpStackPointerAddr("foo>");
-}
-pub fn blat() void {
-    dumpStackPointerAddr("blat<");
-    @call(noInlineCall,bar,.{});
-    dumpStackPointerAddr("blat>");
-}
-pub fn bar() void {
-    dumpStackPointerAddr("bar");
-}
-test "frame structure" {
-    std.debug.print(" foo={x} bar={x}\n",.{@ptrToInt(foo),@ptrToInt(bar)});
-    dumpStackPointerAddr("test<");
-    @call(noInlineCall,foo,.{});
-    dumpStackPointerAddr("test>");
-}
-pub fn main() void {
-    const method = compileMethod(Nil,0,1,.{
-        p.pushContext,"^",
-        "label1:",
-        p.pushLiteral,42,
-        p.popIntoTemp,1,
-        p.pushTemp,1,
-        p.pushLiteral0,
-        p.send,sym.@"<",
-        p.ifFalse,"label3",
-        "label2",
-        "label3:",
-        p.pushTemp,1,
-        "label4:",
-        p.returnWithContext,
-        "label2:",
-        p.pushLiteral0,
-        "label4",
-    });
-    _ = testing.testExecute(method.asCompiledMethodPtr());
-    
-//    std.debug.print(" main={x} foo={x} bar={x}\n",.{@ptrToInt(main),@ptrToInt(foo),@ptrToInt(bar)});
-//    dumpStackPointerAddr("main<");
-//    @call(noInlineCall,foo,.{});
-//    dumpStackPointerAddr("main>");
 }
