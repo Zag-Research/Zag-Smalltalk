@@ -33,7 +33,7 @@ inline fn bumpSize(size:u16) u16 {
     return size*2;
 }
 inline fn initialSize(size:usize) u16 {
-    return @import("utilities.zig").largerPowerOf2(@maximum(@intCast(u16,size),4));
+    return @import("utilities.zig").largerPowerOf2(@max(@intCast(u16,size),4));
 }
 const Fix = struct {index:u16,a:u16,b:u16,c:u16};
 const CF = struct{size:u16,hash:u32};
@@ -70,13 +70,13 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
             var bestConflictRand: u32 = 0;
             var used : [maxSize]u8 = undefined;
             var size = initialSize(sm.len);
-            const limitSize = @minimum(@maximum(initialSize(sm.len*4),17),maxSize);
+            const limitSize = @min(@max(initialSize(sm.len*4),17),maxSize);
             while (size<limitSize) : (size = bumpSize(size)) {
                 var minConflicts: u32 = maxSize;
                 var bestRand: u32 = 0;
                 var tries: u32 = 1;
                 while (tries<=65) : (tries += 1) {
-                    const rand = tries *% u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(u32,size)+1);
+                    const rand = tries *% u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(@as(u32,size))+1);
                     for (used[0..size]) |*b| b.* = 0;
                     if (extra) |key| {
                         const hash = extractHash(key) *% rand >> @truncate(u5,rand);
@@ -140,7 +140,7 @@ fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_i
                 }
             }
             const fixup = fix[0..i];
-            std.debug.print("table of size {}({}) has {} conflicts ({any})({}) with rand={}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand});
+            std.debug.print("table of size {}({}) has {} conflicts ({any})({}) with rand=0x{x:8>0}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand});
             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
         fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
