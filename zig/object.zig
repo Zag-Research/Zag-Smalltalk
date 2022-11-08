@@ -182,7 +182,7 @@ const objectMethods = struct {
         if (self.equals(other)) return ord.eq;
         const sla = self.arrayAsSlice(u8);
         const slb = other.arrayAsSlice(u8);
-        for (sla[0..@minimum(sla.len,slb.len)]) |va,index| {
+        for (sla[0..@min(sla.len,slb.len)]) |va,index| {
             const vb=slb[index];
             if (va<vb) return ord.lt;
             if (va>vb) return ord.gt;

@@ -173,14 +173,14 @@ pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 const heapMethods = struct {
     const forwardLength : u16 = 4095;
     const indirectLength : u16 = 4094;
-    const maxLength = @minimum(indirectLength-1,pow2(@as(u16,HeapAllocation.maxObjects/2)));
+    const maxLength = @min(indirectLength-1,pow2(@as(u16,HeapAllocation.maxObjects/2)));
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
     pub inline fn isForwarded(self: HeapConstPtr) bool {
         return self.length==forwardLength;
     }
-    pub inline fn isForwardedOrExchanged(self: HeapConstPtr) bool {
+    pub inline fn isForwardedOrIndirect(self: HeapConstPtr) bool {
         return self.length>=forwardLength;
     }
     pub inline fn forwarded(self: HeapConstPtr) HeapConstPtr {
@@ -371,7 +371,7 @@ pub const Age = enum(u4) {
 };
 pub const Header = switch (native_endian) {
     .Big => packed struct {
-        length: u12, // align(8),
+        length: u12,
         age: Age,
         objectFormat: Format,
         hash: u24,
@@ -380,7 +380,7 @@ pub const Header = switch (native_endian) {
         pub const includesHeader = true;
     },
     .Little => packed struct {
-        classIndex: u16, // align(8),
+        classIndex: u16,
         hash: u24,
         objectFormat: Format,
         age: Age,
@@ -556,11 +556,11 @@ pub const GlobalArena = struct {
         next: FreeListPtr,
     };
     const FreeListPtr = ?*FreeList;
-    const nFreeLists = @ctz(u16,heapMethods.maxLength)+1;
+    const nFreeLists = @ctz(heapMethods.maxLength)+1;
     const allocationUnit = heapMethods.maxLength; // size in u64 units including the header
     fn findAllocationList(target: u16) usize {
         if (target > 1<<(nFreeLists-1)) return 0;
-        return @ctz(u16,pow2Not1(target));
+        return @ctz(pow2Not1(target));
     }
 };
 test "findAllocationList" {
@@ -611,7 +611,7 @@ pub const Arena = packed struct {
         const width = @sizeOf(T);
         const asize = (array_size*width+objectWidth-width)/objectWidth;
         const form = Format.none.raw(T,array_size);
-        const size = @minimum(asize,heapMethods.maxLength);
+        const size = @min(asize,heapMethods.maxLength);
         var totalSize = asize+@as(usize,if (size<asize) 2 else 1);
         return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO, age);
     }
