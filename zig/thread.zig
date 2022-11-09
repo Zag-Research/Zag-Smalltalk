@@ -75,13 +75,13 @@ pub const Thread = extern struct {
     pub inline fn endOfStack(self: *Self) [*]Object {
         return self.ptr().nursery.endOfStack();
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr, selector: u64) void {
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr) void {
 //        if (self.ptr().debug) |debugger|
 //            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
-        @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selector});
+        @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context});
     }
-    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selector: u64) void {
-        return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context,selector});
+    pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context});
     }
 };
 test "check flag" {
