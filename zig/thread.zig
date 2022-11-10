@@ -75,6 +75,9 @@ pub const Thread = extern struct {
     pub inline fn endOfStack(self: *Self) [*]Object {
         return self.ptr().nursery.endOfStack();
     }
+    pub inline fn stack(self: *Self, sp: [*]Object) []Object {
+        return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
+    }
     pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr) void {
 //        if (self.ptr().debug) |debugger|
 //            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
