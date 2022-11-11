@@ -5,11 +5,15 @@ const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 const stdout = std.io.getStdOut().writer();
 const Object = @import("../object.zig").Object;
+const Code = @import("../execute.zig").Code;
+const ContextPtr = @import("../execute.zig").ContextPtr;
+const HeapPtr = @import("../heap.zig").HeapPtr;
+const Thread = @import("../thread.zig").Thread;
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
 fn fibNative(self: u64) u64 {
-    if (self <- 2) return 1;
+    if (self <= 2) return 1;
     return fibNative(self-1) + fibNative(self-2);
 }
 const i = struct {
@@ -20,40 +24,47 @@ const p = struct {
     usingnamespace @import("execute.zig").controlPrimitives;
     usingnamespace @import("primitives.zig").primitives;
 };
-fn FibComp(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-    if (i.p5(sp[0],Object.from(2))) {
-        sp[0] = Object.from(1);
-        return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context,selector});
-    }
-    if (context.push(pc,sp,1)) |newContext| {
+const fibs = struct {
+    fn fibcomp(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
+        if (i.p5(sp[0],Object.from(2))) {
+            sp[0] = Object.from(1);
+            return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
+        }
+        const result = context.push(pc,sp,1);
+        const newContext = result.ctxt;
+        const newHp = result.hp;
         const newSp = newContext.asObjectPtr()-1;
         if (i.p2(sp[0],Object.from(1))) |m1| {
             newSp[0] = m1;
             newContext.npc = fibComp1;
-            return @call(tailCall,i.call,.{ps+?,newSp,hp,thread,newContext,fibMethod});
+            const fib = fibCompT;
+            return @call(tailCall,fib[0].prim,.{fib+1,newSp,hp,thread,newContext});
         }            
         else @panic("int subtract failed in fibComp");
     }
-    else @panic("Stack overflow in fibComp");
-}
-fn FibComp1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-    const newSp = sp-1;
-    if (i.p2(context.tempAt(1),Object.from(2))) |m2| {
+    fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        if (i.p2(context.getTemp(0),Object.from(2))) |m2| {
             newSp[0] = m2;
-            newContext.npc = fibComp2;
-            return @call(tailCall,i.call,.{context.threadedPc,newSp,hp,thread,newContext,fibMethod});
+            context.npc = fibComp2;
+            const fib = fibCompT;
+            return @call(tailCall,fib[0].prim,.{fib+1,newSp,hp,thread,context});
         }            
         else @panic("int subtract failed in fibComp1");
-}
-fn FibComp2(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {
-    const newSp = sp+2;
-    if (i.p1(sp[1],sp[0])) |sum| {
-        newSp[0] = sum;
-        return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context,selector});
     }
-    else @panic("int add failed in fibComp2");
-}
-const N = struct {
+    fn fibComp2(_: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
+        _ = thread;
+        if (i.p1(sp[1],sp[0])) |sum| {
+            context.setTemp(0,sum);
+            const result = context.pop(sp,thread,0);
+            const newSp = result.sp;
+            const callerContext = result.context;
+            return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
+        }
+        else @panic("int add failed in fibComp2");
+    }
+};
+const R = struct {
     fn doit(sp: usize,_:i64,thread: *Thread,_:u64) void {
         while (true) {
             @call(noInlineCall,st,.{sp,stack[sp] -% 1});
@@ -84,10 +95,10 @@ const N = struct {
         return thread.loops;
     }
 };
-test "n" {
+test "R" {
     const expectEqual = std.testing.expectEqual;
     const runs = 10000000;
-    try expectEqual(N.run(runs),runs-1);
+    try expectEqual(R.run(runs),runs-1);
 }
 pub fn timing(runs: isize) !void {
     const ts=std.time.nanoTimestamp;
