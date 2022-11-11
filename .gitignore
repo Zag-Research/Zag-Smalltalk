@@ -49,3 +49,5 @@ zig/*/zig-cache/*
 pharo-local
 log1.txt
 zig/execute
+zig/fibonacci 
+zig/experiments/fibonacci 
