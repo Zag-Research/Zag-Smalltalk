@@ -60,6 +60,9 @@ const objectMethods = struct {
     pub inline fn u(self: Object) u64 {
         return @bitCast(u64,self);
     }
+    pub inline fn i(self: Object) i64 {
+        return @bitCast(i64,self);
+    }
     pub inline fn tagbits(self: Object) u16 {
         return @bitCast(u16,@truncate(i16,@bitCast(i64,self)>>48));
     }

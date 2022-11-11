@@ -10,7 +10,7 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
-pub const Hp = [*]heap.Header;
+pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -32,7 +32,7 @@ pub const ContextPtr = *Context;
 pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
-    npc: fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns, //ThreadedFn, // native PC - in Continuation Passing Style
+    npc: ThreadedFn, // native PC - in Continuation Passing Style
     size: u64,
     prevCtxt: ContextPtr,
     method: CompiledMethodPtr,
@@ -49,13 +49,13 @@ pub const Context = struct {
             .temps = undefined,
         };
     }
-    inline fn pop(self: ContextPtr, sp: [*]Object, thread: *Thread, itemsToDiscard: usize) struct {
+    pub inline fn pop(self: ContextPtr, sp: [*]Object, thread: *Thread, itemsToDiscard: usize) struct {
         sp: [*]Object,
         ctxt: ContextPtr,
     } {
         if (self.isInStack(sp,thread))
             return .{.sp=self.asObjectPtr() + baseSize + itemsToDiscard,.ctxt=self.prevCtxt};
-        const itemsToKeep = self.items[itemsToDiscard..];
+        const itemsToKeep = self.temps[itemsToDiscard..];
         const newSp = thread.endOfStack() - itemsToKeep.len;
         for (itemsToKeep) | obj,index | {
             newSp[index] = obj;
@@ -89,36 +89,36 @@ pub const Context = struct {
         @setRuntimeSafety(false);
         return @ptrCast(heap.HeapConstPtr,self).indexables(Object);
     }
-    inline fn getTPc(self: ContextPtr) [*]const Code {
+    pub inline fn getTPc(self: ContextPtr) [*]const Code {
         return self.tpc;
     }
-    inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
+    pub inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
         self.tpc = pc;
     }
-    inline fn getNPc(self: ContextPtr) ThreadedFn {
+    pub inline fn getNPc(self: ContextPtr) ThreadedFn {
         return self.npc;
     }
-    inline fn setNPc(self: ContextPtr, pc: ThreadedFn) void {
+    pub inline fn setNPc(self: ContextPtr, pc: ThreadedFn) void {
         self.npc = pc;
     }
-    inline fn isInStack(self: *Context, sp: [*]Object, thread: *Thread) bool {
+    pub inline fn isInStack(self: *Context, sp: [*]Object, thread: *Thread) bool {
         return @ptrToInt(sp)<@ptrToInt(self) and @ptrToInt(self)<@ptrToInt(thread.endOfStack());
     }
-    inline fn getTemp(self: ContextPtr, n: usize) Object {
+    pub inline fn getTemp(self: ContextPtr, n: usize) Object {
         @setRuntimeSafety(false);
         return self.temps[n];
     }
-    inline fn setTemp(self: ContextPtr, n: usize, v: Object) void {
+    pub inline fn setTemp(self: ContextPtr, n: usize, v: Object) void {
         @setRuntimeSafety(false);
         self.temps[n] = v;
     }
     pub inline fn previous(self: ContextPtr) ContextPtr {
-        return self.prevCtxt.to(ContextPtr);
+        return self.prevCtxt;
     }
-    inline fn asHeapPtr(self : ContextPtr) HeapPtr {
+    pub inline fn asHeapPtr(self : ContextPtr) HeapPtr {
         return @ptrCast(HeapPtr,self);
     }
-    inline fn asObjectPtr(self : ContextPtr) [*]Object {
+    pub inline fn asObjectPtr(self : ContextPtr) [*]Object {
         return @ptrCast([*]Object,self);
     }
     inline fn fromObjectPtr(op: [*]Object) *Context {
@@ -250,8 +250,8 @@ pub const Code = extern union {
     uint: u64,
     object: Object,
     header: heap.Header,
-//    method: CompiledMethodPtr,
-    inline fn prim(pp: ThreadedFn) Code {
+    method: CompiledMethodPtr,
+    pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
     inline fn int(i: i64) Code {
@@ -392,7 +392,7 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
         }
     }
 //    method.code[n]=Code.end();
-    method.print();
+//    method.print();
     return method;
 }
 const stdout = std.io.getStdOut().writer();
@@ -498,8 +498,13 @@ pub const controlPrimitives = struct {
     }
     pub fn pushTemp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const newSp = sp-1;
-        newSp[0]=context.getTemp(pc[0].uint);
+        newSp[0]=context.getTemp(pc[0].uint-1);
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context});
+    }
+    pub fn pushTemp0(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        newSp[0]=context.getTemp(0);
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
     }
     fn lookupMethod(cls: class.ClassIndex,selector: u64) CompiledMethodPtr {
         _ = cls;
@@ -514,7 +519,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
     }
     pub fn call(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        context.setReturn(pc+1);
+        context.setTPc(pc+1);
         const newPc = pc[0].method.codePtr();
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
     }

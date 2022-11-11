@@ -16,7 +16,7 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const sym = @import("symbol.zig");
 const heap = @import("heap.zig");
-const HeapPtr = heap.HeapPtr;
+const Hp = heap.HeaderArray;
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
@@ -119,39 +119,39 @@ test "inline primitives" {
 }
 
 pub const primitives = struct {
-    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#+
+        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p2(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    pub fn p2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#+
+        sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#*
-        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
+        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#*
-        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
+        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
+    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
+    pub fn p110(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // atAllPut:
-        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    pub fn p145(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // atAllPut:
+        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#~~
+    pub fn p169(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#~~
         sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: HeapPtr, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>class
+    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>class
 };
 const p = struct {
     usingnamespace @import("execute.zig").controlPrimitives;

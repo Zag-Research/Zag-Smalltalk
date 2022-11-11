@@ -4,13 +4,13 @@ const math = std.math;
 const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 const stdout = std.io.getStdOut().writer();
-const Object = @import("../object.zig").Object;
-const Nil = @import("../object.zig").Nil;
-const Code = @import("../execute.zig").Code;
-const compileMethod = @import("../execute.zig").compileMethod;
-const ContextPtr = @import("../execute.zig").ContextPtr;
-const HeapPtr = @import("../heap.zig").HeapPtr;
-const Thread = @import("../thread.zig").Thread;
+const Object = @import("object.zig").Object;
+const Nil = @import("object.zig").Nil;
+const Code = @import("execute.zig").Code;
+const compileMethod = @import("execute.zig").compileMethod;
+const ContextPtr = @import("execute.zig").ContextPtr;
+const Hp = @import("heap.zig").HeaderArray;
+const Thread = @import("thread.zig").Thread;
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
@@ -19,83 +19,70 @@ fn fibNative(self: u64) u64 {
     return fibNative(self-1) + fibNative(self-2);
 }
 const i = struct {
-    usingnamespace @import("../execute.zig").inlines;
-    usingnamespace @import("../primitives.zig").inlines;
-    const lessOrEqual = i.p5;
-    const subtract = i.p2;
-    const add = i.p1;
+    usingnamespace @import("primitives.zig").inlines;
 };
 const p = struct {
-    usingnamespace @import("../execute.zig").controlPrimitives;
-    usingnamespace @import("../primitives.zig").primitives;
-    const lessOrEqual = p.p5;
-    const subtract = p.p2;
-    const add = p.p1;
+    usingnamespace @import("execute.zig").controlPrimitives;
+    usingnamespace @import("primitives.zig").primitives;
 };
-const fibCompT_ = [1]Code{Code.prim(fibComp)};
-const fibCompT = @ptrCast([*]Code,fibCompT_);
-fn fibComp(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
-    if (i.lessOrEqual(sp[0],Object.from(2))) {
+var fibCompT_ = [1]Code{Code.prim(fibComp)};
+const fibCompT = @ptrCast([*]Code,&fibCompT_[0]);
+fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+    if (i.p5(sp[0],Object.from(2)) catch unreachable) {
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
     }
-    const result = context.push(pc,sp,1);
+    const result = context.push(sp,hp,thread,fibThread.asCompiledMethodPtr(),0,1);
     const newContext = result.ctxt;
     const newHp = result.hp;
     const newSp = newContext.asObjectPtr()-1;
-    if (i.subtract(sp[0],Object.from(1))) |m1| {
-        newSp[0] = m1;
-        newContext.tpc = pc+4;
-        newContext.npc = fibComp1;
-        const fib = fibCompT;
-        return @call(tailCall,fib[0].prim,.{fib+1,newSp,newHp,thread,newContext});
-    }            
-    else @panic("int subtract failed in fibComp");
+    const m1 = i.p2(sp[0],Object.from(1)) catch @panic("int subtract failed in fibComp");
+    newSp[0] = m1;
+    newContext.tpc = pc+4;
+    newContext.npc = fibComp1;
+    const fib = fibCompT;
+    return @call(tailCall,fib[0].prim,.{fib+1,newSp,newHp,thread,newContext});
 }
-fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
+fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     const newSp = sp-1;
-    if (i.subtract(context.getTemp(0),Object.from(2))) |m2| {
-        newSp[0] = m2;
-        context.tpc = pc+3;
-        context.npc = fibComp2;
-        const fib = fibCompT;
-        return @call(tailCall,fib[0].prim,.{fib+1,newSp,hp,thread,context});
-    }            
-    else @panic("int subtract failed in fibComp1");
+    const m2 = i.p2(context.getTemp(0),Object.from(2)) catch @panic("int add failed in fibComp1");
+    newSp[0] = m2;
+    context.tpc = pc+3;
+    context.npc = fibComp2;
+    const fib = fibCompT;
+    return @call(tailCall,fib[0].prim,.{fib+1,newSp,hp,thread,context});
 }
-fn fibComp2(_: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr) void {
-    if (i.add(sp[1],sp[0])) |sum| {
-        context.setTemp(0,sum);
-        const result = context.pop(sp,thread,0);
-        const newSp = result.sp;
-        const callerContext = result.context;
-        return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
-    }
-    else @panic("int add failed in fibComp2");
+fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+    const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
+    context.setTemp(0,sum);
+    const result = context.pop(sp,thread,0);
+    const newSp = result.sp;
+    const callerContext = result.ctxt;
+    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
 }
-const fibThread =
+var fibThread =
     compileMethod(Nil,0,0,.{
         "fibonacci:",
         p.dup,
         p.pushLiteral, 2,
-        p.lessOrEqual,
+        p.p5,
         p.ifFalse,"label3",
         "label2:",
         p.pop,
         p.pushLiteral, 1,
-        p.returnDirect,
+//        p.returnDirect,
         "label3:",
         p.pushContext,"^",
-        p.pushTemp1,
+        p.pushTemp0,
         p.pushLiteral, 1,
-        p.sub,
+        p.p2,
         p.call,"fibonacci",
-        p.pushTemp1,
+        p.pushTemp0,
         p.pushLiteral, 2,
-        p.sub,
+        p.p2,
         p.call,"fibonacci",
-        p.add,
-        p.returnTop,
+        p.p1,
+//        p.returnTop,
 });
 pub fn timing(runs: usize) !void {
     const ts=std.time.nanoTimestamp;
