@@ -27,6 +27,9 @@ pub const inlines = struct {
     pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
         return !self.equals(other);
     }
+    pub inline fn p145(self: Object, _: Object) !void { // atAllPut:
+        return self;
+    }
     pub inline fn p1(self: Object, other: Object) !Object { // Add
         if (other.isInt()) {
             const result = @bitCast(Object,self.u()+%@bitCast(u64,other.toUnchecked(i64)));
@@ -46,7 +49,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn p3(self: Object, other: Object) !bool { // LessThan
-        if (self<other) return true;
+        if (self.u()<other.u()) return true;
         if (other.isInt()) return false;
         return error.primitiveError;
     }
@@ -56,7 +59,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
-        if (self<=other) return true;
+        if (self.u()<=other.u()) return true;
         if (other.isInt()) return false;
         return error.primitiveError;
     }
@@ -92,13 +95,13 @@ pub const inlines = struct {
     pub inline fn p9Orig(self: Object, other: Object) !Object { // Multiply
         if (other.isInt()) {
             const s = self.toUnchecked(i64);
-            const sBits = @clz(u64,unsafeAbs(s));
+            const sBits = @clz(unsafeAbs(s));
             const o = other.toUnchecked(i64);
-            const oBits = @clz(u64,unsafeAbs(o));
+            const oBits = @clz(unsafeAbs(o));
             if (sBits+oBits>13) return Object.from(s*o);
             if (sBits+oBits==13) {
                 const result = s*o;
-                if (@ctz(i64,result)==50) return Object.from(result);
+                if (@ctz(result)==50) return Object.from(result);
             }
         }
         return error.primitiveError;
@@ -120,6 +123,10 @@ pub const primitives = struct {
         sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
+    pub fn p2(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+        sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    }
     pub fn p9(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#*
         sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
@@ -128,8 +135,16 @@ pub const primitives = struct {
         sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
+    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
+        sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    }
     pub fn p110(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
+    }
+    pub fn p145(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // atAllPut:
+        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim.*,.{pc+2,sp,hp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selector});
     }
     pub fn p169(pc: [*]const Code, sp: [*]Object, hp: HeapPtr, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#~~
