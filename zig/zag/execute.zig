@@ -170,6 +170,7 @@ const TestExecution = struct {
         for (source) |src,idx|
             sp[idx] = src;
         const pc = method.codePtr();
+        self.ctxt.setNPc(Self.end);
         pc[0].prim(pc+1,sp,self.thread.getHeap(),&self.thread,&self.ctxt);
         self.sp = endSp;
         self.hp = endHp;

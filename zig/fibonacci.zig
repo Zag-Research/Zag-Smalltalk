@@ -25,8 +25,8 @@ const p = struct {
     usingnamespace @import("zag/execute.zig").controlPrimitives;
     usingnamespace @import("zag/primitives.zig").primitives;
 };
-var fibCompT_ = [1]Code{Code.prim(fibComp)};
-const fibCompT = @ptrCast([*]Code,&fibCompT_[0]);
+var fibCompM = compileMethod(Nil,0,0,.{fibComp});
+const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     if (i.p5(sp[0],Object.from(2)) catch unreachable) {
         sp[0] = Object.from(1);

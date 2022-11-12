@@ -48,7 +48,7 @@ pub const Thread = extern struct {
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);
     pub inline fn needsCheck(self: *const Self) bool {
-        return @truncate(checkType,@ptrToInt(self))==0;
+        return @truncate(checkType,@ptrToInt(self))==1;
     }
     pub inline fn decCheck(self: *Self) *Self {
         if (self.needsCheck()) return self;
