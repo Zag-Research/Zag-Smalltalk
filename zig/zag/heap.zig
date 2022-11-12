@@ -423,7 +423,7 @@ const teen_size = (threadAvail-@sizeOf(NurseryArena))/2/@sizeOf(Object);
 pub const NurseryArena = extern struct {
     const Self = @This();
     vtable:  Arena.Vtable,
-    hp: [*]Header,
+    hp: HeaderArray,
     sp: [*]Object,
     heapArea: [nursery_size-field_size/@sizeOf(Header)]Header,
     const field_size = @sizeOf(Arena.Vtable)+@sizeOf([*]Header)+@sizeOf([*]Object);
@@ -440,7 +440,7 @@ pub const NurseryArena = extern struct {
             .hp = undefined,
             .sp = undefined,
         };
-        result.hp = @ptrCast([*]Header,&result.heapArea[0]);
+        result.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&result.heapArea[0]));
         result.sp = result.endOfStack();
         return result;
     }
@@ -453,7 +453,7 @@ pub const NurseryArena = extern struct {
     pub inline fn asArena(self: *Self) *Arena {
         return @ptrCast(*Arena,self);
     }
-    pub inline fn getHp(self: *Self) [*]Header {
+    pub inline fn getHp(self: *Self) HeaderArray {
         return self.hp;
     }
     fn alloc(arena: *Arena, totalSize: usize) !HeapPtr {

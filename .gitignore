@@ -40,6 +40,7 @@ bug
 c/eg*[0-9]
 zig/zig-cache/*
 zig/*/zig-cache/*
+zig/*/*/zig-cache/*
 *.o
 *.s
 *.sample*
@@ -48,6 +49,5 @@ zig/*/zig-cache/*
 *.sources
 pharo-local
 log1.txt
-zig/execute
+zig/zag/execute
 zig/fibonacci 
-zig/experiments/fibonacci 

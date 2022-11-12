@@ -4,13 +4,13 @@ const math = std.math;
 const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 const stdout = std.io.getStdOut().writer();
-const Object = @import("object.zig").Object;
-const Nil = @import("object.zig").Nil;
-const Code = @import("execute.zig").Code;
-const compileMethod = @import("execute.zig").compileMethod;
-const ContextPtr = @import("execute.zig").ContextPtr;
-const Hp = @import("heap.zig").HeaderArray;
-const Thread = @import("thread.zig").Thread;
+const Object = @import("zag/object.zig").Object;
+const Nil = @import("zag/object.zig").Nil;
+const Code = @import("zag/execute.zig").Code;
+const compileMethod = @import("zag/execute.zig").compileMethod;
+const ContextPtr = @import("zag/execute.zig").ContextPtr;
+const Hp = @import("zag/heap.zig").HeaderArray;
+const Thread = @import("zag/thread.zig").Thread;
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
@@ -19,11 +19,11 @@ fn fibNative(self: u64) u64 {
     return fibNative(self-1) + fibNative(self-2);
 }
 const i = struct {
-    usingnamespace @import("primitives.zig").inlines;
+    usingnamespace @import("zag/primitives.zig").inlines;
 };
 const p = struct {
-    usingnamespace @import("execute.zig").controlPrimitives;
-    usingnamespace @import("primitives.zig").primitives;
+    usingnamespace @import("zag/execute.zig").controlPrimitives;
+    usingnamespace @import("zag/primitives.zig").primitives;
 };
 var fibCompT_ = [1]Code{Code.prim(fibComp)};
 const fibCompT = @ptrCast([*]Code,&fibCompT_[0]);
@@ -70,7 +70,7 @@ var fibThread =
         "label2:",
         p.pop,
         p.pushLiteral, 1,
-//        p.returnDirect,
+//        p.returnNoContext,
         "label3:",
         p.pushContext,"^",
         p.pushTemp0,

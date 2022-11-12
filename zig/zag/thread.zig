@@ -66,7 +66,7 @@ pub const Thread = extern struct {
         self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
-    pub inline fn getHeap(self: *Self) [*]heap.Header {
+    pub inline fn getHeap(self: *Self) heap.HeaderArray {
         return self.nursery.getHp();
     }
     pub inline fn getArena(self: *Self) *heap.Arena {
