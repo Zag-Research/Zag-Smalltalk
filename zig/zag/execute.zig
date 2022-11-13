@@ -49,11 +49,11 @@ pub const Context = struct {
             .temps = undefined,
         };
     }
-    pub inline fn pop(self: ContextPtr, sp: [*]Object, thread: *Thread, itemsToDiscard: usize) struct {
+    pub inline fn pop(self: ContextPtr, thread: *Thread, itemsToDiscard: usize) struct {
         sp: [*]Object,
         ctxt: ContextPtr,
     } {
-        if (self.isInStack(sp,thread))
+        if (self.isInStack())
             return .{.sp=self.asObjectPtr() + baseSize + itemsToDiscard,.ctxt=self.prevCtxt};
         const itemsToKeep = self.temps[itemsToDiscard..];
         const newSp = thread.endOfStack() - itemsToKeep.len;
@@ -67,11 +67,12 @@ pub const Context = struct {
         ctxt: ContextPtr,
     } {
         const newSp = sp - baseSize - locals;
-        if (heap.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap");
+        if (heap.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Context),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
         for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
+        ctxt.header = heap.Header.partialOnStack;
         if (thread.needsCheck()) @panic("grow heap2");
         return .{.hp=hp,.ctxt=ctxt};
     }
@@ -101,8 +102,8 @@ pub const Context = struct {
     pub inline fn setNPc(self: ContextPtr, pc: ThreadedFn) void {
         self.npc = pc;
     }
-    pub inline fn isInStack(self: *Context, sp: [*]Object, thread: *Thread) bool {
-        return @ptrToInt(sp)<@ptrToInt(self) and @ptrToInt(self)<@ptrToInt(thread.endOfStack());
+    pub inline fn isInStack(self: *Context) bool {
+        return @alignCast(8,&self.header).isInStack();
     }
     pub inline fn getTemp(self: ContextPtr, n: usize) Object {
         @setRuntimeSafety(false);
@@ -140,7 +141,7 @@ pub const Context = struct {
 //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,thread);}
     }
 };
-const TestExecution = struct {
+pub const TestExecution = struct {
     thread: Thread,
     ctxt: Context,
     sp: [*]Object,
@@ -151,14 +152,17 @@ const TestExecution = struct {
     var endHp: Hp = undefined;
     var endPc: [*] const Code = undefined;
     var baseMethod = CompiledMethod.init(Nil,0);
-    fn init() Self {
+    pub fn new() Self {
         return Self {
-            .thread = Thread.init(),
+            .thread = Thread.new(),
             .ctxt = Context.init(&baseMethod),
             .sp = undefined,
             .hp = undefined,
             .pc = undefined,
         };
+    }
+    pub fn init(self: *Self) void {
+        self.thread.init();
     }
     fn end(pc: [*]const Code, sp: [*]Object, hp: Hp, _: *Thread, _: ContextPtr) void {
         endPc = pc;
@@ -349,7 +353,7 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
         switch (@TypeOf(field)) {
             Object => {method.code[n]=Code.object(field);n=n+1;},
             @TypeOf(null) => {method.code[n]=Code.object(Nil);n=n+1;},
-            comptime_int,comptime_float => {method.code[n]=Code.object(Object.from(field));n = n+1;},
+            comptime_int => {method.code[n]=Code.int(field);n = n+1;},
             ThreadedFn => {method.code[n]=Code.prim(field);n=n+1;},
             else => {
                 comptime var found = false;
@@ -363,10 +367,6 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
                             method.code[n]=Code.int(-1);
-                            n=n+1;
-                            found = true;
-                        } else if (field.len==1 and field[0]>='0' and field[0]<='9') {
-                            method.code[n]=Code.int(field[0]-'0');
                             n=n+1;
                             found = true;
                         } else {
@@ -404,7 +404,8 @@ const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, 42, "def:", "abc", "*", "^", "3", null});
+    const o = Object.from;
+    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, comptime o(42), "def:", "abc", "*", "^", 3, null});
     var t = m.code[0..];
     try expectEqual(t.len,10);
     try expectEqual(t[0].prim,controlPrimitives.noop);
@@ -555,9 +556,9 @@ pub const controlPrimitives = struct {
         const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
         return @call(tailCall,pc[1].prim,.{pc+2,result.ctxt.asObjectPtr(),result.hp,thread,result.ctxt});
     }
-    pub fn returnWithContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+    pub fn returnWithContext(pc: [*]const Code, _: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         std.debug.print("return skip {} values\n",.{pc[0].uint});
-        const result = context.pop(sp,thread,pc[0].uint);
+        const result = context.pop(thread,pc[0].uint);
         const newSp = result.sp;
         const callerContext = result.ctxt;
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
@@ -610,7 +611,8 @@ pub const testing = struct {
     pub fn testExecute(method: * const CompiledMethod) Object {
         const code = method.codeSlice();
         var context: Context = undefined;
-        var thread = Thread.initForTest(null) catch unreachable;
+        var thread = Thread.newForTest(null) catch unreachable;
+        thread.init();
         var sp = thread.endOfStack()-1;
         sp[0]=Nil;
         execute(code.ptr,sp+1,thread.getHeap(),(&thread).maxCheck(),&context);
@@ -639,10 +641,11 @@ test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
         p.noop,
-        p.pushLiteral,42,
+        p.pushLiteral,comptime Object.from(42),
         p.returnNoContext,
     });
-    var te = TestExecution.init();
+    var te = TestExecution.new();
+    te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
     try expectEqual(result.len,3);
@@ -655,10 +658,11 @@ test "context return via TestExecution" {
     var method = compileMethod(Nil,0,0,.{
         p.noop,
         p.pushContext,"^",
-        p.pushLiteral,42,
-        p.returnWithContext,"1",
+        p.pushLiteral,comptime Object.from(42),
+        p.returnWithContext,1,
     });
-    var te = TestExecution.init();
+    var te = TestExecution.new();
+    te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
     try expectEqual(result.len,1);
@@ -668,22 +672,23 @@ test "simple executable" {
     var method = compileMethod(Nil,0,1,.{
         p.pushContext,"^",
         "label1:",
-        p.pushLiteral,42,
-        p.popIntoTemp,"1",
+        p.pushLiteral,comptime Object.from(42),
+        p.popIntoTemp,1,
         p.pushTemp1,
         p.pushLiteral0,
         p.pushTrue,
         p.ifFalse,"label3",
         p.branch,"label2",
         "label3:",
-        p.pushTemp,"1",
+        p.pushTemp,1,
         "label4:",
-        p.returnWithContext,"1",
+        p.returnWithContext,1,
         "label2:",
         p.pushLiteral0,
         p.branch,"label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution.init();
+    var te = TestExecution.new();
+    te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }

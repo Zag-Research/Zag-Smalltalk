@@ -22,28 +22,29 @@ pub const Thread = extern struct {
     teen1 : heap.TeenArena,
     teen2 : heap.TeenArena,
     const Self = @This();
-    pub fn init() Self {
+    pub fn new() Self {
         defer next_thread_number += 1;
-        var result = Self {
+        return Self {
             .id = next_thread_number,
             .next = null,
 //            .debug = null,
-            .nursery = heap.NurseryArena.init(),
-            .teen1 = heap.TeenArena.init(),
-            .teen2 = heap.TeenArena.init(),
+            .nursery = heap.NurseryArena.new(),
+            .teen1 = heap.TeenArena.new(),
+            .teen2 = heap.TeenArena.new(),
         };
-        result.nursery.setThread(&result);
-        result.teen1.setOther(&result.teen2);
-        result.teen2.setOther(&result.teen1);
-        return result;
     }
-    pub fn initForTest(_: ?ex.ThreadedFn) !Self {
+    pub fn init(self: *Self) void {
+        self.nursery.init();
+        self.teen1.init(&self.teen2);
+        self.teen2.init(&self.teen1);
+    }
+    pub fn newForTest(_: ?ex.ThreadedFn) !Self {
         if (builtin.is_test) {
-            var thr = Self.init();
+            var thr = Self.new();
 //            thr.debug=debugger;
             return thr;
         }
-        else unreachable;
+        unreachable;
     }
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);
@@ -67,10 +68,10 @@ pub const Thread = extern struct {
         self.ptr().* = undefined;
     }
     pub inline fn getHeap(self: *Self) heap.HeaderArray {
-        return self.nursery.getHp();
+        return self.ptr().nursery.getHp();
     }
     pub inline fn getArena(self: *Self) *heap.Arena {
-        return self.nursery.asArena();
+        return self.ptr().nursery.asArena();
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
         return self.ptr().nursery.endOfStack();
@@ -89,8 +90,9 @@ pub const Thread = extern struct {
 };
 test "check flag" {
     const testing = std.testing;
-    var thread = Thread.initForTest(null) catch unreachable;
+    var thread = Thread.newForTest(null) catch unreachable;
     var thr = &thread;
+    thr.init();
     try testing.expect(thr.needsCheck());
     const origEOS = thr.endOfStack();
     thr = thr.maxCheck();

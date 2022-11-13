@@ -108,6 +108,7 @@ const objectMethods = struct {
     pub  fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
         switch (T) {
             f64 => {if (check and self.isDouble()) return @bitCast(f64, self);},
+            i64 => {if (check and self.isInt()) return @bitCast(T, self);},
             bool=> {if (check and self.isBool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {

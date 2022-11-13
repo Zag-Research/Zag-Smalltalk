@@ -174,6 +174,11 @@ const heapMethods = struct {
     const forwardLength : u16 = 4095;
     const indirectLength : u16 = 4094;
     const maxLength = @min(indirectLength-1,pow2(@as(u16,HeapAllocation.maxObjects/2)));
+    pub const includesHeader = true;
+    pub const partialOnStack = @bitCast(Header,@as(u64,0));
+    pub inline fn isInStack(self: HeapConstPtr) bool {
+        return self.age.isInStack();
+    }
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
@@ -234,8 +239,8 @@ const heapMethods = struct {
     pub inline fn asObjectPtr(self: HeapConstPtr) [*]Object {
         return @bitCast([*]Object,self);
     }
-    pub inline fn fromObjectPtr(op:  [*]const Object) [*]Header {
-        return @intToPtr([*]Header,@ptrToInt(op));
+    pub inline fn fromObjectPtr(op:  [*]const Object) HeaderArray {
+        return @intToPtr(HeaderArray,@ptrToInt(op));
     }
     pub inline fn o(self: Header) Object {
         return @bitCast(Object,self);
@@ -365,8 +370,11 @@ pub const Age = enum(u4) {
     const Global: u4 = 8;
     const Static: u4 = 15;
     const Self = @This();
-    pub fn isGlobal(self: Self) bool {
+    pub inline fn isGlobal(self: Self) bool {
         return @enumToInt(self)>=Global;
+    }
+    pub inline fn isInStack(self: Self) bool {
+        return @enumToInt(self) == Stack;
     }
 };
 pub const Header = switch (native_endian) {
@@ -377,7 +385,6 @@ pub const Header = switch (native_endian) {
         hash: u24,
         classIndex: u16,
         usingnamespace heapMethods;
-        pub const includesHeader = true;
     },
     .Little => packed struct {
         classIndex: u16,
@@ -386,7 +393,6 @@ pub const Header = switch (native_endian) {
         age: Age,
         length: u12,
         usingnamespace heapMethods;
-        pub const includesHeader = true;
     },
 };
 pub inline fn header(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) Header {
@@ -433,16 +439,17 @@ pub const NurseryArena = extern struct {
     }
     pub fn setThread(_: *Self, _: *thread.Thread) void {
     }
-    pub fn init() NurseryArena {
-        var result = NurseryArena {
+    pub fn new() NurseryArena {
+        return NurseryArena {
             .vtable = vtable,
             .heapArea = undefined,
             .hp = undefined,
             .sp = undefined,
         };
-        result.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&result.heapArea[0]));
-        result.sp = result.endOfStack();
-        return result;
+    }
+    pub fn init(self: *Self) void {
+        self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea[0]));
+        self.sp = self.endOfStack();
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
         return @intToPtr([*]Object,@ptrToInt(&self.heapArea[0]))+nursery_size;
@@ -487,16 +494,16 @@ pub const TeenArena = extern struct {
         if (checkEqual(@sizeOf(TeenArena),teen_size*@sizeOf(Header))) |s|
             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
     }
-    pub fn init() TeenArena {
-        var result = Self {
+    pub fn new() TeenArena {
+        return Self {
             .vtable = vtable,
             .free = undefined,
             .heap = undefined,
         };
-        result.free = @ptrCast([*]Header,&result.heap[0]);
-        return result;
     }
-    pub fn setOther(_: *Self, _: *Self) void {
+    pub fn init(self: *Self, otherTeenHeap: *Self) void {
+        _ = otherTeenHeap;
+        self.free = @ptrCast([*]Header,&self.heap[0]);
     }
     const vtable =  Arena.Vtable {
         .alloc = alloc,
