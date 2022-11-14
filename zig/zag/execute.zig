@@ -15,6 +15,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
+const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 pub const MethodReturns = void;
@@ -271,9 +272,9 @@ pub const Code = extern union {
     inline fn header(h: heap.Header) Code {
         return Code{.header=h};
     }
-//   inline fn method(m: CompiledMethodPtr) Code {
-//        return Code{.method=m};
-//    }
+   inline fn method(m: CompiledMethodPtr) Code {
+        return Code{.method=m};
+    }
     inline fn end() Code {
         return Code{.object=NotAnObject};
     }
@@ -327,6 +328,11 @@ fn CompileTimeMethod(comptime tup: anytype) type {
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
             return @ptrCast(* CompiledMethod,self);
         }
+        pub fn update(self: *Self, tag: Object, method: CompiledMethodPtr) void {
+            for (self.code) |*c| {
+                if (c.object.equals(tag)) c.* = Code.method(method);
+            }
+        }
         fn headerOffset(_: *Self, codeIndex: usize) Code {
             return Code.uint(codeIndex+codeOffsetInUnits);
         }
@@ -343,11 +349,10 @@ fn CompileTimeMethod(comptime tup: anytype) type {
     };
 }
 pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime locals: comptime_int, comptime tup: anytype) CompileTimeMethod(tup) {
-//    var result: [countNonLabels(tup)+CompiledMethod.codeOffset]Code = undefined;
+    @setEvalBranchQuota(2000);
     const methodType = CompileTimeMethod(tup);
     var method = methodType.init(name,locals);
-    method.code[0] = Code.prim(controlPrimitives.noop);
-    comptime var n = 1;
+    comptime var n = 0;
     _ = parameters;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
@@ -378,7 +383,7 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
                                         .Pointer => {
                                             if (t[t.len-1]==':') {
                                                 if (comptime std.mem.startsWith(u8,t,field)) {
-                                                    method.code[n]=Code.int(lp-n);
+                                                    method.code[n]=Code.int(lp-n-1);
                                                     n=n+1;
                                                     found = true;
                                                 }
@@ -404,10 +409,12 @@ const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    const o = Object.from;
-    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, comptime o(42), "def:", "abc", "*", "^", 3, null});
+    const mref = comptime uniqueSymbol(42);
+    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
+    const mcmp = m.asCompiledMethodPtr();
+    m.update(mref,mcmp);
     var t = m.code[0..];
-    try expectEqual(t.len,10);
+    try expectEqual(t.len,11);
     try expectEqual(t[0].prim,controlPrimitives.noop);
     try expectEqual(t[1].prim,testing.return_tos);
     try expectEqual(t[2].int,2);
@@ -417,9 +424,10 @@ test "compiling method" {
     try expectEqual(t[6].int,-1);
     try expectEqual(t[7].int,7);
     try expectEqual(CompiledMethod.methodFromCodeOffset((&t[7]).codePtr()),m.asCompiledMethodPtr());
-    try expectEqual((&t[7]).methodPtr(),m.asCompiledMethodPtr());
+    try expectEqual((&t[7]).methodPtr(),mcmp);
     try expectEqual(t[8].int,3);
-    try expectEqual(t[9].object,Nil);
+    try expectEqual(t[9].method,mcmp);
+    try expectEqual(t[10].object,Nil);
 }
 fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
@@ -464,6 +472,9 @@ pub const controlPrimitives = struct {
         if (False.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context});
         if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context});
         @panic("non boolean");
+    }
+    pub fn primFailure(_: [*]const Code, _: [*]Object, _: Hp, _: *Thread, _: ContextPtr) void {
+        @panic("primFailure");
     }
     pub fn dup(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const newSp = sp-1;
@@ -554,12 +565,24 @@ pub const controlPrimitives = struct {
         const locals = stackStructure.h0;
         const maxStackNeeded = stackStructure.h1;
         const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
-        return @call(tailCall,pc[1].prim,.{pc+2,result.ctxt.asObjectPtr(),result.hp,thread,result.ctxt});
+        const ctxt = result.ctxt;
+        ctxt.setNPc(returnTrampoline);
+        return @call(tailCall,pc[1].prim,.{pc+2,result.ctxt.asObjectPtr(),result.hp,thread,ctxt});
+    }
+    pub fn returnTrampoline(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
     }
     pub fn returnWithContext(pc: [*]const Code, _: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        std.debug.print("return skip {} values\n",.{pc[0].uint});
         const result = context.pop(thread,pc[0].uint);
         const newSp = result.sp;
+        const callerContext = result.ctxt;
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+    }
+    pub fn returnTop(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const top = sp[0];
+        const result = context.pop(thread,pc[0].uint);
+        const newSp = result.sp;
+        newSp[0] = top;
         const callerContext = result.ctxt;
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
     }
@@ -667,6 +690,21 @@ test "context return via TestExecution" {
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);
+}
+test "context returnTop via TestExecution" {
+    const expectEqual = std.testing.expectEqual;
+    var method = compileMethod(Nil,0,0,.{
+        p.noop,
+        p.pushContext,"^",
+        p.pushLiteral,comptime Object.from(42),
+        p.returnTop,1,
+    });
+    var te = TestExecution.new();
+    te.init();
+    var objs = [_]Object{Nil,True};
+    var result = te.run(objs[0..],method.asCompiledMethodPtr());
+    try expectEqual(result.len,1);
+    try expectEqual(result[0],Object.from(42));
 }
 test "simple executable" {
     var method = compileMethod(Nil,0,1,.{

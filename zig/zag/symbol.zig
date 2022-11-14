@@ -7,23 +7,26 @@ const class = @import("class.zig");
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
 const thread = @import("thread.zig");
-inline fn symbol_of(index: u64, arity: u64) object.Object {
-    return symbol0(index|(arity<<24));
+inline fn symbol_of(index: u32, arity: u8) object.Object {
+    return symbol0(index|(@as(u32,arity)<<24));
 }
-pub inline fn symbol0(index: u64) object.Object {
+pub inline fn symbol0(index: u32) object.Object {
     return @bitCast(object.Object,index|((@as(u64,0xfff70000)+class.Symbol_I)<<32));
 }
-pub inline fn symbol1(index: u64) object.Object {
+pub inline fn symbol1(index: u24) object.Object {
     return symbol_of(index,1);
 }
-pub inline fn symbol2(index: u64) object.Object {
+pub inline fn symbol2(index: u24) object.Object {
     return symbol_of(index,2);
 }
-pub inline fn symbol3(index: u64) object.Object {
+pub inline fn symbol3(index: u24) object.Object {
     return symbol_of(index,3);
 }
-pub inline fn symbol4(index: u64) object.Object {
+pub inline fn symbol4(index: u24) object.Object {
     return symbol_of(index,4);
+}
+pub fn uniqueSymbol(uniqueNumber:u24) object.Object {
+    return symbol0(uniqueNumber|@as(u32,0xff000000));
 }
 pub const symbols = struct {
     pub const yourself = symbol0(1);
@@ -113,12 +116,12 @@ pub fn intern(string: object.Object) object.Object {
     return (symbolTable orelse unreachable).intern(string);
 }
 const objectTreap = Treap(object.Object,u32,u0);
-fn numArgs(obj: object.Object) u32 {
+fn numArgs(obj: object.Object) u8 {
     const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
     const first = string[0];
     if (first<'A' or (first>'Z' and first<'a') or first>'z') return 1;
-    var count : u32 = 0;
+    var count : u8 = 0;
     for (string) |char| {
         if (char==':') count +=1;
     }
