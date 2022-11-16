@@ -584,11 +584,12 @@ test "findAllocationList" {
     else
         try ee(findAllocationList(1400),0);
 }
-pub const Arena = packed struct {
+pub const Arena = extern struct {
     vtable: Vtable,
     const Self = Arena;
     const objectWidth = @sizeOf(Object);
     const Vtable = packed struct {
+//        alloc: *const fn(self: *Self, totalSize: usize) anyerror!HeapPtr,
         alloc: fn(self: *Self, totalSize: usize) anyerror!HeapPtr,
     };
     fn alloc(self: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr{

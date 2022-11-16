@@ -17,7 +17,6 @@ pub const avail_size = thread_total_size-thread_size;
 pub const Thread = extern struct {
     next: ?*Thread,
     id : u64,
-//    debug: ?ex.ThreadedFn,
     nursery : heap.NurseryArena align(@alignOf(heap.NurseryArena)),
     teen1 : heap.TeenArena,
     teen2 : heap.TeenArena,
@@ -37,14 +36,6 @@ pub const Thread = extern struct {
         self.nursery.init();
         self.teen1.init(&self.teen2);
         self.teen2.init(&self.teen1);
-    }
-    pub fn newForTest(_: ?ex.ThreadedFn) !Self {
-        if (builtin.is_test) {
-            var thr = Self.new();
-//            thr.debug=debugger;
-            return thr;
-        }
-        unreachable;
     }
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);
