@@ -20,7 +20,7 @@ const p = struct {
     usingnamespace @import("zag/execute.zig").controlPrimitives;
     usingnamespace @import("zag/primitives.zig").primitives;
 };
-var fibCompM = compileMethod(Nil,0,0,.{fibComp});
+var fibCompM = compileMethod(Nil,0,0,.{&fibComp});
 const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
@@ -63,34 +63,34 @@ fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
 const fibThreadRef = uniqueSymbol(42);
 var fibThread =
     compileMethod(Nil,0,0,.{
-        p.noop,
-        p.dup,
-        p.pushLiteral, Object.from(2),
-        p.p5,"label1",
-        p.primFailure,
+        &p.noop,
+        &p.dup,
+        &p.pushLiteral, Object.from(2),
+        &p.p5,"label1",
+        &p.primFailure,
         "label1:",
-        p.ifFalse,"label3",
-        p.drop,
-        p.pushLiteral, Object.from(1),
-        p.returnNoContext,
+        &p.ifFalse,"label3",
+        &p.drop,
+        &p.pushLiteral, Object.from(1),
+        &p.returnNoContext,
         "label3:",
-        p.pushContext,"^",
-        p.pushTemp1,
-        p.pushLiteral, Object.from(1),
-        p.p2, "label4",
-        p.primFailure,
+        &p.pushContext,"^",
+        &p.pushTemp1,
+        &p.pushLiteral, Object.from(1),
+        &p.p2, "label4",
+        &p.primFailure,
         "label4:",
-        p.call, fibThreadRef,
-        p.pushTemp1,
-        p.pushLiteral, Object.from(2),
-        p.p2,"label5",
-        p.primFailure,
+        &p.call, fibThreadRef,
+        &p.pushTemp1,
+        &p.pushLiteral, Object.from(2),
+        &p.p2,"label5",
+        &p.primFailure,
         "label5:",
-        p.call,fibThreadRef,
-        p.p1,"label6",
-        p.primFailure,
+        &p.call,fibThreadRef,
+        &p.p1,"label6",
+        &p.primFailure,
         "label6:",
-        p.returnTop,0,
+        &p.returnTop,0,
 });
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
@@ -131,7 +131,7 @@ test "fibComp" {
 }
 fn timeComp(n: i64) void {
     var method = compileMethod(Nil,0,0,.{
-        fibComp,
+        &fibComp,
     });
     var objs = [_]Object{Object.from(n)};
     var te = TestExecution.new();

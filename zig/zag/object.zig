@@ -43,8 +43,14 @@ pub fn fromLE(comptime T: type, v: T) Object {
     const val = @ptrCast(*const [@sizeOf(T)]u8,&v);
     return @bitCast(Object,mem.readIntLittle(T,val));
 }
-pub const compareObject = objectMethods.compare;
-const objectMethods = struct {
+pub const compareObject = Object.compare;
+pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
+pub const ClassGrouping = enum(u16) {CodeReference = 0xfff5, Local2, Heap, SmallIntMin, SmallInt0 = 0xfffc, _ };
+pub const Object = packed struct(u64) {
+    h0: u16, // align(8),
+    h1: u16,
+    l2: Level2,
+    signMantissa: ClassGrouping,
     pub inline fn hash(self: Object) Object {
         return @bitCast(Object,self.u()|u64_ZERO);
     }
@@ -72,11 +78,8 @@ const objectMethods = struct {
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
-    pub inline fn isIntA(self: Object) bool {
-        return self.u() >= u64_MINVAL;
-    }
     pub inline fn isInt(self: Object) bool {
-        return self.tagbits() >= u64_MINVAL>>48;
+        return self.u() >= u64_MINVAL;
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;
@@ -239,24 +242,6 @@ const objectMethods = struct {
         return Object{.signMantissa =.SmallInt0, .h0 = f0, .h1 = f1, .l2 = @intToEnum(Level2,f2)};
     }
 
-};
-pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
-pub const ClassGrouping = enum(u16) {CodeReference = 0xfff5, Local2, Heap, SmallIntMin, SmallInt0 = 0xfffc, _ };
-pub const Object = switch (native_endian) {
-    .Big => packed struct {
-        signMantissa: ClassGrouping, // align(8),
-        l2: Level2,
-        h1: u16,
-        h0: u16,
-        usingnamespace objectMethods;
-    },
-    .Little => packed struct {
-        h0: u16, // align(8),
-        h1: u16,
-        l2: Level2,
-        signMantissa: ClassGrouping,
-        usingnamespace objectMethods;
-    },
 };
 
 test "slicing" {

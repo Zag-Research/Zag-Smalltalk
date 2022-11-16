@@ -27,13 +27,13 @@ pub const MethodReturns = void;
 //         return self>=MethodReturns.NonLocal;
 //     }
 // };
-pub const ThreadedFn = fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
 
 pub const ContextPtr = *Context;
 pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
-    npc: ThreadedFn, // native PC - in Continuation Passing Style
+    npc: * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns, // native PC - in Continuation Passing Style
     size: u64,
     prevCtxt: ContextPtr,
     method: CompiledMethodPtr,
@@ -410,7 +410,7 @@ const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     const mref = comptime uniqueSymbol(42);
-    var m = compileMethod(Nil,0,0,.{"abc:", testing.return_tos, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
+    var m = compileMethod(Nil,0,0,.{"abc:", &testing.return_tos, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
     const mcmp = m.asCompiledMethodPtr();
     m.update(mref,mcmp);
     var t = m.code[0..];
@@ -634,7 +634,7 @@ pub const testing = struct {
     pub fn testExecute(method: * const CompiledMethod) Object {
         const code = method.codeSlice();
         var context: Context = undefined;
-        var thread = Thread.newForTest(null) catch unreachable;
+        var thread = Thread.new();
         thread.init();
         var sp = thread.endOfStack()-1;
         sp[0]=Nil;
@@ -655,17 +655,17 @@ pub const testing = struct {
 test "simple return via execute" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
-        p.noop,
-        testing.return_tos,
+        &p.noop,
+        &testing.return_tos,
     });
     try expectEqual(testing.testExecute(method.asCompiledMethodPtr()),Nil);
 }
 test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
-        p.noop,
-        p.pushLiteral,comptime Object.from(42),
-        p.returnNoContext,
+        &p.noop,
+        &p.pushLiteral,comptime Object.from(42),
+        &p.returnNoContext,
     });
     var te = TestExecution.new();
     te.init();
@@ -679,10 +679,10 @@ test "simple return via TestExecution" {
 test "context return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
-        p.noop,
-        p.pushContext,"^",
-        p.pushLiteral,comptime Object.from(42),
-        p.returnWithContext,1,
+        &p.noop,
+        &p.pushContext,"^",
+        &p.pushLiteral,comptime Object.from(42),
+        &p.returnWithContext,1,
     });
     var te = TestExecution.new();
     te.init();
@@ -694,10 +694,10 @@ test "context return via TestExecution" {
 test "context returnTop via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
-        p.noop,
-        p.pushContext,"^",
-        p.pushLiteral,comptime Object.from(42),
-        p.returnTop,1,
+        &p.noop,
+        &p.pushContext,"^",
+        &p.pushLiteral,comptime Object.from(42),
+        &p.returnTop,1,
     });
     var te = TestExecution.new();
     te.init();
@@ -708,22 +708,22 @@ test "context returnTop via TestExecution" {
 }
 test "simple executable" {
     var method = compileMethod(Nil,0,1,.{
-        p.pushContext,"^",
+        &p.pushContext,"^",
         "label1:",
-        p.pushLiteral,comptime Object.from(42),
-        p.popIntoTemp,1,
-        p.pushTemp1,
-        p.pushLiteral0,
-        p.pushTrue,
-        p.ifFalse,"label3",
-        p.branch,"label2",
+        &p.pushLiteral,comptime Object.from(42),
+        &p.popIntoTemp,1,
+        &p.pushTemp1,
+        &p.pushLiteral0,
+        &p.pushTrue,
+        &p.ifFalse,"label3",
+        &p.branch,"label2",
         "label3:",
-        p.pushTemp,1,
+        &p.pushTemp,1,
         "label4:",
-        p.returnWithContext,1,
+        &p.returnWithContext,1,
         "label2:",
-        p.pushLiteral0,
-        p.branch,"label4",
+        &p.pushLiteral0,
+        &p.branch,"label4",
     });
     var objs = [_]Object{Nil};
     var te = TestExecution.new();

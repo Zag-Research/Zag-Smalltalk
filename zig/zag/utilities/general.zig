@@ -3,7 +3,7 @@ const phi = std.math.phi;
 pub fn inversePhi(comptime T: type) T {
     switch (@typeInfo(T)) {
         .Int => |int_info| switch (int_info.signedness) {
-            .unsigned => return @floatToInt(T,(1<<int_info.bits)/phi),
+            .unsigned => return @floatToInt(T,@intToFloat(f64,1<<int_info.bits)/phi),
             else => {},
         },
         else => {},
@@ -15,7 +15,7 @@ test "check inversePhi" {
     try expectEqual(inversePhi(u32),2654435769);
     try expectEqual(inversePhi(u16),40503);
     try expectEqual(inversePhi(u8),158);
-    try expectEqual(inversePhi(u64),11400714819323198485);
+    try expectEqual(inversePhi(u64),11400714819323197440);
 }
 test "randomness of /phi - all values enumerated" {
     var data = [_]u16{0} ** 65536;
@@ -31,8 +31,8 @@ test "randomness of /phi - all values enumerated" {
     const expectEqual = @import("std").testing.expectEqual;
     try expectEqual(counts[1],65536);
 }
-pub inline fn largerPowerOf2(size:anytype) @TypeOf(size) {
-    var n = size-1;
+inline fn po2(size:anytype,comptime not1: u1) @TypeOf(size) {
+    var n = (size-1)|not1;
     const bits = @typeInfo(@TypeOf(size)).Int.bits;
     if (comptime bits>32) n |= n>>32;
     if (comptime bits>16) n |= n>>16;
@@ -41,6 +41,9 @@ pub inline fn largerPowerOf2(size:anytype) @TypeOf(size) {
     n |= n>>2;
     n |= n>>1;
     return n+1;
+}
+pub inline fn largerPowerOf2(size:anytype) @TypeOf(size) {
+    return po2(size,0);
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
@@ -50,15 +53,7 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2(@as(u16,255)),256);
 }
 pub inline fn largerPowerOf2Not1(size:anytype) @TypeOf(size) {
-    var n = (size-1)|1;
-    const bits = @typeInfo(@TypeOf(size)).Int.bits;
-    if (comptime bits>32) n |= n>>32;
-    if (comptime bits>16) n |= n>>16;
-    if (comptime bits>8) n |= n>>8;
-    if (comptime bits>4) n |= n>>4;
-    n |= n>>2;
-    n |= n>>1;
-    return n+1;
+    return po2(size,1);
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;

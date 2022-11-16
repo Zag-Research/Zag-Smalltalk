@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
 const class = @import("class.zig");
+const globalArena = @import("arenas.zig").globalArena;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
 const thread = @import("thread.zig");
@@ -83,7 +84,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
 var symbolTable : ?Symbol_Table = null;
 
 pub fn init(initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
-    var arena = heap.globalArena.asArena();
+    var arena = globalArena.asArena();
     var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
     symbolTable = st;
     st.loadSymbols(initialSymbolStrings[0..]);

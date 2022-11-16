@@ -6,6 +6,13 @@
 - [Jecel's list of Smalltalks](https://github.com/jeceljr/SmalltalkSurvey)
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
 
+### Memory Management
+#### mimalloc
+- [gihub](https://github.com/microsoft/mimalloc)
+- has some interesting ideas similar to those I was thinking about
+- [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
+#### Mist
+- [[MistDesign]] also has some ideas we modify
 
 ### Architectures
 #### x86-64

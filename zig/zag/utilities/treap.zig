@@ -5,13 +5,13 @@ const Order = math.Order;
 const mem = std.mem;
 const includeStdTest = false;
 pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
-    const ElementS = packed struct {
+    const ElementS = struct {
         key: Key,
         left: Index,
         right: Index,
         value: Value,
     };
-    const Compare = fn (Key,Key) Order;
+    const Compare = * const fn (Key,Key) Order;
     return struct {
         table: []ElementS,
         compare: Compare,
@@ -42,7 +42,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         }
         pub fn ref(memory: []u8, compare: Compare, empty: Key) Self {
             return Self {
-                .table = mem.bytesAsSlice(Element,memory),
+                .table = mem.bytesAsSlice(Element,@alignCast(@alignOf(ElementS),memory)),
                 .compare = compare,
                 .empty = empty,
             };
@@ -261,9 +261,9 @@ const Treap_u64 = Treap(u64,u32,u0);
 test "treap element sizes" {
     const expectEqual = @import("std").testing.expectEqual;
     try expectEqual(@sizeOf(Treap_u64.Element),16);
-    try expectEqual(@sizeOf(Treap(u32,u16,u0).Element),8);
     try expectEqual(@sizeOf(Treap(u32,u16,u32).Element),12);
-    //try expectEqual(@sizeOf(Treap(u32,u16,u8).Element),12);
+    try expectEqual(@sizeOf(Treap(u32,u16,u0).Element),8);
+    try expectEqual(@sizeOf(Treap(u32,u16,u8).Element),12);
 }
 test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-insert-and-delete/" {
     const stdout = std.io.getStdOut().writer();

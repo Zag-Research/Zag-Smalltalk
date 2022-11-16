@@ -191,7 +191,7 @@ pub fn init() !void {
     try subClass(Nil,symbols.Object);
 }
 test "classes match initialized class table" {
-    var thr = try thread.Thread.newForTest(null);
+    var thr = thread.Thread.new();
     thr.init();
     _ = try symbol.init(500,symbol.noStrings);
     try init();
