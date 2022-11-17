@@ -65,18 +65,31 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2Not1(@as(u16,255)),256);
 }
 pub inline fn bitToRepresent(size:anytype) u16 {
-    var n = size;
-    const bits = @typeInfo(@TypeOf(size)).Int.bits;
-    if (comptime bits>32) n |= n>>32;
-    if (comptime bits>16) n |= n>>16;
-    if (comptime bits>8) n |= n>>8;
-    if (comptime bits>4) n |= n>>4;
-    n |= n>>2;
-    n |= n>>1;
-    return @ctz(~n);
+    const T = @TypeOf(size);
+    if (T==comptime_int) {
+        comptime var n = size;
+        n |= n>>32;
+        n |= n>>16;
+        n |= n>>8;
+        n |= n>>4;
+        n |= n>>2;
+        n |= n>>1;
+        return @ctz(~@as(u64,n));
+    } else {
+        var n = size;
+        const bits = @typeInfo(T).Int.bits;
+        if (comptime bits>32) n |= n>>32;
+        if (comptime bits>16) n |= n>>16;
+        if (comptime bits>8) n |= n>>8;
+        if (comptime bits>4) n |= n>>4;
+        n |= n>>2;
+        n |= n>>1;
+        return @ctz(~n);
+    }
 }
 test "check bitToRepresent" {
     const expectEqual = std.testing.expectEqual;
+    try expectEqual(bitToRepresent(15),4);
     try expectEqual(bitToRepresent(@as(u16,1)),1);
     try expectEqual(bitToRepresent(@as(u16,15)),4);
     try expectEqual(bitToRepresent(@as(u16,16)),5);

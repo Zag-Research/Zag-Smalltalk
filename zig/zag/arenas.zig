@@ -147,6 +147,10 @@ pub const GlobalArena = struct {
     const Self = @This();
     vtable:  Arena.Vtable,
     freeLists: [nFreeLists]FreeListPtr,
+    comptime {
+        if (checkEqual(0,nFreeLists)) |s|
+            @compileError("nFreeLists " ++ s);
+    }
     pub fn init() GlobalArena {
         var result = GlobalArena {
             .vtable = Arena.Vtable {
@@ -174,7 +178,7 @@ pub const GlobalArena = struct {
         next: FreeListPtr,
     };
     const FreeListPtr = ?*FreeList;
-    const nFreeLists = bitToRepresent(@as(u16,Header.maxLength));
+    const nFreeLists = bitToRepresent(Header.maxLength); // @as(u16,Header.maxLength));
     comptime {std.debug.print("nFreeLists={}\n",.{nFreeLists});}
     const allocationUnit = Header.maxLength; // size in u64 units including the header
     fn findAllocationList(target: u16) usize {
