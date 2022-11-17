@@ -178,8 +178,7 @@ pub const GlobalArena = struct {
         next: FreeListPtr,
     };
     const FreeListPtr = ?*FreeList;
-    const nFreeLists = bitToRepresent(Header.maxLength); // @as(u16,Header.maxLength));
-    comptime {std.debug.print("nFreeLists={}\n",.{nFreeLists});}
+    const nFreeLists = bitToRepresent(Header.maxLength);
     const allocationUnit = Header.maxLength; // size in u64 units including the header
     fn findAllocationList(target: u16) usize {
         if (target > 1<<(nFreeLists-1)) return 0;
