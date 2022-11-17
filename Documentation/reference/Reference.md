@@ -5,6 +5,10 @@
 - [Blue Book](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
 - [Jecel's list of Smalltalks](https://github.com/jeceljr/SmalltalkSurvey)
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
+- [point-free Smalltalk](https://smalltalkthoughts.blogspot.com/2011/08/point-free-programming-in-smalltalk.html)
+- [Marcus Denker blog](https://blog.marcusdenker.de/)
+- [Cog blog - build me a JIT as fastt as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
+- 
 
 ### Memory Management
 #### mimalloc
@@ -33,6 +37,7 @@
 
 ### Zig
 - [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
+- [Zig 0.10.0 release notes](https://ziglang.org/download/0.10.0/release-notes.html#Function-Pointers)
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
