@@ -10,7 +10,8 @@ const True = object.True;
 const False = object.False;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
-const pow2Not1 = @import("utilities.zig").largerPowerOf2Not1;
+const bitToRepresent = @import("utilities.zig").bitToRepresent;
+const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
 const Header = @import("heap.zig").Header;
 const header = @import("heap.zig").header;
 const Format = @import("heap.zig").Format;
@@ -19,6 +20,9 @@ const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
+}
+test "first" {
+    std.debug.print("start\n",.{});
 }
 test "arenaFree" {
     const testing = std.testing;
@@ -170,11 +174,12 @@ pub const GlobalArena = struct {
         next: FreeListPtr,
     };
     const FreeListPtr = ?*FreeList;
-    const nFreeLists = @ctz(Header.maxLength)+1;
+    const nFreeLists = bitToRepresent(@as(u16,Header.maxLength));
+    comptime {std.debug.print("nFreeLists={}\n",.{nFreeLists});}
     const allocationUnit = Header.maxLength; // size in u64 units including the header
     fn findAllocationList(target: u16) usize {
         if (target > 1<<(nFreeLists-1)) return 0;
-        return @ctz(pow2Not1(target));
+        return bitToRepresent(target);
     }
 };
 test "findAllocationList" {

@@ -191,9 +191,9 @@ pub const Header = packed struct(u64) {
         age: Age,
         length: u12,
 
-    const forwardLength : u16 = 4095;
-    const indirectLength : u16 = 4094;
-    const maxLength = indirectLength-1;
+    const forwardLength: u16 = 4095;
+    const indirectLength: u16 = 4094;
+    pub const maxLength = 4093;
     pub const includesHeader = true;
     pub const partialOnStack = @bitCast(Header,@as(u64,0));
     pub inline fn isInStack(self: HeapConstPtr) bool {
@@ -328,7 +328,7 @@ pub const Header = packed struct(u64) {
             size = oa[0];
             oa += 1;
         }
-        oa += if (size >= indirectLength) 1 else size;
+        oa = oa + (if (size >= indirectLength) 1 else size);
         return (@ptrToInt(oa)-@ptrToInt(self))/@sizeOf(Object);
     }
     fn @"format FUBAR"(

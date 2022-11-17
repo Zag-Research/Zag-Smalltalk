@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
+const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const ex = @import("execute.zig");
@@ -17,9 +18,9 @@ pub const avail_size = thread_total_size-thread_size;
 pub const Thread = extern struct {
     next: ?*Thread,
     id : u64,
-    nursery : heap.NurseryArena align(@alignOf(heap.NurseryArena)),
-    teen1 : heap.TeenArena,
-    teen2 : heap.TeenArena,
+    nursery : arenas.NurseryArena align(@alignOf(arenas.NurseryArena)),
+    teen1 : arenas.TeenArena,
+    teen2 : arenas.TeenArena,
     const Self = @This();
     pub fn new() Self {
         defer next_thread_number += 1;
@@ -27,9 +28,9 @@ pub const Thread = extern struct {
             .id = next_thread_number,
             .next = null,
 //            .debug = null,
-            .nursery = heap.NurseryArena.new(),
-            .teen1 = heap.TeenArena.new(),
-            .teen2 = heap.TeenArena.new(),
+            .nursery = arenas.NurseryArena.new(),
+            .teen1 = arenas.TeenArena.new(),
+            .teen2 = arenas.TeenArena.new(),
         };
     }
     pub fn init(self: *Self) void {
@@ -81,7 +82,7 @@ pub const Thread = extern struct {
 };
 test "check flag" {
     const testing = std.testing;
-    var thread = Thread.newForTest(null) catch unreachable;
+    var thread = Thread.new();
     var thr = &thread;
     thr.init();
     try testing.expect(thr.needsCheck());

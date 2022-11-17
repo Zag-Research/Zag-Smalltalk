@@ -32,7 +32,8 @@ test "randomness of /phi - all values enumerated" {
     try expectEqual(counts[1],65536);
 }
 inline fn po2(size:anytype,comptime not1: u1) @TypeOf(size) {
-    var n = (size-1)|not1;
+    var n = size-1;
+    n |= not1;
     const bits = @typeInfo(@TypeOf(size)).Int.bits;
     if (comptime bits>32) n |= n>>32;
     if (comptime bits>16) n |= n>>16;
@@ -62,4 +63,22 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2Not1(@as(u16,16)),16);
     try expectEqual(largerPowerOf2Not1(@as(u16,33)),64);
     try expectEqual(largerPowerOf2Not1(@as(u16,255)),256);
+}
+pub inline fn bitToRepresent(size:anytype) u16 {
+    var n = size;
+    const bits = @typeInfo(@TypeOf(size)).Int.bits;
+    if (comptime bits>32) n |= n>>32;
+    if (comptime bits>16) n |= n>>16;
+    if (comptime bits>8) n |= n>>8;
+    if (comptime bits>4) n |= n>>4;
+    n |= n>>2;
+    n |= n>>1;
+    return @ctz(~n);
+}
+test "check bitToRepresent" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(bitToRepresent(@as(u16,1)),1);
+    try expectEqual(bitToRepresent(@as(u16,15)),4);
+    try expectEqual(bitToRepresent(@as(u16,16)),5);
+    try expectEqual(bitToRepresent(@as(u16,17)),5);
 }

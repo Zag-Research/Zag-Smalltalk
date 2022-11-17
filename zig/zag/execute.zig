@@ -8,6 +8,7 @@ const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
+const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 pub const Hp = heap.HeaderArray;
@@ -68,7 +69,7 @@ pub const Context = struct {
         ctxt: ContextPtr,
     } {
         const newSp = sp - baseSize - locals;
-        if (heap.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
+        if (arenas.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Context),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;

@@ -1,5 +1,6 @@
 const general = @import("utilities/general.zig");
 pub const inversePhi = general.inversePhi;
+pub const bitToRepresent = general.bitToRepresent;
 pub const largerPowerOf2 = general.largerPowerOf2;
 pub const largerPowerOf2Not1 = general.largerPowerOf2Not1;
 pub const Treap = @import("utilities/Treap.zig").Treap;
