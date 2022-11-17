@@ -147,10 +147,6 @@ pub const GlobalArena = struct {
     const Self = @This();
     vtable:  Arena.Vtable,
     freeLists: [nFreeLists]FreeListPtr,
-    comptime {
-        if (checkEqual(0,nFreeLists)) |s|
-            @compileError("nFreeLists " ++ s);
-    }
     pub fn init() GlobalArena {
         var result = GlobalArena {
             .vtable = Arena.Vtable {
