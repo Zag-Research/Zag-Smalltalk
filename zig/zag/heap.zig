@@ -196,6 +196,15 @@ pub const Header = packed struct(u64) {
     pub const maxLength = 4093;
     pub const includesHeader = true;
     pub const partialOnStack = @bitCast(Header,@as(u64,0));
+    inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) Header {
+        return Header {
+            .length = length,
+            .age = age,
+            .objectFormat = format,
+            .hash = hash,
+            .classIndex = classIndex,
+        };
+    }
     pub inline fn isInStack(self: HeapConstPtr) bool {
         return self.age.isInStack();
     }
@@ -218,10 +227,11 @@ pub const Header = packed struct(u64) {
     pub inline fn isIndirect(self: HeapConstPtr) bool {
         return self.length>=indirectLength and self.length<forwardLength;
     }
-    pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) []T {
+    pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) ![]T {
         const scale = @sizeOf(Object)/@sizeOf(T);
         const ptr = self.forwarded();
         const form = ptr.objectFormat;
+        if (!form.isIndexable()) return error.NotIndexable;
         if (form.isRaw()) {
             const formi = @enumToInt(form);
             var size :usize = ptr.length;
@@ -242,8 +252,7 @@ pub const Header = packed struct(u64) {
             const oa = ptr.asObjectArray();
             return mem.bytesAsSlice(
                 T,
-                if (!form.isIndexable()) (&[0]T{})
-                    else if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
+                if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
                     else @ptrCast([*]T,oa)[0..size*scale]);
         }
     }
@@ -376,15 +385,7 @@ pub const Header = packed struct(u64) {
         }
     }
 };
-pub inline fn header(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) Header {
-    return Header {
-        .length = length,
-        .age = age,
-        .objectFormat = format,
-        .hash = hash,
-        .classIndex = classIndex,
-    };
-}
+pub const header = Header.init;
 test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
@@ -436,6 +437,6 @@ pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
 
 const abcde = CompileTimeString("abcde").init();
 test "compile time" {
-    std.debug.print("abcde: {any}\n",.{abcde.h()});
-    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
+//    std.debug.print("abcde: {any}\n",.{abcde.h()});
+//    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
 }

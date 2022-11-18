@@ -7,6 +7,7 @@ const Nil = object.Nil;
 const u64_MINVAL = object.u64_MINVAL;
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
+const arenas = @import("arenas.zig");
 const dispatch = @import("dispatch.zig");
 const methodT = dispatch.methodT;
 const heap = @import("heap.zig");
@@ -66,9 +67,9 @@ const Class_Table = struct {
         return std.math.order(l,r);
     }
     fn init(initialClassTableSize:usize) !Self {
-        var theHeapObject = try heap.globalArena.asArena().allocObject(ClassTable_I,
+        var theHeapObject = try arenas.globalArena.asArena().allocObject(ClassTable_I,
                                                   0,initialClassTableSize*2,Object,heap.Age.global);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareU32,0);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8) catch @panic("class table not allocated"),compareU32,0);
         return Class_Table {
             .theObject = theHeapObject.asObject(),
         };
@@ -142,7 +143,7 @@ pub fn subClass(superclassName: Object, className: Object) !void {
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].isNil()) {
-        const arena = heap.globalArena.asArena();
+        const arena = arenas.globalArena.asArena();
         const metaclass_I = classTable.nextFree();
         metaclass = arena.allocStruct(Metaclass_I, Metaclass_S, Nil,heap.Age.global) catch @panic("No space");
         classes[metaclass_I] = Object.from(metaclass);

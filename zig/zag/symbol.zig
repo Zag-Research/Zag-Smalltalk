@@ -4,7 +4,6 @@ const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
 const class = @import("class.zig");
-const globalArena = @import("arenas.zig").globalArena;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
 const thread = @import("thread.zig");
@@ -84,7 +83,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
 var symbolTable : ?Symbol_Table = null;
 
 pub fn init(initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
-    var arena = globalArena.asArena();
+    var arena = @import("arenas.zig").globalArena.asArena();
     var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
     symbolTable = st;
     st.loadSymbols(initialSymbolStrings[0..]);
@@ -131,10 +130,10 @@ fn numArgs(obj: object.Object) u8 {
 const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
-    fn init(arena: *heap.Arena, initialSymbolTableSize:usize) !Self {
+    fn init(arena: *@import("arenas.zig").Arena, initialSymbolTableSize:usize) !Self {
         var theHeapObject = try arena.allocObject(class.SymbolTable_I,
                                                   0,initialSymbolTableSize*2,object.Object,heap.Age.stack);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8) catch @panic("symbol table unallocated"),object.compareObject,Nil);
         return Symbol_Table {
             .theObject = theHeapObject.asObject(),
         };

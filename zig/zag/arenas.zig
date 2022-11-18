@@ -177,8 +177,9 @@ pub const GlobalArena = struct {
     const nFreeLists = bitToRepresent(Header.maxLength);
     const allocationUnit = Header.maxLength; // size in u64 units including the header
     fn findAllocationList(target: u16) usize {
-        if (target > 1<<(nFreeLists-1)) return 0;
-        return bitToRepresent(target);
+        if (target > Header.maxLength) return 0;
+        if (target < 2) return 1;
+        return bitToRepresent(target-1);
     }
 };
 test "findAllocationList" {
@@ -188,12 +189,9 @@ test "findAllocationList" {
     try ee(findAllocationList(2),1);
     try ee(findAllocationList(3),2);
     try ee(findAllocationList(4),2);
-    if (std.mem.page_size < 8192)
-        {try ee(findAllocationList(400),0);}
-    else if (std.mem.page_size < 16384)
-        {try ee(findAllocationList(800),0);}
-    else
-        try ee(findAllocationList(1400),0);
+    try ee(findAllocationList(17),5);
+    try ee(findAllocationList(Header.maxLength),12);
+    try ee(findAllocationList(Header.maxLength+1),0);
 }
 pub const Arena = extern struct {
     vtable: Vtable,
@@ -201,42 +199,34 @@ pub const Arena = extern struct {
     const objectWidth = @sizeOf(Object);
     const Vtable = extern struct {
         alloc: *const fn(self: *Self, totalSize: usize) anyerror!HeapPtr,
+        maxSize: usize,
+        createAge: usize,
     };
-    fn alloc(self: *Arena, classIndex: class.ClassIndex, form: Format, iv_size: usize, asize: usize, size: usize, totalSize: usize, fill: Object, age: Age) !HeapPtr{
+    fn alloc(self: *Arena, classIndex: class.ClassIndex, form: Format, ivSize: usize, aSize: usize, fill: Object) !HeapPtr{
+        var totalSize = 1+ivSize;
+        const size = 0;
+        const age = self.vtable.createAge;
         const result = @ptrCast([*]Object,try self.vtable.alloc(self,totalSize));
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
         const head = header(@intCast(u12,size),form,classIndex,hash,age);
         mem.set(Object,result[1..totalSize],fill);
-        if (totalSize>size+1) result[iv_size+1] = @bitCast(Object,asize);
+        if (totalSize>size+1) result[ivSize+1] = @bitCast(Object,aSize);
         result[0] = @bitCast(Object,head);
         return @ptrCast(HeapPtr,result);
     }
-    pub fn allocObjectX(self : *Self, classIndex : class.ClassIndex, format: Format, iv_size : usize, array_size : usize, age: Age) !HeapPtr {
-        var form = format.noBase();
-        var totalSize = iv_size + array_size + 1;
-        if (iv_size>0) form=form.object();
-        if (array_size>0) {
-            form=form.array();
-            if (array_size>32766) form=form.object(); // big arrays use Format.both
-        }
-        if (format.isWeak()) form=form.weak();
-        if (form.hasBoth()) totalSize += 1;
-        const size = if (form.hasInstVars()) iv_size else array_size;
-        return self.alloc(classIndex, form, iv_size, array_size, size, totalSize, object.Nil, age);
+    pub inline fn allocObject(self : *Self, classIndex : class.ClassIndex, ivSize : usize) !HeapPtr {
+        return self.alloc(classIndex, Format.object, ivSize, 0, object.Nil);
     }
-    pub fn allocObject(self : *Self, classIndex : class.ClassIndex, iv_size : usize, array_size : usize, comptime T: type, age: Age) !HeapPtr {
-        _ = iv_size;
+    pub inline fn allocArray(self : *Self, classIndex : class.ClassIndex, ivSize : usize, arraySize : usize, comptime T: type) !HeapPtr {
+        var form = if (ivSize>0) Format.object else Format.none;
         const width = @sizeOf(T);
-        const asize = (array_size*width+objectWidth-width)/objectWidth;
-        const form = Format.none.raw(T,array_size);
-        const size = @min(asize,Header.maxLength);
-        var totalSize = asize+@as(usize,if (size<asize) 2 else 1);
-        return self.alloc(classIndex, form, 0, asize, size, totalSize, object.ZERO, age);
+        const aSize = (arraySize*width+objectWidth-width)/objectWidth;
+        return self.alloc(classIndex, form, ivSize, aSize, object.ZERO);
     }
-    pub fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, fill: Object, age: Age) !*T {
-        const asize = (@sizeOf(T)+objectWidth-1)/objectWidth;
-        const form = Format.object;
-        return @ptrCast(*T,@alignCast(8,try self.alloc(classIndex, form, asize, 0, asize, asize+1, fill, age)));
+    pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, fill: Object) !*T {
+        const ivSize = (@sizeOf(T)+objectWidth-1)/objectWidth;
+        const aSize = (extra+objectWidth-1)/objectWidth;
+        return @ptrCast(*T,@alignCast(@alignOf(T),try self.alloc(classIndex, if (aSize>0) Format.both else Format.object, ivSize, aSize, fill)));
     }
 };
 fn TempArena(comptime size: usize) type {
@@ -244,14 +234,14 @@ fn TempArena(comptime size: usize) type {
         const Self = @This();
         vtable : Arena.Vtable,
         heap: [size]Object,
-        ptr: usize,
+        nextFree: usize,
         pub fn init() Self {
             return Self {
                 .vtable = Arena.Vtable {
                     .alloc = alloc,
                 },
                 .heap = undefined,
-                .ptr = 0,
+                .nextFree = 0,
             };
         }
         pub inline fn asArena(self: *Self) *Arena {
@@ -259,17 +249,17 @@ fn TempArena(comptime size: usize) type {
         }
         fn alloc(arena: *Arena, totalSize: usize) !HeapPtr {
             const self = @ptrCast(*Self,@alignCast(@alignOf(Self),arena));
-            if (self.ptr+totalSize>size) {
-                std.debug.print("ptr = {} totalSize = {} size = {}\n",.{self.ptr,totalSize,size});
+            if (self.nextFree+totalSize>size) {
+                std.debug.print("nextFree = {} totalSize = {} size = {}\n",.{self.nextFree,totalSize,size});
                 return error.HeapFull;
             }
-            const result = @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),&self.heap[self.ptr]));
-            self.ptr += totalSize;
+            const result = @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),&self.heap[self.nextFree]));
+            self.nextFree += totalSize;
             return result;
         }
         fn verify(self: *Self, expected: []Object) !void {
-            if (self.ptr!=size) {
-                std.debug.print("ptr = {} expected {}\n",.{self.ptr,size});
+            if (self.nextFree!=size) {
+                std.debug.print("nextFree = {} expected {}\n",.{self.nextFree,size});
                 return error.HeapDidnotEndUpAtEnd;
             }
             var ok=true;
@@ -289,9 +279,12 @@ test "temp arena" {
     var arena = TempArena(5).init();
     const testArena = arena.asArena();
     const obj1 : HeapPtr = try testArena.allocObject(42,3,0,Object,Age.stack);
+    std.debug.print("obj1: 0x{x:0>16}\n",.{obj1.o().u()});
     try testing.expectEqual(@alignOf(@TypeOf(obj1)),Object.alignment);
     try testing.expect(obj1.asObject().isHeap());
     try testing.expectEqual(obj1.inHeapSize(),4);
+    try testing.expectEqual(obj1.asObject().inHeapSize(),4);
+    try testing.expectEqual(Nil.inHeapSize(),0);
     try testing.expectError(error.HeapFull,testArena.allocObject(42,3,0,Object,Age.stack));
 }
 test "slicing" {
@@ -299,12 +292,14 @@ test "slicing" {
     var arena = TempArena(16).init();
     const testArena = arena.asArena();
     const hp0 = try testArena.allocObject(42,1,0,Object,Age.stack);
-    try testing.expectEqual(hp0.arrayAsSlice(u8).len,0);
+    try testing.expectEqual((try hp0.arrayAsSlice(u8)).len,0);
     const hp1 = try testArena.allocObject(42,1,2,Object,Age.stack);
     const obj1 = hp1.asObject();
-    try testing.expectEqual(hp1.arrayAsSlice(u8).len,16);
-    try testing.expectEqual(obj1.arrayAsSlice(u8).len,16);
-    try testing.expectEqual(hp1.arrayAsSlice(u8),obj1.arrayAsSlice(u8));
+    try testing.expect(hp1.isIndexable());
+    try testing.expect(obj1.isIndexable());
+    try testing.expectEqual((try hp1.arrayAsSlice(u8)).len,obj1.arrayAsSlice(u8).len);
+    try testing.expectEqual((try hp1.arrayAsSlice(u8)).ptr,obj1.arrayAsSlice(u8).ptr);
+//    try testing.expectEqual(hp1.arrayAsSlice(u8),obj1.arrayAsSlice(u8));
 }
 
 test "one object #1 allocator" {
