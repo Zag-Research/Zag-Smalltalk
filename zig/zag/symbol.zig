@@ -83,8 +83,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
 var symbolTable : ?Symbol_Table = null;
 
 pub fn init(initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !Symbol_Table {
-    var arena = @import("arenas.zig").globalArena.asArena();
-    var st = symbolTable orelse try Symbol_Table.init(arena,initialSymbolTableSize);
+    var st = symbolTable orelse try Symbol_Table.init(initialSymbolTableSize);
     symbolTable = st;
     st.loadSymbols(initialSymbolStrings[0..]);
     st.loadSymbols(str);
@@ -130,7 +129,8 @@ fn numArgs(obj: object.Object) u8 {
 const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
-    fn init(arena: *@import("arenas.zig").Arena, initialSymbolTableSize:usize) !Self {
+    fn init(initialSymbolTableSize:usize) !Self {
+        var arena = &@import("arenas.zig").globalArena;
         var theHeapObject = try arena.allocObject(class.SymbolTable_I,
                                                   0,initialSymbolTableSize*2,object.Object,heap.Age.stack);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8) catch @panic("symbol table unallocated"),object.compareObject,Nil);

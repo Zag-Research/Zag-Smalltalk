@@ -19,8 +19,8 @@ pub const Thread = extern struct {
     next: ?*Thread,
     id : u64,
     nursery : arenas.NurseryArena align(@alignOf(arenas.NurseryArena)),
-    teen1 : arenas.TeenArena,
-    teen2 : arenas.TeenArena,
+//    teen1 : arenas.TeenArena,
+//    teen2 : arenas.TeenArena,
     const Self = @This();
     pub fn new() Self {
         defer next_thread_number += 1;
@@ -29,14 +29,14 @@ pub const Thread = extern struct {
             .next = null,
 //            .debug = null,
             .nursery = arenas.NurseryArena.new(),
-            .teen1 = arenas.TeenArena.new(),
-            .teen2 = arenas.TeenArena.new(),
+//            .teen1 = arenas.TeenArena.new(),
+//            .teen2 = arenas.TeenArena.new(),
         };
     }
     pub fn init(self: *Self) void {
-        self.nursery.init();
-        self.teen1.init(&self.teen2);
-        self.teen2.init(&self.teen1);
+        self.nursery.init(self);
+//        self.teen1.init(&self.teen2);
+//        self.teen2.init(&self.teen1);
     }
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);

@@ -12,7 +12,11 @@ const ContextPtr = @import("zag/execute.zig").ContextPtr;
 const TestExecution = @import("zag/execute.zig").TestExecution;
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
-const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
+//const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
+pub fn uniqueSymbol(uniqueNumber:u24) Object {
+    return @bitCast(Object,uniqueNumber|@as(u64,0xfff60007ff000000));
+}
+
 const i = struct {
     usingnamespace @import("zag/primitives.zig").inlines;
 };
