@@ -198,11 +198,11 @@ pub const Header = packed struct(u64) {
     pub const partialOnStack = @bitCast(Header,@as(u64,0));
     inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) Header {
         return Header {
-            .length = length,
-            .age = age,
-            .objectFormat = format,
-            .hash = hash,
             .classIndex = classIndex,
+            .hash = hash,
+            .objectFormat = format,
+            .age = age,
+            .length = length,
         };
     }
     pub inline fn isInStack(self: HeapConstPtr) bool {
@@ -409,7 +409,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
         chars: [size]u8,
         const Self = @This();
         pub fn init() Self {
-            var result : Self = .{
+            var result = Self {
                 .header = header((size+7)/8,Format.immutable.raw(u8,size),class.String_I,hash,Age.static),
                 .chars = [_]u8{0}**size,
             };

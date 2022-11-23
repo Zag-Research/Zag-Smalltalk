@@ -51,10 +51,10 @@ pub const NurseryArena = extern struct {
     }
     pub fn new() NurseryArena {
         return NurseryArena {
-            .heapArea = undefined,
             .hp = undefined,
             .sp = undefined,
             .thread = undefined,
+            .heapArea = undefined,
         };
     }
     pub fn init(self: *Self, thr: *thread.Thread) void {

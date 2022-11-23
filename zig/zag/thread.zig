@@ -25,9 +25,8 @@ pub const Thread = extern struct {
     pub fn new() Self {
         defer next_thread_number += 1;
         return Self {
-            .id = next_thread_number,
             .next = null,
-//            .debug = null,
+            .id = next_thread_number,
             .nursery = arenas.NurseryArena.new(),
 //            .teen1 = arenas.TeenArena.new(),
 //            .teen2 = arenas.TeenArena.new(),
