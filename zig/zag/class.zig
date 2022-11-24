@@ -67,7 +67,7 @@ const Class_Table = struct {
         return std.math.order(l,r);
     }
     fn init(initialClassTableSize:usize) !Self {
-        var theHeapObject = try arenas.globalArena.asArena().allocObject(ClassTable_I,
+        var theHeapObject = try arenas.globalArena.allocObject(ClassTable_I,
                                                   0,initialClassTableSize*2,Object,heap.Age.global);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8) catch @panic("class table not allocated"),compareU32,0);
         return Class_Table {
@@ -143,11 +143,10 @@ pub fn subClass(superclassName: Object, className: Object) !void {
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].isNil()) {
-        const arena = arenas.globalArena.asArena();
         const metaclass_I = classTable.nextFree();
-        metaclass = arena.allocStruct(Metaclass_I, Metaclass_S, Nil,heap.Age.global) catch @panic("No space");
+        metaclass = arenas.globalArena.allocStruct(Metaclass_I, Metaclass_S, 8, Nil) catch @panic("No space");
         classes[metaclass_I] = Object.from(metaclass);
-        class = arena.allocStruct(metaclass_I, Class_S, Nil,heap.Age.global) catch @panic("No space");
+        class = arenas.globalArena.allocStruct(metaclass_I, Class_S, 8, Nil) catch @panic("No space");
         const class_O = Object.from(class);
         metaclass.super.index=Object.from(class_I);
         metaclass.soleInstance=class_O;

@@ -160,78 +160,78 @@ const p = struct {
 test "simple ==" {
     const expect = std.testing.expect;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,4,
-        p.pushLiteral,4,            
-        p.p110,"next","next:",
-        return_tos,
+        &p.pushLiteral,4,
+        &p.pushLiteral,4,            
+        &p.p110,"next","next:",
+        &return_tos,
     });
-    const pr = std.io.getStdOut().writer().print;
+    const pr = std.debug.print;
     const result = testExecute(prog.asCompiledMethodPtr());
-    try pr("result = {}\n",.{result});
+    pr("result = {}\n",.{result});
     try expect(result.to(bool));
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,3,
-        p.pushLiteral,4,            
-        p.p1,"success",
-        failed_test,
-        "success:", return_tos,
+        &p.pushLiteral,3,
+        &p.pushLiteral,4,            
+        &p.p1,"success",
+        &failed_test,
+        "success:", &return_tos,
     });
-    const pr = std.io.getStdOut().writer().print;
+    const pr = std.debug.print;
     const result = testExecute(prog.asCompiledMethodPtr());
-    try pr("result = {}\n",.{result});
+    pr("result = {}\n",.{result});
     try expectEqual(result.toInt(),7);
 }
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,4,            
-        p.pushLiteral, 0x3_ffffffffffff,
-        p.p1,"succeeded",
-        return_tos,
-        "succeeded:",failed_test,
+        &p.pushLiteral,4,            
+        &p.pushLiteral, 0x3_ffffffffffff,
+        &p.p1,"succeeded",
+        &return_tos,
+        "succeeded:",&failed_test,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),4);
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,3,
-        p.pushLiteral,4,            
-        p.p110,"success","success:",
-        return_tos,
+        &p.pushLiteral,3,
+        &p.pushLiteral,4,            
+        &p.p110,"success","success:",
+        &return_tos,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr()),False);
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,3,
-        p.pushLiteral,4,            
-        p.p110,"success","success:",
-        p.ifTrue,"true",
-        p.pushLiteral,17,
-        p.branch,"common",
+        &p.pushLiteral,3,
+        &p.pushLiteral,4,            
+        &p.p110,"success","success:",
+        &p.ifTrue,"true",
+        &p.pushLiteral,17,
+        &p.branch,"common",
         "true:",
-        p.pushLiteral,42,
-        "common:", return_tos,
+        &p.pushLiteral,42,
+        "common:", &return_tos,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),17);
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,3,
-        p.pushLiteral,4,            
-        p.p169,"success","success:",
-        p.ifTrue,"true",
-        p.pushLiteral,17,
-        p.branch,"common",
+        &p.pushLiteral,3,
+        &p.pushLiteral,4,            
+        &p.p169,"success","success:",
+        &p.ifTrue,"true",
+        &p.pushLiteral,17,
+        &p.branch,"common",
         "true:",
-        p.pushLiteral,42,
-        "common:", return_tos,
+        &p.pushLiteral,42,
+        "common:", &return_tos,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),42);
 }
@@ -240,11 +240,11 @@ test "dispatch3" {
 }
 pub fn main() void {
     var prog = compileMethod(Nil,0,0,.{
-        p.pushLiteral,3,
-        p.pushLiteral,4,            
-        p.p1,"success",
-        failed_test,
-        "success:", return_tos,
+        &p.pushLiteral,3,
+        &p.pushLiteral,4,            
+        &p.p1,"success",
+        &failed_test,
+        "success:", &return_tos,
     });
     _ = testExecute(prog.asCompiledMethodPtr());
 }

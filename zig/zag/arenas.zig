@@ -46,8 +46,8 @@ pub const NurseryArena = extern struct {
     heapArea: [nursery_size-field_size/@sizeOf(Header)]Header,
     const field_size = @sizeOf(HeaderArray)+@sizeOf([*]Object);
     comptime {
-        if (checkEqual(@sizeOf(NurseryArena),nursery_size*@sizeOf(Header))) |s|
-            @compileError("Modify NurseryArena.heap to make @sizeOf(NurseryArena) == " ++ s);
+//        if (checkEqual(@sizeOf(NurseryArena),nursery_size*@sizeOf(Header))) |s|
+//            @compileError("Modify NurseryArena.heap to make @sizeOf(NurseryArena) == " ++ s);
     }
     pub fn new() NurseryArena {
         return NurseryArena {
@@ -154,21 +154,28 @@ pub const GlobalArena = struct {
 //             .freeLists = [_]FreeListPtr{null}**nFreeLists,
         };
     }
-//     fn alloc(arena: *Self, totalSize: usize) !HeapPtr {
-//         _ = arena; _ = totalSize;
-//         unreachable;
-//     }
-//    pub fn promote(obj: Object) !Object {
-//        if (!obj.isHeap()) return obj;
-//        unreachable;
-// //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
-// //       return result.asObject();
-//     }
-//     fn findAllocationList(target: u16) usize {
-//         if (target > Header.maxLength) return 0;
-//         if (target < 2) return 1;
-//         return bitToRepresent(target-1);
-//     }
+    fn alloc(arena: *Self, totalSize: usize) !HeapPtr {
+        _ = arena; _ = totalSize;
+        unreachable;
+    }
+   pub fn promote(obj: Object) !Object {
+       if (!obj.isHeap()) return obj;
+       unreachable;
+//       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
+//       return result.asObject();
+    }
+    fn findAllocationList(target: u16) usize {
+        if (target > Header.maxLength) return 0;
+        if (target < 2) return 1;
+        return bitToRepresent(target-1);
+    }
+    pub fn allocObject(_: *Self, _ : class.ClassIndex, _ : usize, _: anytype, _: anytype, _: anytype) !HeapPtr {
+        unreachable;
+    }
+    pub fn allocStruct(_: *Self, _: class.ClassIndex, comptime T: type, _: usize, _: Object) !*T {
+        unreachable;
+    }
+
 };
 // test "findAllocationList" {
 //     const ee = std.testing.expectEqual;

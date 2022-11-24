@@ -12,10 +12,10 @@ const ContextPtr = @import("zag/execute.zig").ContextPtr;
 const TestExecution = @import("zag/execute.zig").TestExecution;
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
-//const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
-pub fn uniqueSymbol(uniqueNumber:u24) Object {
-    return @bitCast(Object,uniqueNumber|@as(u64,0xfff60007ff000000));
-}
+const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
+//pub fn uniqueSymbol(uniqueNumber:u24) Object {
+//    return @bitCast(Object,uniqueNumber|@as(u64,0xfff60007ff000000));
+//y}
 
 const i = struct {
     usingnamespace @import("zag/primitives.zig").inlines;
@@ -120,7 +120,7 @@ fn timeThread(n: i64) void {
 }
 test "fibComp" {
     var method = compileMethod(Nil,0,0,.{
-        fibComp,
+        &fibComp,
     });
     var n:u32 = 1;
     while (n<40) : (n += 1) {
