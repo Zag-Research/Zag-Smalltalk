@@ -67,7 +67,7 @@ fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
 const fibThreadRef = uniqueSymbol(42);
 var fibThread =
     compileMethod(Nil,0,0,.{
-        &p.noop,
+        "recurse:",
         &p.dup,
         &p.pushLiteral, Object.from(2),
         &p.p5,"label1",
@@ -84,13 +84,13 @@ var fibThread =
         &p.p2, "label4",
         &p.primFailure,
         "label4:",
-        &p.call, fibThreadRef,
+        &p.callLocal, "recurse",
         &p.pushTemp1,
         &p.pushLiteral, Object.from(2),
         &p.p2,"label5",
         &p.primFailure,
         "label5:",
-        &p.call,fibThreadRef,
+        &p.callLocal, "recurse",
         &p.p1,"label6",
         &p.primFailure,
         "label6:",

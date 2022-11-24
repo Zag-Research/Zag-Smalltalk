@@ -353,7 +353,8 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
     @setEvalBranchQuota(2000);
     const methodType = CompileTimeMethod(tup);
     var method = methodType.init(name,locals);
-    comptime var n = 0;
+    method.code[0] = Code.prim(controlPrimitives.noop);
+    comptime var n = 1;
     _ = parameters;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
@@ -384,7 +385,7 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
                                         .Pointer => {
                                             if (t[t.len-1]==':') {
                                                 if (comptime std.mem.startsWith(u8,t,field)) {
-                                                    method.code[n]=Code.int(lp-n-1);
+                                                    method.code[n]=Code.int(lp-n);
                                                     n=n+1;
                                                     found = true;
                                                 }
@@ -555,6 +556,12 @@ pub const controlPrimitives = struct {
     pub fn call(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         context.setTPc(pc+1);
         const newPc = pc[0].method.codePtr();
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
+    }
+    pub fn callLocal(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        context.setTPc(pc+1);
+        const offset = pc[0].int;
+        const newPc = if (offset>=0) pc+1+@intCast(u64, offset) else pc+1-@intCast(u64, -offset);
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
