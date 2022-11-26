@@ -29,8 +29,9 @@ pub const MethodReturns = void;
 //     }
 // };
 
-pub fn Context(codeType: type, compiledMethodPtr: type) type {
-//    return extern struct {
+pub const CodeContextPtr = Context(Code,CompiledMethodPtr);
+pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
+    return extern struct {
     header: heap.Header,
     tpc: [*]const codeType, // threaded PC
     npc: * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns, // native PC - in Continuation Passing Style
@@ -44,7 +45,7 @@ pub fn Context(codeType: type, compiledMethodPtr: type) type {
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
     fn init(method: compiledMethodPtr) Self {
         return Self {
-            .header = heap.header(2,Format.both,class.Self_I,@truncate(u24,@ptrToInt(method)),Age.static),
+            .header = heap.header(2,Format.both,class.Context_I,@truncate(u24,@ptrToInt(method)),Age.static),
             .tpc = undefined,
             .npc = undefined,
             .size = 2,
@@ -146,7 +147,7 @@ pub fn Context(codeType: type, compiledMethodPtr: type) type {
     }
 };
 }
-pub fn TestExecution(codeType: type, contextType: type, compiledMethodPtr: type) type {
+pub fn TestExecution(comptime codeType: type, comptime compiledMethodPtr: type) type {
     return struct {
     thread: Thread,
     ctxt: contextType,
@@ -154,6 +155,7 @@ pub fn TestExecution(codeType: type, contextType: type, compiledMethodPtr: type)
     hp: Hp,
     pc: [*] const codeType,
     const Self = @This();
+    const contextType = Context(codeType,compiledMethodPtr);
     var endSp: [*]Object = undefined;
     var endHp: Hp = undefined;
     var endPc: [*] const codeType = undefined;
@@ -263,6 +265,8 @@ pub const Code = extern union {
     object: Object,
     header: heap.Header,
     method: CompiledMethodPtr,
+    const ContextPtr = *Context(Code,CompiledMethodPtr);
+    pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -292,6 +296,8 @@ pub const Code = extern union {
     }
 };
 fn countNonLabels(comptime tup: anytype) usize {
+    const ContextPtr = *Context(Code,CompiledMethodPtr);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     var n = 1;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
@@ -356,6 +362,8 @@ fn CompileTimeMethod(comptime tup: anytype) type {
 }
 pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime locals: comptime_int, comptime tup: anytype) CompileTimeMethod(tup) {
     @setEvalBranchQuota(2000);
+    const ContextPtr = *Context(Code,CompiledMethodPtr);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     const methodType = CompileTimeMethod(tup);
     var method = methodType.init(name,locals);
     method.code[0] = Code.prim(controlPrimitives.noop);
@@ -436,10 +444,9 @@ test "compiling method" {
     try expectEqual(t[9].method,mcmp);
     try expectEqual(t[10].object,Nil);
 }
-fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-    return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-}
 pub const controlPrimitives = struct {
+    const ContextPtr = *Context(Code,CompiledMethodPtr);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: Context, needed: usize) void {
         _ = thread;
         _ = pc;
@@ -615,6 +622,11 @@ const p = struct {
     usingnamespace controlPrimitives;
 };
 pub const testing = struct {
+    const ContextPtr = *Context(Code,CompiledMethodPtr);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+    fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
+    }
     pub fn return_tos(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         _ = pc;
         _ = sp;
@@ -646,7 +658,7 @@ pub const testing = struct {
     }
     pub fn testExecute(method: * const CompiledMethod) Object {
         const code = method.codeSlice();
-        var context: Context = undefined;
+        var context: Context(Code,CompiledMethodPtr) = undefined;
         var thread = Thread.new();
         thread.init();
         var sp = thread.endOfStack()-1;
@@ -680,7 +692,7 @@ test "simple return via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnNoContext,
     });
-    var te = TestExecution.new();
+    var te = TestExecution(Code,CompiledMethodPtr).new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -697,7 +709,7 @@ test "context return via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnWithContext,1,
     });
-    var te = TestExecution.new();
+    var te = TestExecution(Code,CompiledMethodPtr).new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -712,7 +724,7 @@ test "context returnTop via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnTop,1,
     });
-    var te = TestExecution.new();
+    var te = TestExecution(Code,CompiledMethodPtr).new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -739,7 +751,7 @@ test "simple executable" {
         &p.branch,"label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution.new();
+    var te = TestExecution(Code,CompiledMethodPtr).new();
     te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }
