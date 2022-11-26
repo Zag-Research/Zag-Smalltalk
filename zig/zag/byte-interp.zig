@@ -20,6 +20,7 @@ const Context = @import("execute.zig").Context;
 const ContextPtr = @import("execute.zig").ContextPtr;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
+const print = std.debug.print;
 pub const TestByteExecution = struct {
     thread: Thread,
     ctxt: Context,
@@ -55,7 +56,7 @@ pub const TestByteExecution = struct {
         const pc = method.codePtr();
         const hp = self.thread.getHeap();
         self.ctxt.setNPc(Self.end);
-        pc[0].prim(pc+1,sp,hp,&self.thread,&self.ctxt);
+        ByteCode.interpret(pc,sp,hp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.hp = endHp;
         self.pc = endPc;
@@ -117,8 +118,44 @@ pub const CompiledByteCodeMethod = extern struct {
 };
 pub const ByteCode = enum(u8) {
     noop,
-    push,
+    branch,
+    ifTrue,
+    ifFalse,
+    primFailure,
+    dup,
+    over,
+    drop,
+    pushLiteral,
+    pushLiteral0,
+    pushLiteral1,
+    pushNil,
+    pushTrue,
+    pushFalse,
+    popIntoTemp,
+    popIntoTemp1,
+    pushTemp,
+    pushTemp1,
+    lookupByteCodeMethod,
+    send,
+    call,
+    pushContext,
+    returnTrampoline,
+    returnWithContext,
+    returnTop,
+    returnNoContext,
+    dnu,
+    return_tos,
+    failed_test,
+    unexpected_return,
+    dumpContext,
     exit,
+    fn interpret(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, _: *Thread, _: ContextPtr) void {
+        while (true) {
+            switch (pc[0]) {
+
+            }
+        }
+    }
     inline fn int(i: i8) ByteCode {
         @setRuntimeSafety(false);
         return @intToEnum(ByteCode,i);
@@ -131,7 +168,7 @@ fn countNonLabels(comptime tup: anytype) usize {
             Object => {n+=1;},
             @TypeOf(null) => {n+=1;},
             comptime_int,comptime_float => {n+=1;},
-            ThreadedFn => {n+=1;},
+            ByteCode => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
                     .Pointer => {if (field[field.len-1]!=':') n = n + 1;},
@@ -198,7 +235,7 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
             Object => {method.code[n]=ByteCode.object(field);n=n+1;},
             @TypeOf(null) => {method.code[n]=ByteCode.object(Nil);n=n+1;},
             comptime_int => {method.code[n]=ByteCode.int(field);n = n+1;},
-            ThreadedFn => {method.code[n]=ByteCode.prim(field);n=n+1;},
+            ByteCode => {method.code[n]=ByteCode.prim(field);n=n+1;},
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
@@ -206,23 +243,23 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                         if (field[field.len-1]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            method.code[n]=Code.int(n);
+                            method.code[n]=ByteCode.int(n);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
-                            method.code[n]=Code.int(-1);
+                            method.code[n]=ByteCode.int(-1);
                             n=n+1;
                             found = true;
                         } else {
                             comptime var lp = 0;
                             inline for (tup) |t| {
-                                if (@TypeOf(t) == ThreadedFn) lp=lp+1
+                                if (@TypeOf(t) == ByteCode) lp=lp+1
                                     else
                                     switch (@typeInfo(@TypeOf(t))) {
                                         .Pointer => {
                                             if (t[t.len-1]==':') {
                                                 if (comptime std.mem.startsWith(u8,t,field)) {
-                                                    method.code[n]=Code.int(lp-n-1);
+                                                    method.code[n]=ByteCode.int(lp-n-1);
                                                     n=n+1;
                                                     found = true;
                                                 }
@@ -244,8 +281,7 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
 //    method.print();
     return method;
 }
-const stdout = std.io.getStdOut().writer();
-const print = std.io.getStdOut().writer().print;
+const b = ByteCode;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     const mref = comptime uniqueSymbol(42);
@@ -268,229 +304,9 @@ test "compiling method" {
     try expectEqual(t[9].method,mcmp);
     try expectEqual(t[10].object,Nil);
 }
-fn execute(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-    return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-}
-pub const controlPrimitives = struct {
-    pub inline fn checkSpace(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: Context, needed: usize) void {
-        _ = thread;
-        _ = pc;
-        _ = hp;
-        _ = context;
-        _ = sp;
-        _ = needed;
-    }
-    pub fn noop(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-    }
-    pub fn branch(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const offset = pc[0].int;
-        if (offset>=0) {
-            const target = pc+1+@intCast(u64, offset);
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
-            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context});
-        }
-        if (offset == -1) {
-            const target = context.getTPc();
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
-            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context});
-        }
-        const target = pc+1-@intCast(u64, -offset);
-        if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
-        return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread.decCheck(),context});
-    }
-    pub fn ifTrue(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const v = sp[0];
-        if (True.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context});
-        if (thread.needsCheck()) return @call(tailCall,Thread.check,.{pc+2,sp,hp,thread,context});
-        if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context});
-        @panic("non boolean");
-    }
-    pub fn ifFalse(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const v = sp[0];
-        if (False.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context});
-        if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context});
-        @panic("non boolean");
-    }
-    pub fn primFailure(_: [*]const ByteCode, _: [*]Object, _: Hp, _: *Thread, _: ContextPtr) void {
-        @panic("primFailure");
-    }
-    pub fn dup(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=newSp[1];
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn over(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=newSp[2];
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn drop(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context});
-    }
-    pub fn pushLiteral(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=pc[0].object;
-        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context});
-    }
-    pub fn pushLiteral0(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=Object.from(0);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn pushLiteral1(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=Object.from(1);
-        return @call(tailCall,pc[1].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn pushNil(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=Nil;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn pushTrue(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=True;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn pushFalse(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=False;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    pub fn popIntoTemp(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        context.setTemp(pc[0].uint,sp[0]);
-        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context});
-    }
-    pub fn popIntoTemp1(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        context.setTemp(0,sp[0]);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context});
-    }
-    pub fn pushTemp(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=context.getTemp(pc[0].uint-1);
-        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context});
-    }
-    pub fn pushTemp1(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const newSp = sp-1;
-        newSp[0]=context.getTemp(0);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
-    }
-    fn lookupByteCodeMethod(cls: class.ClassIndex,selector: u64) CompiledByteCodeMethodPtr {
-        _ = cls;
-        _ = selector;
-        @panic("unimplemented");
-    }
-    pub fn send(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _=pc; _=sp; _=hp; _=thread; _=context;
-        @panic("not implemented");
-        // const selector = pc[0].object;
-        // const numArgs = selector.numArgs();
-        // const newPc = lookupByteCodeMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
-        // context.setTPc(pc+1);
-        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
-    }
-    pub fn call(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        context.setTPc(pc+1);
-        const newPc = pc[0].method.codePtr();
-        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
-    }
-    pub fn pushContext(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const method = CompiledByteCodeMethod.methodFromCodeOffset(pc);
-        // can rewrite pc[0] to be direct mathod reference and pc[-1] to be pushContextAlt
-        // - so second time will be faster
-        // - but need to be careful to do in an idempotent way to guard against another thread executing this in parallel
-        const stackStructure = method.stackStructure;
-        const locals = stackStructure.h0;
-        const maxStackNeeded = stackStructure.h1;
-        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
-        const ctxt = result.ctxt;
-        ctxt.setNPc(returnTrampoline);
-        return @call(tailCall,pc[1].prim,.{pc+2,result.ctxt.asObjectPtr(),result.hp,thread,ctxt});
-    }
-    pub fn returnTrampoline(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-    }
-    pub fn returnWithContext(pc: [*]const ByteCode, _: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const result = context.pop(thread,pc[0].uint);
-        const newSp = result.sp;
-        const callerContext = result.ctxt;
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
-    }
-    pub fn returnTop(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const top = sp[0];
-        const result = context.pop(thread,pc[0].uint);
-        const newSp = result.sp;
-        newSp[0] = top;
-        const callerContext = result.ctxt;
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
-    }
-    pub fn returnNoContext(_: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context});
-    }
-    pub fn dnu(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        @panic("unimplemented");
-    }
-};
 const p = struct {
     usingnamespace controlPrimitives;
 };
-pub const testing = struct {
-    pub fn return_tos(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        return;
-    }
-    pub fn failed_test(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        _ = sp;
-        @panic("failed_test");
-    }
-    pub fn unexpected_return(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        @panic("unexpected_return");
-    }
-    pub fn dumpContext(pc: [*]const ByteCode, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        print("pc: 0x{x:0>16} sp: 0x{x:0>16} hp: 0x{x:0>16}",.{pc,sp,hp});
-        context.print(sp,thread);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-    }
-    pub fn testExecute(method: * const CompiledByteCodeMethod) Object {
-        const code = method.codeSlice();
-        var context: Context = undefined;
-        var thread = Thread.newForTest(null) catch unreachable;
-        thread.init();
-        var sp = thread.endOfStack()-1;
-        sp[0]=Nil;
-        execute(code.ptr,sp+1,thread.getHeap(),(&thread).maxCheck(),&context);
-        return sp[0];
-    }
-    pub fn debugExecute(method: * const CompiledByteCodeMethod) Object {
-        const code = method.codeSlice();
-        var context: Context = undefined;
-        var thread = Thread.initForTest(null) catch unreachable;
-        var sp = thread.endOfStack()-1;
-        sp[0]=Nil;
-        execute(code.ptr,sp,thread.getArena().heap,1000,&thread,&context,method.name);
-        return sp[0];
-    }
-};
-
 test "simple return via execute" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(Nil,0,0,.{
