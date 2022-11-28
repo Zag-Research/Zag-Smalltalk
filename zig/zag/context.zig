@@ -137,7 +137,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     }
 };
 }
-pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type, comptime executor: * const fn(method: *compiledMethod, programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: *Context(codeType,*compiledMethod)) MethodReturns) type {
+pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type, comptime executor: * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: *Context(codeType,*compiledMethod)) MethodReturns) type {
     return struct {
     thread: Thread,
     ctxt: contextType,
@@ -178,7 +178,7 @@ pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type, com
         endSp = sp;
         endHp = hp;
         endPc = pc;
-        executor(method,pc,sp,hp,&self.thread,&self.ctxt);
+        executor(pc,sp,hp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.hp = endHp;
         self.pc = endPc;

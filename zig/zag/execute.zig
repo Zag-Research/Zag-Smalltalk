@@ -450,7 +450,7 @@ const p = struct {
 pub const testing = struct {
     const ContextPtr = *Context(Code,CompiledMethodPtr);
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
-    fn execute(_: CompiledMethodPtr, pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+    fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return pc[0].prim(pc+1,sp,hp,thread,context);
     }
     pub fn return_tos(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {

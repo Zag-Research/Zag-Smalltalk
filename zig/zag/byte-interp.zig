@@ -30,8 +30,6 @@ pub const CompiledByteCodeMethod = extern struct {
     name: Object,
     class: Object,
     stackStructure: Object, // number of local values beyond the parameters
-    objects: ?[*]Object,
-    methods: ?[*]CompiledByteCodeMethod,
     size: u64,
     code: [1] ByteCode,
     const Self = @This();
@@ -47,8 +45,6 @@ pub const CompiledByteCodeMethod = extern struct {
             .header = undefined,
             .name = name,
             .class = Nil,
-            .objects = null,
-            .methods = null,
             .stackStructure = Object.from(0),
             .size = size,
             .code = [1]ByteCode{ByteCode.int(0)},
@@ -115,13 +111,35 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(method: *CompiledByteCodeMethod, _pc: [*]const ByteCode, _sp: [*]Object, _: Hp, _: *Thread, _: *Context(ByteCode,*CompiledByteCodeMethod)) void {
+    var objects: [128]Object = undefined;
+    var nObjects:usize = 0;
+    fn findObject(search: Object) usize {
+        for (objects[0..nObjects]) |v,index| {
+            if (@bitCast(u64,search)==@bitCast(u64,v))
+                return index;
+        }
+        objects[nObjects] = search;
+        nObjects += 1;
+        return nObjects-1;
+    }
+    var methods: [128] CompiledByteCodeMethodPtr = undefined;
+    var nMethods = 0;
+    fn findMethod(search: CompiledByteCodeMethodPtr) i8 {
+        for (methods[0..nMethods]) |v,index| {
+            if (search==v)
+                return @intCast(i8,index);
+        }
+        methods[nMethods] = search;
+        nMethods += 1;
+        return nMethods-1;
+    }
+    fn interpret(_pc: [*]const ByteCode, _sp: [*]Object, _: Hp, _: *Thread, _: *Context(ByteCode,*CompiledByteCodeMethod)) void {
         var pc = _pc;
         var sp = _sp;
         while (true) {
             switch (pc[0]) {
                 .noop => {},
-                .pushLiteral => {sp-=1;sp[0]=method.objects[@intCast(usize,@enumToInt(pc[1]))];pc+=1;},
+                .pushLiteral => {sp-=1;sp[0]=objects[@intCast(usize,@enumToInt(pc[1]))];pc+=1;},
                 .return_tos => return,
                 .exit => @panic("fell off the end"),
                 else => { var buf: [100]u8 = undefined;
@@ -141,18 +159,11 @@ pub const ByteCode = enum(i8) {
         return @intToEnum(ByteCode,i);
     }
 };
-fn countNonLabels(comptime tup: anytype) struct
-    {
-        codeSize : usize,
-        nObjects : usize,
-        nMethods : usize,
-} {
+fn countNonLabels(comptime tup: anytype) usize {
     var n = 1;
-    var o = 0;
-    var m = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {o+=1;n+=1;},
+            Object => {n+=1;},
             @TypeOf(null) => {n+=1;},
             comptime_int,comptime_float => {n+=1;},
             ByteCode => {n+=1;},
@@ -163,24 +174,17 @@ fn countNonLabels(comptime tup: anytype) struct
             }
         }
     }
-        return .{
-            .codeSize = n,
-            .nObjects = o,
-            .nMethods = m};
+        return n;
 }
 fn CompileTimeByteCodeMethod(comptime tup: anytype) type {
-    const counts = countNonLabels(tup);
+    const codeSize = countNonLabels(tup);
     return extern struct { // structure must exactly match CompiledByteCodeMethod
         header: heap.Header,
         name: Object,
         class: Object,
         stackStructure: Object,
-        objects: ?[*]Object,
-        methods: ?[*]CompiledByteCodeMethod,
         size: u64,
-        code: [counts.codeSize] ByteCode,
-        objArray: [counts.nObjects] Object,
-        methodArray: [counts.nMethods] CompiledByteCodeMethod,
+        code: [codeSize] ByteCode,
         const pr = std.io.getStdOut().writer().print;
         const codeOffsetInUnits = CompiledByteCodeMethod.codeOffset/@sizeOf(ByteCode);
         const methodIVars = CompiledByteCodeMethod.nIVars;
@@ -191,12 +195,8 @@ fn CompileTimeByteCodeMethod(comptime tup: anytype) type {
                 .name = name,
                 .class = Nil,
                 .stackStructure = Object.packedInt(locals,locals+name.numArgs(),0),
-                .objects = null,
-                .methods = null,
-                .size = counts.codeSize+counts.nObjects+counts.nMethods,
+                .size = codeSize,
                 .code = undefined,
-                .objArray = undefined,
-                .methodArray = undefined,
             };
         }
         pub fn asCompiledByteCodeMethodPtr(self: *Self) * CompiledByteCodeMethod {
@@ -212,7 +212,7 @@ fn CompileTimeByteCodeMethod(comptime tup: anytype) type {
             return ByteCode.uint(codeIndex+codeOffsetInUnits);
         }
         fn getCodeSize(_: *Self) usize {
-            return counts.codeSize;
+            return codeSize;
         }
         fn print(self: *Self) void {
             pr("CTByteCodeMethod: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
@@ -228,15 +228,12 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
     const methodType = CompileTimeByteCodeMethod(tup);
     var method = methodType.init(name,locals);
     comptime var n = 0;
-    comptime var o: i8 = 0;
-//    comptime var m: i8 = 0;
     _ = parameters;
-    method.objects = &method.objArray;
-    method.methods = &method.methodArray;
+    _ = ByteCode.findObject(Nil);
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {method.code[n]=ByteCode.int(o);method.objArray[o]=field;o+=1;n+=1;},
-            @TypeOf(null) => {method.code[n]=ByteCode.object(Nil);n+=1;},
+            Object => {method.code[n]=ByteCode.int(@intCast(i8,ByteCode.findObject(field)));n+=1;},
+            @TypeOf(null) => {method.code[n]=ByteCode.int(0);n+=1;},
             comptime_int => {method.code[n]=ByteCode.int(field);n+=1;},
             ByteCode => {method.code[n]=field;n+=1;},
             else => {
@@ -298,11 +295,11 @@ test "compiling method" {
     try expectEqual(t.len,11);
     try expectEqual(t[0],b.return_tos);
     try expectEqual(t[1].asInt(),2);
-    try expectEqual(t[2].asObject(),True);
-    try expectEqual(t[3].asObject(),Object.from(42));
+    //try expectEqual(t[2].asObject(),True);
+    //try expectEqual(t[3].asObject(),Object.from(42));
     try expectEqual(t[4].asInt(),-5);
     try expectEqual(t[5].asInt(),-1);
-    try expectEqual(t[6].asInt(),7);
+    try expectEqual(t[6].asInt(),6);
 //    try expectEqual(t[?].asMethodPtr(),mcmp);
     try expectEqual(t[7].asInt(),3);
 //    try expectEqual(t[8].method,mcmp);
