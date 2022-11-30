@@ -44,7 +44,7 @@ fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
     const newContext = result.ctxt;
     const newHp = result.hp;
     const newSp = newContext.asObjectPtr()-1;
-    const m1 = i.p2(sp[0],Object.from(1)) catch @panic("int subtract failed in fibComp");
+    const m1 = i.p2L(sp[0],1) catch @panic("int subtract failed in fibComp");
     newSp[0] = m1;
     newContext.tpc = pc+4;
     newContext.npc = fibComp1;
@@ -52,7 +52,7 @@ fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
 }
 fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     const newSp = sp-1;
-    const m2 = i.p2(context.getTemp(0),Object.from(2)) catch @panic("int add failed in fibComp1");
+    const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
     context.tpc = pc+3;
     context.npc = fibComp2;
@@ -71,25 +71,28 @@ var fibThread =
     compileMethod(Nil,0,0,.{
         "recurse:",
         &p.dup,
-        &p.pushLiteral, Object.from(2),
+        &p.pushLiteral2, //Object.from(2),
         &p.p5,"label1",
         &p.primFailure,
         "label1:",
         &p.ifFalse,"label3",
         &p.drop,
-        &p.pushLiteral, Object.from(1),
+        &p.pushLiteral1, //Object.from(1),
         &p.returnNoContext,
         "label3:",
         &p.pushContext,"^",
         &p.pushTemp1,
-        &p.pushLiteral, Object.from(1),
-        &p.p2, "label4",
+        //&p.pushLiteral1, //Object.from(1),
+        //&p.p2, "label4",
+        &p.p2L1, "label4",
         &p.primFailure,
         "label4:",
         &p.callLocal, "recurse",
         &p.pushTemp1,
-        &p.pushLiteral, Object.from(2),
-        &p.p2,"label5",
+        //&p.pushLiteral, Object.from(2),
+        //&p.pushLiteral2,
+        //&p.p2,"label5",
+        &p.p2L2,"label5",
         &p.primFailure,
         "label5:",
         &p.callLocal, "recurse",

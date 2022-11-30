@@ -24,7 +24,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0-3    | xxxx | xxxx | xxxx | NaN (unused)                  |
+| FFF0-5    | xxxx | xxxx | xxxx | NaN (unused)                  |
 | FFF6      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
 | FFF6      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
 | FFF6      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |

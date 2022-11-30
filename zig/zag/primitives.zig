@@ -37,6 +37,11 @@ pub const inlines = struct {
         }
         return error.primitiveError;
     }
+    pub inline fn p1L(self: Object, other: i64) !Object { // Add a literal
+        const result = @bitCast(Object,self.i()+other);
+        if (result.isInt()) return result;
+        return error.primitiveError;
+    }
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract
         if (other.isInt()) {
             const result = @bitCast(Object,self.i()-%other.toUnchecked(i64));
@@ -44,6 +49,11 @@ pub const inlines = struct {
                 return result;
             }
         }
+        return error.primitiveError;
+    }
+    pub inline fn p2L(self: Object, other: i64) !Object { // Subtract a literal
+        const result = @bitCast(Object,self.i()-other);
+        if (result.isInt()) return result;
         return error.primitiveError;
     }
     pub inline fn p3(self: Object, other: Object) !bool { // LessThan
@@ -121,10 +131,23 @@ pub const primitives = struct {
         sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
+    pub fn p1L1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context});
+    }
     pub fn p2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#+
         sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
+    pub fn p2L1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        sp[0]=inlines.p2L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context});
+    }
+    pub fn p2L2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        sp[0]=inlines.p2L(sp[0],2) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context});
+    }
+
     pub fn p9(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
         sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});

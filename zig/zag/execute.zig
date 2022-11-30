@@ -340,7 +340,17 @@ pub const controlPrimitives = struct {
     pub fn pushLiteral1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const newSp = sp-1;
         newSp[0]=Object.from(1);
-        return @call(tailCall,pc[1].prim,.{pc+1,newSp,hp,thread,context});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
+    }
+    pub fn pushLiteral2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        newSp[0]=Object.from(2);
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
+    }
+    pub fn pushLiteralM1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        newSp[0]=Object.from(-1);
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
     }
     pub fn pushNil(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const newSp = sp-1;
