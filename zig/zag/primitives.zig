@@ -1,10 +1,10 @@
 const std = @import("std");
 const execute = @import("execute.zig");
-const ContextPtr = execute.ContextPtr;
+const ContextPtr = execute.CodeContextPtr;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
-const testExecute = execute.testing.testExecute;
+const CompiledMethodPtr = execute.CompiledMethodPtr;
 const failed_test = execute.testing.failed_test;
 const return_tos = execute.testing.return_tos;
 const Thread = @import("thread.zig").Thread;
@@ -169,6 +169,13 @@ test "simple ==" {
     const result = testExecute(prog.asCompiledMethodPtr());
     pr("result = {}\n",.{result});
     try expect(result.to(bool));
+}
+fn testExecute(method: CompiledMethodPtr) Object {
+    var te = @import("execute.zig").TestCodeExecute.new();
+    te.init();
+    var objs = [_]Object{};
+    var result = te.run(objs[0..],method);
+    return result[0];
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;

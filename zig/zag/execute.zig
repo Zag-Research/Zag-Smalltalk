@@ -31,7 +31,7 @@ pub const MethodReturns = void;
 //     }
 // };
 
-pub const CodeContextPtr = Context(Code,CompiledMethodPtr);
+pub const CodeContextPtr = *Context(Code,CompiledMethodPtr);
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
     header: heap.Header,
@@ -73,7 +73,8 @@ pub const CompiledMethod = extern struct {
         return true;
     }
     fn methodFromCodeOffset(pc: [*] const Code) CompiledMethodPtr {
-        const method = @intToPtr(CompiledMethodPtr,@ptrToInt(pc)-codeOffset-(pc[0].uint)*@sizeOf(Code));
+        const startOfCode = @ptrToInt(pc-pc[0].uint);
+        const method = @intToPtr(CompiledMethodPtr,startOfCode-codeOffset);
         return method;
     }
     fn print(self: *Self) void {
@@ -91,8 +92,7 @@ pub const Code = extern union {
     object: Object,
     header: heap.Header,
     method: CompiledMethodPtr,
-    const ContextPtr = *Context(Code,CompiledMethodPtr);
-    pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+    pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -122,8 +122,7 @@ pub const Code = extern union {
     }
 };
 fn countNonLabels(comptime tup: anytype) usize {
-    const ContextPtr = *Context(Code,CompiledMethodPtr);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     var n = 1;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
@@ -133,7 +132,7 @@ fn countNonLabels(comptime tup: anytype) usize {
             ThreadedFn => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => {if (field[field.len-1]!=':') n = n + 1;},
+                    .Pointer => |pointer| {if (@hasField(pointer.child,"len") and field[field.len-1]!=':') n = n + 1;},
                     else => {n = n+1;},
             }
         }
@@ -188,8 +187,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
 }
 pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime locals: comptime_int, comptime tup: anytype) CompileTimeMethod(tup) {
     @setEvalBranchQuota(2000);
-    const ContextPtr = *Context(Code,CompiledMethodPtr);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     const methodType = CompileTimeMethod(tup);
     var method = methodType.init(name,locals);
     method.code[0] = Code.prim(controlPrimitives.noop);
@@ -221,8 +219,8 @@ pub fn compileMethod(name: Object, comptime parameters: comptime_int, comptime l
                                 if (@TypeOf(t) == ThreadedFn) lp=lp+1
                                     else
                                     switch (@typeInfo(@TypeOf(t))) {
-                                        .Pointer => {
-                                            if (t[t.len-1]==':') {
+                                        .Pointer => |tPointer| {
+                                            if (@hasField(tPointer.child,"len") and t[t.len-1]==':') {
                                                 if (comptime std.mem.startsWith(u8,t,field)) {
                                                     method.code[n]=Code.int(lp-n);
                                                     n=n+1;
@@ -271,8 +269,8 @@ test "compiling method" {
     try expectEqual(t[10].object,Nil);
 }
 pub const controlPrimitives = struct {
-    const ContextPtr = *Context(Code,CompiledMethodPtr);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
+    const ContextPtr = CodeContextPtr;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: Context, needed: usize) void {
         _ = thread;
         _ = pc;
@@ -448,9 +446,9 @@ const p = struct {
     usingnamespace controlPrimitives;
 };
 pub const testing = struct {
-    const ContextPtr = *Context(Code,CompiledMethodPtr);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
-    fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+    const ContextPtr = CodeContextPtr;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
+    fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
         return pc[0].prim(pc+1,sp,hp,thread,context);
     }
     pub fn return_tos(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
@@ -511,6 +509,7 @@ pub const testing = struct {
 //     });
 //     try expectEqual(testing.testExecute(method.asCompiledMethodPtr()),Nil);
 // }
+pub const TestCodeExecution = TestExecution(Code,CompiledMethod,&testing.execute);
 test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{
@@ -518,7 +517,7 @@ test "simple return via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnNoContext,
     });
-    var te = TestExecution(Code,CompiledMethod,&testing.execute).new();
+    var te = TestCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -535,7 +534,7 @@ test "context return via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnWithContext,1,
     });
-    var te = TestExecution(Code,CompiledMethod,&testing.execute).new();
+    var te = TestCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -550,7 +549,7 @@ test "context returnTop via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnTop,1,
     });
-    var te = TestExecution(Code,CompiledMethod,&testing.execute).new();
+    var te = TestCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledMethodPtr());
@@ -577,7 +576,7 @@ test "simple executable" {
         &p.branch,"label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution(Code,CompiledMethod,&testing.execute).new();
+    var te = TestCodeExecution.new();
     te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }

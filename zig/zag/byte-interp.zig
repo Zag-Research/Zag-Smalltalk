@@ -65,7 +65,8 @@ pub const CompiledByteCodeMethod = extern struct {
         return true;
     }
     fn methodFromCodeOffset(pc: [*] const ByteCode) CompiledByteCodeMethodPtr {
-        const method = @intToPtr(CompiledByteCodeMethodPtr,@ptrToInt(pc)-codeOffset-(pc[0].uint)*@sizeOf(ByteCode));
+        const startOfCode = @ptrToInt(pc-@bitCast(u8,@enumToInt(pc[0])));
+        const method = @intToPtr(CompiledByteCodeMethodPtr,startOfCode-codeOffset);
         return method;
     }
     fn print(self: *Self) void {
@@ -111,6 +112,132 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
+    fn interpret(_pc: [*]const ByteCode, _sp: [*]Object, _hp: Hp, thread: *Thread, _context: *Context(ByteCode,*CompiledByteCodeMethod)) MethodReturns {
+        var pc = _pc;
+        var sp = _sp;
+        var hp = _hp;
+        var context = _context;
+        while (true) {
+            const code = pc[0];
+            std.debug.print("\npc[{}]: {}",.{@ptrToInt(pc)-@ptrToInt(_pc),code});
+            pc += 1;
+            switch (code) {
+                .noop => {},
+                .branch => {
+                    const offset = pc[0].i();
+                    if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
+                    if (offset == -1) {
+                        @panic("return branch");
+                    }
+                    pc = pc+1-@intCast(u64, -offset);
+                },
+                .ifTrue => {
+                    const v = sp[0];
+                    sp+=1;
+                    if (True.equals(v)) {
+                        const offset = pc[0].i();
+                        if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
+                        if (offset == -1) {
+                            @panic("return branch");
+                        }
+                        pc = pc+1-@intCast(u64, -offset);
+                    }
+                    if (!False.equals(v)) @panic("non boolean");
+                    pc+=1;
+                },
+                .ifFalse => {
+                    const v = sp[0];
+                    sp+=1;
+                    if (False.equals(v)) {
+                        const offset = pc[0].i();
+                        if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
+                        if (offset == -1) {
+                            @panic("return branch");
+                        }
+                        pc = pc+1-@intCast(u64, -offset);
+                    }
+                    if (!True.equals(v)) @panic("non boolean");
+                    pc+=1;
+                },
+                .pushLiteral => {
+                    sp-=1;
+                    sp[0]=pc[0].o();
+                    pc+=1;
+                },
+                .pushLiteral0 => {
+                    sp-=1;
+                    sp[0]=Object.from(0);
+                },
+                .pushTrue => {
+                    sp-=1;
+                    sp[0]=True;
+                },
+                .pushContext => {
+                    const method = CompiledByteCodeMethod.methodFromCodeOffset(pc);
+                    const stackStructure = method.stackStructure;
+                    const locals = stackStructure.h0;
+                    const maxStackNeeded = stackStructure.h1;
+                    const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
+                    const ctxt = result.ctxt;
+                    ctxt.setNPc(interpret);
+                    sp = result.ctxt.asObjectPtr();
+                    hp = result.hp;
+                    context = ctxt;
+                    pc += 1;
+                },
+                .pushTemp => {
+                    sp-=1;
+                    sp[0]=context.getTemp(pc[0].u()-1);
+                    pc += 1;
+                },
+                .pushTemp1 => {
+                    sp-=1;
+                    sp[0]=context.getTemp(0);
+                },
+                .popIntoTemp => {
+                    context.setTemp(pc[0].u(),sp[0]);
+                    sp+=1;
+                    pc += 1;
+                },
+                .popIntoTemp1 => {
+                    context.setTemp(0,sp[0]);
+                    sp+=1;
+                },
+                .returnWithContext => {
+                    const result = context.pop(thread,pc[0].u());
+                    const newSp = result.sp;
+                    const callerContext = result.ctxt;
+                    return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                },
+                .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context}),
+                .returnTop => {
+                    const top = sp[0];
+                    const result = context.pop(thread,pc[0].u());
+                    const newSp = result.sp;
+                    newSp[0] = top;
+                    const callerContext = result.ctxt;
+                    return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                },
+                .return_tos => return,
+                .exit => @panic("fell off the end"),
+                else => { var buf: [100]u8 = undefined;
+                         @panic(std.fmt.bufPrint(buf[0..], "unexpected bytecode {}", .{code}) catch unreachable);
+                         }
+            }
+        }
+    }
+    inline fn i(self: Self) i8 {
+        return @enumToInt(self);
+    }
+    inline fn u(self: Self) u8 {
+        return @bitCast(u8,self.i());
+    }
+    inline fn o(self: Self) Object {
+        return objects[self.u()];
+    }
+    inline fn int(v: i8) ByteCode {
+        return @intToEnum(ByteCode,v);
+    }
     var objects: [128]Object = undefined;
     var nObjects:usize = 0;
     fn findObject(search: Object) usize {
@@ -132,31 +259,6 @@ pub const ByteCode = enum(i8) {
         methods[nMethods] = search;
         nMethods += 1;
         return nMethods-1;
-    }
-    fn interpret(_pc: [*]const ByteCode, _sp: [*]Object, _: Hp, _: *Thread, _: *Context(ByteCode,*CompiledByteCodeMethod)) void {
-        var pc = _pc;
-        var sp = _sp;
-        while (true) {
-            switch (pc[0]) {
-                .noop => {},
-                .pushLiteral => {sp-=1;sp[0]=objects[@intCast(usize,@enumToInt(pc[1]))];pc+=1;},
-                .return_tos => return,
-                .exit => @panic("fell off the end"),
-                else => { var buf: [100]u8 = undefined;
-                         @panic(std.fmt.bufPrint(buf[0..], "unexpected bytecode {}", .{pc[0]}) catch unreachable);
-                         }
-            }
-            pc += 1;
-        }
-    }
-    inline fn asInt(self: Self) i8 {
-        return @enumToInt(self);
-    }
-    inline fn asObject(_: Self) Object {
-        return Nil;
-    }
-    inline fn int(i: i8) ByteCode {
-        return @intToEnum(ByteCode,i);
     }
 };
 fn countNonLabels(comptime tup: anytype) usize {
@@ -294,16 +396,16 @@ test "compiling method" {
     }
     try expectEqual(t.len,11);
     try expectEqual(t[0],b.return_tos);
-    try expectEqual(t[1].asInt(),2);
-    //try expectEqual(t[2].asObject(),True);
-    //try expectEqual(t[3].asObject(),Object.from(42));
-    try expectEqual(t[4].asInt(),-5);
-    try expectEqual(t[5].asInt(),-1);
-    try expectEqual(t[6].asInt(),6);
+    try expectEqual(t[1].i(),2);
+    //try expectEqual(t[2].o(),True);
+    //try expectEqual(t[3].o(),Object.from(42));
+    try expectEqual(t[4].i(),-5);
+    try expectEqual(t[5].i(),-1);
+    try expectEqual(t[6].i(),6);
 //    try expectEqual(t[?].asMethodPtr(),mcmp);
-    try expectEqual(t[7].asInt(),3);
+    try expectEqual(t[7].i(),3);
 //    try expectEqual(t[8].method,mcmp);
-    try expectEqual(t[9].asObject(),Nil);
+    try expectEqual(t[9].o(),Nil);
 }
 test "simple return via execute" {
     const expectEqual = std.testing.expectEqual;

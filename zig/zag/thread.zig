@@ -8,7 +8,7 @@ const HeapPtr = heap.HeapPtr;
 const ex = @import("execute.zig");
 const Hp = ex.Hp;
 const Code = ex.Code;
-const ContextPtr = *ex.CodeContextPtr;
+const ContextPtr = ex.CodeContextPtr;
 const tailCall = ex.tailCall;
 
 const thread_total_size = 64*1024; //std.mem.page_size;
