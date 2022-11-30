@@ -249,13 +249,13 @@ const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     const mref = comptime uniqueSymbol(42);
-    var m = compileMethod(Nil,0,0,.{"abc:", &testing.return_tos, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
+    var m = compileMethod(Nil,0,0,.{"abc:", &p.dnu, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
     const mcmp = m.asCompiledMethodPtr();
     m.update(mref,mcmp);
     var t = m.code[0..];
     try expectEqual(t.len,11);
     try expectEqual(t[0].prim,controlPrimitives.noop);
-    try expectEqual(t[1].prim,testing.return_tos);
+    try expectEqual(t[1].prim,p.dnu);
     try expectEqual(t[2].int,2);
     try expectEqual(t[3].object,True);
     try expectEqual(t[4].object,Object.from(42));
@@ -445,61 +445,61 @@ pub const controlPrimitives = struct {
 const p = struct {
     usingnamespace controlPrimitives;
 };
-pub const testing = struct {
-    const ContextPtr = CodeContextPtr;
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
-    fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
-        return pc[0].prim(pc+1,sp,hp,thread,context);
-    }
-    pub fn return_tos(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        return;
-    }
-    pub fn failed_test(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        _ = sp;
-        @panic("failed_test");
-    }
-    pub fn unexpected_return(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        _ = pc;
-        _ = sp;
-        _ = hp;
-        _ = thread;
-        _ = context;
-        @panic("unexpected_return");
-    }
-    pub fn dumpContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        print("pc: 0x{x:0>16} sp: 0x{x:0>16} hp: 0x{x:0>16}",.{pc,sp,hp});
-        context.print(sp,thread);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
-    }
-    // pub fn testExecute(method: * const CompiledMethod) Object {
-    //     const code = method.codeSlice();
-    //     var context: Context(Code,CompiledMethodPtr) = undefined;
-    //     var thread = Thread.new();
-    //     thread.init();
-    //     var sp = thread.endOfStack()-1;
-    //     sp[0]=Nil;
-    //     execute(code.ptr,sp+1,thread.getHeap(),(&thread).maxCheck(),&context);
-    //     return sp[0];
-    // }
-    // pub fn debugExecute(method: * const CompiledMethod) Object {
-    //     const code = method.codeSlice();
-    //     var context: Context = undefined;
-    //     var thread = Thread.initForTest(null) catch unreachable;
-    //     var sp = thread.endOfStack()-1;
-    //     sp[0]=Nil;
-    //     execute(code.ptr,sp,thread.getArena().heap,1000,&thread,&context,method.name);
-    //     return sp[0];
-    // }
-};
+// pub const testing = struct {
+//     const ContextPtr = CodeContextPtr;
+//     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
+//     fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
+//         return pc[0].prim(pc+1,sp,hp,thread,context);
+//     }
+//     pub fn return_tos(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+//         _ = pc;
+//         _ = sp;
+//         _ = hp;
+//         _ = thread;
+//         _ = context;
+//         return;
+//     }
+//     pub fn failed_test(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+//         _ = pc;
+//         _ = hp;
+//         _ = thread;
+//         _ = context;
+//         _ = sp;
+//         @panic("failed_test");
+//     }
+//     pub fn unexpected_return(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+//         _ = pc;
+//         _ = sp;
+//         _ = hp;
+//         _ = thread;
+//         _ = context;
+//         @panic("unexpected_return");
+//     }
+//     pub fn dumpContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+//         print("pc: 0x{x:0>16} sp: 0x{x:0>16} hp: 0x{x:0>16}",.{pc,sp,hp});
+//         context.print(sp,thread);
+//         return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
+//     }
+//     // pub fn testExecute(method: * const CompiledMethod) Object {
+//     //     const code = method.codeSlice();
+//     //     var context: Context(Code,CompiledMethodPtr) = undefined;
+//     //     var thread = Thread.new();
+//     //     thread.init();
+//     //     var sp = thread.endOfStack()-1;
+//     //     sp[0]=Nil;
+//     //     execute(code.ptr,sp+1,thread.getHeap(),(&thread).maxCheck(),&context);
+//     //     return sp[0];
+//     // }
+//     // pub fn debugExecute(method: * const CompiledMethod) Object {
+//     //     const code = method.codeSlice();
+//     //     var context: Context = undefined;
+//     //     var thread = Thread.initForTest(null) catch unreachable;
+//     //     var sp = thread.endOfStack()-1;
+//     //     sp[0]=Nil;
+//     //     execute(code.ptr,sp,thread.getArena().heap,1000,&thread,&context,method.name);
+//     //     return sp[0];
+//     // }
+// };
 
 // test "simple return via execute" {
 //     const expectEqual = std.testing.expectEqual;
@@ -509,7 +509,10 @@ pub const testing = struct {
 //     });
 //     try expectEqual(testing.testExecute(method.asCompiledMethodPtr()),Nil);
 // }
-pub const TestCodeExecution = TestExecution(Code,CompiledMethod,&testing.execute);
+fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
+    return pc[0].prim(pc+1,sp,hp,thread,context);
+}
+pub const TestCodeExecution = TestExecution(Code,CompiledMethod,&execute);
 test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Nil,0,0,.{

@@ -5,8 +5,6 @@ const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const failed_test = execute.testing.failed_test;
-const return_tos = execute.testing.return_tos;
 const Thread = @import("thread.zig").Thread;
 const object = @import("object.zig");
 const Object = object.Object;
@@ -135,7 +133,7 @@ pub const primitives = struct {
         sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
-    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==
+    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
@@ -160,87 +158,85 @@ const p = struct {
 test "simple ==" {
     const expect = std.testing.expect;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,4,
-        &p.pushLiteral,4,            
+        &p.pushLiteral,Object.from(4),
+        &p.pushLiteral,Object.from(4),
         &p.p110,"next","next:",
-        &return_tos,
+        &p.returnNoContext,
     });
-    const pr = std.debug.print;
     const result = testExecute(prog.asCompiledMethodPtr());
-    pr("result = {}\n",.{result});
-    try expect(result.to(bool));
+    try expect(result[0].to(bool));
 }
-fn testExecute(method: CompiledMethodPtr) Object {
-    var te = @import("execute.zig").TestCodeExecute.new();
+fn testExecute(method: CompiledMethodPtr) []Object {
+    var te = @import("execute.zig").TestCodeExecution.new();
     te.init();
     var objs = [_]Object{};
     var result = te.run(objs[0..],method);
-    return result[0];
+    std.debug.print("result = {any}\n",.{result});
+    return result;
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,3,
-        &p.pushLiteral,4,            
+        &p.pushLiteral,Object.from(3),
+        &p.pushLiteral,Object.from(4),
         &p.p1,"success",
-        &failed_test,
-        "success:", &return_tos,
+        &p.pushLiteral,Object.from(-999),
+        "success:", &p.returnNoContext,
     });
-    const pr = std.debug.print;
     const result = testExecute(prog.asCompiledMethodPtr());
-    pr("result = {}\n",.{result});
-    try expectEqual(result.toInt(),7);
+    try expectEqual(result[0].toInt(),7);
 }
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,4,            
-        &p.pushLiteral, 0x3_ffffffffffff,
+        &p.pushLiteral,Object.from(4),            
+        &p.pushLiteral,Object.from(0x3_ffffffffffff),
         &p.p1,"succeeded",
-        &return_tos,
-        "succeeded:",&failed_test,
+        &p.pushLiteral,Object.from(-999),
+        "succeeded:",
+        &p.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),4);
+    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),-999);
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,3,
-        &p.pushLiteral,4,            
+        &p.pushLiteral,Object.from(3),
+        &p.pushLiteral,Object.from(4),
         &p.p110,"success","success:",
-        &return_tos,
+        &p.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr()),False);
+    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0],False);
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,3,
-        &p.pushLiteral,4,            
+        &p.pushLiteral,Object.from(3),
+        &p.pushLiteral,Object.from(4),
         &p.p110,"success","success:",
         &p.ifTrue,"true",
-        &p.pushLiteral,17,
+        &p.pushLiteral,Object.from(17),
         &p.branch,"common",
         "true:",
-        &p.pushLiteral,42,
-        "common:", &return_tos,
+        &p.pushLiteral,Object.from(42),
+        "common:", &p.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),17);
+    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),17);
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Nil,0,0,.{
-        &p.pushLiteral,3,
-        &p.pushLiteral,4,            
+        &p.pushLiteral,Object.from(3),
+        &p.pushLiteral,Object.from(4),
         &p.p169,"success","success:",
         &p.ifTrue,"true",
-        &p.pushLiteral,17,
+        &p.pushLiteral,Object.from(17),
         &p.branch,"common",
         "true:",
-        &p.pushLiteral,42,
-        "common:", &return_tos,
+        &p.pushLiteral,Object.from(42),
+        "common:", &p.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr()).toInt(),42);
+    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),42);
 }
 
 test "dispatch3" {
@@ -250,8 +246,8 @@ pub fn main() void {
         &p.pushLiteral,3,
         &p.pushLiteral,4,            
         &p.p1,"success",
-        &failed_test,
-        "success:", &return_tos,
+        &p.pushLiteral,Object.from(-999),
+        "success:", &p.returnNoContext,
     });
     _ = testExecute(prog.asCompiledMethodPtr());
 }

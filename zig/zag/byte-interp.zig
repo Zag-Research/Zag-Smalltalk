@@ -9,7 +9,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const Context = @import("context.zig").Context;
-const TestExecution = @import("context.zig").TestExecution;
+pub const TestExecution = @import("context.zig").TestExecution;
 const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -99,6 +99,7 @@ pub const ByteCode = enum(i8) {
     lookupByteCodeMethod,
     send,
     call,
+    callLocal,
     pushContext,
     returnTrampoline,
     returnWithContext,
@@ -109,6 +110,9 @@ pub const ByteCode = enum(i8) {
     failed_test,
     unexpected_return,
     dumpContext,
+    p1,
+    p2,
+    p5,
     exit,
     _,
     const Self = @This();
@@ -117,113 +121,143 @@ pub const ByteCode = enum(i8) {
         var sp = _sp;
         var hp = _hp;
         var context = _context;
-        while (true) {
+        const inlines = @import("primitives.zig").inlines;
+        interp: while (true) {
             const code = pc[0];
-            std.debug.print("\npc[{}]: {}",.{@ptrToInt(pc)-@ptrToInt(_pc),code});
             pc += 1;
-            switch (code) {
-                .noop => {},
-                .branch => {
-                    const offset = pc[0].i();
-                    if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
-                    if (offset == -1) {
-                        @panic("return branch");
-                    }
-                    pc = pc+1-@intCast(u64, -offset);
-                },
-                .ifTrue => {
-                    const v = sp[0];
-                    sp+=1;
-                    if (True.equals(v)) {
+            while (true) {
+                switch (code) {
+                    .noop => {continue :interp;},
+                    .branch => {break; // to common code
+                    },
+                    .ifTrue => {
+                        const v = sp[0];
+                        sp+=1;
+                        if (False.equals(v)) {pc+=1;continue :interp;}
+                        if (!True.equals(v)) @panic("non boolean");
+                        break; // to branch
+                    },
+                    .ifFalse => {
+                        const v = sp[0];
+                        sp+=1;
+                        if (True.equals(v)) {pc+=1;continue :interp;}
+                        if (!False.equals(v)) @panic("non boolean");
+                        break; // to branch
+                    },
+                    .dup => {
+                        sp-=1;
+                        sp[0]=sp[1];
+                        continue :interp;
+                    },
+                    .over => {
+                        sp-=1;
+                        sp[0]=sp[2];
+                        continue :interp;
+                    },
+                    .drop => {
+                        sp+=1;
+                        continue :interp;
+                    },
+                    .pushLiteral => {
+                        sp-=1;
+                        sp[0]=pc[0].o();
+                        pc+=1;
+                        continue :interp;
+                    },
+                    .pushLiteral0 => {
+                        sp-=1;
+                        sp[0]=Object.from(0);
+                        continue :interp;
+                    },
+                    .pushTrue => {
+                        sp-=1;
+                        sp[0]=True;
+                        continue :interp;
+                    },
+                    .pushContext => {
+                        const method = CompiledByteCodeMethod.methodFromCodeOffset(pc);
+                        const stackStructure = method.stackStructure;
+                        const locals = stackStructure.h0;
+                        const maxStackNeeded = stackStructure.h1;
+                        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
+                        const ctxt = result.ctxt;
+                        ctxt.setNPc(interpret);
+                        sp = result.ctxt.asObjectPtr();
+                        hp = result.hp;
+                        context = ctxt;
+                        pc += 1;
+                        continue :interp;
+                    },
+                    .pushTemp => {
+                        sp-=1;
+                        sp[0]=context.getTemp(pc[0].u()-1);
+                        pc += 1;
+                        continue :interp;
+                    },
+                    .pushTemp1 => {
+                        sp-=1;
+                        sp[0]=context.getTemp(0);
+                        continue :interp;
+                    },
+                    .popIntoTemp => {
+                        context.setTemp(pc[0].u(),sp[0]);
+                        sp+=1;
+                        pc += 1;
+                        continue :interp;
+                    },
+                    .popIntoTemp1 => {
+                        context.setTemp(0,sp[0]);
+                        sp+=1;
+                        continue :interp;
+                    },
+                    .returnWithContext => {
+                        const result = context.pop(thread,pc[0].u());
+                        const newSp = result.sp;
+                        const callerContext = result.ctxt;
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                    },
+                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context}),
+                    .returnTop => {
+                        const top = sp[0];
+                        const result = context.pop(thread,pc[0].u());
+                        const newSp = result.sp;
+                        newSp[0] = top;
+                        const callerContext = result.ctxt;
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                    },
+                    .p1 => {// SmallInteger>>#+
+                        sp[1] = inlines.p1(sp[1],sp[0]) catch {pc+=1;continue :interp;};
+                        sp+=1;
+                        break;
+                    },
+                    .p2 => {// SmallInteger>>#+
+                        sp[1] = inlines.p2(sp[1],sp[0]) catch {pc+=1;continue :interp;};
+                        sp+=1;
+                        break;
+                    },
+                    .p5 => { // SmallInteger>>#<=
+                        sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
+                        sp+=1;
+                        break; // to branch
+                    },
+                    .callLocal => {
+                        context.setTPc(pc+1);
                         const offset = pc[0].i();
-                        if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
-                        if (offset == -1) {
-                            @panic("return branch");
-                        }
-                        pc = pc+1-@intCast(u64, -offset);
-                    }
-                    if (!False.equals(v)) @panic("non boolean");
-                    pc+=1;
-                },
-                .ifFalse => {
-                    const v = sp[0];
-                    sp+=1;
-                    if (False.equals(v)) {
-                        const offset = pc[0].i();
-                        if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
-                        if (offset == -1) {
-                            @panic("return branch");
-                        }
-                        pc = pc+1-@intCast(u64, -offset);
-                    }
-                    if (!True.equals(v)) @panic("non boolean");
-                    pc+=1;
-                },
-                .pushLiteral => {
-                    sp-=1;
-                    sp[0]=pc[0].o();
-                    pc+=1;
-                },
-                .pushLiteral0 => {
-                    sp-=1;
-                    sp[0]=Object.from(0);
-                },
-                .pushTrue => {
-                    sp-=1;
-                    sp[0]=True;
-                },
-                .pushContext => {
-                    const method = CompiledByteCodeMethod.methodFromCodeOffset(pc);
-                    const stackStructure = method.stackStructure;
-                    const locals = stackStructure.h0;
-                    const maxStackNeeded = stackStructure.h1;
-                    const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
-                    const ctxt = result.ctxt;
-                    ctxt.setNPc(interpret);
-                    sp = result.ctxt.asObjectPtr();
-                    hp = result.hp;
-                    context = ctxt;
-                    pc += 1;
-                },
-                .pushTemp => {
-                    sp-=1;
-                    sp[0]=context.getTemp(pc[0].u()-1);
-                    pc += 1;
-                },
-                .pushTemp1 => {
-                    sp-=1;
-                    sp[0]=context.getTemp(0);
-                },
-                .popIntoTemp => {
-                    context.setTemp(pc[0].u(),sp[0]);
-                    sp+=1;
-                    pc += 1;
-                },
-                .popIntoTemp1 => {
-                    context.setTemp(0,sp[0]);
-                    sp+=1;
-                },
-                .returnWithContext => {
-                    const result = context.pop(thread,pc[0].u());
-                    const newSp = result.sp;
-                    const callerContext = result.ctxt;
-                    return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
-                },
-                .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context}),
-                .returnTop => {
-                    const top = sp[0];
-                    const result = context.pop(thread,pc[0].u());
-                    const newSp = result.sp;
-                    newSp[0] = top;
-                    const callerContext = result.ctxt;
-                    return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
-                },
-                .return_tos => return,
-                .exit => @panic("fell off the end"),
-                else => { var buf: [100]u8 = undefined;
-                         @panic(std.fmt.bufPrint(buf[0..], "unexpected bytecode {}", .{code}) catch unreachable);
-                         }
+                        if (offset>=0) pc += 1+@intCast(u64, offset) else pc -= @intCast(u64, @as(i32,-offset)-1);
+                        continue :interp;
+                    },
+                    .exit => @panic("fell off the end"),
+                    else => { var buf: [100]u8 = undefined;
+                             @panic(std.fmt.bufPrint(buf[0..], "unexpected bytecode {}", .{code}) catch unreachable);
+                             }
+                }
             }
+            const offset = pc[0].i();
+            if (offset>=0) { pc = pc+1+@intCast(u64, offset); continue;}
+            if (offset == -1) {
+                @panic("return branch");
+            }
+            pc = pc+1-@intCast(u64, -offset);
         }
     }
     inline fn i(self: Self) i8 {
@@ -271,7 +305,7 @@ fn countNonLabels(comptime tup: anytype) usize {
             ByteCode => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => {if (field[field.len-1]!=':') n = n + 1;},
+                    .Pointer => |pointer| {if (@hasField(pointer.child,"len") and field[field.len-1]!=':') n = n + 1;},
                     else => {n = n+1;},
             }
         }
@@ -358,9 +392,9 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                                 if (@TypeOf(t) == ByteCode) lp+=1
                                     else
                                     switch (@typeInfo(@TypeOf(t))) {
-                                        .Pointer => {
-                                            if (t[t.len-1]==':') {
-                                                if (comptime std.mem.startsWith(u8,t,field)) {
+                                       .Pointer => |tPointer| {
+                                            if (@hasField(tPointer.child,"len") and t[t.len-1]==':') {
+                                                 if (comptime std.mem.startsWith(u8,t,field)) {
                                                     method.code[n]=ByteCode.int(lp-n-1);
                                                     n+=1;
                                                     found = true;
@@ -407,26 +441,15 @@ test "compiling method" {
 //    try expectEqual(t[8].method,mcmp);
     try expectEqual(t[9].o(),Nil);
 }
-test "simple return via execute" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(Nil,0,0,.{
-        b.noop,
-        b.return_tos,
-    });
-    var te = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret).new();
-    te.init();
-    var objs = [_]Object{Nil};
-    var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
-    try expectEqual(result[0],Nil);
-}
-test "simple return via TestExecution" {
+pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret);
+test "simple return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(Nil,0,0,.{
         b.noop,
         b.pushLiteral,comptime Object.from(42),
         b.returnNoContext,
     });
-    var te = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret).new();
+    var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
@@ -435,7 +458,7 @@ test "simple return via TestExecution" {
     try expectEqual(result[1],Nil);
     try expectEqual(result[2],True);
 }
-test "context return via TestExecution" {
+test "context return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(Nil,0,0,.{
         b.noop,
@@ -443,14 +466,14 @@ test "context return via TestExecution" {
         b.pushLiteral,comptime Object.from(42),
         b.returnWithContext,1,
     });
-    var te = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret).new();
+    var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);
 }
-test "context returnTop via TestExecution" {
+test "context returnTop via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(Nil,0,0,.{
         b.noop,
@@ -458,7 +481,7 @@ test "context returnTop via TestExecution" {
         b.pushLiteral,comptime Object.from(42),
         b.returnTop,1,
     });
-    var te = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret).new();
+    var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
@@ -485,7 +508,7 @@ test "simple executable" {
         b.branch,"label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret).new();
+    var te = TestByteCodeExecution.new();
     te.init();
     _ = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
 }
