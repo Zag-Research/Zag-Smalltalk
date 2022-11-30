@@ -19,6 +19,8 @@
 - [[MistDesign]] also has some ideas we modify
 
 ### Architectures
+#### HPC and architectures (cache et al)
+- [Algorithmica](https://en.algorithmica.org/hpc/)
 #### x86-64
 - [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
 - [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 
