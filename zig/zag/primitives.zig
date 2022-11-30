@@ -71,6 +71,9 @@ pub const inlines = struct {
         if (other.isInt()) return false;
         return error.primitiveError;
     }
+    pub inline fn p5N(self: Object, other: Object) bool { // LessOrEqual when both known SmallIntegers
+        return self.u()<=other.u();
+    }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (self<other) return false;
         if (other.isInt()) return true;
@@ -159,6 +162,10 @@ pub const primitives = struct {
     pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
+    }
+    pub fn p5N(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
+        sp[1] = Object.from(inlines.p5N(sp[1],sp[0]));
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context});
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));

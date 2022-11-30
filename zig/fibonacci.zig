@@ -36,7 +36,7 @@ fn fibNative(self: u64) u64 {
     return fibNative(self-1) + fibNative(self-2);
 }
 fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-    if (i.p5(sp[0],Object.from(2)) catch unreachable) {
+    if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
     }
@@ -46,7 +46,7 @@ fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
     const newSp = newContext.asObjectPtr()-1;
     const m1 = i.p2L(sp[0],1) catch @panic("int subtract failed in fibComp");
     newSp[0] = m1;
-    newContext.tpc = pc+4;
+    newContext.tpc = pc+15; // label4 + callLocal
     newContext.npc = fibComp1;
     return @call(tailCall,fibComp,.{fibCompT+1,newSp,newHp,thread,newContext});
 }
@@ -54,7 +54,7 @@ fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: 
     const newSp = sp-1;
     const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
-    context.tpc = pc+3;
+    context.tpc = pc+6; // after 2nd callLocal
     context.npc = fibComp2;
     return @call(tailCall,fibComp,.{fibCompT+1,newSp,hp,thread,context});
 }
@@ -71,27 +71,26 @@ var fibThread =
     compileMethod(Nil,0,0,.{
         "recurse:",
         &p.dup,
-        &p.pushLiteral2, //Object.from(2),
-        &p.p5,"label1",
-        &p.primFailure,
-        "label1:",
+        //&p.pushLiteral2, Object.from(2),
+        &p.pushLiteral2,
+        //&p.p5,"label1",
+        //&p.primFailure,
+        //"label1:",
+        &p.p5N, // know that self and 2 are definitely integers
         &p.ifFalse,"label3",
-        &p.drop,
-        &p.pushLiteral1, //Object.from(1),
+        &p.drop, // self
+        &p.pushLiteral1,
         &p.returnNoContext,
         "label3:",
         &p.pushContext,"^",
         &p.pushTemp1,
-        //&p.pushLiteral1, //Object.from(1),
+        //&p.pushLiteral1,
         //&p.p2, "label4",
         &p.p2L1, "label4",
         &p.primFailure,
         "label4:",
         &p.callLocal, "recurse",
         &p.pushTemp1,
-        //&p.pushLiteral, Object.from(2),
-        //&p.pushLiteral2,
-        //&p.p2,"label5",
         &p.p2L2,"label5",
         &p.primFailure,
         "label5:",
@@ -99,7 +98,7 @@ var fibThread =
         &p.p1,"label6",
         &p.primFailure,
         "label6:",
-        &p.returnTop,0,
+        &p.returnTop0,
 });
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();

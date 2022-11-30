@@ -440,6 +440,22 @@ pub const controlPrimitives = struct {
         const callerContext = result.ctxt;
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
     }
+    pub fn returnTop0(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const top = sp[0];
+        const result = context.pop(thread,0);
+        const newSp = result.sp;
+        newSp[0] = top;
+        const callerContext = result.ctxt;
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+    }
+    pub fn returnTop1(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const top = sp[0];
+        const result = context.pop(thread,1);
+        const newSp = result.sp;
+        newSp[0] = top;
+        const callerContext = result.ctxt;
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+    }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context});
     }
