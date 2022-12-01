@@ -31,9 +31,15 @@ const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
-fn fibNative(self: u64) u64 {
+fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
     return fibNative(self-1) + fibNative(self-2);
+}
+fn fibObject(self: Object) Object {
+    if (self.u() <= Object.from(2).u()) return Object.from(1);
+    const fm1 = fibObject(Object.cast(self.u()-1));
+    const fm2 = fibObject(Object.cast(self.u()-2));
+    return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
 fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     if (i.p5N(sp[0],Object.from(2))) {
@@ -100,6 +106,17 @@ var fibThread =
         "label6:",
         &p.returnTop0,
 });
+test "fibObject" {
+    var n:i32 = 1;
+    while (n<10) : (n += 1) {
+        const result = fibObject(Object.from(n));
+        std.debug.print("fib({}) = {any}\n",.{n,result});
+        try std.testing.expectEqual(result.toInt(),@truncate(i51,fibNative(n)));
+    }
+}
+fn timeObject(n: i64) void {
+    _ = fibObject(Object.from(n));
+}
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
     fibThread.update(fibThreadRef,method);
@@ -111,7 +128,7 @@ test "fibThread" {
         const result = te.run(objs[0..],method);
         std.debug.print("fib({}) = {any}\n",.{n,result});
         try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i64,@truncate(u51,fibNative(n))));
+        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
     }
 }
 fn timeThread(n: i64) void {
@@ -126,7 +143,7 @@ test "fibComp" {
     var method = compileMethod(Nil,0,0,.{
         &fibComp,
     });
-    var n:u32 = 1;
+    var n:i32 = 1;
     while (n<20) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te =  TestCodeExecution.new();
@@ -134,7 +151,7 @@ test "fibComp" {
         const result = te.run(objs[0..],method.asCompiledMethodPtr());
         std.debug.print("fib({}) = {any}\n",.{n,result});
         try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i64,@truncate(u51,fibNative(n))));
+        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
     }
 }
 fn timeComp(n: i64) void {
@@ -180,7 +197,7 @@ test "fibByte" {
             b.returnTop,0,
     });
     const method = fibByte.asCompiledByteCodeMethodPtr();
-    var n:u32 = 1;
+    var n:i32 = 1;
     while (n<10) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te =  TestByteCodeExecution.new();
@@ -188,7 +205,7 @@ test "fibByte" {
         const result = te.run(objs[0..],method);
         std.debug.print("fib({}) = {any}\n",.{n,result});
         try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i64,@truncate(u51,fibNative(n))));
+        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
     }
 }
  fn timeByte(n: i64) void {
@@ -237,11 +254,17 @@ pub fn timing(runs: u32) !void {
     var base = ts()-start;
     try stdout.print("fibNative: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/@intToFloat(f64,runs)});
     start=ts();
-    _ = timeComp(runs);
+    _ = timeObject(runs);
     _ = fibThread;
     _ = Object;
     var time = ts()-start;
-    try stdout.print("fibComp: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    try stdout.print("fibObject: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    start=ts();
+    _ = timeComp(runs);
+    _ = fibThread;
+    _ = Object;
+    time = ts()-start;
+    try stdout.print("fibComp:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     start=ts();
     _ = timeThread(runs);
     time = ts()-start;
@@ -249,7 +272,7 @@ pub fn timing(runs: u32) !void {
     start=ts();
     _ = timeByte(runs);
     time = ts()-start;
-    try stdout.print("fibByte: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
     try timing(40);

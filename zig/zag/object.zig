@@ -42,7 +42,7 @@ pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this
 
 pub fn fromLE(comptime T: type, v: T) Object {
     const val = @ptrCast(*const [@sizeOf(T)]u8,&v);
-    return @bitCast(Object,mem.readIntLittle(T,val));
+    return of(mem.readIntLittle(T,val));
 }
 pub const compareObject = Object.compare;
 pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
@@ -52,8 +52,11 @@ pub const Object = packed struct(u64) {
     h1: u16,
     l2: Level2,
     signMantissa: ClassGrouping,
+    pub inline fn cast(v: anytype) Object {
+        return @bitCast(Object,v);
+    }
     pub inline fn hash(self: Object) Object {
-        return @bitCast(Object,self.u()|u64_ZERO);
+        return cast(self.u()|u64_ZERO);
     }
     pub inline fn hash24(self: Object) u24 {
         return @truncate(u24,self.u());
@@ -159,16 +162,16 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
-        if (T==HeapConstPtr) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
-        if (T==[*]Code) return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Code_References);
+        if (T==HeapConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
+        if (T==[*]Code) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Code_References);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
-                return @bitCast(Object, @bitCast(u64, @as(i64, value)) +% u64_ZERO);
+                return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO);
             },
             .Float,
             .ComptimeFloat => {
-                return @bitCast(Object, @as(f64, value));
+                return cast(@as(f64, value));
             },
             .Bool => {
                 return if (value) True else False;
@@ -179,7 +182,7 @@ pub const Object = packed struct(u64) {
             .Pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
-                        return @bitCast(Object, @truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
+                        return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
                     },
                     else => {},
                 }
