@@ -37,8 +37,10 @@ pub fn fibNative(self: i64) i64 {
 }
 pub fn fibObject(self: Object) Object {
     if (self.u() <= Object.from(2).u()) return Object.from(1);
-    const fm1 = fibObject(Object.cast(self.u()-1));
-    const fm2 = fibObject(Object.cast(self.u()-2));
+    const m1 = i.p2L(self,1) catch @panic("int subtract failed in fibObject");
+    const fm1 = fibObject(m1);
+    const m2 = i.p2L(self,2) catch @panic("int subtract failed in fibObject");
+    const fm2 = fibObject(m2);
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
 pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
