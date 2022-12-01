@@ -31,17 +31,17 @@ const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
-fn fibNative(self: i64) i64 {
+pub fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
     return fibNative(self-1) + fibNative(self-2);
 }
-fn fibObject(self: Object) Object {
+pub fn fibObject(self: Object) Object {
     if (self.u() <= Object.from(2).u()) return Object.from(1);
     const fm1 = fibObject(Object.cast(self.u()-1));
     const fm2 = fibObject(Object.cast(self.u()-2));
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
-fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
