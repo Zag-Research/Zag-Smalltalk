@@ -12,3 +12,5 @@ Memory structure and some of execution principles modelled on OpenSmalltalk VM
 [More information in the Documentation](Documentation/Abstract.md)
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
+
+[Slides from a recent talk at UK Smalltalk](https://sarg.torontomu.ca/dmason/UKSt2022-11-30.pdf)
