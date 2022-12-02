@@ -19,15 +19,6 @@ const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
 pub const inlines = struct {
-    pub inline fn p110(self: Object, other: Object) bool { // Identical - can't fail
-        return self.equals(other);
-    }
-    pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
-        return !self.equals(other);
-    }
-    pub inline fn p145(self: Object, _: Object) !void { // atAllPut:
-        return self;
-    }
     pub inline fn p1(self: Object, other: Object) !Object { // Add
         if (other.isInt()) {
             const result = @bitCast(Object,self.u()+%@bitCast(u64,other.toUnchecked(i64)));
@@ -62,7 +53,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn p4(self: Object, other: Object) !bool { // GreaterThan
-        if (self<=other) return false;
+        if (self.u()<=other.u()) return false;
         if (other.isInt()) return true;
         return error.primitiveError;
     }
@@ -117,6 +108,28 @@ pub const inlines = struct {
         }
         return error.primitiveError;
     }
+    pub inline fn p60(self: Object, other: Object) !Object { // at:
+        _ = self; _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p61(self: Object, other: Object) !Object { // at:put:
+        _ = self; _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p71(self: Object, other: Object) !Object { // basicNew:
+        _ = self; _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p110(self: Object, other: Object) bool { // Identical - can't fail
+        return self.equals(other);
+    }
+    pub inline fn p145(self: Object, other: Object) !Object { // atAllPut:
+        _ = self; _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
+        return !self.equals(other);
+    }
 };
 test "inline primitives" {
     const expectEqual = std.testing.expectEqual;
@@ -150,14 +163,9 @@ pub const primitives = struct {
         sp[0]=inlines.p2L(sp[0],2) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
         return @call(tailCall,p.branch,.{pc,sp,hp,thread,context});
     }
-
-    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
-        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
-    }
-    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
-        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
+    pub fn p7(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
+        //        return error.primitiveError;
+        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
@@ -166,6 +174,26 @@ pub const primitives = struct {
     pub fn p5N(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5N(sp[1],sp[0]));
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context});
+    }
+    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
+        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
+    }
+    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {// SmallInteger>>#*
+        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context});
+        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
+    }
+    pub fn p60(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
+        //        return error.primitiveError;
+        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
+    }
+    pub fn p61(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
+        //        return error.primitiveError;
+        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
+    }
+    pub fn p71(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
+        //        return error.primitiveError;
+        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));

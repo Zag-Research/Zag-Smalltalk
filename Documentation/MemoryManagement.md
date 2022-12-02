@@ -66,9 +66,10 @@ The Global Arena uses a binary heap.
 
 #### Free-space allocation
 Free-space is split up into power-of-2-sized pieces and put on the appropriate queue:
-- 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word is stored) 
+- all allocations are on power-of-2 boundaries; hence small objects will never span 2 cache-lines. A flag can be set so no list for values smaller than a cache-line is maintained, in which case no cache line would contain multiple objects. This can reduce cache thrashing between threads/cores. Thanks to [Peter Lount](https://www.linkedin.com/in/peterlount/) for pointing out [the potential bad behaviour on multi-threaded access](https://en.algorithmica.org/hpc/cpu-cache/cache-lines/). 
+- 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word) is stored.
 - Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate queue, and loop to allocate the rest.
-- arguably (thanks to [Peter Lount](https://www.linkedin.com/in/peterlount/) ) we shouldn't partition objects smaller than 64 bytes (8 words) in the global arena because they will then be across [multiple cache lines, which has really bad behaviour on multi-threaded access](https://en.algorithmica.org/hpc/cpu-cache/cache-lines/).
+
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.

@@ -85,11 +85,12 @@ First we have the object format tag. The bits code the following:
 - bit 7: = 1 says the value is immutable
 
 Therefore, only the following values currently have meaning:
-- 32,64: non-indexable objects with inst vars (Association et al) 
+- 32,96: non-indexable objects with inst vars (Association et al) 
 - 1-17: indexable objects with no inst vars
-- 32-49,65-81: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 96: weak non-indexable objects with inst vars  (Ephemeron)
-- 97-113: weak indexable objects with inst vars (WeakArray et al)
+- 32-49,97-113: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+- 64: weak non-indexable objects with inst vars  (Ephemeron)
+- 65-81: weak indexable objects with inst vars (WeakArray et al)
+- 16,48,112: Array-of-Structs arrays all of the same type, or at least same size
 
 Format anded with 80 = 0 declares no pointers, so GC doesn't look through them for pointers. Things are initially created as their pointer-free version but change to their pointer-containing version if a pointer is stored in them. i.e. 64 is ored if a pointer is stored into an instance variable, and 16 is ored if a pointer is stored into an indexed field (additionally, the pointee may need to be promoted to the general arena). During garbage collection, if no reference is found during the scan, they revert to the pointer-free version (i.e. bit 4 or 6 is reset).
 
