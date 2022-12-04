@@ -168,6 +168,7 @@ pub const Age = enum(u4) {
     nursery = Nursery,
     teen = FirstTeen,
     global = Global,
+    aoo = AoO,
     static = Static,
     _,
     const Stack: u4 = 0;
@@ -175,10 +176,22 @@ pub const Age = enum(u4) {
     const FirstTeen: u4 = 2;
     const LastTeen: u4 = 7;
     const Global: u4 = 8;
-    const Static: u4 = 15;
+    const GlobalMarked: u4 = 9;
+    const GlobalScanned: u4 = 11;
+    const Static: u4 = 10;
+    const AoO : u4 = 12;
+    const AoOMarked : u4 = 13;
+    const Unused : u4 = 14;
+    const AoOScanned : u4 = 15;
     const Self = @This();
-    pub inline fn isGlobal(self: Self) bool {
+    pub inline fn isAoO(self: Self) bool {
+        return @enumToInt(self)>=AoO;
+    }
+    pub inline fn isGlobalOrStatic(self: Self) bool {
         return @enumToInt(self)>=Global;
+    }
+    pub inline fn isGlobal(self: Self) bool {
+        return @enumToInt(self)>=Global and @enumToInt(self)!=Static;
     }
     pub inline fn isInStack(self: Self) bool {
         return @enumToInt(self) == Stack;
@@ -191,8 +204,9 @@ pub const Header = packed struct(u64) {
         age: Age,
         length: u12,
 
-    const forwardLength: u16 = 4095;
-    const indirectLength: u16 = 4094;
+    const immediateLength: u16 = 4095;
+    const forwardLength: u16 = 4094;
+    const indirectLength: u16 = 4093;
     pub const maxLength = 4093;
     pub const includesHeader = true;
     pub const partialOnStack = @bitCast(Header,@as(u64,0));

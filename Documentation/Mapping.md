@@ -72,12 +72,21 @@ Block closures are relatively expensive because they need to be heap allocated. 
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
 
 There are a few significant changes:
-1. We are using a pure generational copying collector. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
+1. We are using a pure generational copying collector for nursery and teen arenas. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
 2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
-This coding is used for heap and thread-local objects. They are treated exactly the same, except that thread-local are not collected or moved.
+#### Length
+The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables). If there are both instance variables and indexable values, the index variables are followed by a size field, that says the number of indexable values that follow. If there is a size field, the following interpretations apply to it
 
+There are a number of special length values:
+- 4095 - this isn't a header, it's an immediate value. This only occurs in a header position for object locations within an Array-of-Structs object.
+- 4094 - this is a forwarding pointer, the low 48 bits are the address.
+- 4093 - this is a remote array object, instead of the array contents will be the size and the address of a, possibly very large, page aligned indexable array, as well as a treap structure to find this object from a memory address.
+- 0-2047 - normal object
+Note that the total heap space for an object can't exceed 4093 words. Anything larger will be allocated as a remote object.
+
+#### Format
 First we have the object format tag. The bits code the following:
 - bit 0-3: encode indexable fields
 	- 0: no indexable fields
@@ -96,18 +105,20 @@ First we have the object format tag. The bits code the following:
 - bit 7: = 1 says the value is immutable
 
 Therefore, only the following values currently have meaning:
+- 0: unallocated (i.e. free-list - no pointers)
+- 1-15: indexable objects with no inst vars (no pointers)
+- 17: indexable objects with no inst vars (with pointers)
 - 32,96: non-indexable objects with inst vars (Association et al) 
-- 1-17: indexable objects with no inst vars
-- 32-49,97-113: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+- 33-49,97-113: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 - 64: weak non-indexable objects with inst vars  (Ephemeron)
 - 65-81: weak indexable objects with inst vars (WeakArray et al)
 - 16,48,112: Array-of-Structs arrays all of the same type, or at least same size
 
-Format anded with 80 = 0 declares no pointers, so GC doesn't look through them for pointers. Things are initially created as their pointer-free version but change to their pointer-containing version if a pointer is stored in them. i.e. 64 is ored if a pointer is stored into an instance variable, and 16 is ored if a pointer is stored into an indexed field (additionally, the pointee may need to be promoted to the general arena). During garbage collection, if no reference is found during the scan, they revert to the pointer-free version (i.e. bit 4 or 6 is reset).
+Format anded with 80 = 0 declares no pointers, so GC doesn't look through them for pointers. Things are initially created as their pointer-free version but change to their pointer-containing version if a pointer is stored in them. i.e. 64 is ored if a pointer is stored into an instance variable, and 16 is ored if a pointer is stored into an indexed field (additionally, the pointee may need to be promoted to the pointer target arena). During garbage collection, if no reference is found during the scan, they revert to the pointer-free version (i.e. bit 4 or 6 is reset).
 
-If there are both instVars and indexable fields, the length field is the number of instVars which are followed by a word containing the size of the indexable portion, which follows. Weak objects are rare enough that we don't bother to handle cases with no instance variables or no indexable values separately.
+If there are both instVars and indexable fields, the length field is the number of instVars which are followed by a word containing the size of the indexable portion, which follows. Weak objects are rare enough that we don't bother to handle cases with no instance variables separately. Weak object instance variables are assumed to contain pointers.
 
-If there aren't both  instVars and indexable fields, the size is determined by the length field. The only difference between instVars and indexables is whether `at:`, `size`, etc. should work or give an error.
+If there aren't both instVars and indexable fields, the size is determined by the length field. The only difference between instVars and indexables is whether `at:`, `size`, etc. should work or give an error.
 
 If the array length is >= 2048 (whether in the length field or the additional size word), the values are preceded by a size which is the number of additional words. 
 
@@ -136,6 +147,7 @@ If the format=3,7,11, the instance variables are followed by a word with the ind
 
 The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
 
+#### Age
 The age field encodes the number of times the object has been copied. Stack objects (only Contexts) will always have an age of 0. Nursery heap objects have an age of 1. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see[[MemoryManagement]]).
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
