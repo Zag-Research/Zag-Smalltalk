@@ -15,10 +15,10 @@ const TestByteCodeExecution = @import("zag/byte-interp.zig").TestByteCodeExecuti
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
-//pub fn uniqueSymbol(uniqueNumber:u24) Object {
-//    return @bitCast(Object,uniqueNumber|@as(u64,0xfff60007ff000000));
-//y}
-
+const header = @import("zag/heap.zig").header;
+const array = @import("zag/heap.zig").Format.array;
+const static = @import("zag/heap.zig").Age.static;
+const ByteArray_I = @import("zag/class.zig").ByteArray_I;
 const il = struct {
     usingnamespace @import("zag/primitives.zig").inlines;
 };
@@ -64,35 +64,6 @@ pub fn sieveNative(self: i64) i64 {
     }
     return count;
 }
-test "sieveNative" {
-    const n = 5;
-    const result = sieveNative(5);
-    std.debug.print("sieve({}) = {any}\n",.{n,result});
-    try std.testing.expectEqual(result,1028);
-}
-pub fn sieveObject(self: Object) Object {
-    const size = Object.from(8190);
-    var iter = Object.from(1);
-    var count = Nil;
-    while (il.p5N(iter,self)) : (iter = il.p1L(iter,1) catch @panic("p1L error in sieveObject")) {
-        count = Object.from(0);
-        var flags = il.p71(count,size) catch @panic("p71 error in sieveObject");
-        il.p145(flags,Object.from(1)) catch @panic("p145 error in sieveObject");
-        var i = Object.from(1);
-        while (il.p5N(i,size)) : (i = il.p1L(i,1) catch @panic("p1L error in sieveObject")) {
-            if (il.p7(il.p60(flags,i) catch @panic("p60 error in sieveObject"),Object.from(1)) catch @panic("p7 error in sieveObject")) {
-                const prime = il.p1L(i,1) catch @panic("p1L error in sieveObject");
-                var k = il.p1L(i,prime) catch @panic("p1L error in sieveObject");
-                while (il.p5N(k,size)) {
-                    il.p61(flags,k,Object.from(0)) catch @panic("p61 error in sieveObject");
-                    k = il.p1(k,prime) catch @panic("p1 error in sieveObject");
-                }
-                count = il.p1L(count,1) catch @panic("p1L error in sieveObject");
-            }
-        }
-    }
-    return count;
-}
 pub fn sieveComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     if (il.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
@@ -125,9 +96,10 @@ fn sieveComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context:
     return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
 }
 const sieveThreadRef = uniqueSymbol(42);
-const ByteArray = 42;
+const ByteArray = header(0,array,ByteArray_I,0,static).o();
 var sieveThread =
-    compileMethod(Nil,0,0,.{
+    compileMethod(Nil,0,7,.{
+        &p.pushContext,"^",
         "label1:",
         &p.pushLiteral, Object.from(8190),
         &p.popIntoTemp, 1, //size
@@ -136,16 +108,22 @@ var sieveThread =
         "label2:",
         &p.pushTemp, 6, //iter
         &p.pushTemp, 8, //self
-        &p.p5,
+        &p.p5, "p5OK",
+        &p.primFailure,
+        "p5OK:",
         &p.ifFalse, "label12",
         "label3:",
         &p.pushLiteral0,
         &p.popIntoTemp, 5, //count
-        &p.pushLiteral, Object.from(ByteArray),
+        &p.pushLiteral, ByteArray,
         &p.pushTemp, 1, //size
-        &p.p71,
+        &p.p71, "p71OK",
+        &p.primFailure,
+        "p71OK:",
         &p.pushLiteral1,
-        &p.p145,
+        &p.p145, "p145OK",
+        &p.primFailure,
+        "p145OK:",
         &p.popIntoTemp, 2, //flags
         &p.pushTemp, 1, //size
         &p.popIntoTemp, 8, //limit_i
@@ -154,85 +132,100 @@ var sieveThread =
         "label4:",
         &p.pushTemp, 7, //i
         &p.pushTemp, 8, //limit_i
-        &p.p5,
+        &p.p5, "p5OKb",
+        &p.primFailure,
+        "p5OKb:",
         &p.ifFalse, "label11",
         "label5:",
         &p.pushTemp, 2, //flags
         &p.pushTemp, 7, //i
-        &p.p60,
+        &p.p60, "p60OK",
+        &p.primFailure,
+        "p60OK:",
         &p.pushLiteral1,
-        &p.p7,
+        &p.p7, "p7OK",
+        &p.primFailure,
+        "p7OK:",
         &p.ifFalse, "label10",
         "label6:",
         &p.pushTemp, 7, //i
         &p.pushLiteral1,
-        &p.p1,
+        &p.p1, "p1OK",
+        &p.primFailure,
+        "p1OK:",
         &p.popIntoTemp, 3, //prime
         &p.pushTemp, 7, //i
         &p.pushTemp, 3, //prime
-        &p.p1,
+        &p.p1, "p1OKb",
+        &p.primFailure,
+        "p1OKb:",
         &p.popIntoTemp, 4, //k
         "label7:",
         &p.pushTemp, 4, //k
         &p.pushTemp, 1, //size
-        &p.p5,
+        &p.p5, "p5OKc",
+        &p.primFailure,
+        "p5OKc:",
         &p.ifFalse, "label9",
         "label8:",
         &p.pushTemp, 2, //flags
         &p.pushTemp, 4, //k
         &p.pushLiteral0,
-        &p.p61,
+        &p.p61, "p61OK",
+        &p.primFailure,
+        "p61OK:",
         &p.drop,
         &p.pushTemp, 4, //k
         &p.pushTemp, 3, //prime
-        &p.p1,
+        &p.p1, "p1OKc",
+        &p.primFailure,
+        "p1OKc:",
         &p.popIntoTemp, 4, //k
         &p.branch, "label7",
         "label9:",
         &p.pushTemp, 5, //count
         &p.pushLiteral1,
-        &p.p1,
+        &p.p1, "p1OKd",
+        &p.primFailure,
+        "p1OKd:",
         &p.popIntoTemp, 5, //count
         "label10:",
         &p.pushTemp, 7, //i
         &p.pushLiteral1,
-        &p.p1,
+        &p.p1, "p1OKe",
+        &p.primFailure,
+        "p1OKe:",
         &p.popIntoTemp, 7, //i
         &p.branch, "label4",
         "label11:",
         &p.pushTemp, 6, //iter
         &p.pushLiteral1,
-        &p.p1,
+        &p.p1, "p1OKf",
+        &p.primFailure,
+        "p1OKf:",
         &p.popIntoTemp, 6, //iter
         &p.branch, "label2",
         "label12:",
         &p.pushTemp, 5, //count
         &p.returnTop
 });
-test "sieveObject" {
-    var n:i32 = 1;
-    while (n<10) : (n += 1) {
-        const result = sieveObject(Object.from(n));
-        std.debug.print("sieve({}) = {any}\n",.{n,result});
-        try std.testing.expectEqual(result.toInt(),@truncate(i51,sieveNative(n)));
-    }
-}
-fn timeObject(n: i64) void {
-    _ = sieveObject(Object.from(n));
+test "sieveNative" {
+    const n = 5;
+    const result = sieveNative(n);
+    std.debug.print("sieve({}) = {any}\n",.{n,result});
+    try std.testing.expectEqual(result,1028);
 }
 test "sieveThread" {
     const method = sieveThread.asCompiledMethodPtr();
     sieveThread.update(sieveThreadRef,method);
-    var n:u32 = 1;
-    while (n<10) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te =  TestCodeExecution.new();
-        te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("sieve({}) = {any}\n",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,sieveNative(n)));
-    }
+    const n = 17;
+    var objs = [_]Object{Object.from(n)};
+    var te =  TestCodeExecution.new();
+    te.init();
+    const result = te.run(objs[0..],method);
+    std.debug.print("sieve({}) = {any}\n",.{n,result});
+    try std.testing.expectEqual(result.len,1);
+    try std.testing.expectEqual(result[0].toInt(),@truncate(i51,sieveNative(n)));
 }
 fn timeThread(n: i64) void {
     const method = sieveThread.asCompiledMethodPtr();
@@ -246,16 +239,14 @@ test "sieveComp" {
     var method = compileMethod(Nil,0,0,.{
         &sieveComp,
     });
-    var n:i32 = 1;
-    while (n<20) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te =  TestCodeExecution.new();
-        te.init();
-        const result = te.run(objs[0..],method.asCompiledMethodPtr());
-        std.debug.print("sieve({}) = {any}\n",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,sieveNative(n)));
-    }
+    const n = 1;
+    var objs = [_]Object{Object.from(n)};
+    var te =  TestCodeExecution.new();
+    te.init();
+    const result = te.run(objs[0..],method.asCompiledMethodPtr());
+    std.debug.print("sieve({}) = {any}\n",.{n,result});
+    try std.testing.expectEqual(result.len,1);
+    try std.testing.expectEqual(result[0].toInt(),@truncate(i51,sieveNative(n)));
 }
 fn timeComp(n: i64) void {
     var method = compileMethod(Nil,0,0,.{
@@ -270,25 +261,20 @@ pub fn timing(runs: u32) !void {
     const ts=std.time.nanoTimestamp;
     try stdout.print("for {} runs\n",.{runs});
     var start=ts();
+    var time = start;
     _ = sieveNative(runs);
     var base = ts()-start;
     try stdout.print("sieveNative: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/@intToFloat(f64,runs)});
-    // start=ts();
-    // _ = timeObject(runs);
-    // _ = sieveThread;
-    // _ = Object;
-    // var time = ts()-start;
-    // try stdout.print("sieveObject: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     // start=ts();
     // _ = timeComp(runs);
     // _ = sieveThread;
     // _ = Object;
     // time = ts()-start;
     // try stdout.print("sieveComp:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    // start=ts();
-    // _ = timeThread(runs);
-    // time = ts()-start;
-    // try stdout.print("sieveThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    start=ts();
+    _ = timeThread(runs);
+    time = ts()-start;
+    try stdout.print("sieveThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
     try timing(5000);

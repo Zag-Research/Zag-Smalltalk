@@ -52,7 +52,7 @@ pub const Thread = extern struct {
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
     inline fn ptr(self: *Self) *Self {
-        return self;
+        return @intToPtr(*Self,@ptrToInt(self) & ~@as(u64,7));
     }
     pub fn deinit(self : *Self) void {
         self.ptr().heap.deinit();

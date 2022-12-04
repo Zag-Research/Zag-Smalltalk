@@ -1,4 +1,5 @@
 const std = @import("std");
+const trace = std.debug.print;
 const execute = @import("execute.zig");
 const ContextPtr = execute.CodeContextPtr;
 const Code = execute.Code;
@@ -164,11 +165,11 @@ pub const primitives = struct {
         return @call(tailCall,p.branch,.{pc,sp,hp,thread,context});
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
-        //        return error.primitiveError;
         _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
+        trace("p5: {any}\n",.{context.stack(sp+1)});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
     pub fn p5N(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
@@ -184,15 +185,12 @@ pub const primitives = struct {
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
     pub fn p60(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
-        //        return error.primitiveError;
         _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p61(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
-        //        return error.primitiveError;
         _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p71(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // at:
-        //        return error.primitiveError;
         _ = pc; _ = sp; _ = hp; _ = thread; _ = context; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // ProtoObject>>#==

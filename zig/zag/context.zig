@@ -62,11 +62,15 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
         ctxt: ContextPtr,
     } {
         const newSp = sp - baseSize - locals;
+        const currentStackSize = 1; // ToDo: calculate from thread/self
         if (arenas.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
-        for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
+        ctxt.size = locals + currentStackSize + 2; // ToDo: remove this if don't have format
+        { @setRuntimeSafety(false);
+         for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
+         }
         ctxt.header = heap.Header.partialOnStack;
         if (thread.needsCheck()) @panic("grow heap2");
         return .{.hp=hp,.ctxt=ctxt};
@@ -81,9 +85,31 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
             self.prevCtxt.convertToProperHeapObject(sp, thread);
         }
     }
+    // pub fn format(
+    //     self: Context,
+    //     comptime fmt: []const u8,
+    //     options: std.fmt.FormatOptions,
+    //     writer: anytype,
+    // ) !void {
+    //     _ = fmt;
+    //     _ = options;
+        
+    //     if (self.isInStack()) {
+    //         writer.print("context in stack: ");
+    //         { @setRuntimeSafety(false);
+    //          writer.print("temps: {any}",.{self.temps[0..self.size-2]});
+    //          }
+    //         //if (self.prevCtxt.isInStack())
+    //         //else
+    //     }
+    //     else @panic("context not in stack");
+    // }
+    pub inline fn stack(self: *Self, sp: [*]Object) []Object {
+        return sp[0..(@ptrToInt(self)-@ptrToInt(sp))/@sizeOf(Object)];
+    }
     pub inline fn allTemps(self: ContextPtr) []Object {
         @setRuntimeSafety(false);
-        return @ptrCast(heap.HeapConstPtr,self).indexables(Object);
+        return self.temps[0..self.size-2];
     }
     pub inline fn getTPc(self: ContextPtr) [*]const codeType {
         return self.tpc;

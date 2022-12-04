@@ -24,16 +24,21 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0-5    | xxxx | xxxx | xxxx | NaN (unused)                  |
-| FFF6      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
-| FFF6      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF6      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF6      | 0003 | xxxx | xxxx | reserved (tag = Float (double))       |
-| FFF6      | 0004 | 0001 | 0000 | False                         |
-| FFF6      | 0005 | 0010 | 0001 | True                          |
-| FFF6      | 0006 | 0100 | 0002 | UndefinedObject               |
-| FFF6      | 0007 | aaxx | xxxx | Symbol                        |
-| FFF6      | 0008 | 00xx | xxxx | Character                     |
+| FFF0      | xxxx | xxxx | xxxx | NaN (unused)                  |
+| FFF1      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
+| FFF1      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
+| FFF1      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF1      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
+| FFF1      | 0004 | 0001 | 0000 | False                         |
+| FFF1      | 0005 | 0010 | 0001 | True                          |
+| FFF1      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF1      | 0007 | aaxx | xxxx | Symbol                        |
+| FFF1      | 0008 | 00xx | xxxx | Character                     |
+| FFF2      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFF3      | xxxx | xxxx | xxxx | niladic constant closure      |
+| FFF4      | xxxx | xxxx | xxxx | monadic constant closure      |
+| FFF5      | xxxx | xxxx | xxxx | diadic constant closure       |
+| FFF6      | xxxx | xxxx | xxxx | self thunk                    |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
@@ -56,6 +61,12 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 6. UndefinedObject: This encodes the value `nil` with all zero hash code.
 7. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
+
+### Thunks and Closures
+Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values and obviate the need for heap allocation.
+1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF1 immediates
+2. niladic, monadic, and diadic constant closures have no access to parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the code
+3. a self thunk simply returns `self`. The low 48 bits are the address of the context.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
