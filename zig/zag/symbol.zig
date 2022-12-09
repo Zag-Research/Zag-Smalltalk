@@ -36,8 +36,8 @@ pub const symbols = struct {
     pub const @"-" = symbol1(5);
     pub const @"*" = symbol1(6);
     pub const size = symbol0(7);
-    pub const @"at:" = symbol0(8);
-    pub const @"at:put:" = symbol0(9);
+    pub const @"at:" = symbol1(8);
+    pub const @"at:put:" = symbol2(9);
     pub const @"~=" = symbol1(10);
     pub const @"==" = symbol1(11);
     pub const @"~~" = symbol1(12);

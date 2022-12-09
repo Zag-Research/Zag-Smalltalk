@@ -24,20 +24,18 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0      | xxxx | xxxx | xxxx | NaN (unused)                  |
-| FFF1      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
-| FFF1      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF1      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF1      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF1      | 0004 | 0001 | 0000 | False                         |
-| FFF1      | 0005 | 0010 | 0001 | True                          |
-| FFF1      | 0006 | 0100 | 0002 | UndefinedObject               |
-| FFF1      | 0007 | aaxx | xxxx | Symbol                        |
-| FFF1      | 0008 | 00xx | xxxx | Character                     |
-| FFF2      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFF3      | xxxx | xxxx | xxxx | niladic constant closure      |
-| FFF4      | xxxx | xxxx | xxxx | monadic constant closure      |
-| FFF5      | xxxx | xxxx | xxxx | diadic constant closure       |
+| FFF0-2    | xxxx | xxxx | xxxx | NaN (unused)                  |
+| FFF3      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
+| FFF3      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
+| FFF3      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF3      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
+| FFF3      | 0004 | 0001 | 0000 | False                         |
+| FFF3      | 0005 | 0010 | 0001 | True                          |
+| FFF3      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF3      | 0007 | aaxx | xxxx | Symbol                        |
+| FFF3      | 0008 | 00xx | xxxx | Character                     |
+| FFF4      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFF5      | xxxx | xxxx | xxxx | closure-free block            |
 | FFF6      | xxxx | xxxx | xxxx | self thunk                    |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
@@ -64,9 +62,11 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 
 ### Thunks and Closures
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values and obviate the need for heap allocation.
-1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF1 immediates
-2. niladic, monadic, and diadic constant closures have no access to parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the code
-3. a self thunk simply returns `self`. The low 48 bits are the address of the context.
+1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF3 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
+2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
+3. a self thunk simply does a non-local return of `self`. The low 48 bits are the address of the context. Sole example: `[^self]`.
+
+When a `[self]` closure is required, runtime code returns either an immediate thunk (if `self` is immediate and fits), or a full closure with an appropriate `self` field.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).

@@ -17,6 +17,9 @@
 - [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
 #### Mist
 - [[MistDesign]] also has some ideas we modify
+#### Garbage Collectors
+- [Deconstructing the garbage-first collector](https://dl.acm.org/doi/10.1145/3381052.3381320)
+- [MMTk](https://github.com/mmtk)
 
 ### Architectures
 #### HPC and architectures (cache et al)

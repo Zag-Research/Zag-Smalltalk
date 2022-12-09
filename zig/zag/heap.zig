@@ -17,7 +17,8 @@ pub const Format = enum(u8) {
     objectNP = InstVars,
     arrayNP = Indexable_64,
     bothNP = InstVars + Indexable_64,
-    immutable = Immutable,
+    bothOP = InstVarsWithPtrs + Indexable_64,
+    bothAP = InstVars + IndexableWithPtrs,
     _,
     const Self = @This();
     const InstVars : u8 = 32;
@@ -82,6 +83,9 @@ pub const Format = enum(u8) {
             u64,i64,f64,Object => return self.plusIndexable(Indexable_64),
             else => return self,
         }
+    }
+    pub inline fn immutable(self: Self) Self {
+        return @intToEnum(Self,@enumToInt(self) | Immutable);
     }
     pub inline fn hasInstVars(self: Self) bool {
         return @enumToInt(self) & InstVars != 0;
@@ -196,6 +200,13 @@ pub const Age = enum(u4) {
     pub inline fn isInStack(self: Self) bool {
         return @enumToInt(self) == Stack;
     }
+    pub inline fn marked(self: Self) Self {
+        return @intToEnum(Self,@enumToInt(self) | 1);
+    }
+    pub inline fn scanned(self: Self) Self {
+        return @intToEnum(Self,@enumToInt(self) | 2);
+    }
+    // Note: assigning a ptr to a scanned object must block for collection
 };
 pub const Header = packed struct(u64) {
         classIndex: u16,
@@ -209,7 +220,9 @@ pub const Header = packed struct(u64) {
     const indirectLength: u16 = 4093;
     pub const maxLength = 4093;
     pub const includesHeader = true;
-    pub const partialOnStack = @bitCast(Header,@as(u64,0));
+    pub inline fn partialOnStack(selfOffset: u16) Header {
+        return @bitCast(Header,@as(u64,selfOffset)<<16);
+    }
     inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) Header {
         return Header {
             .classIndex = classIndex,
@@ -301,6 +314,9 @@ pub const Header = packed struct(u64) {
     }
     pub inline fn getClass(self: HeapConstPtr) ClassIndex {
         return self.classIndex;
+    }
+    pub inline fn hash16(self: Header) u16 {
+        return @truncate(u16,@bitCast(u64,self)>>16);
     }
     pub inline fn instVars(self: HeapConstPtr) []Object {
         if (self.objectFormat.hasInstVars()) {

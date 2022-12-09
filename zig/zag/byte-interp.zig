@@ -40,13 +40,13 @@ pub const CompiledByteCodeMethod = extern struct {
             @compileError("CompileByteCodeMethod prefix not the same as CompileTimeByteCodeMethod == " ++ s);
     }
     const pr = std.io.getStdOut().writer().print;
-    pub fn init(name: Object, size: u64) Self {
+    pub fn init(name: Object, locals: u16, maxStack: u16) Self {
         return Self {
             .header = undefined,
             .name = name,
             .class = Nil,
-            .stackStructure = Object.from(0),
-            .size = size,
+            .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
+            .size = 0,
             .code = [1]ByteCode{ByteCode.int(0)},
         };
     }
@@ -179,7 +179,8 @@ pub const ByteCode = enum(i8) {
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
-                        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded);
+                        const selfOffset = @enumToInt(stackStructure.l2);
+                        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded,selfOffset);
                         const ctxt = result.ctxt;
                         ctxt.setNPc(interpret);
                         sp = result.ctxt.asObjectPtr();
@@ -211,7 +212,7 @@ pub const ByteCode = enum(i8) {
                         continue :interp;
                     },
                     .returnWithContext => {
-                        const result = context.pop(thread,pc[0].u());
+                        const result = context.pop(thread);
                         const newSp = result.sp;
                         const callerContext = result.ctxt;
                         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
@@ -219,7 +220,7 @@ pub const ByteCode = enum(i8) {
                     .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context}),
                     .returnTop => {
                         const top = sp[0];
-                        const result = context.pop(thread,pc[0].u());
+                        const result = context.pop(thread);
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;

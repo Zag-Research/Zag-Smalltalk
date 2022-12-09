@@ -15,9 +15,7 @@ const TestByteCodeExecution = @import("zag/byte-interp.zig").TestByteCodeExecuti
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
-//pub fn uniqueSymbol(uniqueNumber:u24) Object {
-//    return @bitCast(Object,uniqueNumber|@as(u64,0xfff60007ff000000));
-//y}
+const sym = @import("zag/symbol.zig").symbols;
 
 const i = struct {
     usingnamespace @import("zag/primitives.zig").inlines;
@@ -26,7 +24,7 @@ const p = struct {
     usingnamespace @import("zag/execute.zig").controlPrimitives;
     usingnamespace @import("zag/primitives.zig").primitives;
 };
-var fibCompM = compileMethod(Nil,0,0,.{&fibComp});
+var fibCompM = compileMethod(sym.value,0,0,.{&fibComp});
 const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
@@ -48,7 +46,7 @@ pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, contex
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
     }
-    const result = context.push(sp,hp,thread,fibThread.asCompiledMethodPtr(),0,1);
+    const result = context.push(sp,hp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
     const newContext = result.ctxt;
     const newHp = result.hp;
     const newSp = newContext.asObjectPtr()-1;
@@ -69,14 +67,14 @@ fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: 
 fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
     context.setTemp(0,sum);
-    const result = context.pop(thread,0);
+    const result = context.pop(thread);
     const newSp = result.sp;
     const callerContext = result.ctxt;
     return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
 }
 const fibThreadRef = uniqueSymbol(42);
 var fibThread =
-    compileMethod(Nil,0,0,.{
+    compileMethod(sym.value,0,2,.{
         "recurse:",
         &p.dup,
         //&p.pushLiteral, Object.from(2),
@@ -106,7 +104,7 @@ var fibThread =
         &p.p1,"label6",
         &p.primFailure,
         "label6:",
-        &p.returnTop0,
+        &p.returnTop,
 });
 test "fibObject" {
     var n:i32 = 1;
@@ -142,7 +140,7 @@ fn timeThread(n: i64) void {
     _ = te.run(objs[0..],method);
 }
 test "fibComp" {
-    var method = compileMethod(Nil,0,0,.{
+    var method = compileMethod(sym.value,0,2,.{
         &fibComp,
     });
     var n:i32 = 1;
@@ -157,7 +155,7 @@ test "fibComp" {
     }
 }
 fn timeComp(n: i64) void {
-    var method = compileMethod(Nil,0,0,.{
+    var method = compileMethod(sym.value,0,0,.{
         &fibComp,
     });
     var objs = [_]Object{Object.from(n)};
@@ -168,7 +166,7 @@ fn timeComp(n: i64) void {
 const b = @import("zag/byte-interp.zig").ByteCode;
 test "fibByte" {
     var fibByte =
-        compileByteCodeMethod(Nil,0,0,.{
+        compileByteCodeMethod(sym.value,0,0,.{
             "recurse:",
             b.dup,
             b.pushLiteral, Object.from(2),
@@ -212,7 +210,7 @@ test "fibByte" {
 }
  fn timeByte(n: i64) void {
      var fibByte =
-         compileByteCodeMethod(Nil,0,0,.{
+         compileByteCodeMethod(sym.value,0,0,.{
              "recurse:",
              b.dup,
              b.pushLiteral, Object.from(2),

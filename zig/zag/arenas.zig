@@ -63,7 +63,7 @@ pub const NurseryArena = extern struct {
         self.thread = thr;
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
-        return @intToPtr([*]Object,@ptrToInt(&self.heapArea[0]))+nursery_size;
+        return @intToPtr([*]Object,@ptrToInt(&self.heapArea[0]))+self.heapArea.len;
     }
     pub inline fn getHp(self: *Self) HeaderArray {
         return self.hp;

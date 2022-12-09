@@ -1,6 +1,6 @@
 const std = @import("std");
-const trace = std.debug.print;
 const execute = @import("execute.zig");
+const trace = execute.trace;
 const ContextPtr = execute.CodeContextPtr;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
@@ -13,7 +13,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("symbol.zig");
+const sym = @import("symbol.zig").symbols;
 const heap = @import("heap.zig");
 const Hp = heap.HeaderArray;
 const MinSmallInteger: i64 = object.MinSmallInteger;
@@ -213,7 +213,7 @@ const p = struct {
 };
 test "simple ==" {
     const expect = std.testing.expect;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(4),
         &p.pushLiteral,Object.from(4),
         &p.p110,"next","next:",
@@ -232,7 +232,7 @@ fn testExecute(method: CompiledMethodPtr) []Object {
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(3),
         &p.pushLiteral,Object.from(4),
         &p.p1,"success",
@@ -244,7 +244,7 @@ test "simple add" {
 }
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(4),            
         &p.pushLiteral,Object.from(0x3_ffffffffffff),
         &p.p1,"succeeded",
@@ -256,7 +256,7 @@ test "simple add with overflow" {
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(3),
         &p.pushLiteral,Object.from(4),
         &p.p110,"success","success:",
@@ -266,7 +266,7 @@ test "simple compare" {
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(3),
         &p.pushLiteral,Object.from(4),
         &p.p110,"success","success:",
@@ -281,7 +281,7 @@ test "simple compare and don't branch" {
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,Object.from(3),
         &p.pushLiteral,Object.from(4),
         &p.p169,"success","success:",
@@ -298,7 +298,7 @@ test "simple compare and branch" {
 test "dispatch3" {
 }
 pub fn main() void {
-    var prog = compileMethod(Nil,0,0,.{
+    var prog = compileMethod(sym.value,0,0,.{
         &p.pushLiteral,3,
         &p.pushLiteral,4,            
         &p.p1,"success",
