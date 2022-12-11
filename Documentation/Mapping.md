@@ -24,26 +24,29 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0-2    | xxxx | xxxx | xxxx | NaN (unused)                  |
-| FFF3      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
-| FFF3      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF3      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF3      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF3      | 0004 | 0001 | 0000 | False                         |
-| FFF3      | 0005 | 0010 | 0001 | True                          |
-| FFF3      | 0006 | 0100 | 0002 | UndefinedObject               |
-| FFF3      | 0007 | aaxx | xxxx | Symbol                        |
-| FFF3      | 0008 | 00xx | xxxx | Character                     |
-| FFF4      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFF5      | xxxx | xxxx | xxxx | closure-free block            |
-| FFF6      | xxxx | xxxx | xxxx | self thunk                    |
+| FFF0-1    | xxxx | xxxx | xxxx | NaN (unused)                  |
+| FFF2      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
+| FFF2      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
+| FFF2      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF2      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
+| FFF2      | 0004 | 0001 | 0000 | False                         |
+| FFF2      | 0005 | 0010 | 0001 | True                          |
+| FFF2      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF2      | 0007 | aaxx | xxxx | Symbol                        |
+| FFF2      | 0008 | 00xx | xxxx | Character                     |
+| FFF3      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFF4      | xxxx | xxxx | xxxx | closure-free block            |
+| FFF5      | xxxx | xxxx | xxxx | self thunk                    |
+| FFF6      | xxxx | xxxx | xxxx | heap closure                    |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
 | FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 7, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF3 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 2, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF1 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+Groups 4 through 7 have the low 48 bits being the address of an object.
+Groups 3 through 6 are all `BlockClosure`s - 3 through 5 being immediate blocks (see [[Mapping#Thunks and Closures]]) and 6 being a full closure
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
@@ -61,10 +64,15 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Thunks and Closures
-Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values and obviate the need for heap allocation.
-1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF3 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
+Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
+1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF2 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
 2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
 3. a self thunk simply does a non-local return of `self`. The low 48 bits are the address of the context. Sole example: `[^self]`.
+4. all remaining closures are heap allocated, and contain the following fields in order:
+	1. the address of the Method object that contains various values, and the threaded code implementation;
+	2. the address of the Context if there are any non-local returns;
+	3. the address of any (usually 0) Arrays that contain mutable fields that are shared between blocks or the main execution;
+	4. the values of `self` and any parameters or read-only locals that are referenced. 
 
 When a `[self]` closure is required, runtime code returns either an immediate thunk (if `self` is immediate and fits), or a full closure with an appropriate `self` field.
 
@@ -73,17 +81,17 @@ We are following some of the basic ideas from the [SPUR](http://www.mirandabanda
 
 There are a few significant changes:
 1. We are using a pure generational copying collector for nursery and teen arenas. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
-2. `become:` will be implemented with similar forwarding flagging. `become:` will replace both objects headers with forwarding pointer to an object that just contains the original object references and revised header words. When the objects are collected, the references will be updated.
+2. `become:` will be implemented with similar forwarding.... When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 #### Length
 The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables). If there are both instance variables and indexable values, the index variables are followed by a size field, that says the number of indexable values that follow. If there is a size field, the following interpretations apply to it
 
 There are a number of special length values:
-- 4095 - this isn't a header, it's an immediate value. This only occurs in a header position for object locations within an Array-of-Structs object.
+- 4095 - this isn't a header, it would an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
 - 4094 - this is a forwarding pointer, the low 48 bits are the address.
 - 4093 - this is a remote array object, instead of the array contents will be the size and the address of a, possibly very large, page aligned indexable array, as well as a treap structure to find this object from a memory address.
-- 0-2047 - normal object
+- 0-4092 - normal object
 Note that the total heap space for an object can't exceed 4093 words. Anything larger will be allocated as a remote object.
 
 #### Format

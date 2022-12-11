@@ -17,17 +17,16 @@ inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
 inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
-    return ((@as(u64,0xfff7)<<16)+c<<32)+h;
+    return (((@as(u64,ClassGrouping.Immediates)<<16)+c)<<32)+h;
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    0xfff0000000000000;
 // unused NaN fff00-fff4f
-const Start_of_Code_References: u64 = 0xfff4_000000000000;
-const End_of_Code_References: u64   = 0xfff4_ffffffffffff;
-const Start_of_Pointer_Objects: u64 = 0xfff5_000000000000;
-const Start_of_Heap_Objects: u64 =    0xfff6_000000000000;
-const End_of_Heap_Objects: u64   =    0xfff6_ffffffffffff;
-const c2Base = o2(0,0);
+const Start_of_Blocks: u64 =          0xfff3_000000000000;
+const Start_of_Pointer_Objects: u64 = 0xfff4_000000000000;
+const End_of_Blocks: u64 =            0xfff6_ffffffffffff;
+const Start_of_Heap_Objects: u64 =    0xfff7_000000000000;
+const End_of_Heap_Objects: u64   =    0xfff7_ffffffffffff;
 pub const False             = of(o2(class.False_I,0x00010000));
 pub const True              = of(o2(class.True_I,0x00100001));
 pub const Nil               = of(o2(class.UndefinedObject_I,0x01000002));
@@ -46,7 +45,10 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
-pub const ClassGrouping = enum(u16) {CodeReference = 0xfff5, Local2, Heap, SmallIntMin, SmallInt0 = 0xfffc, _ };
+pub const ClassGrouping = enum(u16) {
+    immediates = Immediates, immediateThunk, closureFreeBlock, selfThunk, heapClosure, heap, smallIntMin, smallInt0 = 0xfffc, _,
+    const Immediates = 0xfff2;
+};
 pub const Object = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
@@ -74,39 +76,37 @@ pub const Object = packed struct(u64) {
         return @bitCast(i64,self);
     }
     pub inline fn tagbits(self: Object) u16 {
-        return @bitCast(u16,@truncate(i16,@bitCast(i64,self)>>48));
+        return @truncate(u16,self.u()>>48);
     }
     pub inline fn tagbitsL(self: Object) u32 {
-        return @bitCast(u32,@truncate(i32,@bitCast(i64,self)>>32));
+        return @truncate(u32,self.u()>>32);
     }
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object) bool {
-        return self.u() >= u64_MINVAL;
+        return self.tagbits() >= u64_MINVAL>>48;
     }
     pub inline fn isDouble(self: Object) bool {
-        return self.u() <= Negative_Infinity;
+        return self.tagbits() <= Negative_Infinity>>48;
     }
     pub inline fn isBool(self: Object) bool {
-        return self.equals(False) or self.equals(True);
-    }
-    pub inline fn isNilA(self: Object) bool {
-        return self.equals(Nil);
+        const tag = self.tagbitsL();
+        return tag==False.tagbitsL() or tag==True.tagbitsL();
     }
     pub inline fn isNil(self: Object) bool {
         return self.tagbitsL() == Nil.tagbitsL();
     }
-    pub inline fn isHeapA(self: Object) bool {
-        if (self.u() <= Start_of_Heap_Objects) return false;
-        return self.u() <= End_of_Heap_Objects;
-    }
-    pub inline fn isHeap(self: Object) bool {
+    pub inline fn isHeapObject(self: Object) bool {
         return self.tagbits() == Start_of_Heap_Objects>>48;
     }
-    pub inline fn is_memory(self: Object) bool {
-        if (self.u() <= Start_of_Code_References) return false;
-        return self.u() <= End_of_Heap_Objects;
+    pub inline fn isHeapAllocated(self: Object) bool {
+        const tag = self.tagbits();
+        return tag >= Start_of_Pointer_Objects>>48 and  tag <= End_of_Heap_Objects>>48;
+    }
+    pub inline fn isBlock(self: Object) bool {
+        const tag = self.tagbits();
+        return tag >= Start_of_Blocks>>48 and  tag <= End_of_Blocks>>48;
     }
     pub  fn toInt(self: Object) i64 {
         if (self.isInt()) return @bitCast(i64, self.u() -% u64_ZERO);
@@ -149,7 +149,7 @@ pub const Object = packed struct(u64) {
         return symbol.asString(self).arrayAsSlice(u8);
     }
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
-        if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch &[0]T{};
+        if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch return &[0]T{};
         return &[0]T{};
     }
     pub  fn isIndexable(self: Object) bool {
@@ -163,7 +163,6 @@ pub const Object = packed struct(u64) {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==HeapConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
-        if (T==[*]Code) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Code_References);
         switch (@typeInfo(@TypeOf(value))) {
             .Int,
             .ComptimeInt => {
@@ -211,14 +210,13 @@ pub const Object = packed struct(u64) {
         return ord.eq;
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
-        if (self.isInt()) return class.SmallInteger_I;
-        if (self.isDouble()) return class.Float_I;
-        if (self.u() >= c2Base) return @truncate(ClassIndex,self.u() >> 32);
-        if (self.u() >= Start_of_Code_References) {
-            if (self.u() > End_of_Code_References) return class.Object_I;
-            return class.CodeReference_I;
-        }
-            @panic("unknown immediate");
+        const tag = self.tagbits();
+        if (tag >= u64_MINVAL>>48) return class.SmallInteger_I;
+        if (tag == Start_of_Heap_Objects>>48) return class.Object_I;
+        if (tag >= Start_of_Blocks>>48) return class.BlockClosure_I;
+        if (tag <= Negative_Infinity>>48) return class.Float_I;
+        if (tag == ClassGrouping.Immediates) return @truncate(ClassIndex,self.u() >> 32);
+        @panic("unknown encoding");
     }
     pub inline fn get_class(self: Object) ClassIndex {
         const immediate = self.immediate_class();
@@ -251,7 +249,7 @@ pub const Object = packed struct(u64) {
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object{.signMantissa =.SmallInt0, .h0 = f0, .h1 = f1, .l2 = @intToEnum(Level2,f2)};
+        return Object{.signMantissa =.smallInt0, .h0 = f0, .h1 = f1, .l2 = @intToEnum(Level2,f2)};
     }
 
 };
