@@ -268,7 +268,7 @@ test "compiling method" {
     try expectEqual(t.len,11);
 }
 //pub const trace = std.debug.print;
-pub fn trace(_:anytype,_:anytype) void {}
+pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
@@ -286,15 +286,15 @@ pub const controlPrimitives = struct {
     pub fn branch(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const offset = pc[0].int;
         trace("\nbranch offset: {}\n",.{offset});
+        if (offset == -1) {
+            const target = context.getTPc();
+            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
+            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context});
+        }
         if (offset>=0) {
             const target = pc+1+@intCast(u64, offset);
             if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
             trace("\nbranch target: {}",.{target[0].uint});
-            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context});
-        }
-        if (offset == -1) {
-            const target = context.getTPc();
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context});
             return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context});
         }
         const target = pc+1-@intCast(u64, -offset);

@@ -45,9 +45,10 @@ pub const Number_I = c3o + 18;
 pub const ClassDescription_I = c3o + 19;
 pub const Boolean_I = c3o + 20;
 pub const Context_I = c3o + 21;
-pub const CodeReference_I = c3o + 22;
-pub const CompiledMethod_I = c3o + 23;
-pub const ByteArray_I = c3o + 24;
+pub const CatchingContext_I = c3o + 22;
+pub const EnsuringContext_I = c3o + 23;
+pub const CompiledMethod_I = c3o + 24;
+pub const ByteArray_I = c3o + 25;
 const initialClassStrings = heap.compileStrings(.{ // must be in same order as above
     "Object", "SmallInteger", "Float", "False", "True",
     "UndefinedObject", "Symbol", "Character", "Array", "String",
@@ -55,7 +56,7 @@ const initialClassStrings = heap.compileStrings(.{ // must be in same order as a
     "MethodDictionary", "System", "Return", "Send", "Literal", "Load",
     "Store", "SymbolTable", "Dispatch", "ClassTable", "Magnitude",
     "Number", "ClassDescription", "Boolean", "Context",
-    "CodeReference", "CompiledMethod", "ByteArray",
+    "CatchingContext", "EnsuringContext", "CompiledMethod", "ByteArray",
 });
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
 var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
