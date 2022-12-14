@@ -121,36 +121,58 @@ pub const Code = extern union {
         return CompiledMethod.methodFromCodeOffset(self.codePtr());
     }
 };
-fn countNonLabels(comptime tup: anytype) usize {
+fn intOf(str: []const u8) usize {
+    var n: u16 = 0;
+    for (str) |c| {
+        if (c>'9') return n;
+        n = n*10 + (c-'0');
+    }
+    return n;
+}
+test "intOf" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(intOf("012Abc"),12);
+    try expectEqual(intOf("1230Abc"),1230);
+}
+pub fn countNonLabels(comptime tup: anytype) struct {codes: usize, refs: usize} {
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     var n = 1;
+    var r = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {n+=1;},
+            Object => {n+=1;if (!field.isLiteral()) @compileError("use reference for non-literal object");},
             @TypeOf(null) => {n+=1;},
             comptime_int,comptime_float => {n+=1;},
             ThreadedFn => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => |pointer| {if (@hasField(pointer.child,"len") and field[field.len-1]!=':') n = n + 1;},
-                    else => {n = n+1;},
+                    .Pointer => |pointer| {
+                        if (@hasField(pointer.child,"len"))
+                            switch (field[0]) {
+                                ':' => {},
+                                '0'...'9' => {r = @max(r,intOf(field[0..])); n+=1;},
+                                else => n+=1,
+                        };
+                    },
+                    else => {n+=1;},
             }
         }
     }
-    return n;
+    return .{.codes=n, .refs=r};
 }
 fn CompileTimeMethod(comptime tup: anytype) type {
-    const codeSize = countNonLabels(tup)+7; // ToDo: why is this too small for sieve????
+    const counts = countNonLabels(tup);
+    const codeSize = counts.codes;
+    const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.Header,
         name: Object,
         class: Object,
         stackStructure: Object,
-        size: u64,
-        code: [codeSize] Code,
+        code: [refsSize+1+codeSize] Code,
         const pr = std.io.getStdOut().writer().print;
         const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
-        const methodIVars = CompiledMethod.nIVars;
+        const methodIVars = CompiledMethod.nIVars+refsSize;
         const Self = @This();
         fn init(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int) Self {
             return .{
@@ -158,18 +180,23 @@ fn CompileTimeMethod(comptime tup: anytype) type {
                 .name = name,
                 .class = Nil,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
-                .size = codeSize,
                 .code = undefined,
             };
         }
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
             return @ptrCast(* CompiledMethod,self);
         }
-        pub fn update(self: *Self, tag: Object, method: CompiledMethodPtr) void {
-            for (self.code) |*c| {
-                if (c.object.equals(tag)) c.* = Code.method(method);
-            }
+        pub fn references(self: *Self, refs: []Object) void {
+            if (refs.len!=refsSize) @panic("refs count wrong");
+            for (refs) |obj,idx|
+                self.code[idx] = Code.object(obj);
+            self.code[refsSize] = Code.uint(refs.len);
         }
+        // pub fn update(self: *Self, tag: Object, method: CompiledMethodPtr) void {
+        //     for (self.code) |*c| {
+        //         if (c.object.equals(tag)) c.* = Code.method(method);
+        //     }
+        // }
         fn headerOffset(_: *Self, codeIndex: usize) Code {
             return Code.uint(codeIndex+codeOffsetInUnits);
         }
@@ -202,7 +229,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
                     .Pointer => {
-                        if (field[field.len-1]==':') {
+                        if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
                             method.code[n]=Code.int(n);
@@ -219,8 +246,8 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                     else
                                     switch (@typeInfo(@TypeOf(t))) {
                                         .Pointer => |tPointer| {
-                                            if (@hasField(tPointer.child,"len") and t[t.len-1]==':') {
-                                                if (comptime std.mem.startsWith(u8,t,field)) {
+                                            if (@hasField(tPointer.child,"len") and t[0]==':') {
+                                                if (comptime std.mem.endsWith(u8,t,field)) {
                                                     method.code[n]=Code.int(lp-n);
                                                     n=n+1;
                                                     found = true;
@@ -247,11 +274,12 @@ const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    const mref = comptime uniqueSymbol(42);
-    var m = compileMethod(sym.yourself,0,0,.{"abc:", &p.dnu, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, null});
+    var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
     const mcmp = m.asCompiledMethodPtr();
-    m.update(mref,mcmp);
+    m.references([_]Object{Object.from(mcmp)});
     var t = m.code[0..];
+    for (t) |tv,idx|
+        std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
     try expectEqual(t[0].prim,controlPrimitives.noop);
     try expectEqual(t[1].prim,p.dnu);
     try expectEqual(t[2].int,2);
@@ -265,7 +293,7 @@ test "compiling method" {
     try expectEqual(t[8].int,3);
     try expectEqual(t[9].method,mcmp);
     try expectEqual(t[10].object,Nil);
-    try expectEqual(t.len,11);
+    try expectEqual(t.len,12);
 }
 //pub const trace = std.debug.print;
 pub inline fn trace(_:anytype,_:anytype) void {}
@@ -360,6 +388,13 @@ pub const controlPrimitives = struct {
         const newSp = sp-1;
         newSp[0]=Object.from(-1);
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
+    }
+    pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        const offset = pc[0].int;
+        newSp[0]=@intToPtr(*Object,@bitCast(i64,pc)+offset).*;
+        trace("\npushLiteralIndirect: {}",.{newSp[0]});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context});
     }
     pub fn pushNil(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         const newSp = sp-1;
@@ -528,11 +563,27 @@ test "context returnTop via TestExecution" {
     try expectEqual(result.len,2);
     try expectEqual(result[0],Object.from(42));
 }
+test "context returnTop with indirect via TestExecution" {
+    const expectEqual = std.testing.expectEqual;
+    var method = compileMethod(sym.yourself,3,0,.{
+        &p.noop,
+        &p.pushContext,"^",
+        &p.pushLiteralIndirect,"0Obj",
+        &p.returnTop,
+    });
+    method.references([_]Object{Object.from(42)});
+    var te = TestCodeExecution.new();
+    te.init();
+    var objs = [_]Object{Nil,True};
+    const result = te.run(objs[0..],method.asCompiledMethodPtr());
+    try expectEqual(result.len,2);
+    try expectEqual(result[0],Object.from(42));
+}
 test "simple executable" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself,1,0,.{
         &p.pushContext,"^",
-        "label1:",
+        ":label1",
         &p.pushLiteral,comptime Object.from(42),
         &p.popIntoTemp,1,
         &p.pushTemp1,
@@ -540,11 +591,11 @@ test "simple executable" {
         &p.pushTrue,
         &p.ifFalse,"label3",
         &p.branch,"label2",
-        "label3:",
+        ":label3",
         &p.pushTemp,1,
-        "label4:",
+        ":label4",
         &p.returnTop,
-        "label2:",
+        ":label2",
         &p.pushLiteral0,
         &p.branch,"label4",
     });

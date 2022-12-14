@@ -38,6 +38,7 @@ const u64_ZERO              =    0xfffc_000000000000;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
 pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
+pub const invalidHeapPointer = of(Start_of_Heap_Objects);
 
 pub fn fromLE(comptime T: type, v: T) Object {
     const val = @ptrCast(*const [@sizeOf(T)]u8,&v);
@@ -104,6 +105,9 @@ pub const Object = packed struct(u64) {
         const tag = self.tagbits();
         return tag >= Start_of_Pointer_Objects>>48 and  tag <= End_of_Heap_Objects>>48;
     }
+    pub inline fn isLiteral(self: Object) bool {
+        return !self.isHeapAllocated();
+    }
     pub inline fn isBlock(self: Object) bool {
         const tag = self.tagbits();
         return tag >= Start_of_Blocks>>48 and  tag <= End_of_Blocks>>48;
@@ -121,7 +125,7 @@ pub const Object = packed struct(u64) {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (check and (self.isHeap() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
+                        if (check and (self.isHeapObject() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
@@ -153,7 +157,7 @@ pub const Object = packed struct(u64) {
         return &[0]T{};
     }
     pub  fn isIndexable(self: Object) bool {
-        if (self.isHeap()) return self.to(HeapPtr).isIndexable();
+        if (self.isHeapObject()) return self.to(HeapPtr).isIndexable();
         return false;
     }
     pub  fn inHeapSize(self: Object) usize {
@@ -191,7 +195,7 @@ pub const Object = packed struct(u64) {
         @compileError("Can't convert \""++@typeName(@TypeOf(value))++"\"");
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
-        if (!self.isHeap() or !other.isHeap()) {
+        if (!self.isHeapObject() or !other.isHeapObject()) {
             const u64s = self.u();
             const u64o = other.u();
             return std.math.order(u64s,u64o);

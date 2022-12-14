@@ -306,7 +306,7 @@ fn countNonLabels(comptime tup: anytype) usize {
             ByteCode => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => |pointer| {if (@hasField(pointer.child,"len") and field[field.len-1]!=':') n = n + 1;},
+                    .Pointer => |pointer| {if (@hasField(pointer.child,"len") and field[0]!=':') n = n + 1;},
                     else => {n = n+1;},
             }
         }
@@ -377,7 +377,7 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
                     .Pointer => {
-                        if (field[field.len-1]==':') {
+                        if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
                             method.code[n]=ByteCode.int(n);
@@ -394,8 +394,8 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                                     else
                                     switch (@typeInfo(@TypeOf(t))) {
                                        .Pointer => |tPointer| {
-                                            if (@hasField(tPointer.child,"len") and t[t.len-1]==':') {
-                                                 if (comptime std.mem.startsWith(u8,t,field)) {
+                                            if (@hasField(tPointer.child,"len") and t[0]==':') {
+                                                 if (comptime std.mem.endsWith(u8,t,field)) {
                                                     method.code[n]=ByteCode.int(lp-n-1);
                                                     n+=1;
                                                     found = true;
@@ -422,7 +422,7 @@ const b = ByteCode;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     const mref = comptime uniqueSymbol(42);
-    var m = compileByteCodeMethod(Nil,0,0,.{"abc:", b.return_tos, "def", True, comptime Object.from(42), "def:", "abc", "*", "^", 3, mref, Nil});
+    var m = compileByteCodeMethod(Nil,0,0,.{":abc", b.return_tos, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, mref, Nil});
 //    const mcmp = m.asCompiledByteCodeMethodPtr();
 //    m.update(mref,mcmp);
     var t = m.code[0..];
@@ -445,7 +445,7 @@ test "compiling method" {
 pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret);
 test "simple return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(Nil,0,0,.{
+    var method = compileByteCodeMethod(sym.yourself,0,0,.{
         b.noop,
         b.pushLiteral,comptime Object.from(42),
         b.returnNoContext,
@@ -454,6 +454,7 @@ test "simple return via TestByteCodeExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,3);
     try expectEqual(result[0],Object.from(42));
     try expectEqual(result[1],Nil);
@@ -461,38 +462,41 @@ test "simple return via TestByteCodeExecution" {
 }
 test "context return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(Nil,0,0,.{
+    var method = compileByteCodeMethod(sym.@"at:",0,0,.{
         b.noop,
         b.pushContext,"^",
         b.pushLiteral,comptime Object.from(42),
-        b.returnWithContext,1,
+        b.returnWithContext,
     });
     var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);
 }
 test "context returnTop via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(Nil,0,0,.{
+    var method = compileByteCodeMethod(sym.yourself,0,0,.{
         b.noop,
         b.pushContext,"^",
         b.pushLiteral,comptime Object.from(42),
-        b.returnTop,1,
+        b.returnTop,
     });
     var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
     var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,1);
     try expectEqual(result[0],Object.from(42));
 }
 test "simple executable" {
-    var method = compileByteCodeMethod(Nil,0,1,.{
+    const expectEqual = std.testing.expectEqual;
+    var method = compileByteCodeMethod(sym.yourself,0,1,.{
         b.pushContext,"^",
-        "label1:",
+        ":label1",
         b.pushLiteral,comptime Object.from(42),
         b.popIntoTemp,1,
         b.pushTemp1,
@@ -500,16 +504,19 @@ test "simple executable" {
         b.pushTrue,
         b.ifFalse,"label3",
         b.branch,"label2",
-        "label3:",
+        ":label3",
         b.pushTemp,1,
-        "label4:",
-        b.returnWithContext,1,
-        "label2:",
+        ":label4",
+        b.returnWithContext,
+        ":label2",
         b.pushLiteral0,
         b.branch,"label4",
     });
     var objs = [_]Object{Nil};
     var te = TestByteCodeExecution.new();
     te.init();
-    _ = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    const result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    std.debug.print("result = {any}\n",.{result});
+    try expectEqual(result.len,1);
+    try expectEqual(result[0],Object.from(0));
 }
