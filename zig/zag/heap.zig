@@ -10,9 +10,9 @@ const pow2 = @import("utilities.zig").largerPowerOf2;
 
 pub const Format = enum(u8) {
     none = 0,
-    object = InstVarsWithPtrs,
-    array = IndexableWithPtrs,
-    both = InstVarsWithPtrs + IndexableWithPtrs,
+    objectP = InstVarsWithPtrs,
+    arrayP = IndexableWithPtrs,
+    bothPP = InstVarsWithPtrs + IndexableWithPtrs,
     weak = Weak,
     objectNP = InstVars,
     arrayNP = Indexable_64,
@@ -70,7 +70,7 @@ pub const Format = enum(u8) {
         return @intToEnum(Self,@enumToInt(self.withoutIndexable())+n);
     }
     pub inline fn justIndexable(self: Self) Self {
-        return @intToEnum(Self,@enumToInt(self) & (IndexableFormat+Immutable));
+        return @intToEnum(Self,@enumToInt(self) & IndexableFormat);
     }
     pub inline fn setArray(self: Self) Self {
         return self.plusIndexable(IndexableWithPtrs);
@@ -157,11 +157,11 @@ test "raw formats" {
 }
 test "header formats" {
     const expect = std.testing.expect;
-    try expect(Format.object.hasInstVars());
-    try expect(!Format.object.isPointerFree());
+    try expect(Format.objectP.hasInstVars());
+    try expect(!Format.objectP.isPointerFree());
     try expect(Format.objectNP.isPointerFree());
-    try expect(!Format.object.isIndexable());
-    try expect(!Format.object.isWeak());
+    try expect(!Format.objectP.isIndexable());
+    try expect(!Format.objectP.isWeak());
     try expect(Format.weak.isWeak());
 }
 pub const HeaderArray = [*]align(@alignOf(u64)) Header;
@@ -292,8 +292,11 @@ pub const Header = packed struct(u64) {
     pub inline fn asObject(self: HeapConstPtr) Object {
         return Object.from(self);
     }
-    pub inline fn asObjectPtr(self: HeapConstPtr) [*]Object {
-        return @bitCast([*]Object,self);
+    pub inline fn asObjectConstPtr(self: HeapConstPtr) [*]const Object {
+        return @ptrCast([*]const Object,self);
+    }
+    pub inline fn asObjectPtr(self: HeapPtr) [*]Object {
+        return @ptrCast([*]Object,self);
     }
     pub inline fn fromObjectPtr(op:  [*]const Object) HeaderArray {
         return @intToPtr(HeaderArray,@ptrToInt(op));

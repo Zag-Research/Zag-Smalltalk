@@ -35,7 +35,7 @@ test "arenaFree" {
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
-test "with vtable" {
+test "with arena" {
     var t = thread.Thread.new();
     var nursery = NurseryArena.new();
     nursery.init(&t);
@@ -45,22 +45,29 @@ test "with vtable" {
     const a = nursery.asArena();
     const r = try a.allocObject(sp,hp,context,42,5);
     const o = r.allocated;
-    try std.testing.expect(o.o().isHeapObject());
+    try std.testing.expect(!o.isInStack());
+    try std.testing.expect(!o.isForwarded());
+    try std.testing.expect(!o.isIndirect());
+    try std.testing.expect(!o.isIndexable());
+    try std.testing.expect(!o.isRaw());
+    const ivs = o.instVars();
+    try std.testing.expect(ivs.len==5);
 }
 const ArenaErrors = error {Fail,HeapFull};
 const AllocResult = struct {
     sp: [*]Object,
-    hp : HeaderArray,
+    hp: HeaderArray,
     context: u64,
-    allocated: [*]Object,
+    age: Age,
+    allocated: HeapPtr,
 };
 const AllocReturn = ArenaErrors!AllocResult;
 const threadAvail = thread.avail_size;
-const nursery_size = threadAvail/7/@sizeOf(Object);
+const nursery_size = @min(threadAvail/7/@sizeOf(Object),Header.maxLength);
 const teen_size = (threadAvail-@sizeOf(NurseryArena))/2/@sizeOf(Object);
 pub const NurseryArena = extern struct {
     const Self = @This();
-    vtable: Arena,
+    arena: Arena,
     hp: HeaderArray,
     sp: [*]Object,
     thread: *thread.Thread,
@@ -72,7 +79,7 @@ pub const NurseryArena = extern struct {
     }
     pub fn new() NurseryArena {
         return NurseryArena {
-            .vtable = undefined,
+            .arena = undefined,
             .hp = undefined,
             .sp = undefined,
             .thread = undefined,
@@ -80,7 +87,7 @@ pub const NurseryArena = extern struct {
         };
     }
     pub fn init(self: *Self, thr: *thread.Thread) void {
-        self.vtable = Arena{.alloc=alloc,.collect=collect};
+        self.arena = Arena{.alloc=alloc,.collect=collect};
         self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea[0]));
         self.sp = self.endOfStack();
         self.thread = thr;
@@ -98,35 +105,43 @@ pub const NurseryArena = extern struct {
         const result = @ptrCast(HeapPtr,hp);
         const end = hp + totalSize;
         if (@ptrToInt(sp)<=@ptrToInt(end)) return error.HeapFull;
-        return .{.sp=sp, .hp=end, .context=context, .allocated=result,};
+        return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
     }
-    fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64) AllocReturn {
+    fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64) ArenaErrors!void {
         const self = @ptrCast(*Self,arena);
         _ =  self; _ = sp; _ = hp; _ = context;
         @panic("incomplete");
     }
 };
-inline fn initAllocation(result: [*]Object, classIndex: class.ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
+inline fn initAllocation(result: HeapPtr, classIndex: class.ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
     const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
-    mem.set(Object,result[1..size+1],fill);
-    result[0]=@bitCast(Object,header(@truncate(u12,size),form,classIndex,hash,age));
+    mem.set(Object,result.asObjectPtr()[1..size+1],fill);
+    result.*=header(@intCast(u12,size),form,classIndex,hash,age);
 }
 const Arena = extern struct {
     const Self = @This();
     alloc: *const fn (*Arena,[*]Object,HeaderArray,u64,u64) ArenaErrors!AllocResult,
     collect: *const fn (*Arena,[*]Object,HeaderArray,u64) ArenaErrors!void,
-    pub inline fn allocObject(self : *Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex: class.ClassIndex, ivSize: usize) AllocReturn {
+
+    pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex:ClassIndex, ivSize:usize) AllocReturn {
         var result = try self.alloc(self,sp,hp,context,ivSize+1);
-        initAllocation(result.allocated,classIndex, Format.object, ivSize, Age.nursery, Nil);
+        initAllocation(result.allocated,classIndex, Format.objectNP, ivSize, result.age, Nil);
         return result;
     }
-    pub fn allocArray(self : *Self, classIndex : class.ClassIndex, ivSize : usize, arraySize : usize, comptime T: type) AllocReturn {
+    pub fn allocArray(self:*Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
+        const noIVs = ivSize==0;
+        var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
         const width = @sizeOf(T);
         const aSize = (arraySize*width+objectWidth-width)/objectWidth;
+        const fill = if (T==Object) Nil else object.ZERO;
         if (ivSize==0) {
-            if (arraySize)
+            if (aSize<Header.maxSize) {
+                var result = try self.alloc(self,sp,hp,context,aSize+1);
+                initAllocation(result.allocated,classIndex, form, ivSize, result.age, fill);
+                return result;
+            }
+            @panic("big array");
         }
-        var form = if (ivSize>0) Format.object else Format.none;
         return self.alloc(classIndex, form, ivSize, aSize, object.ZERO);
     }
     inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, fill: Object) !*T {
@@ -228,69 +243,6 @@ pub const GlobalArena = struct {
 //     try ee(findAllocationList(17),5);
 //     try ee(findAllocationList(Header.maxLength),12);
 //     try ee(findAllocationList(Header.maxLength+1),0);
-// }
-// // inline fn initAllocation(result: [*]Object, classIndex: class.ClassIndex, form: Format, ivSize: usize, aSize: usize, fill: Object) !HeapPtr{
-// //     var totalSize = 1+ivSize;
-// //     const size = 0;
-// //     const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
-// //     const head = header(@intCast(u12,size),form,classIndex,hash,age);
-// //     mem.set(Object,result[1..totalSize],fill);
-// //     if (totalSize>size+1) result[ivSize+1] = @bitCast(Object,aSize);
-// //     result[0] = @bitCast(Object,head);
-// //     return @ptrCast(HeapPtr,result);
-// // }
-// // inline fn allocObject(self : *Self, classIndex : class.ClassIndex, ivSize : usize) !HeapPtr {
-// //     return self.alloc(classIndex, Format.object, ivSize, 0, object.Nil);
-// // }
-// fn TempArena(comptime size: usize) type {
-//     return extern struct{
-//         const Self = @This();
-//         heap: [size]Object,
-//         nextFree: usize,
-//         pub fn init() Self {
-//             return Self {
-//                 .heap = undefined,
-//                 .nextFree = 0,
-//             };
-//         }
-//         fn alloc(self: *Self, totalSize: usize) !HeapPtr {
-//             if (self.nextFree+totalSize>size) {
-//                 std.debug.print("nextFree = {} totalSize = {} size = {}\n",.{self.nextFree,totalSize,size});
-//                 return error.HeapFull;
-//             }
-//             const result = @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),&self.heap[self.nextFree]));
-//             self.nextFree += totalSize;
-//             return result;
-//         }
-//         fn verify(self: *Self, expected: []Object) !void {
-//             if (self.nextFree!=size) {
-//                 std.debug.print("nextFree = {} expected {}\n",.{self.nextFree,size});
-//                 return error.HeapDidnotEndUpAtEnd;
-//             }
-//             var ok=true;
-//             for (expected) |item, index| {
-//                 if (!self.heap[index].equals(item) and
-//                         !(item.isDouble() and std.math.fabs(self.heap[index].to(f64)-item.to(f64))<0.00001)) {
-//                     std.debug.print("comparing[{}] expected={} output={}\n",.{index,item,self.heap[index]});
-//                     ok = false;
-//                 }
-//             }
-//             if (!ok) return error.OutputDiffered;
-//         }
-//     };
-// }
-// test "temp arena" {
-//     const testing = std.testing;
-//     var arena = TempArena(5).init();
-//     const testArena = arena.asArena();
-//     const obj1 : HeapPtr = try testArena.allocObject(42,3,0,Object,Age.stack);
-//     std.debug.print("obj1: 0x{x:0>16}\n",.{obj1.o().u()});
-//     try testing.expectEqual(@alignOf(@TypeOf(obj1)),Object.alignment);
-//     try testing.expect(obj1.asObject().isHeap());
-//     try testing.expectEqual(obj1.inHeapSize(),4);
-//     try testing.expectEqual(obj1.asObject().inHeapSize(),4);
-//     try testing.expectEqual(Nil.inHeapSize(),0);
-//     try testing.expectError(error.HeapFull,testArena.allocObject(42,3,0,Object,Age.stack));
 // }
 // test "slicing" {
 //     const testing = std.testing;
