@@ -56,7 +56,7 @@ test "check largerPowerOf2" {
 pub inline fn largerPowerOf2Not1(size:anytype) @TypeOf(size) {
     return po2(size,1);
 }
-test "check largerPowerOf2" {
+test "check largerPowerOf2Not1" {
     const expectEqual = std.testing.expectEqual;
     try expectEqual(largerPowerOf2Not1(@as(u16,1)),2);
     try expectEqual(largerPowerOf2Not1(@as(u16,2)),2);

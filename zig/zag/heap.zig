@@ -218,7 +218,7 @@ pub const Header = packed struct(u64) {
     const immediateLength: u16 = 4095;
     const forwardLength: u16 = 4094;
     const indirectLength: u16 = 4093;
-    pub const maxLength = 4093;
+    pub const maxLength = 4092;
     pub const includesHeader = true;
     pub inline fn partialOnStack(selfOffset: u16) Header {
         return @bitCast(Header,@as(u64,selfOffset)<<16);

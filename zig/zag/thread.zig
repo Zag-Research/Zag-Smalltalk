@@ -12,7 +12,7 @@ const ContextPtr = ex.CodeContextPtr;
 const tailCall = ex.tailCall;
 
 const thread_total_size = 64*1024; //std.mem.page_size;
-const thread_size = @sizeOf(u64)+@sizeOf(usize)*2;
+const thread_size = @sizeOf(u64)+@sizeOf(?*Thread);
 pub const avail_size = thread_total_size-thread_size;
 
 pub const Thread = extern struct {

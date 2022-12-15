@@ -88,6 +88,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isInt(self: Object) bool {
         return self.tagbits() >= u64_MINVAL>>48;
     }
+    pub inline fn isNat(self: Object) bool {
+        return self.tagbits() >= u64_ZERO>>48;
+    }
     pub inline fn isDouble(self: Object) bool {
         return self.tagbits() <= Negative_Infinity>>48;
     }
@@ -112,14 +115,19 @@ pub const Object = packed struct(u64) {
         const tag = self.tagbits();
         return tag >= Start_of_Blocks>>48 and  tag <= End_of_Blocks>>48;
     }
-    pub  fn toInt(self: Object) i64 {
+    pub inline fn toInt(self: Object) i64 {
         if (self.isInt()) return @bitCast(i64, self.u() -% u64_ZERO);
         @panic("Trying to convert Object to i64");
     }
-    pub  fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
+    pub inline fn toNat(self: Object) u64 {
+        if (self.isNat()) return self.u() -% u64_ZERO;
+        @panic("Trying to convert Object to u64");
+    }
+    pub fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
         switch (T) {
             f64 => {if (check and self.isDouble()) return @bitCast(f64, self);},
-            i64 => {if (check and self.isInt()) return @bitCast(T, self);},
+            i64 => {if (check and self.isInt()) return self.toInt();},
+            u64 => {if (check and self.isNat()) return self.toNat();},
             bool=> {if (check and self.isBool()) return self.equals(True);},
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
@@ -149,7 +157,7 @@ pub const Object = packed struct(u64) {
         if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T,false);
     }
-    pub  fn as_string(self: Object) []const u8 {
+    pub  fn asString(self: Object) []const u8 {
         return symbol.asString(self).arrayAsSlice(u8);
     }
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
@@ -244,7 +252,7 @@ pub const Object = packed struct(u64) {
             class.False_I => writer.print("false", .{}),
             class.True_I => writer.print("true", .{}),
             class.UndefinedObject_I => writer.print("nil", .{}),
-            class.Symbol_I => writer.print("#{s}", .{self.as_string()}),
+            class.Symbol_I => writer.print("#{s}", .{self.asString()}),
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
             class.SmallInteger_I => writer.print("{d}", .{self.toInt()}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
