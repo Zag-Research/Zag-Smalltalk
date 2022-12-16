@@ -80,13 +80,13 @@ variables and other information required to represent a constraint.
 Instance variables:
 	strength			the strength of this constraint <Strength>
 '!
-Object subclass: #Variable
+Object subclass: #DBVariable
 	instanceVariableNames: 'value constraints determinedBy walkStrength stay mark '
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'PharoJsTiming-DeltaBlue'!
 
-Variable comment:
+DBVariable comment:
 'I represent a constrained variable. In addition to my value, I maintain the
 structure of the constraint graph, the current dataflow graph, and various
 parameters of interest to the DeltaBlue incremental constraint solver.
@@ -112,7 +112,7 @@ UnaryConstraint comment:
 variable.
 
 Instance variables:
-	output		possible output variable <Variable>
+	output		possible output variable <DBVariable>
 	satisfied		true if I am currently satisfied <Boolean>'!
 
 UnaryConstraint subclass: #EditConstraint
@@ -148,7 +148,7 @@ BinaryConstraint comment:
 variables.
 
 Instance variables:
-	v1, v2		possible output variables <Variable>
+	v1, v2		possible output variables <DBVariable>
 	direction		one of:
 					#forward (v2 is output)
 					#backward (	v1 is output)
@@ -166,8 +166,8 @@ ScaleConstraint comment:
 relationship but the scale factor and offset are considered read-only.
 
 Instance variables:
-	scale		scale factor input variable <Variable>
-	offset		offset input variable <Variable>'!
+	scale		scale factor input variable <DBVariable>
+	offset		offset input variable <DBVariable>'!
 
 BinaryConstraint subclass: #EqualityConstraint
 	instanceVariableNames: ''
@@ -192,11 +192,11 @@ changing inputs.'!
 
 !UnaryConstraint methodsFor: 'initialize-release'!
 
-var: aVariable strength: strengthSymbol
+var: aDBVariable strength: strengthSymbol
 	"Initialize myself with the given variable and strength."
 
 	strength := Strength of: strengthSymbol.
-	output := aVariable.
+	output := aDBVariable.
 	satisfied := false.
 	self addConstraint.! !
 
@@ -277,11 +277,11 @@ EditConstraint class
 
 !EditConstraint class methodsFor: 'instance creation'!
 
-var: aVariable strength: strengthSymbol
+var: aDBVariable strength: strengthSymbol
 	"Install an edit constraint with the given strength on the given
 	 variable."
 
-	^(self new) var: aVariable strength: strengthSymbol! !
+	^(self new) var: aDBVariable strength: strengthSymbol! !
 
 
 !StayConstraint methodsFor: 'execution'!
@@ -296,10 +296,10 @@ StayConstraint class
 
 !StayConstraint class methodsFor: 'instance creation'!
 
-var: aVariable strength: strengthSymbol
+var: aDBVariable strength: strengthSymbol
 	"Install a stay constraint with the given strength on the given variable."
 
-	^(self new) var: aVariable strength: strengthSymbol! !
+	^(self new) var: aDBVariable strength: strengthSymbol! !
 
 
 !BinaryConstraint methodsFor: 'initialize-release'!
@@ -652,13 +652,13 @@ addPropagate: c mark: mark
 		 self addConstraintsConsuming: d output to: todo].
 	^true!
 
-changeVar: aVariable newValue: newValue
+changeVar: aDBVariable newValue: newValue
 
 	| editConstraint plan |
-	editConstraint := EditConstraint var: aVariable strength: #preferred.
+	editConstraint := EditConstraint var: aDBVariable strength: #preferred.
 	plan := self extractPlanFromConstraints: (Array with: editConstraint).
 	10 timesRepeat: [
-		aVariable value: newValue.
+		aDBVariable value: newValue.
 		plan execute].
 	editConstraint destroyConstraint.!
 
@@ -718,7 +718,7 @@ chainTest: n
 
 	| vars editConstraint plan planner |
 	planner := Planner new.
-	vars := (1 to: n+1) collect: [ :i | Variable new].
+	vars := (1 to: n+1) collect: [ :i | DBVariable new].
 
 	"thread a chain of equality constraints through the variables"
 	1 to: n do:
@@ -743,12 +743,12 @@ projectionTest: n
 	| scale offset src dst planner dests |
 	planner := Planner new.
 	dests := OrderedCollection new.
-	scale := Variable value: 10.
-	offset := Variable value: 1000.
+	scale := DBVariable value: 10.
+	offset := DBVariable value: 1000.
 	1 to: n do:
 		[ :i |
-		src := Variable value: i.
-		dst := Variable value: i.
+		src := DBVariable value: i.
+		dst := DBVariable value: i.
 		dests add: dst.
 		StayConstraint var: src strength: #default.
 		ScaleConstraint var: src var: scale var: offset var: dst strength: #required].
@@ -1071,7 +1071,7 @@ shortPrintOn: aStream
 	aStream nextPutAll: self class name, '(', self asOop printString, ')'.! !
 
 
-!Variable methodsFor: 'initialize-release'!
+!DBVariable methodsFor: 'initialize-release'!
 
 initialize
 
@@ -1082,7 +1082,7 @@ initialize
 	stay := true.
 	mark := 0.! !
 
-!Variable methodsFor: 'access'!
+!DBVariable methodsFor: 'access'!
 
 addConstraint: aConstraint
 	"Add the given constraint to the set of all constraints that refer
@@ -1153,7 +1153,7 @@ walkStrength: aStrength
 
 	walkStrength := aStrength.! !
 
-!Variable methodsFor: 'changes'!
+!DBVariable methodsFor: 'changes'!
 
 setValue: aValue
 	"Attempt to assign the given value to me using a strength of
@@ -1171,7 +1171,7 @@ setValue: aValue strength: strengthSymbol
 		 Planner propagateFrom: self].
 	editConstraint destroyConstraint.! !
 
-!Variable methodsFor: 'printing'!
+!DBVariable methodsFor: 'printing'!
 
 longPrintOn: aStream
 
@@ -1202,11 +1202,11 @@ shortPrintOn: aStream
 	aStream cr.! !
 "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- "!
 
-Variable class
+DBVariable class
 	instanceVariableNames: ''!
 
 
-!Variable class methodsFor: 'instance creation'!
+!DBVariable class methodsFor: 'instance creation'!
 
 new
 

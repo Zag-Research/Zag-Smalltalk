@@ -53,6 +53,16 @@ test "with arena" {
     const ivs = o.instVars();
     try std.testing.expect(ivs.len==5);
 }
+test "aligned allocation" {
+    const expectEqual = std.testing.expectEqual;
+    const allocator = std.heap.page_allocator;
+
+    const memory = try allocator.alignedAlloc(u8, 16384, 102400);
+    defer allocator.free(memory);
+    std.debug.print("addr = 0x{x:0>16}\n",.{@ptrToInt(memory.ptr)});
+    try expectEqual(memory.len, 102400);
+    try expectEqual(@TypeOf(memory), []align(16384)u8);
+}
 const ArenaErrors = error {Fail,HeapFull};
 const AllocResult = struct {
     sp: [*]Object,

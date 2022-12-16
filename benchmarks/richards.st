@@ -479,7 +479,7 @@ report: string times: count run: aBlock
 
 standardBenchmark
         "This the combined benchmark."
-        "Planner standardBenchmark"
+        "RBPlanner standardBenchmark"
 
         self report: 'Richards simulations' times: 100 run: [ self start ]!
 
