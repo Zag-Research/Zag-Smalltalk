@@ -53,16 +53,6 @@ test "with arena" {
     const ivs = o.instVars();
     try std.testing.expect(ivs.len==5);
 }
-test "aligned allocation" {
-    const expectEqual = std.testing.expectEqual;
-    const allocator = std.heap.page_allocator;
-
-    const memory = try allocator.alignedAlloc(u8, 16384, 102400);
-    defer allocator.free(memory);
-    std.debug.print("addr = 0x{x:0>16}\n",.{@ptrToInt(memory.ptr)});
-    try expectEqual(memory.len, 102400);
-    try expectEqual(@TypeOf(memory), []align(16384)u8);
-}
 const ArenaErrors = error {Fail,HeapFull};
 const AllocResult = struct {
     sp: [*]Object,
@@ -181,29 +171,56 @@ const Arena = extern struct {
 //         self.free = @ptrCast(HeaderArray,&self.heap[0]);
 //     }
 // };
-// const HeapAllocation = extern struct {
-//     flags: u64,
-//     next: ?*HeapAllocation,
-//     mem: [size]u8,
-//     const Self = @This();
-//     const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
-//     const page_allocation_size = 64*1024;
-//     const size = page_allocation_size - field_size;
-//     const maxObjects = size/@sizeOf(Header);
-//     fn init() Self {
-//         return Self {
-//             .flags = 0,
-//             .mem = undefined,
-//         };
-//     }
-//     fn sweep(self: *Self) void {
-//         var ptr = @ptrCast(HeaderArray,&self.mem[0]);
-//         const end = ptr+maxObjects;
-//         while (ptr<end) {
-//             unreachable;
-//         }
-//     }
-// };
+const HeapAllocation = extern struct {
+    flags: u64,
+    next: ?*HeapAllocation,
+    mem: [size]u8,
+    const Self = @This();
+    const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
+    const page_allocation_size = 64*1024;
+    const size = page_allocation_size - field_size;
+    const maxObjects = size/@sizeOf(Header);
+    const returnType = []u8;
+    fn getAligned(p:[]usize) []align(page_allocation_size)u8 { // ToDo: wastes 1/2 the space
+        var buf = std.heap.page_allocator.alloc(u8, page_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
+        const base = @ptrToInt(buf.ptr) & (page_allocation_size-1);
+        p[0]=base;
+        const offs = if (base==0) 0 else page_allocation_size-base;
+        if (!std.heap.page_allocator.resize(buf,offs+page_allocation_size)) @panic("resize failed");
+        return @alignCast(page_allocation_size,buf[offs..offs+page_allocation_size]);
+    }
+    fn alloc(p:[]usize) *Self {
+        var space = getAligned(p);
+        const self = @ptrCast(*Self,space.ptr);
+        self.flags = 0;
+        self.next = null;
+        return self;
+    }
+    fn sweep(self: *Self) void {
+        var ptr = @ptrCast(HeaderArray,&self.mem[0]);
+        const end = ptr+maxObjects;
+        while (ptr<end) {
+            unreachable;
+        }
+    }
+};
+test "aligned allocation" {
+    const expectEqual = std.testing.expectEqual;
+    var bases = [_]usize{0}**5;
+    const allocation1 = HeapAllocation.alloc(bases[0..]);
+    const allocation2 = HeapAllocation.alloc(bases[1..]);
+    const allocation3 = HeapAllocation.alloc(bases[2..]);
+    const allocation4 = HeapAllocation.alloc(bases[3..]);
+    const allocation5 = HeapAllocation.alloc(bases[4..]);
+    std.debug.print("bases = {any}\n",.{bases});
+    std.debug.print("addr1 = 0x{x:0>16}\n",.{@ptrToInt(allocation1)});
+    std.debug.print("addr2 = 0x{x:0>16}\n",.{@ptrToInt(allocation2)});
+    std.debug.print("addr3 = 0x{x:0>16}\n",.{@ptrToInt(allocation3)});
+    std.debug.print("addr4 = 0x{x:0>16}\n",.{@ptrToInt(allocation4)});
+    std.debug.print("addr5 = 0x{x:0>16}\n",.{@ptrToInt(allocation5)});
+    try expectEqual(allocation1.flags,0);
+}
+
 pub var globalArena = GlobalArena.init();
 pub const GlobalArena = struct {
     const Self = @This();
