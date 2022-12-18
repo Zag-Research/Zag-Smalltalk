@@ -14,7 +14,7 @@
 
 ### Memory Management
 #### mimalloc
-- [gihub](https://github.com/microsoft/mimalloc)
+- [on github](https://github.com/microsoft/mimalloc)
 - has some interesting ideas similar to those I was thinking about
 - [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
 #### Mist
@@ -28,7 +28,7 @@
 - [Algorithmica](https://en.algorithmica.org/hpc/)
 - [What Every Programmer Should Know About Memory](http://people.freebsd.org/~lstewart/articles/cpumemory.pdf)
 - 
-
+#### x86_64
 - [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
 - [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 
 #### ARM

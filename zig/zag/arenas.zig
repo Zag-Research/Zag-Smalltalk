@@ -171,39 +171,6 @@ const Arena = extern struct {
 //         self.free = @ptrCast(HeaderArray,&self.heap[0]);
 //     }
 // };
-const HeapAllocation = extern struct {
-    flags: u64,
-    next: ?*HeapAllocation,
-    mem: [size]u8,
-    const Self = @This();
-    const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
-    const page_allocation_size = 64*1024;
-    const size = page_allocation_size - field_size;
-    const maxObjects = size/@sizeOf(Header);
-    const returnType = []u8;
-    fn getAligned(p:[]usize) []align(page_allocation_size)u8 { // ToDo: wastes 1/2 the space
-        var buf = std.heap.page_allocator.alloc(u8, page_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
-        const base = @ptrToInt(buf.ptr) & (page_allocation_size-1);
-        p[0]=base;
-        const offs = if (base==0) 0 else page_allocation_size-base;
-        if (!std.heap.page_allocator.resize(buf,offs+page_allocation_size)) @panic("resize failed");
-        return @alignCast(page_allocation_size,buf[offs..offs+page_allocation_size]);
-    }
-    fn alloc(p:[]usize) *Self {
-        var space = getAligned(p);
-        const self = @ptrCast(*Self,space.ptr);
-        self.flags = 0;
-        self.next = null;
-        return self;
-    }
-    fn sweep(self: *Self) void {
-        var ptr = @ptrCast(HeaderArray,&self.mem[0]);
-        const end = ptr+maxObjects;
-        while (ptr<end) {
-            unreachable;
-        }
-    }
-};
 test "aligned allocation" {
     const expectEqual = std.testing.expectEqual;
     var bases = [_]usize{0}**5;
@@ -224,17 +191,19 @@ test "aligned allocation" {
 pub var globalArena = GlobalArena.init();
 pub const GlobalArena = struct {
     const Self = @This();
-//     freeLists: [nFreeLists]FreeListPtr,
-//     const nFreeLists = bitToRepresent(Header.maxLength);
-//     const FreeList = struct {
-//         header: Header,
-//         next: FreeListPtr,
-//     };
-//     const FreeListPtr = ?*FreeList;
-//     const allocationUnit = Header.maxLength; // size in u64 units including the header
+    heapAllocations: ?*HeapAllocation;
+    freeLists: [nFreeLists]FreeListPtr,
+    const nFreeLists = bitsToRepresent(Header.maxLength);
+    const FreeList = struct {
+        header: Header,
+        next: FreeListPtr,
+    };
+    const FreeListPtr = ?*FreeList;
+    const allocationUnit = Header.maxLength; // size in u64 units including the header
     fn init() Self {
         return Self {
-//             .freeLists = [_]FreeListPtr{null}**nFreeLists,
+            .heapAllocation  = null,
+            .freeLists = [_]FreeListPtr{null}**nFreeLists,
         };
     }
     fn alloc(arena: *Self, totalSize: usize) !HeapPtr {
@@ -252,13 +221,54 @@ pub const GlobalArena = struct {
         if (target < 2) return 1;
         return bitToRepresent(target-1);
     }
-    pub fn allocObject(_: *Self, _ : class.ClassIndex, _ : usize, _: anytype, _: anytype, _: anytype) !HeapPtr {
-        unreachable;
+    fn freeList(space: []Header) void {
+        var free = space;
+        while (free.len>1) {
+            unreachable;
+        }
+        if (free.len==1) {
+            unreachable;
+        }
     }
-    pub fn allocStruct(_: *Self, _: class.ClassIndex, comptime T: type, _: usize, _: Object) !*T {
-        unreachable;
-    }
-
+    const HeapAllocation = extern struct {
+        flags: u64,
+        next: ?*HeapAllocation,
+        mem: [size]Header,
+        const Self = @This();
+        const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
+        const heap_allocation_size = std.mem.page_size; //64*1024;
+        const size = (heap_allocation_size - field_size)/@sizeOf(Header);
+        const maxObjects = size/@sizeOf(Header);
+        const returnType = []u8;
+        fn getAligned() []align(heap_allocation_size)u8 { // ToDo: align larger size without wasting 1/2 the space
+            //var buf = std.heap.page_allocator.alloc(u8, heap_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
+            //const base = @ptrToInt(buf.ptr) & (heap_allocation_size-1);
+            //const offs = if (base==0) 0 else heap_allocation_size-base;
+            //if (!std.heap.page_allocator.resize(buf,offs+heap_allocation_size)) @panic("resize failed");
+            //return @alignCast(heap_allocation_size,buf[offs..offs+page_allocation_size]);
+            return std.heap.page_allocator.alloc(u8, heap_allocation_size) catch @panic("page allocator failed");
+        }
+        fn alloc(arena: *GlobalArena) *Self {
+            var space = getAligned();
+            const self = @ptrCast(*Self,space.ptr);
+            arena.freeList(self.mem[0..]);
+            self.flags = 0;
+            var prev = heapAllocation;
+            while (true) {
+                self.next = prev;
+                if (@cmpxchgWeak(*HeapAllocation,&arena.heapAllocation,prev,self)) |old| {prev = old;continue;}
+                break;
+            }
+            return self;
+        }
+        fn sweep(self: *Self) void {
+            var ptr = @ptrCast(HeaderArray,&self.mem[0]);
+            const end = ptr+maxObjects;
+            while (ptr<end) {
+                unreachable;
+            }
+        }
+    };
 };
 // test "findAllocationList" {
 //     const ee = std.testing.expectEqual;
