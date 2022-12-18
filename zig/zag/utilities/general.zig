@@ -53,6 +53,16 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2(@as(u16,33)),64);
     try expectEqual(largerPowerOf2(@as(u16,255)),256);
 }
+pub inline fn smallerPowerOf2(size:anytype) @TypeOf(size) {
+    return po2(size/2+1,0);
+}
+test "check smallerPowerOf2" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(smallerPowerOf2(@as(u16,1)),1);
+    try expectEqual(smallerPowerOf2(@as(u16,16)),16);
+    try expectEqual(smallerPowerOf2(@as(u16,33)),32);
+    try expectEqual(smallerPowerOf2(@as(u16,255)),128);
+}
 pub inline fn largerPowerOf2Not1(size:anytype) @TypeOf(size) {
     return po2(size,1);
 }

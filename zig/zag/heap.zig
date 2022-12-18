@@ -174,6 +174,7 @@ pub const Age = enum(u4) {
     global = Global,
     aoo = AoO,
     static = Static,
+    free = Free,
     _,
     const Stack: u4 = 0;
     const Nursery: u4 = 1;
@@ -185,7 +186,7 @@ pub const Age = enum(u4) {
     const Static: u4 = 10;
     const AoO : u4 = 12;
     const AoOMarked : u4 = 13;
-    const Unused : u4 = 14;
+    const Free : u4 = 14;
     const AoOScanned : u4 = 15;
     const Self = @This();
     pub inline fn isAoO(self: Self) bool {
