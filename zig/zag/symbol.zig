@@ -130,12 +130,11 @@ const Symbol_Table = struct {
     theObject: object.Object,
     const Self = @This();
     fn init(initialSymbolTableSize:usize) !Self {
-        var arena = &@import("arenas.zig").globalArena;
-        var theHeapObject = try arena.allocObject(class.SymbolTable_I,
-                                                  0,initialSymbolTableSize*2,object.Object,heap.Age.stack);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8) catch @panic("symbol table unallocated"),object.compareObject,Nil);
+        var arena = @import("arenas.zig").globalArena;
+        var theHeapObject = arena.allocObject(class.SymbolTable_I,initialSymbolTableSize*2);
+        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
         return Symbol_Table {
-            .theObject = theHeapObject.asObject(),
+            .theObject = theHeapObject,
         };
     }
     fn deinit(s: *Self) void {

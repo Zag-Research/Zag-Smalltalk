@@ -90,10 +90,13 @@ const Arena = extern struct {
         }
         return self.alloc(classIndex, form, ivSize, aSize, object.ZERO);
     }
-    inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, fill: Object) !*T {
+    inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex: class.ClassIndex, comptime T: type, extra: usize, fill: Object) AllocReturn {
         const ivSize = (@sizeOf(T)+objectWidth-1)/objectWidth;
         const aSize = (extra+objectWidth-1)/objectWidth;
-        return @ptrCast(*T,@alignCast(@alignOf(T),try self.alloc(classIndex, if (aSize>0) Format.both else Format.object, ivSize, aSize, fill)));
+        const size = ivSize+(if (aSize>0) aSize+1 else 0);
+        var result = try self.alloc(self,sp,hp,context,size+1);
+        initAllocation(result.allocated, classIndex, if (aSize>0) Format.bothNP else Format.objectNP, ivSize, result.age, fill);
+        return result;
     }
     inline fn initAllocation(result: HeapPtr, classIndex: class.ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
@@ -209,9 +212,12 @@ pub const GlobalArena = struct {
     fn init() Self {
         return Self {
             .arena = Arena{.alloc=alloc,.collect=collect},
-            .heapAllocation  = null,
+            .heapAllocations  = null,
             .freeLists = [_]FreeList{null}**nFreeLists,
         };
+    }
+    pub fn asArena(self: *Self) *Arena {
+        return @ptrCast(*Arena,self);
     }
     fn alloc(arena: *Arena, _:[*]Object, _:HeaderArray, _:u64, totalSize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
@@ -224,7 +230,7 @@ pub const GlobalArena = struct {
         @panic("incomplete");
     }
    pub fn promote(obj: Object) !Object {
-       if (!obj.isHeap()) return obj;
+       if (!obj.isHeapAllocated()) return obj;
        unreachable;
 //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
 //       return result.asObject();
@@ -284,6 +290,14 @@ pub const GlobalArena = struct {
             }
         }
     };
+    pub inline fn allocObject(self:*Self, classIndex:ClassIndex, ivSize:usize) Object {
+        var result = self.asArena().allocObject(([0]Object{})[0..],([0]Header{})[0..],0,classIndex,ivSize) catch @panic("allocObject failed");
+        return result.allocated.asObject();
+    }
+    pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, fill: Object) *T {
+        var result = self.asArena().allocStruct(([0]Object{})[0..],([0]Header{})[0..],0,classIndex,T,extra,fill) catch @panic("allocStruct failed");
+        return @intToPtr(*T,@ptrToInt(result.allocated));
+    }
 };
 // test "findAllocationList" {
 //     const ee = std.testing.expectEqual;

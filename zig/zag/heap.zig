@@ -423,7 +423,7 @@ pub const header = Header.init;
 test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
-    const hdr = header(17, Format.object, 35,0x123,Age.teen);
+    const hdr = header(17, Format.objectNP, 35,0x123,Age.teen);
     try testing.expectEqual(hdr.o().u(),0x0112600001230023);
 }
 fn hash24(str: [] const u8) u24 {
@@ -444,7 +444,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
         const Self = @This();
         pub fn init() Self {
             var result = Self {
-                .header = header((size+7)/8,Format.immutable.raw(u8,size),class.String_I,hash,Age.static),
+                .header = header((size+7)/8,Format.arrayNP.raw(u8,size),class.String_I,hash,Age.static),
                 .chars = [_]u8{0}**size,
             };
             for (str) |c,idx| {
