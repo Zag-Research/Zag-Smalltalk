@@ -219,7 +219,7 @@ pub const Header = packed struct(u64) {
     const immediateLength: u16 = 4095;
     const forwardLength: u16 = 4094;
     const indirectLength: u16 = 4093;
-    pub const maxLength = 4092;
+    pub const maxLength = @min(4092,@import("arenas.zig").heapAllocationSize-1);
     pub const includesHeader = true;
     pub inline fn partialOnStack(selfOffset: u16) Header {
         return @bitCast(Header,@as(u64,selfOffset)<<16);
@@ -260,10 +260,12 @@ pub const Header = packed struct(u64) {
         const ptr = self.forwarded();
         const form = ptr.objectFormat;
         if (!form.isIndexable()) return error.NotIndexable;
+        var size: usize = ptr.length;
+        var oa = ptr.asObjectArray();
+        if (T==Object)
+            return oa[0..size];
         if (form.isRaw()) {
             const formi = @enumToInt(form);
-            var size :usize = ptr.length;
-            var oa = ptr.asObjectArray();
             if (ptr.isIndirect()) {
                 size = @bitCast(usize,oa[0]);
                 oa += 1;
@@ -276,8 +278,6 @@ pub const Header = packed struct(u64) {
                     else if (formi>=Format.Indexable_32) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
                     else @ptrCast([*]T,oa)[0..size*scale]);
         } else {
-            const size = ptr.length;
-            const oa = ptr.asObjectArray();
             return mem.bytesAsSlice(
                 T,
                 if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]

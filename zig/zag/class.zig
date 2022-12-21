@@ -139,45 +139,43 @@ pub fn getClass(className: Object) Object {
     return classes[getClassIndex(className)];
 }
 pub fn subClass(superclassName: Object, className: Object) !void {
-//    const stdout = std.io.getStdOut().writer();
     const class_I = getClassIndex(className);
     var class: *Class_S = undefined;
     var metaclass: *Metaclass_S = undefined;
     if (classes[class_I].isNil()) {
         const metaclass_I = classTable.nextFree();
-        metaclass = arenas.globalArena.allocStruct(Metaclass_I, Metaclass_S, 8, Nil);
+        metaclass = arenas.globalArena.allocStruct(Metaclass_I, Metaclass_S, 8, Object);
         classes[metaclass_I] = Object.from(metaclass);
-        class = arenas.globalArena.allocStruct(metaclass_I, Class_S, 8, Nil);
+        class = arenas.globalArena.allocStruct(Metaclass_I, Class_S, 8, Object);
         const class_O = Object.from(class);
         metaclass.super.index=Object.from(class_I);
         metaclass.soleInstance=class_O;
         class.super.index=Object.from(class_I);
         class.name=className;
         classes[class_I] = class_O;
-//        try stdout.print("\nnew ", .{});
+//        std.debug.print("\nnew ", .{});
     } else {
         class = classes[class_I].to(*Class_S);
-//        try stdout.print("\nexisting ", .{});
+//        std.debug.print("\nexisting ", .{});
         metaclass = classes[class.super.super.header.classIndex].to(*Metaclass_S);
     }
-//    try stdout.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
+//    std.debug.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
     var superclass_I = classTable.lookup(superclassName);
     if (superclass_I==0)
         superclass_I = classTable.lookup(symbols.Class);
     // *****************************
     // * This is not correct
     // *****************************
-//    try stdout.print("superclass:{}\n", .{superclass_I});
+//    std.debug.print("superclass:{}\n", .{superclass_I});
     _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
     _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
-//    try stdout.print(" class:{}\n", .{class});
-//    try stdout.print(" metaclass:{}\n", .{metaclass});
+//    std.debug.print(" class:{}\n", .{class});
+//    std.debug.print(" metaclass:{}\n", .{metaclass});
 }
 pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("before addClass\n",.{});
+    std.debug.print("before addClass\n",.{});
     try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
-    try stdout.print("before getClass\n",.{});
+    std.debug.print("before getClass\n",.{});
     return getClass(className);
 }
 pub fn init() !void {
