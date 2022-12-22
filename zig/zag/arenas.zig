@@ -14,6 +14,7 @@ const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const bitsToRepresent = @import("utilities.zig").bitsToRepresent;
 const smallerPowerOf2 = @import("utilities.zig").smallerPowerOf2;
+const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
 const Header = @import("heap.zig").Header;
 const header = @import("heap.zig").header;
@@ -230,13 +231,21 @@ pub const GlobalArena = struct {
         if (target < self.minAllocation) return &self.freeLists[self.minFreeList];
         return &self.freeLists[bitsToRepresent(target-1)];
     }
+    inline fn boundaryCalc(space: []Header) usize {
+        const po2:usize = smallerPowerOf2(space.len);
+        const mask = @bitCast(usize,-@intCast(isize,po2*@sizeOf(Header)));
+        const alignedLen = ((@ptrToInt(space.ptr+space.len)&mask)-@ptrToInt(space.ptr))/@sizeOf(Header);
+        return alignedLen;
+    }
     fn freeToList(self: *Self, space: []Header) void {
-        var free = space;
+        const alignedLen = boundaryCalc(space);
+        if (alignedLen<space.len) self.freeToList(space[alignedLen..]);
+        var free = space[0..alignedLen];
         while (free.len>0) {
             const len = smallerPowerOf2(free.len);
-            // ToDo free not aligned properly
-            FreeList.addToFree(self,len,free.ptr+len);
-            free = free[0..len];
+            const end = free.len - len;
+            FreeList.addToFree(self,@intCast(u12,len),@ptrCast(HeapPtr,free.ptr+end));
+            free = free[0..end];
         }
     }
     fn freeSpace(self: *Self) usize {
@@ -245,6 +254,9 @@ pub const GlobalArena = struct {
             sum += fl.freeSpace();
         }
         return sum;
+    }
+    fn freeOfSize(self: *Self, size: u16) usize {
+        return self.freeLists[bitsToRepresent(size-1)].freeSpace();
     }
     fn allocatedSpace(self: *Self) usize {
         var sum: usize = 0;
@@ -312,16 +324,20 @@ pub const GlobalArena = struct {
     const FreeList = struct {
         size: u16,
         list: FreeListPtr,
-        inline fn addToFree(ga: *GlobalArena, len: usize, ptr: HeapPtr) void {
+        inline fn addToFree(ga: *GlobalArena, len: u12, ptr: HeapPtr) void {
+            //std.debug.print("\naddToFree: {} 0x{x:0>16}",.{len,@ptrToInt(ptr)});
             ptr.* = header(len,Format.none,0,0,Age.free);
             if (len>=ga.minAllocation) {
-                const self = @ptrCast(FreeListPtr,ptr);
-                const myFreeList = ga.findAllocationList(len);
-                var prev = myFreeList.*;
-                while (true) {
-                    self.next = prev;
-                    if (@cmpxchgWeak(FreeListPtr,myFreeList,prev,self,SeqCst,SeqCst)) |old| {prev = old;continue;}
-                    break;
+                const self = @ptrCast(*FreeListElement,ptr);
+                if (ga.findAllocationList(len)) |myFreeList| {
+                    var prev = myFreeList.list;
+                    while (true) {
+                        self.next = prev;
+                        if (@cmpxchgWeak(FreeListPtr,&myFreeList.list,prev,self,SeqCst,SeqCst)) |old| {
+                            prev = old;
+                        } else
+                            break;
+                    }
                 }
             }
         }
@@ -371,7 +387,24 @@ test "check allocations" {
     var ha = GlobalArena.HeapAllocation.alloc(&ga);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(ga.freeSpace(),0);
-    _ = ha;
+    try ee(GlobalArena.boundaryCalc(ha.mem[0..14]),14);
+    try ee(GlobalArena.boundaryCalc(ha.mem[14..31]),16);
+    try ee(GlobalArena.boundaryCalc(ha.mem[14..30]),16);
+    try ee(GlobalArena.boundaryCalc(ha.mem[62..75]),8);
+    try ee(GlobalArena.boundaryCalc(ha.mem[126..158]),32);
+    try ee(GlobalArena.boundaryCalc(ha.mem[0..]),ha.mem.len);
+    ga.freeToList(ha.mem[0..14]);
+    try ee(ga.freeOfSize(8),8);
+    try ee(ga.freeOfSize(4),4);
+    try ee(ga.freeOfSize(2),2);
+    ga.freeToList(ha.mem[14..45]);
+    try ee(ga.freeOfSize(16),16);
+    try ee(ga.freeOfSize(8),16);
+    try ee(ga.freeOfSize(4),8);
+    try ee(ga.freeOfSize(2),4);
+    try ee(ga.freeOfSize(1),0);
+    ga.freeToList(ha.mem[45..]);
+    try ee(ga.freeSpace(),heapAllocationSize-2); // ignored the 2x 1-word allocations
 }
 test "findAllocationList" {
     const ee = std.testing.expectEqual;
