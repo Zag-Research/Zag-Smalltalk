@@ -256,7 +256,6 @@ pub const Header = packed struct(u64) {
         return self.length>=indirectLength and self.length<forwardLength;
     }
     pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) ![]T {
-        const scale = @sizeOf(Object)/@sizeOf(T);
         const ptr = self.forwarded();
         const form = ptr.objectFormat;
         if (!form.isIndexable()) return error.NotIndexable;
@@ -273,16 +272,12 @@ pub const Header = packed struct(u64) {
             }
             return mem.bytesAsSlice(
                 T,
-                if (formi>=Format.Indexable_8) @ptrCast([*]T,oa)[0..size*scale-(formi&7)]
-                    else if (formi>=Format.Indexable_16) @ptrCast([*]T,oa)[0..size*scale-(formi&3)]
-                    else if (formi>=Format.Indexable_32) @ptrCast([*]T,oa)[0..size*scale-(formi&1)]
-                    else @ptrCast([*]T,oa)[0..size*scale]);
-        } else {
-            return mem.bytesAsSlice(
-                T,
-                if (form.hasInstVars()) @ptrCast([*]T,oa+size+1)[0..@bitCast(usize,oa[size])*scale]
-                    else @ptrCast([*]T,oa)[0..size*scale]);
+                if (formi>=Format.Indexable_8) @ptrCast([*]u8,oa)[0..size*8-(formi&7)]
+                    else if (formi>=Format.Indexable_16) @ptrCast([*]u8,oa)[0..size*8-(formi&3)*2]
+                    else if (formi>=Format.Indexable_32) @ptrCast([*]u8,oa)[0..size*8-(formi&1)*4]
+                    else @ptrCast([*]u8,oa)[0..size*8]);
         }
+        @panic("arrayAsSlice for non-raw");
     }
     pub inline fn isIndexable(self: HeapConstPtr) bool {
         return self.objectFormat.isIndexable();
@@ -423,8 +418,8 @@ pub const header = Header.init;
 test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
-    const hdr = header(17, Format.objectNP, 35,0x123,Age.teen);
-    try testing.expectEqual(hdr.o().u(),0x0112600001230023);
+    const hdr = header(0x17, Format.objectNP, 0x23, 0x123,Age.teen);
+    try testing.expectEqual(hdr.o().u(),0x0172200001230023);
 }
 fn hash24(str: [] const u8) u24 {
     const phi: u32 = @import("utilities.zig").inversePhi(u24);

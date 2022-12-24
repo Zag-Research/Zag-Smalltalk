@@ -17,6 +17,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         compare: Compare,
         empty: Key,
         const Element = ElementS;
+        pub const elementSize = @sizeOf(Element);
         const Self = @This();
         const Equal = Order.eq;
         const Less = Order.lt;

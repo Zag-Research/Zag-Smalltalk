@@ -29,9 +29,9 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF2      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
 | FFF2      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
 | FFF2      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF2      | 0004 | 0001 | 0000 | False                         |
-| FFF2      | 0005 | 0010 | 0001 | True                          |
-| FFF2      | 0006 | 0100 | 0002 | UndefinedObject               |
+| FFF2      | 0004 | 0000 | 0000 | False                         |
+| FFF2      | 0005 | 0000 | 0001 | True                          |
+| FFF2      | 0006 | 0000 | 0002 | UndefinedObject               |
 | FFF2      | 0007 | aaxx | xxxx | Symbol                        |
 | FFF2      | 0008 | 00xx | xxxx | Character                     |
 | FFF3      | xxxx | xxxx | xxxx | immediate thunk               |
@@ -57,16 +57,16 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
 2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
-4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This only encodes the single value `false`.
-5. True: This only encodes the single value `true`
-6. UndefinedObject: This encodes the value `nil` with all zero hash code.
+4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
+5. True: This encodes the singleton value `true`
+6. UndefinedObject: This encodes the singleton value `nil`.
 7. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Thunks and Closures
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
 1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF2 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
-2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
+2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the Method object for the block code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
 3. a self thunk simply does a non-local return of `self`. The low 48 bits are the address of the context. Sole example: `[^self]`.
 4. all remaining closures are heap allocated, and contain the following fields in order:
 	1. the address of the Method object that contains various values, and the threaded code implementation;

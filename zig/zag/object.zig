@@ -27,10 +27,10 @@ const Start_of_Pointer_Objects: u64 = 0xfff4_000000000000;
 const End_of_Blocks: u64 =            0xfff6_ffffffffffff;
 const Start_of_Heap_Objects: u64 =    0xfff7_000000000000;
 const End_of_Heap_Objects: u64   =    0xfff7_ffffffffffff;
-pub const False             = of(o2(class.False_I,0x00010000));
-pub const True              = of(o2(class.True_I,0x00100001));
-pub const Nil               = of(o2(class.UndefinedObject_I,0x01000002));
-pub const NotAnObject       = of(o2(class.UndefinedObject_I,0x01000003)); // never a valid object... should never be visible to managed language
+pub const False             = of(o2(class.False_I,0x0));
+pub const True              = of(o2(class.True_I,0x1));
+pub const Nil               = of(o2(class.UndefinedObject_I,0x2));
+pub const NotAnObject       = of(o2(class.UndefinedObject_I,0x3)); // never a valid object... should never be visible to managed language
 const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
 pub const u64_MINVAL            =    0xfff8_000000000000;
@@ -45,7 +45,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return of(mem.readIntLittle(T,val));
 }
 pub const compareObject = Object.compare;
-pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, Context, _ };
+pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, _ };
 pub const ClassGrouping = enum(u16) {
     immediates = Immediates, immediateThunk, closureFreeBlock, selfThunk, heapClosure, heap, smallIntMin, smallInt0 = 0xfffc, _,
     const Immediates = 0xfff2;
@@ -160,6 +160,14 @@ pub const Object = packed struct(u64) {
     pub  fn asString(self: Object) []const u8 {
         return symbol.asString(self).arrayAsSlice(u8);
     }
+    pub  fn header(self: Object) heap.Header {
+        if (self.isHeapObject()) return self.to(HeapPtr).*;
+        return @bitCast(heap.Header,@as(u64,0));
+    }
+    pub  fn instVars(self: Object) []Object {
+        if (self.isHeapObject()) return self.to(HeapPtr).instVars();
+        return &[0]Object{};
+    }
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
         if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch return &[0]T{};
         return &[0]T{};
@@ -169,7 +177,7 @@ pub const Object = packed struct(u64) {
         return false;
     }
     pub  fn inHeapSize(self: Object) usize {
-        if (self.isHeap()) return self.to(HeapPtr).inHeapSize();
+        if (self.isHeapObject()) return self.to(HeapPtr).inHeapSize();
         return 0;
     }
     pub inline fn from(value: anytype) Object {
@@ -271,29 +279,41 @@ test "slicing" {
 //    try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
 }
 test "from conversion" {
-    const testing = std.testing;
-    try testing.expectEqual(@bitCast(u64, Object.packedInt(1,2,3)), 0xfffc000300020001);
-    try testing.expectEqual(@bitCast(f64, Object.from(3.14)), 3.14);
-    try testing.expectEqual(Object.from(42).u(), u64_ZERO +% 42);
-    try testing.expectEqual(Object.from(3.14).immediate_class(),class.Float_I);
-    try testing.expect(Object.from(3.14).isDouble());
-    try testing.expectEqual(Object.from(3).immediate_class(),class.SmallInteger_I);
-    try testing.expect(Object.from(3).isInt());
-    try testing.expect(Object.from(false).isBool());
-    try testing.expectEqual(Object.from(false).immediate_class(),class.False_I);
-    try testing.expectEqual(Object.from(true).immediate_class(),class.True_I);
-    try testing.expect(Object.from(true).isBool());
-    try testing.expectEqual(Object.from(null).immediate_class(),class.UndefinedObject_I);
-    try testing.expect(Object.from(null).isNil());
+    const ee = std.testing.expectEqual;
+    try ee(@bitCast(u64, Object.packedInt(1,2,3)), 0xfffc000300020001);
+    try ee(@bitCast(f64, Object.from(3.14)), 3.14);
+    try ee(Object.from(42).u(), u64_ZERO +% 42);
+    try ee(Object.from(3.14).immediate_class(),class.Float_I);
+    try std.testing.expect(Object.from(3.14).isDouble());
+    try ee(Object.from(3).immediate_class(),class.SmallInteger_I);
+    try std.testing.expect(Object.from(3).isInt());
+    try std.testing.expect(Object.from(false).isBool());
+    try ee(Object.from(false).immediate_class(),class.False_I);
+    try ee(Object.from(true).immediate_class(),class.True_I);
+    try std.testing.expect(Object.from(true).isBool());
+    try ee(Object.from(null).immediate_class(),class.UndefinedObject_I);
+    try std.testing.expect(Object.from(null).isNil());
 }
 test "to conversion" {
-    const testing = std.testing;
-    try testing.expectEqual(Object.from(3.14).to(f64), 3.14);
-    try testing.expectEqual(Object.from(42).toInt(), 42);
-    try testing.expect(Object.from(42).isInt());
-    try testing.expectEqual(Object.from(true).to(bool), true);
-    try testing.expectEqual(of(u64_MAXVAL).toUnchecked(i64),0x3_ffffffffffff);
-    try testing.expectEqual(Object.from(-0x400000).toUnchecked(i64),-0x400000);
+    const ee = std.testing.expectEqual;
+    try ee(Object.from(3.14).to(f64), 3.14);
+    try ee(Object.from(42).toInt(), 42);
+    try std.testing.expect(Object.from(42).isInt());
+    try ee(Object.from(true).to(bool), true);
+    try ee(of(u64_MAXVAL).toUnchecked(i64),0x3_ffffffffffff);
+    try ee(Object.from(-0x400000).toUnchecked(i64),-0x400000);
+}
+test "immediate_class" {
+    const ee = std.testing.expectEqual;
+    try ee(Object.from(3.14).immediate_class(), class.Float_I);
+    try ee(Object.from(42).immediate_class(), class.SmallInteger_I);
+    try ee(Object.from(true).immediate_class(), class.True_I);
+    try ee(Object.from(false).immediate_class(), class.False_I);
+    try ee(Nil.immediate_class(),class.UndefinedObject_I);
+    try ee(True.immediate_class(),class.True_I);
+    try ee(False.immediate_class(),class.False_I);
+    try ee(symbol.symbols.yourself.immediate_class(),class.Symbol_I);
+    
 }
 test "printing" {
     _ = try symbol.init(250,symbol.noStrings);

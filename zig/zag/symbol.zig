@@ -11,7 +11,7 @@ inline fn symbol_of(index: u32, arity: u8) object.Object {
     return symbol0(index|(@as(u32,arity)<<24));
 }
 pub inline fn symbol0(index: u32) object.Object {
-    return @bitCast(object.Object,index|((@as(u64,0xfff70000)+class.Symbol_I)<<32));
+    return @bitCast(object.Object,index|((@as(u64,0xfff20000)+class.Symbol_I)<<32));
 }
 pub inline fn symbol1(index: u24) object.Object {
     return symbol_of(index,1);
@@ -131,8 +131,9 @@ const Symbol_Table = struct {
     const Self = @This();
     fn init(initialSymbolTableSize:usize) !Self {
         var arena = @import("arenas.zig").globalArena;
-        var theHeapObject = arena.allocObject(class.SymbolTable_I,initialSymbolTableSize*2);
-        _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),object.compareObject,Nil);
+        var theHeapObject = arena.allocArray(class.SymbolTable_I,initialSymbolTableSize*2*objectTreap.elementSize,u8);
+        var memory = theHeapObject.arrayAsSlice(u8);
+        _ = objectTreap.init(memory,object.compareObject,Nil);
         return Symbol_Table {
             .theObject = theHeapObject,
         };

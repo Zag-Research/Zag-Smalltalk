@@ -74,7 +74,7 @@ test "check largerPowerOf2Not1" {
     try expectEqual(largerPowerOf2Not1(@as(u16,33)),64);
     try expectEqual(largerPowerOf2Not1(@as(u16,255)),256);
 }
-pub inline fn bitsToRepresent(size:anytype) u16 {
+pub inline fn bitsToRepresent(size:anytype) u7 {
     const T = @TypeOf(size);
     if (T==comptime_int) {
         comptime var n = size;
@@ -104,4 +104,5 @@ test "check bitsToRepresent" {
     try expectEqual(bitsToRepresent(@as(u16,15)),4);
     try expectEqual(bitsToRepresent(@as(u16,16)),5);
     try expectEqual(bitsToRepresent(@as(u16,17)),5);
+    try expectEqual(bitsToRepresent(@as(u64,4000)),12);
 }

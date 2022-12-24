@@ -52,7 +52,7 @@ pub const Thread = extern struct {
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
     inline fn ptr(self: *Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self) & ~@as(u64,7));
+        return @intToPtr(*Self,@ptrToInt(self) & ~@as(u64,checkMax));
     }
     pub fn deinit(self : *Self) void {
         self.ptr().heap.deinit();
@@ -84,12 +84,12 @@ test "check flag" {
     var thread = Thread.new();
     var thr = &thread;
     thr.init();
-    try testing.expect(thr.needsCheck());
+    try testing.expect(!thr.needsCheck());
     const origEOS = thr.endOfStack();
     thr = thr.maxCheck();
     try testing.expect(!thr.needsCheck());
     var count = Thread.checkMax-1;
-    while (count>0) : (count -= 1) {
+    while (count>1) : (count -= 1) {
         thr = thr.decCheck();
     }
     try testing.expect(!thr.needsCheck());

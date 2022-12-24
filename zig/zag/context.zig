@@ -90,6 +90,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
             self.size = self.prevCtxt.calculatedSize(thread);
             self.prevCtxt.convertToProperHeapObject(sp, thread);
         }
+        @panic("ToDo: not the correct test for whether it needs to be done");
     }
     pub inline fn isInStack(self: * const Self) bool {
         return @alignCast(8,&self.header).isInStack();

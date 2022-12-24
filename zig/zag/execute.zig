@@ -411,6 +411,12 @@ pub const controlPrimitives = struct {
         newSp[0]=False;
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
     }
+    pub fn pushThisContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+        const newSp = sp-1;
+        newSp[0]=Object.from(context);
+        context.convertToProperHeapObject(sp,thread);
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context});
+    }
     pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         trace("\npopIntoTemp: {} {}",.{pc[0].uint,sp[0]});
         context.setTemp(pc[0].uint-1,sp[0]);
