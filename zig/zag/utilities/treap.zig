@@ -71,6 +71,15 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         inline fn setRoot(self: *Self,r: Index) void {
             self.table[0].right=r;
         }
+        pub fn hasRoom(self: *Self,_n: usize) bool {
+            var free =self.getFree();
+            var n = _n;
+            while (free > 0 and n > 0) {
+                n -= 1;
+                free = self.table[free].left;
+            }
+            return n == 0;
+        }
         inline fn setFree(self: *Self,f: Index) void {
             self.table[0].left=f;
         }

@@ -13,6 +13,7 @@ const Thread = @import("thread.zig");
 const Code = @import("execute.zig").Code;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
+const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
@@ -157,9 +158,6 @@ pub const Object = packed struct(u64) {
         if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T,false);
     }
-    pub  fn asString(self: Object) []const u8 {
-        return symbol.asString(self).arrayAsSlice(u8);
-    }
     pub  fn header(self: Object) heap.Header {
         if (self.isHeapObject()) return self.to(HeapPtr).*;
         return @bitCast(heap.Header,@as(u64,0));
@@ -171,6 +169,9 @@ pub const Object = packed struct(u64) {
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
         if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch return &[0]T{};
         return &[0]T{};
+    }
+    pub fn growSize(self: Object, comptime T: type) usize {
+        return largerPowerOf2(self.arrayAsSlice(T).len * 2);
     }
     pub  fn isIndexable(self: Object) bool {
         if (self.isHeapObject()) return self.to(HeapPtr).isIndexable();
@@ -260,7 +261,7 @@ pub const Object = packed struct(u64) {
             class.False_I => writer.print("false", .{}),
             class.True_I => writer.print("true", .{}),
             class.UndefinedObject_I => writer.print("nil", .{}),
-            class.Symbol_I => writer.print("#{s}", .{self.asString()}),
+            class.Symbol_I => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             class.Character_I => writer.print("${c}", .{self.to(u8)}),
             class.SmallInteger_I => writer.print("{d}", .{self.toInt()}),
             class.Float_I => writer.print("{}", .{self.to(f64)}),
@@ -316,7 +317,6 @@ test "immediate_class" {
     
 }
 test "printing" {
-    _ = try symbol.init(250,symbol.noStrings);
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();

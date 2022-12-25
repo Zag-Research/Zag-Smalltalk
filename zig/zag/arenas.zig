@@ -62,7 +62,7 @@ const AllocResult = struct {
     allocated: HeapPtr,
 };
 const AllocReturn = ArenaErrors!AllocResult;
-const Arena = extern struct {
+pub const Arena = extern struct {
     const Self = @This();
     alloc: *const fn (*Arena,[*]Object,HeaderArray,u64,usize,usize) ArenaErrors!AllocResult,
     collect: *const fn (*Arena,[*]Object,HeaderArray,u64) ArenaErrors!void,
@@ -197,7 +197,7 @@ pub const GlobalArena = struct {
     minAllocation: u16,
     const nFreeLists = bitsToRepresent(Header.maxLength);
     const allocationUnit = Header.maxLength; // size in u64 units including the header
-    fn init() Self {
+    pub fn init() Self {
         const minFreeList = 1;
         return Self {
             .arena = Arena{.alloc=alloc,.collect=collect},
@@ -207,7 +207,7 @@ pub const GlobalArena = struct {
             .minAllocation = 1<<minFreeList,
         };
     }
-    fn deinit(self: *Self) void {
+    pub fn deinit(self: *Self) void {
         if (self.heapAllocations) |ha| ha.freeAll();
     }
     pub fn asArena(self: *Self) *Arena {
@@ -223,8 +223,8 @@ pub const GlobalArena = struct {
     fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64, heapSize: usize, arraySize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
         const totalSize = heapSize + arraySize;
-        if (totalSize>heapAllocationSize) return allocIndirect(arena,sp,hp,context,heapSize,arraySize);
         var index = self.findAllocationList(totalSize);
+        if (index==0) return allocIndirect(arena,sp,hp,context,heapSize,arraySize);
         const allocation: []Header = (
             while (index<self.freeLists.len) : (index += 1) {
                 if (self.freeLists[index].getSlice()) |slice| break slice;
@@ -374,11 +374,14 @@ pub const GlobalArena = struct {
             var myList = &self.list;
             var prev = myList.*;
             while (true) {
-                const next = if (prev) |fle| fle.next else return null;
-                if (@cmpxchgWeak(FreeListPtr,myList,prev,next,SeqCst,SeqCst)) |old| {
-                    prev = old;
-                } else
-                    return @ptrCast(HeaderArray,next)[0..self.size];
+                if (prev) |fle| {
+                    const next = fle.next;
+                    if (@cmpxchgWeak(FreeListPtr,myList,prev,next,SeqCst,SeqCst)) |old| {
+                        prev = old;
+                    } else
+                        return @ptrCast(HeaderArray,fle)[0..self.size];
+                }
+                else return null;
             }
         }
         fn init(comptime n: comptime_int) [n]FreeList {
@@ -457,14 +460,21 @@ test "check alloc object" {
 }
 test "check alloc array" {
     const ee = std.testing.expectEqual;
+    const allocSize = (Header.maxLength>>1)-1;
     var ga = GlobalArena.init();
     defer ga.deinit();
-    var o1 = ga.allocArray(17,500,u64);
+    var o1 = ga.allocArray(17,allocSize,u64);
     try ee(ga.allocatedSpace(),heapAllocationSize);
-    try ee(o1.inHeapSize(),501);
+    try ee(o1.inHeapSize(),allocSize+1);
     const a1 = o1.arrayAsSlice(u64);
-    try ee(a1.len,500);
-    try ee(ga.freeSpace(),heapAllocationSize-501-1);
+    try ee(a1.len,allocSize);
+    try ee(ga.freeSpace(),heapAllocationSize-(allocSize+1));
+    var o2 = ga.allocArray(42,allocSize,u64);
+    try ee(ga.allocatedSpace(),heapAllocationSize);
+    try ee(o2.inHeapSize(),allocSize+1);
+    const a2 = o2.arrayAsSlice(u64);
+    try ee(a2.len,allocSize);
+    try ee(ga.freeSpace(),heapAllocationSize-(allocSize+1)*2);
 }
 test "findAllocationList" {
     const ee = std.testing.expectEqual;

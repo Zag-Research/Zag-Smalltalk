@@ -59,20 +59,24 @@ const initialClassStrings = heap.compileStrings(.{ // must be in same order as a
     "CatchingContext", "EnsuringContext", "CompiledMethod", "ByteArray",
 });
 pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
-var classes = [_]object.Object{Nil} ** ReservedNumberOfClasses;
-var classTable : Class_Table = undefined;
+var classTable : ClassTable = undefined;
+pub fn init() !void {
+    classTable = setUpClassTable();
+}
 const objectTreap = Treap(u32,ClassIndex,u0);
-const Class_Table = struct {
+const ClassTable = struct {
     theObject: object.Object,
+    classes: [ReservedNumberOfClasses]object.Object,
     const Self = @This();
     fn compareU32(l: u32, r: u32) std.math.Order {
         return std.math.order(l,r);
     }
     fn init(initialClassTableSize:usize) !Self {
-        var theHeapObject = arenas.globalArena.allocObject(ClassTable_I,initialClassTableSize*2);
+        var theHeapObject = arenas.globalArena.allocArray(ClassTable_I,initialClassTableSize*2*objectTreap.elementSize,u8);
         _ = objectTreap.init(theHeapObject.arrayAsSlice(u8),compareU32,0);
-        return Class_Table {
+        return ClassTable {
             .theObject = theHeapObject,
+            .classes = [_]object.Object{Nil} ** ReservedNumberOfClasses,
         };
     }
     fn deinit(s: *Self) void {
@@ -98,10 +102,56 @@ const Class_Table = struct {
         }
         unreachable;
     }
-    fn loadInitialClassNames(s: *Self) void {
+    fn loadInitialClassNames(s: *Self,st: symbol.SymbolTable) void {
         for(initialClassStrings) |name| {
-            _ = s.intern(symbol.intern(name.asObject()));
+            _ = s.intern(st.intern(name.asObject()));
         }
+    }
+    pub inline fn getClassIndex(self: *Self, className: Object) ClassIndex {
+        return self.intern(className);
+    }
+    pub fn getClass(self: *Self, className: Object) Object {
+        return self.classes[self.getClassIndex(className)];
+    }
+    pub fn subClass(self: *Self, superclassName: Object, className: Object) !void {
+        const class_I = getClassIndex(className);
+        var class: *Class_S = undefined;
+        var metaclass: *Metaclass_S = undefined;
+        if (self.classes[class_I].isNil()) {
+            const metaclass_I = classTable.nextFree();
+            metaclass = arenas.globalArena.allocStruct(Metaclass_I, Metaclass_S, 8, Object);
+            self.classes[metaclass_I] = Object.from(metaclass);
+            class = arenas.globalArena.allocStruct(Metaclass_I, Class_S, 8, Object);
+            const class_O = Object.from(class);
+            metaclass.super.index=Object.from(class_I);
+            metaclass.soleInstance=class_O;
+            class.super.index=Object.from(class_I);
+            class.name=className;
+            self.classes[class_I] = class_O;
+            //        std.debug.print("\nnew ", .{});
+        } else {
+            class = self.classes[class_I].to(*Class_S);
+            //        std.debug.print("\nexisting ", .{});
+            metaclass = self.classes[class.super.super.header.classIndex].to(*Metaclass_S);
+        }
+        //    std.debug.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
+        var superclass_I = self.lookup(superclassName);
+        if (superclass_I==0)
+            superclass_I = self.lookup(symbols.Class);
+        // *****************************
+        // * This is not correct
+        // *****************************
+        //    std.debug.print("superclass:{}\n", .{superclass_I});
+        _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
+        _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
+        //    std.debug.print(" class:{}\n", .{class});
+        //    std.debug.print(" metaclass:{}\n", .{metaclass});
+    }
+    pub fn init_class(self: *Self, t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
+        std.debug.print("before addClass\n",.{});
+        try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
+        std.debug.print("before getClass\n",.{});
+        return self.getClass(className);
     }
 };
 const Behavior_S = packed struct {
@@ -132,68 +182,25 @@ pub const Class_S = packed struct{
     subclasses: Object,
 };
 
-pub inline fn getClassIndex(className: Object) ClassIndex {
-   return classTable.intern(className);
-}
-pub fn getClass(className: Object) Object {
-    return classes[getClassIndex(className)];
-}
-pub fn subClass(superclassName: Object, className: Object) !void {
-    const class_I = getClassIndex(className);
-    var class: *Class_S = undefined;
-    var metaclass: *Metaclass_S = undefined;
-    if (classes[class_I].isNil()) {
-        const metaclass_I = classTable.nextFree();
-        metaclass = arenas.globalArena.allocStruct(Metaclass_I, Metaclass_S, 8, Object);
-        classes[metaclass_I] = Object.from(metaclass);
-        class = arenas.globalArena.allocStruct(Metaclass_I, Class_S, 8, Object);
-        const class_O = Object.from(class);
-        metaclass.super.index=Object.from(class_I);
-        metaclass.soleInstance=class_O;
-        class.super.index=Object.from(class_I);
-        class.name=className;
-        classes[class_I] = class_O;
-//        std.debug.print("\nnew ", .{});
-    } else {
-        class = classes[class_I].to(*Class_S);
-//        std.debug.print("\nexisting ", .{});
-        metaclass = classes[class.super.super.header.classIndex].to(*Metaclass_S);
-    }
-//    std.debug.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
-    var superclass_I = classTable.lookup(superclassName);
-    if (superclass_I==0)
-        superclass_I = classTable.lookup(symbols.Class);
-    // *****************************
-    // * This is not correct
-    // *****************************
-//    std.debug.print("superclass:{}\n", .{superclass_I});
-    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
-    _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
-//    std.debug.print(" class:{}\n", .{class});
-//    std.debug.print(" metaclass:{}\n", .{metaclass});
-}
-pub fn init_class(t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
-    std.debug.print("before addClass\n",.{});
-    try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
-    std.debug.print("before getClass\n",.{});
-    return getClass(className);
-}
-pub fn init() !void {
-    classTable = try Class_Table.init(ReservedNumberOfClasses);
-    classTable.loadInitialClassNames();
-    try subClass(Nil,symbols.Object);
-    try subClass(symbols.Object,symbols.Behavior);
-    try subClass(symbols.Behavior,symbols.ClassDescription);
-    try subClass(symbols.ClassDescription,symbols.Class);
-    try subClass(symbols.ClassDescription,symbols.Metaclass);
+fn setUpClassTable(st: symbol.SymbolTable) !ClassTable {
+    var ct = try ClassTable.init(ReservedNumberOfClasses);
+    ct.loadInitialClassNames(st);
+    try ct.subClass(Nil,symbols.Object);
+    try ct.subClass(symbols.Object,symbols.Behavior);
+    try ct.subClass(symbols.Behavior,symbols.ClassDescription);
+    try ct.subClass(symbols.ClassDescription,symbols.Class);
+    try ct.subClass(symbols.ClassDescription,symbols.Metaclass);
     // repeat to set metaclass superclass properly
-    try subClass(Nil,symbols.Object);
+    try ct.subClass(Nil,symbols.Object);
+    return ct;
 }
 test "classes match initialized class table" {
-    var thr = thread.Thread.new();
-    thr.init();
-    _ = try symbol.init(500,symbol.noStrings);
-    try init();
+//    var thr = thread.Thread.new();
+    //    thr.init();
+    var ga = arenas.GlobalArena.init();
+    defer ga.deinit();
+    var st = symbol.SymbolTable.init(&ga);
+    var ct = try ClassTable.init(ReservedNumberOfClasses);
     for(initialClassStrings) |string,idx|
-        try std.testing.expectEqual(idx+1,classTable.lookup(symbol.lookup(&thr,string.asObject())));
+        try std.testing.expectEqual(idx+1,ct.lookup(st.lookup(string.asObject())));
 }
