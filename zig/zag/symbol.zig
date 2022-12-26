@@ -132,7 +132,7 @@ pub const SymbolTable = struct {
     treap: objectTreap,
     arena: *GlobalArena,
     const Self = @This();
-    const initialSymbolTableSize = 100;
+    const initialSymbolTableSize = 50;
     pub fn init(ga: *GlobalArena) Self {
         return SymbolTable {
             .theObject = Nil,
@@ -194,6 +194,7 @@ pub const SymbolTable = struct {
         const str = string.promoteTo() catch return Nil;
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
+        std.debug.print("\ninternDirect: {} {}",.{index,nArgs});
         return symbol_of(index,nArgs);
     }
     fn loadSymbols(self: *Self, strings: [] const heap.HeapConstPtr) void {

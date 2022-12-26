@@ -79,6 +79,7 @@ pub const Arena = extern struct {
         const aSize = (arraySize*width+objectWidth-width)/objectWidth;
         const fill = if (T==Object) Nil else object.ZERO;
         if (ivSize==0) {
+            std.debug.print("\nallocArray: aSize = {} arraySize = {} Header.maxLength = {}",.{aSize,arraySize,Header.maxLength});
             if (aSize<Header.maxLength) {
                 var result = try self.alloc(self,sp,hp,context,aSize+1,0);
                 initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
@@ -418,7 +419,7 @@ test "freeList structure" {
     try ee(fls[0].size,1);
     try ee(fls[9].size,512);
     try ee(GlobalArena.nFreeLists,switch (std.mem.page_size) {
-        4096 => 8,
+        4096 => 9,
         16384 => 11,
         else => std.mem.page_size,
     });
