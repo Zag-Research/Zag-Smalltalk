@@ -32,7 +32,7 @@ test "randomness of /phi - all values enumerated" {
     try expectEqual(counts[1],65536);
 }
 inline fn po2(size:anytype,comptime not1: u1) @TypeOf(size) {
-    var n = size-1;
+    var n = if (size==0) 0 else size-1;
     n |= not1;
     const bits = @typeInfo(@TypeOf(size)).Int.bits;
     if (comptime bits>32) n |= n>>32;

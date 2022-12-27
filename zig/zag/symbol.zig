@@ -136,20 +136,20 @@ pub const SymbolTable = struct {
     pub fn init(ga: *GlobalArena) Self {
         return SymbolTable {
             .theObject = Nil,
-            .treap = undefined,
+            .treap = objectTreap.initEmpty(object.compareObject,Nil),
             .arena = ga,
         };
     }
     inline fn theTreap(self: *Self, adding: usize) *objectTreap {
-        if (Nil.equals(self.theObject) or (adding>0 and !self.treap.hasRoom(adding)))
-            return self.allocTreap(adding);
-        return &self.treap;
+        if (self.treap.hasRoom(adding))
+            return &self.treap;
+        return self.allocTreap(adding);
     }
     fn allocTreap(self: *Self, _: usize) *objectTreap {
         {
             // ToDo: add locking
             const size = if (Nil.equals(self.theObject))
-                initialSymbolTableSize*2*objectTreap.elementSize
+                initialSymbolTableSize*objectTreap.elementSize
                 else
                 self.theObject.growSize(u8);
             var theHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
@@ -177,7 +177,7 @@ pub const SymbolTable = struct {
         }
         return Nil;
     }
-    fn intern(self: *Self,string: object.Object) object.Object {
+    pub fn intern(self: *Self,string: object.Object) object.Object {
         var trp = self.theTreap(1);
         while (true) {
             const lu = lookupDirect(trp,string);
@@ -194,7 +194,6 @@ pub const SymbolTable = struct {
         const str = string.promoteTo() catch return Nil;
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
-        std.debug.print("\ninternDirect: {} {}",.{index,nArgs});
         return symbol_of(index,nArgs);
     }
     fn loadSymbols(self: *Self, strings: [] const heap.HeapConstPtr) void {
@@ -203,8 +202,8 @@ pub const SymbolTable = struct {
             _ = internDirect(trp,string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-        std.debug.print("\nverify 0x{x:0>16} {} {}",.{symbol.u(),symbol.hash24(),initialSymbolStrings[symbol.hash24()+1].asObject()});
-        try std.testing.expectEqual(symbol,self.lookup(initialSymbolStrings[symbol.hash24()+1].asObject()));
+//        std.debug.print("\nverify 0x{x:0>16} {} {}",.{symbol.u(),symbol.hash24(),initialSymbolStrings[symbol.hash24()-1].asObject()});
+        try std.testing.expectEqual(symbol,self.lookup(initialSymbolStrings[symbol.hash24()-1].asObject()));
     }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
