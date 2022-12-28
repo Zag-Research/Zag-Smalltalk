@@ -69,8 +69,8 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         pub fn resize(self: *Self, memory: []u8) Self {
             var treap = ref(memory,self.compare,self.empty);
             treap.setRoot(self.root());
-            @panic("resize not fully implemented");
-            //return treap;
+            if (true) @panic("resize not fully implemented");
+            return treap;
         }
         inline fn root(self: *const Self) Index {
             return self.table[0].right;
@@ -242,19 +242,17 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         }
         // Only for tests
         fn inorderPrint(self: *Self) void {
-            const stdout = std.io.getStdOut().writer();
-            stdout.print("root: {}\n",.{self.root()}) catch unreachable;
+            std.debug.print("root: {}\n",.{self.root()});
             self.inorderWalkPrint(self.root());
         }
         fn inorderWalkPrint(self: *const Self, pos: Index) void {
             if (pos>0) {
-                const stdout = std.io.getStdOut().writer();
                 const node = self.table[pos];
                 self.inorderWalkPrint(self.table[pos].left);
-                stdout.print("pos: {} key: {} priority: {:10}",.{pos,node.key,priority(pos)}) catch unreachable;
-                if (node.left>0) stdout.print(" | left: {}",.{self.table[node.left].key}) catch unreachable;
-                if (node.right>0) stdout.print(" | right: {}",.{self.table[node.right].key}) catch unreachable;
-                stdout.print("\n",.{}) catch unreachable;
+                std.debug.print("pos: {} key: {} priority: {:10}",.{pos,node.key,priority(pos)});
+                if (node.left>0) std.debug.print(" | left: {}",.{self.table[node.left].key});
+                if (node.right>0) std.debug.print(" | right: {}",.{self.table[node.right].key});
+                std.debug.print("\n",.{});
                 self.inorderWalkPrint(self.table[pos].right);
             }
         }
@@ -285,7 +283,6 @@ test "treap element sizes" {
     try expectEqual(@sizeOf(Treap(u32,u16,u8).Element),12);
 }
 test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-insert-and-delete/" {
-    const stdout = std.io.getStdOut().writer();
     if (includeStdTest) {
         const n = 20;
         var memory = [_]u8{0} ** ((n+1)*Treap_u64.elementSize);
@@ -297,24 +294,24 @@ test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-in
         _ = try treap.insert(70);
         _ = try treap.insert(60);
         _ = try treap.insert(80);
-        try stdout.print("\nInorder traversal of the given tree \n",.{});
+        std.debug.print("\nInorder traversal of the given tree \n",.{});
         treap.inorderPrint();
         treap.remove(20);
-        try stdout.print("Inorder traversal of the tree after remove 20 \n",.{});
+        std.debug.print("Inorder traversal of the tree after remove 20 \n",.{});
         treap.inorderPrint();
         treap.remove(30);
-        try stdout.print("Inorder traversal of the tree after remove 20,30 \n",.{});
+        std.debug.print("Inorder traversal of the tree after remove 20,30 \n",.{});
         treap.inorderPrint();
         treap.remove(50);
-        try stdout.print("Inorder traversal of the tree after remove 20,30,50 \n",.{});
+        std.debug.print("Inorder traversal of the tree after remove 20,30,50 \n",.{});
         treap.inorderPrint();
         _ = try treap.insert(20);
         _ = try treap.insert(30);
         _ = try treap.insert(50);
-        try stdout.print("Inorder traversal of the tree after added back \n",.{});
+        std.debug.print("Inorder traversal of the tree after added back \n",.{});
         treap.inorderPrint();
     } else
-        try stdout.print(" - Set includeStdTest=true to include this test ",.{});
+        std.debug.print(" - Set includeStdTest=true to include this test ",.{});
 }
 test "simple u64 treap alloc with nextFree" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -345,6 +342,24 @@ test "simple u64 treap with values" {
     treap.setValue(f1,99);
     try expectEqual(treap.getValue(f2),92);
 }
+test "resize u64 treap with values" {
+    const expectEqual = @import("std").testing.expectEqual;
+    const Treap_u64V = Treap(u64,u32,u64);
+    var memory = [_]u8{0} ** (4*Treap_u64V.elementSize);
+    var treap = Treap_u64V.init(memory[0..],compareU64,0);
+    const f2 = try treap.insert(42);
+    treap.setValue(f2,92);
+    try expectEqual(f2,1);
+    try expectEqual(treap.nextFree(),2);
+    const f1 = try treap.insert(17);
+    try expectEqual(f1,3);
+    treap.setValue(f1,99);
+    try expectEqual(treap.getValue(f2),92);
+    var memory2 = [_]u8{0} ** (6*Treap_u64V.elementSize);
+    var treap2 = treap.resize(memory2[0..]);
+    const f3 = try treap2.insert(17);
+    try expectEqual(f3,4);
+}
 test "simple u64 treap alloc" {
     const expectEqual = @import("std").testing.expectEqual;
     const n = 5;
@@ -367,12 +382,12 @@ test "simple u64 treap alloc" {
     try expectEqual(treap.lookup(44),5);
     var depths = [_]u32{0} ** ((n+1)*3);
     treap.depths(depths[0..]);
-    // try std.io.getStdOut().writer().print("treap={}\n",.{treap});
-    // try std.io.getStdOut().writer().print("depths={any}\n",.{depths});
+    // std.debug.print("treap={}\n",.{treap});
+    // std.debug.print("depths={any}\n",.{depths});
 }
 test "full u64 treap alloc" {
     if (includeStdTest) {
-        try std.io.getStdOut().writer().print(" - Set includeStdTest=false to include this test ",.{});
+        std.debug.print(" - Set includeStdTest=false to include this test ",.{});
     } else {
         const expectEqual = @import("std").testing.expectEqual;
         const n = 21;
@@ -385,8 +400,8 @@ test "full u64 treap alloc" {
         try expectEqual(treap.lookup(20),20);
         var depths = [_]u32{0} ** (n+1);
         treap.depths(depths[0..]);
-        // try std.io.getStdOut().writer().print("depths={any}\n",.{depths});
-        // try std.io.getStdOut().writer().print("treap={}\n",.{treap});
+        // std.debug.print("depths={any}\n",.{depths});
+        // std.debug.print("treap={}\n",.{treap});
     }
 }
 test "simple u64 treap range" {
