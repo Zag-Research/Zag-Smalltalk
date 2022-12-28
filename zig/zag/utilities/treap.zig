@@ -68,8 +68,8 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         }
         pub fn resize(self: *Self, memory: []u8) Self {
             var treap = ref(memory,self.compare,self.empty);
-            treap.setRoot(self.root());
-            if (true) @panic("resize not fully implemented");
+            for (self.table) | element,i | treap.table[i] = element;
+            treap.extend(@intCast(Index,self.table.len));
             return treap;
         }
         inline fn root(self: *const Self) Index {
@@ -347,6 +347,7 @@ test "resize u64 treap with values" {
     const Treap_u64V = Treap(u64,u32,u64);
     var memory = [_]u8{0} ** (4*Treap_u64V.elementSize);
     var treap = Treap_u64V.init(memory[0..],compareU64,0);
+    try expectEqual(treap.table.len,4);
     const f2 = try treap.insert(42);
     treap.setValue(f2,92);
     try expectEqual(f2,1);
@@ -355,10 +356,18 @@ test "resize u64 treap with values" {
     try expectEqual(f1,3);
     treap.setValue(f1,99);
     try expectEqual(treap.getValue(f2),92);
+    try expectEqual(treap.hasRoom(1),false);
     var memory2 = [_]u8{0} ** (6*Treap_u64V.elementSize);
     var treap2 = treap.resize(memory2[0..]);
-    const f3 = try treap2.insert(17);
+    try expectEqual(treap2.table.len,6);
+    try expectEqual(treap2.hasRoom(2),true);
+    try expectEqual(treap2.hasRoom(3),false);
+    const f3 = try treap2.insert(19);
+    try expectEqual(try treap2.insert(17),f1);
+    try expectEqual(treap2.hasRoom(1),true);
+    try expectEqual(treap2.hasRoom(2),false);
     try expectEqual(f3,4);
+    try expectEqual(treap2.getValue(f2),92);
 }
 test "simple u64 treap alloc" {
     const expectEqual = @import("std").testing.expectEqual;
