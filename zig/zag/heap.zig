@@ -31,32 +31,39 @@ pub const Format = enum(u8) {
     const Indexable_32 : u8 = 2;
     const Indexable_16 : u8 = 4;
     const Indexable_8 : u8 = 8;
+    const IndexableSizes : u8 = 15;
     const IndexableFormat : u8 = 31;
     const Immutable : u8 = 128;
-    fn calcSizes() [IndexableFormat+1]u8 {
-        var sizes : [IndexableFormat+1]u8 = undefined;
-        for (sizes) |*size,i| {
-            const typ = i & (IndexableFormat>>1);
-            if (typ<Indexable_32) size.* = 1
-                else if (typ<Indexable_16) size.* = 2
-                else if (typ<Indexable_8) size.* = 4
-                else size.* = 8;
+    fn calcSizes() [IndexableSizes+1]u8 {
+        var sizes : [IndexableSizes+1]u8 = undefined;
+        for (sizes) |*s,i| {
+            const typ = i & IndexableSizes;
+            s.* =
+                if (typ<Indexable_32) 1
+                else if (typ<Indexable_16) 2
+                else if (typ<Indexable_8) 4
+                else 8;
         }
         return sizes;
     }
-    const fieldSizes = [_]u8{calcSizes()};
-    fn calcPartials() [IndexableFormat+1]u8 {
-        var partials : [IndexableFormat+1]u8 = undefined;
+    const fieldSizes = calcSizes();
+    fn calcPartials() [IndexableSizes+1]u8 {
+        var partials: [IndexableSizes+1]u8 = undefined;
         for (partials) |*partial,i| {
-            const typ = i & (IndexableFormat/2);
-            if (typ<Indexable_32) partial.* = 0
-            else if (typ<Indexable_16) partial.* = Indexable_32-typ
-            else if (typ<Indexable_8) partial.* = Indexable_16-typ
-            else partial.* = Indexable_8-typ;
+            const typ: u8 = @truncate(u8,i) & IndexableSizes;
+            partial.* =
+                if (typ>Indexable_32 and typ<Indexable_16) typ&1
+                else if (typ>Indexable_16 and typ<Indexable_8) typ&3
+                else if (typ>Indexable_8) typ&7
+                else 0;
         }
         return partials;
     }
-    const fieldPartials = [_]u8{calcPartials()};
+    const fieldPartials = calcPartials();
+    pub inline fn size(self: Self, n: usize) usize {
+        const f = @enumToInt(self) & IndexableFormat;
+        return n*fieldSizes[f]-fieldPartials[f];
+    }
     pub inline fn setWeak(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) & ~InstVars | Weak);
     }
@@ -75,11 +82,11 @@ pub const Format = enum(u8) {
     pub inline fn setArray(self: Self) Self {
         return self.plusIndexable(IndexableWithPtrs);
     }
-    pub inline fn raw(self: Self, comptime T : type, size : usize) Self {
+    pub inline fn raw(self: Self, comptime T : type, s : usize) Self {
         switch (T) {
-            u8,i8 => return self.plusIndexable(Indexable_8 + @intCast(u8,(-@intCast(isize,size))&7)),
-            u16,i16 => return self.plusIndexable(Indexable_16 + @intCast(u8,(-@intCast(isize,size))&3)),
-            u32,i32,f32 => return self.plusIndexable(Indexable_32 + @intCast(u8,(-@intCast(isize,size))&1)),
+            u8,i8 => return self.plusIndexable(Indexable_8 + @intCast(u8,(-@intCast(isize,s))&7)),
+            u16,i16 => return self.plusIndexable(Indexable_16 + @intCast(u8,(-@intCast(isize,s))&3)),
+            u32,i32,f32 => return self.plusIndexable(Indexable_32 + @intCast(u8,(-@intCast(isize,s))&1)),
             u64,i64,f64,Object => return self.plusIndexable(Indexable_64),
             else => return self,
         }
@@ -155,6 +162,29 @@ test "raw formats" {
     try Format.none.raw(u64,1).eq(Format.Indexable_64+0);
     try std.testing.expect(Format.none.raw(u64,0).is64());
 }
+test "raw size" {
+    const ee = std.testing.expectEqual;
+    try ee(Format.none.raw(u8,24).size(3),24);
+    try ee(Format.none.raw(u8,23).size(3),23);
+    try ee(Format.none.raw(u8,22).size(3),22);
+    try ee(Format.none.raw(u8,21).size(3),21);
+    try ee(Format.none.raw(u8,20).size(3),20);
+    try ee(Format.none.raw(u8,19).size(3),19);
+    try ee(Format.none.raw(u8,18).size(3),18);
+    try ee(Format.none.raw(u8,17).size(3),17);
+    try ee(Format.none.raw(u8,24).size(3),24);
+    try ee(Format.none.raw(u16,12).size(3),12);
+    try ee(Format.none.raw(u16,11).size(3),11);
+    try ee(Format.none.raw(u16,10).size(3),10);
+    try ee(Format.none.raw(u16,9).size(3),9);
+    try ee(Format.none.raw(u16,12).size(3),12);
+    try ee(Format.none.raw(u32,6).size(3),6);
+    try ee(Format.none.raw(u32,5).size(3),5);
+    try ee(Format.none.raw(u32,6).size(3),6);
+    try ee(Format.none.raw(u64,3).size(3),3);
+    try ee(Format.none.raw(u64,3).size(3),3);
+}
+
 test "header formats" {
     const expect = std.testing.expect;
     try expect(Format.objectP.hasInstVars());
@@ -218,8 +248,7 @@ pub const Header = packed struct(u64) {
 
     const immediateLength: u16 = 4095;
     const forwardLength: u16 = 4094;
-    const indirectLength: u16 = 4093;
-    pub const maxLength = @min(4092,@import("arenas.zig").heapAllocationSize-1);
+    pub const maxLength = @min(4093,@import("arenas.zig").heapAllocationSize-1);
     pub const includesHeader = true;
     pub inline fn partialOnStack(selfOffset: u16) Header {
         return @bitCast(Header,@as(u64,selfOffset)<<16);
@@ -252,32 +281,64 @@ pub const Header = packed struct(u64) {
         }
         return ptr;
     }
-    pub inline fn isIndirect(self: HeapConstPtr) bool {
-        return self.length>=indirectLength and self.length<forwardLength;
-    }
-    pub fn arrayAsSlice(self: HeapConstPtr, comptime T: type) ![]T {
-        const ptr = self.forwarded();
-        const form = ptr.objectFormat;
+    pub inline fn arrayAsSlice(maybeForwarded: HeapConstPtr,comptime T:type) ![]T {
+        const self = maybeForwarded.forwarded();
+        var size: usize = self.length;
+        const form = self.objectFormat;
         if (!form.isIndexable()) return error.NotIndexable;
-        var size: usize = ptr.length;
-        var oa = ptr.asObjectArray();
-        if (T==Object)
-            return oa[0..size];
-        if (form.isRaw()) {
-            const formi = @enumToInt(form);
-            if (ptr.isIndirect()) {
-                size = @bitCast(usize,oa[0]);
-                oa += 1;
-                @panic("incomplete");
-            }
-            return mem.bytesAsSlice(
-                T,
-                if (formi>=Format.Indexable_8) @ptrCast([*]u8,oa)[0..size*8-(formi&7)]
-                    else if (formi>=Format.Indexable_16) @ptrCast([*]u8,oa)[0..size*8-(formi&3)*2]
-                    else if (formi>=Format.Indexable_32) @ptrCast([*]u8,oa)[0..size*8-(formi&1)*4]
-                    else @ptrCast([*]u8,oa)[0..size*8]);
+        var oa = @intToPtr([*]u64,@ptrToInt(self))+1;
+        if (form.hasInstVars()) {
+            oa += size;
+            size = oa[0];
+            return @intToPtr([*]T,oa[1])[0..size];
         }
-        @panic("arrayAsSlice for non-raw");
+        oa += 1;
+        switch (T) {
+            Object,i64,u64,f64 => {
+                return @ptrCast([*]T,oa)[0..size];
+            },
+            i32,u32,f32 => {
+                return @ptrCast([*]T,oa)[0..size*2-(@enumToInt(form)&1)];
+            },
+            i16,u16 => {
+                return @ptrCast([*]T,oa)[0..size*4-(@enumToInt(form)&3)];
+            },
+            i8,u8 => {
+                return @ptrCast([*]T,oa)[0..size*8-(@enumToInt(form)&7)];
+            },
+            else => @panic("can't get arrayAsSlice for " ++ @typeName(T)),
+        }
+    }
+    pub inline fn arraySize(maybeForwarded: HeapConstPtr) !usize {
+        const self = maybeForwarded.forwarded();
+        const form = self.objectFormat;
+        if (!form.isIndexable()) return error.NotIndexable;
+        const size = self.length;
+        if (form.hasInstVars()) {
+            const oa = @intToPtr([*]u64,@ptrToInt(self));
+            return oa[size+1];
+        }
+        return form.size(size);
+    }
+    pub inline fn inHeapSize(maybeForwarded: HeapConstPtr) usize {
+        const self = maybeForwarded.forwarded();
+        const form = self.objectFormat;
+        const size = self.length;
+        if (form.isIndexable() and form.hasInstVars()) {
+            return size+3;
+        }
+        return size+1;
+    }
+    pub inline fn isIndirect(maybeForwarded: HeapConstPtr) bool {
+        const self = maybeForwarded.forwarded();
+        const form = self.objectFormat;
+        var size : usize = self.length;
+        if (!form.isIndexable()) return false;
+        if (form.hasInstVars()) {
+            var oa = @intToPtr([*]u64,@ptrToInt(self))+size;
+            return oa[2]!=@ptrToInt(oa+3);
+        }
+        return false;
     }
     pub inline fn isIndexable(self: HeapConstPtr) bool {
         return self.objectFormat.isIndexable();
@@ -322,52 +383,6 @@ pub const Header = packed struct(u64) {
             const size = self.length;
             return self.asObjectArray()[0..size];
         } else return &[0]Object{};
-    }
-    pub inline fn indexables(self: HeapConstPtr,comptime T:type) []T {
-        const form = self.objectFormat;
-        if (!form.isIndexable()) return &[0]T{};
-        var size: usize = self.length;
-        var oa = @intToPtr([*]u64,@ptrToInt(self))+1;
-        if (form.hasInstVars()) {
-            oa += size;
-            size = oa[0];
-            oa += 1;
-        } else if (size >= indirectLength) {
-            size = oa[0];
-            oa += 1;
-        }
-        if (size >= indirectLength) oa = @intToPtr([*]u64,oa[0]);
-        switch (T) {
-            Object,i64,u64,f64 => {
-                return @ptrCast([*]T,oa)[0..size];
-            },
-            i32,u32,f32 => {
-                return @ptrCast([*]T,oa)[0..size*2-(@enumToInt(form)&1)];
-            },
-            i16,u16 => {
-                return @ptrCast([*]T,oa)[0..size*4-(@enumToInt(form)&3)];
-            },
-            i8,u8 => {
-                return @ptrCast([*]T,oa)[0..size*8-(@enumToInt(form)&7)];
-            },
-            else => unreachable,
-        }
-    }
-    pub inline fn inHeapSize(self: HeapConstPtr) usize {
-        const form = self.objectFormat;
-        var size : usize = self.length;
-        if (!form.isIndexable()) return size+1;
-        var oa = @intToPtr([*]u64,@ptrToInt(self))+1;
-        if (form.hasInstVars()) {
-            oa += size;
-            size = oa[0];
-            oa += 1;
-        } else if (size >= indirectLength) {
-            size = oa[0];
-            oa += 1;
-        }
-        oa = oa + (if (size >= indirectLength) 1 else size);
-        return (@ptrToInt(oa)-@ptrToInt(self))/@sizeOf(Object);
     }
     fn @"format FUBAR"(
         self: HeapConstPtr,

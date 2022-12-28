@@ -5,6 +5,7 @@ const native_endian = builtin.target.cpu.arch.endian();
 const symbol = @import("symbol.zig");
 const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
+const Header = heap.Header;
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
 const Thread = @import("thread.zig");
@@ -170,8 +171,14 @@ pub const Object = packed struct(u64) {
         if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch return &[0]T{};
         return &[0]T{};
     }
-    pub fn growSize(self: Object, comptime T: type) usize {
-        return largerPowerOf2(self.arrayAsSlice(T).len * 2);
+    pub fn size(self: Object) !usize {
+        if (!self.isHeapObject()) return error.NotIndexable;
+        return self.to(HeapPtr).arraySize();
+    }
+    pub fn growSize(self: Object) !usize {
+        const lp2 = largerPowerOf2(try self.size() * 2);
+        if (lp2>Header.maxLength and lp2<Header.maxLength*2) return Header.maxLength;
+        return lp2;
     }
     pub  fn isIndexable(self: Object) bool {
         if (self.isHeapObject()) return self.to(HeapPtr).isIndexable();
