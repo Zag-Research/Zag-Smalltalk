@@ -148,13 +148,17 @@ pub const SymbolTable = struct {
     fn allocTreap(self: *Self, _: usize) *objectTreap {
         {
             // ToDo: add locking
-            const size = if (Nil.equals(self.theObject))
-                initialSymbolTableSize*objectTreap.elementSize
-                else
-                self.theObject.growSize(u8);
+            const size = ((self.theObject.growSize()
+                               catch initialSymbolTableSize*objectTreap.elementSize)
+                              / objectTreap.elementSize
+                          ) * objectTreap.elementSize;
             var theHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
             var memory = theHeapObject.arrayAsSlice(u8);
-            self.treap = objectTreap.init(memory,object.compareObject,Nil);
+            var newTreap = objectTreap.init(memory,object.compareObject,Nil);
+            if (!Nil.equals(self.theObject)) {
+                self.treap = newTreap;
+                @panic("incomplete");
+                }
             self.theObject = theHeapObject;
         }
         self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);

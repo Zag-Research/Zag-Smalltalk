@@ -35,7 +35,7 @@ test "arenaFree" {
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
-test "with arena" {
+test "object in nursery arena" {
     var t = thread.Thread.new();
     var nursery = NurseryArena.new();
     nursery.init(&t);
@@ -225,7 +225,7 @@ pub const GlobalArena = struct {
         const self = @ptrCast(*Self,arena);
         const totalSize = heapSize + arraySize;
         var index = self.findAllocationList(totalSize);
-        if (index==0) return allocIndirect(arena,sp,hp,context,heapSize,arraySize);
+        if (index==0) @panic("alloc didn't find a valid freeList");
         const allocation: []Header = (
             while (index<self.freeLists.len) : (index += 1) {
                 if (self.freeLists[index].getSlice()) |slice| break slice;
@@ -424,7 +424,7 @@ test "freeList structure" {
         else => std.mem.page_size,
     });
 }
-test "check heap allocations" {
+test "check HeapAllocations" {
     const ee = std.testing.expectEqual;
     var ga = GlobalArena.init();
     defer ga.deinit();
@@ -450,14 +450,16 @@ test "check heap allocations" {
     ga.freeToList(ha.mem[45..]);
     try ee(ga.freeSpace(),heapAllocationSize-2); // ignored the 2x 1-word allocations
 }
-test "check alloc object" {
+test "check GlobalArena alloc object" {
     const ee = std.testing.expectEqual;
+    const err = std.testing.expectError;
     var ga = GlobalArena.init();
     defer ga.deinit();
     var o1 = ga.allocObject(17,5);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o1.inHeapSize(),6);
     try ee(ga.freeSpace(),heapAllocationSize-6);
+    try err(error.unexpected,o1.size());
 }
 test "check alloc array" {
     const ee = std.testing.expectEqual;

@@ -85,14 +85,13 @@ There are a few significant changes:
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 #### Length
-The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables). If there are both instance variables and indexable values, the index variables are followed by a size field, that says the number of indexable values that follow. If there is a size field, the following interpretations apply to it
+The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables and the array fits in a heap allocation). If there are both instance variables and indexable values, the index variables are followed by a slice, that may reference the indexable values immediately following, or to a remote array. A remote object with no instance variables will be coded with a length of 0. This means that pure-indexable objects that fit in a heap allocation have no overhead, but large indaxable objects and mixed objects will have the slice.
 
 There are a number of special length values:
 - 4095 - this isn't a header, it would an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
 - 4094 - this is a forwarding pointer, the low 48 bits are the address.
-- 4093 - this is a remote array object, instead of the array contents will be the size and the address of a, possibly very large, page aligned indexable array, as well as a treap structure to find this object from a memory address.
-- 0-4092 - normal object
-Note that the total heap space for an object can't exceed 4093 words. Anything larger will be allocated as a remote object.
+- 0-4093 - normal object 
+Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
 
 #### Format
 First we have the object format tag. The bits code the following:
