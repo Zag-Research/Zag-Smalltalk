@@ -64,6 +64,13 @@ pub const Format = enum(u8) {
         const f = @enumToInt(self) & IndexableFormat;
         return n*fieldSizes[f]-fieldPartials[f];
     }
+    pub inline fn wordSize(self: Self, n: usize) usize {
+        const fs = fieldSizes[@enumToInt(self) & IndexableFormat];
+        return (n+fs-1)/fs;
+    }
+    pub inline fn getSize(self: Self) usize {
+        return fieldSizes[@enumToInt(self) & IndexableFormat];
+    }
     pub inline fn setWeak(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) & ~InstVars | Weak);
     }
@@ -286,11 +293,11 @@ pub const Header = packed struct(u64) {
         var size: usize = self.length;
         const form = self.objectFormat;
         if (!form.isIndexable()) return error.NotIndexable;
-        var oa = @intToPtr([*]u64,@ptrToInt(self))+1;
+        var oa = @intToPtr([*]u64,@ptrToInt(self));
         if (form.hasInstVars()) {
             oa += size;
-            size = oa[0];
-            return @intToPtr([*]T,oa[1])[0..size];
+            size = oa[1];
+            return @intToPtr([*]T,oa[2])[0..size];
         }
         oa += 1;
         switch (T) {
@@ -319,6 +326,19 @@ pub const Header = packed struct(u64) {
             return oa[size+1];
         }
         return form.size(size);
+    }
+    pub fn growSize(maybeForwarded: HeapConstPtr, stepSize: usize) !usize {
+        const self = maybeForwarded.forwarded();
+        const form = self.objectFormat;
+        if (!form.isIndexable()) return error.NotIndexable;
+        var size: usize = self.length;
+        if (form.hasInstVars()) {
+            const oa = @intToPtr([*]u64,@ptrToInt(self));
+            size = form.wordSize(oa[size+1]);
+        }
+        size = @import("utilities.zig").largerPowerOf2(size * 2);
+        if (size>Header.maxLength and size<Header.maxLength*2) size = Header.maxLength;
+        return (form.getSize()*size+stepSize-1)/stepSize*stepSize;
     }
     pub inline fn inHeapSize(maybeForwarded: HeapConstPtr) usize {
         const self = maybeForwarded.forwarded();
@@ -454,7 +474,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
         const Self = @This();
         pub fn init() Self {
             var result = Self {
-                .header = header((size+7)/8,Format.arrayNP.raw(u8,size),class.String_I,hash,Age.static),
+                .header = header((size+7)/8,Format.none.raw(u8,size),class.String_I,hash,Age.static),
                 .chars = [_]u8{0}**size,
             };
             for (str) |c,idx| {
@@ -464,6 +484,9 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
         }
         fn h(self: * const Self) []const u8 {
             return @ptrCast([*]const u8,self)[0..(size+15)/8*8];
+        }
+        fn obj(self: * const Self) HeapConstPtr {
+            return @ptrCast(*const Header,self);
         }
         pub fn asObject(self: * const Self) Object {
             return Object.from(@ptrCast(*const Header,self));
@@ -479,8 +502,11 @@ pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
     return result;
 }
 
-const abcde = CompileTimeString("abcde").init();
-test "compile time" {
-//    std.debug.print("abcde: {any}\n",.{abcde.h()});
-//    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
-}
+// const abcde = CompileTimeString("abcdefghijk").init();
+// test "compile time" {
+//     std.testing.expectEqual("abcdefghijk"[0..],abcde.asObject().arrayAsSlice(i8));
+//     std.debug.print("abcde: {any}\n",.{abcde.obj().*});
+//     std.debug.print("abcde: {any}\n",.{abcde.asObject().arrayAsSlice(i8)});
+//     std.debug.print("abcde: {any}\n",.{abcde.h()});
+//     std.debug.print("abcde: {any}\n",.{abcde.asObject()});
+// }

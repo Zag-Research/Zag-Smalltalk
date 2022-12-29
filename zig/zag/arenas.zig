@@ -459,7 +459,7 @@ test "check GlobalArena alloc object" {
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o1.inHeapSize(),6);
     try ee(ga.freeSpace(),heapAllocationSize-6);
-    try err(error.unexpected,o1.size());
+    try err(error.NotIndexable,o1.size());
 }
 test "check alloc array" {
     const ee = std.testing.expectEqual;

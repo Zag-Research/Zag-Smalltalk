@@ -84,31 +84,12 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
 });
 var symbolTable = SymbolTable.init(&arenas.globalArena);
 
-// fn init(initialSymbolTableSize:usize,str:[]const heap.HeapConstPtr) !SymbolTable {
-//     var st = symbolTable orelse SymbolTable.init(initialSymbolTableSize,&arenas.globalArena);
-//     symbolTable = st;
-//     st.loadSymbols(initialSymbolStrings[0..]);
-//     st.loadSymbols(str);
-//     return st;
-// }
-// pub fn deinit(thr: *thread.Thread) void {
-//     _ = thr;
-//     (symbolTable orelse unreachable).deinit();
-// }
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
 }
 pub fn loadSymbols(_: *thread.Thread,str:[]const heap.HeapConstPtr) void {
     symbolTable.loadSymbols(str);
 }
-// pub fn lookupLiteral(string: []const u8) object.Object {
-//     return (symbolTable orelse unreachable).lookupLiteral(string);
-// }
-// pub fn internLiteral(arena: *heap.Arena, string: []const u8) object.Object {
-//     const result = (symbolTable orelse unreachable).internLiteral(arena, string);
-//     if (!result.isNil()) return result;
-//     unreachable; // out of space
-// }
 pub inline fn lookup(_: *thread.Thread,string: object.Object) object.Object {
     return symbolTable.lookup(string);
 }
@@ -148,20 +129,15 @@ pub const SymbolTable = struct {
     fn allocTreap(self: *Self, _: usize) *objectTreap {
         {
             // ToDo: add locking
-            const size = ((self.theObject.growSize()
-                               catch initialSymbolTableSize*objectTreap.elementSize)
-                              / objectTreap.elementSize
-                          ) * objectTreap.elementSize;
-            var theHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
-            var memory = theHeapObject.arrayAsSlice(u8);
-            var newTreap = objectTreap.init(memory,object.compareObject,Nil);
-            if (!Nil.equals(self.theObject)) {
-                self.treap = newTreap;
-                @panic("incomplete");
-                }
-            self.theObject = theHeapObject;
+            const size = self.theObject.growSize(objectTreap.elementSize)
+                catch initialSymbolTableSize*objectTreap.elementSize;
+            var newHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
+            var memory = newHeapObject.arrayAsSlice(u8);
+            var newTreap = self.treap.resize(memory);
+            self.treap = newTreap;
+            self.theObject = newHeapObject;
         }
-        self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
+        self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len]);
         return &self.treap;
     }
     pub fn deinit(self: *Self) void {
@@ -206,7 +182,7 @@ pub const SymbolTable = struct {
             _ = internDirect(trp,string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-//        std.debug.print("\nverify 0x{x:0>16} {} {}",.{symbol.u(),symbol.hash24(),initialSymbolStrings[symbol.hash24()-1].asObject()});
+        std.debug.print("\nverify 0x{x:0>16} {} {}",.{symbol.u(),symbol.hash24(),initialSymbolStrings[symbol.hash24()-1].asObject()});
         try std.testing.expectEqual(symbol,self.lookup(initialSymbolStrings[symbol.hash24()-1].asObject()));
     }
 };

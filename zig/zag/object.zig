@@ -175,10 +175,9 @@ pub const Object = packed struct(u64) {
         if (!self.isHeapObject()) return error.NotIndexable;
         return self.to(HeapPtr).arraySize();
     }
-    pub fn growSize(self: Object) !usize {
-        const lp2 = largerPowerOf2(try self.size() * 2);
-        if (lp2>Header.maxLength and lp2<Header.maxLength*2) return Header.maxLength;
-        return lp2;
+    pub fn growSize(self: Object, stepSize: usize) !usize {
+        if (!self.isHeapObject()) return error.NotIndexable;
+        return self.to(HeapPtr).growSize(stepSize);
     }
     pub  fn isIndexable(self: Object) bool {
         if (self.isHeapObject()) return self.to(HeapPtr).isIndexable();
