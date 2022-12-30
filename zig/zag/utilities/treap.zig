@@ -65,6 +65,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
                 element.value=undefined;
                 index += 1;
             }
+            self.table[self.table.len-1].left=0;
         }
         pub fn resize(self: *Self, memory: []u8) Self {
             var treap = ref(memory,self.compare,self.empty);
@@ -82,7 +83,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             if (self.table.len==0) return false;
             var free =self.getFree();
             var n = _n;
-            while (n > 0 and free < self.table.len) {
+            while (n > 0 and free > 0) {
                 n -= 1;
                 free = self.table[free].left;
             }
@@ -97,7 +98,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         }
         pub fn nextFree(self: *Self) !Index {
             const pos = self.getFree();
-            if (pos>=self.table.len) return error.OutOfSpace;
+            if (pos==0) return error.OutOfSpace;
             self.setFree(self.table[pos].left);
             self.table[pos].left=0;
             return pos;
@@ -241,19 +242,19 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             self.setFree(pos);
         }
         // Only for tests
-        fn inorderPrint(self: *Self) void {
+        pub fn inorderPrint(self: *Self) void {
             std.debug.print("root: {}\n",.{self.root()});
             self.inorderWalkPrint(self.root());
         }
         fn inorderWalkPrint(self: *const Self, pos: Index) void {
             if (pos>0) {
                 const node = self.table[pos];
-                self.inorderWalkPrint(self.table[pos].left);
-                std.debug.print("pos: {} key: {} priority: {:10}",.{pos,node.key,priority(pos)});
-                if (node.left>0) std.debug.print(" | left: {}",.{self.table[node.left].key});
-                if (node.right>0) std.debug.print(" | right: {}",.{self.table[node.right].key});
-                std.debug.print("\n",.{});
-                self.inorderWalkPrint(self.table[pos].right);
+                self.inorderWalkPrint(node.left);
+                std.debug.print("pos:{:3}({})",.{pos,node.key});
+                if (node.left>0) std.debug.print(" | left: {:3}({})",.{node.left,self.table[node.left].key});
+                if (node.right>0) std.debug.print(" | right:{:3}({})",.{node.right,self.table[node.right].key});
+                std.debug.print(" priority: {:10}\n",.{priority(pos)});
+                self.inorderWalkPrint(node.right);
             }
         }
         fn depths(self: *Self, data: []Index) void {
