@@ -28,6 +28,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     prevCtxt: ContextPtr,
     method: compiledMethodPtr,
     size: u64,
+    addr: *Object,
     temps: [1]Object,
     const Self = @This();
     const ContextPtr = *Self;
@@ -41,6 +42,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
             .prevCtxt = undefined,
             .method = undefined,
             .size = 0,
+            .addr = undefined,
             .temps = undefined,
         };
     }
@@ -88,6 +90,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
         if (self.isInStack(sp,thread)) {
             self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
             self.size = self.prevCtxt.calculatedSize(thread);
+            self.addr = self.temps;
             self.prevCtxt.convertToProperHeapObject(sp, thread);
         }
         @panic("ToDo: not the correct test for whether it needs to be done");
