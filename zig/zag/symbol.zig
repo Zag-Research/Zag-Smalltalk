@@ -208,3 +208,19 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.Object);
     try expect(mem.eql(u8,"valueWithArguments:"[0..],symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
 }
+test "force second allocation of symbol treap" {
+    const moreSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
+        "xxx00", "xxx01", "xxx02", "xxx03", "xxx04", "xxx05", "xxx06", "xxx07", "xxx08", "xxx09",
+        "xxx10", "xxx11", "xxx12", "xxx13", "xxx14", "xxx15", "xxx16", "xxx17", "xxx18", "xxx19",
+        "xxx20", "xxx21", "xxx22", "xxx23", "xxx24", "xxx25", "xxx26", "xxx27", "xxx28", "xxx29",
+        "xxx30", "xxx31", "xxx32", "xxx33", "xxx34", "xxx35", "xxx36", "xxx37", "xxx38", "xxx39",
+    });
+//    const expectEqual = std.testing.expectEqual;
+//    const expect = std.testing.expect;
+    var symbol = SymbolTable.init(&arenas.globalArena);
+    defer symbol.deinit();
+    symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
+    symbol.loadSymbols(moreSymbolStrings[0..moreSymbolStrings.len-1]);
+    symbol.treap.inorderPrint();
+    _ = symbol.arena.allocArray(49,480,u8);
+}
