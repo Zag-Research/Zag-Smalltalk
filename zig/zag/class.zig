@@ -58,17 +58,17 @@ const initialClassStrings = heap.compileStrings(.{ // must be in same order as a
     "Number", "ClassDescription", "Boolean", "Context",
     "CatchingContext", "EnsuringContext", "CompiledMethod", "ByteArray",
 });
-pub const ReservedNumberOfClasses = if (builtin.is_test) 100 else 500;
+pub const ReservedNumberOfClasses = if (builtin.is_test) 60 else 500;
 var classTable : ClassTable = undefined;
 pub fn init() !void {
     classTable = setUpClassTable();
 }
 const objectTreap = Treap(u32,ClassIndex,u0);
 const ClassTable = struct {
-    theObject: object.Object,
+    theObject: Object,
     treap: objectTreap,
     symbolTable: *symbol.SymbolTable,
-    classes: [ReservedNumberOfClasses]object.Object,
+    classes: [ReservedNumberOfClasses]Object,
     const Self = @This();
     fn compareU32(l: u32, r: u32) std.math.Order {
         return std.math.order(l,r);
@@ -78,7 +78,7 @@ const ClassTable = struct {
             .theObject = Nil,
             .treap = objectTreap.initEmpty(compareU32,0),
             .symbolTable = st,
-            .classes = [_]object.Object{Nil} ** ReservedNumberOfClasses,
+            .classes = [_]Object{Nil} ** ReservedNumberOfClasses,
         };
     }
     inline fn theTreap(self: *Self, adding: usize) *objectTreap {
@@ -89,13 +89,19 @@ const ClassTable = struct {
     fn allocTreap(self: *Self, _: usize) *objectTreap {
         {
             // ToDo: add locking
-            const size = self.theObject.growSize() catch ReservedNumberOfClasses*objectTreap.elementSize;
-            var theHeapObject = self.symbolTable.arena.allocArray(ClassTable_I,size,u8);
-            var memory = theHeapObject.arrayAsSlice(u8);
-            self.treap = objectTreap.init(memory,compareU32,0);
-            self.theObject = theHeapObject;
-            for(initialClassStrings) |name| {
-                _ = self.intern(self.symbolTable.intern(name.asObject()));
+            const size = self.theObject.growSize(objectTreap.elementSize)
+                catch ReservedNumberOfClasses*objectTreap.elementSize;
+            var newHeapObject = self.symbolTable.arena.allocArray(ClassTable_I,size,u8);
+            var memory = newHeapObject.arrayAsSlice(u8);
+            var newTreap = self.treap.resize(memory);
+            self.treap = newTreap;
+            if (Nil.equals(self.theObject)) {
+                self.theObject = newHeapObject;
+                for(initialClassStrings) |name| {
+                    _ = self.intern(self.symbolTable.intern(name.asObject()));
+                }
+            } else {
+                self.theObject = newHeapObject;
             }
         }
         return &self.treap;
@@ -104,17 +110,17 @@ const ClassTable = struct {
         self.*=undefined;
     }
     fn nextFree(self: *Self) ClassIndex {
-        return @truncate(ClassIndex,self.theTreap(1).nextFree() catch @panic("class treap full"));
+        return self.theTreap(1).nextFree() catch unreachable;
     }
-    fn lookup(self: *Self,sym: object.Object) ClassIndex {
-        return @truncate(ClassIndex,self.theTreap(0).lookup(sym.hash32()));
+    fn lookup(self: *Self,sym: Object) ClassIndex {
+        return self.theTreap(0).lookup(sym.hash32());
     }
-    fn intern(self: *Self, sym: object.Object) ClassIndex {
+    fn intern(self: *Self, sym: Object) ClassIndex {
         var trp = self.theTreap(1);
         while (true) {
             const lu = self.lookup(sym);
             if (lu>0) return lu;
-            const result = @truncate(ClassIndex,trp.insert(sym.hash32()) catch @panic("class treap full"));
+            const result = trp.insert(sym.hash32()) catch unreachable;
             if (result>0) return result;
             unreachable; // out of space
         }
@@ -126,12 +132,12 @@ const ClassTable = struct {
     pub fn getClass(self: *Self, className: Object) Object {
         return self.classes[self.getClassIndex(className)];
     }
-    pub fn subClass(self: *Self, superclassName: Object, className: Object) !void {
+    pub fn subClass(self: *Self, superclass: ?*Metaclass_S, className: Object) *Metaclass_S {
         const class_I = self.getClassIndex(className);
         var class: *Class_S = undefined;
         var metaclass: *Metaclass_S = undefined;
         if (self.classes[class_I].isNil()) {
-            const metaclass_I = classTable.nextFree();
+            const metaclass_I = self.nextFree();
             metaclass = self.symbolTable.arena.allocStruct(Metaclass_I, Metaclass_S, 8, Object);
             self.classes[metaclass_I] = Object.from(metaclass);
             class = self.symbolTable.arena.allocStruct(Metaclass_I, Class_S, 8, Object);
@@ -141,51 +147,39 @@ const ClassTable = struct {
             class.super.index=Object.from(class_I);
             class.name=className;
             self.classes[class_I] = class_O;
-            //        std.debug.print("\nnew ", .{});
         } else {
             class = self.classes[class_I].to(*Class_S);
-            //        std.debug.print("\nexisting ", .{});
             metaclass = self.classes[class.super.super.header.classIndex].to(*Metaclass_S);
         }
-        //    std.debug.print("subClass {} {} 0x{x:0>16}\n", .{className,class_I,classes[class_I].u()});
-        var superclass_I = self.lookup(superclassName);
-        if (superclass_I==0)
-            superclass_I = self.lookup(symbols.Class);
-        // *****************************
-        // * This is not correct
-        // *****************************
-        //    std.debug.print("superclass:{}\n", .{superclass_I});
-        _ = @ptrCast(heap.HeapPtr,@alignCast(8,&class.super.super.header)).setHash(superclass_I);
-        _ = @ptrCast(heap.HeapPtr,@alignCast(8,&metaclass.super.super.header)).setHash(superclass_I);
-        //    std.debug.print(" class:{}\n", .{class});
-        //    std.debug.print(" metaclass:{}\n", .{metaclass});
-    }
-    pub fn init_class(self: *Self, t: *thread.Thread, className: Object,  instanceMethods: []const dispatch.SymbolMethod, classMethods: []const dispatch.SymbolMethod) !Object {
-        std.debug.print("before addClass\n",.{});
-        try @import("dispatch.zig").addClass(t,className,instanceMethods,classMethods);
-        std.debug.print("before getClass\n",.{});
-        return self.getClass(className);
+        if (superclass) |sc| {
+            metaclass.super.super.superclass = Object.from(sc);
+            class.super.super.superclass = sc.soleInstance;
+        } else {
+            metaclass.super.super.superclass = Nil;
+            class.super.super.superclass = Nil;
+        }
+        return metaclass;
     }
 };
-const Behavior_S = packed struct {
+const Behavior_S = extern struct {
     header: heap.Header,
     superclass: Object,
     methodDict: Object,
     format: Object,
 };
-const ClassDescription_S = packed struct {
+const ClassDescription_S = extern struct {
     super: Behavior_S,
     index: Object,
     organization: Object,
 };
-pub const Metaclass_S = packed struct{
+pub const Metaclass_S = extern struct{
     pub const ClassIndex = Metaclass_I;
     pub const includesHeader = true;
     const size = @sizeOf(Metaclass_S)-@sizeOf(Object);
     super: ClassDescription_S,
     soleInstance: Object,
 };
-pub const Class_S = packed struct{
+pub const Class_S = extern struct{
     pub const includesHeader = true;
     const size =  @sizeOf(Class_S)-@sizeOf(Object);
     super: ClassDescription_S,
@@ -197,13 +191,13 @@ pub const Class_S = packed struct{
 
 fn setUpClassTable(st: *symbol.SymbolTable) !ClassTable {
     var ct = try ClassTable.init(st);
-    try ct.subClass(Nil,symbols.Object);
-    try ct.subClass(symbols.Object,symbols.Behavior);
-    try ct.subClass(symbols.Behavior,symbols.ClassDescription);
-    try ct.subClass(symbols.ClassDescription,symbols.Class);
-    try ct.subClass(symbols.ClassDescription,symbols.Metaclass);
+    var obj = ct.subClass(null,symbols.Object);
+    const behavior = ct.subClass(obj,symbols.Behavior);
+    const classDescription = ct.subClass(behavior,symbols.ClassDescription);
+    _ = ct.subClass(classDescription,symbols.Class);
+    _ = ct.subClass(classDescription,symbols.Metaclass);
     // repeat to set metaclass superclass properly
-    try ct.subClass(Nil,symbols.Object);
+    obj.super.super.superclass = behavior.soleInstance;
     return ct;
 }
 test "classes match initialized class table" {
@@ -214,7 +208,6 @@ test "classes match initialized class table" {
     var st = symbol.SymbolTable.init(&ga);
     var ct = try setUpClassTable(&st);
     for(initialClassStrings) |string,idx| {
-        std.debug.print("\nidx = {} lookup = 0x{x:0>16} string  = 0x{x:0>16}",.{idx,st.lookup(string.asObject()).u(),string.asObject().u()});
-        _=ct;//        try std.testing.expectEqual(idx,ct.lookup(st.lookup(string.asObject())));
+        try std.testing.expectEqual(idx+1,ct.lookup(st.lookup(string.asObject())));
     }
 }

@@ -278,9 +278,6 @@ pub const Header = packed struct(u64) {
     pub inline fn isForwarded(self: HeapConstPtr) bool {
         return self.length==forwardLength;
     }
-    pub inline fn isForwardedOrIndirect(self: HeapConstPtr) bool {
-        return self.length>=forwardLength;
-    }
     pub inline fn forwarded(self: HeapConstPtr) HeapConstPtr {
         var ptr = self;
         while (ptr.isForwarded()) {
@@ -345,7 +342,8 @@ pub const Header = packed struct(u64) {
         const form = self.objectFormat;
         const size = self.length;
         if (form.isIndexable() and form.hasInstVars()) {
-            return size+3;
+            var oa = @intToPtr([*]u64,@ptrToInt(self))+size;
+            return size+3+if (oa[2]!=@ptrToInt(oa+3)) 0 else form.wordSize(oa[1]);
         }
         return size+1;
     }

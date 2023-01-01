@@ -73,33 +73,33 @@ pub const Arena = extern struct {
         return result;
     }
     pub fn allocArray(self:*Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
+        if (arraySize==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
         const noIVs = ivSize==0;
         var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
         const width = @sizeOf(T);
         const aSize = (arraySize*width+objectWidth-width)/objectWidth;
         const fill = if (T==Object) Nil else object.ZERO;
-        if (ivSize==0) {
-            std.debug.print("\nallocArray: aSize = {} arraySize = {} Header.maxLength = {}",.{aSize,arraySize,Header.maxLength});
+        if (noIVs) {
             if (aSize<Header.maxLength) {
                 var result = try self.alloc(self,sp,hp,context,aSize+1,0);
                 initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
                 return result;
             }
-            @panic("big array");
         }
-        var result = try self.alloc(self,sp,hp,context,ivSize+2,arraySize);
-        mem.set(Object,try result.allocated.arrayAsSlice(Object),fill);
-        initAllocation(result.allocated,classIndex, form, ivSize, result.age, Nil);
+        var result = try self.alloc(self,sp,hp,context,ivSize+3,aSize);
+        const offs = @ptrCast([*]u64,result.allocated)+ivSize+1;
+        mem.set(Object,@intToPtr([*]Object,offs[1])[0..aSize],fill);
+        offs[0] = arraySize;
+        initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
         return result;
     }
     inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeaderArray, context:u64, classIndex: class.ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
 
         // should call allocObject or allocArray
         
-        const ivSize = (@sizeOf(T)+objectWidth-1)/objectWidth;
+        const ivSize = (@sizeOf(T)+objectWidth-1)/objectWidth-1;
         if (extra==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
-        const aSize = (extra+objectWidth-1)/objectWidth;
-        return self.allocArray(sp,hp,context,classIndex,ivSize,aSize,T2);
+        return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
     }
     inline fn initAllocation(result: HeapPtr, classIndex: class.ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
@@ -216,22 +216,28 @@ pub const GlobalArena = struct {
     }
     fn allocIndirect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64, heapSize: usize, arraySize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
-        _ = self; _ = heapSize; _ = arraySize;
-        if (true) @panic("incomplete");
-        const result = @ptrCast(HeapPtr,hp);
-        return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=result,};
+        _ = self;
+        const array = @ptrCast(HeapPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
+        var result = try GlobalArena.alloc(arena,sp,hp,context,heapSize,0);
+        const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;
+        offs[1] = @ptrToInt(array);
+        return result;
     }
     fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64, heapSize: usize, arraySize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
         const totalSize = heapSize + arraySize;
         var index = self.findAllocationList(totalSize);
-        if (index==0) @panic("alloc didn't find a valid freeList");
+        if (index==0) return GlobalArena.allocIndirect(arena,sp,hp,context,heapSize,arraySize);
         const allocation: []Header = (
             while (index<self.freeLists.len) : (index += 1) {
                 if (self.freeLists[index].getSlice()) |slice| break slice;
             } else 
                 GlobalArena.HeapAllocation.allocSlice(self));
         self.freeToList(allocation[totalSize..]);
+        if (arraySize>0) {
+            const offs = @ptrCast([*]u64,allocation.ptr)+heapSize-2;
+            offs[1] = @ptrToInt(offs+2);
+        }
         return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=@ptrCast(HeapPtr,allocation.ptr),};
     }
     fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:u64) ArenaErrors!void {
@@ -247,7 +253,7 @@ pub const GlobalArena = struct {
 //       return result.asObject();
     }
     fn findAllocationList(self: *Self, target: usize) u7 {
-        if (target > comptime smallerPowerOf2(@as(u12,Header.maxLength))) return 0;
+        if (target > Header.maxLength) return 0;
         if (target < self.minAllocation) return self.minFreeList;
         return bitsToRepresent(target-1);
     }
@@ -292,7 +298,7 @@ pub const GlobalArena = struct {
         return result.allocated.asObject();
     }
     pub inline fn allocArray(self:*Self, classIndex:ClassIndex, arraySize:usize, comptime T: type) Object {
-        var result = self.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,classIndex,0,arraySize,T) catch @panic("allocObject failed");
+        var result = self.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,classIndex,0,arraySize,T) catch @panic("allocArray failed");
         return result.allocated.asObject();
     }
     pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
@@ -353,7 +359,6 @@ pub const GlobalArena = struct {
         size: u16,
         list: FreeListPtr,
         inline fn addToFree(ga: *GlobalArena, len: u12, ptr: HeapPtr) void {
-            //std.debug.print("\naddToFree: {} 0x{x:0>16}",.{len,@ptrToInt(ptr)});
             ptr.* = header(len,Format.none,0,0,Age.free);
             if (len>=ga.minAllocation) {
                 const self = @ptrCast(*FreeListElement,ptr);
@@ -463,6 +468,7 @@ test "check GlobalArena alloc object" {
 }
 test "check alloc array" {
     const ee = std.testing.expectEqual;
+    const err = std.testing.expectError;
     const allocSize = (Header.maxLength>>1)-1;
     var ga = GlobalArena.init();
     defer ga.deinit();
@@ -478,6 +484,8 @@ test "check alloc array" {
     const a2 = o2.arrayAsSlice(u64);
     try ee(a2.len,allocSize);
     try ee(ga.freeSpace(),heapAllocationSize-(allocSize+1)*2);
+    var result = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,19,42,0,u8) catch @panic("allocArray failed");
+    try err(error.NotIndexable,result.allocated.asObject().size());
 }
 test "findAllocationList" {
     const ee = std.testing.expectEqual;
@@ -488,145 +496,62 @@ test "findAllocationList" {
     try ee(ga.findAllocationList(3),2);
     try ee(ga.findAllocationList(4),2);
     try ee(ga.findAllocationList(17),5);
-    try ee(ga.findAllocationList(Header.maxLength),0);
+    try ee(ga.findAllocationList(Header.maxLength),11);
+    try ee(ga.findAllocationList(Header.maxLength+1),0);
 }
-// test "slicing" {
-//     const testing = std.testing;
-//     var arena = TempArena(16).init();
-//     const testArena = arena.asArena();
-//     const hp0 = try testArena.allocObject(42,1,0,Object,Age.stack);
-//     try testing.expectEqual((try hp0.arrayAsSlice(u8)).len,0);
-//     const hp1 = try testArena.allocObject(42,1,2,Object,Age.stack);
-//     const obj1 = hp1.asObject();
-//     try testing.expect(hp1.isIndexable());
-//     try testing.expect(obj1.isIndexable());
-//     try testing.expectEqual((try hp1.arrayAsSlice(u8)).len,obj1.arrayAsSlice(u8).len);
-//     try testing.expectEqual((try hp1.arrayAsSlice(u8)).ptr,obj1.arrayAsSlice(u8).ptr);
-// //    try testing.expectEqual(hp1.arrayAsSlice(u8),obj1.arrayAsSlice(u8));
-// }
-
-// test "one object #1 allocator" {
-//     const testing = std.testing;
-//     const h1 = header(3,Format.object,42,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h1).inHeapSize(),4);
-//     const expected = ([_]Object{
-//         h1.o(),True,Nil,False,
-//     })[0..];
-//     var arena = TempArena(expected.len).init();
-//     const testArena = arena.asArena();
-//     const obj1 = try testArena.allocObject(42,3,0,Object,Age.stack);
-//     try testing.expectEqual(obj1.inHeapSize(),4);
-//     const ivs1 = obj1.instVars();
-//     try testing.expectEqual(ivs1.len,3);
-//     ivs1[0]=True;
-//     ivs1[2]=False;
-//     try arena.verify(expected);
-// }
-// test "one object #2 allocator" {
-//     const testing = std.testing;
-//     const h2 = header(1,Format.both,43,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h2).inHeapSize(),4);
-//     const expected = ([_]Object{
-//         h2.o(),True,Nil,@bitCast(Object,@as(u64,1)),False,Nil,Nil,
-//     })[0..];
-//     var arena = TempArena(expected.len).init();
-//     const testArena = arena.asArena();
-//     const obj2 = try testArena.allocObject(43,2,3,Object,Age.stack);
-//     try testing.expectEqual(obj2.inHeapSize(),7);
-//     const ivs2 = obj2.instVars();
-//     try testing.expectEqual(ivs2.len,2);
-//     ivs2[0]=True;
-//     const idx2 = obj2.indexables(Object);
-//     try testing.expectEqual(idx2.len,3);
-//     idx2[0]=False;
-//     try arena.verify(expected);
-// }
-// test "one object #3 allocator" {
-//     const testing = std.testing;
-//     const h3 = header(2,Format.array,44,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h3).inHeapSize(),3);
-//     const expected = ([_]Object{
-//         h3.o(),Nil,True,
-//     })[0..];
-//     var arena = TempArena(expected.len).init();
-//     const testArena = arena.asArena();
-//     const obj3 = try testArena.allocObject(44,0,2,Object,Age.stack);
-//     try testing.expectEqual(obj3.inHeapSize(),3);
-//     const ivs3 = obj3.instVars();
-//     try testing.expectEqual(ivs3.len,0);
-//     const idx3 = obj3.indexables(Object);
-//     try testing.expectEqual(idx3.len,2);
-//     idx3[1]=True;
-//     try arena.verify(expected);
-// }
-// test "one object #4 allocator" {
-//     const testing = std.testing;
-//     const h4 = header(2,Format.array,44,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h4).inHeapSize(),3);
-//     const expected = ([_]Object{
-//         h4.o(),@bitCast(Object,@as(u64,0)),@bitCast(Object,@as(u64,1)),
-//     })[0..];
-//     var arena = TempArena(expected.len).init();
-//     const testArena = arena.asArena();
-//     const obj4 = try testArena.allocObject(45,0,2,u64,Age.stack);
-//     try testing.expectEqual(obj4.inHeapSize(),3);
-//     const ivs4 = obj4.instVars();
-//     try testing.expectEqual(ivs4.len,0);
-//     const idx4 = obj4.indexables(i64);
-//     try testing.expectEqual(idx4.len,2);
-//     idx4[1]=1;
-//     try arena.verify(expected);
-// }
-// test "four object allocator" {
-//     const testing = std.testing;
-//     const h1 = header(3,Format.object,42,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h1).inHeapSize(),4);
-//     const h2 = header(1,Format.both,43,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h2).inHeapSize(),4);
-//     const h3 = header(2,Format.array,44,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h3).inHeapSize(),3);
-//     const h4 = header(2,Format.array,44,0,Age.stack);
-//     try testing.expectEqual(@alignCast(8,&h4).inHeapSize(),3);
-//     const expected = ([_]Object{
-//         h1.o(),True,Nil,False,
-//         h2.o(),True,@bitCast(Object,@as(u64,1)),False,
-//         h3.o(),Nil,True,
-//         h4.o(),@bitCast(Object,@as(u64,0)),@bitCast(Object,@as(u64,1)),
-//     })[0..];
-//     var arena = TempArena(expected.len).init();
-//     const testArena = arena.asArena();
-//     const obj1 = try testArena.allocObject(42,3,0,Object,Age.stack);
-//     try testing.expectEqual(obj1.inHeapSize(),4);
-//     const obj2 = try testArena.allocObject(43,1,1,Object,Age.stack);
-//     try testing.expectEqual(obj2.inHeapSize(),4);
-//     const obj3 = try testArena.allocObject(44,0,2,Object,Age.stack);
-//     try testing.expectEqual(obj3.inHeapSize(),3);
-//     const obj4 = try testArena.allocObject(45,0,2,u64,Age.stack);
-//     try testing.expectEqual(obj4.inHeapSize(),3);
-//     const ivs4 = obj4.instVars();
-//     try testing.expectEqual(ivs4.len,0);
-//     const idx4 = obj4.indexables(i64);
-//     try testing.expectEqual(idx4.len,2);
-//     idx4[1]=1;
-//     const ivs3 = obj3.instVars();
-//     try testing.expectEqual(ivs3.len,0);
-//     const idx3 = obj3.indexables(Object);
-//     try testing.expectEqual(idx3.len,2);
-//     idx3[1]=True;
-//     const ivs2 = obj2.instVars();
-//     try testing.expectEqual(ivs2.len,1);
-//     ivs2[0]=True;
-//     const idx2 = obj2.indexables(Object);
-//     try testing.expectEqual(idx2.len,1);
-//     idx2[0]=False;
-//     const ivs1 = obj1.instVars();
-//     try testing.expectEqual(ivs1.len,3);
-//     ivs1[0]=True;
-//     ivs1[2]=False;
-//     // try stdout.print("obj1*=0x{x:0>16}: {}\n",.{@ptrToInt(obj1),obj1});
-//     // try stdout.print("obj2*=0x{x:0>16}: {}\n",.{@ptrToInt(obj2),obj2});
-//     // try stdout.print("obj3*=0x{x:0>16}: {}\n",.{@ptrToInt(obj3),obj3});
-//     // try stdout.print("obj4*=0x{x:0>16}: {}\n",.{@ptrToInt(obj4),obj4});
-//     try arena.verify(expected);
-// }
+test "allocStruct" {
+    const Test_S = extern struct {
+        header: Header,
+        superclass: Object,
+        methodDict: Object,
+        format: Object,
+    };
+    const ee = std.testing.expectEqual;
+    var ga = GlobalArena.init();
+    defer ga.deinit();
+    var test1 = ga.allocStruct(17,Test_S,0,Object);
+    try ee(test1.superclass,Nil);
+    const h1: HeapPtr = &test1.header;
+    try ee(h1.inHeapSize(),4);
+    try std.testing.expectError(error.NotIndexable,h1.arrayAsSlice(u8));
+    var test2 = ga.allocStruct(17,Test_S,8,u8);
+    try ee(test2.methodDict,Nil);
+    const h2: HeapPtr = &test2.header;
+    try ee(h2.inHeapSize(),7);
+    const a2: []u8 = try h2.arrayAsSlice(u8);
+    try ee(a2.len,8);
+}
+test "check alloc indirect" {
+    const ee = std.testing.expectEqual;
+    const err = std.testing.expectError;
+    var ga = GlobalArena.init();
+    defer ga.deinit();
+    var o1 = ga.allocObject(17,5);
+    try ee(ga.allocatedSpace(),heapAllocationSize);
+    try ee(o1.inHeapSize(),6);
+    try ee(ga.freeSpace(),heapAllocationSize-6);
+    try err(error.NotIndexable,o1.size());
+    const maxValid = Header.maxLength-45;
+    const result2 = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,19,42,maxValid*8-1,u8) catch @panic("allocArray failed");
+    const h2 = result2.allocated;
+    try ee(h2.isIndirect(),false);
+    try ee(h2.inHeapSize(),Header.maxLength);
+    try ee(h2.arraySize(),maxValid*8-1);
+    const result3 = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,19,42,maxValid*8+1,u8) catch @panic("allocArray failed");
+    const h3 = result3.allocated;
+    try ee(h3.isIndirect(),true);
+    try ee(h3.inHeapSize(),45);
+    try ee(h3.arraySize(),maxValid*8+1);
+    const maxVArray = Header.maxLength-1;
+    const result4 = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,19,0,maxVArray*8-1,u8) catch @panic("allocArray failed");
+    const h4 = result4.allocated;
+    try ee(h4.isIndirect(),false);
+    try ee(h4.inHeapSize(),Header.maxLength);
+    try ee(h4.arraySize(),maxVArray*8-1);
+    const result5 = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],0,19,0,maxVArray*8+1,u8) catch @panic("allocArray failed");
+    const h5 = result5.allocated;
+    try ee(h5.isIndirect(),true);
+    try ee(h5.inHeapSize(),3);
+    try ee(h5.arraySize(),maxVArray*8+1);
+}
 

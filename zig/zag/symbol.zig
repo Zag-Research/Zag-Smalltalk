@@ -182,7 +182,6 @@ pub const SymbolTable = struct {
             _ = internDirect(trp,string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-        std.debug.print("\nverify 0x{x:0>16} {} {}",.{symbol.u(),symbol.hash24(),initialSymbolStrings[symbol.hash24()-1].asObject()});
         try std.testing.expectEqual(symbol,self.lookup(initialSymbolStrings[symbol.hash24()-1].asObject()));
     }
 };
@@ -221,6 +220,5 @@ test "force second allocation of symbol treap" {
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     symbol.loadSymbols(moreSymbolStrings[0..moreSymbolStrings.len-1]);
-    symbol.treap.inorderPrint();
     _ = symbol.arena.allocArray(49,480,u8);
 }
