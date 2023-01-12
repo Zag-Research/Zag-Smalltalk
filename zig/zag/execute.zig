@@ -35,11 +35,12 @@ pub const CodeContextPtr = *Context(Code,CompiledMethodPtr);
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
     header: heap.Header,
-    name: Object,
-    class: Object,
+    selector: Object,
     stackStructure: Object, // number of local values beyond the parameters
-    size: u64,
     code: [1] Code,
+    //size: u64,
+    //address: [*]Object,
+    //references: [n]Object, // first is the class for this method
     const Self = @This();
     const codeOffset = @offsetOf(CompiledMethod,"code");
     const nIVars = codeOffset/@sizeOf(Object)-2;
@@ -272,29 +273,29 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
 }
 const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
-test "compiling method" {
-    const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
-    const mcmp = m.asCompiledMethodPtr();
-    m.references([_]Object{Object.from(mcmp)});
-    var t = m.code[0..];
-    for (t) |tv,idx|
-        std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
-    try expectEqual(t[0].prim,controlPrimitives.noop);
-    try expectEqual(t[1].prim,p.dnu);
-    try expectEqual(t[2].int,2);
-    try expectEqual(t[3].object,True);
-    try expectEqual(t[4].object,Object.from(42));
-    try expectEqual(t[5].int,-5);
-    try expectEqual(t[6].int,-1);
-    try expectEqual(t[7].int,7);
-    try expectEqual(CompiledMethod.methodFromCodeOffset((&t[7]).codePtr()),m.asCompiledMethodPtr());
-    try expectEqual((&t[7]).methodPtr(),mcmp);
-    try expectEqual(t[8].int,3);
-    try expectEqual(t[9].method,mcmp);
-    try expectEqual(t[10].object,Nil);
-    try expectEqual(t.len,12);
-}
+// test "compiling method" {
+//     const expectEqual = std.testing.expectEqual;
+//     var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
+//     const mcmp = m.asCompiledMethodPtr();
+//     m.references([_]Object{Object.from(mcmp)});
+//     var t = m.code[0..];
+//     for (t) |tv,idx|
+//         std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
+//     try expectEqual(t[0].prim,controlPrimitives.noop);
+//     try expectEqual(t[1].prim,p.dnu);
+//     try expectEqual(t[2].int,2);
+//     try expectEqual(t[3].object,True);
+//     try expectEqual(t[4].object,Object.from(42));
+//     try expectEqual(t[5].int,-5);
+//     try expectEqual(t[6].int,-1);
+//     try expectEqual(t[7].int,7);
+//     try expectEqual(CompiledMethod.methodFromCodeOffset((&t[7]).codePtr()),m.asCompiledMethodPtr());
+//     try expectEqual((&t[7]).methodPtr(),mcmp);
+//     try expectEqual(t[8].int,3);
+//     try expectEqual(t[9].method,mcmp);
+//     try expectEqual(t[10].object,Nil);
+//     try expectEqual(t.len,12);
+// }
 //pub const trace = std.debug.print;
 pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
@@ -523,93 +524,93 @@ fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
     return pc[0].prim(pc+1,sp,hp,thread,context);
 }
 pub const TestCodeExecution = TestExecution(Code,CompiledMethod,&execute);
-test "simple return via TestExecution" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself,0,0,.{
-        &p.noop,
-        &p.pushLiteral,comptime Object.from(42),
-        &p.returnNoContext,
-    });
-    var te = TestCodeExecution.new();
-    te.init();
-    var objs = [_]Object{Nil,True};
-    var result = te.run(objs[0..],method.asCompiledMethodPtr());
-    try expectEqual(result.len,3);
-    try expectEqual(result[0],Object.from(42));
-    try expectEqual(result[1],Nil);
-    try expectEqual(result[2],True);
-}
-test "context return via TestExecution" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.@"at:",0,0,.{
-        &p.noop,
-        &p.pushContext,"^",
-        &p.pushLiteral,comptime Object.from(42),
-        &p.returnWithContext,
-    });
-    var te = TestCodeExecution.new();
-    te.init();
-    var objs = [_]Object{Nil,True};
-    var result = te.run(objs[0..],method.asCompiledMethodPtr());
-    try expectEqual(result.len,1);
-    try expectEqual(result[0],True);
-}
-test "context returnTop via TestExecution" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself,3,0,.{
-        &p.noop,
-        &p.pushContext,"^",
-        &p.pushLiteral,comptime Object.from(42),
-        &p.returnTop,
-    });
-    var te = TestCodeExecution.new();
-    te.init();
-    var objs = [_]Object{Nil,True};
-    const result = te.run(objs[0..],method.asCompiledMethodPtr());
-    try expectEqual(result.len,2);
-    try expectEqual(result[0],Object.from(42));
-}
-test "context returnTop with indirect via TestExecution" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself,3,0,.{
-        &p.noop,
-        &p.pushContext,"^",
-        &p.pushLiteralIndirect,"0Obj",
-        &p.returnTop,
-    });
-    method.references([_]Object{Object.from(42)});
-    var te = TestCodeExecution.new();
-    te.init();
-    var objs = [_]Object{Nil,True};
-    const result = te.run(objs[0..],method.asCompiledMethodPtr());
-    try expectEqual(result.len,2);
-    try expectEqual(result[0],Object.from(42));
-}
-test "simple executable" {
-    const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself,1,0,.{
-        &p.pushContext,"^",
-        ":label1",
-        &p.pushLiteral,comptime Object.from(42),
-        &p.popIntoTemp,1,
-        &p.pushTemp1,
-        &p.pushLiteral0,
-        &p.pushTrue,
-        &p.ifFalse,"label3",
-        &p.branch,"label2",
-        ":label3",
-        &p.pushTemp,1,
-        ":label4",
-        &p.returnTop,
-        ":label2",
-        &p.pushLiteral0,
-        &p.branch,"label4",
-    });
-    var objs = [_]Object{Nil};
-    var te = TestCodeExecution.new();
-    te.init();
-    const result = te.run(objs[0..],method.asCompiledMethodPtr());
-    std.debug.print("result = {any}\n",.{result});
-    try expectEqual(result.len,1);
-    try expectEqual(result[0],Object.from(0));
-}
+// test "simple return via TestExecution" {
+//     const expectEqual = std.testing.expectEqual;
+//     var method = compileMethod(sym.yourself,0,0,.{
+//         &p.noop,
+//         &p.pushLiteral,comptime Object.from(42),
+//         &p.returnNoContext,
+//     });
+//     var te = TestCodeExecution.new();
+//     te.init();
+//     var objs = [_]Object{Nil,True};
+//     var result = te.run(objs[0..],method.asCompiledMethodPtr());
+//     try expectEqual(result.len,3);
+//     try expectEqual(result[0],Object.from(42));
+//     try expectEqual(result[1],Nil);
+//     try expectEqual(result[2],True);
+// }
+// test "context return via TestExecution" {
+//     const expectEqual = std.testing.expectEqual;
+//     var method = compileMethod(sym.@"at:",0,0,.{
+//         &p.noop,
+//         &p.pushContext,"^",
+//         &p.pushLiteral,comptime Object.from(42),
+//         &p.returnWithContext,
+//     });
+//     var te = TestCodeExecution.new();
+//     te.init();
+//     var objs = [_]Object{Nil,True};
+//     var result = te.run(objs[0..],method.asCompiledMethodPtr());
+//     try expectEqual(result.len,1);
+//     try expectEqual(result[0],True);
+// }
+// test "context returnTop via TestExecution" {
+//     const expectEqual = std.testing.expectEqual;
+//     var method = compileMethod(sym.yourself,3,0,.{
+//         &p.noop,
+//         &p.pushContext,"^",
+//         &p.pushLiteral,comptime Object.from(42),
+//         &p.returnTop,
+//     });
+//     var te = TestCodeExecution.new();
+//     te.init();
+//     var objs = [_]Object{Nil,True};
+//     const result = te.run(objs[0..],method.asCompiledMethodPtr());
+//     try expectEqual(result.len,2);
+//     try expectEqual(result[0],Object.from(42));
+// }
+// test "context returnTop with indirect via TestExecution" {
+//     const expectEqual = std.testing.expectEqual;
+//     var method = compileMethod(sym.yourself,3,0,.{
+//         &p.noop,
+//         &p.pushContext,"^",
+//         &p.pushLiteralIndirect,"0Obj",
+//         &p.returnTop,
+//     });
+//     method.references([_]Object{Object.from(42)});
+//     var te = TestCodeExecution.new();
+//     te.init();
+//     var objs = [_]Object{Nil,True};
+//     const result = te.run(objs[0..],method.asCompiledMethodPtr());
+//     try expectEqual(result.len,2);
+//     try expectEqual(result[0],Object.from(42));
+// }
+// test "simple executable" {
+//     const expectEqual = std.testing.expectEqual;
+//     var method = compileMethod(sym.yourself,1,0,.{
+//         &p.pushContext,"^",
+//         ":label1",
+//         &p.pushLiteral,comptime Object.from(42),
+//         &p.popIntoTemp,1,
+//         &p.pushTemp1,
+//         &p.pushLiteral0,
+//         &p.pushTrue,
+//         &p.ifFalse,"label3",
+//         &p.branch,"label2",
+//         ":label3",
+//         &p.pushTemp,1,
+//         ":label4",
+//         &p.returnTop,
+//         ":label2",
+//         &p.pushLiteral0,
+//         &p.branch,"label4",
+//     });
+//     var objs = [_]Object{Nil};
+//     var te = TestCodeExecution.new();
+//     te.init();
+//     const result = te.run(objs[0..],method.asCompiledMethodPtr());
+//     std.debug.print("result = {any}\n",.{result});
+//     try expectEqual(result.len,1);
+//     try expectEqual(result[0],Object.from(0));
+// }

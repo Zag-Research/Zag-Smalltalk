@@ -60,7 +60,7 @@ fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) Meth
     _ = .{thread,self,selector,ci};
     @panic("stage2a");
 }
-fn DispatchMethods(comptime T: type, extractHash: fn(T) u32, maxSize: comptime_int) type {
+fn DispatchMethods(comptime T: type, comptime extractHash: fn(T) u32, comptime maxSize: comptime_int) type {
     return struct{
         const Self = @This();
         fn findTableSize(sm: []const T, extra: ?T,fix: *[15]Fix) !TableStructureResult {

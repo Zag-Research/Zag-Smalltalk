@@ -89,9 +89,9 @@ pub const inlines = struct {
         if (other.isInt()) {
             const s = @truncate(i51,self.toUnchecked(i64));
             const o = @truncate(i51,other.toUnchecked(i64));
-            var result: i51 = undefined;
-            if (!@mulWithOverflow(i51,s,o,&result))
-                return Object.from(result);
+            const result = @mulWithOverflow(s,o);
+            if (result.overflow==0)
+                return Object.from(result.result);
         }
         return error.primitiveError;
     }
