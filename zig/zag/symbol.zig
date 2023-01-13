@@ -13,7 +13,7 @@ inline fn symbol_of(index: u32, arity: u8) object.Object {
     return symbol0(index|(@as(u32,arity)<<24));
 }
 pub inline fn symbol0(index: u32) object.Object {
-    return @bitCast(object.Object,index|((@as(u64,0xfff20000)+class.Symbol_I)<<32));
+    return object.Object.makeImmediate(class.Symbol_I,index);
 }
 pub inline fn symbol1(index: u24) object.Object {
     return symbol_of(index,1);
@@ -27,8 +27,8 @@ pub inline fn symbol3(index: u24) object.Object {
 pub inline fn symbol4(index: u24) object.Object {
     return symbol_of(index,4);
 }
-pub fn uniqueSymbol(uniqueNumber:u24) object.Object {
-    return symbol0(uniqueNumber|@as(u32,0xff000000));
+pub fn indexSymbol(uniqueNumber:u24) object.Object {
+    return symbol_of(uniqueNumber,0xff);
 }
 pub const symbols = struct {
     pub const yourself = symbol0(1);

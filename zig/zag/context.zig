@@ -102,7 +102,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
         return if (self.isInStack()) self.asObjectPtr() else thread.endOfStack();
     }
     inline fn calculatedSize(self: ContextPtr, thread: *Thread) usize {
-        return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps[0]))/@sizeOf(Object);
+        return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
     pub inline fn stack(self: *Self, sp: [*]Object, thread: *Thread) []Object {
         return sp[0..(@ptrToInt(self.endOfStack(thread))-@ptrToInt(sp))/@sizeOf(Object)];
@@ -159,7 +159,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     }
 };
 }
-pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type, comptime executor: * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: *Context(codeType,*compiledMethod)) MethodReturns) type {
+pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type) type {
     return struct {
     thread: Thread,
     ctxt: contextType,
@@ -200,7 +200,7 @@ pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type, com
         endSp = sp;
         endHp = hp;
         endPc = pc;
-        executor(pc,sp,hp,&self.thread,&self.ctxt);
+        method.execute(pc,sp,hp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.hp = endHp;
         self.pc = endPc;

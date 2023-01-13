@@ -55,7 +55,7 @@ pub const CompiledByteCodeMethod = extern struct {
         return self.code[0..self.codeSize()];
     }
     pub fn codePtr(self: * const CompiledByteCodeMethod) [*] const ByteCode {
-        return @ptrCast([*]const ByteCode,&self.code[0]);
+        return @ptrCast([*]const ByteCode,&self.code);
     }
     inline fn codeSize(self: * const CompiledByteCodeMethod) usize {
         return @alignCast(8,&self.header).inHeapSize()-@sizeOf(Self)/@sizeOf(Object)+1;

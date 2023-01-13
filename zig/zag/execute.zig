@@ -13,6 +13,7 @@ const TestExecution = @import("context.zig").TestExecution;
 const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
+const HeapConstPtr = heap.HeapConstPtr;
 pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
@@ -31,6 +32,7 @@ pub const MethodReturns = void;
 //     }
 // };
 
+pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
 pub const CodeContextPtr = *Context(Code,CompiledMethodPtr);
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
@@ -40,50 +42,33 @@ pub const CompiledMethod = extern struct {
     code: [1] Code,
     //size: u64,
     //address: [*]Object,
-    //references: [n]Object, // first is the class for this method
+    //references: [n]Object,
     const Self = @This();
     const codeOffset = @offsetOf(CompiledMethod,"code");
-    const nIVars = codeOffset/@sizeOf(Object)-2;
-    comptime {
-        if (checkEqual(codeOffset,@offsetOf(CompileTimeMethod(.{0}),"code"))) |s|
-            @compileError("CompileMethod prefix not the same as CompileTimeMethod == " ++ s);
-    }
-    const pr = std.io.getStdOut().writer().print;
-    pub fn init(name: Object, size: u64, _: u16) Self {
+    pub fn init(name: Object,methodFn: ThreadedFn) Self {
         return Self {
-            .header = heap.header(3,Format.bothOP,class.Method_I,name.hash24(),Age.static),
-            .name = name,
-            .class = Nil,
+            .header = heap.header(3,Format.objectNP,class.Method_I,name.hash24(),Age.static),
+            .selector = name,
             .stackStructure = Object.from(0),
-            .size = size,
-            .code = [1]Code{Code.int(0)},
+            .code = [1]Code{Code.prim(methodFn)},
         };
     }
-    fn codeSlice(self: * const CompiledMethod) [] const Code{
-        @setRuntimeSafety(false);
-        return self.code[0..self.codeSize()];
+    pub inline fn execute(self: * const Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
+        const pc = @ptrCast([*]const Code,&self.code);
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
     }
-    pub fn codePtr(self: * const CompiledMethod) [*] const Code {
-        return @ptrCast([*]const Code,&self.code[0]);
+    inline fn asHeapPtr(self: * const Self) HeapConstPtr {
+        return @ptrCast(HeapConstPtr,self);
     }
-    inline fn codeSize(self: * const CompiledMethod) usize {
-        return @alignCast(8,&self.header).inHeapSize()-@sizeOf(Self)/@sizeOf(Object)+1;
-    }
-    fn matchedSelector(pc: [*] const Code) bool {
-        _ = pc;
-        return true;
-    }
-    fn methodFromCodeOffset(pc: [*] const Code) CompiledMethodPtr {
-        const startOfCode = @ptrToInt(pc-pc[0].uint);
-        const method = @intToPtr(CompiledMethodPtr,startOfCode-codeOffset);
-        return method;
+    pub inline fn matchedSelector(self: *Self, selector: Object) bool {
+        return selector.equals(self.selector);
     }
     fn print(self: *Self) void {
-        pr("CMethod: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
+        std.debug.print("CMethod: {} {} {} (",.{self.header,self.name,self.stackStructure});
 //            for (self.code[0..]) |c| {
-//                pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
+//                std.debug.print(" 0x{x:0>16}",.{@bitCast(u64,c)});
 //            }
-        pr(")\n",.{}) catch @panic("io");
+        std.debug.print(")\n",.{});
     }
 };
 pub const Code = extern union {
@@ -92,8 +77,6 @@ pub const Code = extern union {
     uint: u64,
     object: Object,
     header: heap.Header,
-    method: CompiledMethodPtr,
-    pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -109,17 +92,11 @@ pub const Code = extern union {
     inline fn header(h: heap.Header) Code {
         return Code{.header=h};
     }
-   inline fn method(m: CompiledMethodPtr) Code {
-        return Code{.method=m};
-    }
     inline fn end() Code {
         return Code{.object=NotAnObject};
     }
     inline fn codePtr(self: * const Code) [*]const Code {
         return @ptrCast([*]const Code,self);
-    }
-    inline fn methodPtr(self: * const Code) CompiledMethodPtr {
-        return CompiledMethod.methodFromCodeOffset(self.codePtr());
     }
 };
 fn intOf(str: []const u8) usize {
@@ -135,87 +112,136 @@ test "intOf" {
     try expectEqual(intOf("012Abc"),12);
     try expectEqual(intOf("1230Abc"),1230);
 }
-pub fn countNonLabels(comptime tup: anytype) struct {codes: usize, refs: usize} {
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
-    var n = 1;
-    var r = 0;
+pub fn countNonLabels(comptime tup: anytype) struct {codes: usize, refs: usize, objects: usize} {
+    comptime var n = 1;
+    comptime var r = 0;
+    comptime var o = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {n+=1;if (!field.isLiteral()) @compileError("use reference for non-literal object");},
-            @TypeOf(null) => {n+=1;},
+            Object => {n+=1;if (!comptime field.isLiteral()) @compileError("use reference for non-literal object");o+=1;},
+            @TypeOf(null) => {n+=1;o+=1;},
             comptime_int,comptime_float => {n+=1;},
-            ThreadedFn => {n+=1;},
             else => 
                 switch (@typeInfo(@TypeOf(field))) {
                     .Pointer => |pointer| {
-                        if (@hasField(pointer.child,"len"))
-                            switch (field[0]) {
-                                ':' => {},
-                                '0'...'9' => {r = @max(r,intOf(field[0..])); n+=1;},
-                                else => n+=1,
-                        };
+                        switch (@typeInfo(pointer.child)) {
+                            .Fn => n+=1,
+                            else => {
+                                if (@hasField(pointer.child,"len"))
+                                    switch (field[0]) {
+                                        ':' => {},
+                                        '0'...'9' => {r = comptime @max(r,intOf(field[0..])+1); n+=1;},
+                                        else => n+=1,
+                                } else n+=1;
+                        }}
                     },
                     else => {n+=1;},
             }
         }
     }
-    return .{.codes=n, .refs=r};
+    return .{.codes=n, .refs=r, .objects = o};
 }
+test "countNonLabels" {
+    const expectEqual = std.testing.expectEqual;
+    const r1 = countNonLabels(.{
+        ":abc",
+        &dnu,
+        "def",
+        True,
+        comptime Object.from(42),
+        ":def",
+        "abc",
+        "*",
+        "^",
+        3,
+        "1mref",
+        null,
+    });
+    try expectEqual(r1.codes,11);
+    try expectEqual(r1.refs,2);
+    try expectEqual(r1.objects,3);
+}
+pub fn dnu() void {
+        @panic("unimplemented");
+    }
+
 fn CompileTimeMethod(comptime tup: anytype) type {
     const counts = countNonLabels(tup);
     const codeSize = counts.codes;
     const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.Header,
-        name: Object,
-        class: Object,
+        selector: Object,
         stackStructure: Object,
-        code: [refsSize+1+codeSize] Code,
-        const pr = std.io.getStdOut().writer().print;
+        code: [codeSize] Code,
+        size: u64,
+        address: [*]Object,
+        references: [refsSize]Object,
         const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
-        const methodIVars = CompiledMethod.nIVars+refsSize;
         const Self = @This();
+        comptime {
+            if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
+                @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
+        }
         fn init(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int) Self {
             return .{
-                .header = heap.header(methodIVars,Format.both,class.CompiledMethod_I,name.hash24(),Age.static),
-                .name = name,
-                .class = Nil,
+                .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
+                .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
+                .size = refsSize,
+                .address = undefined,
                 .code = undefined,
+                .references = undefined,
             };
         }
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
             return @ptrCast(* CompiledMethod,self);
         }
-        pub fn references(self: *Self, refs: []Object) void {
+        pub fn setReferences(self: *Self, refs: []Object) void {
             if (refs.len!=refsSize) @panic("refs count wrong");
+            self.address = @ptrCast([*]Object,&self.references);
             for (refs) |obj,idx|
-                self.code[idx] = Code.object(obj);
-            self.code[refsSize] = Code.uint(refs.len);
-        }
-        // pub fn update(self: *Self, tag: Object, method: CompiledMethodPtr) void {
-        //     for (self.code) |*c| {
-        //         if (c.object.equals(tag)) c.* = Code.method(method);
-        //     }
-        // }
-        fn headerOffset(_: *Self, codeIndex: usize) Code {
-            return Code.uint(codeIndex+codeOffsetInUnits);
+                self.references[idx] = obj;
+            for (self.code) |*c,idx| {
+                if (c.object.isIndexSymbol())
+                    c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(&self.code[idx]))/@sizeOf(Object));
+            }
         }
         fn getCodeSize(_: *Self) usize {
             return codeSize;
         }
         fn print(self: *Self) void {
-            pr("CTMethod: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
+            std.debug.print("CTMethod: {} {} {} (",.{self.header,self.selector,self.stackStructure});
             for (self.code[0..]) |c| {
-                pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
+                std.debug.print(" 0x{x:0>16}",.{@bitCast(u64,c)});
             }
-            pr(")\n",.{}) catch @panic("io");
+            std.debug.print(")\n",.{});
         }
     };
 }
+test "CompileTimeMethod" {
+    const expectEqual = std.testing.expectEqual;
+    const c1 = CompileTimeMethod(.{
+        ":abc",
+        &dnu,
+        "def",
+        True,
+        comptime Object.from(42),
+        ":def",
+        "abc",
+        "*",
+        "^",
+        3,
+        "1mref",
+        null,
+    });
+    var r1 = c1.init(Nil,2,3);
+    var r1r = [_]Object{Nil,True};
+    r1.setReferences(r1r[0..]);
+    try expectEqual(r1.getCodeSize(),11);
+}
 pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(tup) {
     @setEvalBranchQuota(20000);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
     const methodType = CompileTimeMethod(tup);
     var method = methodType.init(name,locals,maxStack);
     method.code[0] = Code.prim(controlPrimitives.noop);
@@ -267,8 +293,6 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
             },
         }
     }
-//    method.code[n]=Code.end();
-//    method.print();
     return method;
 }
 const stdout = std.io.getStdOut().writer();
@@ -300,8 +324,7 @@ const print = std.io.getStdOut().writer().print;
 pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
-    pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: Context, needed: usize) void {
+    pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, needed: usize) void {
         _ = thread;
         _ = pc;
         _ = hp;
@@ -520,10 +543,7 @@ pub const controlPrimitives = struct {
 const p = struct {
     usingnamespace controlPrimitives;
 };
-fn execute(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
-    return pc[0].prim(pc+1,sp,hp,thread,context);
-}
-pub const TestCodeExecution = TestExecution(Code,CompiledMethod,&execute);
+pub const TestCodeExecution = TestExecution(Code,CompiledMethod);
 // test "simple return via TestExecution" {
 //     const expectEqual = std.testing.expectEqual;
 //     var method = compileMethod(sym.yourself,0,0,.{

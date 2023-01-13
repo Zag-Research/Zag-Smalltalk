@@ -57,6 +57,9 @@ pub const Object = packed struct(u64) {
     h1: u16,
     l2: Level2,
     signMantissa: ClassGrouping,
+    pub inline fn makeImmediate(cls: class.ClassIndex, low32: u32) Object {
+        return cast(low32|((@as(u64,ClassGrouping.Immediates<<16)+cls)<<32));
+    }
     pub inline fn cast(v: anytype) Object {
         return @bitCast(Object,v);
     }
@@ -116,6 +119,12 @@ pub const Object = packed struct(u64) {
     pub inline fn isBlock(self: Object) bool {
         const tag = self.tagbits();
         return tag >= Start_of_Blocks>>48 and  tag <= End_of_Blocks>>48;
+    }
+    pub inline fn isIndexSymbol(self: Object) bool {
+        return (self.u()>>24)==(symbol.indexSymbol(0).u()>>24);
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbitsL()==symbol.indexSymbol(0).tagbitsL();
     }
     pub inline fn toInt(self: Object) i64 {
         if (self.isInt()) return @bitCast(i64, self.u() -% u64_ZERO);

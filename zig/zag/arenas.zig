@@ -134,7 +134,7 @@ pub const NurseryArena = extern struct {
     }
     pub fn init(self: *Self, thr: *thread.Thread) void {
         self.arena = Arena{.alloc=alloc,.collect=collect};
-        self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea[0]));
+        self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea));
         self.sp = self.endOfStack();
         self.thread = thr;
     }
@@ -142,7 +142,7 @@ pub const NurseryArena = extern struct {
         return @ptrCast(*Arena,self);
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
-        return @intToPtr([*]Object,@ptrToInt(&self.heapArea[0]))+self.heapArea.len;
+        return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
     }
     pub inline fn getHp(self: *Self) HeaderArray {
         return self.hp;
@@ -183,7 +183,7 @@ pub const NurseryArena = extern struct {
 //     }
 //     pub fn init(self: *Self, otherTeenHeap: *Self) void {
 //         _ = otherTeenHeap;
-//         self.free = @ptrCast(HeaderArray,&self.heap[0]);
+//         self.free = @ptrCast(HeaderArray,&self.heap);
 //     }
 // };
 
@@ -348,7 +348,7 @@ pub const GlobalArena = struct {
             std.heap.page_allocator.free(@ptrCast([*]u8,self)[0..heap_allocation_size]);
         }
         fn sweep(self: *HeapAllocation) void {
-            var ptr = @ptrCast(HeaderArray,&self.mem[0]);
+            var ptr = @ptrCast(HeaderArray,&self.mem);
             const end = ptr+maxObjects;
             while (ptr<end) {
                 unreachable;
