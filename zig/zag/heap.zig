@@ -201,11 +201,8 @@ test "header formats" {
     try expect(!Format.objectP.isWeak());
     try expect(Format.weak.isWeak());
 }
-pub const HeaderArray = [*]align(@alignOf(u64)) Header;
-pub const HeapPtr = *align(@alignOf(u64)) Header;
-pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 pub const Age = enum(u4) {
-    stack = Stack,
+    incompleteContext = IncompleteContext,
     nursery = Nursery,
     teen = FirstTeen,
     global = Global,
@@ -213,18 +210,20 @@ pub const Age = enum(u4) {
     static = Static,
     free = Free,
     _,
-    const Stack: u4 = 0;
-    const Nursery: u4 = 1;
-    const FirstTeen: u4 = 2;
+    const IncompleteContext: u1 = 0;
+    const Stack: u4 = 1;
+    const Nursery: u4 = 2;
+    const FirstTeen: u4 = 3;
     const LastTeen: u4 = 7;
     const Global: u4 = 8;
     const GlobalMarked: u4 = 9;
-    const GlobalScanned: u4 = 11;
     const Static: u4 = 10;
+    const GlobalScanned: u4 = 11;
     const AoO : u4 = 12;
     const AoOMarked : u4 = 13;
     const Free : u4 = 14;
     const AoOScanned : u4 = 15;
+    const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Static for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub inline fn isAoO(self: Self) bool {
         return @enumToInt(self)>=AoO;
@@ -236,7 +235,10 @@ pub const Age = enum(u4) {
         return @enumToInt(self)>=Global and @enumToInt(self)!=Static;
     }
     pub inline fn isInStack(self: Self) bool {
-        return @enumToInt(self) == Stack;
+        return @enumToInt(self) <= Stack;
+    }
+    pub inline fn isIncompleteContext(self: Self) bool {
+        return @enumToInt(self) <= IncompleteContext;
     }
     pub inline fn marked(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) | 1);
@@ -246,6 +248,9 @@ pub const Age = enum(u4) {
     }
     // Note: assigning a ptr to a scanned object must block for collection
 };
+pub const HeaderArray = [*]align(@alignOf(u64)) Header;
+pub const HeapPtr = *align(@alignOf(u64)) Header;
+pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
 pub const Header = packed struct(u64) {
         classIndex: u16,
         hash: u24,
@@ -271,6 +276,9 @@ pub const Header = packed struct(u64) {
     }
     pub inline fn isInStack(self: HeapConstPtr) bool {
         return self.age.isInStack();
+    }
+    pub inline fn isIncompleteContext(self: HeapConstPtr) bool {
+        return self.age.isIncompleteContext();
     }
     pub inline fn forwardedTo(self: HeapConstPtr) HeapConstPtr {
         return @intToPtr(HeapConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
@@ -451,8 +459,8 @@ pub const header = Header.init;
 test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
-    const hdr = header(0x17, Format.objectNP, 0x23, 0x123,Age.teen);
-    try testing.expectEqual(hdr.o().u(),0x0172200001230023);
+    const hdr = header(0x17, Format.objectNP, 0x27, 0x129,Age.teen);
+    try testing.expectEqual(hdr.o().u(),0x0173200001290027);
 }
 fn hash24(str: [] const u8) u24 {
     const phi: u32 = @import("utilities.zig").inversePhi(u24);

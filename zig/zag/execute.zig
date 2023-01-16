@@ -19,9 +19,9 @@ const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
-const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
-pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
-const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
+const indexSymbol = @import("symbol.zig").indexSymbol;
+pub const tailCall: std.builtin.CallModifier = .always_tail;
+const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = void;
 // union(enum) {
 //     Normal: Object,
@@ -89,6 +89,9 @@ pub const Code = extern union {
     inline fn object(o: Object) Code {
         return Code{.object=o};
     }
+    inline fn ref(u: u64) Code {
+        return Code{.object=indexSymbol(@truncate(u24,u))};
+    }
     inline fn header(h: heap.Header) Code {
         return Code{.header=h};
     }
@@ -145,7 +148,7 @@ test "countNonLabels" {
     const expectEqual = std.testing.expectEqual;
     const r1 = countNonLabels(.{
         ":abc",
-        &dnu,
+        &p.dnu,
         "def",
         True,
         comptime Object.from(42),
@@ -161,9 +164,6 @@ test "countNonLabels" {
     try expectEqual(r1.refs,2);
     try expectEqual(r1.objects,3);
 }
-pub fn dnu() void {
-        @panic("unimplemented");
-    }
 
 fn CompileTimeMethod(comptime tup: anytype) type {
     const counts = countNonLabels(tup);
@@ -223,7 +223,7 @@ test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(.{
         ":abc",
-        &dnu,
+        &p.dnu,
         "def",
         True,
         comptime Object.from(42),
@@ -259,14 +259,18 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            method.code[n]=Code.int(n);
+                            method.code[n]=Code.int(n+3);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
                             method.code[n]=Code.int(-1);
                             n=n+1;
                             found = true;
-                        } else {
+                        } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
+                            method.code[n]=Code.ref(intOf(field[0..]));
+                            n+=1;
+                            found = true;
+                         } else {
                             comptime var lp = 0;
                             inline for (tup) |t| {
                                 if (@TypeOf(t) == ThreadedFn) lp=lp+1
@@ -297,29 +301,27 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
 }
 const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
-// test "compiling method" {
-//     const expectEqual = std.testing.expectEqual;
-//     var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
-//     const mcmp = m.asCompiledMethodPtr();
-//     m.references([_]Object{Object.from(mcmp)});
-//     var t = m.code[0..];
-//     for (t) |tv,idx|
-//         std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
-//     try expectEqual(t[0].prim,controlPrimitives.noop);
-//     try expectEqual(t[1].prim,p.dnu);
-//     try expectEqual(t[2].int,2);
-//     try expectEqual(t[3].object,True);
-//     try expectEqual(t[4].object,Object.from(42));
-//     try expectEqual(t[5].int,-5);
-//     try expectEqual(t[6].int,-1);
-//     try expectEqual(t[7].int,7);
-//     try expectEqual(CompiledMethod.methodFromCodeOffset((&t[7]).codePtr()),m.asCompiledMethodPtr());
-//     try expectEqual((&t[7]).methodPtr(),mcmp);
-//     try expectEqual(t[8].int,3);
-//     try expectEqual(t[9].method,mcmp);
-//     try expectEqual(t[10].object,Nil);
-//     try expectEqual(t.len,12);
-// }
+test "compiling method" {
+    const expectEqual = std.testing.expectEqual;
+    var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
+    const mcmp = m.asCompiledMethodPtr();
+    m.setReferences(&[_]Object{Object.from(mcmp)});
+    var t = m.code[0..];
+    for (t) |tv,idx|
+        std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
+    try expectEqual(t[0].prim,controlPrimitives.noop);
+    try expectEqual(t[1].prim,p.dnu);
+    try expectEqual(t[2].int,2);
+    try expectEqual(t[3].object,True);
+    try expectEqual(t[4].object,Object.from(42));
+    try expectEqual(t[5].int,-5);
+    try expectEqual(t[6].int,-1);
+    try expectEqual(t[7].int,10);
+    try expectEqual(t[8].int,3);
+    try expectEqual(t[9].int,4);
+    try expectEqual(t[10].object,Nil);
+    try expectEqual(t.len,11);
+}
 //pub const trace = std.debug.print;
 pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {

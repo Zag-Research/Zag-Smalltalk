@@ -72,7 +72,7 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
         }
         return .{.sp=newSp,.ctxt=self.previous()};
     }
-        pub inline fn push(self: ContextPtr, sp: [*]Object, hp: Hp, thread: *Thread, method: compiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  struct { hp: Hp,ctxt: ContextPtr } {
+    pub inline fn push(self: ContextPtr, sp: [*]Object, hp: Hp, thread: *Thread, method: compiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  struct { hp: Hp,ctxt: ContextPtr } {
         const newSp = sp - baseSize - locals;
         if (arenas.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
@@ -83,11 +83,11 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
          }
         ctxt.header = heap.Header.partialOnStack(selfOffset+baseSize);
         //ctxt.size = ctxt.calculatedSize(thread); // ToDo: only needed of there is a format method
-        if (thread.needsCheck()) @panic("grow heap2");
+        if (thread.needsCheck()) @panic("thread needsCheck");
        return .{.hp=hp,.ctxt=ctxt};
     }
     fn convertToProperHeapObject(self: ContextPtr, sp: [*]Object, thread: *Thread) void {
-        if (self.isInStack(sp,thread)) {
+        if (self.isIncomplete(sp,thread)) {
             self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
             self.size = self.prevCtxt.calculatedSize(thread);
             self.addr = self.temps;
@@ -95,8 +95,8 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
         }
         @panic("ToDo: not the correct test for whether it needs to be done");
     }
-    pub inline fn isInStack(self: * const Self) bool {
-        return @alignCast(8,&self.header).isInStack();
+    pub inline fn isIncomplete(self: * const Self) bool {
+        return @alignCast(8,&self.header).isIncompleteContext();
     }
     inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
         return if (self.isInStack()) self.asObjectPtr() else thread.endOfStack();
