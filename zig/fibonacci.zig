@@ -133,7 +133,6 @@ test "fibThread" {
 }
 fn timeThread(n: i64) void {
     const method = fibThread.asCompiledMethodPtr();
-    fibThread.update(fibThreadRef,method);
     var objs = [_]Object{Object.from(n)};
     var te = TestCodeExecution.new();
     te.init();

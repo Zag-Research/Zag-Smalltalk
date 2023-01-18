@@ -63,6 +63,9 @@ pub const CompiledMethod = extern struct {
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
     }
+    pub inline fn methodFromCodeOffset(pc: [*]const Code,offset: u64) CompiledMethodPtr {
+        return @intToPtr(CompiledMethodPtr,@ptrToInt(pc-offset));
+    }
     fn print(self: *Self) void {
         std.debug.print("CMethod: {} {} {} (",.{self.header,self.name,self.stackStructure});
 //            for (self.code[0..]) |c| {
@@ -494,10 +497,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const method = CompiledMethod.methodFromCodeOffset(pc);
-        // can rewrite pc[0] to be direct mathod reference and pc[-1] to be pushContextAlt
-        // - so second time will be faster
-        // - but need to be careful to do in an idempotent way to guard against another thread executing this in parallel
+        const method = CompiledMethod.methodFromCodeOffset(pc,pc[0].uint);
         const stackStructure = method.stackStructure;
         const locals = stackStructure.h0;
         const maxStackNeeded = stackStructure.h1;

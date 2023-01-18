@@ -4,7 +4,6 @@ const Thread = @import("thread.zig").Thread;
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
-const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
@@ -15,11 +14,9 @@ pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
-const sym = @import("symbol.zig").symbols;
-const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
 pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
 const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
-pub const MethodReturns = void;
+pub const ThreadedFn = @import("execute.zig").ThreadedFn;
 pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     return extern struct {
     header: heap.Header,
@@ -32,7 +29,6 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     temps: [1]Object,
     const Self = @This();
     const ContextPtr = *Self;
-    pub const ThreadedFn = * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
     fn init() Self {
         return Self {
@@ -93,10 +89,12 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
             self.addr = self.temps;
             self.prevCtxt.convertToProperHeapObject(sp, thread);
         }
-        @panic("ToDo: not the correct test for whether it needs to be done");
     }
     pub inline fn isIncomplete(self: * const Self) bool {
         return @alignCast(8,&self.header).isIncompleteContext();
+    }
+    pub inline fn isInStack(self: * const Self) bool {
+        return @alignCast(8,&self.header).isInStack();
     }
     inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
         return if (self.isInStack()) self.asObjectPtr() else thread.endOfStack();
