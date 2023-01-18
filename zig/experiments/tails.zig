@@ -1,8 +1,7 @@
 const std = @import("std");
 const debug = std.debug;
 const math = std.math;
-const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
-const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
+const tailCall: std.builtin.CallModifier = .always_tail;
 const stdout = std.io.getStdOut().writer();
 
 fn loop1(cur: u64, limit: u64) void {

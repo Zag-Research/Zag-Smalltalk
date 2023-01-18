@@ -1,11 +1,10 @@
 const std = @import("std");
 const debug = std.debug;
 const math = std.math;
-const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
-const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
 const stdout = std.io.getStdOut().writer();
 const Object = @import("zag/object.zig").Object;
 const Nil = @import("zag/object.zig").Nil;
+const tailCall = @import("zag/execute.zig").tailCall;
 const Code = @import("zag/execute.zig").Code;
 const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;

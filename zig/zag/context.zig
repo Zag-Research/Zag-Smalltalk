@@ -14,14 +14,14 @@ pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
-pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
-const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
-pub const ThreadedFn = @import("execute.zig").ThreadedFn;
+const execute = @import("execute.zig");
+const tailCall = execute.tailCall;
+const MethodReturns = execute.MethodReturns;
 pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     return extern struct {
     header: heap.Header,
     tpc: [*]const codeType, // threaded PC
-    npc: * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns, // native PC - in Continuation Passing Style
+    npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr,
     method: compiledMethodPtr,
     size: u64,
@@ -29,10 +29,11 @@ pub fn Context(comptime codeType: type, comptime compiledMethodPtr: type) type {
     temps: [1]Object,
     const Self = @This();
     const ContextPtr = *Self;
+    const ThreadedFn = * const fn(programCounter: [*]const codeType, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
     fn init() Self {
         return Self {
-            .header = heap.header(4,Format.both,class.Context_I,0,Age.static),
+            .header = heap.header(4,Format.bothPP,class.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = undefined,
             .prevCtxt = undefined,
@@ -192,13 +193,12 @@ pub fn TestExecution(comptime codeType: type, comptime compiledMethod: type) typ
         const sp = self.thread.endOfStack() - source.len;
         for (source) |src,idx|
             sp[idx] = src;
-        const pc = method.codePtr();
         const hp = self.thread.getHeap();
         self.ctxt.setNPc(Self.end);
         endSp = sp;
         endHp = hp;
-        endPc = pc;
-        method.execute(pc,sp,hp,&self.thread,&self.ctxt);
+//        endPc = pc;
+//        method.execute(pc,sp,hp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.hp = endHp;
         self.pc = endPc;

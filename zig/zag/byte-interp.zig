@@ -19,8 +19,7 @@ const Age = heap.Age;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
 const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
-pub const tailCall: std.builtin.CallOptions = .{.modifier = .always_tail};
-const noInlineCall: std.builtin.CallOptions = .{.modifier = .never_inline};
+const tailCall: std.builtin.CallModifier = .always_tail;
 const print = std.debug.print;
 pub const MethodReturns = void;
 
@@ -328,7 +327,7 @@ fn CompileTimeByteCodeMethod(comptime tup: anytype) type {
         const Self = @This();
         fn init(name: Object, comptime locals: comptime_int) Self {
             return Self {
-                .header = heap.header(methodIVars,Format.both,class.CompiledMethod_I,name.hash24(),Age.static),
+                .header = heap.header(methodIVars,Format.bothPP,class.CompiledMethod_I,name.hash24(),Age.static),
                 .name = name,
                 .class = Nil,
                 .stackStructure = Object.packedInt(locals,locals+name.numArgs(),0),
@@ -442,7 +441,7 @@ test "compiling method" {
 //    try expectEqual(t[8].method,mcmp);
     try expectEqual(t[9].o(),Nil);
 }
-pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledByteCodeMethod,&b.interpret);
+pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledByteCodeMethod);
 test "simple return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(sym.yourself,0,0,.{

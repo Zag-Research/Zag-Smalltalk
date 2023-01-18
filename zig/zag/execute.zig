@@ -1,6 +1,7 @@
 const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
 const Thread = @import("thread.zig").Thread;
+const ThreadPtr = @import("thread.zig").ThreadPtr;
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
