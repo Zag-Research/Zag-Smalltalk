@@ -34,7 +34,7 @@ pub const MethodReturns = void;
 // };
 
 pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr) MethodReturns;
-pub const CodeContextPtr = *Context(Code,CompiledMethodPtr);
+pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
     header: heap.Header,
@@ -56,7 +56,8 @@ pub const CompiledMethod = extern struct {
     }
     pub inline fn execute(self: * const Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
         const pc = @ptrCast([*]const Code,&self.code);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
+//        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context});
+        return pc[0].prim(pc+1,sp,hp,thread,context);
     }
     inline fn asHeapPtr(self: * const Self) HeapConstPtr {
         return @ptrCast(HeapConstPtr,self);
@@ -119,7 +120,8 @@ test "intOf" {
     try expectEqual(intOf("012Abc"),12);
     try expectEqual(intOf("1230Abc"),1230);
 }
-pub fn countNonLabels(comptime tup: anytype) struct {codes: usize, refs: usize, objects: usize} {
+pub const CountSizes = struct {codes: usize, refs: usize, objects: usize};
+pub fn countNonLabels(comptime tup: anytype) CountSizes {
     comptime var n = 1;
     comptime var r = 0;
     comptime var o = 0;
@@ -169,8 +171,7 @@ test "countNonLabels" {
     try expectEqual(r1.objects,3);
 }
 
-fn CompileTimeMethod(comptime tup: anytype) type {
-    const counts = countNonLabels(tup);
+fn CompileTimeMethod(comptime counts: CountSizes) type {
     const codeSize = counts.codes;
     const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
@@ -225,7 +226,7 @@ fn CompileTimeMethod(comptime tup: anytype) type {
 }
 test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
-    const c1 = CompileTimeMethod(.{
+    const c1 = CompileTimeMethod(countNonLabels(.{
         ":abc",
         &p.dnu,
         "def",
@@ -238,24 +239,25 @@ test "CompileTimeMethod" {
         3,
         "1mref",
         null,
-    });
+    }));
     var r1 = c1.init(Nil,2,3);
     var r1r = [_]Object{Nil,True};
     r1.setReferences(r1r[0..]);
     try expectEqual(r1.getCodeSize(),11);
 }
-pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(tup) {
+pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
-    const methodType = CompileTimeMethod(tup);
+    const methodType = CompileTimeMethod(countNonLabels(tup));
     var method = methodType.init(name,locals,maxStack);
     method.code[0] = Code.prim(controlPrimitives.noop);
+    const code = method.code[0..];
     comptime var n = 1;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {method.code[n]=Code.object(field);n=n+1;},
-            @TypeOf(null) => {method.code[n]=Code.object(Nil);n=n+1;},
-            comptime_int => {method.code[n]=Code.int(field);n = n+1;},
-            ThreadedFn => {method.code[n]=Code.prim(field);n=n+1;},
+            Object => {code[n]=Code.object(field);n=n+1;},
+            @TypeOf(null) => {code[n]=Code.object(Nil);n=n+1;},
+            comptime_int => {code[n]=Code.int(field);n = n+1;},
+            ThreadedFn => {code[n]=Code.prim(field);n=n+1;},
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
@@ -263,15 +265,15 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            method.code[n]=Code.int(n+3);
+                            code[n]=Code.int(n+3);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
-                            method.code[n]=Code.int(-1);
+                            code[n]=Code.int(-1);
                             n=n+1;
                             found = true;
                         } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
-                            method.code[n]=Code.ref(intOf(field[0..]));
+                            code[n]=Code.ref(intOf(field[0..]));
                             n+=1;
                             found = true;
                          } else {
@@ -283,7 +285,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                         .Pointer => |tPointer| {
                                             if (@hasField(tPointer.child,"len") and t[0]==':') {
                                                 if (comptime std.mem.endsWith(u8,t,field)) {
-                                                    method.code[n]=Code.int(lp-n);
+                                                    code[n]=Code.int(lp-n);
                                                     n=n+1;
                                                     found = true;
                                                 }
@@ -546,7 +548,6 @@ pub const controlPrimitives = struct {
 const p = struct {
     usingnamespace controlPrimitives;
 };
-pub const TestCodeExecution = TestExecution(Code,CompiledMethod);
 // test "simple return via TestExecution" {
 //     const expectEqual = std.testing.expectEqual;
 //     var method = compileMethod(sym.yourself,0,0,.{

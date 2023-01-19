@@ -9,8 +9,7 @@ const Code = @import("zag/execute.zig").Code;
 const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
-const TestCodeExecution = @import("zag/execute.zig").TestCodeExecution;
-const TestByteCodeExecution = @import("zag/byte-interp.zig").TestByteCodeExecution;
+const TestExecution = @import("zag/context.zig").TestExecution;
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
@@ -122,7 +121,7 @@ test "fibThread" {
     var n:u32 = 1;
     while (n<10) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
-        var te =  TestCodeExecution.new();
+        var te =  TestExecution.new();
         te.init();
         const result = te.run(objs[0..],method);
         std.debug.print("fib({}) = {any}\n",.{n,result});
@@ -133,7 +132,7 @@ test "fibThread" {
 fn timeThread(n: i64) void {
     const method = fibThread.asCompiledMethodPtr();
     var objs = [_]Object{Object.from(n)};
-    var te = TestCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     _ = te.run(objs[0..],method);
 }
@@ -144,7 +143,7 @@ test "fibComp" {
     var n:i32 = 1;
     while (n<20) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
-        var te =  TestCodeExecution.new();
+        var te =  TestExecution.new();
         te.init();
         const result = te.run(objs[0..],method.asCompiledMethodPtr());
         std.debug.print("fib({}) = {any}\n",.{n,result});
@@ -157,7 +156,7 @@ fn timeComp(n: i64) void {
         &fibComp,
     });
     var objs = [_]Object{Object.from(n)};
-    var te = TestCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }
@@ -198,7 +197,7 @@ test "fibByte" {
     var n:i32 = 1;
     while (n<10) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
-        var te =  TestByteCodeExecution.new();
+        var te =  TestExecution.new();
         te.init();
         const result = te.run(objs[0..],method);
         std.debug.print("fib({}) = {any}\n",.{n,result});
@@ -240,9 +239,10 @@ test "fibByte" {
      });
      const method = fibByte.asCompiledByteCodeMethodPtr();
      var objs = [_]Object{Object.from(n)};
-     var te = TestByteCodeExecution.new();
+     var te = TestExecution.new();
      te.init();
-     _ = te.run(objs[0..],method);
+     _ = objs; _ = method;
+//     _ = te.run(objs[0..],method);
 }
 pub fn timing(runs: u32) !void {
     const ts=std.time.nanoTimestamp;
@@ -268,7 +268,7 @@ pub fn timing(runs: u32) !void {
     time = ts()-start;
     try stdout.print("fibThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     start=ts();
-    _ = timeByte(runs);
+//    _ = timeByte(runs);
     time = ts()-start;
     try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }

@@ -312,59 +312,14 @@ fn countNonLabels(comptime tup: anytype) usize {
     }
         return n;
 }
-fn CompileTimeByteCodeMethod(comptime tup: anytype) type {
-    const codeSize = countNonLabels(tup);
-    return extern struct { // structure must exactly match CompiledByteCodeMethod
-        header: heap.Header,
-        name: Object,
-        class: Object,
-        stackStructure: Object,
-        size: u64,
-        code: [codeSize] ByteCode,
-        const pr = std.io.getStdOut().writer().print;
-        const codeOffsetInUnits = CompiledByteCodeMethod.codeOffset/@sizeOf(ByteCode);
-        const methodIVars = CompiledByteCodeMethod.nIVars;
-        const Self = @This();
-        fn init(name: Object, comptime locals: comptime_int) Self {
-            return Self {
-                .header = heap.header(methodIVars,Format.bothPP,class.CompiledMethod_I,name.hash24(),Age.static),
-                .name = name,
-                .class = Nil,
-                .stackStructure = Object.packedInt(locals,locals+name.numArgs(),0),
-                .size = codeSize,
-                .code = undefined,
-            };
-        }
-        pub fn asCompiledByteCodeMethodPtr(self: *Self) * CompiledByteCodeMethod {
-            return @ptrCast(* CompiledByteCodeMethod,self);
-        }
-        pub fn update(_: *Self, _: Object, _: CompiledByteCodeMethodPtr) void {
-//            for (self.code) |*c| {
-//                if (c.asObject().equals(tag)) c.* = ByteCode.method(method);
-            //            }
-            unreachable;
-        }
-        fn headerOffset(_: *Self, codeIndex: usize) ByteCode {
-            return ByteCode.uint(codeIndex+codeOffsetInUnits);
-        }
-        fn getCodeSize(_: *Self) usize {
-            return codeSize;
-        }
-        fn print(self: *Self) void {
-            pr("CTByteCodeMethod: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
-            for (self.code[0..]) |c| {
-                pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
-            }
-            pr(")\n",.{}) catch @panic("io");
-        }
-    };
-}
 pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, comptime locals: comptime_int, comptime tup: anytype) CompileTimeByteCodeMethod(tup) {
-    @setEvalBranchQuota(2000);
-    const methodType = CompileTimeByteCodeMethod(tup);
-    var method = methodType.init(name,locals);
-    comptime var n = 0;
-    _ = parameters;
+    @setEvalBranchQuota(20000);
+    const counts = countNonLabels(tup);
+    const methodType = CompileTimeMethod();
+    var method = methodType.init(name,locals,maxStack);
+    method.code[0] = Code.prim(ByteCode.interpret);
+//    const code = 
+    comptime var n = 1;
     _ = ByteCode.findObject(Nil);
     inline for (tup) |field| {
         switch (@TypeOf(field)) {

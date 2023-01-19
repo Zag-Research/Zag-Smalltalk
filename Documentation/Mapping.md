@@ -36,8 +36,8 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF2      | 0008 | 00xx | xxxx | Character                     |
 | FFF3      | xxxx | xxxx | xxxx | immediate thunk               |
 | FFF4      | xxxx | xxxx | xxxx | closure-free block            |
-| FFF5      | xxxx | xxxx | xxxx | self thunk                    |
-| FFF6      | xxxx | xxxx | xxxx | heap closure                    |
+| FFF5      | xxxx | xxxx | xxxx | special thunk                 |
+| FFF6      | xxxx | xxxx | xxxx | heap closure                  |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
@@ -67,14 +67,14 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
 1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF2 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
 2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the Method object for the block code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
-3. a self thunk simply does a non-local return of `self`. The low 48 bits are the address of the context. Sole example: `[^self]`.
+3. a special thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced tto zero) are the address of the context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 4. all remaining closures are heap allocated, and contain the following fields in order:
-	1. the address of the Method object that contains various values, and the threaded code implementation;
+	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation;
 	2. the address of the Context if there are any non-local returns;
-	3. the address of any (usually 0) Arrays that contain mutable fields that are shared between blocks or the main execution;
+	3. the address of any (usually 0) Arrays that contain mutable fields that are shared between blocks or with the main method execution;
 	4. the values of `self` and any parameters or read-only locals that are referenced. 
 
-When a `[self]` closure is required, runtime code returns either an immediate thunk (if `self` is immediate and fits), or a full closure with an appropriate `self` field.
+When a `[self]` closure is required, runtime code returns either an immediate thunk (if `self` is immediate and fits), or a full closure with 2 fields: the CompiledMethod reference and the `self` value.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
