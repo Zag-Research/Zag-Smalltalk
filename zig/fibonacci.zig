@@ -237,12 +237,11 @@ test "fibByte" {
              ":label6",
              b.returnTop,0,
      });
-     const method = fibByte.asCompiledByteCodeMethodPtr();
+     const method = fibByte.asCompiledMethodPtr();
      var objs = [_]Object{Object.from(n)};
      var te = TestExecution.new();
      te.init();
-     _ = objs; _ = method;
-//     _ = te.run(objs[0..],method);
+     _ = te.run(objs[0..],method);
 }
 pub fn timing(runs: u32) !void {
     const ts=std.time.nanoTimestamp;
@@ -268,10 +267,10 @@ pub fn timing(runs: u32) !void {
     time = ts()-start;
     try stdout.print("fibThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     start=ts();
-//    _ = timeByte(runs);
+    _ = timeByte(runs);
     time = ts()-start;
     try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
-    try timing(40);
+    try timing(4);
 }

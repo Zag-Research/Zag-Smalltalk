@@ -21,61 +21,13 @@ const sym = @import("symbol.zig").symbols;
 const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
 const tailCall: std.builtin.CallModifier = .always_tail;
 const print = std.debug.print;
-pub const MethodReturns = void;
+const MethodReturns = void;
+const execute = @import("execute.zig");
+const CompiledMethodPtr = *CompiledMethod;
+const CompiledMethod = execute.CompiledMethod;
+const CompileTimeMethod = execute.CompileTimeMethod;
+const Code = execute.Code;
 
-pub const CompiledByteCodeMethodPtr = *CompiledByteCodeMethod;
-pub const CompiledByteCodeMethod = extern struct {
-    header: heap.Header,
-    name: Object,
-    class: Object,
-    stackStructure: Object, // number of local values beyond the parameters
-    size: u64,
-    code: [1] ByteCode,
-    const Self = @This();
-    const codeOffset = @offsetOf(CompiledByteCodeMethod,"code");
-    const nIVars = codeOffset/@sizeOf(Object)-2;
-    comptime {
-        if (checkEqual(codeOffset,@offsetOf(CompileTimeByteCodeMethod(.{0}),"code"))) |s|
-            @compileError("CompileByteCodeMethod prefix not the same as CompileTimeByteCodeMethod == " ++ s);
-    }
-    const pr = std.io.getStdOut().writer().print;
-    pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-        return Self {
-            .header = undefined,
-            .name = name,
-            .class = Nil,
-            .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
-            .size = 0,
-            .code = [1]ByteCode{ByteCode.int(0)},
-        };
-    }
-    fn codeSlice(self: * const CompiledByteCodeMethod) [] const ByteCode{
-        @setRuntimeSafety(false);
-        return self.code[0..self.codeSize()];
-    }
-    pub fn codePtr(self: * const CompiledByteCodeMethod) [*] const ByteCode {
-        return @ptrCast([*]const ByteCode,&self.code);
-    }
-    inline fn codeSize(self: * const CompiledByteCodeMethod) usize {
-        return @alignCast(8,&self.header).inHeapSize()-@sizeOf(Self)/@sizeOf(Object)+1;
-    }
-    fn matchedSelector(pc: [*] const ByteCode) bool {
-        _ = pc;
-        return true;
-    }
-    fn methodFromCodeOffset(pc: [*] const ByteCode) CompiledByteCodeMethodPtr {
-        const startOfCode = @ptrToInt(pc-@bitCast(u8,@enumToInt(pc[0])));
-        const method = @intToPtr(CompiledByteCodeMethodPtr,startOfCode-codeOffset);
-        return method;
-    }
-    fn print(self: *Self) void {
-        pr("CByteCodeMethod: {} {} {} {} (",.{self.header,self.name,self.class,self.stackStructure}) catch @panic("io");
-//            for (self.code[0..]) |c| {
-//                pr(" 0x{x:0>16}",.{@bitCast(u64,c)}) catch @panic("io");
-//            }
-        pr(")\n",.{}) catch @panic("io");
-    }
-};
 pub const ByteCode = enum(i8) {
     noop,
     branch,
@@ -115,11 +67,13 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(_pc: [*]const ByteCode, _sp: [*]Object, _hp: Hp, thread: *Thread, _context: *Context(ByteCode,*CompiledByteCodeMethod)) MethodReturns {
-        var pc = _pc;
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, _hp: Hp, thread: *Thread, _context: *Context) MethodReturns {
+        var pc:[*]align(1) const ByteCode = @ptrCast([*]align(1) const ByteCode,_pc);
         var sp = _sp;
         var hp = _hp;
         var context = _context;
+        var method = context.method;
+        var references = (&method.header).arrayAsSlice(Object) catch unreachable;
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
@@ -159,7 +113,7 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushLiteral => {
                         sp-=1;
-                        sp[0]=pc[0].o();
+                        sp[0]=references[pc[0].u()];
                         pc+=1;
                         continue :interp;
                     },
@@ -174,7 +128,8 @@ pub const ByteCode = enum(i8) {
                         continue :interp;
                     },
                     .pushContext => {
-                        const method = CompiledByteCodeMethod.methodFromCodeOffset(pc);
+                        method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].u())-@sizeOf(Code)-CompiledMethod.codeOffset);
+                        references = (&method.header).arrayAsSlice(Object) catch unreachable;
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
@@ -241,7 +196,7 @@ pub const ByteCode = enum(i8) {
                         break; // to branch
                     },
                     .callLocal => {
-                        context.setTPc(pc+1);
+                        context.setTPc(asCodePtr(pc+1));
                         const offset = pc[0].i();
                         if (offset>=0) pc += 1+@intCast(u64, offset) else pc -= @intCast(u64, @as(i32,-offset)-1);
                         continue :interp;
@@ -266,26 +221,19 @@ pub const ByteCode = enum(i8) {
     inline fn u(self: Self) u8 {
         return @bitCast(u8,self.i());
     }
-    inline fn o(self: Self) Object {
-        return objects[self.u()];
-    }
     inline fn int(v: i8) ByteCode {
         return @intToEnum(ByteCode,v);
     }
-    var objects: [128]Object = undefined;
-    var nObjects:usize = 0;
-    fn findObject(search: Object) usize {
-        for (objects[0..nObjects]) |v,index| {
-            if (@bitCast(u64,search)==@bitCast(u64,v))
-                return index;
-        }
-        objects[nObjects] = search;
-        nObjects += 1;
-        return nObjects-1;
+    inline fn uint(v: u8) ByteCode {
+        return int(@bitCast(i8,v));
     }
-    var methods: [128] CompiledByteCodeMethodPtr = undefined;
+    inline fn asCodePtr(self: [*]const Self) [*]const Code {
+        @setRuntimeSafety(false);
+        return @intToPtr([*]const Code,@ptrToInt(self));
+    }
+    var methods: [128] CompiledMethodPtr = undefined;
     var nMethods = 0;
-    fn findMethod(search: CompiledByteCodeMethodPtr) i8 {
+    fn findMethod(search: CompiledMethodPtr) i8 {
         for (methods[0..nMethods]) |v,index| {
             if (search==v)
                 return @intCast(i8,index);
@@ -312,21 +260,27 @@ fn countNonLabels(comptime tup: anytype) usize {
     }
         return n;
 }
-pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, comptime locals: comptime_int, comptime tup: anytype) CompileTimeByteCodeMethod(tup) {
+fn convertCountSizes(comptime counts: execute.CountSizes) execute.CountSizes {
+    return .{
+        .codes=(counts.codes+7)/8,
+        .refs=counts.refs+counts.objects,
+        .objects=0,
+    };
+}
+pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(convertCountSizes(execute.countNonLabels(tup))) {
     @setEvalBranchQuota(20000);
-    const counts = countNonLabels(tup);
-    const methodType = CompileTimeMethod();
+    const counts = comptime execute.countNonLabels(tup);
+    const methodType = CompileTimeMethod(convertCountSizes(counts));
     var method = methodType.init(name,locals,maxStack);
     method.code[0] = Code.prim(ByteCode.interpret);
-//    const code = 
-    comptime var n = 1;
-    _ = ByteCode.findObject(Nil);
+    const code = @intToPtr([*]ByteCode,@ptrToInt(&method.code[1]));
+    comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {method.code[n]=ByteCode.int(@intCast(i8,ByteCode.findObject(field)));n+=1;},
-            @TypeOf(null) => {method.code[n]=ByteCode.int(0);n+=1;},
-            comptime_int => {method.code[n]=ByteCode.int(field);n+=1;},
-            ByteCode => {method.code[n]=field;n+=1;},
+            Object => {code[n]=ByteCode.uint(@intCast(u8,method.findObject(field)));n+=1;},
+            @TypeOf(null) => {code[n]=ByteCode.int(0);n+=1;},
+            comptime_int => {code[n]=ByteCode.int(field);n+=1;},
+            ByteCode => {code[n]=field;n+=1;},
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
@@ -334,12 +288,16 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            method.code[n]=ByteCode.int(n);
+                            code[n]=ByteCode.uint(n+24);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
-                            method.code[n]=ByteCode.int(-1);
+                            code[n]=ByteCode.int(-1);
                             n=n+1;
+                            found = true;
+                        } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
+                            code[n]=ByteCode.ref(execute.intOf(field[0..]));
+                            n+=1;
                             found = true;
                         } else {
                             comptime var lp = 0;
@@ -350,7 +308,7 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
                                        .Pointer => |tPointer| {
                                             if (@hasField(tPointer.child,"len") and t[0]==':') {
                                                  if (comptime std.mem.endsWith(u8,t,field)) {
-                                                    method.code[n]=ByteCode.int(lp-n-1);
+                                                    code[n]=ByteCode.int(lp-n-1);
                                                     n+=1;
                                                     found = true;
                                                 }
@@ -368,7 +326,7 @@ pub fn compileByteCodeMethod(name: Object, comptime parameters: comptime_int, co
             },
         }
     }
-    method.code[n]=ByteCode.exit;
+    code[n]=ByteCode.exit;
 //    method.print();
     return method;
 }
@@ -377,7 +335,7 @@ test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     const mref = comptime uniqueSymbol(42);
     var m = compileByteCodeMethod(Nil,0,0,.{":abc", b.return_tos, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, mref, Nil});
-//    const mcmp = m.asCompiledByteCodeMethodPtr();
+//    const mcmp = m.asCompiledMethodPtr();
 //    m.update(mref,mcmp);
     var t = m.code[0..];
     for (t) | v,idx | {
@@ -396,7 +354,7 @@ test "compiling method" {
 //    try expectEqual(t[8].method,mcmp);
     try expectEqual(t[9].o(),Nil);
 }
-pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledByteCodeMethod);
+pub const TestByteCodeExecution = TestExecution(ByteCode,CompiledMethod);
 test "simple return via TestByteCodeExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileByteCodeMethod(sym.yourself,0,0,.{
@@ -407,7 +365,7 @@ test "simple return via TestByteCodeExecution" {
     var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
-    var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    var result = te.run(objs[0..],method.asCompiledMethodPtr());
     std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,3);
     try expectEqual(result[0],Object.from(42));
@@ -425,7 +383,7 @@ test "context return via TestByteCodeExecution" {
     var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
-    var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    var result = te.run(objs[0..],method.asCompiledMethodPtr());
     std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);
@@ -441,7 +399,7 @@ test "context returnTop via TestByteCodeExecution" {
     var te = TestByteCodeExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
-    var result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    var result = te.run(objs[0..],method.asCompiledMethodPtr());
     std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,1);
     try expectEqual(result[0],Object.from(42));
@@ -469,7 +427,7 @@ test "simple executable" {
     var objs = [_]Object{Nil};
     var te = TestByteCodeExecution.new();
     te.init();
-    const result = te.run(objs[0..],method.asCompiledByteCodeMethodPtr());
+    const result = te.run(objs[0..],method.asCompiledMethodPtr());
     std.debug.print("result = {any}\n",.{result});
     try expectEqual(result.len,1);
     try expectEqual(result[0],Object.from(0));

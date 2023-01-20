@@ -45,7 +45,7 @@ pub const CompiledMethod = extern struct {
     //address: [*]Object,
     //references: [n]Object,
     const Self = @This();
-    const codeOffset = @offsetOf(CompiledMethod,"code");
+    pub const codeOffset = @offsetOf(CompiledMethod,"code");
     pub fn init(name: Object,methodFn: ThreadedFn) Self {
         return Self {
             .header = heap.header(3,Format.objectNP,class.Method_I,name.hash24(),Age.static),
@@ -64,9 +64,6 @@ pub const CompiledMethod = extern struct {
     }
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
-    }
-    pub inline fn methodFromCodeOffset(pc: [*]const Code,offset: u64) CompiledMethodPtr {
-        return @intToPtr(CompiledMethodPtr,@ptrToInt(pc-offset));
     }
     fn print(self: *Self) void {
         std.debug.print("CMethod: {} {} {} (",.{self.header,self.name,self.stackStructure});
@@ -107,7 +104,7 @@ pub const Code = extern union {
         return @ptrCast([*]const Code,self);
     }
 };
-fn intOf(str: []const u8) usize {
+pub fn intOf(str: []const u8) usize {
     var n: u16 = 0;
     for (str) |c| {
         if (c>'9') return n;
@@ -171,9 +168,10 @@ test "countNonLabels" {
     try expectEqual(r1.objects,3);
 }
 
-fn CompileTimeMethod(comptime counts: CountSizes) type {
+pub fn CompileTimeMethod(comptime counts: CountSizes) type {
     const codeSize = counts.codes;
     const refsSize = counts.refs;
+    const objectsStart = counts.refs-counts.objects;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.Header,
         selector: Object,
@@ -188,7 +186,7 @@ fn CompileTimeMethod(comptime counts: CountSizes) type {
             if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
                 @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         }
-        fn init(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int) Self {
+        pub fn init(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int) Self {
             return .{
                 .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
@@ -212,8 +210,17 @@ fn CompileTimeMethod(comptime counts: CountSizes) type {
                     c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(&self.code[idx]))/@sizeOf(Object));
             }
         }
-        fn getCodeSize(_: *Self) usize {
+        pub fn getCodeSize(_: *Self) usize {
             return codeSize;
+        }
+        pub fn findObject(self: *Self, search: Object) usize {
+            for (self.references[objectsStart..]) |*v,index| {
+                if (Object.NotAnObject.equals(v))
+                    v.* = search;
+                if (search.equals(v))
+                    return index;
+            }
+            unreachable;
         }
         fn print(self: *Self) void {
             std.debug.print("CTMethod: {} {} {} (",.{self.header,self.selector,self.stackStructure});
@@ -265,7 +272,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            code[n]=Code.int(n+3);
+                            code[n]=Code.uint(n+3);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {
@@ -500,7 +507,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
-        const method = CompiledMethod.methodFromCodeOffset(pc,pc[0].uint);
+        const method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].uint)-CompiledMethod.codeOffset);
         const stackStructure = method.stackStructure;
         const locals = stackStructure.h0;
         const maxStackNeeded = stackStructure.h1;

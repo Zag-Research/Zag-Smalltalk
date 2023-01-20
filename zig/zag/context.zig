@@ -24,8 +24,8 @@ pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
-    prevCtxt: ContextPtr,
-    method: CompiledMethodPtr,
+    prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
+    method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     size: u64,
     addr: *Object,
     temps: [1]Object,
@@ -72,9 +72,19 @@ pub const Context = struct {
         return .{.sp=newSp,.ctxt=self.previous()};
     }
     pub inline fn push(self: ContextPtr, sp: [*]Object, hp: Hp, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  struct { hp: Hp,ctxt: ContextPtr } {
+        std.debug.print("\nself: 0x{x:0>16}",.{@ptrToInt(self)});
+        std.debug.print("\nsp:   0x{x:0>16}",.{@ptrToInt(sp)});
+        std.debug.print("\nhp:   0x{x:0>16}",.{@ptrToInt(hp)});
+        std.debug.print("\nmthd: 0x{x:0>16}",.{@ptrToInt(method)});
+//        std.debug.print("\n0x{x:0>16}",.{@ptrToInt()});
+        std.debug.print("\nlocals: {}",.{locals});
+        std.debug.print("\nmaxstk: {}",.{maxStackNeeded});
+        std.debug.print("\nslfoff: {}",.{selfOffset});
+//        std.debug.print("\n{}",.{});
         const newSp = sp - baseSize - locals;
         if (arenas.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
+        std.debug.print("\nctxt: 0x{x:0>16}",.{@ptrToInt(ctxt)});
         ctxt.prevCtxt = self;
         ctxt.method = method;
         { @setRuntimeSafety(false);
