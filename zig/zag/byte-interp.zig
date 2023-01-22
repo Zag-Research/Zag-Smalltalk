@@ -288,7 +288,7 @@ pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, compti
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            code[n]=ByteCode.uint(n+24);
+                            code[n]=ByteCode.uint(n);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {

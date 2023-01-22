@@ -171,7 +171,6 @@ test "countNonLabels" {
 pub fn CompileTimeMethod(comptime counts: CountSizes) type {
     const codeSize = counts.codes;
     const refsSize = counts.refs;
-    const objectsStart = counts.refs-counts.objects;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.Header,
         selector: Object,
@@ -191,17 +190,17 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
+                .code = undefined,
                 .size = refsSize,
                 .address = undefined,
-                .code = undefined,
-                .references = undefined,
+                .references = [_]Object{object.NotAnObject}**refsSize,
             };
         }
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
             return @ptrCast(* CompiledMethod,self);
         }
         pub fn setReferences(self: *Self, refs: []Object) void {
-            if (refs.len!=refsSize) @panic("refs count wrong");
+            if (refs.len>refsSize) @panic("refs count too big");
             self.address = @ptrCast([*]Object,&self.references);
             for (refs) |obj,idx|
                 self.references[idx] = obj;
@@ -214,11 +213,15 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             return codeSize;
         }
         pub fn findObject(self: *Self, search: Object) usize {
-            for (self.references[objectsStart..]) |*v,index| {
-                if (Object.NotAnObject.equals(v))
-                    v.* = search;
+            var index = self.references.len-1;
+            while (index>=0) : (index -= 1) {
+                const v = self.references[index];
                 if (search.equals(v))
                     return index;
+                if (object.NotAnObject.equals(v)) {
+                    self.references[index] = search;
+                    return index;
+                }
             }
             unreachable;
         }
@@ -272,7 +275,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                         if (field[0]==':') {
                             found = true;
                         } else if (field.len==1 and field[0]=='^') {
-                            code[n]=Code.uint(n+3);
+                            code[n]=Code.uint(n);
                             n=n+1;
                             found = true;
                         } else if (field.len==1 and field[0]=='*') {

@@ -70,7 +70,6 @@ fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: C
     const callerContext = result.ctxt;
     return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
 }
-const fibThreadRef = uniqueSymbol(42);
 var fibThread =
     compileMethod(sym.value,0,2,.{
         ":recurse",
@@ -117,7 +116,7 @@ fn timeObject(n: i64) void {
 }
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
-    fibThread.update(fibThreadRef,method);
+//    fibThread.update(fibThreadRef,method);
     var n:u32 = 1;
     while (n<10) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -237,6 +236,7 @@ test "fibByte" {
              ":label6",
              b.returnTop,0,
      });
+     fibByte.setReferences(&[0]Object{});
      const method = fibByte.asCompiledMethodPtr();
      var objs = [_]Object{Object.from(n)};
      var te = TestExecution.new();
@@ -272,5 +272,5 @@ pub fn timing(runs: u32) !void {
     try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
-    try timing(4);
+    try timing(40);
 }
