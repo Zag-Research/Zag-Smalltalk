@@ -81,7 +81,7 @@ pub const Context = struct {
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
         ctxt.header = heap.Header.partialOnStack(selfOffset+baseSize);
-        //ctxt.size = ctxt.calculatedSize(thread); // ToDo: only needed of there is a format method
+        //ctxt.size = ctxt.calculatedSize(thread); // ToDo: only needed if there is a format method
         if (thread.needsCheck()) @panic("thread needsCheck");
        return .{.hp=hp,.ctxt=ctxt};
     }

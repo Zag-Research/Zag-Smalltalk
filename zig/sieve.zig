@@ -9,13 +9,13 @@ const Code = @import("zag/execute.zig").Code;
 const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
-const TestCodeExecution = @import("zag/execute.zig").TestCodeExecution;
+const TestExecution = @import("zag/context.zig").TestExecution;
 const TestByteCodeExecution = @import("zag/byte-interp.zig").TestByteCodeExecution;
 const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const header = @import("zag/heap.zig").header;
-const array = @import("zag/heap.zig").Format.array;
+const array = @import("zag/heap.zig").Format.arrayNP;
 const static = @import("zag/heap.zig").Age.static;
 const ByteArray_I = @import("zag/class.zig").ByteArray_I;
 const il = struct {
@@ -99,112 +99,112 @@ const ByteArray = header(0,array,ByteArray_I,0,static).o();
 var sieveThread =
     compileMethod(Nil,0,7,.{
         &p.pushContext,"^",
-        "label1:",
+        ":label1",
         &p.pushLiteral, Object.from(8190),
         &p.popIntoTemp, 1, //size
         &p.pushLiteral1,
         &p.popIntoTemp, 6, //iter
-        "label2:",
+        ":label2",
         &p.pushTemp, 6, //iter
         &p.pushTemp, 8, //self
         &p.p5, "p5OK",
         &p.primFailure,
-        "p5OK:",
+        ":p5OK",
         &p.ifFalse, "label12",
-        "label3:",
+        ":label3",
         &p.pushLiteral0,
         &p.popIntoTemp, 5, //count
         &p.pushLiteral, ByteArray,
         &p.pushTemp, 1, //size
         &p.p71, "p71OK",
         &p.primFailure,
-        "p71OK:",
+        ":p71OK",
         &p.pushLiteral1,
         &p.p145, "p145OK",
         &p.primFailure,
-        "p145OK:",
+        ":p145OK",
         &p.popIntoTemp, 2, //flags
         &p.pushTemp, 1, //size
         &p.popIntoTemp, 8, //limit_i
         &p.pushLiteral1,
         &p.popIntoTemp, 7, //i
-        "label4:",
+        ":label4",
         &p.pushTemp, 7, //i
         &p.pushTemp, 8, //limit_i
         &p.p5, "p5OKb",
         &p.primFailure,
-        "p5OKb:",
+        ":p5OKb",
         &p.ifFalse, "label11",
-        "label5:",
+        ":label5",
         &p.pushTemp, 2, //flags
         &p.pushTemp, 7, //i
         &p.p60, "p60OK",
         &p.primFailure,
-        "p60OK:",
+        ":p60OK",
         &p.pushLiteral1,
         &p.p7, "p7OK",
         &p.primFailure,
-        "p7OK:",
+        ":p7OK",
         &p.ifFalse, "label10",
-        "label6:",
+        ":label6",
         &p.pushTemp, 7, //i
         &p.pushLiteral1,
         &p.p1, "p1OK",
         &p.primFailure,
-        "p1OK:",
+        ":p1OK",
         &p.popIntoTemp, 3, //prime
         &p.pushTemp, 7, //i
         &p.pushTemp, 3, //prime
         &p.p1, "p1OKb",
         &p.primFailure,
-        "p1OKb:",
+        ":p1OKb",
         &p.popIntoTemp, 4, //k
-        "label7:",
+        ":label7",
         &p.pushTemp, 4, //k
         &p.pushTemp, 1, //size
         &p.p5, "p5OKc",
         &p.primFailure,
-        "p5OKc:",
+        ":p5OKc",
         &p.ifFalse, "label9",
-        "label8:",
+        ":label8",
         &p.pushTemp, 2, //flags
         &p.pushTemp, 4, //k
         &p.pushLiteral0,
         &p.p61, "p61OK",
         &p.primFailure,
-        "p61OK:",
+        ":p61OK",
         &p.drop,
         &p.pushTemp, 4, //k
         &p.pushTemp, 3, //prime
         &p.p1, "p1OKc",
         &p.primFailure,
-        "p1OKc:",
+        ":p1OKc",
         &p.popIntoTemp, 4, //k
         &p.branch, "label7",
-        "label9:",
+        ":label9",
         &p.pushTemp, 5, //count
         &p.pushLiteral1,
         &p.p1, "p1OKd",
         &p.primFailure,
-        "p1OKd:",
+        ":p1OKd",
         &p.popIntoTemp, 5, //count
-        "label10:",
+        ":label10",
         &p.pushTemp, 7, //i
         &p.pushLiteral1,
         &p.p1, "p1OKe",
         &p.primFailure,
-        "p1OKe:",
+        ":p1OKe",
         &p.popIntoTemp, 7, //i
         &p.branch, "label4",
-        "label11:",
+        ":label11",
         &p.pushTemp, 6, //iter
         &p.pushLiteral1,
         &p.p1, "p1OKf",
         &p.primFailure,
-        "p1OKf:",
+        ":p1OKf",
         &p.popIntoTemp, 6, //iter
         &p.branch, "label2",
-        "label12:",
+        ":label12",
         &p.pushTemp, 5, //count
         &p.returnTop
 });
@@ -219,7 +219,7 @@ test "sieveThread" {
     sieveThread.update(sieveThreadRef,method);
     const n = 17;
     var objs = [_]Object{Object.from(n)};
-    var te =  TestCodeExecution.new();
+    var te =  TestExecution.new();
     te.init();
     const result = te.run(objs[0..],method);
     std.debug.print("sieve({}) = {any}\n",.{n,result});
@@ -228,9 +228,9 @@ test "sieveThread" {
 }
 fn timeThread(n: i64) void {
     const method = sieveThread.asCompiledMethodPtr();
-    sieveThread.update(sieveThreadRef,method);
+//    sieveThread.update(sieveThreadRef,method);
     var objs = [_]Object{Object.from(n)};
-    var te = TestCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     _ = te.run(objs[0..],method);
 }
@@ -240,7 +240,7 @@ test "sieveComp" {
     });
     const n = 1;
     var objs = [_]Object{Object.from(n)};
-    var te =  TestCodeExecution.new();
+    var te =  TestExecution.new();
     te.init();
     const result = te.run(objs[0..],method.asCompiledMethodPtr());
     std.debug.print("sieve({}) = {any}\n",.{n,result});
@@ -252,7 +252,7 @@ fn timeComp(n: i64) void {
         &sieveComp,
     });
     var objs = [_]Object{Object.from(n)};
-    var te = TestCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }

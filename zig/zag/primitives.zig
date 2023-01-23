@@ -169,7 +169,7 @@ pub const primitives = struct {
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
-        trace("p5: {any}\n",.{context.stack(sp+1)});
+        trace("p5: {any}\n",.{context.stack(sp+1,thread)});
         return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context});
     }
     pub fn p5N(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void { // SmallInteger>>#<=
