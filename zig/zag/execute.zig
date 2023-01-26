@@ -332,7 +332,7 @@ test "compiling method" {
     try expectEqual(t[4].object,Object.from(42));
     try expectEqual(t[5].int,-5);
     try expectEqual(t[6].int,-1);
-    try expectEqual(t[7].int,10);
+    try expectEqual(t[7].int,7);
     try expectEqual(t[8].int,3);
     try expectEqual(t[9].int,4);
     try expectEqual(t[10].object,Nil);

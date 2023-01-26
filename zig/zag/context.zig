@@ -20,6 +20,8 @@ const Code = execute.Code;
 const CompiledMethod = execute.CompiledMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const MethodReturns = execute.MethodReturns;
+pub const ContextPtr = *Context;
+pub var nullContext = Context.init();
 pub const Context = struct {
     header: heap.Header,
     tpc: [*]const Code, // threaded PC
@@ -30,12 +32,11 @@ pub const Context = struct {
     addr: *Object,
     temps: [1]Object,
     const Self = @This();
-    const ContextPtr = *Self;
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr) MethodReturns;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
-    fn init() Self {
+    pub fn init() Self {
         return Self {
-            .header = heap.header(4,Format.bothPP,class.Context_I,0,Age.static),
+            .header = comptime heap.header(4,Format.bothPP,class.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = undefined,
             .prevCtxt = undefined,

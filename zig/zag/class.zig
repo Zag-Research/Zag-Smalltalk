@@ -91,7 +91,8 @@ const ClassTable = struct {
             // ToDo: add locking
             const size = self.theObject.growSize(objectTreap.elementSize)
                 catch ReservedNumberOfClasses*objectTreap.elementSize;
-            var newHeapObject = self.symbolTable.arena.allocArray(ClassTable_I,size,u8);
+            var context = @import("context.zig").Context.init();
+            var newHeapObject = self.symbolTable.arena.allocArray(ClassTable_I,size,u8,&context);
             var memory = newHeapObject.arrayAsSlice(u8);
             var newTreap = self.treap.resize(memory);
             self.treap = newTreap;
@@ -132,15 +133,15 @@ const ClassTable = struct {
     pub fn getClass(self: *Self, className: Object) Object {
         return self.classes[self.getClassIndex(className)];
     }
-    pub fn subClass(self: *Self, superclass: ?*Metaclass_S, className: Object) *Metaclass_S {
+    pub fn subClass(self: *Self, superclass: ?*Metaclass_S, className: Object, context: @import("context.zig").ContextPtr) *Metaclass_S {
         const class_I = self.getClassIndex(className);
         var class: *Class_S = undefined;
         var metaclass: *Metaclass_S = undefined;
         if (self.classes[class_I].isNil()) {
             const metaclass_I = self.nextFree();
-            metaclass = self.symbolTable.arena.allocStruct(Metaclass_I, Metaclass_S, 8, Object);
+            metaclass = self.symbolTable.arena.allocStruct(Metaclass_I, Metaclass_S, 8, Object,context);
             self.classes[metaclass_I] = Object.from(metaclass);
-            class = self.symbolTable.arena.allocStruct(Metaclass_I, Class_S, 8, Object);
+            class = self.symbolTable.arena.allocStruct(Metaclass_I, Class_S, 8, Object,context);
             const class_O = Object.from(class);
             metaclass.super.index=Object.from(class_I);
             metaclass.soleInstance=class_O;
@@ -191,11 +192,12 @@ pub const Class_S = extern struct{
 
 fn setUpClassTable(st: *symbol.SymbolTable) !ClassTable {
     var ct = try ClassTable.init(st);
-    var obj = ct.subClass(null,symbols.Object);
-    const behavior = ct.subClass(obj,symbols.Behavior);
-    const classDescription = ct.subClass(behavior,symbols.ClassDescription);
-    _ = ct.subClass(classDescription,symbols.Class);
-    _ = ct.subClass(classDescription,symbols.Metaclass);
+    var context = @import("context.zig").Context.init();
+    var obj = ct.subClass(null,symbols.Object,&context);
+    const behavior = ct.subClass(obj,symbols.Behavior,&context);
+    const classDescription = ct.subClass(behavior,symbols.ClassDescription,&context);
+    _ = ct.subClass(classDescription,symbols.Class,&context);
+    _ = ct.subClass(classDescription,symbols.Metaclass,&context);
     // repeat to set metaclass superclass properly
     obj.super.super.superclass = behavior.soleInstance;
     return ct;
