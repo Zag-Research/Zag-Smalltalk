@@ -12,28 +12,31 @@ const ContextPtr = ex.CodeContextPtr;
 const tailCall = ex.tailCall;
 
 const thread_total_size = 64*1024; //std.mem.page_size;
-const thread_size = @sizeOf(u64)+@sizeOf(?*Thread);
-pub const avail_size = thread_total_size-thread_size;
-
 pub const Thread = extern struct {
-    next: ?*Thread,
+    next: ?*Self,
     id : u64,
-    nursery : arenas.NurseryArena align(@alignOf(arenas.NurseryArena)),
+    nursery : nurseryType, // align(@alignOf(arenas.NurseryArena)),
 //    teen1 : arenas.TeenArena,
 //    teen2 : arenas.TeenArena,
     const Self = @This();
+    const nurseryType = arenas.NurseryArena(nursery_size);
+    const thread_size = @sizeOf(u64)+@sizeOf(?*Self);
+    const threadAvail = thread_total_size-thread_size;
+    const nursery_size = @min(threadAvail/7/@sizeOf(Object),heap.Header.maxLength);
+    const teen_size = (threadAvail-nursery_size)/2/@sizeOf(Object);
+
     pub fn new() Self {
         defer next_thread_number += 1;
         return Self {
             .next = null,
             .id = next_thread_number,
-            .nursery = arenas.NurseryArena.new(),
+            .nursery = nurseryType.new(),
 //            .teen1 = arenas.TeenArena.new(),
 //            .teen2 = arenas.TeenArena.new(),
         };
     }
     pub fn init(self: *Self) void {
-        self.nursery.init(self);
+        self.nursery.init();
 //        self.teen1.init(&self.teen2);
 //        self.teen2.init(&self.teen1);
     }

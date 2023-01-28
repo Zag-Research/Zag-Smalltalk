@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
-const thread = @import("thread.zig");
 const object = @import("object.zig");
 const Object = object.Object;
 const class = @import("class.zig");

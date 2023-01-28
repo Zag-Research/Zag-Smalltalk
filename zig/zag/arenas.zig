@@ -3,7 +3,10 @@ const builtin = @import("builtin");
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const mem = std.mem;
 const checkEqual = @import("utilities.zig").checkEqual;
-const thread = @import("thread.zig");
+const bitsToRepresent = @import("utilities.zig").bitsToRepresent;
+const smallerPowerOf2 = @import("utilities.zig").smallerPowerOf2;
+const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
+const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
 const object = @import("object.zig");
 const Object = object.Object;
 const objectWidth = @sizeOf(Object);
@@ -12,10 +15,6 @@ const True = object.True;
 const False = object.False;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
-const bitsToRepresent = @import("utilities.zig").bitsToRepresent;
-const smallerPowerOf2 = @import("utilities.zig").smallerPowerOf2;
-const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
-const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
 const Header = @import("heap.zig").Header;
 const header = @import("heap.zig").header;
 const Format = @import("heap.zig").Format;
@@ -36,10 +35,14 @@ test "arenaFree" {
     try testing.expectEqual(arenaFree(s5,hp),2);
     try testing.expectEqual(arenaFree(s1,hp),-2);
 }
+test "fubar" {
+    const nType = NurseryArena(1024);
+    _ = nType;
+}
 test "object in nursery arena" {
-    var t = thread.Thread.new();
-    var nursery = NurseryArena.new();
-    nursery.init(&t);
+    const nType = NurseryArena(1024);
+    var nursery = nType.new();
+    nursery.init();
     var hp = nursery.getHp();
     var sp = nursery.endOfStack();
     var context = Context.init();
@@ -65,8 +68,8 @@ const AllocResult = struct {
 const AllocReturn = ArenaErrors!AllocResult;
 pub const Arena = extern struct {
     const Self = @This();
-    alloc: *const fn (*Arena,[*]Object,HeaderArray,ContextPtr,usize,usize) ArenaErrors!AllocResult,
-    collect: *const fn (*Arena,[*]Object,HeaderArray,ContextPtr) ArenaErrors!void,
+    alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) ArenaErrors!AllocResult,
+    collect: *const fn (*Self,[*]Object,HeaderArray,ContextPtr) ArenaErrors!void,
 
     pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
         var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
@@ -109,68 +112,65 @@ pub const Arena = extern struct {
     }
 };
 
-const threadAvail = thread.avail_size;
-const nursery_size = @min(threadAvail/7/@sizeOf(Object),Header.maxLength);
-const teen_size = (threadAvail-@sizeOf(NurseryArena))/2/@sizeOf(Object);
-pub const NurseryArena = extern struct {
-    const Self = @This();
-    arena: Arena,
-    hp: HeaderArray,
-    sp: [*]Object,
-    thread: *thread.Thread,
-    heapArea: [nursery_size-field_size/@sizeOf(Header)]Header,
-    const field_size = @sizeOf(HeaderArray)+@sizeOf([*]Object)+@sizeOf(*thread.Thread)+@sizeOf(Arena);
-    comptime {
-        if (checkEqual(@sizeOf(NurseryArena),nursery_size*@sizeOf(Header))) |s|
-            @compileError("Modify NurseryArena.heapArea to make @sizeOf(NurseryArena) == " ++ s);
-    }
-    pub fn new() NurseryArena {
-        return NurseryArena {
-            .arena = undefined,
-            .hp = undefined,
-            .sp = undefined,
-            .thread = undefined,
-            .heapArea = undefined,
-        };
-    }
-    pub fn init(self: *Self, thr: *thread.Thread) void {
-        self.arena = Arena{.alloc=alloc,.collect=collect};
-        self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea));
-        self.sp = self.endOfStack();
-        self.thread = thr;
-    }
-    pub fn asArena(self: *Self) *Arena {
-        return @ptrCast(*Arena,self);
-    }
-    pub inline fn endOfStack(self: *Self) [*]Object {
-        return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
-    }
-    pub inline fn getHp(self: *Self) HeaderArray {
-        return self.hp;
-    }
-    fn allocSlow(_: *Arena, _:[*]Object, _:HeaderArray, _:ContextPtr, _: usize, _: usize) AllocReturn {
-        return error.HeapFull;
-    }
-    fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
-        const totalSize = heapSize + arraySize;
-        const result = @ptrCast(HeapPtr,hp);
-        const end = hp + totalSize;
-        if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
-        return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
-    }
-    fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) ArenaErrors!void {
-        const self = @ptrCast(*Self,arena);
-        _ =  self; _ = sp; _ = hp; _ = context;
-        @panic("incomplete");
-    }
-};
-// pub const TeenArena = extern struct {
+pub fn NurseryArena(comptime nursery_size: comptime_int) type {
+    return extern struct {
+        const Self = @This();
+        arena: Arena,
+        hp: HeaderArray,
+        sp: [*]Object,
+        heapArea: [nursery_size-field_size]Header,
+        const field_size = (@sizeOf(Arena)+@sizeOf(HeaderArray)+@sizeOf([*]Object))/@sizeOf(Header);
+        comptime {
+            if (checkEqual(@sizeOf(Self),nursery_size*@sizeOf(Header))) |s|
+                @compileError("Modify NurseryArena.field_size to make @sizeOf(NurseryArena) == " ++ s);
+        }
+        pub fn new() Self {
+            return Self {
+                .arena = undefined,
+                .hp = undefined,
+                .sp = undefined,
+                .heapArea = undefined,
+            };
+        }
+        pub fn init(self: *Self) void {
+            self.arena = Arena{.alloc=alloc,.collect=collect};
+            self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea));
+            self.sp = self.endOfStack();
+        }
+        pub fn asArena(self: *Self) *Arena {
+            return @ptrCast(*Arena,self);
+        }
+        pub inline fn endOfStack(self: *Self) [*]Object {
+            return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
+        }
+        pub inline fn getHp(self: *Self) HeaderArray {
+            return self.hp;
+        }
+        fn allocSlow(_: *Arena, _:[*]Object, _:HeaderArray, _:ContextPtr, _: usize, _: usize) AllocReturn {
+            return error.HeapFull;
+        }
+        fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
+            const totalSize = heapSize + arraySize;
+            const result = @ptrCast(HeapPtr,hp);
+            const end = hp + totalSize;
+            if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
+            return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
+        }
+        fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) ArenaErrors!void {
+            const self = @ptrCast(*Self,arena);
+            _ =  self; _ = sp; _ = hp; _ = context;
+            @panic("incomplete");
+        }
+    };
+}
+// pub fn TeenArena(comptime teen_size: comptime_int) type {
+//     return extern struct {
 //     const Self = @This();
 //     arena: Arena,
 //     free: HeaderArray,
 //     heapArea: [size]Header,
-//     const size = (teen_size-field_size)/@sizeOf(Header)
-//     const field_size = @sizeOf(Arena)+@sizeOf(HeaderArray);
+//     const size = teen_size-field_size;
+//     const field_size = (@sizeOf(Arena)+@sizeOf(HeaderArray))/@sizeOf(Header);
 //     comptime {
 //         if (checkEqual(@sizeOf(TeenArena),teen_size*@sizeOf(Header))) |s|
 //             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
