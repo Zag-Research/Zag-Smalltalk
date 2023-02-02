@@ -17,7 +17,6 @@ const CompiledMethodPtr = execute.CompiledMethodPtr;
 const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 const noArgs = ([0]Object{})[0..];
-pub const SymbolMethod = packed struct{ selector: Object, method: CompiledMethodPtr};
 const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
@@ -64,7 +63,6 @@ fn DispatchMethods(comptime T: type, comptime extractHash: fn(T) u32, comptime m
     return struct{
         const Self = @This();
         fn findTableSize(sm: []const T, extra: ?T,fix: *[15]Fix) !TableStructureResult {
-            // const stdout = @import("std").io.getStdOut().writer();
             var minSizeConflicts: u32 = maxSize;
             var conflictSize: u16 = 0;
             var bestConflictRand: u32 = 0;
@@ -143,8 +141,8 @@ fn DispatchMethods(comptime T: type, comptime extractHash: fn(T) u32, comptime m
             std.debug.print("table of size {}({}) has {} conflicts ({any})({}) with rand=0x{x:8>0}\n",.{conflictSize,sm.len,minSizeConflicts,fixup,i,bestConflictRand});
             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
         }
-        fn addDispatch(thread: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const SymbolMethod) void {
-            const arena = thread.getArena().getGlobal();
+        fn addDispatch(_: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const CompiledMethodPtr) void {
+            const arena = &@import("arenas.zig").globalArena;//.asArena();
             var fixup: [15]Fix = undefined;
             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
             const rand = dispatchSize.hash();
@@ -227,7 +225,7 @@ test "tablesize" {
         try stdout.print("e6: {any}\n",.{try findTableSize2(e6[0..],null,&fix)});
     }
 }
-fn id_cm(x:CompiledMethodPtr) u32 {return x.name.hash32();}
+fn id_cm(x:CompiledMethodPtr) u32 {return x.selector.hash32();}
 const dispatch=DispatchMethods(CompiledMethodPtr,id_cm,2050);
 
 // test "timing" {
@@ -247,8 +245,8 @@ const dispatch=DispatchMethods(CompiledMethodPtr,id_cm,2050);
 //     try expectEqual((try findTableSize(symbolMethods2[0..],null,&fix)).size(),8);
 //     try expectEqual((try findTableSize(symbolMethods3[0..],null,&fix)).size(),16);
 // }
-pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const SymbolMethod, classMethods: []const SymbolMethod) !void {
-    const theClass_I = class.getClassIndex(className);
+pub fn addClass(thread: *Thread, className: Object, instanceMethods: []const CompiledMethodPtr, classMethods: []const CompiledMethodPtr) !void {
+    const theClass_I = 42;_=className;//class.getClassIndex(className);
     const superClass = 0;
     const theMetaclass_I = 0;
     dispatch.addDispatch(thread, theClass_I, superClass, instanceMethods);
@@ -269,15 +267,17 @@ pub inline fn callClass(selector: Object, self: Object, other: Object, cp: *Cont
 fn dispatchTableObject(classIndex: ClassIndex) HeapPtr {
     return @ptrCast(HeapPtr,@alignCast(@alignOf(HeapPtr),classDispatch[classIndex]));
 }
-// test "addClass and call" {
-//     const expectEqual = @import("std").testing.expectEqual;
-//     var thread = try Thread.initForTest(null);
-//     _ = try symbol.init(&thread,250,"");
-//     try class.init(&thread);
-//     try addClass(&thread,symbols.SmallInteger,symbolMethods1[0..],noMethods);
+test "addClass and call" {
+//    const expectEqual = @import("std").testing.expectEqual;
+    var thread = Thread.new();
+    thread.init();
+//    _ = try symbol.init(&thread,250,"");
+    var noMethods = [0]CompiledMethodPtr{};
+    try class.init();
+    try addClass(&thread,symbols.SmallInteger,&noMethods,&noMethods);
 //     const t42 = Object.from(42);
 //     try expectEqual(t42.send(symbols.value,Nil,undefined),MethodReturns{.Normal=Nil});
-// }
+}
 // test "lookups of proper methods" {
 //     const expectEqual = @import("std").testing.expectEqual;
 //     var thread = try Thread.initForTest(null);

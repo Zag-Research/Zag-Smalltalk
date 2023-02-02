@@ -61,7 +61,7 @@ const initialClassStrings = heap.compileStrings(.{ // must be in same order as a
 pub const ReservedNumberOfClasses = if (builtin.is_test) 60 else 500;
 var classTable : ClassTable = undefined;
 pub fn init() !void {
-    classTable = setUpClassTable();
+    classTable = try setUpClassTable(&symbol.symbolTable);
 }
 const objectTreap = Treap(u32,ClassIndex,u0);
 const ClassTable = struct {

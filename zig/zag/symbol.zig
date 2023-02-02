@@ -67,10 +67,11 @@ pub const symbols = struct {
     pub const Behavior = symbol0(34);
     pub const ClassDescription = symbol0(35);
     pub const Metaclass = symbol0(36);
+    pub const SmallInteger = symbol0(37);
     // define any new symbols here
-    pub const Object = symbol0(37); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(38); // always have this the last initial symbol so the tests verify all the counts are correct
 };
-pub const predefinedSymbols = 37;
+pub const predefinedSymbols = 38;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
     "yourself", "doesNotUnderstand:", "=", "+", "-", "*", "size",
     "at:", "at:put:", "~=", "==", "~~", "value", "value:",
@@ -78,11 +79,11 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "value:value:value:", "value:value:value:value:",
     "valueWithArguments:", "cull:cull:", "cull:cull:cull:",
     "cull:cull:cull:cull:", "self", "name", "<", "<=", ">=", ">",
-    "class", "Class", "Behavior", "ClassDescription", "Metaclass",
+    "class", "Class", "Behavior", "ClassDescription", "Metaclass","SmallInteger",
     // add any new values here
     "Object"
 });
-var symbolTable = SymbolTable.init(&arenas.globalArena);
+pub var symbolTable = SymbolTable.init(&arenas.globalArena);
 
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
