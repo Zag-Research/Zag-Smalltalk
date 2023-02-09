@@ -8,7 +8,7 @@ const heap = @import("heap.zig");
 const Header = heap.Header;
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
-const Code = @import("execute.zig").Code;
+//const Code = @import("execute.zig").Code;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
@@ -141,13 +141,14 @@ pub const Object = packed struct(u64) {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (check and (self.isHeapObject() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
+                        if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(heap.Header));
                             }
                         }
+                        @panic("Trying to convert Object pointer to "++@typeName(T));
                     },
                     else => {},
                 }
@@ -159,8 +160,6 @@ pub const Object = packed struct(u64) {
         return self.toWithCheck(T,true);
     }
     pub  fn toUnchecked(self: Object, comptime T:type) T {
-        //const pr = std.io.getStdOut().writer().print;
-        //pr("0x{X:0>16}\n",.{self.u()}) catch unreachable;
         if (T == i64) return @bitCast(i64, self.u() -% u64_ZERO);
         if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T,false);

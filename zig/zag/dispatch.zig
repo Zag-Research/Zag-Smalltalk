@@ -22,8 +22,8 @@ const Dispatch = packed struct {
     hash: u32,
     super: u32,
     methods: [1]CompiledMethodPtr, // normally this is many elements, overwriting the remaining fields
-    altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
-    altMethods: [1]CompiledMethodPtr, // altMethods as the many elements dispatch table if the constraints are met
+//    altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
+//    altMethods: [1]CompiledMethodPtr, // altMethods as the many elements dispatch table if the constraints are met
 };
 pub const DispatchPtr = *Dispatch;
 const max_classes = class.ReservedNumberOfClasses;
@@ -146,7 +146,7 @@ fn DispatchMethods(comptime T: type, comptime extractHash: fn(T) u32, comptime m
             var fixup: [15]Fix = undefined;
             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
             const rand = dispatchSize.hash();
-            const size = dispatchSize.size();
+            const size = 0;//dispatchSize.size();
             const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(CompiledMethodPtr),Dispatch,@bitCast(Object,@ptrToInt(dnu)),8) catch unreachable;
             strct.hash = rand;
             strct.super = superClass;

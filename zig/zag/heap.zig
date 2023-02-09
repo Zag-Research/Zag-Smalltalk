@@ -3,6 +3,8 @@ const builtin = @import("builtin");
 const mem = std.mem;
 const object = @import("object.zig");
 const Object = object.Object;
+const Nil = object.Nil;
+const True = object.True;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const pow2 = @import("utilities.zig").largerPowerOf2;
@@ -247,6 +249,64 @@ pub const Age = enum(u4) {
     }
     // Note: assigning a ptr to a scanned object must block for collection
 };
+pub const HeapPtrIterator = struct {
+    const Self = @This();
+    nextPointer: *const fn (*Self) ?HeapPtr,
+    scanObject: HeapPtr,
+    current: [*]Object,
+    beyond: [*]Object,
+    pub fn noPointers(obj:HeapPtr) HeapPtrIterator {
+        return .{
+            .nextPointer = allDone,
+            .scanObject = obj,
+            .current = undefined,
+            .beyond = undefined,
+        };
+    }
+    pub fn objectPointers(obj:HeapPtr) HeapPtrIterator {
+        const ivs = @ptrCast([*]Object,obj);
+        return .{
+            .nextPointer = justObjects,
+            .scanObject = obj,
+            .current = ivs+1,
+            .beyond = ivs+1+obj.length,
+        };
+    }
+    fn justObjects(self:*Self) ?HeapPtr {
+        while (@ptrToInt(self.current)<@ptrToInt(self.beyond)) {
+            const obj = self.current[0];
+            self.current += 1;
+            if (obj.isHeapAllocated())
+                return obj.toUnchecked(HeapPtr);
+        }
+        self.nextPointer = allDone;
+        return null;
+    }
+    inline fn next(self:*Self) ?HeapPtr {
+        return self.nextPointer(self);
+    }
+    fn allDone(_:*Self) ?HeapPtr {
+        return null;
+    }
+};
+test "heapPtrIterator" {
+    const testing = std.testing;
+    var h1 = header(0x17, Format.objectNP, 0x27, 0x129,Age.teen);
+    var h2 = header(0x0, Format.objectP, 0x27, 0x129,Age.teen);
+    var o1 = [_]Object{Nil,Nil,h1.asObject(),True,h2.asObject(),h1.asObject()};
+    var i = HeapPtrIterator.noPointers(&h1);
+    try testing.expectEqual(i.next(),null);
+    i = HeapPtrIterator.objectPointers(&h2);
+    try testing.expectEqual(i.next(),null);
+    o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.objectP, 0x27, 0x129,Age.teen).o();
+    i = HeapPtrIterator.noPointers(@ptrCast(HeapPtr,&o1));
+    try testing.expectEqual(i.next(),null);
+    i = HeapPtrIterator.objectPointers(@ptrCast(HeapPtr,&o1));
+    try testing.expectEqual(i.next().?,&h1);
+    try testing.expectEqual(i.next().?,&h2);
+    try testing.expectEqual(i.next().?,&h1);
+    try testing.expectEqual(i.next(),null);
+}
 pub const HeaderArray = [*]align(@alignOf(u64)) Header;
 pub const HeapPtr = *align(@alignOf(u64)) Header;
 pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
