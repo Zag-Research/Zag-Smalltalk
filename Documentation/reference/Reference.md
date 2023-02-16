@@ -8,6 +8,7 @@
 - [point-free Smalltalk](https://smalltalkthoughts.blogspot.com/2011/08/point-free-programming-in-smalltalk.html)
 - [Marcus Denker blog](https://blog.marcusdenker.de/)
 - [Cog blog - build me a JIT as fastt as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
+- [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
 
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
