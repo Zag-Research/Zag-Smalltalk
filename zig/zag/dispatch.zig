@@ -20,14 +20,31 @@ const noArgs = ([0]Object{})[0..];
 const Dispatch = packed struct {
     header: u64, //Header,
     hash: u32,
-    super: u32,
+    super: u16,
+    shift: u6,
     methods: [1]CompiledMethodPtr, // normally this is many elements, overwriting the remaining fields
 //    altHash: u64, // but when hash=0, methods contains a single constraint fn that uses altHash to rehash and
 //    altMethods: [1]CompiledMethodPtr, // altMethods as the many elements dispatch table if the constraints are met
 };
 pub const DispatchPtr = *Dispatch;
+const ClassDispatch = extern struct {
+    dispatch: ?*Dispatch,
+    hash: u32,
+    shift: u6,
+    const Self = @This();
+    const init:Self =  .{.dispatch = null,.hash=0,.shift=0};
+    fn store(self:*Self,value:Self) void {
+        @atomicStore(u128, @ptrCast(*u128,self), @bitCast(u128,value), std.builtin.AtomicOrder.Unordered);
+    }
+};
+test "128-bit atomic store" {
+    var foo = ClassDispatch.init;
+    const bar = ClassDispatch {.dispatch = null,.hash=0,.shift=1};
+    foo.store(bar);
+    try std.testing.expectEqual(foo,bar);
+}
 const max_classes = class.ReservedNumberOfClasses;
-var classDispatch : [max_classes]*Dispatch = undefined;
+var classDispatch : [max_classes]ClassDispatch = undefined;
 inline fn bumpSize(size:u16) u16 {
     return size*2;
 }

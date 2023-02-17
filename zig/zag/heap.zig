@@ -102,8 +102,14 @@ pub const Format = enum(u8) {
     pub inline fn immutable(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) | Immutable);
     }
+    pub inline fn hasInstVarsWithPtrs(self: Self) bool {
+        return @enumToInt(self) & InstVarsWithPtrs == InstVarsWithPtrs;
+    }
     pub inline fn hasInstVars(self: Self) bool {
         return @enumToInt(self) & InstVars != 0;
+    }
+    pub inline fn isIndexableWithPtrs(self: Self) bool {
+        return @enumToInt(self) & IndexableFormat == IndexableWithPtrs;
     }
     pub inline fn isIndexable(self: Self) bool {
         return @enumToInt(self) & IndexableFormat != 0;
@@ -140,6 +146,17 @@ pub const Format = enum(u8) {
     }
     pub inline fn noBase(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) & Immutable);
+    }
+    const Iterator = *const fn(obj:HeapConstPtr) HeapPtrIterator;
+    pub fn iterator(self: Self) Iterator {
+        switch (self) {
+            .weak => return HeapPtrIterator.weakDefault,
+            .objectP,.bothOP => return HeapPtrIterator.ivPointers,
+            .arrayP => return HeapPtrIterator.arrayPointers,
+            .bothAP => return HeapPtrIterator.bothOnlyArrayPointers,
+            .bothPP => return HeapPtrIterator.bothPointers,
+            else => return HeapPtrIterator.noPointers
+        }
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@intToEnum(Self,v),f);
@@ -252,10 +269,13 @@ pub const Age = enum(u4) {
 pub const HeapPtrIterator = struct {
     const Self = @This();
     nextPointer: *const fn (*Self) ?HeapPtr,
-    scanObject: HeapPtr,
-    current: [*]Object,
-    beyond: [*]Object,
-    pub fn noPointers(_:HeapPtr) HeapPtrIterator {
+    scanObject: HeapConstPtr,
+    current: [*] const Object,
+    beyond: [*] const Object,
+    pub fn weakDefault(_:HeapConstPtr) HeapPtrIterator {
+        @panic("weakDefault called");
+    }
+    pub fn noPointers(_:HeapConstPtr) HeapPtrIterator {
         return .{
             .nextPointer = allDone,
             .scanObject = undefined,
@@ -263,33 +283,47 @@ pub const HeapPtrIterator = struct {
             .beyond = undefined,
         };
     }
-    pub fn ivPointers(obj:HeapPtr) HeapPtrIterator { // only ivs, only arrays, or both with only iv pointers
-        const ivs = @ptrCast([*]Object,obj);
+    pub fn ivPointers(obj:HeapConstPtr) HeapPtrIterator { // only ivs, or both with only iv pointers
+        if (!obj.hasInstVarsWithPtrs()) return noPointers(obj);
+        const ivs = @ptrCast([*] const Object,obj);
         return .{
             .nextPointer = lastPointerGroup,
-            .scanObject = obj, // make undefined
+            .scanObject = undefined,
             .current = ivs+1,
             .beyond = ivs+1+obj.length,
         };
     }
-    pub fn arrayPointers(obj:HeapPtr) HeapPtrIterator { // both with no iv pointers
-        const ivs = @ptrCast([*]Object,obj);
-        const size = ivs[1+obj.length].u();
-        const array = @intToPtr([*]Object,ivs[2+obj.length].u());
+    pub fn arrayPointers(obj:HeapConstPtr) HeapPtrIterator { // only array
+        if (!obj.isIndexableWithPtrs()) return noPointers(obj);
+        const ivs = @ptrCast([*] const Object,obj);
         return .{
             .nextPointer = lastPointerGroup,
-            .scanObject = obj, // make undefined
-            .current = array,
-            .beyond = array+size-1,
+            .scanObject = undefined,
+            .current = ivs+1,
+            .beyond = ivs+1+obj.length,
         };
     }
-    pub fn bothPointers(obj:HeapPtr) HeapPtrIterator { // both with iv and array pointers
-        const ivs = @ptrCast([*]Object,obj);
+    pub fn bothPointers(obj:HeapConstPtr) HeapPtrIterator { // both with iv and array pointers
+        if (!obj.hasInstVarsWithPtrs()) return bothOnlyArrayPointers(obj);
+        if (!obj.isIndexableWithPtrs()) return ivPointers(obj);
+        const ivs = @ptrCast([*] const Object,obj);
         return .{
             .nextPointer = firstPointerGroup,
             .scanObject = obj,
             .current = ivs+1,
-            .beyond = ivs+obj.length,
+            .beyond = ivs+1+obj.length,
+        };
+    }
+    pub fn bothOnlyArrayPointers(obj:HeapConstPtr) HeapPtrIterator { // both with no iv pointers
+        if (!obj.isIndexableWithPtrs()) return noPointers(obj);
+        const ivs = @ptrCast([*] const Object,obj);
+        const size = ivs[1+obj.length].u();
+        const array = @intToPtr([*]Object,ivs[2+obj.length].u());
+        return .{
+            .nextPointer = lastPointerGroup,
+            .scanObject = undefined,
+            .current = array,
+            .beyond = array+size-1,
         };
     }
     fn lastPointerGroup(self:*Self) ?HeapPtr {
@@ -310,7 +344,7 @@ pub const HeapPtrIterator = struct {
                 return obj.toUnchecked(HeapPtr);
         }
         const obj = self.scanObject;
-        const ivs = @ptrCast([*]Object,obj);
+        const ivs = @ptrCast([*]const Object,obj);
         const size = ivs[1+obj.length].u();
         const array = @intToPtr([*]Object,ivs[2+obj.length].u());
         self.current = array;
@@ -321,7 +355,8 @@ pub const HeapPtrIterator = struct {
     fn allDone(_:*Self) ?HeapPtr {
         return null;
     }
-    inline fn next(self:*Self) ?HeapPtr {
+    //inline
+        fn next(self:*Self) ?HeapPtr {
         return self.nextPointer(self);
     }
 };
@@ -330,39 +365,42 @@ test "heapPtrIterator" {
     var h1 = header(0x17, Format.objectNP, 0x27, 0x129,Age.teen);
     var h2 = header(0x0, Format.objectP, 0x27, 0x129,Age.teen);
     var o1 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
-    var i = HeapPtrIterator.noPointers(&h1);
+    const ho1 = @ptrCast(HeapPtr,&o1);
+    var i = h1.makeIterator();
     try testing.expectEqual(i.next(),null);
-    i = HeapPtrIterator.ivPointers(&h2);
+    i = h2.makeIterator();
     try testing.expectEqual(i.next(),null);
     o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.objectP, 0x27, 0x129,Age.teen).o();
-    i = HeapPtrIterator.noPointers(@ptrCast(HeapPtr,&o1));
+    i = HeapPtrIterator.noPointers(ho1);
     try testing.expectEqual(i.next(),null);
-    i = HeapPtrIterator.ivPointers(@ptrCast(HeapPtr,&o1));
+    i = HeapPtrIterator.ivPointers(ho1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h2);
-    std.debug.print("o1={any}\n",.{o1});
     try testing.expectEqual(i.next(),null);
     o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.arrayP, 0x27, 0x129,Age.teen).o();
-    i = HeapPtrIterator.noPointers(@ptrCast(HeapPtr,&o1));
+    i = HeapPtrIterator.noPointers(ho1);
     try testing.expectEqual(i.next(),null);
-    i = HeapPtrIterator.ivPointers(@ptrCast(HeapPtr,&o1));
+    i = HeapPtrIterator.ivPointers(ho1);
+    try testing.expectEqual(i.next(),null);
+    i = HeapPtrIterator.arrayPointers(ho1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h2);
     try testing.expectEqual(i.next(),null);
     o1[3] = @bitCast(Object,@as(u64,2));
     o1[4] = @bitCast(Object,@ptrToInt(&o1[5]));
-    o1[0] = header(1,Format.bothOP, 0x27, 0x129,Age.teen).o();
-    i = HeapPtrIterator.ivPointers(@ptrCast(HeapPtr,&o1));
-    std.debug.print("o1(0x{x:0>16})={any}\n",.{@ptrToInt(&o1),o1});
-    std.debug.print("\ni={}\n",.{i});
+    o1[0] = header(2,Format.bothOP, 0x27, 0x129,Age.teen).o();
+    i = HeapPtrIterator.ivPointers(ho1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next(),null);
-    i = HeapPtrIterator.arrayPointers(@ptrCast(HeapPtr,&o1));
-    try testing.expectEqual(i.next().?,&h2);
+    i = HeapPtrIterator.bothPointers(ho1);
+    try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next(),null);
-    i = HeapPtrIterator.bothPointers(@ptrCast(HeapPtr,&o1));
+    i = HeapPtrIterator.arrayPointers(ho1);
+    try testing.expectEqual(i.next(),null);
+    o1[0] = header(2,Format.bothPP, 0x27, 0x129,Age.teen).o();
+    i = ho1.makeIterator();
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h2);
     try testing.expectEqual(i.next(),null);
@@ -381,6 +419,12 @@ pub const Header = packed struct(u64) {
     const forwardLength: u16 = 4094;
     pub const maxLength = @min(4093,@import("arenas.zig").heapAllocationSize-1);
     pub const includesHeader = true;
+    pub fn iterator(self: HeapConstPtr) Format.Iterator {
+        return self.objectFormat.iterator();
+    }
+    pub fn makeIterator(self: HeapConstPtr) HeapPtrIterator {
+        return self.objectFormat.iterator()(self);
+    }
     pub inline fn partialOnStack(selfOffset: u16) Header {
         return @bitCast(Header,@as(u64,selfOffset)<<16);
     }
@@ -485,9 +529,6 @@ pub const Header = packed struct(u64) {
         }
         return false;
     }
-    pub inline fn isIndexable(self: HeapConstPtr) bool {
-        return self.objectFormat.isIndexable();
-    }
     pub inline fn isRaw(self: HeapConstPtr) bool {
         return self.objectFormat.isRaw();
     }
@@ -522,6 +563,18 @@ pub const Header = packed struct(u64) {
     }
     pub inline fn hash16(self: Header) u16 {
         return @truncate(u16,@bitCast(u64,self)>>16);
+    }
+    pub inline fn hasInstVars(self: HeapConstPtr) bool {
+        return self.objectFormat.hasInstVars();
+    }
+    pub inline fn hasInstVarsWithPtrs(self: HeapConstPtr) bool {
+        return self.objectFormat.hasInstVarsWithPtrs();
+    }
+    pub inline fn isIndexable(self: HeapConstPtr) bool {
+        return self.objectFormat.isIndexable();
+    }
+    pub inline fn isIndexableWithPtrs(self: HeapConstPtr) bool {
+        return self.objectFormat.isIndexableWithPtrs();
     }
     pub inline fn instVars(self: HeapConstPtr) []Object {
         if (self.objectFormat.hasInstVars()) {

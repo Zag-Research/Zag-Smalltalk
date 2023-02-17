@@ -4,6 +4,7 @@ var next_thread_number : u64 = 0;
 const Object = @import("object.zig").Object;
 const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
+const dispatch = @import("dispatch.zig");
 const HeapPtr = heap.HeapPtr;
 const ex = @import("execute.zig");
 const Hp = ex.Hp;
