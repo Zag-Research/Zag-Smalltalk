@@ -9,6 +9,7 @@
 - [Marcus Denker blog](https://blog.marcusdenker.de/)
 - [Cog blog - build me a JIT as fastt as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
 - [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
+- [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
 
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
@@ -28,7 +29,7 @@
 #### HPC and architectures (cache et al)
 - [Algorithmica](https://en.algorithmica.org/hpc/)
 - [What Every Programmer Should Know About Memory](http://people.freebsd.org/~lstewart/articles/cpumemory.pdf)
-- 
+- [Concerns of Self-Modifying-Code on ARM](https://dl.acm.org/doi/10.1145/3546568)
 #### x86_64
 - [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
 - [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 
