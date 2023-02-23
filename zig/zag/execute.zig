@@ -56,8 +56,9 @@ pub const CompiledMethod = extern struct {
     }
     pub inline fn execute(self: * const Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
         const pc = @ptrCast([*]const Code,&self.code);
-//        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,0});
-        return pc[0].prim(pc+1,sp,hp,thread,context);
+        const selectorHash = self.selector.hash32();
+//        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return pc[0].prim(pc+1,sp,hp,thread,context,selectorHash);
     }
     inline fn asHeapPtr(self: * const Self) HeapConstPtr {
         return @ptrCast(HeapConstPtr,self);
@@ -558,22 +559,22 @@ pub const controlPrimitives = struct {
 const p = struct {
     usingnamespace controlPrimitives;
 };
-// test "simple return via TestExecution" {
-//     const expectEqual = std.testing.expectEqual;
-//     var method = compileMethod(sym.yourself,0,0,.{
-//         &p.noop,
-//         &p.pushLiteral,comptime Object.from(42),
-//         &p.returnNoContext,
-//     });
-//     var te = TestCodeExecution.new();
-//     te.init();
-//     var objs = [_]Object{Nil,True};
-//     var result = te.run(objs[0..],method.asCompiledMethodPtr());
-//     try expectEqual(result.len,3);
-//     try expectEqual(result[0],Object.from(42));
-//     try expectEqual(result[1],Nil);
-//     try expectEqual(result[2],True);
-// }
+test "simple return via TestExecution" {
+    const expectEqual = std.testing.expectEqual;
+    var method = compileMethod(sym.yourself,0,0,.{
+        &p.noop,
+        &p.pushLiteral,comptime Object.from(42),
+        &p.returnNoContext,
+    });
+    var te = TestExecution.new();
+    te.init();
+    var objs = [_]Object{Nil,True};
+    var result = te.run(objs[0..],method.asCompiledMethodPtr());
+    try expectEqual(result.len,3);
+    try expectEqual(result[0],Object.from(42));
+    try expectEqual(result[1],Nil);
+    try expectEqual(result[2],True);
+}
 // test "context return via TestExecution" {
 //     const expectEqual = std.testing.expectEqual;
 //     var method = compileMethod(sym.@"at:",0,0,.{

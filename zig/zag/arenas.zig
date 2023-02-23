@@ -49,7 +49,7 @@ test "object in nursery arena" {
     const a = nursery.asArena();
     const r = try a.allocObject(sp,hp,&context,42,5);
     const o = r.allocated;
-    try std.testing.expect(!o.isInStack());
+    try std.testing.expect(!o.isOnStack());
     try std.testing.expect(!o.isForwarded());
     try std.testing.expect(!o.isIndirect());
     try std.testing.expect(!o.isIndexable());

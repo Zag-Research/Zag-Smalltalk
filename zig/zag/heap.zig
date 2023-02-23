@@ -221,6 +221,7 @@ test "header formats" {
 }
 pub const Age = enum(u4) {
     incompleteContext = IncompleteContext,
+    stack = Stack,
     nursery = Nursery,
     teen = FirstTeen,
     global = Global,
@@ -252,8 +253,11 @@ pub const Age = enum(u4) {
     pub inline fn isGlobal(self: Self) bool {
         return @enumToInt(self)>=Global and @enumToInt(self)!=Static;
     }
-    pub inline fn isInStack(self: Self) bool {
+    pub inline fn isOnStack(self: Self) bool {
         return @enumToInt(self) <= Stack;
+    }
+    pub inline fn isStack(self: Self) bool {
+        return @enumToInt(self) == Stack;
     }
     pub inline fn isIncompleteContext(self: Self) bool {
         return @enumToInt(self) <= IncompleteContext;
@@ -437,8 +441,11 @@ pub const Header = packed struct(u64) {
             .length = length,
         };
     }
-    pub inline fn isInStack(self: HeapConstPtr) bool {
-        return self.age.isInStack();
+    pub inline fn isOnStack(self: HeapConstPtr) bool {
+        return self.age.isOnStack();
+    }
+    pub inline fn isStack(self: HeapConstPtr) bool {
+        return self.age.isStack();
     }
     pub inline fn isIncompleteContext(self: HeapConstPtr) bool {
         return self.age.isIncompleteContext();

@@ -39,10 +39,12 @@ pub fn fibObject(self: Object) Object {
     const fm2 = fibObject(m2);
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
-pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+const fibHash = sym.value.hash32(); // made up hash value
+pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    if (selectorHash!=fibHash) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
-        return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context});
+        return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context,0});
     }
     const result = context.push(sp,hp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
     const newContext = result.ctxt;
@@ -52,23 +54,23 @@ pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, contex
     newSp[0] = m1;
     newContext.tpc = pc+15; // label4 + callLocal
     newContext.npc = fibComp1;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,newHp,thread,newContext});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,newHp,thread,newContext,fibHash});
 }
-fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, _: u32) void {
     const newSp = sp-1;
     const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
     context.tpc = pc+6; // after 2nd callLocal
     context.npc = fibComp2;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,hp,thread,context});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,hp,thread,context,fibHash});
 }
-fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, _: u32) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
     context.setTemp(0,sum);
     const result = context.pop(thread);
     const newSp = result.sp;
     const callerContext = result.ctxt;
-    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext});
+    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext,0});
 }
 var fibThread =
     compileMethod(sym.value,0,2,.{
