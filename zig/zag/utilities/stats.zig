@@ -1,4 +1,5 @@
-const math = @import("std").math;
+const std = @import("std");
+const math = std.math;
 const Order = math.Order;
 pub fn Stats(comptime T:type) type {
     return struct {
@@ -42,10 +43,36 @@ pub fn Stats(comptime T:type) type {
         pub fn noData(self : Self) bool {
             return self.n==0;
         }
+        pub fn format(
+            self: *const Self,
+            comptime fmt: []const u8,
+            comptime options: std.fmt.FormatOptions,
+            writer: anytype,
+        ) !void {
+            if (self.noData())
+                {try writer.print("?",.{});}
+            else {
+                var sep: []const u8 = "";
+                const opts: []const u8 = comptime if (options.precision==null) "{d}" else "{d:.2}";
+                inline for (if (fmt.len==0) "nmxs" else fmt) |f| {
+                    try writer.print("{s}",.{sep});
+                    switch (f) {
+                        'n' => try writer.print(opts,.{self.minValue}),
+                        'm' => try writer.print(opts,.{self.mean()}),
+                        'x' => try writer.print(opts,.{self.maxValue}),
+                        's' => try writer.print(opts,.{self.stddev()}),
+                        'r' => try writer.print(opts,.{(self.maxValue-self.minValue)/2}),
+                        else => {},
+                    }
+                    sep = "--";
+                }
+            }
+        }
     };
 }
 test "simple stats" {
     const expectEqual = @import("std").testing.expectEqual;
+    const expect = @import("std").testing.expect;
     var stat = Stats(usize).init(42);
     stat.addData(2.0);
     stat.addData(4.0);
@@ -53,4 +80,9 @@ test "simple stats" {
     try expectEqual(stat.max(),4.0);
     try expectEqual(stat.mean(),3.0);
     try expectEqual(stat.stddev(),1.0);
+    var buf: [200]u8 = undefined;
+    var buf2: [200]u8 = undefined;
+//    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
+//    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
+    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
