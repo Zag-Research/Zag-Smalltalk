@@ -3,7 +3,7 @@ const phi = std.math.phi;
 pub fn inversePhi(comptime T: type) T {
     switch (@typeInfo(T)) {
         .Int => |int_info| switch (int_info.signedness) {
-            .unsigned => return @floatToInt(T,@intToFloat(f64,1<<int_info.bits)/phi),
+            .unsigned => return @floatToInt(T,@intToFloat(f64,1<<int_info.bits)/phi)|1,
             else => {},
         },
         else => {},
@@ -14,22 +14,90 @@ test "check inversePhi" {
     const expectEqual = std.testing.expectEqual;
     try expectEqual(inversePhi(u32),2654435769);
     try expectEqual(inversePhi(u16),40503);
-    try expectEqual(inversePhi(u8),158);
-    try expectEqual(inversePhi(u64),11400714819323197440);
+    try expectEqual(inversePhi(u8),159);
+    try expectEqual(inversePhi(u64),11400714819323197441);
+}
+pub fn undoPhi(comptime T: type) T {
+    // there isn't a closed form way to calculate this, but
+    // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Computing_multiplicative_inverses_in_modular_structures
+    // shows the Extended Eclidean algorithm can calculate in log time
+    if (true) {
+        switch (T) {
+            u32 => return 340573321,
+            u16 => return 30599,
+            u8 => return 95,
+            else => @compileError("invalid type for undoPhi: "++@typeName(T)),
+        }
+    } else if (true) {
+        // function inverse(a, n)
+        //     t := 0;     newt := 1
+        //     r := n;     newr := a
+        //     while newr ≠ 0 do
+        //         quotient := r div newr
+        //         (t, newt) := (newt, t − quotient × newt) 
+        //         (r, newr) := (newr, r − quotient × newr)
+        //     if r > 1 then
+        //         return "a is not invertible"
+        //     if t < 0 then
+        //         t := t + n
+        //     return t
+    } else {
+        const phiT = inversePhi(T);
+        var undoT: T = 1;
+        var temp = phiT;
+        while (temp!=1) {
+            undoT *%= phiT;
+            temp *%= phiT;
+        }
+        return undoT;
+    }
+}
+test "check undoPhi" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(undoPhi(u32),340573321);
+    try expectEqual(undoPhi(u16),30599);
+    try expectEqual(undoPhi(u8),95);
 }
 test "randomness of /phi - all values enumerated" {
-    var data = [_]u16{0} ** 65536;
+    var data16 = [_]u16{0} ** 65536;
     var counts = [_]u32{0} ** 2;
     const phi16 = inversePhi(u16);
-    for (data) |_,index| {
-        data[@truncate(u16,index)*%phi16] += 1;
+    for (data16) |_,index| {
+        data16[@truncate(u16,index)*%phi16] += 1;
     }
-    for (data) |count| {
+    for (data16) |count| {
         counts[count] += 1;
     }
-    //try std.io.getStdOut().writer().print("\n counts: {any}",.{counts});
     const expectEqual = @import("std").testing.expectEqual;
     try expectEqual(counts[1],65536);
+    var data8 = [_]u16{0} ** 256;
+    const phi8 = inversePhi(u8);
+    for (data8) |_,index| {
+        data8[@truncate(u8,index)*%phi8] += 1;
+    }
+    counts[1]=0;
+    for (data8) |count| {
+        counts[count] += 1;
+    }
+    try expectEqual(counts[1],256);
+}
+test "undo phi" {
+    const expectEqual = @import("std").testing.expectEqual;
+    const phi8 = inversePhi(u8);
+    const undo8 = undoPhi(u8);
+    try expectEqual(phi8*%undo8,1);
+    try expectEqual((42*%phi8)*%undo8,42);
+    try expectEqual((128*%phi8)*%undo8,128);
+    const phi16 = inversePhi(u16);
+    const undo16 = undoPhi(u16);
+    try expectEqual(phi16*%undo16,1);
+    try expectEqual((42*%phi16)*%undo16,42);
+    try expectEqual((42321*%phi16)*%undo16,42321);
+    const phi32 = inversePhi(u32);
+    const undo32 = undoPhi(u32);
+    try expectEqual(phi32*%undo32,1);
+    try expectEqual((42*%phi32)*%undo32,42);
+    try expectEqual((123242321*%phi32)*%undo32,123242321);
 }
 inline fn po2(size:anytype,comptime not1: u1) @TypeOf(size) {
     var n = if (size==0) 0 else size-1;
