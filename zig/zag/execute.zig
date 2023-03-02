@@ -40,7 +40,7 @@ pub const CompiledMethod = extern struct {
     header: heap.Header,
     selector: Object,
     stackStructure: Object, // number of local values beyond the parameters
-    code: [1] Code,
+    code: [2] Code, // will typically be a lot more then 2, as it will be the threaded version of the method
     //size: u64,
     //address: [*]Object,
     //references: [n]Object,
@@ -80,13 +80,14 @@ pub const Code = extern union {
     uint: u64,
     object: Object,
     header: heap.Header,
+    codeRef: [*]Code,
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
     inline fn int(i: i64) Code {
         return Code{.int=i};
     }
-    inline fn uint(u: u64) Code {
+    pub inline fn uint(u: u64) Code {
         return Code{.uint=u};
     }
     inline fn object(o: Object) Code {
@@ -97,6 +98,9 @@ pub const Code = extern union {
     }
     inline fn header(h: heap.Header) Code {
         return Code{.header=h};
+    }
+    inline fn codeRef(c: [*]Code) Code {
+        return Code{.codeRef=c};
     }
     inline fn end() Code {
         return Code{.object=NotAnObject};

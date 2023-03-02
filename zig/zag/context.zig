@@ -183,6 +183,8 @@ pub const TestExecution = struct {
     }
     pub fn init(self: *Self) void {
         self.thread.init();
+        self.sp = self.thread.endOfStack();
+        self.hp = self.thread.getHeap();
     }
     fn end(pc: [*]const Code, sp: [*]Object, hp: Hp, _: *Thread, _: * Context, _: u32) void {
         endPc = pc;

@@ -12,6 +12,9 @@ const Code = ex.Code;
 const ContextPtr = ex.CodeContextPtr;
 const tailCall = ex.tailCall;
 
+test "force dispatch load" {
+    dispatch.forTest();
+}
 const thread_total_size = 64*1024; //std.mem.page_size;
 pub const Thread = extern struct {
     next: ?*Self,
