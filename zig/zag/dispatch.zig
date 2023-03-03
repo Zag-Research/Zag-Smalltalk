@@ -42,7 +42,7 @@ const Dispatch = extern struct {
             .methods = undefined,
         };
     }
-    inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next two functions or tests
+    inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
         self.hash = minHash;
         self.beyond = minHash;
         self.superOrDNU = code;
@@ -91,6 +91,7 @@ const Dispatch = extern struct {
     fn add(self: *Self, selector: Object, codePtr: [*]Code) !void {
         const hashed = preHash(selector);
         const address = self.lookupAddress(hashed);
+        std.debug.print("add selector={} address=0x{x:0>16}\n",.{selector,@ptrToInt(address)});
         const previous = @cmpxchgStrong([*]Code,address,&self.superOrDNU,codePtr,.SeqCst,.SeqCst);
         if (previous==null) return;
         return error.NotAvailable;
@@ -150,6 +151,12 @@ test "add methods" {
     try std.testing.expectEqual(temp,2);
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self);
     try std.testing.expectEqual(temp,3);
+    try dispatch.add(symbols.@"~~",&code1);
+    std.debug.print("yourself = {}\n",.{Dispatch.preHash(symbols.yourself)%13});
+    var n:u24 = 1;
+    while (n<40) : (n += 1) {
+        std.debug.print("n{} = {}\n",.{n,Dispatch.preHash(symbol.symbol1(n))%13});
+    }
 }
 pub const DispatchPtr = *Dispatch;
 const ClassDispatch = extern struct {
