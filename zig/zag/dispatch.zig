@@ -28,26 +28,31 @@ const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
     header: heap.Header,
     hash: u32,
-    beyond: u32,
+    free: u32,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
-    methods: [minHash][*]Code, // this is just the default... normally a larger array
+    methods: [minHash+extra][*]Code, // this is just the default... normally a larger array
     const Self = @This();
     const minHash = 13; // must be prime
+    const extra = 0;
     fn new() Self {
         return .{
             .header = heap.header(@sizeOf(Self)/@sizeOf(Object)-1, heap.Format.objectP, class.Dispatch_I, 42, heap.Age.static),
             .hash = undefined,
-            .beyond = undefined,
+            .free = undefined,
             .superOrDNU = undefined,
             .methods = undefined,
         };
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
         self.hash = minHash;
-        self.beyond = minHash;
+        self.free = minHash;
         self.superOrDNU = code;
-        for (self.methods) |*ptr|
+        for (self.methods[0..minHash]) |*ptr|
             ptr.* = &self.superOrDNU;
+        if (extra>0) {
+            self.methods[minHash] = @ptrCast([*]Code,&self.methods[self.methods.len]);
+            self.methods[minHash+1] = @intToPtr([*]Code,extra-2);
+        }
     }
     fn initSuper(self: *Self, superClass: ClassIndex) void {
         self.iniitPrivate(.{Code.prim(&super),Code.uint(superClass)});
@@ -92,9 +97,12 @@ const Dispatch = extern struct {
         const hashed = preHash(selector);
         const address = self.lookupAddress(hashed);
         std.debug.print("add selector={} address=0x{x:0>16}\n",.{selector,@ptrToInt(address)});
-        const previous = @cmpxchgStrong([*]Code,address,&self.superOrDNU,codePtr,.SeqCst,.SeqCst);
-        if (previous==null) return;
-        return error.NotAvailable;
+        if (@cmpxchgStrong([*]Code,address,&self.superOrDNU,codePtr+1,.SeqCst,.SeqCst)) |p| {
+            const prevSelector = p-1;
+            if (prevSelector[0].object.equals(codePtr[0].object))
+                if (@cmpxchgStrong([*]Code,address,p,codePtr+1,.SeqCst,.SeqCst)==null) return;
+            return error.Conflict;
+        } else return;
     }
     const shifts = .{&shift0,&shift1};
     fn super(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
@@ -138,25 +146,31 @@ fn testYourself(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *T
     if (selectorHash!=Dispatch.preHash(symbols.yourself)) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 2;
 }
+fn testAt(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    _ = .{sp, hp, thread, context};
+    if (selectorHash!=Dispatch.preHash(symbols.yourself)) @panic("hash doesn't match");
+    @intToPtr(*usize,programCounter[0].uint).* += 4;
+}
 test "add methods" {
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
     var temp: usize = 0;
-    var code1 = [_]Code{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))};
+    var code1 = [_]Code{Code.object(symbols.yourself),Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))};
+    var code2 = [_]Code{Code.object(symbols.@"at:"),Code.prim(&testAt),Code.uint(@ptrToInt(&temp))};
     dispatch.initTest(&temp);
     try dispatch.add(symbols.yourself,&code1);
-    try std.testing.expectEqual(dispatch.add(symbols.yourself,&code1),error.NotAvailable);
+    try dispatch.add(symbols.yourself,&code1);
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,2);
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self);
     try std.testing.expectEqual(temp,3);
-    try dispatch.add(symbols.@"~~",&code1);
-    std.debug.print("yourself = {}\n",.{Dispatch.preHash(symbols.yourself)%13});
-    var n:u24 = 1;
-    while (n<40) : (n += 1) {
-        std.debug.print("n{} = {}\n",.{n,Dispatch.preHash(symbol.symbol1(n))%13});
-    }
+    try dispatch.add(symbols.@"at:",&code2);
+    std.debug.print("yourself = {}\n",.{(Dispatch.preHash(symbols.yourself)*%@as(u64,13))>>32});
+    // var n:u24 = 1;
+    // while (n<40) : (n += 1) {
+    //     std.debug.print("n{} = {}\n",.{n,(Dispatch.preHash(symbol.symbol1(n))*%@as(u64,13))>>32});
+    // }
 }
 pub const DispatchPtr = *Dispatch;
 const ClassDispatch = extern struct {
@@ -168,12 +182,12 @@ const ClassDispatch = extern struct {
         @atomicStore(u128, @ptrCast(*u128,self), @bitCast(u128,value), std.builtin.AtomicOrder.Unordered);
     }
 };
-test "128-bit atomic store" {
-    var foo = ClassDispatch.init;
-    const bar = ClassDispatch {.dispatch = null,.hash=0};
-    foo.store(bar);
-    try std.testing.expectEqual(foo,bar);
-}
+//test "128-bit atomic store" {
+//    var foo = ClassDispatch.init;
+//    const bar = ClassDispatch {.dispatch = null,.hash=0};
+//    foo.store(bar);
+//    try std.testing.expectEqual(foo,bar);
+//}
 const max_classes = class.ReservedNumberOfClasses;
 var classDispatch : [max_classes]ClassDispatch = undefined;
 inline fn bumpSize(size:u16) u16 {

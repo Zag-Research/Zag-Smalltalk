@@ -38,8 +38,8 @@ pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
     header: heap.Header,
-    selector: Object,
     stackStructure: Object, // number of local values beyond the parameters
+    selector: Object, // must be the word before code
     code: [2] Code, // will typically be a lot more then 2, as it will be the threaded version of the method
     //size: u64,
     //address: [*]Object,
@@ -90,7 +90,7 @@ pub const Code = extern union {
     pub inline fn uint(u: u64) Code {
         return Code{.uint=u};
     }
-    inline fn object(o: Object) Code {
+    pub inline fn object(o: Object) Code {
         return Code{.object=o};
     }
     inline fn ref(u: u64) Code {
