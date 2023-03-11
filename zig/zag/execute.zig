@@ -51,7 +51,7 @@ pub const CompiledMethod = extern struct {
             .header = heap.header(3,Format.objectNP,class.Method_I,name.hash24(),Age.static),
             .selector = name,
             .stackStructure = Object.from(0),
-            .code = [1]Code{Code.prim(methodFn)},
+            .code = [2]Code{Code.prim(methodFn),Code.uint(0)},
         };
     }
     pub inline fn execute(self: * const Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
@@ -108,6 +108,9 @@ pub const Code = extern union {
     inline fn codePtr(self: * const Code) [*]const Code {
         return @ptrCast([*]const Code,self);
     }
+    pub inline fn compiledMethodPtr(self: * const Code, index: usize) *const CompiledMethod {
+        return @fieldParentPtr(CompiledMethod,"code",@ptrCast(*const [2]Code,@ptrCast([*]const Code,self)-index));
+    }
 };
 pub fn intOf(str: []const u8) usize {
     var n: u16 = 0;
@@ -122,7 +125,7 @@ test "intOf" {
     try expectEqual(intOf("012Abc"),12);
     try expectEqual(intOf("1230Abc"),1230);
 }
-pub const CountSizes = struct {codes: usize, refs: usize, objects: usize};
+pub const CountSizes = struct {codes: usize, refs: usize = 0, objects: usize = 0};
 pub fn countNonLabels(comptime tup: anytype) CountSizes {
     comptime var n = 1;
     comptime var r = 0;
@@ -190,12 +193,23 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
                 @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         }
-        pub fn init(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int) Self {
+        pub fn init(name: Object, locals: u16, maxStack: u16) Self {
             return .{
                 .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
+                .size = refsSize,
+                .address = undefined,
+                .references = [_]Object{object.NotAnObject}**refsSize,
+            };
+        }
+        pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
+            return .{
+                .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
+                .selector = name,
+                .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
+                .code = code,
                 .size = refsSize,
                 .address = undefined,
                 .references = [_]Object{object.NotAnObject}**refsSize,
@@ -259,6 +273,9 @@ test "CompileTimeMethod" {
     var r1r = [_]Object{Nil,True};
     r1.setReferences(r1r[0..]);
     try expectEqual(r1.getCodeSize(),11);
+}
+pub fn compiledMethodType(comptime codeSize: comptime_int) type {
+    return CompileTimeMethod(.{.codes=codeSize});
 }
 pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);

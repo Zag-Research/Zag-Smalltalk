@@ -17,7 +17,9 @@ const execute = @import("execute.zig");
 const Context = execute.Context;
 const MethodReturns = execute.MethodReturns;
 const ThreadedFn = execute.ThreadedFn;
-//const CompiledMethodPtr = execute.CompiledMethodPtr;
+const CompiledMethod = execute.CompiledMethod;
+const compileMethod = execute.compileMethod;
+const compiledMethodType = execute.compiledMethodType;
 const Code = execute.Code;
 const CodeContextPtr = execute.CodeContextPtr;
 const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
@@ -30,7 +32,7 @@ const Dispatch = extern struct {
     hash: u32,
     free: u32,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
-    methods: [minHash+extra][*]Code, // this is just the default... normally a larger array
+    methods: [minHash+extra]*const CompiledMethod, // this is just the default... normally a larger array
     const Self = @This();
     const minHash = 13; // must be prime
     const extra = 0;
@@ -48,14 +50,14 @@ const Dispatch = extern struct {
         self.free = minHash;
         self.superOrDNU = code;
         for (self.methods[0..minHash]) |*ptr|
-            ptr.* = &self.superOrDNU;
+            ptr.* = (&self.superOrDNU[0]).compiledMethodPtr(0);
         if (extra>0) {
-            self.methods[minHash] = @ptrCast([*]Code,&self.methods[self.methods.len]);
-            self.methods[minHash+1] = @intToPtr([*]Code,extra-2);
+            self.methods[minHash] = @intToPtr(*const CompiledMethod,extra-2);
+            self.methods[minHash+1] = @ptrCast([*]Code,&self.methods[self.methods.len]);
         }
     }
     fn initSuper(self: *Self, superClass: ClassIndex) void {
-        self.iniitPrivate(.{Code.prim(&super),Code.uint(superClass)});
+        self.initPrivate(.{Code.prim(&super),Code.uint(superClass)});
     }
     fn initDNU(self: *Self) void {
         self.initPrivate(.{Code.prim(&dnu),Code.uint(0)});
@@ -67,40 +69,41 @@ const Dispatch = extern struct {
         var foo = Self.new();
         foo.initDNU();
     }
-    fn isDispatch(self: *Self, code: [*]Code) bool {
-        const ptr = @ptrToInt(code);
+    fn isDispatch(self: *Self, cmp: *const CompiledMethod) bool {
+        const ptr = @ptrToInt(cmp);
         if (ptr>=@ptrToInt(self) and ptr<=(@ptrToInt(self)+self.hash.length)) return false;
         if (ptr>=@ptrToInt(&super) and ptr<=@ptrToInt(&dnu)) return false;
         if (ptr<4096) return false;
         return true;
     }
-    fn isAvailable(self: *Self, code: [*]Code) bool {
-        const ptr = @ptrToInt(code);
-        if (ptr==@ptrToInt(&self.superOrDNU)) return true;
+    fn isAvailable(self: *Self, cmp: *const CompiledMethod) bool {
+        const ptr = @ptrToInt(cmp);
+        if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    inline fn lookup(self: *Self, selectorHash: u32) [*]Code {
+    inline fn lookup(self: *Self, selectorHash: u64) *CompiledMethod {
         return self.lookupAddress(selectorHash).*;
     }
-    inline fn lookupAddress(self: *Self, selectorHash: u32) *[*]Code {
-        return @ptrCast(*[*]Code,&self.methods[selectorHash*@as(u64,self.hash)>>32]);
+    inline fn lookupAddress(self: *Self, selectorHash: u64) **CompiledMethod {
+        return @ptrCast(**CompiledMethod,&self.methods[selectorHash*@as(u64,self.hash)>>32]);
     }
-    inline fn preHash(selector: Object) u32 {
-        return selector.hash32()*%u32_phi_inverse;
+    inline fn preHash(selector: u32) u64 {
+        return @as(u64,selector*%u32_phi_inverse);
     }
     pub fn dispatch(self: *Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selector: Object) MethodReturns {
-        const hashed = preHash(selector);
-        const pc = self.lookup(hashed);
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,Hp,*Thread,CodeContextPtr,Object) MethodReturns,pc[0].prim),.{@ptrCast(*Dispatch,pc+1),sp,hp,thread,context,@bitCast(Object,@as(u64,hashed))});
+        const hash = selector.hash32();
+        const hashed = preHash(hash);
+        const cmp = self.lookup(hashed);
+        // all thhe ugly casting is to make signature match
+        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,Hp,*Thread,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@ptrCast(*Dispatch,&cmp.code[1]),sp,hp,thread,context,@bitCast(Object,@as(u64,hash))});
     }
-    fn add(self: *Self, selector: Object, codePtr: [*]Code) !void {
-        const hashed = preHash(selector);
+    fn add(self: *Self, selector: Object, cmp: *const CompiledMethod) !void {
+        const hashed = preHash(selector.hash32());
         const address = self.lookupAddress(hashed);
         std.debug.print("add selector={} address=0x{x:0>16}\n",.{selector,@ptrToInt(address)});
-        if (@cmpxchgStrong([*]Code,address,&self.superOrDNU,codePtr+1,.SeqCst,.SeqCst)) |p| {
-            const prevSelector = p-1;
-            if (prevSelector[0].object.equals(codePtr[0].object))
-                if (@cmpxchgStrong([*]Code,address,p,codePtr+1,.SeqCst,.SeqCst)==null) return;
+        if (@cmpxchgStrong(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)) |p| {
+            if (p.selector.equals(cmp.selector))
+                if (@cmpxchgStrong(*const CompiledMethod,address,p,cmp,.SeqCst,.SeqCst)==null) return;
             return error.Conflict;
         } else return;
     }
@@ -119,11 +122,11 @@ const Dispatch = extern struct {
     }
     const primes = .{&prime3,&prime5};
     fn prime3(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        const pc = programCounter[(@as(u64,selectorHash)*3)>>32].codeRef;
+        const pc = programCounter[(preHash(selectorHash)*3)>>32].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
     }
     fn prime5(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        const pc = programCounter[(@as(u64,selectorHash)*5)>>32].codeRef;
+        const pc = programCounter[(preHash(selectorHash)*5)>>32].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
     }
     fn fail(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
@@ -143,33 +146,34 @@ const Dispatch = extern struct {
 };
 fn testYourself(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
     _ = .{sp, hp, thread, context};
-    if (selectorHash!=Dispatch.preHash(symbols.yourself)) @panic("hash doesn't match");
+    if (selectorHash!=symbols.yourself.hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 2;
 }
 fn testAt(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
     _ = .{sp, hp, thread, context};
-    if (selectorHash!=Dispatch.preHash(symbols.yourself)) @panic("hash doesn't match");
+if (selectorHash!=symbols.@"at:".hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 4;
 }
 test "add methods" {
+    var temp: usize = 0;
+    const methodType = compiledMethodType(2);
+    var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))});
+    var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&testAt),Code.uint(@ptrToInt(&temp))});
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
-    var temp: usize = 0;
-    var code1 = [_]Code{Code.object(symbols.yourself),Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))};
-    var code2 = [_]Code{Code.object(symbols.@"at:"),Code.prim(&testAt),Code.uint(@ptrToInt(&temp))};
     dispatch.initTest(&temp);
-    try dispatch.add(symbols.yourself,&code1);
-    try dispatch.add(symbols.yourself,&code1);
+    try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
+    try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,2);
-    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self);
+    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self); // invoke DNU
     try std.testing.expectEqual(temp,3);
-    try dispatch.add(symbols.@"at:",&code2);
-    std.debug.print("yourself = {}\n",.{(Dispatch.preHash(symbols.yourself)*%@as(u64,13))>>32});
+    try dispatch.add(symbols.@"at:",code2.asCompiledMethodPtr());
+    std.debug.print("yourself = {}\n",.{(Dispatch.preHash(symbols.yourself.hash32())*%@as(u64,13))>>32});
     // var n:u24 = 1;
     // while (n<40) : (n += 1) {
-    //     std.debug.print("n{} = {}\n",.{n,(Dispatch.preHash(symbol.symbol1(n))*%@as(u64,13))>>32});
+    //     std.debug.print("n{} = {}\n",.{n,(Dispatch.preHash(symbol.symbol1(n).hash32())*%@as(u64,13))>>32});
     // }
 }
 pub const DispatchPtr = *Dispatch;
