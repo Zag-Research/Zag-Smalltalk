@@ -35,7 +35,7 @@ const Dispatch = extern struct {
     methods: [minHash+extra]*const CompiledMethod, // this is just the default... normally a larger array
     const Self = @This();
     const minHash = 13; // must be prime
-    const extra = 0;
+    const extra = 5;
     fn new() Self {
         return .{
             .header = heap.header(@sizeOf(Self)/@sizeOf(Object)-1, heap.Format.objectP, class.Dispatch_I, 42, heap.Age.static),
@@ -47,14 +47,12 @@ const Dispatch = extern struct {
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
         self.hash = minHash;
-        self.free = minHash;
         self.superOrDNU = code;
         for (self.methods[0..minHash]) |*ptr|
             ptr.* = (&self.superOrDNU[0]).compiledMethodPtr(0);
-        if (extra>0) {
-            self.methods[minHash] = @intToPtr(*const CompiledMethod,extra-2);
-            self.methods[minHash+1] = @ptrCast([*]Code,&self.methods[self.methods.len]);
-        }
+        self.free = minHash;
+        if (extra>0)
+            self.methods[minHash] = @intToPtr(*const CompiledMethod,extra);
     }
     fn initSuper(self: *Self, superClass: ClassIndex) void {
         self.initPrivate(.{Code.prim(&super),Code.uint(superClass)});
@@ -71,9 +69,10 @@ const Dispatch = extern struct {
     }
     fn isDispatch(self: *Self, cmp: *const CompiledMethod) bool {
         const ptr = @ptrToInt(cmp);
-        if (ptr>=@ptrToInt(self) and ptr<=(@ptrToInt(self)+self.hash.length)) return false;
-        if (ptr>=@ptrToInt(&super) and ptr<=@ptrToInt(&dnu)) return false;
         if (ptr<4096) return false;
+        if (ptr>=@ptrToInt(&super) and ptr<=@ptrToInt(&dnu)) return false;
+        const cmpVsDispatchDifferential = CompiledMethod.codeOffset-@offsetOf(Self,"superOrDNU");
+        if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.hash.length)) return false;
         return true;
     }
     fn isAvailable(self: *Self, cmp: *const CompiledMethod) bool {
