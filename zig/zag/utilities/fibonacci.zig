@@ -25,12 +25,12 @@ fn initFibs(comptime T: type,array: []T) void {
     array[0] = 1;
     array[1] = 2;
     const start = 2;
-    for(array[start..]) |*value,index| {
+    for(array[start..],0..) |*value,index| {
         value.* = array[index+start-2] + array[index+start-1];
     }
 }
 fn findFib1(target: u64) usize {
-    for (fibonacci_u64[0..]) |value,index| {
+    for (fibonacci_u64[0..],0..) |value,index| {
         if (value>=target) return index;
     }
     unreachable;
@@ -50,7 +50,7 @@ fn findFib2(target: u64) usize {
     const start = fibonacci_u16.len-1;
     if (target<=fibonacci_u16[start])
         return search(0,start,@truncate(u16,target));
-    for (fibonacci_u64[start..]) |value,index| {
+    for (fibonacci_u64[start..],0..) |value,index| {
         if (value>=target) return index+start;
     }
     unreachable;

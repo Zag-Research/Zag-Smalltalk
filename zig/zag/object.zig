@@ -34,6 +34,7 @@ const Symbol_Base           =    o2(class.Symbol_I,0);
 const Character_Base        =    o2(class.Character_I,0);
 pub const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
+pub const u64_ZERO2              =    u64_MINVAL;
 const u64_MAXVAL            =    0xffff_ffffffffffff;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
 pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
@@ -232,7 +233,7 @@ pub const Object = packed struct(u64) {
         if (self.equals(other)) return ord.eq;
         const sla = self.arrayAsSlice(u8);
         const slb = other.arrayAsSlice(u8);
-        for (sla[0..@min(sla.len,slb.len)]) |va,index| {
+        for (sla[0..@min(sla.len,slb.len)],0..) |va,index| {
             const vb=slb[index];
             if (va<vb) return ord.lt;
             if (va>vb) return ord.gt;

@@ -393,7 +393,7 @@ pub const GlobalArena = struct {
         }
         fn init(comptime n: comptime_int) [n]FreeList {
             var initial_value: [n]FreeList = undefined;
-            for (initial_value) |*fl,index| {
+            for (initial_value[0..],0..) |*fl,index| {
                 fl.size = @as(u16,1)<<@intCast(u4,index);
                 fl.list = null;
             }

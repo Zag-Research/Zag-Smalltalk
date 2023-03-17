@@ -62,7 +62,7 @@ test "randomness of /phi - all values enumerated" {
     var data16 = [_]u16{0} ** 65536;
     var counts = [_]u32{0} ** 2;
     const phi16 = inversePhi(u16);
-    for (data16) |_,index| {
+    for (data16,0..) |_,index| {
         data16[@truncate(u16,index)*%phi16] += 1;
     }
     for (data16) |count| {
@@ -72,7 +72,7 @@ test "randomness of /phi - all values enumerated" {
     try expectEqual(counts[1],65536);
     var data8 = [_]u16{0} ** 256;
     const phi8 = inversePhi(u8);
-    for (data8) |_,index| {
+    for (data8,0..) |_,index| {
         data8[@truncate(u8,index)*%phi8] += 1;
     }
     counts[1]=0;

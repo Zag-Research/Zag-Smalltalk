@@ -37,7 +37,7 @@ pub const Format = enum(u8) {
     const Immutable : u8 = 128;
     fn calcSizes() [IndexableSizes+1]u8 {
         var sizes : [IndexableSizes+1]u8 = undefined;
-        for (sizes) |*s,i| {
+        for (sizes[0..],0..) |*s,i| {
             const typ = i & IndexableSizes;
             s.* =
                 if (typ<Indexable_32) 1
@@ -50,7 +50,7 @@ pub const Format = enum(u8) {
     const fieldSizes = calcSizes();
     fn calcPartials() [IndexableSizes+1]u8 {
         var partials: [IndexableSizes+1]u8 = undefined;
-        for (partials) |*partial,i| {
+        for (partials[0..],0..) |*partial,i| {
             const typ: u8 = @truncate(u8,i) & IndexableSizes;
             partial.* =
                 if (typ>Indexable_32 and typ<Indexable_16) typ&1
@@ -644,7 +644,7 @@ test "Header structure" {
 fn hash24(str: [] const u8) u24 {
     const phi: u32 = @import("utilities.zig").inversePhi(u24);
     var hash = phi*%@truncate(u32,str.len+%1);
-    for (str) |c,idx| {
+    for (str,0..) |c,idx| {
         if (idx>9) break;
         hash +%= phi*%c;
     }
@@ -662,7 +662,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
                 .header = header((size+7)/8,Format.none.raw(u8,size),class.String_I,hash,Age.static),
                 .chars = [_]u8{0}**size,
             };
-            for (str) |c,idx| {
+            for (str,0..) |c,idx| {
                 result.chars[idx]=c;
             }
             return result;
@@ -681,7 +681,7 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
 pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
     @setEvalBranchQuota(3000);
     comptime var result : [tup.len] HeapConstPtr = undefined;
-    inline for (tup) |name,idx| {
+    inline for (tup,0..) |name,idx| {
         result[idx] = comptime @ptrCast(HeapConstPtr,@alignCast(8,&CompileTimeString(name).init()));
     }
     return result;

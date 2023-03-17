@@ -69,7 +69,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
         }
         pub fn resize(self: *Self, memory: []u8) Self {
             var treap = ref(memory,self.compare,self.empty);
-            for (self.table) | element,i | treap.table[i] = element;
+            for (self.table,0..) | element,i | treap.table[i] = element;
             treap.extend(@intCast(Index,self.table.len));
             return treap;
         }

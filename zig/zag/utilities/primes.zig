@@ -278,7 +278,7 @@ test "hashs" {
     while (index <= 50) : (index += 1) {
         hashEfficiency(v1[0..index]);
     }
-    for (v1) |*s,idx| {
+    for (v1,0..) |*s,idx| {
         s.*=@truncate(u32,idx)+1;
     }
     shift = 28;

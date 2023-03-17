@@ -26,21 +26,24 @@ const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const forTest = Dispatch.forTest;
+const DispatchState = enum(u8){clean,beingUpdated,dead};
 const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
     header: heap.Header,
     hash: u32,
-    free: u32,
+    free: u16,
+    state: DispatchState,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
     methods: [minHash+extra]*const CompiledMethod, // this is just the default... normally a larger array
     const Self = @This();
     const minHash = 13; // must be prime
-    const extra = 5;
+    const extra = 8; // must be multiple of 8 to allow cast below
     fn new() Self {
         return .{
             .header = heap.header(@sizeOf(Self)/@sizeOf(Object)-1, heap.Format.objectP, class.Dispatch_I, 42, heap.Age.static),
             .hash = undefined,
             .free = undefined,
+            .state = undefined,
             .superOrDNU = undefined,
             .methods = undefined,
         };
@@ -51,6 +54,7 @@ const Dispatch = extern struct {
         for (self.methods[0..minHash]) |*ptr|
             ptr.* = (&self.superOrDNU[0]).compiledMethodPtr(0);
         self.free = minHash;
+        self.state = .clean;
         if (extra>0)
             self.methods[minHash] = @intToPtr(*const CompiledMethod,extra);
     }
@@ -67,12 +71,11 @@ const Dispatch = extern struct {
         var foo = Self.new();
         foo.initDNU();
     }
-    fn isDispatch(self: *Self, cmp: *const CompiledMethod) bool {
+    fn isExternalCompiledMethod(self: *Self, cmp: *const CompiledMethod) bool {
         const ptr = @ptrToInt(cmp);
-        if (ptr<4096) return false;
+        const cmpVsDispatchDifferential = CompiledMethod.codeOffset-@offsetOf(Self,"superOrDNU"); // fudge because Dispatch and CM are different
+        if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.header.length)*@sizeOf(Object)) return false;
         if (ptr>=@ptrToInt(&super) and ptr<=@ptrToInt(&dnu)) return false;
-        const cmpVsDispatchDifferential = CompiledMethod.codeOffset-@offsetOf(Self,"superOrDNU");
-        if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.hash.length)) return false;
         return true;
     }
     fn isAvailable(self: *Self, cmp: *const CompiledMethod) bool {
@@ -80,10 +83,10 @@ const Dispatch = extern struct {
         if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    inline fn lookup(self: *Self, selectorHash: u64) *CompiledMethod {
+    inline fn lookup(self: *Self, selectorHash: u64) *const CompiledMethod {
         return self.lookupAddress(selectorHash).*;
     }
-    inline fn lookupAddress(self: *Self, selectorHash: u64) **CompiledMethod {
+    inline fn lookupAddress(self: *Self, selectorHash: u64) **const CompiledMethod {
         return @ptrCast(**CompiledMethod,&self.methods[selectorHash*@as(u64,self.hash)>>32]);
     }
     inline fn preHash(selector: u32) u64 {
@@ -93,33 +96,186 @@ const Dispatch = extern struct {
         const hash = selector.hash32();
         const hashed = preHash(hash);
         const cmp = self.lookup(hashed);
-        // all thhe ugly casting is to make signature match
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,Hp,*Thread,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@ptrCast(*Dispatch,&cmp.code[1]),sp,hp,thread,context,@bitCast(Object,@as(u64,hash))});
+        // all the ugly casting is to make signature match
+        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,Hp,*Thread,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@intToPtr(*Dispatch,@ptrToInt(&cmp.code[1])),sp,hp,thread,context,@bitCast(Object,@as(u64,hash))});
+    }
+    fn disambiguate(location: []*const CompiledMethod,one: *const CompiledMethod, another: *const CompiledMethod) *const CompiledMethod {
+        const oneHash = one.selector.hash32();
+        const anotherHash = another.selector.hash32();
+        const shift = @intCast(u5,@ctz(oneHash^anotherHash));
+        const bit = @as(u32,1)<<shift;
+        if (oneHash&bit==0) {
+            location[1] = one;
+            location[2] = another;
+        } else {
+            location[1] = another;
+            location[2] = one;
+        }
+        location[0]= @ptrCast(*const CompiledMethod,@alignCast(8,shifts[shift]));
+        const cmp = @fieldParentPtr(CompiledMethod,"code",@ptrCast(*const [2]execute.Code,location.ptr));
+        return cmp;
     }
     fn add(self: *Self, selector: Object, cmp: *const CompiledMethod) !void {
         const hashed = preHash(selector.hash32());
         const address = self.lookupAddress(hashed);
-        std.debug.print("add selector={} address=0x{x:0>16}\n",.{selector,@ptrToInt(address)});
-        if (@cmpxchgStrong(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)) |p| {
-            if (p.selector.equals(cmp.selector))
-                if (@cmpxchgStrong(*const CompiledMethod,address,p,cmp,.SeqCst,.SeqCst)==null) return;
-            return error.Conflict;
-        } else return;
+        while (true) {
+            if (@cmpxchgWeak(DispatchState,&self.state,.clean,.beingUpdated,.SeqCst,.SeqCst)) |notClean| {
+                if (notClean==.dead) return error.Conflict;
+            } else break;
+        }
+        defer {self.state = .clean;}
+        if (@cmpxchgWeak(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)==null)
+            return; // we replaced DNU with mathod
+        if (address.*.selector.equals(cmp.selector)) {
+            address.* = cmp;
+            return;
+        }
+        const existing = address.*;
+        if (self.isExternalCompiledMethod(existing)) { // an actual cmp - not internalx
+            const end = self.header.length-@offsetOf(Self,"methods")/@sizeOf(Object)-2;
+            if (self.free < end) {
+                self.free += 3;
+                const disambiguator = disambiguate(self.methods[self.free-3..self.free],existing,cmp);
+                address.* = disambiguator;
+                return;
+            }
+        }
+        return error.Conflict;
     }
-    const shifts = .{&shift0,&shift1};
+    const shifts = [_]ThreadedFn{&shift0,&shift1,&shift2,&shift3,&shift4,&shift5,&shift6,&shift7,&shift8,&shift9,&shift10,&shift11,&shift12,&shift13,&shift14,&shift15,&shift16,&shift17,&shift18,&shift19,&shift20,&shift21,&shift22,&shift23,&shift24,&shift25,&shift26,&shift27,&shift28,&shift29,&shift30,&shift31};
     fn super(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         _ = .{programCounter, sp, hp, thread, context, selectorHash};
         @panic("called super function");
     }
     fn shift0(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        const cmp = programCounter[selectorHash&1].compiledMethod;
+        return @call(tailCall,cmp.code[0].prim,.{@intToPtr([*]const Code,@ptrToInt(&cmp.code[1])),sp,hp,thread,context,selectorHash});
     }
     fn shift1(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
     }
-    const primes = .{&prime3,&prime5};
+    fn shift2(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift3(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift4(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift5(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift6(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift7(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift8(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift9(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift10(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift11(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift12(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift13(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift14(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift15(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift16(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift17(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift18(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift19(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift20(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift21(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift22(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift23(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift24(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift25(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift26(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift27(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift28(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift29(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift30(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[selectorHash&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    fn shift31(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        const pc = programCounter[(selectorHash>>1)&1].codeRef;
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    }
+    const primes  = [_]?ThreadedFn{null,null,null,&prime3,null,&prime5};
     fn prime3(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(preHash(selectorHash)*3)>>32].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
@@ -154,25 +310,30 @@ if (selectorHash!=symbols.@"at:".hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 4;
 }
 test "add methods" {
+    var temp0: usize = 0;
     var temp: usize = 0;
     const methodType = compiledMethodType(2);
+    var code0 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp0))});
     var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))});
     var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&testAt),Code.uint(@ptrToInt(&temp))});
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
     dispatch.initTest(&temp);
-    try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
+    try dispatch.add(symbols.yourself,code0.asCompiledMethodPtr());
     try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,2);
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self); // invoke DNU
     try std.testing.expectEqual(temp,3);
     try dispatch.add(symbols.@"at:",code2.asCompiledMethodPtr());
-    std.debug.print("yourself = {}\n",.{(Dispatch.preHash(symbols.yourself.hash32())*%@as(u64,13))>>32});
-    // var n:u24 = 1;
-    // while (n<40) : (n += 1) {
-    //     std.debug.print("n{} = {}\n",.{n,(Dispatch.preHash(symbol.symbol1(n).hash32())*%@as(u64,13))>>32});
+    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
+    try std.testing.expectEqual(temp,5);
+    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.@"at:");
+    try std.testing.expectEqual(temp,9);
+    try std.testing.expectEqual(dispatch.add(symbols.name,code2.asCompiledMethodPtr()),error.Conflict);
+    // for (1..40) |n| {
+    //     std.debug.print("{} = {} {}\n",.{symbol.symbol1(n),(Dispatch.preHash(symbol.symbol0(n).hash32())*%@as(u64,13))>>32,(Dispatch.preHash(symbol.symbol1(n).hash32())*%@as(u64,13))>>32});
     // }
 }
 pub const DispatchPtr = *Dispatch;
@@ -237,8 +398,7 @@ fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) Meth
 //             while (size<limitSize) : (size = bumpSize(size)) {
 //                 var minConflicts: u32 = maxSize;
 //                 var bestRand: u32 = 0;
-//                 var tries: u32 = 1;
-//                 while (tries<=65) : (tries += 1) {
+//                 for (1..66) |tries| {
 //                     const rand = tries *% u32_phi_inverse & ~@as(u32,31) | @truncate(u5,@clz(@as(u32,size))+1);
 //                     for (used[0..size]) |*b| b.* = 0;
 //                     if (extra) |key| {

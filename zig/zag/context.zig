@@ -67,7 +67,7 @@ pub const Context = struct {
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
         const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         const newSp = thread.endOfStack() - itemsToKeep.len;
-        for (itemsToKeep) | obj,index | {
+        for (itemsToKeep,0..) | obj,index | {
             newSp[index] = obj;
         }
         return .{.sp=newSp,.ctxt=self.previous()};
@@ -193,7 +193,7 @@ pub const TestExecution = struct {
     }
     pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
         const sp = self.thread.endOfStack() - source.len;
-        for (source) |src,idx|
+        for (source,0..) |src,idx|
             sp[idx] = src;
 //        const pc = method.codePtr();
         const hp = self.thread.getHeap();

@@ -9,25 +9,25 @@ const Treap = @import("utilities.zig").Treap;
 const thread = @import("thread.zig");
 const arenas = @import("arenas.zig");
 const GlobalArena = arenas.GlobalArena;
-inline fn symbol_of(index: u32, arity: u8) object.Object {
-    return symbol0(index|(@as(u32,arity)<<24));
+inline fn symbol_of(index: usize, arity: u8) object.Object {
+    return symbol0(index|(@as(usize,arity)<<24));
 }
-pub inline fn symbol0(index: u32) object.Object {
-    return object.Object.makeImmediate(class.Symbol_I,index);
+pub inline fn symbol0(index: usize) object.Object {
+    return object.Object.makeImmediate(class.Symbol_I,@truncate(u32,index));
 }
-pub inline fn symbol1(index: u24) object.Object {
+pub inline fn symbol1(index: usize) object.Object {
     return symbol_of(index,1);
 }
-pub inline fn symbol2(index: u24) object.Object {
+pub inline fn symbol2(index: usize) object.Object {
     return symbol_of(index,2);
 }
-pub inline fn symbol3(index: u24) object.Object {
+pub inline fn symbol3(index: usize) object.Object {
     return symbol_of(index,3);
 }
-pub inline fn symbol4(index: u24) object.Object {
+pub inline fn symbol4(index: usize) object.Object {
     return symbol_of(index,4);
 }
-pub fn indexSymbol(uniqueNumber:u24) object.Object {
+pub fn indexSymbol(uniqueNumber:usize) object.Object {
     return symbol_of(uniqueNumber,0xff);
 }
 pub const symbols = struct {
@@ -196,7 +196,7 @@ test "symbols match initialized symbol table" {
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     var trp = symbol.theTreap(0);
     try expectEqual(symbols.Object,SymbolTable.internDirect(trp,initialSymbolStrings[initialSymbolStrings.len-1].asObject()));
-    for(initialSymbolStrings) |string,idx|
+    for(initialSymbolStrings,0..) |string,idx|
         try expectEqual(idx+1,symbol.lookup(string.asObject()).hash24());
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");

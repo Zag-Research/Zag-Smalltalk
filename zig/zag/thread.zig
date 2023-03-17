@@ -77,10 +77,10 @@ pub const Thread = extern struct {
     pub inline fn stack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr) void {
+    pub fn check(pc: [*]const Code, sp: [*]Object, hp: Hp, self: *Thread, context: ContextPtr, selectorHash: u32) void {
 //        if (self.ptr().debug) |debugger|
 //            return  @call(tailCall,debugger,.{pc,sp,hp,self,context,selector});
-        @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context});
+        @call(tailCall,pc[0].prim,.{pc+1,sp,hp,self,context,selectorHash});
     }
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context});
