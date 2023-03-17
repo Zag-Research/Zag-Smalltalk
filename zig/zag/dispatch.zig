@@ -306,7 +306,7 @@ fn testYourself(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *T
 }
 fn testAt(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
     _ = .{sp, hp, thread, context};
-if (selectorHash!=symbols.@"at:".hash32()) @panic("hash doesn't match");
+    if (selectorHash!=symbols.@"at:".hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 4;
 }
 test "add methods" {

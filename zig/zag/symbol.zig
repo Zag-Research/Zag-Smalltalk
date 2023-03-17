@@ -132,8 +132,7 @@ pub const SymbolTable = struct {
             // ToDo: add locking
             const size = self.theObject.growSize(objectTreap.elementSize)
                 catch initialSymbolTableSize*objectTreap.elementSize;
-            var context = @import("context.zig").Context.init();
-            var newHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8,&context);
+            var newHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
             var memory = newHeapObject.arrayAsSlice(u8);
             var newTreap = self.treap.resize(memory);
             self.treap = newTreap;
@@ -222,6 +221,5 @@ test "force second allocation of symbol treap" {
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     symbol.loadSymbols(moreSymbolStrings[0..moreSymbolStrings.len-1]);
-    var context = @import("context.zig").Context.init();
-    _ = symbol.arena.allocArray(49,480,u8,&context);
+    _ = symbol.arena.allocArray(49,480,u8);
 }

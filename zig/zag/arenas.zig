@@ -190,9 +190,10 @@ pub fn NurseryArena(comptime nursery_size: comptime_int) type {
 
 pub var globalArena = GlobalArena.init();
 pub const heapAllocationSize = GlobalArena.HeapAllocation.size;
+var junkContext = Context.init();
 pub const GlobalArena = struct {
     const Self = @This();
-    arena: Arena,
+    arena: Arena, // must be first field
     heapAllocations: ?*HeapAllocation,
     freeLists: [nFreeLists]FreeList,
     minFreeList: u7,
@@ -294,16 +295,16 @@ pub const GlobalArena = struct {
         }
         return sum;
     }
-    pub inline fn allocObject(self:*Self, classIndex:ClassIndex, ivSize:usize, context: ContextPtr) Object {
-        var result = self.asArena().allocObject(([0]Object{})[0..],([0]Header{})[0..],context,classIndex,ivSize) catch @panic("allocObject failed");
+    pub inline fn allocObject(self:*Self, classIndex:ClassIndex, ivSize:usize) Object {
+        var result = self.asArena().allocObject(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,ivSize) catch @panic("allocObject failed");
         return result.allocated.asObject();
     }
-    pub inline fn allocArray(self:*Self, classIndex:ClassIndex, arraySize:usize, comptime T: type, context: ContextPtr) Object {
-        var result = self.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],context,classIndex,0,arraySize,T) catch @panic("allocArray failed");
+    pub inline fn allocArray(self:*Self, classIndex:ClassIndex, arraySize:usize, comptime T: type) Object {
+        var result = self.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,0,arraySize,T) catch @panic("allocArray failed");
         return result.allocated.asObject();
     }
-    pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, comptime T2: type, context: ContextPtr) *T {
-        var result = self.asArena().allocStruct(([0]Object{})[0..],([0]Header{})[0..],context,classIndex,T,extra,T2) catch @panic("allocStruct failed");
+    pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
+        var result = self.asArena().allocStruct(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,T,extra,T2) catch @panic("allocStruct failed");
         return @intToPtr(*T,@ptrToInt(result.allocated));
     }
     const HeapAllocation = extern struct {
@@ -461,8 +462,7 @@ test "check GlobalArena alloc object" {
     const err = std.testing.expectError;
     var ga = GlobalArena.init();
     defer ga.deinit();
-    var context = Context.init();
-    var o1 = ga.allocObject(17,5,&context);
+    var o1 = ga.allocObject(17,5);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o1.inHeapSize(),6);
     try ee(ga.freeSpace(),heapAllocationSize-6);
@@ -474,19 +474,19 @@ test "check alloc array" {
     const allocSize = (Header.maxLength>>1)-1;
     var ga = GlobalArena.init();
     defer ga.deinit();
-    var context = Context.init();
-    var o1 = ga.allocArray(17,allocSize,u64,&context);
+    var o1 = ga.allocArray(17,allocSize,u64);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o1.inHeapSize(),allocSize+1);
     const a1 = o1.arrayAsSlice(u64);
     try ee(a1.len,allocSize);
     try ee(ga.freeSpace(),heapAllocationSize-(allocSize+1));
-    var o2 = ga.allocArray(42,allocSize,u64,&context);
+    var o2 = ga.allocArray(42,allocSize,u64);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o2.inHeapSize(),allocSize+1);
     const a2 = o2.arrayAsSlice(u64);
     try ee(a2.len,allocSize);
     try ee(ga.freeSpace(),heapAllocationSize-(allocSize+1)*2);
+    var context = Context.init();
     var result = ga.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],&context,19,42,0,u8) catch @panic("allocArray failed");
     try err(error.NotIndexable,result.allocated.asObject().size());
 }
@@ -512,13 +512,12 @@ test "allocStruct" {
     const ee = std.testing.expectEqual;
     var ga = GlobalArena.init();
     defer ga.deinit();
-    var context = Context.init();
-    var test1 = ga.allocStruct(17,Test_S,0,Object,&context);
+    var test1 = ga.allocStruct(17,Test_S,0,Object);
     try ee(test1.superclass,Nil);
     const h1: HeapPtr = &test1.header;
     try ee(h1.inHeapSize(),4);
     try std.testing.expectError(error.NotIndexable,h1.arrayAsSlice(u8));
-    var test2 = ga.allocStruct(17,Test_S,8,u8,&context);
+    var test2 = ga.allocStruct(17,Test_S,8,u8);
     try ee(test2.methodDict,Nil);
     const h2: HeapPtr = &test2.header;
     try ee(h2.inHeapSize(),7);
@@ -531,7 +530,7 @@ test "check alloc indirect" {
     var ga = GlobalArena.init();
     defer ga.deinit();
     var context = Context.init();
-    var o1 = ga.allocObject(17,5,&context);
+    var o1 = ga.allocObject(17,5);
     try ee(ga.allocatedSpace(),heapAllocationSize);
     try ee(o1.inHeapSize(),6);
     try ee(ga.freeSpace(),heapAllocationSize-6);

@@ -195,22 +195,13 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
+        if (T==Object) return value;
         if (T==HeapConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
         switch (@typeInfo(@TypeOf(value))) {
-            .Int,
-            .ComptimeInt => {
-                return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO);
-            },
-            .Float,
-            .ComptimeFloat => {
-                return cast(@as(f64, value));
-            },
-            .Bool => {
-                return if (value) True else False;
-            },
-            .Null => {
-                return Nil;
-            },
+            .Int, .ComptimeInt => return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO),
+            .Float, .ComptimeFloat => return cast(@as(f64, value)),
+            .Bool => return if (value) True else False,
+            .Null => return Nil,
             .Pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
@@ -222,6 +213,14 @@ pub const Object = packed struct(u64) {
             else => {},
         }
         @compileError("Can't convert \""++@typeName(@TypeOf(value))++"\"");
+    }
+    pub fn new(classIndex: ClassIndex, comptime tup: anytype) Object {
+        @setEvalBranchQuota(20000);
+        const obj = arenas.globalArena.allocObject(classIndex,tup.len);
+        inline for (tup,obj.instVars()) |field,*iVar| {
+            iVar.* = from(field);
+        }
+        return obj;
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         if (!self.isHeapObject() or !other.isHeapObject()) {
@@ -287,6 +286,10 @@ pub const Object = packed struct(u64) {
 
 };
 
+test "new" {
+    const o1 = Object.new(1,.{3,True,Nil});
+    std.debug.print("\nOBJ = {}\n",.{o1});
+}
 test "slicing" {
 //    const testing = std.testing;
 //    try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
