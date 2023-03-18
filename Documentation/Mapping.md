@@ -84,6 +84,9 @@ There are a few significant changes:
 2. `become:` will be implemented with similar forwarding.... When the objects are collected, the references will be updated.
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
+#### Object addresses
+All object addresses actually point to the start of the contents; that is the header word is the word before the referenced address. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelistt(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects in nursery and teen arenas also have the pointer pointing to the beginning of the object, but these should **not** be passed to Zig libraries, because the objects can move.
+
 #### Length
 The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables and the array fits in a heap allocation). If there are both instance variables and indexable values, the index variables are followed by a slice, that may reference the indexable values immediately following, or to a remote array. A remote object with no instance variables will be coded with a length of 0. This means that pure-indexable objects that fit in a heap allocation have no overhead, but large indaxable objects and mixed objects will have the slice.
 

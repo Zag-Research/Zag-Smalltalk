@@ -225,7 +225,7 @@ pub const Age = enum(u4) {
     nursery = Nursery,
     teen = FirstTeen,
     global = Global,
-    aoo = AoO,
+    aoo = AoO, aooMarked = AoOMarked, aooScanned = AoOSccanned,
     static = Static,
     free = Free,
     _,
@@ -245,13 +245,16 @@ pub const Age = enum(u4) {
     const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Static for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub inline fn isAoO(self: Self) bool {
-        return @enumToInt(self)>=AoO;
+        return switch (self) {
+            .aoo, .aooMarked, .aooScanned => true,
+            else => false,
+        };
     }
     pub inline fn isGlobalOrStatic(self: Self) bool {
         return @enumToInt(self)>=Global;
     }
     pub inline fn isGlobal(self: Self) bool {
-        return @enumToInt(self)>=Global and @enumToInt(self)!=Static;
+        return self.isGlobalOrStatic() and @enumToInt(self)!=Static;
     }
     pub inline fn isOnStack(self: Self) bool {
         return @enumToInt(self) <= Stack;
@@ -263,7 +266,10 @@ pub const Age = enum(u4) {
         return @enumToInt(self) <= IncompleteContext;
     }
     pub inline fn marked(self: Self) Self {
-        return @intToEnum(Self,@enumToInt(self) | 1);
+        return switch (self) {
+            .static => self,
+            else => @intToEnum(Self,@enumToInt(self) | 1),
+        };
     }
     pub inline fn scanned(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) | 2);
@@ -419,7 +425,7 @@ pub const Header = packed struct(u64) {
         age: Age,
         length: u12,
 
-    const immediateLength: u16 = 4095;
+    const immediateLength: u16 = 4095; // all immediate objects (except doubles) have this as top 12 bits
     const forwardLength: u16 = 4094;
     pub const maxLength = @min(4093,@import("arenas.zig").heapAllocationSize-1);
     pub const includesHeader = true;

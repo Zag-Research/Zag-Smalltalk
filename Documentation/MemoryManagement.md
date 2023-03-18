@@ -61,6 +61,19 @@ The Global Arena uses a non-moving mark and sweep collector. There is a dedicate
 
 When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
 
+#### Object age fields
+The age field for global objects is as follows:
+8. Global
+9. GlobalMarked
+10. Static
+11. GlobalScanned
+12. AoO
+13. AoOMarked
+14. Free
+15. AoOScanned
+AoO objects are objects within [[MemoryManagement#Array of Objects]].
+Static objects are only scanned once per garbage collection.
+
 ### Global Arena Structure
 The Global Arena uses a binary heap.
 
@@ -92,6 +105,21 @@ The way we had proposed to do it had 4 cases:
 2. if both objects are thread-local and of the same size, then the contents are swapped (thread local guarantees "small")
 3. If at least one of the objects is in the global arena, if the other isn't it is promoted to the global arena (leaving a forwarding pointer behind). Now both objects are in the global arena, and the global collector is asked to do the `become`.
 4. the default handling is to create a become structure which is a table of header+address pairs for the objects from the `become`. Then each header is replaced with a 'become' forwarding pointer. The 'become' forwarding pointer is a length of 4080+offset, where offset is the position in the become structure that should now be used for this object, and the address portion is the address of the become structure. Become structures disappear when the arena in which they reside is collected.
+
+### Array of Objects
+Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situattion, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.
+
+The allocation of an array of objects creates an object that encompasses a sequence of objects of a given size. The objects at those locations are complete object (including headers) and do not have to be homogeneous, but have to be no larger than that size. In fact, when the AoO is first allocated, all the elements will be initialized to Nil. This means that polymorphic dispatch could be used as long as the AoO is created with the largest of the objects. The `at:put:` message will fail if a larger object is provided. Elements also cannot be `Float` (for encoding reasons) but this is not a limitatiion since an array of flosts is already efficiently handled.
+
+The low 6 bits of the hash field for an element are the log2 of the size of the total array and allow accessing its header.
+
+The two advantages of arrays of objects are:
+1. (small) space saving, since we save an indirect pointer, but this can be a 25% saving for, e.g., `Point` or `Association`
+2. significantly better cache locality for `do:` or `collect:`
+
+The disadvantages relate to garbage collection:
+1. if the elements contain pointers, additional scanning may be required
+2. references to elements require a bit more work when being marked
 
 ## Notes
 - when the stack is being copied, 
