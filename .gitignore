@@ -52,3 +52,4 @@ log1.txt
 zig/zag/execute
 zig/fibonacci 
 zig/sieve
+*.a

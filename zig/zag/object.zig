@@ -109,7 +109,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isHeapAllocated(self: Object) bool {
         const tag = self.tagbits();
-        return tag >= Start_of_Pointer_Objects>>48 and  tag <= End_of_Heap_Objects>>48;
+        return tag >= Start_of_Pointer_Objects>>48 and tag <= End_of_Heap_Objects>>48;
     }
     pub inline fn isLiteral(self: Object) bool {
         return !self.isHeapAllocated();
@@ -241,19 +241,24 @@ pub const Object = packed struct(u64) {
         if (sla.len>slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline fn immediate_class(self: Object) ClassIndex {
+    inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         const tag = self.tagbits();
+        if (tag == Start_of_Heap_Objects>>48)
+            return if (full) self.to(HeapPtr).*.getClass() else class.Object_I;
         if (tag >= u64_MINVAL>>48) return class.SmallInteger_I;
-        if (tag == Start_of_Heap_Objects>>48) return class.Object_I;
         if (tag >= Start_of_Blocks>>48) return class.BlockClosure_I;
         if (tag <= Negative_Infinity>>48) return class.Float_I;
-        if (tag == ClassGrouping.Immediates) return @truncate(ClassIndex,self.u() >> 32);
-        @panic("unknown encoding");
+        if (tag != ClassGrouping.Immediates) unreachable;
+        return @truncate(ClassIndex,self.u() >> 32);
+    }
+    pub inline fn immediate_class(self: Object) ClassIndex {
+        return self.which_class(false);
     }
     pub inline fn get_class(self: Object) ClassIndex {
-        const immediate = self.immediate_class();
-        if (immediate > 1) return immediate;
-        return self.to(HeapPtr).*.getClass();
+        return self.which_class(true);
+    }
+    pub fn full_get_class(self: Object) ClassIndex {
+        return self.which_class(true);
     }
     pub inline fn promoteTo(self: Object) !Object {
         return arenas.GlobalArena.promote(self);
@@ -288,7 +293,7 @@ pub const Object = packed struct(u64) {
 
 test "new" {
     const o1 = Object.new(1,.{3,True,Nil});
-    std.debug.print("\nOBJ = {}\n",.{o1});
+    std.debug.print("\nOBJ = {} {}\n",.{o1,o1.full_get_class()});
 }
 test "slicing" {
 //    const testing = std.testing;

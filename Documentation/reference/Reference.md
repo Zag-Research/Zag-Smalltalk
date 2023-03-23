@@ -37,6 +37,7 @@
 - [Writing AArch64 code for Apple](https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms) and [Code in ARM Assembly (for Apple)](https://eclecticlight.co/2021/06/16/code-in-arm-assembly-registers-explained/)
 - [More AArch64 coding advice](https://thinkingeek.com/2016/10/23/exploring-aarch64-assembler-chapter-3/)
 - [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
+- [Computer Organization and Design (book) ARM editions](https://www.academia.edu/keypass/WEp6S1RhVXFYMjhVYUZBTkNCSzJvMnJLRzgyWFFONENMWWh0cVliVGY0OD0tLTExbEJEMUR4RXRLS3BDVDdIbVRYMXc9PQ==--6d9207bbe2f5e142ab68fe654908b0330e763f5d/t/E9U-QZniS8Z-ij15Y/resource/work/31710742/Computer_organization_and_design_arm_edition?auto=download&email_work_card=download-paper)
 - [Application Binary Interface for the Arm® Architecture](https://github.com/ARM-software/abi-aa/) including [Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [AArch64 encoding literals](https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/)
 - [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))

@@ -225,7 +225,7 @@ pub const Age = enum(u4) {
     nursery = Nursery,
     teen = FirstTeen,
     global = Global,
-    aoo = AoO, aooMarked = AoOMarked, aooScanned = AoOSccanned,
+    aoo = AoO, aooMarked = AoOMarked, aooScanned = AoOScanned,
     static = Static,
     free = Free,
     _,
