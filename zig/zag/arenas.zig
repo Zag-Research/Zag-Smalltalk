@@ -216,6 +216,26 @@ pub const GlobalArena = struct {
     pub fn asArena(self: *Self) *Arena {
         return @ptrCast(*Arena,self);
     }
+    const Allocator = std.mem.Allocator;
+    const vtable = Allocator{
+        .alloc = allocForAllocator,
+        .resize = Allocator.noResize,
+        .free = freeForAllocator,
+    };
+    pub fn allocator(self: *Self) Allocator {
+        return .{
+            .ptr = self,
+            .vtable = vtable,
+        };
+    }
+    fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
+        _ = .{ctx,len,ptr_align,ret_addr};
+        unreachable;
+    }
+    fn freeForAllocator (ctx: *anyopaque, buf: []u8, buf_align: u8, ret_addr: usize) void {
+        _ = .{ctx,buf,buf_align,ret_addr};
+        unreachable;
+    }
     fn allocIndirect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
         _ = self;

@@ -97,6 +97,7 @@ There is a complex approach that we considered, but full  `become:` is rare enou
 2. if both are forwarding pointers, we just swap those (after swapping the hashes)
 3. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
 4. otherwise, the larger is copied to a fresh location, the smaller is copied to the old location of the larger (with the rest becoming free space), and a forward to the fresh location replaces the header of the smaller, with the rest becoming free space
+5. We may have to do something to prevent forwarding pointers pointing to forwarding pointers.
 
 This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from thread-local heaps to the global heap.
 
@@ -120,6 +121,14 @@ The two advantages of arrays of objects are:
 The disadvantages relate to garbage collection:
 1. if the elements contain pointers, additional scanning may be required
 2. references to elements require a bit more work when being marked
+
+`at:`, `do:`, `collect:`, etc. for an array of objects return the immediate value if that is what is at the particular position, or a created heap reference.
+`at:put:` verifies that either:
+-  the value is a non-double immediate, or 
+- a heap-allocated object with a length <= the specified limit, and that value is currently on a per-thread heap - because we must move the object into the AoO and we don't move global objects (this should not be an onerous limitation)
+
+## Zig Allocator
+The global heap has an interface to make it work as a Zig Allocator. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
 
 ## Notes
 - when the stack is being copied, 

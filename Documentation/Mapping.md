@@ -24,29 +24,29 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | 8000      | 0000 | 0000 | 0000 | double     -0                 |
 | 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
 | FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0-1    | xxxx | xxxx | xxxx | NaN (unused)                  |
-| FFF2      | 0000 | xxxx | xxxx | reserved (tag = unused)       |
-| FFF2      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF2      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF2      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF2      | 0004 | 0000 | 0000 | False                         |
-| FFF2      | 0005 | 0000 | 0001 | True                          |
-| FFF2      | 0006 | 0000 | 0002 | UndefinedObject               |
-| FFF2      | 0007 | aaxx | xxxx | Symbol                        |
-| FFF2      | 0008 | 00xx | xxxx | Character                     |
-| FFF3      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFF4      | xxxx | xxxx | xxxx | closure-free block            |
-| FFF5      | xxxx | xxxx | xxxx | special thunk                 |
-| FFF6      | xxxx | xxxx | xxxx | heap closure                  |
-| FFF7      | xxxx | xxxx | xxxx | heap object                   |
-| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
-| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
-| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
-| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
+| FFF0      | 0000 | xxxx | xxxx | NaN (unused)                  |
+| FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
+| FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
+| FFF0      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
+| FFF0      | 0004 | 0000 | 0000 | False                         |
+| FFF0      | 0005 | 0000 | 0001 | True                          |
+| FFF0      | 0006 | 0000 | 0002 | UndefinedObject               |
+| FFF0      | 0007 | aaxx | xxxx | Symbol                        |
+| FFF0      | 0008 | 00xx | xxxx | Character                     |
+| FFF1-9    | xxxx | xxxx | xxxx | SmallInteger                  |
+| FFF1      | 0000 | 0000 | 0000 | SmallInteger minVal           |
+| FFF5      | 0000 | 0000 | 0000 | SmallInteger 0                |
+| FFF9      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
+| FFFA      | xxxx | xxxx | xxxx | (unused)                      |
+| FFFB      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFFC      | xxxx | xxxx | xxxx | closure-free block            |
+| FFFD      | xxxx | xxxx | xxxx | non-local thunk               |
+| FFFE      | xxxx | xxxx | xxxx | heap closure                  |
+| FFFF      | xxxx | xxxx | xxxx | heap object                   |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 2, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF0-FFF1 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
-Groups 4 through 7 have the low 48 bits being the address of an object.
-Groups 3 through 6 are all `BlockClosure`s - 3 through 5 being immediate blocks (see [[Mapping#Thunks and Closures]]) and 6 being a full closure
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFFA and FFF0 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+Groups C through F have the low 48 bits being the address of an object.
+Groups B through E are all `BlockClosure`s - B through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
@@ -55,7 +55,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 
 #### Tag values
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
-2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, with a 0 in the high bit, followed by the positive integers with a 1 in the high bit. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
 5. True: This encodes the singleton value `true`
@@ -67,7 +67,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
 1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF2 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
 2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the Method object for the block code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
-3. a special thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced tto zero) are the address of the context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
+3. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced tto zero) are the address of the context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 4. all remaining closures are heap allocated, and contain the following fields in order:
 	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation;
 	2. the address of the Context if there are any non-local returns;
@@ -85,7 +85,7 @@ There are a few significant changes:
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 #### Object addresses
-All object addresses actually point to the start of the contents; that is the header word is the word before the referenced address. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelistt(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects in nursery and teen arenas also have the pointer pointing to the beginning of the object, but these should **not** be passed to Zig libraries, because the objects can move.
+All object addresses point to the header word. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects in nursery and teen arenas should **not** be passed to Zig libraries, because the objects can move.
 
 #### Length
 The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables and the array fits in a heap allocation). If there are both instance variables and indexable values, the index variables are followed by a slice, that may reference the indexable values immediately following, or to a remote array. A remote object with no instance variables will be coded with a length of 0. This means that pure-indexable objects that fit in a heap allocation have no overhead, but large indaxable objects and mixed objects will have the slice.
@@ -158,7 +158,7 @@ If the format=3,7,11, the instance variables are followed by a word with the ind
 The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
 
 #### Age
-The age field encodes the number of times the object has been copied. Stack objects (only Contexts) will always have an age of 0. Nursery heap objects have an age of 1. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see[[MemoryManagement]]).
+The age field encodes the number of times the object has been copied. Stack objects (only Contexts) will always have an age of 0. Nursery heap objects have an age of 1. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see [[MemoryManagement]]).
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
 
