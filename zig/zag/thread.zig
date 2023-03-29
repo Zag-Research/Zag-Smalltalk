@@ -58,8 +58,12 @@ pub const Thread = extern struct {
         @setRuntimeSafety(false);
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
-    inline fn ptr(self: *Self) *Self {
+    pub inline fn noCheck(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(u64,checkMax));
+    }
+    inline fn ptr(self: *Self) *Self {
+        return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.Header)
+                         );
     }
     pub fn deinit(self : *Self) void {
         self.ptr().heap.deinit();
