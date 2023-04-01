@@ -33,10 +33,11 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0006 | 0000 | 0002 | UndefinedObject               |
 | FFF0      | 0007 | aaxx | xxxx | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
-| FFF1-9    | xxxx | xxxx | xxxx | SmallInteger                  |
+| FFF1-8    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF1      | 0000 | 0000 | 0000 | SmallInteger minVal           |
 | FFF5      | 0000 | 0000 | 0000 | SmallInteger 0                |
-| FFF9      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
+| FFF8      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
+| FFF9      | xxxx | xxxx | xxxx | (unused)                      |
 | FFFA      | xxxx | xxxx | xxxx | (unused)                      |
 | FFFB      | xxxx | xxxx | xxxx | immediate thunk               |
 | FFFC      | xxxx | xxxx | xxxx | closure-free block            |

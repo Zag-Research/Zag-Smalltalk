@@ -229,11 +229,17 @@ pub const GlobalArena = struct {
         };
     }
     fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
-        _ = .{ctx,len,ptr_align,ret_addr};
-        unreachable;
+        const self = @ptrCast(*Self, @alignCast(@alignOf(Self), ctx));
+        _ = .{ptr_align,ret_addr};
+        const obj = self.rawAlloc(0,len+@sizeof(*AllocatorKnown)) catch return null;
+        // ToDo: add obj to the allocatorKnown list for its page
+        const array = obj.arrayAsSlice(u8);
+        for (array) |*ptr| ptr.* = undefined;
+        return array.ptr;
     }
     fn freeForAllocator (ctx: *anyopaque, buf: []u8, buf_align: u8, ret_addr: usize) void {
-        _ = .{ctx,buf,buf_align,ret_addr};
+        const self = @ptrCast(*Self, @alignCast(@alignOf(Self), ctx));
+        _ = .{self,buf,buf_align,ret_addr};
         unreachable;
     }
     fn allocIndirect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
@@ -247,6 +253,10 @@ pub const GlobalArena = struct {
     }
     fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
         const self = @ptrCast(*Self,arena);
+        const allocation = try self.rawAlloc(heapSize,arraySize);
+        return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=allocation,};
+    }
+    fn rawAlloc(self: *Self, heapSize: usize, arraySize: usize) ArenaErrors!HeapPtr {
         const totalSize = heapSize + arraySize;
         var index = self.findAllocationList(totalSize);
         if (index==0) return GlobalArena.allocIndirect(arena,sp,hp,context,heapSize,arraySize);

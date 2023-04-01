@@ -30,16 +30,18 @@ pub const Thread = extern struct {
     const teen_size = (threadAvail-nursery_size)/2/@sizeOf(Object);
 
     pub fn new() Self {
-        defer next_thread_number += 1;
         return Self {
-            .next = null,
-            .id = next_thread_number,
+            .next = undefined,
+            .id = undefined,
             .nursery = nurseryType.new(),
 //            .teen1 = arenas.TeenArena.new(),
 //            .teen2 = arenas.TeenArena.new(),
         };
     }
     pub fn init(self: *Self) void {
+        defer next_thread_number += 1;
+        self.next = null;
+        self.id = next_thread_number;
         self.nursery.init();
 //        self.teen1.init(&self.teen2);
 //        self.teen2.init(&self.teen1);
@@ -59,7 +61,7 @@ pub const Thread = extern struct {
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
     pub inline fn noCheck(self: *Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self) & ~@as(u64,checkMax));
+        return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
     inline fn ptr(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.Header)

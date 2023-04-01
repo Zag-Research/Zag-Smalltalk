@@ -26,7 +26,7 @@ Each thread/process has its own nursery heap, typically about 8kib. All allocati
 
 The nursery and teen arenas are both collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack of contexts.
 
-If, after an allocation in the teen arena (from a nursery collection, or a large-object allocation), there is not enough free space in the teen arena for a full nursery collection, then the nursery arena will be collected into the teen arena and then the teen arena will be collected. This is collected into the other teen arena, and if there still isn't enough space for a full copy from the nursery, then the teen arena will be copied into the shared GlobalArena, so it must obtain a lock. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the nursery.
+If, after an allocation in the teen arena (from a nursery collection, or in anticipation of a large-object allocation), there is not enough free space in the currrent teen arena for a full nursery collection, then the nursery arena and current teen arena will be collected into the other teen arena, keeping track of how much space is occuupied by each age. If there still isn't enough space for a full copy from the nursery, then the teen arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtain a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the nursery.
 
 ### Stack of Contexts
 The execution stack is allocated at the top of the nursery arena, and grows down. This means that for both heap and stack allocation, the space between the heap pointer and the stack pointer is what is available. If insufficient space is available then either the contexts will be reified and copied to the teen arena, or the nursery will be collected to the teen arena (which is done depends on what percentage of the nursery arena is currently taken up by the stack).
@@ -43,7 +43,7 @@ The GlobalArena is the eventual repository for all live data. One invariant is t
 1. collections from thread teen arenas
 2. the symbol table
 3. the strings that have the representation of symbols
-4. dispatch tables
+4. dispatch tables & generated code (threaded and native execution)
 5. class objects
 6. large allocations
 7. setting a field in an existing global object to a reference to a local object requires that the local object be promoted (leaving behind forwarding pointers)
@@ -60,6 +60,12 @@ If you have an arena that is accessible to multiple threads, then moving becomes
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
 
 When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
+
+## Zig Allocator
+Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
+
+### Heap object structure
+All objects are allocated with the data followe by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceeded by a slice for the arrray, prreceeded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
 
 #### Object age fields
 The age field for global objects is as follows:
@@ -126,9 +132,6 @@ The disadvantages relate to garbage collection:
 `at:put:` verifies that either:
 -  the value is a non-double immediate, or 
 - a heap-allocated object with a length <= the specified limit, and that value is currently on a per-thread heap - because we must move the object into the AoO and we don't move global objects (this should not be an onerous limitation)
-
-## Zig Allocator
-The global heap has an interface to make it work as a Zig Allocator. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
 
 ## Notes
 - when the stack is being copied, 

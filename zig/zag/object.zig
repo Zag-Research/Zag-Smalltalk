@@ -15,8 +15,8 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
-inline fn o2(c: ClassIndex, comptime h: comptime_int) u64 {
-    return (((@as(u64,ClassGrouping.Immediates)<<16)+c)<<32)+h;
+inline fn oImm(c: ClassIndex, comptime h: comptime_int) u64 {
+    return (((@as(u64,Group.Immediates)<<16)+c)<<32)+h;
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    0xfff0000000000000;
@@ -26,12 +26,12 @@ const Start_of_Pointer_Objects: u64 = 0xfff4_000000000000;
 const End_of_Blocks: u64 =            0xfff6_ffffffffffff;
 const Start_of_Heap_Objects: u64 =    0xfff7_000000000000;
 const End_of_Heap_Objects: u64   =    0xfff7_ffffffffffff;
-pub const False             = of(o2(class.False_I,0x0));
-pub const True              = of(o2(class.True_I,0x1));
-pub const Nil               = of(o2(class.UndefinedObject_I,0x2));
-pub const NotAnObject       = of(o2(class.UndefinedObject_I,0x3)); // never a valid object... should never be visible to managed language
-const Symbol_Base           =    o2(class.Symbol_I,0);
-const Character_Base        =    o2(class.Character_I,0);
+pub const False             = of(oImm(class.False_I,0x0));
+pub const True              = of(oImm(class.True_I,0x1));
+pub const Nil               = of(oImm(class.UndefinedObject_I,0x2));
+pub const NotAnObject       = of(oImm(class.UndefinedObject_I,0x3)); // never a valid object... should never be visible to managed language
+const Symbol_Base           =    oImm(class.Symbol_I,0);
+const Character_Base        =    oImm(class.Character_I,0);
 pub const u64_MINVAL            =    0xfff8_000000000000;
 const u64_ZERO              =    0xfffc_000000000000;
 pub const u64_ZERO2              =    u64_MINVAL;
@@ -46,17 +46,23 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, _ };
-pub const ClassGrouping = enum(u16) {
-    immediates = Immediates, immediateThunk, closureFreeBlock, selfThunk, heapClosure, heap, smallIntMin, smallInt0 = 0xfffc, _,
-    const Immediates = 0xfff2;
+pub const Group = enum(u16) {
+    immediates = Immediates, smallIntMin, smallInt0 = 0xfff5, unused1 = 0xfff9, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
+    const Immediates = 0xfff0;
+    inline fn base(cg: Self) u64 {
+        return @enumToInt(cg)<<48;
+    }
+    inline fn tag(cg: Self) u16 {
+        return @enumToInt(cg);
+    }
 };
 pub const Object = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
     l2: Level2,
-    signMantissa: ClassGrouping,
+    signMantissa: Group,
     pub inline fn makeImmediate(cls: class.ClassIndex, low32: u32) Object {
-        return cast(low32|((@as(u64,ClassGrouping.Immediates<<16)+cls)<<32));
+        return cast(low32|((@as(u64,Group.Immediates<<16)+cls)<<32));
     }
     pub inline fn cast(v: anytype) Object {
         return @bitCast(Object,v);
@@ -248,7 +254,7 @@ pub const Object = packed struct(u64) {
         if (tag >= u64_MINVAL>>48) return class.SmallInteger_I;
         if (tag >= Start_of_Blocks>>48) return class.BlockClosure_I;
         if (tag <= Negative_Infinity>>48) return class.Float_I;
-        if (tag != ClassGrouping.Immediates) unreachable;
+        if (tag != Group.Immediates) unreachable;
         return @truncate(ClassIndex,self.u() >> 32);
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
