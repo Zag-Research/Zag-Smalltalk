@@ -1,0 +1,1 @@
+#define kCCSuccess 0

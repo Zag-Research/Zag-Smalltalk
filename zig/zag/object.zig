@@ -16,26 +16,27 @@ inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
 inline fn oImm(c: ClassIndex, comptime h: comptime_int) u64 {
-    return (((@as(u64,Group.Immediates)<<16)+c)<<32)+h;
+    return o(.immediates)|@as(u64,c)<<32|h;
+}
+inline fn o(g:Group) u64 {
+    return g.base();
 }
 pub const ZERO              = of(0);
-const Negative_Infinity: u64     =    0xfff0000000000000;
+const Negative_Infinity: u64     =    o(.immediates); //0xfff0000000000000;
 // unused NaN fff00-fff4f
-const Start_of_Blocks: u64 =          0xfff3_000000000000;
-const Start_of_Pointer_Objects: u64 = 0xfff4_000000000000;
-const End_of_Blocks: u64 =            0xfff6_ffffffffffff;
-const Start_of_Heap_Objects: u64 =    0xfff7_000000000000;
-const End_of_Heap_Objects: u64   =    0xfff7_ffffffffffff;
+const Start_of_Blocks: u64 =          o(.immediateThunk);
+const Start_of_Pointer_Objects: u64 = o(.closureFreeBlock);
+const Start_of_Heap_Objects: u64 =    o(.heap);
 pub const False             = of(oImm(class.False_I,0x0));
 pub const True              = of(oImm(class.True_I,0x1));
 pub const Nil               = of(oImm(class.UndefinedObject_I,0x2));
 pub const NotAnObject       = of(oImm(class.UndefinedObject_I,0x3)); // never a valid object... should never be visible to managed language
 const Symbol_Base           =    oImm(class.Symbol_I,0);
 const Character_Base        =    oImm(class.Character_I,0);
-pub const u64_MINVAL            =    0xfff8_000000000000;
-const u64_ZERO              =    0xfffc_000000000000;
+pub const u64_MINVAL            =    o(.smallInt);
+const u64_ZERO              =    o(.smallInt0);
 pub const u64_ZERO2              =    u64_MINVAL;
-const u64_MAXVAL            =    0xffff_ffffffffffff;
+const u64_MAXVAL            =    o(.unused1)-1;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
 pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
 pub const invalidHeapPointer = of(Start_of_Heap_Objects);
@@ -47,22 +48,22 @@ pub fn fromLE(comptime T: type, v: T) Object {
 pub const compareObject = Object.compare;
 pub const Level2 = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, _ };
 pub const Group = enum(u16) {
-    immediates = Immediates, smallIntMin, smallInt0 = 0xfff5, unused1 = 0xfff9, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
-    const Immediates = 0xfff0;
+    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, unused1 = 0xfff9, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
+    const Self = @This();
     inline fn base(cg: Self) u64 {
-        return @enumToInt(cg)<<48;
+        return @as(u64,@enumToInt(cg))<<48;
     }
-    inline fn tag(cg: Self) u16 {
+    inline fn u(cg: Self) u16 {
         return @enumToInt(cg);
     }
 };
 pub const Object = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
-    l2: Level2,
-    signMantissa: Group,
+    l2: ClassIndex,
+    tag: Group,
     pub inline fn makeImmediate(cls: class.ClassIndex, low32: u32) Object {
-        return cast(low32|((@as(u64,Group.Immediates<<16)+cls)<<32));
+        return cast(low32|Group.immediates.base()|@as(u64,cls)<<32);
     }
     pub inline fn cast(v: anytype) Object {
         return @bitCast(Object,v);
@@ -86,7 +87,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(i64,self);
     }
     pub inline fn tagbits(self: Object) u16 {
-        return @truncate(u16,self.u()>>48);
+        return @enumToInt(self.tag);
     }
     pub inline fn tagbitsL(self: Object) u32 {
         return @truncate(u32,self.u()>>32);
@@ -95,13 +96,13 @@ pub const Object = packed struct(u64) {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object) bool {
-        return self.tagbits() >= u64_MINVAL>>48;
+        return self.tag.u() >= Group.smallInt.u() and self.tag.u() < Group.unused1.u();
     }
     pub inline fn isNat(self: Object) bool {
-        return self.tagbits() >= u64_ZERO>>48;
+        return self.tag.u() >= Group.smallInt0.u() and self.tag.u() < Group.unused1.u();
     }
     pub inline fn isDouble(self: Object) bool {
-        return self.tagbits() <= Negative_Infinity>>48;
+        return self.u() <= Negative_Infinity;
     }
     pub inline fn isBool(self: Object) bool {
         const tag = self.tagbitsL();
@@ -111,18 +112,18 @@ pub const Object = packed struct(u64) {
         return self.tagbitsL() == Nil.tagbitsL();
     }
     pub inline fn isHeapObject(self: Object) bool {
-        return self.tagbits() == Start_of_Heap_Objects>>48;
+        return self.tag == Group.heap;
     }
     pub inline fn isHeapAllocated(self: Object) bool {
         const tag = self.tagbits();
-        return tag >= Start_of_Pointer_Objects>>48 and tag <= End_of_Heap_Objects>>48;
+        return tag >= Start_of_Pointer_Objects>>48;
     }
     pub inline fn isLiteral(self: Object) bool {
         return !self.isHeapAllocated();
     }
     pub inline fn isBlock(self: Object) bool {
         const tag = self.tagbits();
-        return tag >= Start_of_Blocks>>48 and  tag <= End_of_Blocks>>48;
+        return tag >= Start_of_Blocks>>48 and !self.isHeapObject();
     }
     pub inline fn isIndexSymbol(self: Object) bool {
         return (self.u()>>24)==(symbol.indexSymbol(0).u()>>24);
@@ -248,14 +249,13 @@ pub const Object = packed struct(u64) {
         return ord.eq;
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
-        const tag = self.tagbits();
-        if (tag == Start_of_Heap_Objects>>48)
-            return if (full) self.to(HeapPtr).*.getClass() else class.Object_I;
-        if (tag >= u64_MINVAL>>48) return class.SmallInteger_I;
-        if (tag >= Start_of_Blocks>>48) return class.BlockClosure_I;
-        if (tag <= Negative_Infinity>>48) return class.Float_I;
-        if (tag != Group.Immediates) unreachable;
-        return @truncate(ClassIndex,self.u() >> 32);
+        return switch (self.tag) {
+            .immediateThunk, .closureFreeBlock, .nonLocalThunk, .heapClosure => class.BlockClosure_I,
+            .immediates => self.l2,
+            .heap => if (full) self.to(HeapPtr).*.getClass() else class.Object_I,
+            .unused1, .unused2 => unreachable,
+            else => |tag| if (tag.u() <= Group.immediates.u()) class.Float_I else class.SmallInteger_I,
+        };
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
@@ -292,7 +292,7 @@ pub const Object = packed struct(u64) {
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object{.signMantissa =.smallInt0, .h0 = f0, .h1 = f1, .l2 = @intToEnum(Level2,f2)};
+        return Object{.tag =.smallInt0, .h0 = f0, .h1 = f1, .l2 = f2};
     }
 
 };

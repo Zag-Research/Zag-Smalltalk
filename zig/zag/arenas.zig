@@ -23,10 +23,18 @@ const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
 const Context = @import("context.zig").Context;
 const ContextPtr = @import("context.zig").ContextPtr;
+const targetImplementation = switch (@import("builtin").os.tag) {
+    .macos => @import("os/macos.zig"),
+//    .linux => @import("os/linux.zig"),
+//    .windows => @import("os/windows.zig"),
+    else => unreachable,
+};
+const blockAllocation = targetImplementation.BlockAllocation(1<<16).new();
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
 }
 test "arenaFree" {
+    _ = blockAllocation;
     const testing = std.testing;
     const stack: [10]Object align(8) =undefined;
     const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
@@ -231,7 +239,7 @@ pub const GlobalArena = struct {
     fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
         const self = @ptrCast(*Self, @alignCast(@alignOf(Self), ctx));
         _ = .{ptr_align,ret_addr};
-        const obj = self.rawAlloc(0,len+@sizeof(*AllocatorKnown)) catch return null;
+        const obj = self.rawAlloc(0,len+@sizeOf(*Allocator)) catch return null;
         // ToDo: add obj to the allocatorKnown list for its page
         const array = obj.arrayAsSlice(u8);
         for (array) |*ptr| ptr.* = undefined;
@@ -259,7 +267,7 @@ pub const GlobalArena = struct {
     fn rawAlloc(self: *Self, heapSize: usize, arraySize: usize) ArenaErrors!HeapPtr {
         const totalSize = heapSize + arraySize;
         var index = self.findAllocationList(totalSize);
-        if (index==0) return GlobalArena.allocIndirect(arena,sp,hp,context,heapSize,arraySize);
+// ToDo        if (index==0) return GlobalArena.allocIndirect(self,sp,hp,context,heapSize,arraySize);
         const allocation: []Header = (
             while (index<self.freeLists.len) : (index += 1) {
                 if (self.freeLists[index].getSlice()) |slice| break slice;
@@ -270,7 +278,7 @@ pub const GlobalArena = struct {
             const offs = @ptrCast([*]u64,allocation.ptr)+heapSize-2;
             offs[1] = @ptrToInt(offs+2);
         }
-        return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=@ptrCast(HeapPtr,allocation.ptr),};
+        return @ptrCast(HeapPtr,allocation.ptr);
     }
     fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) ArenaErrors!void {
         const self = @ptrCast(*Self,arena);
