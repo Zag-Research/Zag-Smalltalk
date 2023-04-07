@@ -56,7 +56,7 @@ fn reserve(comptime T: type) ![]T {
     std.debug.print("addr={x}, first={x}, last={x}, end={x}, last-first={x}\n",.{addr,first,last,end,last-first});
     _ = @cmpxchgStrong(@TypeOf(std.heap.next_mmap_addr_hint), &std.heap.next_mmap_addr_hint, hint, @intToPtr(@TypeOf(next_mmap_addr_hint),last), .Monotonic, .Monotonic);
     if (addr<first) os.munmap(slice[0..first-addr]);
-    if (last<end) os.munmap(@intToPtr([*]align(4096)u8,last)[0..end-last]);
+    if (last<end) os.munmap(@intToPtr([*]align(mem.page_size)u8,last)[0..end-last]);
     const res = @intToPtr([*]T,first);
     return res[0..(end-first)/size];
 }
@@ -78,6 +78,10 @@ test "nothing" {
     var block5 = try blockAllocator.alloc();
     var block6 = try blockAllocator.alloc();
     var block7 = try blockAllocator.alloc();
+    const other3 = try os.mmap(null,100,os.PROT.READ | os.PROT.WRITE,os.MAP.PRIVATE | os.MAP.ANONYMOUS,-1,0,);
+    const other4 = try os.mmap(null,100,os.PROT.READ | os.PROT.WRITE,os.MAP.PRIVATE | os.MAP.ANONYMOUS,-1,0,);
+    std.debug.print("other3.ptr={x} len={}\n",.{@ptrToInt(other3.ptr),other3.len});
+    std.debug.print("other4.ptr={x} len={}\n",.{@ptrToInt(other4.ptr),other4.len});
     block0[5]=42;
     std.debug.print("blocks = {any}\n",.{[_]*Test{block0,block1,block2,block3,block4,}});
     std.debug.print("blocks = {any}\n",.{[_]*Test{block5,block6,block7,}});
