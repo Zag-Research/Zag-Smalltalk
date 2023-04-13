@@ -23,18 +23,13 @@ const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
 const Context = @import("context.zig").Context;
 const ContextPtr = @import("context.zig").ContextPtr;
-const targetImplementation = switch (@import("builtin").os.tag) {
-    .macos => @import("os/macos.zig"),
-//    .linux => @import("os/linux.zig"),
-//    .windows => @import("os/windows.zig"),
-    else => unreachable,
-};
-const blockAllocation = targetImplementation.BlockAllocation(1<<16).new();
+const os = @import("os.zig");
+const blockAllocation = os.BlockAllocation([1<<16]u64).new();
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
 }
 test "arenaFree" {
-    _ = blockAllocation;
+    _ = try blockAllocation;
     const testing = std.testing;
     const stack: [10]Object align(8) =undefined;
     const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
@@ -65,15 +60,15 @@ test "object in nursery arena" {
     const ivs = o.instVars();
     try std.testing.expect(ivs.len==5);
 }
-const ArenaErrors = error {Fail,HeapFull,NotIndexable};
-const AllocResult = struct {
+pub const ArenaErrors = error {Fail,HeapFull,NotIndexable};
+pub const AllocResult = struct {
     sp: [*]Object,
     hp: HeaderArray,
     context: ContextPtr,
     age: Age,
     allocated: HeapPtr,
 };
-const AllocReturn = ArenaErrors!AllocResult;
+pub const AllocReturn = ArenaErrors!AllocResult;
 pub const Arena = extern struct {
     const Self = @This();
     alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) ArenaErrors!AllocResult,
@@ -341,7 +336,7 @@ pub const GlobalArena = struct {
         var result = self.asArena().allocArray(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,0,arraySize,T) catch @panic("allocArray failed");
         return result.allocated.asObject();
     }
-    pub inline fn allocStruct(self : *Self, classIndex : class.ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
+    pub inline fn allocStruct(self:*Self, classIndex:ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
         var result = self.asArena().allocStruct(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,T,extra,T2) catch @panic("allocStruct failed");
         return @intToPtr(*T,@ptrToInt(result.allocated));
     }

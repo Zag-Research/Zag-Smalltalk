@@ -13,6 +13,7 @@
 
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
+- [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
 
 ### Memory Management
 #### mimalloc

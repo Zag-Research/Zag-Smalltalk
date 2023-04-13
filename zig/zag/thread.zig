@@ -1,11 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
-var next_thread_number : u64 = 0;
+const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const Object = @import("object.zig").Object;
 const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const dispatch = @import("dispatch.zig");
 const HeapPtr = heap.HeapPtr;
+const Age = heap.Age;
 const ex = @import("execute.zig");
 const Hp = ex.Hp;
 const Code = ex.Code;
@@ -17,34 +18,49 @@ test "force dispatch load" {
 }
 const thread_total_size = 64*1024; //std.mem.page_size;
 pub const Thread = extern struct {
-    next: ?*Self,
-    id : u64,
-    nursery : nurseryType, // align(@alignOf(arenas.NurseryArena)),
-//    teen1 : arenas.TeenArena,
-//    teen2 : arenas.TeenArena,
+    h: ThreadHeader,
+    private: [nursery_size+teen_size+teen_size] Object,
     const Self = @This();
-    const nurseryType = arenas.NurseryArena(nursery_size);
-    const thread_size = @sizeOf(u64)+@sizeOf(?*Self);
-    const threadAvail = thread_total_size-thread_size;
+    const threadAvail = thread_total_size-@sizeOf(ThreadHeader);
     const nursery_size = @min(threadAvail/7/@sizeOf(Object),heap.Header.maxLength);
     const teen_size = (threadAvail-nursery_size)/2/@sizeOf(Object);
-
+    const ThreadHeader = extern struct {
+        next: ?*Self,
+        id : u64,
+        hp: HeaderArray,
+        sp: [*]Object,
+        currTeen: HeaderArray,
+        currHp: HeaderArray,
+        currEnd: HeaderArray,
+        otherTeen: HeaderArray,
+        fn init(t:*Self) ThreadHeader {
+            const h = @ptrCast(HeaderArray,&t.private[0]);
+            cons nursery_end = h+nursery_size;
+            const at = allThreads;
+            return Self {
+                .next = at,
+                .id = if (at) |p| p.h.id+1 else 1,
+                .hp = h,
+                .sp = @ptrCast([*]Object,nursery_end),
+                .currTeen = nursery_end,
+                .currHp = nursery_end,
+                .currEnd = h+teen_size, // leaving enough space for full nursery copy
+                .otherTeen = nursery_end+teen_size,
+            };
+        }
+    };
+    var allThreads: ?*Self;
     pub fn new() Self {
         return Self {
-            .next = undefined,
-            .id = undefined,
-            .nursery = nurseryType.new(),
-//            .teen1 = arenas.TeenArena.new(),
-//            .teen2 = arenas.TeenArena.new(),
+            .header = undefined,
+            .private = undefined,
         };
     }
     pub fn init(self: *Self) void {
-        defer next_thread_number += 1;
-        self.next = null;
-        self.id = next_thread_number;
-        self.nursery.init();
-//        self.teen1.init(&self.teen2);
-//        self.teen2.init(&self.teen1);
+        while (true) {
+            self.h = t=ThreadHeader.init(self);
+            if (@cmpxchgWeak(*Self,&allThreads,self.h.next,self,SeqCst,SeqCst)==null) break;
+        }
     }
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,0x7fffffffffffffff);
@@ -90,6 +106,36 @@ pub const Thread = extern struct {
     }
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context});
+    }
+    pub alloc(self: *Self, sp: [*]Object, hp: Hp, context: ContextPtr, size: u64) arena.AllocReturn {
+        {
+            const result = hp+size;
+            const newHp = result+1;
+            if (newHp<@ptrCast(Hp,sp)) { // leave at least 1 word on stack to save ptr
+                return .{
+                    .sp = sp,
+                    .hp = newHp,
+                    .context = context,
+                    .age = .nursery,
+                    .allocated = @ptrCast(heap.HeapPtr,result),
+                };
+            }
+        }
+        {
+            const result = self.h.currHp+size;
+            const newHp = result+1;
+            if (newHp<self.h.currEnd) {
+                self.h.currHp = newHp;
+                return .{
+                    .sp = sp,
+                    .hp = hp,
+                    .context = context,
+                    .age = .nursery,
+                    .allocated = @ptrCast(heap.HeapPtr,result),
+                };
+            }
+        }
+        @panic("can't alloc without collect");
     }
 };
 test "check flag" {

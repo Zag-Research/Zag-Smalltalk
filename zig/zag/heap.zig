@@ -221,28 +221,26 @@ test "header formats" {
 }
 pub const Age = enum(u4) {
     incompleteContext = IncompleteContext,
-    stack = Stack,
-    nursery = Nursery,
-    teen = FirstTeen,
+    nursery = NurseryFirst,
     global = Global,
     aoo = AoO, aooMarked = AoOMarked, aooScanned = AoOScanned,
     static = Static,
+    aStruct = Struct,
     free = Free,
     _,
-    const IncompleteContext: u1 = 0;
-    const Stack: u4 = 1;
-    const Nursery: u4 = 2;
-    const FirstTeen: u4 = 3;
-    const LastTeen: u4 = 7;
+    const NurseryFirst: u4 = 0;
+    const NurseryLast: u4 = 5;
+    const IncompleteContext: u1 = 6;
+    const Static: u4 = 7;
     const Global: u4 = 8;
     const GlobalMarked: u4 = 9;
-    const Static: u4 = 10;
+    const Struct: u4 = 10;
     const GlobalScanned: u4 = 11;
     const AoO : u4 = 12;
     const AoOMarked : u4 = 13;
     const Free : u4 = 14;
     const AoOScanned : u4 = 15;
-    const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Static for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
+    const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub inline fn isAoO(self: Self) bool {
         return switch (self) {
@@ -250,25 +248,36 @@ pub const Age = enum(u4) {
             else => false,
         };
     }
-    pub inline fn isGlobalOrStatic(self: Self) bool {
-        return @enumToInt(self)>=Global;
+    pub inline fn isUnmoving(self: Self) bool {
+        return switch (self) {
+            .static ... .aooScanned => true,
+            else => false,
+        }
+        return @enumToInt(self)>=Static;
     }
     pub inline fn isGlobal(self: Self) bool {
-        return self.isGlobalOrStatic() and @enumToInt(self)!=Static;
+        return switch (self) {
+            .global ... .aooScanned => true,
+            else => false,
+        }
     }
-    pub inline fn isOnStack(self: Self) bool {
-        return @enumToInt(self) <= Stack;
+    pub inline fn isNonHeap(self: Self) bool {
+        return switch (self) {
+            .static,.incompleteContext => true,
+            else => false,
+        }
     }
-    pub inline fn isStack(self: Self) bool {
-        return @enumToInt(self) == Stack;
+    pub inline fn isStatic(self: Self) bool {
+        return self == static;
     }
     pub inline fn isIncompleteContext(self: Self) bool {
-        return @enumToInt(self) <= IncompleteContext;
+        std.debug.assert(@enumToInt(self)<Global);
+        return @enumToInt(self) >= IncompleteContext;
     }
     pub inline fn marked(self: Self) Self {
         return switch (self) {
-            .static => self,
-            else => @intToEnum(Self,@enumToInt(self) | 1),
+            .global,.aoo => @intToEnum(Self,@enumToInt(self) | 1),
+            else => self,
         };
     }
     pub inline fn scanned(self: Self) Self {

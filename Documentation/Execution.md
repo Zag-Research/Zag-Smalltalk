@@ -46,7 +46,7 @@ When m3 has called m2 has called m1 has called m0, but we haven't created a Cont
 | object | m0 self                  |                                                           |
 | object | m0 parameters            |                                                           |
 | ...    | m0 temps                 | <--- sp                                                   |
-Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The header need be created only if they are promoted to the heap (via a spill or explicit reference).
+Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The partial header is also at the front of the object, rather than the end. The context is only turned into a proper object if it is promoted to the heap (via a spill or explicit reference).
 
 A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success. This will be followed by the thread-code to create the context.
 

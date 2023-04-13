@@ -28,8 +28,6 @@ pub const Context = struct {
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
-    size: u64,
-    addr: *Object,
     temps: [1]Object,
     const Self = @This();
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) MethodReturns;

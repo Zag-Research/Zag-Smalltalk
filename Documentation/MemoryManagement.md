@@ -9,12 +9,13 @@ AST Smalltalk has several features that minimize garbage creation:
 - SmallIntegers have a wide range (2^51) so extension to BigIntegers (which would be heap-allocated) is rare
 - BlockClosures are stack allocated
 - code blocks are generated outside the heap
+- several kinds of common BlockClosures are encoded as immediate values
 
 AST Smalltalk has several features that minimize the amount of work required by garbage collection:
 - all interpreter stacks and code addresses are outside the range of valid heap pointers, so by being careful to never save anything in a stack frame that looks like a heap reference, no scanning is required for the interpreter stack;
 - scanning for roots can proceed very quickly. A single comparison filters all non-heap, non-float values, and if necessary a second filters the floats
 - the format of indexable objects encodes if they are pointer-free, so don't need to be scanned
-- each thread has its own nursery and teen heaps, so there is no contention on allocation
+- each thread has its own nursery heaps, so there is no contention on allocation
 - the list of weak objects that must be scanned at the end of the collection is outside the heap
 
 ## Heap structure
@@ -22,25 +23,31 @@ AST Smalltalk has several features that minimize the amount of work required by 
 The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself and the global collector thread) and a global arena accessible by all threads.
 
 ## Per-Thread Arenas
-Each thread/process has its own nursery heap, typically about 8kib. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the teen arena. Because these are thread-private, there is no locking required for allocation in the nursery or teen arenas. The teen arena is several times larger than the nursery.
+Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena.
 
-The nursery and teen arenas are both collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack of contexts.
+The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack of contexts.
 
-If, after an allocation in the teen arena (from a nursery collection, or in anticipation of a large-object allocation), there is not enough free space in the currrent teen arena for a full nursery collection, then the nursery arena and current teen arena will be collected into the other teen arena, keeping track of how much space is occuupied by each age. If there still isn't enough space for a full copy from the nursery, then the teen arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtain a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the nursery.
+If, after an allocation in the nursery, there is not enough free space in the currrent arena to copy the entire stack, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occuupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtain a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the stack.
 
 ### Stack of Contexts
-The execution stack is allocated at the top of the nursery arena, and grows down. This means that for both heap and stack allocation, the space between the heap pointer and the stack pointer is what is available. If insufficient space is available then either the contexts will be reified and copied to the teen arena, or the nursery will be collected to the teen arena (which is done depends on what percentage of the nursery arena is currently taken up by the stack).
+The execution stack is allocated at the top of the nursery arena, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap.
 
-The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the top of the nursery arena.
+The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the top of the stack area.
 
 On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
+
+#### Object age fields
+The age field for local objects is as follows:
+- 0 Incomplete Context object on the stack
+- 1 Allocated in Nursery
+- 7 Nursery object about to be promoted to Global Arean
 
 ### Copying Collector
 Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-thread arena, where no locks are required. This is why Zag uses this for per-thread arenas.
 
 ## Global Arena
-The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery or teen arena, so such objects must be promoted to the GlobalArena (this is the reason for a nursery collection before any teen collection). There are several sources of this data:
-1. collections from thread teen arenas
+The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery arena, so such objects must be promoted to the GlobalArena. There are several sources of this data:
+1. collections from thread arenas
 2. the symbol table
 3. the strings that have the representation of symbols
 4. dispatch tables & generated code (threaded and native execution)
@@ -61,11 +68,13 @@ The Global Arena uses a non-moving mark and sweep collector. There is a dedicate
 
 When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
 
+When creating a new object in the global arena if the global collector is currently marking, the age will be set to *marked* and *scanned*, otherwise it will be set to unmarked.
+
 ## Zig Allocator
 Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
 
 ### Heap object structure
-All objects are allocated with the data followe by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceeded by a slice for the arrray, prreceeded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
+All objects are allocated with the data followed by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceeded by a slice for the arrray, preceeded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
 
 #### Object age fields
 The age field for global objects is as follows:
