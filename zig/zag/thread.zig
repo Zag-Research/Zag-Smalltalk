@@ -35,7 +35,7 @@ pub const Thread = extern struct {
         otherTeen: HeaderArray,
         fn init(t:*Self) ThreadHeader {
             const h = @ptrCast(HeaderArray,&t.private[0]);
-            cons nursery_end = h+nursery_size;
+            const nursery_end = h+nursery_size;
             const at = allThreads;
             return Self {
                 .next = at,
@@ -49,7 +49,7 @@ pub const Thread = extern struct {
             };
         }
     };
-    var allThreads: ?*Self;
+    var allThreads: ?*Self = null;
     pub fn new() Self {
         return Self {
             .header = undefined,
@@ -58,7 +58,7 @@ pub const Thread = extern struct {
     }
     pub fn init(self: *Self) void {
         while (true) {
-            self.h = t=ThreadHeader.init(self);
+            self.h = ThreadHeader.init(self);
             if (@cmpxchgWeak(*Self,&allThreads,self.h.next,self,SeqCst,SeqCst)==null) break;
         }
     }
@@ -107,7 +107,7 @@ pub const Thread = extern struct {
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context});
     }
-    pub alloc(self: *Self, sp: [*]Object, hp: Hp, context: ContextPtr, size: u64) arena.AllocReturn {
+    pub fn alloc(self: *Self, sp: [*]Object, hp: Hp, context: ContextPtr, size: u64) arena.AllocReturn {
         {
             const result = hp+size;
             const newHp = result+1;

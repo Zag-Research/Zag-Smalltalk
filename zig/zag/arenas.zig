@@ -24,7 +24,7 @@ const HeapPtr = @import("heap.zig").HeapPtr;
 const Context = @import("context.zig").Context;
 const ContextPtr = @import("context.zig").ContextPtr;
 const os = @import("os.zig");
-const blockAllocation = os.BlockAllocation([1<<16]u64).new();
+const blockAllocation = os.BlockAllocation([1<<16]u8).new();
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
     return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
 }

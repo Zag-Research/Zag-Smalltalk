@@ -9,6 +9,7 @@ const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
+const indexSymbol = object.indexSymbol;
 const Context = @import("context.zig").Context;
 const TestExecution = @import("context.zig").TestExecution;
 const arenas = @import("arenas.zig");
@@ -20,7 +21,6 @@ const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
-const indexSymbol = @import("symbol.zig").indexSymbol;
 pub const tailCall: std.builtin.CallModifier = .always_tail;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = void;
@@ -523,7 +523,7 @@ pub const controlPrimitives = struct {
         newSp[0]=context.getTemp(0);
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
     }
-    fn lookupMethod(cls: class.ClassIndex,selector: u64) CompiledMethodPtr {
+    fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
         _ = cls;
         _ = selector;
         @panic("unimplemented");

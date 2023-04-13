@@ -10,51 +10,60 @@ const symbols = symbol.symbols;
 //const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
+const assert = std.debug.assert;
+fn consistent(l: object.Level2,i: ClassIndex) void {
+    assert(@enumToInt(l)==i);
+}
+test "consistency" {
+    assert(object.ClassIndex==ClassIndex);
+    consistent(.Object,Object_I);
+    consistent(.SmallInteger==SmallInteger_I);
+}
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has fewer than 18000 (including metaclasses), so shouldn't be a problem
-pub const Object_I: ClassIndex = 1;
-pub const SmallInteger_I: ClassIndex = 2;
-pub const Float_I: ClassIndex = 3;
-const c2o: ClassIndex = 4;
-pub const False_I = c2o+0;
-pub const True_I = c2o + 1;
-pub const UndefinedObject_I = c2o + 2;
-pub const Symbol_I = c2o + 3;
-pub const Character_I = c2o + 4;
-const c3o = c2o + 5;
-pub const Array_I = c3o + 0;
-pub const String_I = c3o + 1;
-pub const Class_I = c3o + 2;
-pub const Metaclass_I = c3o + 3;
-pub const Behavior_I = c3o + 4;
-pub const BlockClosure_I = c3o + 5;
-pub const Method_I = c3o + 6;
-pub const MethodDictionary_I = c3o + 7;
-pub const System_I = c3o + 8;
-pub const Return_I = c3o + 9;
-pub const Send_I = c3o + 10;
-pub const Literal_I = c3o + 11;
-pub const Load_I = c3o + 12;
-pub const Store_I = c3o + 13;
-pub const SymbolTable_I = c3o + 14;
-pub const Dispatch_I = c3o + 15;
-pub const ClassTable_I = c3o + 16;
-pub const Magnitude_I = c3o + 17;
-pub const Number_I = c3o + 18;
-pub const ClassDescription_I = c3o + 19;
-pub const Boolean_I = c3o + 20;
-pub const Context_I = c3o + 21;
-pub const CatchingContext_I = c3o + 22;
-pub const EnsuringContext_I = c3o + 23;
-pub const CompiledMethod_I = c3o + 24;
-pub const ByteArray_I = c3o + 25;
+pub const Object_I = object.Object_I;
+pub const SmallInteger_I = object.SmallInteger_I;
+pub const Float_I = object.Float_I;
+pub const False_I = object.False_I;
+pub const True_I = object.True_I;
+pub const UndefinedObject_I = object.UndefinedObject_I;
+pub const Symbol_I = object.Symbol_I;
+pub const Character_I = object.Character_I;
+pub const BlockClosure_I = object.BlockClosure_I;
+pub const Array_I = object.Array_I;
+pub const String_I = object.String_I;
+pub const SymbolTable_I = object.SymbolTable_I;
+pub const Method_I = object.Method_I;
+pub const CompiledMethod_I = object.CompiledMethod_I;
+const c3o = 15;
+pub const Class_I = c3o + 0;
+pub const Metaclass_I = c3o + 1;
+pub const Behavior_I = c3o + 2;
+pub const MethodDictionary_I = c3o + 3;
+pub const System_I = c3o + 4;
+pub const Return_I = c3o + 5;
+pub const Send_I = c3o + 6;
+pub const Literal_I = c3o + 7;
+pub const Load_I = c3o + 8;
+pub const Store_I = c3o + 9;
+pub const Dispatch_I = c3o + 10;
+pub const ClassTable_I = c3o + 11;
+pub const Magnitude_I = c3o + 12;
+pub const Number_I = c3o + 13;
+pub const ClassDescription_I = c3o + 14;
+pub const Boolean_I = c3o + 15;
+pub const Context_I = c3o + 16;
+pub const CatchingContext_I = c3o + 17;
+pub const EnsuringContext_I = c3o + 18;
+pub const ByteArray_I = c3o + 19;
 const initialClassStrings = heap.compileStrings(.{ // must be in same order as above
     "Object", "SmallInteger", "Float", "False", "True",
-    "UndefinedObject", "Symbol", "Character", "Array", "String",
-    "Class", "Metaclass", "Behavior", "BlockClosure", "Method",
+    "UndefinedObject", "Symbol", "Character", "BlockClosure", "Array",
+    "String", "SymbolTable", "Method", "CompiledMethod",
+    "Class", "Metaclass", "Behavior",
     "MethodDictionary", "System", "Return", "Send", "Literal", "Load",
-    "Store", "SymbolTable", "Dispatch", "ClassTable", "Magnitude",
+    "Store", "Dispatch", "ClassTable", "Magnitude",
     "Number", "ClassDescription", "Boolean", "Context",
-    "CatchingContext", "EnsuringContext", "CompiledMethod", "ByteArray",
+    "CatchingContext", "EnsuringContext", "ByteArray",
 });
 pub const ReservedNumberOfClasses = if (builtin.is_test) 60 else 500;
 var classTable : ClassTable = undefined;

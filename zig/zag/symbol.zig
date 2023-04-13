@@ -3,17 +3,15 @@ const mem = std.mem;
 const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
-const class = @import("class.zig");
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-const thread = @import("thread.zig");
 const arenas = @import("arenas.zig");
 const GlobalArena = arenas.GlobalArena;
 inline fn symbol_of(index: usize, arity: u8) object.Object {
     return symbol0(index|(@as(usize,arity)<<24));
 }
 pub inline fn symbol0(index: usize) object.Object {
-    return object.Object.makeImmediate(class.Symbol_I,@truncate(u32,index));
+    return object.Object.makeImmediate(object.Symbol_I,@truncate(u32,index));
 }
 pub inline fn symbol1(index: usize) object.Object {
     return symbol_of(index,1);
@@ -26,9 +24,6 @@ pub inline fn symbol3(index: usize) object.Object {
 }
 pub inline fn symbol4(index: usize) object.Object {
     return symbol_of(index,4);
-}
-pub fn indexSymbol(uniqueNumber:usize) object.Object {
-    return symbol_of(uniqueNumber,0xff);
 }
 pub const symbols = struct {
     pub const yourself = symbol0(1);
@@ -88,10 +83,10 @@ pub var symbolTable = SymbolTable.init(&arenas.globalArena);
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
 }
-pub fn loadSymbols(_: *thread.Thread,str:[]const heap.HeapConstPtr) void {
+pub fn loadSymbols(str:[]const heap.HeapConstPtr) void {
     symbolTable.loadSymbols(str);
 }
-pub inline fn lookup(_: *thread.Thread,string: object.Object) object.Object {
+pub inline fn lookup(string: object.Object) object.Object {
     return symbolTable.lookup(string);
 }
 pub inline fn intern(string: object.Object) object.Object {
@@ -132,7 +127,7 @@ pub const SymbolTable = struct {
             // ToDo: add locking
             const size = self.theObject.growSize(objectTreap.elementSize)
                 catch initialSymbolTableSize*objectTreap.elementSize;
-            var newHeapObject = self.arena.allocArray(class.SymbolTable_I,size,u8);
+            var newHeapObject = self.arena.allocArray(object.SymbolTable_I,size,u8);
             var memory = newHeapObject.arrayAsSlice(u8);
             var newTreap = self.treap.resize(memory);
             self.treap = newTreap;

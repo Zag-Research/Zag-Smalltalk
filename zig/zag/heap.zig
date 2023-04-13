@@ -5,8 +5,7 @@ const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
-const class = @import("class.zig");
-const ClassIndex = class.ClassIndex;
+const ClassIndex = object.ClassIndex;
 const pow2 = @import("utilities.zig").largerPowerOf2;
 
 pub const Format = enum(u8) {
@@ -230,7 +229,7 @@ pub const Age = enum(u4) {
     _,
     const NurseryFirst: u4 = 0;
     const NurseryLast: u4 = 5;
-    const IncompleteContext: u1 = 6;
+    const IncompleteContext: u4 = 6;
     const Static: u4 = 7;
     const Global: u4 = 8;
     const GlobalMarked: u4 = 9;
@@ -252,27 +251,25 @@ pub const Age = enum(u4) {
         return switch (self) {
             .static ... .aooScanned => true,
             else => false,
-        }
-        return @enumToInt(self)>=Static;
+        };
     }
     pub inline fn isGlobal(self: Self) bool {
         return switch (self) {
             .global ... .aooScanned => true,
             else => false,
-        }
+        };
     }
     pub inline fn isNonHeap(self: Self) bool {
         return switch (self) {
             .static,.incompleteContext => true,
             else => false,
-        }
+        };
     }
     pub inline fn isStatic(self: Self) bool {
-        return self == static;
+        return self == .static;
     }
     pub inline fn isIncompleteContext(self: Self) bool {
-        std.debug.assert(@enumToInt(self)<Global);
-        return @enumToInt(self) >= IncompleteContext;
+        return self == .incompleteContext;
     }
     pub inline fn marked(self: Self) Self {
         return switch (self) {
@@ -381,15 +378,15 @@ pub const HeapPtrIterator = struct {
 };
 test "heapPtrIterator" {
     const testing = std.testing;
-    var h1 = header(0x17, Format.objectNP, 0x27, 0x129,Age.teen);
-    var h2 = header(0x0, Format.objectP, 0x27, 0x129,Age.teen);
+    var h1 = header(0x17, Format.objectNP, 0x27, 0x129,Age.nursery);
+    var h2 = header(0x0, Format.objectP, 0x27, 0x129,Age.nursery);
     var o1 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
     const ho1 = @ptrCast(HeapPtr,&o1);
     var i = h1.makeIterator();
     try testing.expectEqual(i.next(),null);
     i = h2.makeIterator();
     try testing.expectEqual(i.next(),null);
-    o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.objectP, 0x27, 0x129,Age.teen).o();
+    o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.objectP, 0x27, 0x129,Age.nursery).o();
     i = HeapPtrIterator.noPointers(ho1);
     try testing.expectEqual(i.next(),null);
     i = HeapPtrIterator.ivPointers(ho1);
@@ -397,7 +394,7 @@ test "heapPtrIterator" {
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h2);
     try testing.expectEqual(i.next(),null);
-    o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.arrayP, 0x27, 0x129,Age.teen).o();
+    o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.arrayP, 0x27, 0x129,Age.nursery).o();
     i = HeapPtrIterator.noPointers(ho1);
     try testing.expectEqual(i.next(),null);
     i = HeapPtrIterator.ivPointers(ho1);
@@ -409,7 +406,7 @@ test "heapPtrIterator" {
     try testing.expectEqual(i.next(),null);
     o1[3] = @bitCast(Object,@as(u64,2));
     o1[4] = @bitCast(Object,@ptrToInt(&o1[5]));
-    o1[0] = header(2,Format.bothOP, 0x27, 0x129,Age.teen).o();
+    o1[0] = header(2,Format.bothOP, 0x27, 0x129,Age.nursery).o();
     i = HeapPtrIterator.ivPointers(ho1);
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next(),null);
@@ -418,7 +415,7 @@ test "heapPtrIterator" {
     try testing.expectEqual(i.next(),null);
     i = HeapPtrIterator.arrayPointers(ho1);
     try testing.expectEqual(i.next(),null);
-    o1[0] = header(2,Format.bothPP, 0x27, 0x129,Age.teen).o();
+    o1[0] = header(2,Format.bothPP, 0x27, 0x129,Age.nursery).o();
     i = ho1.makeIterator();
     try testing.expectEqual(i.next().?,&h1);
     try testing.expectEqual(i.next().?,&h2);
@@ -472,24 +469,28 @@ pub const Header = packed struct(u64) {
         return self.length==forwardLength;
     }
     pub inline fn forwarded(self: HeapConstPtr) HeapConstPtr {
-        var ptr = self;
-        while (ptr.isForwarded()) {
-            ptr = ptr.forwardedTo();
+        if (self.isForwarded()) {
+            return self.forwardedTo();
         }
-        return ptr;
+        return self;
     }
     pub inline fn arrayAsSlice(maybeForwarded: HeapConstPtr,comptime T:type) ![]T {
-        const self = maybeForwarded.forwarded();
-        var size: usize = self.length;
-        const form = self.objectFormat;
-        if (!form.isIndexable()) return error.NotIndexable;
-        var oa = @intToPtr([*]u64,@ptrToInt(self));
-        if (form.hasInstVars()) {
-            oa += size;
-            size = oa[1];
-            return @intToPtr([*]T,oa[2])[0..size];
+        var self = maybeForwarded;
+        var head = self.*;
+        var size: usize = head.length;
+        if (size==forwardLength) {
+            self = self.forwardedTo();
+            head = self.*;
+            size = head.length;
         }
-        oa += 1;
+        const form = head.objectFormat;
+        if (!form.isIndexable()) return error.NotIndexable;
+        if (head.age.isIncompleteContext()) unreachable;
+        if (form.hasInstVars()) {
+            const oa = @intToPtr([*]u64,@ptrToInt(self)-16);
+            return @intToPtr([*]T,oa[1])[0..oa[0]];
+        }
+        const oa = @intToPtr([*]u64,@ptrToInt(self)-@sizeOf(Object)*size);
         switch (T) {
             Object,i64,u64,f64 => {
                 return @ptrCast([*]T,oa)[0..size];
@@ -613,7 +614,7 @@ pub const Header = packed struct(u64) {
         _ = fmt;
         _ = options;
         if (self.objectFormat.isRaw()) {
-            if (self.objectFormat.is8() and self.classIndex==class.String) {
+            if (self.objectFormat.is8() and self.classIndex==object.String_I) {
                 try writer.print("{s}",.{self.indexables(u8)});
             } else if (self.objectFormat.is8()) {
                 try writer.print("raw[{}]",.{self.indexables(u8).len});
@@ -653,7 +654,7 @@ pub const header = Header.init;
 test "Header structure" {
     const testing = std.testing;
     try testing.expectEqual(@sizeOf(Header),8);
-    const hdr = header(0x17, Format.objectNP, 0x27, 0x129,Age.teen);
+    const hdr = header(0x17, Format.objectNP, 0x27, 0x129,Age.nursery);
     try testing.expectEqual(hdr.o().u(),0x0173200001290027);
 }
 fn hash24(str: [] const u8) u24 {
@@ -668,13 +669,13 @@ fn hash24(str: [] const u8) u24 {
 pub fn CompileTimeString(comptime str: [] const u8) type {
     const size = str.len;
     const hash = hash24(str);
-    return struct {
-        header: Header,
+    return extern struct {
         chars: [size]u8,
+        header: Header,
         const Self = @This();
         pub fn init() Self {
             var result = Self {
-                .header = header((size+7)/8,Format.none.raw(u8,size),class.String_I,hash,Age.static),
+                .header = header((size+7)/8,Format.none.raw(u8,size),object.String_I,hash,Age.static),
                 .chars = [_]u8{0}**size,
             };
             for (str,0..) |c,idx| {
@@ -686,10 +687,10 @@ pub fn CompileTimeString(comptime str: [] const u8) type {
             return @ptrCast([*]const u8,self)[0..(size+15)/8*8];
         }
         fn obj(self: * const Self) HeapConstPtr {
-            return @ptrCast(*const Header,self);
+            return @ptrCast(*const Header,&self.header);
         }
         pub fn asObject(self: * const Self) Object {
-            return Object.from(@ptrCast(*const Header,self));
+            return Object.from(self.obj());
         }
     };
 }
@@ -697,16 +698,22 @@ pub fn compileStrings(comptime tup: anytype) [tup.len] HeapConstPtr {
     @setEvalBranchQuota(3000);
     comptime var result : [tup.len] HeapConstPtr = undefined;
     inline for (tup,0..) |name,idx| {
-        result[idx] = comptime @ptrCast(HeapConstPtr,@alignCast(8,&CompileTimeString(name).init()));
+        result[idx] = comptime (&CompileTimeString(name).init()).obj();
     }
     return result;
 }
 
-// const abcde = CompileTimeString("abcdefghijk").init();
-// test "compile time" {
-//     std.testing.expectEqual("abcdefghijk"[0..],abcde.asObject().arrayAsSlice(i8));
-//     std.debug.print("abcde: {any}\n",.{abcde.obj().*});
-//     std.debug.print("abcde: {any}\n",.{abcde.asObject().arrayAsSlice(i8)});
-//     std.debug.print("abcde: {any}\n",.{abcde.h()});
-//     std.debug.print("abcde: {any}\n",.{abcde.asObject()});
-// }
+const abcde = CompileTimeString("abcdefghijk").init();
+const strings = compileStrings(.{ // must be in same order as above
+    "Object", "SmallInteger", "Float", "False", "True",
+});
+test "compile time" {
+//    std.testing.expectEqual("abcdefghijk"[0..],abcde.asObject().arrayAsSlice(i8));
+    std.debug.print("abcde: {any}\n",.{abcde.obj().*});
+    std.debug.print("abcde: {any}\n",.{abcde.asObject().arrayAsSlice(i8)});
+    std.debug.print("abcde: {any}\n",.{try abcde.obj().arrayAsSlice(i8)});
+    std.debug.print("abcde: {any}\n",.{abcde.h()});
+    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
+    std.debug.print("strings[3]: {any}\n",.{strings[3].*});
+    std.debug.print("strings[3]: {any}\n",.{strings[3].arrayAsSlice(i8)});
+}
