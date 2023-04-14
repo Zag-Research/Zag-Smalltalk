@@ -17,7 +17,7 @@ fn consistent(l: object.Level2,i: ClassIndex) void {
 test "consistency" {
     assert(object.ClassIndex==ClassIndex);
     consistent(.Object,Object_I);
-    consistent(.SmallInteger==SmallInteger_I);
+    consistent(.SmallInteger,SmallInteger_I);
 }
 pub const ClassIndex = u16; // only allows 65535 classes and this size is baked into a few places, but Pharo has fewer than 18000 (including metaclasses), so shouldn't be a problem
 pub const Object_I = object.Object_I;

@@ -19,8 +19,8 @@ inline fn oImm(c: Level2, comptime h: comptime_int) u64 {
 inline fn o(g:Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(uniqueNumber:usize) Object {
-    return oImm(.Symbol,0xff000000|uniqueNumber);
+pub inline fn indexSymbol(uniqueNumber: u64) Object {
+    return @bitCast(Object,oImm(.Symbol,0xff000000)|uniqueNumber);
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    o(.immediates); //0xfff0000000000000;

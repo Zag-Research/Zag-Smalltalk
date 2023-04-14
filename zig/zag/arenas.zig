@@ -21,6 +21,7 @@ const Format = @import("heap.zig").Format;
 const Age = @import("heap.zig").Age;
 const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
+const AllocErrors = @import("heap.zig").AllocErrors;
 const Context = @import("context.zig").Context;
 const ContextPtr = @import("context.zig").ContextPtr;
 const os = @import("os.zig");
@@ -52,7 +53,7 @@ test "object in nursery arena" {
     const a = nursery.asArena();
     const r = try a.allocObject(sp,hp,&context,42,5);
     const o = r.allocated;
-    try std.testing.expect(!o.isOnStack());
+//    try std.testing.expect(!o.isOnStack());
     try std.testing.expect(!o.isForwarded());
     try std.testing.expect(!o.isIndirect());
     try std.testing.expect(!o.isIndexable());
@@ -60,19 +61,19 @@ test "object in nursery arena" {
     const ivs = o.instVars();
     try std.testing.expect(ivs.len==5);
 }
-pub const ArenaErrors = error {Fail,HeapFull,NotIndexable};
-pub const AllocResult = struct {
+const AllocResult = struct {
     sp: [*]Object,
     hp: HeaderArray,
     context: ContextPtr,
     age: Age,
     allocated: HeapPtr,
 };
-pub const AllocReturn = ArenaErrors!AllocResult;
+const AllocReturn = AllocErrors!AllocResult;
 pub const Arena = extern struct {
     const Self = @This();
-    alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) ArenaErrors!AllocResult,
-    collect: *const fn (*Self,[*]Object,HeaderArray,ContextPtr) ArenaErrors!void,
+
+    alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
+    collect: *const fn (*Self,[*]Object,HeaderArray,ContextPtr) AllocErrors!void,
 
     pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
         var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
@@ -159,7 +160,7 @@ pub fn NurseryArena(comptime nursery_size: comptime_int) type {
             if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
             return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
         }
-        fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) ArenaErrors!void {
+        fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
             const self = @ptrCast(*Self,arena);
             _ =  self; _ = sp; _ = hp; _ = context;
             @panic("incomplete");
@@ -259,7 +260,7 @@ pub const GlobalArena = struct {
         const allocation = try self.rawAlloc(heapSize,arraySize);
         return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=allocation,};
     }
-    fn rawAlloc(self: *Self, heapSize: usize, arraySize: usize) ArenaErrors!HeapPtr {
+    fn rawAlloc(self: *Self, heapSize: usize, arraySize: usize) AllocErrors!HeapPtr {
         const totalSize = heapSize + arraySize;
         var index = self.findAllocationList(totalSize);
 // ToDo        if (index==0) return GlobalArena.allocIndirect(self,sp,hp,context,heapSize,arraySize);
@@ -275,7 +276,7 @@ pub const GlobalArena = struct {
         }
         return @ptrCast(HeapPtr,allocation.ptr);
     }
-    fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) ArenaErrors!void {
+    fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
         const self = @ptrCast(*Self,arena);
         _ =  self; _ = sp; _ = hp; _ = context;
         @panic("incomplete");

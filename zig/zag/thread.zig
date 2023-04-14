@@ -3,15 +3,25 @@ const builtin = @import("builtin");
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const Object = @import("object.zig").Object;
 const arenas = @import("arenas.zig");
-const heap = @import("heap.zig");
 const dispatch = @import("dispatch.zig");
+const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
+const HeaderArray = heap.HeaderArray;
 const Age = heap.Age;
+const AllocErrors = heap.AllocErrors;
 const ex = @import("execute.zig");
 const Hp = ex.Hp;
 const Code = ex.Code;
 const ContextPtr = ex.CodeContextPtr;
 const tailCall = ex.tailCall;
+pub const AllocResult = struct {
+    sp: [*]Object,
+    hp: HeaderArray,
+    context: ContextPtr,
+    age: Age,
+    allocated: HeapPtr,
+};
+pub const AllocReturn = AllocErrors!AllocResult;
 
 test "force dispatch load" {
     dispatch.forTest();
@@ -52,14 +62,14 @@ pub const Thread = extern struct {
     var allThreads: ?*Self = null;
     pub fn new() Self {
         return Self {
-            .header = undefined,
+            .h = undefined,
             .private = undefined,
         };
     }
     pub fn init(self: *Self) void {
         while (true) {
             self.h = ThreadHeader.init(self);
-            if (@cmpxchgWeak(*Self,&allThreads,self.h.next,self,SeqCst,SeqCst)==null) break;
+            if (@cmpxchgWeak(?*Self,&allThreads,self.h.next,self,SeqCst,SeqCst)==null) break;
         }
     }
     const checkType = u5;
@@ -88,13 +98,14 @@ pub const Thread = extern struct {
         self.ptr().* = undefined;
     }
     pub inline fn getHeap(self: *Self) heap.HeaderArray {
-        return self.ptr().nursery.getHp();
+        _=self;unreachable;
+//        return self.ptr().nursery.getHp();
     }
     pub inline fn getArena(self: *Self) *heap.Arena {
         return self.ptr().nursery.asArena();
     }
     pub inline fn endOfStack(self: *Self) [*]Object {
-        return self.ptr().nursery.endOfStack();
+        return @ptrCast([*]Object,&self.ptr().private[nursery_size]);
     }
     pub inline fn stack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
@@ -107,7 +118,7 @@ pub const Thread = extern struct {
     pub fn checkStack(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
         return @call(tailCall,Thread.check,.{pc,sp,hp,thread,context});
     }
-    pub fn alloc(self: *Self, sp: [*]Object, hp: Hp, context: ContextPtr, size: u64) arena.AllocReturn {
+    pub fn alloc(self: *Self, sp: [*]Object, hp: Hp, context: ContextPtr, size: u64) heap.AllocReturn {
         {
             const result = hp+size;
             const newHp = result+1;

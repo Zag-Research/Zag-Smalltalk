@@ -39,8 +39,6 @@ pub const Context = struct {
             .npc = undefined,
             .prevCtxt = undefined,
             .method = undefined,
-            .size = 0,
-            .addr = undefined,
             .temps = undefined,
         };
     }
@@ -85,12 +83,13 @@ pub const Context = struct {
        return .{.hp=hp,.ctxt=ctxt};
     }
     fn convertToProperHeapObject(self: ContextPtr, sp: [*]Object, thread: *Thread) void {
-        if (self.isIncomplete()) {
-            self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
-            self.size = self.prevCtxt.calculatedSize(thread);
-            self.addr = @ptrCast(*Object,&self.temps);
-            self.prevCtxt.convertToProperHeapObject(sp, thread);
-        }
+        _=self;_=sp;_=thread;unreachable;
+        // if (self.isIncomplete()) {
+        //     self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
+        //     self.size = self.prevCtxt.calculatedSize(thread);
+        //     self.addr = @ptrCast(*Object,&self.temps);
+        //     self.prevCtxt.convertToProperHeapObject(sp, thread);
+        // }
     }
     pub inline fn isIncomplete(self: * const Self) bool {
         return @alignCast(8,&self.header).isIncompleteContext();
@@ -108,9 +107,10 @@ pub const Context = struct {
         return sp[0..(@ptrToInt(self.endOfStack(thread))-@ptrToInt(sp))/@sizeOf(Object)];
     }
     pub inline fn allTemps(self: ContextPtr, thread: *Thread) []Object {
-        const size = if (self.isIncomplete()) self.calculatedSize(thread) else self.size;
-        @setRuntimeSafety(false);
-        return self.temps[0..size];
+        _ = self;_=thread;unreachable;
+        // const size = if (self.isIncomplete()) self.calculatedSize(thread) else self.size;
+        // @setRuntimeSafety(false);
+        // return self.temps[0..size];
     }
     pub inline fn getTPc(self: ContextPtr) [*]const Code {
         return self.tpc;

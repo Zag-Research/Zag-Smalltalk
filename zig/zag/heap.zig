@@ -421,6 +421,9 @@ test "heapPtrIterator" {
     try testing.expectEqual(i.next().?,&h2);
     try testing.expectEqual(i.next(),null);
 }
+
+pub const AllocErrors = error {Fail,HeapFull,NotIndexable};
+
 pub const HeaderArray = [*]align(@alignOf(u64)) Header;
 pub const HeapPtr = *align(@alignOf(u64)) Header;
 pub const HeapConstPtr = *align(@alignOf(u64)) const Header;
@@ -454,7 +457,8 @@ pub const Header = packed struct(u64) {
         };
     }
     pub inline fn isOnStack(self: HeapConstPtr) bool {
-        return self.age.isOnStack();
+        _ = self; unreachable;
+//        return self.age.isOnStack();
     }
     pub inline fn isStack(self: HeapConstPtr) bool {
         return self.age.isStack();
