@@ -5,18 +5,17 @@ const Order = math.Order;
 const mem = std.mem;
 const includeStdTest = false;
 pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
-    const ElementS = struct {
-        key: Key,
-        left: Index,
-        right: Index,
-        value: Value,
-    };
     const Compare = * const fn (Key,Key) Order;
     return struct {
-        table: []ElementS,
+        table: []Element,
         compare: Compare,
         empty: Key,
-        const Element = ElementS;
+        pub const Element = struct {
+            key: Key,
+            left: Index,
+            right: Index,
+            value: Value,
+        };
         pub const elementSize = @sizeOf(Element);
         const Self = @This();
         const Equal = Order.eq;
@@ -34,23 +33,23 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             const randomizer = @import("general.zig").inversePhi(Index);
         };
         const priority = _priority.priority;
-        pub fn init(memory: []u8, compare: Compare, empty: Key) Self {
+        pub fn init(memory: []Element, compare: Compare, empty: Key) Self {
             // if this is allocated on an object heap, left,right as an object will together look like an f64 so it will be ignored by garbage collection
             var treap = ref(memory,compare,empty);
             treap.setRoot(0);
             treap.extend(1);
             return treap;
         }
-        pub fn ref(memory: []u8, compare: Compare, empty: Key) Self {
+        pub fn ref(memory: []Element, compare: Compare, empty: Key) Self {
             return Self {
-                .table = mem.bytesAsSlice(Element,@alignCast(@alignOf(ElementS),memory)),
+                .table = memory,
                 .compare = compare,
                 .empty = empty,
             };
         }
         pub fn initEmpty(compare: Compare, empty: Key) Self {
             return Self {
-                .table =  &[0]ElementS{},
+                .table =  &[0]Element{},
                 .compare = compare,
                 .empty = empty,
             };
@@ -67,7 +66,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             }
             self.table[self.table.len-1].left=0;
         }
-        pub fn resize(self: *Self, memory: []u8) Self {
+        pub fn resize(self: *Self, memory: []Element) Self {
             var treap = ref(memory,self.compare,self.empty);
             for (self.table,0..) | element,i | treap.table[i] = element;
             treap.extend(@intCast(Index,self.table.len));
@@ -286,7 +285,7 @@ test "treap element sizes" {
 test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-insert-and-delete/" {
     if (includeStdTest) {
         const n = 20;
-        var memory = [_]u8{0} ** ((n+1)*Treap_u64.elementSize);
+        var memory = [_]Treap_u64.Element{undefined} ** (n+1);
         var treap = Treap_u64.init(memory[0..],compareU64,0);
         _ = try treap.insert(50);
         _ = try treap.insert(30);
@@ -316,13 +315,12 @@ test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-in
 }
 test "simple u64 treap alloc with nextFree" {
     const expectEqual = @import("std").testing.expectEqual;
-    var memory = [_]u8{0} ** (4*Treap_u64.elementSize);
+    var memory = [_]Treap_u64.Element{undefined} ** 4;
     var treap = Treap_u64.init(memory[0..],compareU64,0);
     try expectEqual(treap.hasRoom(3),true);
     try expectEqual(treap.hasRoom(4),false);
     const f2 = try treap.insert(42);
     try expectEqual(f2,1);
-    std.debug.print("\ntreap = {*}",.{treap.table[0..]});
     try expectEqual(treap.hasRoom(1),true);
     try expectEqual(treap.nextFree(),2);
     const f1 = try treap.insert(17);
@@ -332,7 +330,7 @@ test "simple u64 treap alloc with nextFree" {
 test "simple u64 treap with values" {
     const expectEqual = @import("std").testing.expectEqual;
     const Treap_u64V = Treap(u64,u32,u64);
-    var memory = [_]u8{0} ** (4*Treap_u64V.elementSize);
+    var memory = [_]Treap_u64V.Element{undefined} ** 4;
     var treap = Treap_u64V.init(memory[0..],compareU64,0);
     const f2 = try treap.insert(42);
     treap.setValue(f2,92);
@@ -346,7 +344,7 @@ test "simple u64 treap with values" {
 test "resize u64 treap with values" {
     const expectEqual = @import("std").testing.expectEqual;
     const Treap_u64V = Treap(u64,u32,u64);
-    var memory = [_]u8{0} ** (4*Treap_u64V.elementSize);
+    var memory = [_]Treap_u64V.Element{undefined} ** 4;
     var treap = Treap_u64V.init(memory[0..],compareU64,0);
     try expectEqual(treap.table.len,4);
     const f2 = try treap.insert(42);
@@ -358,7 +356,7 @@ test "resize u64 treap with values" {
     treap.setValue(f1,99);
     try expectEqual(treap.getValue(f2),92);
     try expectEqual(treap.hasRoom(1),false);
-    var memory2 = [_]u8{0} ** (6*Treap_u64V.elementSize);
+    var memory2 = [_]Treap_u64V.Element{undefined} ** 6;
     var treap2 = treap.resize(memory2[0..]);
     try expectEqual(treap2.table.len,6);
     try expectEqual(treap2.hasRoom(2),true);
@@ -373,7 +371,7 @@ test "resize u64 treap with values" {
 test "simple u64 treap alloc" {
     const expectEqual = @import("std").testing.expectEqual;
     const n = 5;
-    var memory align(@alignOf(Treap_u64.Element)) = [_]u8{0} ** ((n+1)*Treap_u64.elementSize);
+    var memory align(@alignOf(Treap_u64.Element)) = [_]Treap_u64.Element{undefined} ** (n+1);
     var treap = Treap_u64.init(memory[0..],compareU64,0);
     try expectEqual(treap.lookup(42),0);
     const f2 = try treap.insert(42);
@@ -401,7 +399,7 @@ test "full u64 treap alloc" {
     } else {
         const expectEqual = @import("std").testing.expectEqual;
         const n = 21;
-        var memory = [_]u8{0} ** ((n+1)*Treap_u64.elementSize);
+        var memory = [_]Treap_u64.Element{undefined} ** (n+1);
         var treap = Treap_u64.init(memory[0..],compareU64,0);
         var index : u64 = 1;
         while (treap.hasRoom(1)) : (index += 1) {
@@ -417,7 +415,7 @@ test "full u64 treap alloc" {
 test "simple u64 treap range" {
     const expectEqual = @import("std").testing.expectEqual;
     const n = 4;
-    var memory = [_]u8{0} ** ((n+1)*Treap_u64.elementSize);
+    var memory = [_]Treap_u64.Element{undefined} ** (n+1);
     var treap = Treap_u64.init(memory[0..],compareU64,0);
     const f10 = try treap.insert(10);
     const f20 = try treap.insert(20);
