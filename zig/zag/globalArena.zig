@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const builtin = @import("builtin");
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const mem = std.mem;
@@ -10,11 +11,10 @@ const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
 const object = @import("object.zig");
 const Object = object.Object;
 const objectWidth = @sizeOf(Object);
+const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const class = @import("class.zig");
-const ClassIndex = class.ClassIndex;
 const Header = @import("heap.zig").Header;
 const header = @import("heap.zig").header;
 const Format = @import("heap.zig").Format;
@@ -22,35 +22,10 @@ const Age = @import("heap.zig").Age;
 const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
 const AllocErrors = @import("heap.zig").AllocErrors;
-const Context = @import("context.zig").Context;
-const ContextPtr = @import("context.zig").ContextPtr;
 const os = @import("os.zig");
 const blockAllocation = os.BlockAllocation(HeapAllocation).new();
-pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
-    return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
-}
-test "arenaFree" {
-    _ = try blockAllocation;
-    const testing = std.testing;
-    const stack: [10]Object align(8) =undefined;
-    const s1: [*]const Object = @ptrCast([*]const Object,&stack[1]);
-    const s5 = s1+4;
-    const hp: HeaderArray = Header.fromObjectPtr(s1+2);
-    try testing.expectEqual(arenaFree(s5,hp),2);
-    try testing.expectEqual(arenaFree(s1,hp),-2);
-}
-const AllocResult = struct {
-    sp: [*]Object,
-    hp: HeaderArray,
-    context: ContextPtr,
-    age: Age,
-    allocated: HeapPtr,
-};
-const AllocReturn = AllocErrors!AllocResult;
 
 pub var globalArena = GlobalArena.init();
-pub const heapAllocationSize = GlobalArena.HeapAllocation.size;
-var junkContext = Context.init();
 pub const GlobalArena = struct {
     const Self = @This();
     heapAllocations: ?*HeapAllocation,
@@ -86,7 +61,7 @@ pub const GlobalArena = struct {
     fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
         const self = @ptrCast(*Self, @alignCast(@alignOf(Self), ctx));
         _ = .{ptr_align,ret_addr};
-        const obj = self.rawAlloc(0,len+@sizeOf(*Allocator)) catch return null;
+        const obj = self.rawAlloc(0,len,ptr_align) catch return null;
         // ToDo: add obj to the allocatorKnown list for its page
         const array = obj.arrayAsSlice(u8);
         for (array) |*ptr| ptr.* = undefined;
@@ -97,19 +72,16 @@ pub const GlobalArena = struct {
         _ = .{self,buf,buf_align,ret_addr};
         unreachable;
     }
-    fn allocIndirect(self: *Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
+    fn allocIndirect(self: *Self, sp:[*]Object, fieldsSize: usize, arraySize: usize) AllocReturn {
         const array = @ptrCast(HeapPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
         var result = try GlobalArena.alloc(self,sp,hp,context,heapSize,0);
         const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;
         offs[1] = @ptrToInt(array);
         return result;
     }
-    fn alloc(self: *Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
-        const allocation = try self.rawAlloc(heapSize,arraySize);
-        return .{.sp=sp, .hp=hp, .context=context, .age=Age.global, .allocated=allocation,};
-    }
-    fn rawAlloc(self: *Self, heapSize: usize, arraySize: usize) AllocErrors!HeapPtr {
-        const totalSize = heapSize + arraySize;
+    fn rawAlloc(self: *Self, fieldsSize: usize, arraySize: usize, ptr_align: u8) AllocErrors!HeapPtr {
+        _ = ptr_align;
+        const totalSize = fieldsSize + arraySize;
         var index = self.findAllocationList(totalSize);
 // ToDo        if (index==0) return GlobalArena.allocIndirect(self,sp,hp,context,heapSize,arraySize);
         const allocation: []Header = (
@@ -119,13 +91,13 @@ pub const GlobalArena = struct {
                 GlobalArena.HeapAllocation.allocSlice(self));
         self.freeToList(allocation[totalSize..]);
         if (arraySize>0) {
-            const offs = @ptrCast([*]u64,allocation.ptr)+heapSize-2;
+            const offs = @ptrCast([*]u64,allocation.ptr)+fieldsSize-2;
             offs[1] = @ptrToInt(offs+2);
         }
         return @ptrCast(HeapPtr,allocation.ptr);
     }
-    fn collect(self: *Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
-        _ =  self; _ = sp; _ = hp; _ = context;
+    fn collect(self: *Self) AllocErrors!void {
+        _ =  self;
         @panic("incomplete");
     }
    pub fn promote(obj: Object) !Object {
@@ -176,130 +148,126 @@ pub const GlobalArena = struct {
         }
         return sum;
     }
-    pub inline fn allocObject(self:*Self, classIndex:ClassIndex, ivSize:usize) Object {
-        var result = self.asSelf().allocObject(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,ivSize) catch @panic("allocObject failed");
-        return result.allocated.asObject();
+};
+const HeapFlags = union {
+    int: u64,
+    f: struct {
+        allocators: u16,
+        needScans: u16,
+        marking: bool,
     }
-    pub inline fn allocArray(self:*Self, classIndex:ClassIndex, arraySize:usize, comptime T: type) Object {
-        var result = self.asSelf().allocArray(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,0,arraySize,T) catch @panic("allocArray failed");
-        return result.allocated.asObject();
+};
+const HeapAllocation = extern struct {
+    mem: [size]Header,
+    flags: HeapFlags,
+    next: ?*HeapAllocation,
+    const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
+    const heap_allocation_size = 64*1024;
+    const size = (heap_allocation_size - field_size)/@sizeOf(Header);
+    const maxObjects = size/@sizeOf(Header);
+    const returnType = []u8;
+    fn getAligned() []align(heap_allocation_size)u8 { // ToDo: align larger size without wasting 1/2 the space
+        //var buf = std.heap.page_allocator.alloc(u8, heap_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
+        //const base = @ptrToInt(buf.ptr) & (heap_allocation_size-1);
+        //const offs = if (base==0) 0 else heap_allocation_size-base;
+        //if (!std.heap.page_allocator.resize(buf,offs+heap_allocation_size)) @panic("resize failed");
+        //return @alignCast(heap_allocation_size,buf[offs..offs+page_allocation_size]);
+        return @alignCast(heap_allocation_size,std.heap.page_allocator.alloc(u8, heap_allocation_size) catch @panic("page allocator failed"));
     }
-    pub inline fn allocStruct(self:*Self, classIndex:ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
-        var result = self.asSelf().allocStruct(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,T,extra,T2) catch @panic("allocStruct failed");
-        return @intToPtr(*T,@ptrToInt(result.allocated));
+    fn allocSlice(self: *GlobalArena) []Header {
+        var ha = HeapAllocation.alloc(self);
+        return ha.mem[0..];
     }
-    const HeapAllocation = extern struct {
-        flags: u64,
-        next: ?*HeapAllocation,
-        mem: [size]Header,
-        const field_size = @sizeOf(u64)+@sizeOf(?*HeapAllocation);
-        const heap_allocation_size = std.mem.page_size; //64*1024;
-        const size = (heap_allocation_size - field_size)/@sizeOf(Header);
-        const maxObjects = size/@sizeOf(Header);
-        const returnType = []u8;
-        fn getAligned() []align(heap_allocation_size)u8 { // ToDo: align larger size without wasting 1/2 the space
-            //var buf = std.heap.page_allocator.alloc(u8, heap_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
-            //const base = @ptrToInt(buf.ptr) & (heap_allocation_size-1);
-            //const offs = if (base==0) 0 else heap_allocation_size-base;
-            //if (!std.heap.page_allocator.resize(buf,offs+heap_allocation_size)) @panic("resize failed");
-            //return @alignCast(heap_allocation_size,buf[offs..offs+page_allocation_size]);
-            return @alignCast(heap_allocation_size,std.heap.page_allocator.alloc(u8, heap_allocation_size) catch @panic("page allocator failed"));
+    fn alloc(_: *GlobalArena) *HeapAllocation {
+        var space = getAligned();
+        const self = @ptrCast(*HeapAllocation,space.ptr);
+        self.flags = 0;
+        var prev = self.heapAllocations;
+        while (true) {
+            self.next = prev;
+            if (@cmpxchgWeak(?*HeapAllocation,&self.heapAllocations,prev,self,SeqCst,SeqCst)) |old| {prev = old;continue;}
+            return self;
         }
-        fn allocSlice(self: *GlobalArena) []Header {
-            var ha = HeapAllocation.alloc(self);
-            return ha.mem[0..];
+    }
+    fn freeAll(self: *HeapAllocation) void {
+        var ptr: ?*HeapAllocation = self;
+        while (ptr) |ha| {
+            ptr = ha.next;
+            ha.free();
         }
-        fn alloc(self_: *GlobalArena) *HeapAllocation {
-            var space = getAligned();
-            const self = @ptrCast(*HeapAllocation,space.ptr);
-            self.flags = 0;
-            var prev = self.heapAllocations;
-            while (true) {
-                self.next = prev;
-                if (@cmpxchgWeak(?*HeapAllocation,&self.heapAllocations,prev,self,SeqCst,SeqCst)) |old| {prev = old;continue;}
-                return self;
-            }
+    }
+    fn free(self: *HeapAllocation) void {
+        std.heap.page_allocator.free(@ptrCast([*]u8,self)[0..heap_allocation_size]);
+    }
+    fn sweep(self: *HeapAllocation) void {
+        var ptr = @ptrCast(HeaderArray,&self.mem);
+        const end = ptr+maxObjects;
+        while (ptr<end) {
+            unreachable;
         }
-        fn freeAll(self: *HeapAllocation) void {
-            var ptr: ?*HeapAllocation = self;
-            while (ptr) |ha| {
-                ptr = ha.next;
-                ha.free();
-            }
-        }
-        fn free(self: *HeapAllocation) void {
-            std.heap.page_allocator.free(@ptrCast([*]u8,self)[0..heap_allocation_size]);
-        }
-        fn sweep(self: *HeapAllocation) void {
-            var ptr = @ptrCast(HeaderArray,&self.mem);
-            const end = ptr+maxObjects;
-            while (ptr<end) {
-                unreachable;
-            }
-        }
-    };
-    const FreeList = struct {
-        size: u16,
-        list: FreeListPtr,
-        inline fn addToFree(ga: *GlobalSelf, len: u12, ptr: HeapPtr) void {
-            ptr.* = header(len,Format.none,0,0,Age.free);
-            if (len>=ga.minAllocation) {
-                const self = @ptrCast(*FreeListElement,ptr);
-                const freeListIndex = ga.findAllocationList(len);
-                if (freeListIndex>0) {
-                    var myList = &ga.freeLists[freeListIndex].list;
-                    var prev = myList.*;
-                    while (true) {
-                        self.next = prev;
-                        if (@cmpxchgWeak(FreeListPtr,myList,prev,self,SeqCst,SeqCst)) |old| {
-                            prev = old;
-                        } else
-                            break;
-                    }
-                }
-            }
-        }
-        fn getSlice(self: *FreeList) ?[]Header {
-            var myList = &self.list;
-            var prev = myList.*;
-            while (true) {
-                if (prev) |fle| {
-                    const next = fle.next;
-                    if (@cmpxchgWeak(FreeListPtr,myList,prev,next,SeqCst,SeqCst)) |old| {
+    }
+};
+const FreeList = struct {
+    size: u16,
+    list: FreeListPtr,
+    inline fn addToFree(ga: *GlobalSelf, len: u12, ptr: HeapPtr) void {
+        ptr.* = header(len,Format.none,0,0,Age.free);
+        if (len>=ga.minAllocation) {
+            const self = @ptrCast(*FreeListElement,ptr);
+            const freeListIndex = ga.findAllocationList(len);
+            if (freeListIndex>0) {
+                var myList = &ga.freeLists[freeListIndex].list;
+                var prev = myList.*;
+                while (true) {
+                    self.next = prev;
+                    if (@cmpxchgWeak(FreeListPtr,myList,prev,self,SeqCst,SeqCst)) |old| {
                         prev = old;
                     } else
-                        return @ptrCast(HeaderArray,fle)[0..self.size];
+                        break;
                 }
-                else return null;
             }
         }
-        fn init(comptime n: comptime_int) [n]FreeList {
-            var initial_value: [n]FreeList = undefined;
-            for (initial_value[0..],0..) |*fl,index| {
-                fl.size = @as(u16,1)<<@intCast(u4,index);
-                fl.list = null;
+    }
+    fn getSlice(self: *FreeList) ?[]Header {
+        var myList = &self.list;
+        var prev = myList.*;
+        while (true) {
+            if (prev) |fle| {
+                const next = fle.next;
+                if (@cmpxchgWeak(FreeListPtr,myList,prev,next,SeqCst,SeqCst)) |old| {
+                    prev = old;
+                } else
+                    return @ptrCast(HeaderArray,fle)[0..self.size];
             }
-            return initial_value;
+            else return null;
         }
-        fn freeSpace(self: *const FreeList) usize {
-            if (self.list) |fpe| return self.size*fpe.count();
-            return 0;
+    }
+    fn init(comptime n: comptime_int) [n]FreeList {
+        var initial_value: [n]FreeList = undefined;
+        for (initial_value[0..],0..) |*fl,index| {
+            fl.size = @as(u16,1)<<@intCast(u4,index);
+            fl.list = null;
         }
-    };
-    const FreeListPtr = ?*FreeListElement;
-    const FreeListElement = struct {
-        header: Header,
-        next: FreeListPtr,
-        fn count(self: *FreeListElement) usize {
-            var ptr: FreeListPtr = self;
-            var size: usize = 0;
-            while (ptr) |fle| {
-                size += 1;
-                ptr = fle.next;
-            }
-            return size;
+        return initial_value;
+    }
+    fn freeSpace(self: *const FreeList) usize {
+        if (self.list) |fpe| return self.size*fpe.count();
+        return 0;
+    }
+};
+const FreeListPtr = ?*FreeListElement;
+const FreeListElement = struct {
+    header: Header,
+    next: FreeListPtr,
+    fn count(self: *FreeListElement) usize {
+        var ptr: FreeListPtr = self;
+        var size: usize = 0;
+        while (ptr) |fle| {
+            size += 1;
+            ptr = fle.next;
         }
-    };
+        return size;
+    }
 };
 test "freeList structure" {
     const ee = std.testing.expectEqual;
@@ -440,3 +408,16 @@ test "check alloc indirect" {
     try ee(h5.arraySize(),maxVArray*8+1);
 }
 
+/// TODO replace callsites with `@log2` after this proposal is implemented:
+/// https://github.com/ziglang/zig/issues/13642
+inline fn log2a(x: anytype) switch (@typeInfo(@TypeOf(x))) {
+    .Int => math.Log2Int(@TypeOf(x)),
+    .ComptimeInt => comptime_int,
+    else => @compileError("int please"),
+} {
+    switch (@typeInfo(@TypeOf(x))) {
+        .Int => return math.log2_int(@TypeOf(x), x),
+        .ComptimeInt => return math.log2(x),
+        else => @compileError("bad"),
+    }
+}

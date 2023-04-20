@@ -2,12 +2,9 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const mem = std.mem;
+const page_size = mem.page_size;
 const builtin = @import("builtin");
 const os = std.os;
-const c = std.c;
-//const SC = os.SC;
-const SC_PAGESIZE = 29;
-extern "c" fn sysconf(sc: c_int) i64;
 
 pub fn MemoryAllocator(comptime Block: type) type {
     return struct {
@@ -30,7 +27,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
                 return alignedMap(null,size,a);
             return mmap(null,size,-1);
         }
-        pub fn mapFile(_: *Self, size: usize, fd: os.fd_t) ![]align(mem.page_size) u8 {
+        pub fn mapFile(_: *Self, size: usize, fd: os.fd_t) ![]align(page_size) u8 {
             return mmap(null,size,fd);
         }
         pub fn unmap(_: *Self, slice: []u8) void {
@@ -39,9 +36,9 @@ pub fn MemoryAllocator(comptime Block: type) type {
     };
 }
 const allocMultiple = 16;
-var next_mmap_addr_hint: ?[*]align(mem.page_size) u8 = null;
+var next_mmap_addr_hint: ?[*]align(page_size) u8 = null;
 
-fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(mem.page_size) u8 {
+fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(page_size) u8 {
         if (builtin.os.tag == .windows) @compileError("no windows support");
     return os.mmap(
         hint,
@@ -55,14 +52,14 @@ fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(m
 fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: u32) ![]u8 {
     // may return alignment smaller than allocation so bump up if need 
     if (@as(usize,alignment)>>@ctz(alignment)!=1) unreachable; // alignedMap must have a power-of-2 alignment
-    if (alignment<mem.page_size) unreachable; // alignedMap must have a alignment >= than mem.page_size
+    if (alignment<page_size) unreachable; // alignedMap must have a alignment >= than page_size
     const slice = try mmap(hint,allocation,-1);
     const addr = @ptrToInt(slice.ptr);
     const first = mem.alignForward(addr, alignment);
     const end = @ptrToInt(slice.ptr+slice.len);
     const last = mem.alignBackward(end, alignment);
     if (addr<first) os.munmap(slice[0..first-addr]);
-    if (last<end) os.munmap(@intToPtr([*]align(mem.page_size)u8,last)[0..end-last]);
+    if (last<end) os.munmap(@intToPtr([*]align(page_size)u8,last)[0..end-last]);
     if (first==last) unreachable;
     return slice[first-addr..last-addr];
 }
@@ -72,7 +69,10 @@ fn reserve(comptime T: type) ![]align(@sizeOf(T))T {
         size*allocMultiple;
     const hint = @atomicLoad(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint, .Unordered);
     const res = try alignedMap(hint,supersize,size);
-    _ = @cmpxchgStrong(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint, hint, @ptrCast(@TypeOf(next_mmap_addr_hint),@alignCast(mem.page_size,res.ptr+res.len)), .Monotonic, .Monotonic);
+    _ = @cmpxchgStrong(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint,
+                       hint,
+                       @ptrCast(@TypeOf(next_mmap_addr_hint),@alignCast(page_size,res.ptr+res.len)),
+                       .Monotonic, .Monotonic);
     return @ptrCast([*]T,@alignCast(size,res.ptr))[0..res.len/size];
 }
 
