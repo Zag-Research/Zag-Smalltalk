@@ -2,7 +2,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const mem = std.mem;
-const page_size = mem.page_size;
+pub const page_size = mem.page_size;
 const builtin = @import("builtin");
 const os = std.os;
 
@@ -30,7 +30,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
         pub fn mapFile(_: *Self, size: usize, fd: os.fd_t) ![]align(page_size) u8 {
             return mmap(null,size,fd);
         }
-        pub fn unmap(_: *Self, slice: []u8) void {
+        pub fn unmap(_: *Self, slice: []align(page_size)u8) void {
             os.munmap(slice);
         }
     };
@@ -65,7 +65,7 @@ fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: 
 }
 fn reserve(comptime T: type) ![]align(@sizeOf(T))T {
     const size = @sizeOf(T);
-    const supersize = // yif (os.MAP.NORESERVE>0) 1<<31 else
+    const supersize = // if (os.MAP.NORESERVE>0) 1<<31 else
         size*allocMultiple;
     const hint = @atomicLoad(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint, .Unordered);
     const res = try alignedMap(hint,supersize,size);

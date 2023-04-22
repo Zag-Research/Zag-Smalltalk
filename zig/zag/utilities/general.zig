@@ -144,26 +144,24 @@ test "check largerPowerOf2Not1" {
 }
 pub inline fn bitsToRepresent(size:anytype) u7 {
     const T = @TypeOf(size);
-    if (T==comptime_int) {
-        comptime var n = size;
-        n |= n>>32;
-        n |= n>>16;
-        n |= n>>8;
-        n |= n>>4;
-        n |= n>>2;
-        n |= n>>1;
-        return @ctz(~@as(u64,n));
-    } else {
-        var n = size;
-        const bits = @typeInfo(T).Int.bits;
-        if (comptime bits>32) n |= n>>32;
-        if (comptime bits>16) n |= n>>16;
-        if (comptime bits>8) n |= n>>8;
-        if (comptime bits>4) n |= n>>4;
-        n |= n>>2;
-        n |= n>>1;
-        return @ctz(~n);
+    switch (@typeInfo(T)) {
+        .ComptimeInt => {
+            comptime var n = size;
+            n |= n>>32;
+            n |= n>>16;
+            n |= n>>8;
+            n |= n>>4;
+            n |= n>>2;
+            n |= n>>1;
+            return comptime @ctz(~@as(u64,n));
+        },
+        .Int => |int_info| switch (int_info.signedness) {
+            .unsigned => return @intCast(u7,int_info.bits - @clz(size)),
+            else => {},
+        },
+        else => {},
     }
+    @compileError("bitsToRepresent not implemented for " ++ @typeName(T));
 }
 test "check bitsToRepresent" {
     const expectEqual = std.testing.expectEqual;

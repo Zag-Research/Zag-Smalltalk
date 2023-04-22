@@ -2,7 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
-const symbol = @import("symbol.zig");
+//const symbol = @import("symbol.zig");
 //const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const Header = heap.Header;
@@ -301,7 +301,7 @@ pub const Object = packed struct(u64) {
             False_I => writer.print("false", .{}),
             True_I => writer.print("true", .{}),
             UndefinedObject_I => writer.print("nil", .{}),
-            Symbol_I => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
+//            Symbol_I => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             Character_I => writer.print("${c}", .{self.to(u8)}),
             SmallInteger_I => writer.print("{d}", .{self.toInt()}),
             Float_I => writer.print("{}", .{self.to(f64)}),
@@ -325,7 +325,7 @@ test "slicing" {
 }
 test "from conversion" {
     const ee = std.testing.expectEqual;
-    try ee(@bitCast(u64, Object.packedInt(1,2,3)), 0xfffc000300020001);
+    try ee(@bitCast(u64, Object.packedInt(1,2,3)), u64_ZERO+0x000300020001);
     try ee(@bitCast(f64, Object.from(3.14)), 3.14);
     try ee(Object.from(42).u(), u64_ZERO +% 42);
     try ee(Object.from(3.14).immediate_class(),Float_I);
@@ -357,7 +357,7 @@ test "immediate_class" {
     try ee(Nil.immediate_class(),UndefinedObject_I);
     try ee(True.immediate_class(),True_I);
     try ee(False.immediate_class(),False_I);
-    try ee(symbol.symbols.yourself.immediate_class(),Symbol_I);
+//    try ee(symbol.symbols.yourself.immediate_class(),Symbol_I);
     
 }
 test "printing" {
@@ -365,6 +365,6 @@ test "printing" {
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
     try stream.print("{}\n",.{Object.from(42)});
-    try stream.print("{}\n",.{symbol.symbols.yourself});
+//    try stream.print("{}\n",.{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }

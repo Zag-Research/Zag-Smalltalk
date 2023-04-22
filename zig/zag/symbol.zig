@@ -5,8 +5,8 @@ const object = @import("object.zig");
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-const arenas = @import("arenas.zig");
-const GlobalArena = arenas.GlobalArena;
+const globalArena = @import("globalArena.zig");
+const GlobalArena = globalArena.GlobalArena;
 inline fn symbol_of(index: usize, arity: u8) object.Object {
     return symbol0(index|(@as(usize,arity)<<24));
 }
@@ -78,7 +78,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     // add any new values here
     "Object"
 });
-pub var symbolTable = SymbolTable.init(&arenas.globalArena);
+pub var symbolTable = SymbolTable.init(&globalArena.globalArena);
 
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
@@ -185,7 +185,7 @@ pub const noStrings = &[0]heap.HeapConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
-    var symbol = SymbolTable.init(&arenas.globalArena);
+    var symbol = SymbolTable.init(&globalArena.globalArena);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     var trp = symbol.theTreap(0);
@@ -212,7 +212,7 @@ test "force second allocation of symbol treap" {
     });
 //    const expectEqual = std.testing.expectEqual;
 //    const expect = std.testing.expect;
-    var symbol = SymbolTable.init(&arenas.globalArena);
+    var symbol = SymbolTable.init(&globalArena.globalArena);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     symbol.loadSymbols(moreSymbolStrings[0..moreSymbolStrings.len-1]);
