@@ -70,9 +70,11 @@ const HeapAllocation = extern struct {
     }
     fn putInFreeLists(self: *Self,block: []Header) void {
         var end = block.len;
+        if (end==0) return;
         const offset = block.ptr;
         const freeIndex = @min(nFreeLists-1,bitsToRepresent((end+1)>>1));
         const freeSize = @as(usize,1)<<@truncate(u6,freeIndex);
+        // handle unaligned first part
         const rest = end & freeSize - 1;
         print("\nfreeSize={} freeIndex={} end={} rest={}",.{freeSize,freeIndex,end,rest});
         if (rest>0) self.putInFreeLists(block[end-rest..]);
@@ -95,8 +97,16 @@ const HeapAllocation = extern struct {
     }
     fn allocOfSize(self: *Self, words: usize) ![]Object {
         if (words>Header.maxLength) return self.allocLarge(words);
-        const index = bitsToRepresent(words);
-        _=index;unreachable;
+        var index = bitsToRepresent(words+1);
+        while (index<nFreeLists) {
+            if (self.freeLists[index].getSlice()) |slice| {
+                // set header, give back rest
+                self.putInFreeLists(slice[words+1..]);
+                return @ptrCast([]Object,slice[0..words]);
+            }
+            index += 1;
+        }
+        unreachable;
     }
     fn sweep(self: *HeapAllocation) void {
         var ptr = @ptrCast(HeaderArray,&self.mem);
@@ -117,9 +127,10 @@ test "check HeapAllocations" {
     try ee(ha.allocOfSize(Header.maxLength+1),error.noSpace);
     const alloc1 = try ha.allocOfSize(127);
     const alloc2 = try ha.allocOfSize(127);
-    const alloc3 = try ha.allocOfSize(127);
+    const alloc3 = try ha.allocOfSize(128);
     const alloc4 = try ha.allocOfSize(Header.maxLength);
-    print("\nallocs={any}",.{.{alloc1,alloc2,alloc3,alloc4}});
+    print("\nallocs={any}",.{.{alloc1.len,alloc2.len,alloc3.len,alloc4.len}});
+    try ee(ha.freeSpace(),HeapAllocation.size-512-Header.maxLength);
 //     try ee(ga.allocatedSpace(),heapAllocationSize);
 //     try ee(ga.freeSpace(),0);
 //     try ee(GlobalArena.boundaryCalc(ha.mem[0..14]),14);
@@ -163,14 +174,16 @@ const FreeList = extern struct {
     }
     fn getSlice(self: *Self) ?[]Header {
         var myList = &self.list;
-        var prev = myList.next;
+        print("\ntrying {}",.{self.size});
         while (true) {
-            if (prev) |fle| {
+            if (myList.*) |fle| {
                 const next = fle.next;
-                if (@cmpxchgWeak(FreeListPtr,myList,prev,next,SeqCst,SeqCst)) |old| {
-                    prev = old;
-                } else
-                    return @ptrCast(HeaderArray,@ptrToInt(fle)+@sizeOf(FreeListElement)-self.size*@sizeOf(Header))[0..self.size];
+                if (@cmpxchgWeak(FreeListPtr,myList,fle,next,SeqCst,SeqCst)) |_| {
+                    continue;
+                } else {
+                    print(" - success",.{});
+                    return @intToPtr(HeaderArray,@ptrToInt(fle)+@sizeOf(FreeListElement)-self.size*@sizeOf(Header))[0..self.size];
+                }
             }
             else return null;
         }
