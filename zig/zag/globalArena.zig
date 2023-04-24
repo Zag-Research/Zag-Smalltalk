@@ -39,7 +39,6 @@ const HeapAllocation = extern struct {
     const field_size = @sizeOf(HeapFlags)+@sizeOf(?*HeapAllocation)+@sizeOf(FreeList)*@as(usize,nFreeLists);
     const heap_allocation_size = 128*1024;
     const size = (heap_allocation_size - field_size)/@sizeOf(Header);
-    const maxObjects = size/@sizeOf(Header);
     const minFreeList = 1;
     mem: [size]Header,
     freeLists: [nFreeLists]FreeList,
@@ -55,7 +54,7 @@ const HeapAllocation = extern struct {
         self.next = null;
         self.freeLists = FreeList.init(nFreeLists);
         print("\n&self=0x{x}",.{@ptrToInt(self)});
-        self.putInFreeLists(self.mem[0..]);
+        self.putInFreeLists(@ptrCast([*]Header,&self.mem),0,size);
         return self;
     }
     fn freeAll(self: *align(heap_allocation_size)Self) void {
@@ -68,22 +67,19 @@ const HeapAllocation = extern struct {
     fn free(self: *align(heap_allocation_size)Self) void {
         memoryAllocator.unmap(@ptrCast([*]align(os.page_size)u8,self)[0..heap_allocation_size]);
     }
-    fn putInFreeLists(self: *Self,block: []Header) void {
-        var end = block.len;
-        if (end==0) return;
-        const offset = block.ptr;
-        const freeIndex = @min(nFreeLists-1,bitsToRepresent((end+1)>>1));
+    fn putInFreeLists(self: *Self, ptr: [*]Header, from: usize, to: usize) void {
+        if (to==from) return;
+        const freeIndex = @min(nFreeLists-1,bitsToRepresent((to-from)>>1));
         const freeSize = @as(usize,1)<<@truncate(u6,freeIndex);
-        // handle unaligned first part
-        const rest = end & freeSize - 1;
-        print("\nfreeSize={} freeIndex={} end={} rest={}",.{freeSize,freeIndex,end,rest});
-        if (rest>0) self.putInFreeLists(block[end-rest..]);
-        end -= rest;
-        while (end>0) {
-            end -= freeSize;
-            print("\nend={}",.{end});
-            self.freeLists[freeIndex].addToFree(offset+end);
+        const freeMask = freeSize-1;
+        var start = (from+freeMask)&~freeMask;
+        print("\nfreeSize={} freeIndex={} start={} from={} to={}",.{freeSize,freeIndex,start,from,to});
+        if (from<start) self.putInFreeLists(ptr,from,start);
+        while (start+freeSize<=to) {
+            self.freeLists[freeIndex].addToFree(ptr+start);
+            start += freeSize;
         }
+        if (start<to) self.putInFreeLists(ptr,start,to);
     }
     fn freeSpace(self: *const Self) usize {
         var count: usize = 0;
@@ -91,27 +87,30 @@ const HeapAllocation = extern struct {
             count += fl.freeSpace();
         return count;
     }
-    fn allocLarge(self: *Self, words: usize) ![]Object {
+    fn allocLarge(self: *Self, words: usize) !HeapPtr {
         _ = self; _ = words;
         return error.noSpace;
     }
-    fn allocOfSize(self: *Self, words: usize) ![]Object {
+    fn allocOfSize(self: *Self, words: usize) !HeapPtr {
         if (words>Header.maxLength) return self.allocLarge(words);
         var index = bitsToRepresent(words+1);
         while (index<nFreeLists) {
             if (self.freeLists[index].getSlice()) |slice| {
-                // set header, give back rest
-                self.putInFreeLists(slice[words+1..]);
-                return @ptrCast([]Object,slice[0..words]);
+                const headPtr = &slice[words];
+                headPtr.* = header(@truncate(u12,words),Format.notIndexable,0,0,Age.aStruct);
+                self.putInFreeLists(slice.ptr,words+1,slice.len);
+                return headPtr;
             }
             index += 1;
         }
-        unreachable;
+        return error.noSpace;
     }
     fn sweep(self: *HeapAllocation) void {
         var ptr = @ptrCast(HeaderArray,&self.mem);
-        const end = ptr+maxObjects;
-        while (ptr<end) {
+        const end = size;
+        while (end>0) {
+            const head = ptr[end-1];
+            _ = head;
             unreachable;
         }
     }
@@ -129,8 +128,8 @@ test "check HeapAllocations" {
     const alloc2 = try ha.allocOfSize(127);
     const alloc3 = try ha.allocOfSize(128);
     const alloc4 = try ha.allocOfSize(Header.maxLength);
-    print("\nallocs={any}",.{.{alloc1.len,alloc2.len,alloc3.len,alloc4.len}});
-    try ee(ha.freeSpace(),HeapAllocation.size-512-Header.maxLength);
+    print("\nallocs={any}",.{.{alloc1,alloc2,alloc3,alloc4}});
+    try ee(ha.freeSpace(),HeapAllocation.size-512+125-Header.maxLength);
 //     try ee(ga.allocatedSpace(),heapAllocationSize);
 //     try ee(ga.freeSpace(),0);
 //     try ee(GlobalArena.boundaryCalc(ha.mem[0..14]),14);
@@ -153,15 +152,14 @@ test "check HeapAllocations" {
 //     try ee(ga.freeSpace(),heapAllocationSize-2); // ignored the 2x 1-word allocations
 }
 const FreeList = extern struct {
-    const minAllocation = 1; // might parameterize this eventually
     const Self = @This();
     size: u16,
     list: FreeListPtr,
     inline fn addToFree(self: *Self, ptr: HeaderArray) void {
-        const fle = @intToPtr(*FreeListElement,@ptrToInt(ptr)+self.size*@sizeOf(Header)-@sizeOf(FreeListElement));
+        const fle = @intToPtr(*FreeListElement,@ptrToInt(ptr+self.size)-@sizeOf(FreeListElement));
         print("\n&fle=0x{x} size={}",.{@ptrToInt(fle),self.size});
         fle.header = header(@truncate(u12,self.size-1),Format.notIndexable,0,0,Age.free);
-        if (self.size>minAllocation) {
+        if (self.size>=@sizeOf(FreeListElement)/@sizeOf(Header)) {
             var prev = self.list;
             while (true) {
                 fle.next = prev;
