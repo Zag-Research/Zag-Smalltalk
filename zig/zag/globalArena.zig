@@ -25,6 +25,12 @@ const HeapPtr = @import("heap.zig").HeapPtr;
 const AllocErrors = @import("heap.zig").AllocErrors;
 const os = @import("os.zig");
 
+pub const WeakObject = extern struct {
+    object: Object,
+};
+pub const StructObject = extern struct {
+    object: Object,
+};
 const HeapFlags = extern union {
     int: u64,
     f: extern struct {
@@ -88,17 +94,38 @@ const HeapAllocation = extern struct {
             count += fl.freeSpace();
         return count;
     }
-    fn allocLarge(self: *Self, words: usize) !HeapPtr {
-        _ = self; _ = words;
+    fn allocLarge(self: *Self, instVars: usize, arraySize: usize) !HeapPtr {
+        _ = self; _ = instVars; _ = arraySize;
         return error.noSpace;
     }
-    fn allocOfSize(self: *Self, words: usize) !HeapPtr {
-        if (words>Header.maxLength) return self.allocLarge(words);
+    fn allocOfSize(self: *Self, instVars: usize, arraySize: usize, comptime T: anytype) !HeapPtr {
+        const words = switch (T) {
+            u8 => instVars + (arraySize+@sizeOf(Object)-1)/@sizeOf(Object) +
+                @as(usize,if (Format.isByteSize(arraySize)) 0 else 2),
+            Object,StructObject => instVars + arraySize +
+                @as(usize,if (Format.isObjectSize(arraySize)) 0 else 2),
+            u16,u32,u64 => instVars + (arraySize*@sizeOf(T)+@sizeOf(Object)-1)/@sizeOf(Object) + 2,
+            WeakObject => instVars + arraySize + 3,
+            else => @compileError("can't allocate " ++ @typeName(T)),
+        };
+        const format = switch (T) {
+            u8 => if (Format.isByteSize(arraySize)) Format.byteSize(arraySize) else Format.indexed,
+            Object => if (Format.isObjectSize(arraySize)) Format.objectSize(arraySize) else Format.indexed,
+            u16,u32,u64 => Format.indexed,
+            WeakObject => Format.weakWithPointers,
+            else => Format.notIndexable,
+        };
+        if (words>Header.maxLength) return self.allocLarge(instVars+if (T==WeakObject) 3 else 2,arraySize);
         var index = bitsToRepresent(words+1);
         while (index<nFreeLists) {
             if (self.freeLists[index].getSlice()) |slice| {
                 const headPtr = &slice[words];
-                headPtr.* = header(@truncate(u12,words),Format.notIndexable,0,0,Age.aStruct);
+                headPtr.* = header(@truncate(u12,words),format,0,0,Age.global);
+                if (format.hasIndexFields()) {
+                    const fields = @ptrCast([*]u64,slice.ptr+words-2);
+                    fields[0] = @ptrToInt(slice.ptr+instVars);
+                    fields[1] = arraySize;
+                }
                 self.putInFreeLists(slice.ptr,words+1,slice.len);
                 return headPtr;
             }
@@ -124,13 +151,19 @@ test "check HeapAllocations" {
     var ha = HeapAllocation.init();
     defer ha.deinit();
     try ee(ha.freeSpace(),HeapAllocation.size);
-    try ee(ha.allocOfSize(Header.maxLength+1),error.noSpace);
-    const alloc1 = try ha.allocOfSize(127);
-    const alloc2 = try ha.allocOfSize(127);
-    const alloc3 = try ha.allocOfSize(128);
-    const alloc4 = try ha.allocOfSize(Header.maxLength);
-    print("\nallocs={any}",.{.{alloc1,alloc2,alloc3,alloc4}});
-    try ee(ha.freeSpace(),HeapAllocation.size-512+125-Header.maxLength);
+    try ee(ha.allocOfSize(Header.maxLength+1,0,Object),error.noSpace);
+    const alloc0 = try ha.allocOfSize(1,60,u8);
+    try ee(alloc0.length,9);
+    const alloc1 = try ha.allocOfSize(0,50,Object);
+    try ee(alloc1.length,50);
+    const alloc2 = try ha.allocOfSize(0,125,Object);
+    try ee(alloc2.length,127);
+    const alloc3 = try ha.allocOfSize(124,0,WeakObject);
+    try ee(alloc3.length,127);
+    const alloc4 = try ha.allocOfSize(128,0,Object);
+    const alloc5 = try ha.allocOfSize(Header.maxLength,0,Object);
+    print("\nallocs={any}",.{.{alloc0,alloc1,alloc2,alloc3,alloc4,alloc5,}});
+    try ee(ha.freeSpace(),HeapAllocation.size-512+125-62-Header.maxLength);
 //     try ee(ga.allocatedSpace(),heapAllocationSize);
 //     try ee(ga.freeSpace(),0);
 //     try ee(GlobalArena.boundaryCalc(ha.mem[0..14]),14);

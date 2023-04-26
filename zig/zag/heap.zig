@@ -47,6 +47,19 @@ pub const Format = enum(u8) {
             else => Size.Indexable,
         };
     }
+    pub inline fn isObjectSize(s: usize) bool {
+        return s <= ImmediateObjectMax-ImmediateObjectOne+1;
+    }
+    pub inline fn objectSize(s: usize) Self {
+        if (s==0) return .immediateSizeZero;
+        return @intToEnum(Self,s-1+ImmediateObjectOne);
+    }
+    pub inline fn isByteSize(s: usize) bool {
+        return s <= ImmediateByteMax-ImmediateSizeZero;
+    }
+    pub inline fn byteSize(s: usize) Self {
+        return @intToEnum(Self,s);
+    }
     pub inline fn isIndexableWithPointers(self: Self) bool {
         return self == .indexedWithPointers;
     }
@@ -58,6 +71,9 @@ pub const Format = enum(u8) {
     }
     pub inline fn hasIndexPointers(self: Self) bool {
         return @enumToInt(self) > Indexed;
+    }
+    pub inline fn hasIndexFields(self: Self) bool {
+        return @enumToInt(self) >= Indexed;
     }
     pub inline fn immutable(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) | Immutable);
