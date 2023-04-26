@@ -12,8 +12,10 @@ const inversePhi = utilities.inversePhi;
 
 pub const Format = enum(u8) {
     immediateSizeZero = ImmediateSizeZero,
-    immediateSizeMax = NotIndexable - 1,
-    notIndexable, // this and below have no size/pointer
+    immediateByteMax = NotIndexable - 1,
+    notIndexable, // this and below have no pointers in array portion
+    immediateObjectOne,
+    immediateObjectMax = ImmediateObjectMax, // this and below have no size/pointer
     indexed,
     indexedWithPointers, // this and below have no weak queue
     _weak_, // never created
@@ -21,10 +23,12 @@ pub const Format = enum(u8) {
     _,
     const Self = @This();
     const ImmediateSizeZero: u8 = 0;
-    const ImmediateSizeMax = NotIndexable - 1;
-    const NotIndexable = Indexed - 1;
-    const Indexed = Weak - 3;
-    const Weak = Immutable - 1;
+    const ImmediateByteMax = NotIndexable - 1;
+    const NotIndexable = 64;
+    const ImmediateObjectOne = NotIndexable + 1;
+    const ImmediateObjectMax = Indexed - 1;
+    const Indexed = WeakWithPointers - 3;
+    const WeakWithPointers = Immutable - 1;
     const Pointers: u8 = 1;
     const Immutable : u8 = 128;
     const Size = union(enum) {
@@ -35,15 +39,13 @@ pub const Format = enum(u8) {
         const NotIndexable = Size{.notIndexable={}};
     };
     pub inline fn size(self: Self) Size {
-        const s = @enumToInt(self);
+        const s = @enumToInt(self) & ~Immutable;
         return switch (s) {
-            ImmediateSizeZero ... ImmediateSizeMax => Size{.size = s},
-            NotIndexable => Size{.notIndexable={}},
-            else => Size{.indexable={}},
+            ImmediateSizeZero ... ImmediateByteMax => Size{.size = s},
+            ImmediateObjectOne ... ImmediateObjectMax => Size{.size = s & ImmediateByteMax},
+            NotIndexable => Size.NotIndexable,
+            else => Size.Indexable,
         };
-    }
-    pub inline fn immutable(self: Self) Self {
-        return @intToEnum(Self,@enumToInt(self) | Immutable);
     }
     pub inline fn isIndexableWithPointers(self: Self) bool {
         return self == .indexedWithPointers;
@@ -56,6 +58,9 @@ pub const Format = enum(u8) {
     }
     pub inline fn hasIndexPointers(self: Self) bool {
         return @enumToInt(self) > Indexed;
+    }
+    pub inline fn immutable(self: Self) Self {
+        return @intToEnum(Self,@enumToInt(self) | Immutable);
     }
     pub inline fn isImmutable(self: Self) bool {
         return @enumToInt(self) & Immutable != 0;
@@ -75,7 +80,8 @@ pub const Format = enum(u8) {
 test "raw size" {
     try std.testing.expectEqual(@intToEnum(Format,7).size(),Format.Size{.size=7});
     try std.testing.expectEqual(@intToEnum(Format,125).size(),Format.Size.Indexable);
-    try std.testing.expectEqual(@intToEnum(Format,123).size(),Format.Size.NotIndexable);
+    try std.testing.expectEqual(@intToEnum(Format,64).size(),Format.Size.NotIndexable);
+    try std.testing.expectEqual(@intToEnum(Format,70).size(),Format.Size{.size=6});
     try std.testing.expectEqual(Format.immediateSizeZero.size(),Format.Size{.size=0});
 }
 
@@ -93,7 +99,7 @@ test "header formats" {
     try expect(Format.weakWithPointers.hasIndexPointers());
     try expect(Format.weakWithPointers.isWeak());
     try expect(!Format.indexedWithPointers.isWeak());
-    try expect(!Format.immediateSizeMax.isWeak());
+    try expect(!Format.immediateByteMax.isWeak());
 }
 pub const Age = enum(u4) {
     incompleteContext = IncompleteContext,
@@ -356,15 +362,27 @@ pub const Header = packed struct(u64) {
         }
         return self;
     }
-    pub inline fn arrayAsSlice(maybeForwarded: HeapConstPtr,comptime T:type) ![]T {
-        var self = maybeForwarded;
-        var head = self.*;
-        var size: usize = head.length;
+    pub inline fn asSlice(self: HeapConstPtr) ![]Object {
+        const head = self.*;
+        const size = head.length;
         if (size==forwardLength) {
-            self = self.forwardedTo();
-            head = self.*;
-            size = head.length;
+            const realSelf = self.forwardedTo();
+            const start = @intToPtr([*]Object,@ptrToInt(realSelf)-@sizeOf(Object)*realSelf.length);
+            return start[0..size];
+        } else {
+            const start = @intToPtr([*]Object,@ptrToInt(self)-@sizeOf(Object)*size);
+            return start[0..size];
         }
+    }
+    pub inline fn arrayAsSlice(self: HeapConstPtr,comptime T:type) ![]T {
+        const head = self.*;
+        if (head.length==forwardLength) {
+            const realSelf = self.forwardedTo();
+            return realSelf.arrayAsSlice_(realSelf.*,T);
+        } else
+            return self.arrayAsSlice_(head,T);
+    }
+    inline fn arrayAsSlice_(self: HeapConstPtr, head: Header, comptime T:type) ![]T {
         if (head.age.isIncompleteContext()) unreachable;
         switch (head.objectFormat.size()) {
             .notIndexable => return error.NotIndexable,
@@ -373,7 +391,7 @@ pub const Header = packed struct(u64) {
                 return oa[0..s];
             },
             .indexable => {
-                const oa = @intToPtr([*]u64,@ptrToInt(self)-@sizeOf(Object)*2);
+                const oa = @intToPtr([*]usize,@ptrToInt(self)-@sizeOf(usize)*2);
                 return @intToPtr([*]T,oa[0])[0..oa[1]];
             },
         }

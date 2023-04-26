@@ -37,7 +37,8 @@ const HeapAllocation = extern struct {
     const Self = @This();
     const nFreeLists = bitsToRepresent(Header.maxLength)+1;
     const field_size = @sizeOf(HeapFlags)+@sizeOf(?*HeapAllocation)+@sizeOf(FreeList)*@as(usize,nFreeLists);
-    const heap_allocation_size = 128*1024;
+    const heap_allocation_goal = 128*1024;
+    const heap_allocation_size = @max(4<<nFreeLists,@min(heap_allocation_goal,(math.maxInt(u16)+1)*@sizeOf(Object)));
     const size = (heap_allocation_size - field_size)/@sizeOf(Header);
     const minFreeList = 1;
     mem: [size]Header,
@@ -48,7 +49,7 @@ const HeapAllocation = extern struct {
     fn getAligned() *align(heap_allocation_size)HeapAllocation {
         return @alignCast(heap_allocation_size,memoryAllocator.allocBlock() catch @panic("page allocator failed"));
     }
-    fn alloc() *align(heap_allocation_size)Self {
+    fn init() *align(heap_allocation_size)Self {
         var self = getAligned();
         self.flags.int = 0;
         self.next = null;
@@ -64,7 +65,7 @@ const HeapAllocation = extern struct {
             ha.deinit();
         }
     }
-    fn free(self: *align(heap_allocation_size)Self) void {
+    fn deinit(self: *align(heap_allocation_size)Self) void {
         memoryAllocator.unmap(@ptrCast([*]align(os.page_size)u8,self)[0..heap_allocation_size]);
     }
     fn putInFreeLists(self: *Self, ptr: [*]Header, from: usize, to: usize) void {
@@ -120,8 +121,8 @@ test "size of HeapAllocation" {
 }
 test "check HeapAllocations" {
     const ee = std.testing.expectEqual;
-    var ha = HeapAllocation.alloc();
-    defer ha.free();
+    var ha = HeapAllocation.init();
+    defer ha.deinit();
     try ee(ha.freeSpace(),HeapAllocation.size);
     try ee(ha.allocOfSize(Header.maxLength+1),error.noSpace);
     const alloc1 = try ha.allocOfSize(127);

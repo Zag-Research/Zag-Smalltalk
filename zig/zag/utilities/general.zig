@@ -100,8 +100,8 @@ test "undo phi" {
     try expectEqual((123242321*%phi32)*%undo32,123242321);
 }
 inline fn po2(size:anytype,comptime not1: u1) @TypeOf(size) {
-    var n = if (size==0) 0 else size-1;
-    n |= not1;
+    var n: @TypeOf(size) = if (size==0) 0 else size-1;
+    n |= @as(@TypeOf(n),not1);
     const bits = @typeInfo(@TypeOf(size)).Int.bits;
     if (comptime bits>32) n |= n>>32;
     if (comptime bits>16) n |= n>>16;
@@ -116,6 +116,8 @@ pub inline fn largerPowerOf2(size:anytype) @TypeOf(size) {
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
+    var t4092: u16 = 4092; // should work with u12
+    try expectEqual(largerPowerOf2(t4092),4096);
     try expectEqual(largerPowerOf2(@as(u16,1)),1);
     try expectEqual(largerPowerOf2(@as(u16,16)),16);
     try expectEqual(largerPowerOf2(@as(u16,33)),64);

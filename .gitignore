@@ -53,3 +53,4 @@ zig/zag/execute
 zig/fibonacci 
 zig/sieve
 *.a
+*-generated.zig
