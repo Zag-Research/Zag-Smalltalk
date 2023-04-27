@@ -336,7 +336,7 @@ pub const Header = packed struct(u64) {
 
     const immediateLength: u16 = 4095; // all immediate objects (except doubles) have this as top 12 bits
     const forwardLength: u16 = 4094;
-    pub const maxLength = 4093;
+    pub const maxLength = @min(4093,mem.maxInt(u12)-3); // reserve space for size, address, weakLink
     pub const includesHeader = true;
     pub fn iterator(self: HeapConstPtr) Format.Iterator {
         return self.objectFormat.iterator();
