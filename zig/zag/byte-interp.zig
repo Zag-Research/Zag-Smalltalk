@@ -10,10 +10,8 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const Context = @import("context.zig").Context;
 pub const TestExecution = @import("context.zig").TestExecution;
-const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
-pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -67,10 +65,9 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, _hp: Hp, thread: *Thread, _context: *Context) MethodReturns {
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, thread: *Thread, _context: *Context, _: u32) MethodReturns {
         var pc:[*]align(1) const ByteCode = @ptrCast([*]align(1) const ByteCode,_pc);
         var sp = _sp;
-        var hp = _hp;
         var context = _context;
         var method = context.method;
         var references = (&method.header).arrayAsSlice(Object) catch unreachable;
@@ -133,12 +130,10 @@ pub const ByteCode = enum(i8) {
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
-                        const selfOffset = @enumToInt(stackStructure.l2);
-                        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded,selfOffset);
-                        const ctxt = result.ctxt;
+                        const selfOffset = stackStructure.l2;
+                        const ctxt = context.push(sp,thread,method,locals,maxStackNeeded,selfOffset);
                         ctxt.setNPc(interpret);
-                        sp = result.ctxt.asObjectPtr();
-                        hp = result.hp;
+                        sp = ctxt.asObjectPtr();
                         context = ctxt;
                         pc += 1;
                         continue :interp;
@@ -169,16 +164,16 @@ pub const ByteCode = enum(i8) {
                         const result = context.pop(thread);
                         const newSp = result.sp;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext});
                     },
-                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context}),
+                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,thread,context,0}),
                     .returnTop => {
                         const top = sp[0];
                         const result = context.pop(thread);
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext});
                     },
                     .p1 => {// SmallInteger>>#+
                         sp[1] = inlines.p1(sp[1],sp[0]) catch {pc+=1;continue :interp;};
@@ -234,7 +229,7 @@ pub const ByteCode = enum(i8) {
     var methods: [128] CompiledMethodPtr = undefined;
     var nMethods = 0;
     fn findMethod(search: CompiledMethodPtr) i8 {
-        for (methods[0..nMethods]) |v,index| {
+        for (methods[0..nMethods],0..) |v,index| {
             if (search==v)
                 return @intCast(i8,index);
         }
@@ -338,7 +333,7 @@ test "compiling method" {
 //    const mcmp = m.asCompiledMethodPtr();
 //    m.update(mref,mcmp);
     var t = m.code[0..];
-    for (t) | v,idx | {
+    for (m.code,0..) | v,idx | {
         std.debug.print("t[{}] = {}\n",.{idx,v});
     }
     try expectEqual(t.len,11);

@@ -37,6 +37,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             // if this is allocated on an object heap, left,right as an object will together look like an f64 so it will be ignored by garbage collection
             var treap = ref(memory,compare,empty);
             treap.setRoot(0);
+            treap.setFree(0);
             treap.extend(1);
             return treap;
         }
@@ -55,22 +56,29 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             };
         }
         pub fn extend(self: *Self, start: Index) void {
-            self.setFree(start);
-            var index = start+1;
-            for (self.table[start..]) |*element| {
+            var free =self.getFree();
+            if (free == 0) {
+                self.setFree(start);
+            } else
+                while (true) {
+                    const temp = self.table[free].left;
+                    if (temp == 0 ) {self.table[free].left = start;break;}
+                    free = temp;
+            }
+            for (self.table[start..],start+1..) |*element,index| {
                 element.key=self.empty;
-                element.left=index;
+                element.left=@intCast(Index,index);
                 element.right=0;
                 element.value=undefined;
-                index += 1;
             }
             self.table[self.table.len-1].left=0;
         }
-        pub fn resize(self: *Self, memory: []Element) Self {
-            var treap = ref(memory,self.compare,self.empty);
-            for (self.table,0..) | element,i | treap.table[i] = element;
+        pub fn resize(self: *Self, memory: []Element) void {
+            var treap = if (self.table.len>0) ref(memory,self.compare,self.empty)
+                else init(memory,self.compare,self.empty);
+            for (self.table,treap.table[0..self.table.len]) | element,*tElement | tElement.* = element;
             treap.extend(@intCast(Index,self.table.len));
-            return treap;
+            self.table = memory;
         }
         inline fn root(self: *const Self) Index {
             return self.table[0].right;
@@ -357,16 +365,21 @@ test "resize u64 treap with values" {
     try expectEqual(treap.getValue(f2),92);
     try expectEqual(treap.hasRoom(1),false);
     var memory2 = [_]Treap_u64V.Element{undefined} ** 6;
-    var treap2 = treap.resize(memory2[0..]);
-    try expectEqual(treap2.table.len,6);
-    try expectEqual(treap2.hasRoom(2),true);
-    try expectEqual(treap2.hasRoom(3),false);
-    const f3 = try treap2.insert(19);
-    try expectEqual(try treap2.insert(17),f1);
-    try expectEqual(treap2.hasRoom(1),true);
-    try expectEqual(treap2.hasRoom(2),false);
+    treap.resize(memory2[0..]);
+    var memory3 = [_]Treap_u64V.Element{undefined} ** 8;
+    treap.resize(memory3[0..]);
+    try expectEqual(treap.table.len,8);
+    try expectEqual(treap.hasRoom(2),true);
+    try expectEqual(treap.hasRoom(3),true);
+    try expectEqual(treap.hasRoom(4),true);
+    try expectEqual(treap.hasRoom(5),false);
+    const f3 = try treap.insert(19);
+    try expectEqual(try treap.insert(17),f1);
+    try expectEqual(treap.hasRoom(1),true);
+    try expectEqual(treap.hasRoom(3),true);
+    try expectEqual(treap.hasRoom(4),false);
     try expectEqual(f3,4);
-    try expectEqual(treap2.getValue(f2),92);
+    try expectEqual(treap.getValue(f2),92);
 }
 test "simple u64 treap alloc" {
     const expectEqual = @import("std").testing.expectEqual;

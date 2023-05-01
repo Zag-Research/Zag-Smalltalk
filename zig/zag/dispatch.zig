@@ -467,7 +467,6 @@ fn stage2a(thread : *Thread, self: Object, selector: Object, ci:ClassIndex) Meth
 //             return TableStructureResult{.withConflicts=.{.size=conflictSize+level2,.hash=bestConflictRand,.fix=fixup}};
 //         }
 //         fn addDispatch(_: *Thread, theClass: ClassIndex, superClass: ClassIndex, symbolMethods: []const CompiledMethodPtr) void {
-//             const arena = &@import("arenas.zig").globalArena;//.asArena();
 //             var fixup: [15]Fix = undefined;
 //             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
 //             const rand = dispatchSize.hash();

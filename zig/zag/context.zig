@@ -7,10 +7,8 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
-pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -30,11 +28,11 @@ pub const Context = struct {
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     temps: [1]Object,
     const Self = @This();
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) MethodReturns;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) MethodReturns;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
     pub fn init() Self {
         return Self {
-            .header = comptime heap.header(4,Format.bothPP,class.Context_I,0,Age.static),
+            .header = comptime heap.header(baseSize+1,Format.context,class.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = undefined,
             .prevCtxt = undefined,
@@ -59,7 +57,7 @@ pub const Context = struct {
     }
     pub inline fn pop(self: ContextPtr, thread: *Thread) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.asHeapPtr().hash16();
-        if (self.isInStack())
+        if (self.isOnStack())
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
         const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         const newSp = thread.endOfStack() - itemsToKeep.len;
@@ -68,9 +66,9 @@ pub const Context = struct {
         }
         return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub inline fn push(self: ContextPtr, sp: [*]Object, hp: Hp, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  struct { hp: Hp,ctxt: ContextPtr } {
+    pub inline fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
         const newSp = sp - baseSize - locals;
-        if (arenas.arenaFree(newSp,hp)<5+maxStackNeeded) @panic("grow heap1");
+        if (thread.checkStack(newSp,5+maxStackNeeded)) @panic("grow heap1");
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
@@ -80,7 +78,7 @@ pub const Context = struct {
         ctxt.header = heap.Header.partialOnStack(selfOffset+baseSize);
         //ctxt.size = ctxt.calculatedSize(thread); // ToDo: only needed if there is a format method
         if (thread.needsCheck()) @panic("thread needsCheck");
-       return .{.hp=hp,.ctxt=ctxt};
+       return ctxt;
     }
     fn convertToProperHeapObject(self: ContextPtr, sp: [*]Object, thread: *Thread) void {
         _=self;_=sp;_=thread;unreachable;
@@ -118,10 +116,10 @@ pub const Context = struct {
     pub inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
         self.tpc = pc;
     }
-    pub inline fn getNPc(self: ContextPtr) ThreadedFn {
+    pub inline fn getNPc(self: ContextPtr) Context.ThreadedFn {
         return self.npc;
     }
-    pub inline fn setNPc(self: ContextPtr, pc: ThreadedFn) void {
+    pub inline fn setNPc(self: ContextPtr, pc: Context.ThreadedFn) void {
         self.npc = pc;
     }
     pub inline fn getSelf(self: ContextPtr) Object {
@@ -149,9 +147,9 @@ pub const Context = struct {
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @ptrCast(ContextPtr,op);
     }
-    fn collectNursery(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) MethodReturns {
+    fn collectNursery(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr) MethodReturns {
         if (true) @panic("need to collect nursery");
-        return @call(tailCall,push,.{pc,sp,hp,thread,context});
+        return @call(tailCall,push,.{pc,sp,thread,context});
     }
     fn print(self: ContextPtr, thread: *Thread) void {
         const pr = std.debug.print;
@@ -163,11 +161,9 @@ pub const TestExecution = struct {
     thread: Thread,
     ctxt: Context,
     sp: [*]Object,
-    hp: Hp,
     pc: [*]const Code,
     const Self = @This();
     var endSp: [*]Object = undefined;
-    var endHp: Hp = undefined;
     var endPc: [*]const Code = undefined;
     var baseMethod = CompiledMethod.init(Nil,0,2);
     pub fn new() Self {
@@ -175,18 +171,15 @@ pub const TestExecution = struct {
             .thread = Thread.new(),
             .ctxt = Context.init(),
             .sp = undefined,
-            .hp = undefined,
             .pc = undefined,
         };
     }
     pub fn init(self: *Self) void {
         self.thread.init();
         self.sp = self.thread.endOfStack();
-        self.hp = self.thread.getHeap();
     }
-    fn end(pc: [*]const Code, sp: [*]Object, hp: Hp, _: *Thread, _: * Context, _: u32) void {
+    fn end(pc: [*]const Code, sp: [*]Object, _: *Thread, _: * Context, _: u32) void {
         endPc = pc;
-        endHp = hp;
         endSp = sp;
     }
     pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
@@ -194,15 +187,12 @@ pub const TestExecution = struct {
         for (source,0..) |src,idx|
             sp[idx] = src;
 //        const pc = method.codePtr();
-        const hp = self.thread.getHeap();
         self.ctxt.setNPc(Self.end);
         endSp = sp;
-        endHp = hp;
         //        endPc = pc;
-        self.ctxt.method=method;
-        method.execute(sp,hp,&self.thread,&self.ctxt);
+//        self.method=method;
+        method.execute(sp,&self.thread,&self.ctxt);
         self.sp = endSp;
-        self.hp = endHp;
         self.pc = endPc;
         return self.ctxt.stack(self.sp,&self.thread);
     }

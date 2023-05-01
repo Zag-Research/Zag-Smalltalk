@@ -16,6 +16,7 @@ pub const Format = enum(u8) {
     notIndexable, // this and below have no pointers in array portion
     immediateObjectOne,
     immediateObjectMax = ImmediateObjectMax, // this and below have no size/pointer
+    context,
     indexed,
     indexedWithPointers, // this and below have no weak queue
     _weak_, // never created
@@ -26,7 +27,7 @@ pub const Format = enum(u8) {
     const ImmediateByteMax = NotIndexable - 1;
     const NotIndexable = 64;
     const ImmediateObjectOne = NotIndexable + 1;
-    const ImmediateObjectMax = Indexed - 1;
+    const ImmediateObjectMax = Indexed - 2;
     const Indexed = WeakWithPointers - 3;
     const WeakWithPointers = Immutable - 1;
     const Pointers: u8 = 1;
@@ -147,20 +148,14 @@ pub const Age = enum(u4) {
         };
     }
     pub inline fn isUnmoving(self: Self) bool {
-        return switch (self) {
-            .static ... .aooScanned => true,
-            else => false,
-        };
+        return @enumToInt(self) >= Static;
     }
     pub inline fn isGlobal(self: Self) bool {
-        return switch (self) {
-            .global ... .aooScanned => true,
-            else => false,
-        };
+        return @enumToInt(self) >= Global;
     }
     pub inline fn isNonHeap(self: Self) bool {
-        return switch (self) {
-            .static,.incompleteContext => true,
+        return switch (@enumToInt(self)) {
+            Static,IncompleteContext => true,
             else => false,
         };
     }
@@ -336,7 +331,7 @@ pub const Header = packed struct(u64) {
 
     const immediateLength: u16 = 4095; // all immediate objects (except doubles) have this as top 12 bits
     const forwardLength: u16 = 4094;
-    pub const maxLength = @min(4093,mem.maxInt(u12)-3); // reserve space for size, address, weakLink
+    pub const maxLength = @min(4093,std.math.maxInt(u12)-3); // reserve space for size, address, weakLink
     pub const includesHeader = true;
     pub fn iterator(self: HeapConstPtr) Format.Iterator {
         return self.objectFormat.iterator();
@@ -359,6 +354,9 @@ pub const Header = packed struct(u64) {
     pub inline fn isOnStack(self: HeapConstPtr) bool {
         _ = self; unreachable;
 //        return self.age.isOnStack();
+    }
+    pub inline fn isUnmoving(self: HeapConstPtr) bool {
+        return self.age.isUnmoving();
     }
     pub inline fn isStack(self: HeapConstPtr) bool {
         return self.age.isStack();
@@ -425,7 +423,7 @@ pub const Header = packed struct(u64) {
             },
         }
     }
-    pub fn growSize(maybeForwarded: HeapConstPtr, stepSize: usize) !usize {
+    pub fn growSizeX(maybeForwarded: HeapConstPtr, stepSize: usize) !usize {
         const self = maybeForwarded.forwarded();
         const form = self.objectFormat;
         if (!form.isIndexable()) return error.NotIndexable;
@@ -557,6 +555,22 @@ pub const Header = packed struct(u64) {
         }
     }
 };
+pub fn growSize(obj: anytype, comptime Target:type) !usize {
+    const T = @TypeOf(obj);
+    if (T == Object) return growSize(obj.arrayAsSlice(Target),Target);
+    switch (@typeInfo(T)) {
+        .Pointer => |ptr| if(ptr.child != Target) @compileError("types must match " ++ @typeName(ptr.child) ++ " and " ++ @typeName(Target)),
+        else => @compileError("only pointer types: " ++ @typeName(T)),
+    }
+    var size = (obj.len * @sizeOf(Target) + @sizeOf(Object) - 1)/@sizeOf(Object);
+    size = largerPowerOf2(size * 2);
+    // ToDo: use Format to round down to fit - i.e. consider number of footer words
+    if (size>Header.maxLength and size<Header.maxLength*2) size = Header.maxLength;
+    return (size*@sizeOf(Object)+@sizeOf(Target)-1)/@sizeOf(Target);
+}
+test "growSize" {
+    //try std.testing.expectEqual(growSize(@as([]const u8,"foo"[0..]),u8),8);
+}
 pub const header = Header.init;
 // test "Header structure" {
 //     const testing = std.testing;

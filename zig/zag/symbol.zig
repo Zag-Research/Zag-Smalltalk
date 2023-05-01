@@ -1,12 +1,12 @@
 const std = @import("std");
 const mem = std.mem;
+const Allocator = mem.Allocator;
 const builtin = @import("builtin");
 const object = @import("object.zig");
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-const globalArena = @import("globalArena.zig");
-const GlobalArena = globalArena.GlobalArena;
+var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 inline fn symbol_of(index: usize, arity: u8) object.Object {
     return symbol0(index|(@as(usize,arity)<<24));
 }
@@ -78,7 +78,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     // add any new values here
     "Object"
 });
-pub var symbolTable = SymbolTable.init(&globalArena.globalArena);
+pub var symbolTable = SymbolTable.init(&globalAllocator);
 
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
@@ -92,7 +92,7 @@ pub inline fn lookup(string: object.Object) object.Object {
 pub inline fn intern(string: object.Object) object.Object {
     return symbolTable.intern(string);
 }
-const objectTreap = Treap(object.Object,u32,u0);
+const ObjectTreap = Treap(object.Object,u32,u0);
 fn numArgs(obj: object.Object) u8 {
     const string = obj.arrayAsSlice(u8);
     if (string.len==0) return 0;
@@ -105,38 +105,38 @@ fn numArgs(obj: object.Object) u8 {
     return count;
 }
 pub const SymbolTable = struct {
-    theObject: object.Object,
-    treap: objectTreap,
-    arena: *GlobalArena,
+    mem: []ObjectTreap.Element,
+    treap: ObjectTreap,
+    allocator: *Allocator,
     const Self = @This();
     const initialSymbolTableSize = 50;
-    pub fn init(ga: *GlobalArena) Self {
+    pub fn init(allocator: *Allocator) Self {
         return SymbolTable {
-            .theObject = Nil,
-            .treap = objectTreap.initEmpty(object.compareObject,Nil),
-            .arena = ga,
+            .mem = &[0]ObjectTreap.Element{},
+            .treap = ObjectTreap.initEmpty(object.compareObject,Nil),
+            .allocator = allocator,
         };
     }
-    inline fn theTreap(self: *Self, adding: usize) *objectTreap {
+    inline fn theTreap(self: *Self, adding: usize) *ObjectTreap {
         if (self.treap.hasRoom(adding))
             return &self.treap;
         return self.allocTreap(adding);
     }
-    fn allocTreap(self: *Self, _: usize) *objectTreap {
+    fn allocTreap(self: *Self, _: usize) *ObjectTreap {
         {
             // ToDo: add locking
-            const size = self.theObject.growSize(objectTreap.elementSize)
-                catch initialSymbolTableSize*objectTreap.elementSize;
-            var newHeapObject = self.arena.allocArray(object.SymbolTable_I,size,u8);
-            var memory = newHeapObject.arrayAsSlice(u8);
-            var newTreap = self.treap.resize(memory);
-            self.treap = newTreap;
-            self.theObject = newHeapObject;
+            const size = heap.growSize(self.mem,ObjectTreap.Element)
+                catch initialSymbolTableSize*ObjectTreap.elementSize;
+            var memory = self.allocator.alloc(ObjectTreap.Element,size) catch @panic("can't alloc");
+            self.treap.resize(memory);
+            self.allocator.free(self.mem);
+            self.mem = memory;
         }
         self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len]);
         return &self.treap;
     }
     pub fn deinit(self: *Self) void {
+        self.allocator.free(self.mem);
         self.*=undefined;
     }
     fn asString(self: *Self,string: object.Object) object.Object {
@@ -145,7 +145,7 @@ pub const SymbolTable = struct {
     pub fn lookup(self: *Self,string: object.Object) object.Object {
         return lookupDirect(self.theTreap(0),string);
     }
-    fn lookupDirect(trp: *objectTreap, string: object.Object) object.Object {
+    fn lookupDirect(trp: *ObjectTreap, string: object.Object) object.Object {
         const index = trp.lookup(string);
         if (index>0) {
             const nArgs = numArgs(string);
@@ -164,7 +164,7 @@ pub const SymbolTable = struct {
         }
         unreachable;
     }
-    fn internDirect(trp: *objectTreap, string: object.Object) object.Object {
+    fn internDirect(trp: *ObjectTreap, string: object.Object) object.Object {
         const result = lookupDirect(trp,string);
         if (!result.isNil()) return result;
         const str = string.promoteTo() catch return Nil;
@@ -185,7 +185,7 @@ pub const noStrings = &[0]heap.HeapConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
-    var symbol = SymbolTable.init(&globalArena.globalArena);
+    var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     var trp = symbol.theTreap(0);
@@ -212,9 +212,9 @@ test "force second allocation of symbol treap" {
     });
 //    const expectEqual = std.testing.expectEqual;
 //    const expect = std.testing.expect;
-    var symbol = SymbolTable.init(&globalArena.globalArena);
+    var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len-1]);
     symbol.loadSymbols(moreSymbolStrings[0..moreSymbolStrings.len-1]);
-    _ = symbol.arena.allocArray(49,480,u8);
+    //_ = symbol.allocator.allocArray(49,480,u8);
 }

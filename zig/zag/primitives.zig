@@ -15,7 +15,6 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const sym = @import("symbol.zig").symbols;
 const heap = @import("heap.zig");
-const Hp = heap.HeaderArray;
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
@@ -155,72 +154,73 @@ test "inline primitives" {
 }
 
 pub const embedded = struct {
-    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
+        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
 };
 pub const primitives = struct {
-    pub fn p1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
+        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
+        return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selectorHash});
+// only this one has been corrected
     }
-    pub fn p1L1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context,selectorHash});
+    pub fn p1L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp,thread,context,selectorHash});
     }
-    pub fn p2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
-        sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
+        sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p2L1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        sp[0]=inlines.p2L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context,selectorHash});
+    pub fn p2L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        sp[0]=inlines.p2L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp,thread,context,selectorHash});
     }
-    pub fn p2L2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        sp[0]=inlines.p2L(sp[0],2) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp,hp,thread,context,selectorHash});
+    pub fn p2L2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        sp[0]=inlines.p2L(sp[0],2) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp,thread,context,selectorHash});
     }
-    pub fn p7(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
-        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p7(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
+        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p5(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // SmallInteger>>#<=
+    pub fn p5(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5(sp[1],sp[0]) catch @panic("<= error"));
         trace("p5: {any}\n",.{context.stack(sp+1,thread)});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p5N(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // SmallInteger>>#<=
+    pub fn p5N(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // SmallInteger>>#<=
         sp[1] = Object.from(inlines.p5N(sp[1],sp[0]));
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selectorHash});
     }
-    pub fn p9(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#*
-        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p9(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#*
+        sp[1] = inlines.p9(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p9o(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#*
-        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p9o(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#*
+        sp[1] = inlines.p9Orig(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p60(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
-        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p60(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
+        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
-        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p61(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
+        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
-        _ = pc; _ = sp; _ = hp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p71(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // at:
+        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // ProtoObject>>#==
+    pub fn p110(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // atAllPut:
-        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+    pub fn p145(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // atAllPut:
+        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // ProtoObject>>#~~
+    pub fn p169(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // ProtoObject>>#~~
         sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
     }
     // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>class
 };

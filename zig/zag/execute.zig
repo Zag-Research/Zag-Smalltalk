@@ -12,11 +12,9 @@ const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
 const Context = @import("context.zig").Context;
 const TestExecution = @import("context.zig").TestExecution;
-const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapConstPtr = heap.HeapConstPtr;
-pub const Hp = heap.HeaderArray;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -33,7 +31,7 @@ pub const MethodReturns = void;
 //     }
 // };
 
-pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, heapPointer: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns;
+pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns;
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
@@ -54,11 +52,11 @@ pub const CompiledMethod = extern struct {
             .code = [2]Code{Code.prim(methodFn),Code.uint(0)},
         };
     }
-    pub inline fn execute(self: * const Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr) void {
+    pub inline fn execute(self: * const Self, sp: [*]Object, thread: *Thread, context: CodeContextPtr) void {
         const pc = @ptrCast([*]const Code,&self.code);
         const selectorHash = self.selector.hash32();
-//        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
-        return pc[0].prim(pc+1,sp,hp,thread,context,selectorHash);
+//        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
+        return pc[0].prim(pc+1,sp,thread,context,selectorHash);
     }
     inline fn asHeapPtr(self: * const Self) HeapConstPtr {
         return @ptrCast(HeapConstPtr,self);
@@ -212,7 +210,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
             return .{
-                .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
+                .header = heap.header(codeSize+2,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
@@ -310,40 +308,52 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => {
-                        if (field[0]==':') {
-                            found = true;
-                        } else if (field.len==1 and field[0]=='^') {
-                            code[n]=Code.uint(n);
-                            n=n+1;
-                            found = true;
-                        } else if (field.len==1 and field[0]=='*') {
-                            code[n]=Code.int(-1);
-                            n=n+1;
-                            found = true;
-                        } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
-                            code[n]=Code.ref(intOf(field[0..]));
-                            n+=1;
-                            found = true;
-                         } else {
-                            comptime var lp = 0;
-                            inline for (tup) |t| {
-                                if (@TypeOf(t) == ThreadedFn) lp=lp+1
-                                    else
-                                    switch (@typeInfo(@TypeOf(t))) {
-                                        .Pointer => |tPointer| {
-                                            if (@hasField(tPointer.child,"len") and t[0]==':') {
-                                                if (comptime std.mem.endsWith(u8,t,field)) {
-                                                    code[n]=Code.int(lp-n);
-                                                    n=n+1;
-                                                    found = true;
-                                                }
-                                            } else lp=lp+1;
-                                        },
-                                        else => {lp=lp+1;},
+                    .Pointer => |fPointer| {
+                        switch (@typeInfo(fPointer.child)) {
+                            .Array => {
+                                if (field[0]==':') {
+                                    found = true;
+                                } else if (field.len==1 and field[0]=='^') {
+                                    code[n]=Code.uint(n);
+                                    n=n+1;
+                                    found = true;
+                                } else if (field.len==1 and field[0]=='*') {
+                                    code[n]=Code.int(-1);
+                                    n=n+1;
+                                    found = true;
+                                } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
+                                    code[n]=Code.ref(intOf(field[0..]));
+                                    n+=1;
+                                    found = true;
+                                } else {
+                                    comptime var lp = 0;
+                                    inline for (tup) |t| {
+                                        if (@TypeOf(t) == ThreadedFn) lp=lp+1
+                                            else
+                                            switch (@typeInfo(@TypeOf(t))) {
+                                                .Pointer => |tPointer| {
+                                                    switch (@typeInfo(tPointer.child)) {
+                                                        .Array => {
+                                                            if (t[0]==':') {
+                                                                if (comptime std.mem.endsWith(u8,t,field)) {
+                                                                    code[n]=Code.int(lp-n);
+                                                                    n=n+1;
+                                                                    found = true;
+                                                                }
+                                                            } else lp=lp+1;
+                                                        },
+                                                        //                                                .Fn => |fun| @compileLog(fun),
+                                                        else => lp += 1,
+                                                    }
+                                                },
+                                                else => {lp=lp+1;},
+                                        }
+                                    }
+                                    if (!found) @compileError("missing label: \""++field++"\"");
                                 }
-                            }
-                            if (!found) @compileError("missing label: \""++field++"\"");
+                            },
+                            .Fn => {@compileLog(field);code[n]=Code.prim(field);n=n+1;found = true;},
+                            else => {}
                         }
                     },
                     else => {},
@@ -381,196 +391,194 @@ test "compiling method" {
 pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
-    pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, needed: usize) void {
+    pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, needed: usize) void {
         _ = thread;
         _ = pc;
-        _ = hp;
         _ = context;
         _ = sp;
         _ = needed;
     }
-    pub fn noop(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    pub fn noop(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    pub fn branch(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn branch(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const offset = pc[0].int;
         trace("\nbranch offset: {}\n",.{offset});
         if (offset == -1) {
             const target = context.getTPc();
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selectorHash});
-            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context,selectorHash});
+            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selectorHash});
+            return @call(tailCall,target[0].prim,.{target+1,sp,thread,context,selectorHash});
         }
         if (offset>=0) {
             const target = pc+1+@intCast(u64, offset);
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selectorHash});
+            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selectorHash});
             trace("\nbranch target: {}",.{target[0].uint});
-            return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread,context,selectorHash});
+            return @call(tailCall,target[0].prim,.{target+1,sp,thread,context,selectorHash});
         }
         const target = pc+1-@intCast(u64, -offset);
-        if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,hp,thread,context,selectorHash});
-        return @call(tailCall,target[0].prim,.{target+1,sp,hp,thread.decCheck(),context,selectorHash});
+        if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selectorHash});
+        return @call(tailCall,target[0].prim,.{target+1,sp,thread.decCheck(),context,selectorHash});
     }
-    pub fn ifTrue(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn ifTrue(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const v = sp[0];
-        if (True.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context,selectorHash});
-        if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selectorHash});
+        if (True.equals(v)) return @call(tailCall,branch,.{pc,sp+1,thread,context,selectorHash});
+        if (False.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selectorHash});
         @panic("non boolean");
     }
-    pub fn ifFalse(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn ifFalse(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         trace("\nifFalse: {any}",.{context.stack(sp,thread)});
         const v = sp[0];
-        if (False.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context,selectorHash});
-        if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selectorHash});
+        if (False.equals(v)) return @call(tailCall,branch,.{pc,sp+1,thread,context,selectorHash});
+        if (True.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selectorHash});
         @panic("non boolean");
     }
-    pub fn ifNil(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn ifNil(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const v = sp[0];
-        if (Nil.equals(v)) return @call(tailCall,branch,.{pc,sp+1,hp,thread,context,selectorHash});
-        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selectorHash});
+        if (Nil.equals(v)) return @call(tailCall,branch,.{pc,sp+1,thread,context,selectorHash});
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selectorHash});
     }
-    pub fn primFailure(_: [*]const Code, _: [*]Object, _: Hp, _: *Thread, _: ContextPtr) void {
+    pub fn primFailure(_: [*]const Code, _: [*]Object, _: *Thread, _: ContextPtr, _: u32) void {
         @panic("primFailure");
     }
-    pub fn dup(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn dup(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=newSp[1];
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn over(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn over(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=newSp[2];
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn drop(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context,selectorHash});
+    pub fn drop(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selectorHash});
     }
-    pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=pc[0].object;
         trace("\npushLiteral: {}",.{newSp[0]});
-        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,context,selectorHash});
     }
-    pub fn pushLiteral0(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteral0(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Object.from(0);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushLiteral1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteral1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Object.from(1);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushLiteral2(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteral2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Object.from(2);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushLiteralM1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteralM1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Object.from(-1);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         const offset = pc[0].int;
         newSp[0]=@intToPtr(*Object,@bitCast(i64,pc)+offset).*;
         trace("\npushLiteralIndirect: {}",.{newSp[0]});
-        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,context,selectorHash});
     }
-    pub fn pushNil(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushNil(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Nil;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushTrue(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushTrue(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=True;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushFalse(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushFalse(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=False;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushThisContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushThisContext(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=Object.from(context);
         context.convertToProperHeapObject(sp,thread);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         trace("\npopIntoTemp: {} {}",.{pc[0].uint,sp[0]});
         context.setTemp(pc[0].uint-1,sp[0]);
-        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selectorHash});
     }
-    pub fn popIntoTemp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn popIntoTemp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         context.setTemp(0,sp[0]);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selectorHash});
     }
-    pub fn pushSelf(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushSelf(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=context.getSelf();
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
-    pub fn pushTemp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushTemp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(pc[0].uint-1);
         trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,thread),context.allTemps()});
-        return @call(tailCall,pc[1].prim,.{pc+2,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,context,selectorHash});
     }
-    pub fn pushTemp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushTemp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(0);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selectorHash});
     }
     fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
         _ = cls;
         _ = selector;
         @panic("unimplemented");
     }
-    pub fn send(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        _=pc; _=sp; _=hp; _=thread; _=context; _ = selectorHash;
+    pub fn send(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        _=pc; _=sp; _=thread; _=context; _ = selectorHash;
         @panic("not implemented");
         // const selector = pc[0].object;
         // const numArgs = selector.numArgs();
         // const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
         // context.setTPc(pc+1);
-        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selectorHash});
+        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selectorHash});
     }
-    pub fn call(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn call(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         context.setTPc(pc+1);
         const newPc = pc[0].method.codePtr();
-        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selectorHash});
     }
-    pub fn callLocal(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn callLocal(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         context.setTPc(pc+1);
         const offset = pc[0].int;
         const newPc = if (offset>=0) pc+1+@intCast(u64, offset) else pc+1-@intCast(u64, -offset);
-        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selectorHash});
     }
-    pub fn pushContext(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn pushContext(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].uint)-CompiledMethod.codeOffset);
         const stackStructure = method.stackStructure;
         const locals = stackStructure.h0;
         const maxStackNeeded = stackStructure.h1;
-        const selfOffset = @enumToInt(stackStructure.l2);
-        const result = context.push(sp,hp,thread,method,locals,maxStackNeeded,selfOffset);
-        const ctxt = result.ctxt;
+        const selfOffset = stackStructure.l2;
+        const ctxt = context.push(sp,thread,method,locals,maxStackNeeded,selfOffset);
         ctxt.setNPc(returnTrampoline);
-        trace("\npushContext: {any} {} {any}",.{thread.stack(sp),locals,thread.stack(result.ctxt.asObjectPtr())});
-        return @call(tailCall,pc[1].prim,.{pc+2,result.ctxt.asObjectPtr(),result.hp,thread,ctxt,selectorHash});
+        trace("\npushContext: {any} {} {any}",.{thread.stack(sp),locals,thread.stack(ctxt.asObjectPtr())});
+        return @call(tailCall,pc[1].prim,.{pc+2,ctxt.asObjectPtr(),thread,ctxt,selectorHash});
     }
-    pub fn returnTrampoline(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+    pub fn returnTrampoline(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    pub fn returnWithContext(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn returnWithContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const result = context.pop(thread);
         const newSp = result.sp;
         const callerContext = result.ctxt;
         trace("\nreturnWithContext: {any} -> {any}",.{context.stack(sp,thread),callerContext.stack(newSp,thread)});
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext,selectorHash});
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext,selectorHash});
     }
-    pub fn returnTop(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn returnTop(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         const top = sp[0];
         trace("\nreturnTop: {any}",.{context.stack(sp,thread)});
         trace(" 0x{x}:{}",.{@ptrToInt(context),context});
@@ -580,15 +588,14 @@ pub const controlPrimitives = struct {
         const callerContext = result.ctxt;
         trace(" ->",.{});
         trace(" {any}",.{callerContext.stack(newSp,thread)});
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,hp,thread,callerContext,selectorHash});
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext,selectorHash});
     }
-    pub fn returnNoContext(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-        return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,hp,thread,context,selectorHash});
+    pub fn returnNoContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+        return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,thread,context,selectorHash});
     }
-    pub fn dnu(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+    pub fn dnu(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         _ = pc;
         _ = sp;
-        _ = hp;
         _ = thread;
         _ = context;
         _ = selectorHash;

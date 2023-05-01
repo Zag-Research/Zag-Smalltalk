@@ -10,7 +10,6 @@ const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = @import("zag/context.zig").TestExecution;
-const Hp = @import("zag/heap.zig").HeaderArray;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const sym = @import("zag/symbol.zig").symbols;
@@ -40,37 +39,35 @@ pub fn fibObject(self: Object) Object {
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
 const fibHash = sym.value.hash32(); // made up hash value
-pub fn fibComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
+pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
     if (selectorHash!=fibHash) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
-        return @call(tailCall,context.npc,.{context.tpc,sp,hp,thread,context,0});
+        return @call(tailCall,context.npc,.{context.tpc,sp,thread,context,0});
     }
-    const result = context.push(sp,hp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
-    const newContext = result.ctxt;
-    const newHp = result.hp;
+    const newContext = context.push(sp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
     const newSp = newContext.asObjectPtr()-1;
     const m1 = i.p2L(sp[0],1) catch @panic("int subtract failed in fibComp");
     newSp[0] = m1;
     newContext.tpc = pc+15; // label4 + callLocal
     newContext.npc = fibComp1;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,newHp,thread,newContext,fibHash});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,newContext,fibHash});
 }
-fn fibComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, _: u32) void {
+fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
     const newSp = sp-1;
     const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
     context.tpc = pc+6; // after 2nd callLocal
     context.npc = fibComp2;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,hp,thread,context,fibHash});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,context,fibHash});
 }
-fn fibComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr, _: u32) void {
+fn fibComp2(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
     context.setTemp(0,sum);
     const result = context.pop(thread);
     const newSp = result.sp;
     const callerContext = result.ctxt;
-    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,hp,thread,callerContext,0});
+    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,thread,callerContext,0});
 }
 var fibThread =
     compileMethod(sym.value,0,2,.{

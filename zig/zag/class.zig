@@ -7,7 +7,6 @@ const Nil = object.Nil;
 const u64_MINVAL = object.u64_MINVAL;
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
-//const arenas = @import("arenas.zig");
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
 const assert = std.debug.assert;
