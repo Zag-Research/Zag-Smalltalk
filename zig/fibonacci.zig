@@ -97,7 +97,7 @@ var fibThread =
         &p.primFailure,
         ":label5",
         &p.callLocal, "recurse",
-        &p.p1,"label6",
+        &p.ip1,"label6",
         &p.primFailure,
         ":label6",
         &p.returnTop,

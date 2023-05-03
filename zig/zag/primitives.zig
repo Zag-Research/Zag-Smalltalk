@@ -165,6 +165,14 @@ pub const primitives = struct {
         return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selectorHash});
 // only this one has been corrected
     }
+    pub fn ip1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
+        sp[1] = inlines.p1(sp[1],sp[0]) catch {
+            // call the SmallInteger>>#+ code
+            _ = pc;
+            @panic("ip1 failed");
+        };
+        return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selectorHash});
+    }
     pub fn p1L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
         return @call(tailCall,p.branch,.{pc,sp,thread,context,selectorHash});
