@@ -9,7 +9,6 @@ const Thread = @import("thread.zig").Thread;
 const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
-const Hp = heap.HeaderArray;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
@@ -29,7 +28,6 @@ pub const forTest = Dispatch.forTest;
 const DispatchState = enum(u8){clean,beingUpdated,dead};
 const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
-    header: heap.Header,
     hash: u32,
     free: u16,
     state: DispatchState,
@@ -40,7 +38,6 @@ const Dispatch = extern struct {
     const extra = 8; // must be multiple of 8 to allow cast below
     fn new() Self {
         return .{
-            .header = heap.header(@sizeOf(Self)/@sizeOf(Object)-1, heap.Format.objectP, class.Dispatch_I, 42, heap.Age.static),
             .hash = undefined,
             .free = undefined,
             .state = undefined,
@@ -92,12 +89,12 @@ const Dispatch = extern struct {
     inline fn preHash(selector: u32) u64 {
         return @as(u64,selector*%u32_phi_inverse);
     }
-    pub fn dispatch(self: *Self, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selector: Object) MethodReturns {
+    pub fn dispatch(self: *Self, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) MethodReturns {
         const hash = selector.hash32();
         const hashed = preHash(hash);
         const cmp = self.lookup(hashed);
         // all the ugly casting is to make signature match
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,Hp,*Thread,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@intToPtr(*Dispatch,@ptrToInt(&cmp.code[1])),sp,hp,thread,context,@bitCast(Object,@as(u64,hash))});
+        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Thread,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@intToPtr(*Dispatch,@ptrToInt(&cmp.code[1])),sp,thread,context,@bitCast(Object,@as(u64,hash))});
     }
     fn disambiguate(location: []*const CompiledMethod,one: *const CompiledMethod, another: *const CompiledMethod) *const CompiledMethod {
         const oneHash = one.selector.hash32();
@@ -143,169 +140,169 @@ const Dispatch = extern struct {
         return error.Conflict;
     }
     const shifts = [_]ThreadedFn{&shift0,&shift1,&shift2,&shift3,&shift4,&shift5,&shift6,&shift7,&shift8,&shift9,&shift10,&shift11,&shift12,&shift13,&shift14,&shift15,&shift16,&shift17,&shift18,&shift19,&shift20,&shift21,&shift22,&shift23,&shift24,&shift25,&shift26,&shift27,&shift28,&shift29,&shift30,&shift31};
-    fn super(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        _ = .{programCounter, sp, hp, thread, context, selectorHash};
+    fn super(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        _ = .{programCounter, sp, thread, context, selectorHash};
         @panic("called super function");
     }
-    fn shift0(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift0(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const cmp = programCounter[selectorHash&1].compiledMethod;
-        return @call(tailCall,cmp.code[0].prim,.{@intToPtr([*]const Code,@ptrToInt(&cmp.code[1])),sp,hp,thread,context,selectorHash});
+        return @call(tailCall,cmp.code[0].prim,.{@intToPtr([*]const Code,@ptrToInt(&cmp.code[1])),sp,thread,context,selectorHash});
     }
-    fn shift1(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift1(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift2(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift2(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift3(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift3(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift4(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift4(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift5(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift5(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift6(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift6(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift7(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift7(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift8(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift8(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift9(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift9(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift10(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift10(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift11(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift11(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift12(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift12(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift13(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift13(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift14(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift14(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift15(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift15(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift16(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift16(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift17(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift17(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift18(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift18(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift19(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift19(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift20(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift20(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift21(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift21(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift22(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift22(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift23(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift23(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift24(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift24(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift25(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift25(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift26(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift26(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift27(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift27(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift28(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift28(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift29(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift29(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift30(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift30(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[selectorHash&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn shift31(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn shift31(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
     const primes  = [_]?ThreadedFn{null,null,null,&prime3,null,&prime5};
-    fn prime3(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn prime3(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(preHash(selectorHash)*3)>>32].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn prime5(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    fn prime5(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(preHash(selectorHash)*5)>>32].codeRef;
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,hp,thread,context,selectorHash});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
     }
-    fn fail(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        _ = .{programCounter, sp, hp, thread, context, selectorHash};
+    fn fail(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        _ = .{programCounter, sp, thread, context, selectorHash};
         if (programCounter[0].uint==0)
             @panic("called fail function");
     }
     // make sure all 2nd-level dispatchers are between shift0 and dnu - so they can be checked by isDispatch
-    fn dnu(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        _ = .{programCounter, sp, hp, thread, context, selectorHash};
+    fn dnu(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        _ = .{programCounter, sp, thread, context, selectorHash};
         @panic("called dnu function");
     }
-    fn testIncrement(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-        _ = .{sp, hp, thread, context, selectorHash};
+    fn testIncrement(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+        _ = .{sp, thread, context, selectorHash};
         @intToPtr(*usize,programCounter[0].uint).* += 1;
     }
 };
-fn testYourself(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-    _ = .{sp, hp, thread, context};
+fn testYourself(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    _ = .{sp, thread, context};
     if (selectorHash!=symbols.yourself.hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 2;
 }
-fn testAt(programCounter: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
-    _ = .{sp, hp, thread, context};
+fn testAt(programCounter: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns {
+    _ = .{sp, thread, context};
     if (selectorHash!=symbols.@"at:".hash32()) @panic("hash doesn't match");
     @intToPtr(*usize,programCounter[0].uint).* += 4;
 }
@@ -322,7 +319,7 @@ test "add methods" {
     dispatch.initTest(&temp);
     try dispatch.add(symbols.yourself,code0.asCompiledMethodPtr());
     try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
-    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
+    dispatch.dispatch(tE.sp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,2);
     dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self); // invoke DNU
     try std.testing.expectEqual(temp,3);

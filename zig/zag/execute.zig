@@ -10,7 +10,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
-const Context = @import("context.zig").Context;
+pub const Context = @import("context.zig").Context;
 const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -195,12 +195,9 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
     const codeSize = counts.codes;
     const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
-        header: heap.Header,
         stackStructure: Object,
         selector: Object,
         code: [codeSize] Code,
-        size: u64,
-        address: [*]Object,
         references: [refsSize]Object,
         const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
         const Self = @This();
@@ -221,7 +218,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
             return .{
-                .header = heap.header(codeSize+2,Format.bothAP,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = code,

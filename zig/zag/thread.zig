@@ -171,7 +171,7 @@ test "check flag" {
     try testing.expect(thr.needsCheck());
 }
 
-pub const Arena = extern struct {
+pub const ArenaX = extern struct {
     const Self = @This();
 
     alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
@@ -221,52 +221,40 @@ pub const Arena = extern struct {
 pub fn NurseryArena(comptime stack_size: comptime_int) type {
     return extern struct {
         const Self = @This();
-        arena: Arena,
         hp: HeaderArray,
-        sp: [*]Object,
         heapArea: [stack_size-field_size]Header,
-        const field_size = (@sizeOf(Arena)+@sizeOf(HeaderArray)+@sizeOf([*]Object))/@sizeOf(Header);
+        const field_size = (@sizeOf(HeaderArray)+@sizeOf([*]Object))/@sizeOf(Header);
         comptime {
             if (checkEqual(@sizeOf(Self),stack_size*@sizeOf(Header))) |s|
                 @compileError("Modify NurseryArena.field_size to make @sizeOf(NurseryArena) == " ++ s);
         }
         pub fn new() Self {
             return Self {
-                .arena = undefined,
                 .hp = undefined,
-                .sp = undefined,
                 .heapArea = undefined,
             };
         }
         pub fn init(self: *Self) void {
-            self.arena = Arena{.alloc=alloc,.collect=collect};
             self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea));
-            self.sp = self.endOfStack();
         }
-        pub fn asArena(self: *Self) *Arena {
-            return @ptrCast(*Arena,self);
-        }
-        pub inline fn endOfStack(self: *Self) [*]Object {
-            return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
-        }
+        // pub inline fn endOfStack(self: *Self) [*]Object {
+        //     return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
+        // }
         pub inline fn getHp(self: *Self) HeaderArray {
             return self.hp;
         }
-        fn allocSlow(_: *Arena, _:[*]Object, _:HeaderArray, _:ContextPtr, _: usize, _: usize) AllocReturn {
-            return error.HeapFull;
-        }
-        fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
-            const totalSize = heapSize + arraySize;
-            const result = @ptrCast(HeapPtr,hp);
-            const end = hp + totalSize;
-            if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
-            return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
-        }
-        fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
-            const self = @ptrCast(*Self,arena);
-            _ =  self; _ = sp; _ = hp; _ = context;
-            @panic("incomplete");
-        }
+    //     fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
+    //         const totalSize = heapSize + arraySize;
+    //         const result = @ptrCast(HeapPtr,hp);
+    //         const end = hp + totalSize;
+    //         if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
+    //         return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
+    //     }
+    //     fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
+    //         const self = @ptrCast(*Self,arena);
+    //         _ =  self; _ = sp; _ = hp; _ = context;
+    //         @panic("incomplete");
+    //     }
     };
 }
 // pub fn TeenArena(comptime nursery_size: comptime_int) type {
@@ -302,10 +290,9 @@ test "object in nursery arena" {
     var nursery = nType.new();
     nursery.init();
     var hp = nursery.getHp();
-    var sp = nursery.endOfStack();
     var context = Context.init();
     const a = nursery.asArena();
-    const r = try a.allocObject(sp,hp,&context,42,5);
+    const r = try a.allocObject(hp,&context,42,5);
     const o = r.allocated;
 //    try std.testing.expect(!o.isOnStack());
     try std.testing.expect(!o.isForwarded());

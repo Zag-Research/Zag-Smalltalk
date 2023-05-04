@@ -12,11 +12,13 @@ const inversePhi = utilities.inversePhi;
 
 pub const Format = enum(u8) {
     immediateSizeZero = ImmediateSizeZero,
-    immediateByteMax = NotIndexable - 1,
+    immediateByteMax = ImmediateByteMax,
     notIndexable, // this and below have no pointers in array portion
     immediateObjectOne,
-    immediateObjectMax = ImmediateObjectMax, // this and below have no size/pointer
+    immediateObjectMax = ImmediateObjectMax,
     context,
+    directIndexed,
+    directIndexedWithPointers, // this and below have no size/pointer
     indexed,
     indexedWithPointers, // this and below have no weak queue
     _weak_, // never created
@@ -24,11 +26,16 @@ pub const Format = enum(u8) {
     _,
     const Self = @This();
     const ImmediateSizeZero: u8 = 0;
+    const ByteOffset = ImmediateSizeZero;
     const ImmediateByteMax = NotIndexable - 1;
+    const NumberOfBytes = ImmediateByteMax - ByteOffset;
     const NotIndexable = 64;
-    const ImmediateObjectOne = NotIndexable + 1;
-    const ImmediateObjectMax = Indexed - 2;
-    const Indexed = WeakWithPointers - 3;
+    const ObjectOffset = NotIndexable;
+    const ImmediateObjectOne = ObjectOffset + 1;
+    const ImmediateObjectMax = DirectIndexed - 2;
+    const NumberOfObjects = ImmediateObjectMax - ObjectOffset;
+    const DirectIndexed = Indexed - 2;
+    const Indexed = WeakWithPointers - 5;
     const WeakWithPointers = Immutable - 1;
     const Pointers: u8 = 1;
     const Immutable : u8 = 128;
@@ -93,6 +100,32 @@ pub const Format = enum(u8) {
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@intToEnum(Self,v),f);
     }
+    fn singleAllocation(iVars: usize, indexed: ?usize, elementSize: usize, mSize: ?usize, makeWeak: bool) !AllocationInfo {
+        const maxSize = mSize orelse Header.maxLength;
+        if (indexed) |nElements| {
+            const arraySize = (nElements*elementSize+@sizeOf(Object)-1)/@sizeOf(Object);
+            if (makeWeak) {
+                if (iVars+arraySize<=maxSize)
+                    return .{.format=.weakWithPointers,.size=iVars+arraySize+3};
+                return error.DoesntFit;
+            }
+            if (nElements==0 or (elementSize==1 and nElements<=NumberOfBytes))
+                return .{.format=@intToEnum(Self,nElements+ByteOffset),.size=iVars+arraySize};
+            if (nElements<=NumberOfObjects)
+                return .{.format=@intToEnum(Self,nElements+ObjectOffset),.size=iVars+nElements};
+            if (iVars==0 and nElements<=maxSize and elementSize==@sizeOf(Object))
+                return .{.format=.directIndexed,.size=nElements};
+            if (iVars+arraySize<=maxSize)
+                return .{.format=.indexed,.size=iVars+arraySize+2};
+        } else
+            return .{.format=.notIndexable,.size=iVars};
+        return error.DoesntFit;
+    }
+    const AllocationInfo = struct {
+        format: Format,
+        size: usize,
+        hasSizeField: bool = false,
+    };
 };
 test "raw size" {
     try std.testing.expectEqual(@intToEnum(Format,7).size(),Format.Size{.size=7});
