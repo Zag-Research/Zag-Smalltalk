@@ -172,7 +172,7 @@ pub const SymbolTable = struct {
         const nArgs = numArgs(string);
         return symbol_of(index,nArgs);
     }
-    fn loadSymbols(self: *Self, strings: [] const heap.HeapConstPtr) void {
+    fn loadSymbols(self: *Self, strings: [] const heap.HeapObjectConstPtr) void {
         var trp = self.theTreap(strings.len);
         for (strings) |string|
             _ = internDirect(trp,string.asObject());

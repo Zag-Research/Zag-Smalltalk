@@ -131,16 +131,16 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
                 Greater => return self.lookupElement(self.table[current].left ,key),
             }
         }
-        pub inline fn greaterEqual(self: *const Self, key: Key) Index {
-            return self.lookupElementGE(self.root(),key,0);
+        pub inline fn lessEqual(self: *const Self, key: Key) Index {
+            return self.lookupElementLE(self.root(),key,0);
         }
-        fn lookupElementGE(self: *const Self,current:Index,key:Key,left:Index) Index {
+        fn lookupElementLE(self: *const Self,current:Index,key:Key,left:Index) Index {
             if (current==0) {
                 return left;
             } else switch (self.compare(self.table[current].key,key)) {
                 Equal => return current,
-                Less => return self.lookupElementGE(self.table[current].right,key,current),
-                Greater => return self.lookupElementGE(self.table[current].left,key,left),
+                Less => return self.lookupElementLE(self.table[current].right,key,current),
+                Greater => return self.lookupElementLE(self.table[current].left,key,left),
             }
         }
         pub fn insert(self: *Self,key: Key) !Index {
@@ -434,11 +434,11 @@ test "simple u64 treap range" {
     const f20 = try treap.insert(20);
     _ = try treap.insert(30);
     const f40 = try treap.insert(40);
-    try expectEqual(treap.greaterEqual(10),f10);
-    try expectEqual(treap.greaterEqual(20),f20);
-    try expectEqual(treap.greaterEqual(11),f10);
-    try expectEqual(treap.greaterEqual(29),f20);
-    try expectEqual(treap.greaterEqual(9),0);
-    try expectEqual(treap.greaterEqual(100),f40);
+    try expectEqual(treap.lessEqual(10),f10);
+    try expectEqual(treap.lessEqual(20),f20);
+    try expectEqual(treap.lessEqual(11),f10);
+    try expectEqual(treap.lessEqual(29),f20);
+    try expectEqual(treap.lessEqual(9),0);
+    try expectEqual(treap.lessEqual(100),f40);
 
 }

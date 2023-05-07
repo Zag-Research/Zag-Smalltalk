@@ -4,9 +4,9 @@ const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
 const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
-const Header = heap.Header;
-const HeapPtr = heap.HeapPtr;
-const HeapConstPtr = heap.HeapConstPtr;
+const HeapObject = heap.HeapObject;
+const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 pub const ClassIndex = u16;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
@@ -134,7 +134,7 @@ pub const Object = packed struct(u64) {
         return tag >= Start_of_Pointer_Objects>>48;
     }
     pub inline fn isUnmoving(self: Object) bool {
-        return !self.isHeapAllocated() or self.to(HeapPtr).isUnmoving();
+        return !self.isHeapAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
     pub inline fn isLiteral(self: Object) bool {
         return !self.isHeapAllocated();
@@ -167,11 +167,11 @@ pub const Object = packed struct(u64) {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
+                        if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapObjectConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
-                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(heap.Header));
+                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
                             }
                         }
                         @panic("Trying to convert Object pointer to "++@typeName(T));
@@ -190,38 +190,38 @@ pub const Object = packed struct(u64) {
         if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T,false);
     }
-    pub  fn header(self: Object) heap.Header {
-        if (self.isHeapObject()) return self.to(HeapPtr).*;
-        return @bitCast(heap.Header,@as(u64,0));
+    pub  fn header(self: Object) HeapObject {
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).*;
+        return @bitCast(HeapObject,@as(u64,0));
     }
     pub  fn instVars(self: Object) []Object {
-        if (self.isHeapObject()) return self.to(HeapPtr).instVars();
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars();
         return &[0]Object{};
     }
     pub  fn arrayAsSlice(self: Object, comptime T:type) []T {
-        if (self.isIndexable()) return self.to(HeapPtr).arrayAsSlice(T) catch return &[0]T{};
+        if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T) catch return &[0]T{};
         return &[0]T{};
     }
     pub fn size(self: Object) !usize {
         if (!self.isHeapObject()) return error.NotIndexable;
-        return self.to(HeapPtr).arraySize();
+        return self.to(HeapObjectPtr).arraySize();
     }
     pub fn growSizeX(self: Object, stepSize: usize) !usize {
         if (!self.isHeapObject()) return error.NotIndexable;
-        return self.to(HeapPtr).growSize(stepSize);
+        return self.to(HeapObjectPtr).growSize(stepSize);
     }
     pub  fn isIndexable(self: Object) bool {
-        if (self.isHeapObject()) return self.to(HeapPtr).isIndexable();
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).isIndexable();
         return false;
     }
     pub  fn inHeapSize(self: Object) usize {
-        if (self.isHeapObject()) return self.to(HeapPtr).inHeapSize();
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).inHeapSize();
         return 0;
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==Object) return value;
-        if (T==HeapConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
+        if (T==HeapObjectConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int, .ComptimeInt => return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO),
             .Float, .ComptimeFloat => return cast(@as(f64, value)),
@@ -271,7 +271,7 @@ pub const Object = packed struct(u64) {
         return switch (self.tag) {
             .immediateThunk, .closureFreeBlock, .nonLocalThunk, .heapClosure => BlockClosure_I,
             .immediates => self.l2,
-            .heap => if (full) self.to(HeapPtr).*.getClass() else Object_I,
+            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else Object_I,
             .unused1, .unused2 => unreachable,
             else => |tag| if (tag.u() <= Group.immediates.u()) Float_I else SmallInteger_I,
         };
