@@ -9,12 +9,13 @@ const ClassIndex = object.ClassIndex;
 const checkEqual = @import("utilities.zig").checkEqual;
 const dispatch = @import("dispatch.zig");
 const heap = @import("heap.zig");
-const HeapPtr = heap.HeapPtr;
-const HeaderArray = heap.HeaderArray;
-const Header = heap.Header;
-const header = heap.header;
+const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObjectArray = heap.HeapObjectArray;
+const HeapObject = heap.HeapObject;
+const footer = heap.footer;
 const Age = heap.Age;
 const Format = heap.Format;
+const allocationInfo = Format.allocationInfo;
 const AllocErrors = heap.AllocErrors;
 const ex = @import("execute.zig");
 const Code = ex.Code;
@@ -23,58 +24,49 @@ const Context = ex.Context;
 const tailCall = ex.tailCall;
 pub const AllocResult = struct {
     sp: [*]Object,
-    hp: HeaderArray,
+    hp: HeapObjectArray,
     context: ContextPtr,
     age: Age,
-    allocated: HeapPtr,
+    allocated: HeapObjectPtr,
 };
 pub const AllocReturn = AllocErrors!AllocResult;
 
 test "force dispatch load" {
     dispatch.forTest();
 }
-const thread_total_size = 64*1024; //std.mem.page_size;
+const thread_total_size = 64*1024;
 pub const Thread = extern struct {
-    private: [stack_size+nursery_size+nursery_size] Object,
-    h: ThreadHeader,
+    stack: [stack_size] Object,
+    nursery0: [nursery_size] Object,
+    nursery1: [nursery_size] Object,
+    next: ?*Self,
+    id : u64,
+    sp: [*]Object,
+    currHeap: HeapObjectArray,
+    currHp: HeapObjectArray,
+    currEnd: HeapObjectArray,
+    otherHeap: HeapObjectArray,
     const Self = @This();
-    const threadAvail = thread_total_size-@sizeOf(ThreadHeader);
-    const stack_size = @min(threadAvail/7/@sizeOf(Object),heap.Header.maxLength);
+    const threadAvail = thread_total_size-@sizeOf(?*Self)+@sizeOf(u64)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
+    const stack_size = @min(threadAvail/7/@sizeOf(Object),heap.HeapObject.maxLength);
     const nursery_size = (threadAvail-stack_size)/2/@sizeOf(Object);
-    const ThreadHeader = extern struct {
-        next: ?*Self,
-        id : u64,
-        sp: [*]Object,
-        currTeen: HeaderArray,
-        currHp: HeaderArray,
-        currEnd: HeaderArray,
-        otherTeen: HeaderArray,
-        fn init(t:*Self) ThreadHeader {
-            const h = @ptrCast(HeaderArray,&t.private[0]);
-            const stack_end = h+stack_size;
-            const at = allThreads;
-            return ThreadHeader {
-                .next = at,
-                .id = if (at) |p| p.h.id+1 else 1,
-                .sp = @ptrCast([*]Object,stack_end),
-                .currTeen = stack_end,
-                .currHp = stack_end,
-                .currEnd = h+nursery_size, // leaving enough space for full nursery copy
-                .otherTeen = stack_end+nursery_size,
-            };
-        }
-    };
     var allThreads: ?*Self = null;
     pub fn new() Self {
-        return Self {
-            .h = undefined,
-            .private = undefined,
-        };
+        return undefined;
     }
     pub fn init(self: *Self) void {
+        const h = @ptrCast(HeapObjectArray,&self.stack[0]);
+        const stack_end = h+stack_size;
+        const at = allThreads;
+        self.sp = @ptrCast([*]Object,stack_end);
+        self.currHeap = stack_end;
+        self.currHp = stack_end;
+        self.currEnd = h+nursery_size; // leaving enough space for full nursery copy
+        self.otherHeap = stack_end+nursery_size;
         while (true) {
-            self.h = ThreadHeader.init(self);
-            if (@cmpxchgWeak(?*Self,&allThreads,self.h.next,self,SeqCst,SeqCst)==null) break;
+            self.next = at;
+            self.id = if (at) |p| p.id+1 else 1;
+            if (@cmpxchgWeak(?*Self,&allThreads,self.next,self,SeqCst,SeqCst)==null) break;
         }
     }
     const checkType = u5;
@@ -95,22 +87,15 @@ pub const Thread = extern struct {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
     inline fn ptr(self: *Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.Header)
+        return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.HeapObject)
                          );
     }
     pub fn deinit(self : *Self) void {
         self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
-    pub inline fn getHeap(self: *Self) heap.HeaderArray {
-        _=self;unreachable;
-//        return self.ptr().nursery.getHp();
-    }
-    pub inline fn getArena(self: *Self) *heap.Arena {
-        return self.ptr().nursery.asArena();
-    }
     pub inline fn endOfStack(self: *Self) [*]Object {
-        return @ptrCast([*]Object,&self.ptr().private[stack_size]);
+        return @ptrCast([*]Object,&self.ptr().stack[0])+stack_size;
     }
     pub inline fn stack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
@@ -120,34 +105,37 @@ pub const Thread = extern struct {
 //            return  @call(tailCall,debugger,.{pc,sp,self,context,selector});
         @call(tailCall,pc[0].prim,.{pc+1,sp,self,context,selectorHash});
     }
-    pub inline fn checkStack(self: *Self, sp: [*]Object, words: u64) bool {
-        return @ptrToInt(sp-words)>=@ptrToInt(self);
+    pub inline fn checkStack(self: *Self, sp: [*]Object, context: ContextPtr, words: u64) ?GrowParameters {
+        if (@ptrToInt(sp-words)>=@ptrToInt(self)) return null;
+        _=context;unreachable;
+//        const newSp = self.stack();
+//        copyBackwards(Object, newSp[0..size], sp[0..size]);
     }
-    pub fn alloc(self: *Self, sp: [*]Object, context: ContextPtr, size: u64) heap.AllocReturn {
-        {
+    const GrowParameters = struct {
+        thread: *Self,
+        context: ContextPtr,
+        sp: [*]Object,
+    };
+    //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
+    //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
+    pub fn alloc(self: *Self, sp: [*]Object, context: ContextPtr, classIndex: u16, iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) heap.AllocReturn {
+        const aI = allocationInfo(iVars,indexed,elementSize,makeWeak);
+        if (aI.objectSize(nursery_size/4)) |size| {
             const result = self.currHp+size;
             const newHp = result+1;
-            if (newHp<@ptrCast(HeaderArray,sp)) { // leave at least 1 word on stack to save ptr
+            if (newHp<self.currEnd) {
+                self.currHp = newHp;
+                aI.fillFooters(result,classIndex,.nursery,indexed orelse 0,elementSize);
                 return .{
                     .sp = sp,
                     .context = context,
                     .age = .nursery,
-                    .allocated = @ptrCast(heap.HeapPtr,result),
+                    .allocated = @ptrCast(heap.HeapObjectPtr,result),
                 };
             }
-        }
-        {
-            const result = self.h.currHp+size;
-            const newHp = result+1;
-            if (newHp<self.h.currEnd) {
-                self.h.currHp = newHp;
-                return .{
-                    .sp = sp,
-                    .context = context,
-                    .age = .nursery,
-                    .allocated = @ptrCast(heap.HeapPtr,result),
-                };
-            }
+        } else |_| {
+            //const size = aI.objectSize(HeapObject.maxLength) catch unreachable;
+            unreachable;
         }
         @panic("can't alloc without collect");
     }
@@ -174,15 +162,15 @@ test "check flag" {
 pub const ArenaX = extern struct {
     const Self = @This();
 
-    alloc: *const fn (*Self,[*]Object,HeaderArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
-    collect: *const fn (*Self,[*]Object,HeaderArray,ContextPtr) AllocErrors!void,
+    alloc: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
+    collect: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr) AllocErrors!void,
 
-    pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
+    pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
         var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
         initAllocation(result.allocated,classIndex, Format.objectNP, ivSize, result.age, Nil);
         return result;
     }
-    pub fn allocArray(self:*Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
+    pub fn allocArray(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
         if (arraySize==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
         const noIVs = ivSize==0;
         var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
@@ -190,7 +178,7 @@ pub const ArenaX = extern struct {
         const aSize = (arraySize*width+@sizeOf(Object)-width)/@sizeOf(Object);
         const fill = if (T==Object) Nil else object.ZERO;
         if (noIVs) {
-            if (aSize<Header.maxLength) {
+            if (aSize<HeapObject.maxLength) {
                 var result = try self.alloc(self,sp,hp,context,aSize+1,0);
                 initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
                 return result;
@@ -203,7 +191,7 @@ pub const ArenaX = extern struct {
         initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
         return result;
     }
-    inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, classIndex: ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
+    inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex: ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
 
         // should call allocObject or allocArray
         
@@ -211,94 +199,9 @@ pub const ArenaX = extern struct {
         if (extra==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
         return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
     }
-    inline fn initAllocation(result: HeapPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
+    inline fn initAllocation(result: HeapObjectPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
         mem.set(Object,result.asObjectPtr()[1..size+1],fill);
-        result.*=header(@intCast(u12,size),form,classIndex,hash,age);
+        result.*=footer(@intCast(u12,size),form,classIndex,hash,age);
     }
 };
-
-pub fn NurseryArena(comptime stack_size: comptime_int) type {
-    return extern struct {
-        const Self = @This();
-        hp: HeaderArray,
-        heapArea: [stack_size-field_size]Header,
-        const field_size = (@sizeOf(HeaderArray)+@sizeOf([*]Object))/@sizeOf(Header);
-        comptime {
-            if (checkEqual(@sizeOf(Self),stack_size*@sizeOf(Header))) |s|
-                @compileError("Modify NurseryArena.field_size to make @sizeOf(NurseryArena) == " ++ s);
-        }
-        pub fn new() Self {
-            return Self {
-                .hp = undefined,
-                .heapArea = undefined,
-            };
-        }
-        pub fn init(self: *Self) void {
-            self.hp = @ptrCast(HeaderArray,@alignCast(@alignOf(u64),&self.heapArea));
-        }
-        // pub inline fn endOfStack(self: *Self) [*]Object {
-        //     return @intToPtr([*]Object,@ptrToInt(&self.heapArea))+self.heapArea.len;
-        // }
-        pub inline fn getHp(self: *Self) HeaderArray {
-            return self.hp;
-        }
-    //     fn alloc(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
-    //         const totalSize = heapSize + arraySize;
-    //         const result = @ptrCast(HeapPtr,hp);
-    //         const end = hp + totalSize;
-    //         if (@ptrToInt(sp)<=@ptrToInt(end)) return allocSlow(arena,sp,hp,context,heapSize,arraySize);
-    //         return .{.sp=sp, .hp=end, .context=context, .age=Age.nursery, .allocated=result,};
-    //     }
-    //     fn collect(arena: *Arena, sp:[*]Object, hp:HeaderArray, context:ContextPtr) AllocErrors!void {
-    //         const self = @ptrCast(*Self,arena);
-    //         _ =  self; _ = sp; _ = hp; _ = context;
-    //         @panic("incomplete");
-    //     }
-    };
-}
-// pub fn TeenArena(comptime nursery_size: comptime_int) type {
-//     return extern struct {
-//     const Self = @This();
-//     arena: Arena,
-//     free: HeaderArray,
-//     heapArea: [size]Header,
-//     const size = nursery_size-field_size;
-//     const field_size = (@sizeOf(Arena)+@sizeOf(HeaderArray))/@sizeOf(Header);
-//     comptime {
-//         if (checkEqual(@sizeOf(TeenArena),nursery_size*@sizeOf(Header))) |s|
-//             @compileError("Modify TeenArena.heap to make @sizeOf(TeenArena) == " ++ s);
-//     }
-//     pub fn new() TeenArena {
-//         return Self {
-//             .arena = Arena{.alloc=alloc,.collect=collect};
-//             .free = undefined,
-//             .heap = undefined,
-//         };
-//     }
-//     pub fn init(self: *Self, otherTeenHeap: *Self) void {
-//         _ = otherTeenHeap;
-//         self.free = @ptrCast(HeaderArray,&self.heap);
-//     }
-// };
-test "fubar" {
-    const nType = NurseryArena(1024);
-    _ = nType;
-}
-test "object in nursery arena" {
-    const nType = NurseryArena(1024);
-    var nursery = nType.new();
-    nursery.init();
-    var hp = nursery.getHp();
-    var context = Context.init();
-    const a = nursery.asArena();
-    const r = try a.allocObject(hp,&context,42,5);
-    const o = r.allocated;
-//    try std.testing.expect(!o.isOnStack());
-    try std.testing.expect(!o.isForwarded());
-    try std.testing.expect(!o.isIndirect());
-    try std.testing.expect(!o.isIndexable());
-    try std.testing.expect(!o.isRaw());
-    const ivs = o.instVars();
-    try std.testing.expect(ivs.len==5);
-}

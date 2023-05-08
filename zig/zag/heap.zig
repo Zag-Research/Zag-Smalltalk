@@ -20,7 +20,11 @@ pub const Format = enum(u8) {
     directIndexed,
     directIndexedWithPointers, // this and below have no size/pointer
     indexed,
-    indexedWithPointers, // this and below have no weak queue link
+    indexedWithPointers,
+    external,
+    externalWithPointers, // this and below have no weak queue link
+    _externalWeak_, // never created
+    externalWeakWithPointers,
     _weak_, // never created
     weakWithPointers,
     _,
@@ -35,7 +39,9 @@ pub const Format = enum(u8) {
     const ImmediateObjectMax = DirectIndexed - 2;
     const NumberOfObjects = ImmediateObjectMax - ObjectOffset;
     const DirectIndexed = Indexed - 2;
-    const Indexed = WeakWithPointers - 5;
+    const Indexed = External - 2;
+    const External = ExternalWeakWithPointers - 3;
+    const ExternalWeakWithPointers = WeakWithPointers - 2;
     const WeakWithPointers = Immutable - 1;
     const Pointers: u8 = 1;
     const Immutable : u8 = 128;
@@ -84,8 +90,13 @@ pub const Format = enum(u8) {
     pub inline fn hasIndexPointers(self: Self) bool {
         return @enumToInt(self) > Indexed;
     }
-    pub inline fn hasIndexFields(self: Self) bool {
-        return @enumToInt(self) >= Indexed;
+//    pub inline fn hasIndexFields(self: Self) bool {
+//        return @enumToInt(self) >= Indexed;
+//    }
+    pub inline fn isExternal(self: Self) Self {
+        return switch (@enumToInt(self)) {
+            External ... ExternalWeakWithPointers => true,
+            else => false};
     }
     pub inline fn immutable(self: Self) Self {
         return @intToEnum(Self,@enumToInt(self) | Immutable);
@@ -104,14 +115,13 @@ pub const Format = enum(u8) {
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@intToEnum(Self,v),f);
     }
-    pub fn allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool) AllocationInfo {
+    pub fn allocationInfo(iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) AllocationInfo {
         if (indexed) |nElements| {
             const maxSize = HeapObject.maxLength;
-            const elementSize = eSize orelse @sizeOf(Object);
             const arraySize = (nElements*elementSize+@sizeOf(Object)-1)/@sizeOf(Object);
             if (makeWeak) {
                 if (iVars+arraySize>maxSize-3)
-                    return .{.format=.weakWithPointers,.size=iVars,.sizeField=3,.external=true};
+                    return .{.format=.externalWeakWithPointers,.size=iVars,.sizeField=3};
                 return .{.format=.weakWithPointers,.size=iVars+@intCast(u12,arraySize),.sizeField=3};
             }
             if (nElements==0 or (elementSize==1 and nElements<=NumberOfBytes))
@@ -123,7 +133,7 @@ pub const Format = enum(u8) {
                     return .{.format=.directIndexed,.size=@intCast(u12,arraySize)};
             }
             if (iVars+arraySize>maxSize-2)
-                return .{.format=.indexed,.size=iVars,.sizeField=2,.external=true};
+                return .{.format=.external,.size=iVars,.sizeField=2};
             return .{.format=.indexed,.size=iVars+@intCast(u12,arraySize),.sizeField=2};
         }
         if (makeWeak)
@@ -135,23 +145,23 @@ pub const AllocationInfo = struct {
     format: Format,
     size: u12,
     sizeField: u8 = 0,
-    external: bool = false,
     const Self = @This();
     pub inline fn moreThanOneWord(self: Self) bool {
         return self.sizeField>0;
     }
     pub inline fn objectSize(self: Self, maxLength: u12) !u12 {
         const size = self.size+self.sizeField;
-        if (size>maxLength) return error.HeapFull;
+        if (size>maxLength) return error.ObjectTooLarge;
         return size;
     }
     pub inline fn needsExternalAllocation(self: Self) bool {
-        return self.external;
+        return self.format.isExternal();
     }
     pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize) bool {
+        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(theHeapObject)>>4)*%object.u32_phi_inverse>>8);
         theHeapObject.* =  HeapObject {
             .classIndex = classIndex,
-            .hash = @truncate(u24,@ptrToInt(theHeapObject)>>4),
+            .hash = hash,
             .objectFormat = self.format,
             .age = age,
             .length = self.size+self.sizeField,
@@ -162,7 +172,7 @@ pub const AllocationInfo = struct {
             footers[size-1] = nElements;
             footers[size-2] = @ptrToInt(footers)-elementSize*nElements;
         }
-        return self.external;
+        return self.format.isExternal();
     }
 };
 test "raw size" {
@@ -192,19 +202,19 @@ test "header formats" {
 test "allocationInfo" {
     const ee = std.testing.expectEqual;
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
-    try ee(Format.allocationInfo(10,null,null,false),AllocationInfo{.format=.notIndexable,.size=10});
-    try ee(Format.allocationInfo(10,null,null,true),AllocationInfo{.format=.weakWithPointers,.size=10,.sizeField=3});
-    try ee(Format.allocationInfo(10,0,null,false),AllocationInfo{.format=.immediateSizeZero,.size=10});
-    try ee(Format.allocationInfo(10,9,null,false),AllocationInfo{.format=@intToEnum(Format,Format.ObjectOffset+9),.size=19});
+    try ee(Format.allocationInfo(10,null,0,false),AllocationInfo{.format=.notIndexable,.size=10});
+    try ee(Format.allocationInfo(10,null,0,true),AllocationInfo{.format=.weakWithPointers,.size=10,.sizeField=3});
+    try ee(Format.allocationInfo(10,0,0,false),AllocationInfo{.format=.immediateSizeZero,.size=10});
+    try ee(Format.allocationInfo(10,9,8,false),AllocationInfo{.format=@intToEnum(Format,Format.ObjectOffset+9),.size=19});
     try ee(Format.allocationInfo(10,9,1,false),AllocationInfo{.format=@intToEnum(Format,Format.ImmediateSizeZero+9),.size=12});
     try ee(Format.allocationInfo(10,9,2,false),AllocationInfo{.format=.indexed,.size=13,.sizeField=2});
-    try ee(Format.allocationInfo(10,90,null,false),AllocationInfo{.format=.indexed,.size=100,.sizeField=2});
-    try ee(Format.allocationInfo(0,90,null,false),AllocationInfo{.format=.directIndexed,.size=90});
+    try ee(Format.allocationInfo(10,90,8,false),AllocationInfo{.format=.indexed,.size=100,.sizeField=2});
+    try ee(Format.allocationInfo(0,90,8,false),AllocationInfo{.format=.directIndexed,.size=90});
     try ee(Format.allocationInfo(0,90,1,false),AllocationInfo{.format=.indexed,.size=12,.sizeField=2});
     try ee(Format.allocationInfo(0,90,2,false),AllocationInfo{.format=.indexed,.size=23,.sizeField=2});
-    try ee(Format.allocationInfo(10,90,null,true),AllocationInfo{.format=.weakWithPointers,.size=100,.sizeField=3});
-    try ee(Format.allocationInfo(10,9000,null,false),AllocationInfo{.format=.indexed,.size=10,.sizeField=2,.external=true});
-    try ee(Format.allocationInfo(10,9000,null,true),AllocationInfo{.format=.weakWithPointers,.size=10,.sizeField=3,.external=true});
+    try ee(Format.allocationInfo(10,90,8,true),AllocationInfo{.format=.weakWithPointers,.size=100,.sizeField=3});
+    try ee(Format.allocationInfo(10,9000,8,false),AllocationInfo{.format=.external,.size=10,.sizeField=2});
+    try ee(Format.allocationInfo(10,9000,8,true),AllocationInfo{.format=.externalWeakWithPointers,.size=10,.sizeField=3});
 }
 pub const Age = enum(u4) {
     incompleteContext = IncompleteContext,
@@ -404,7 +414,7 @@ pub const HeapObjectPtrIterator = struct {
 //     try testing.expectEqual(i.next(),null);
 // }
 
-pub const AllocErrors = error {Fail,HeapFull,NotIndexable};
+pub const AllocErrors = error {Fail,HeapFull,NotIndexable,ObjectTooLarge};
 
 pub const HeapObjectArray = [*]align(@alignOf(u64)) HeapObject;
 pub const HeapObjectSlice = []align(@alignOf(u64)) HeapObject;
@@ -450,10 +460,17 @@ pub const HeapObject = packed struct(u64) {
             .length = aI.size,
         };
     }
-    inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
+    pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
         return Format.allocationInfo(iVars,indexed,elementSize,mSize,makeWeak).fillFooters(self,classIndex,hash,age,indexed,elementSize);
     }
-
+    pub inline fn setFields(self: HeapObjectPtr,fill: Object) void {
+        if (fill==Nil and !self.format.isExternal()) {
+            unreachable;
+            //mem.set(Object,result.wholeObjectSlice(),fill);
+            //return;
+        }
+        unreachable; 
+    }
     pub inline fn isOnStack(self: HeapObjectConstPtr) bool {
         _ = self; unreachable;
 //        return self.age.isOnStack();

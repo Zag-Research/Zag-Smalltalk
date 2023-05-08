@@ -30,6 +30,7 @@ const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
     hash: u32,
     free: u16,
+    length: u16,
     state: DispatchState,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
     methods: [minHash+extra]*const CompiledMethod, // this is just the default... normally a larger array
@@ -37,13 +38,7 @@ const Dispatch = extern struct {
     const minHash = 13; // must be prime
     const extra = 8; // must be multiple of 8 to allow cast below
     fn new() Self {
-        return .{
-            .hash = undefined,
-            .free = undefined,
-            .state = undefined,
-            .superOrDNU = undefined,
-            .methods = undefined,
-        };
+        return undefined;
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
         self.hash = minHash;
@@ -51,6 +46,7 @@ const Dispatch = extern struct {
         for (self.methods[0..minHash]) |*ptr|
             ptr.* = (&self.superOrDNU[0]).compiledMethodPtr(0);
         self.free = minHash;
+        self.length = @sizeOf(Self);
         self.state = .clean;
         if (extra>0)
             self.methods[minHash] = @intToPtr(*const CompiledMethod,extra);
@@ -71,7 +67,7 @@ const Dispatch = extern struct {
     fn isExternalCompiledMethod(self: *Self, cmp: *const CompiledMethod) bool {
         const ptr = @ptrToInt(cmp);
         const cmpVsDispatchDifferential = CompiledMethod.codeOffset-@offsetOf(Self,"superOrDNU"); // fudge because Dispatch and CM are different
-        if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.header.length)*@sizeOf(Object)) return false;
+        if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.length)*@sizeOf(Object)) return false;
         if (ptr>=@ptrToInt(&super) and ptr<=@ptrToInt(&dnu)) return false;
         return true;
     }
@@ -123,13 +119,13 @@ const Dispatch = extern struct {
         defer {self.state = .clean;}
         if (@cmpxchgWeak(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)==null)
             return; // we replaced DNU with mathod
-        if (address.*.selector.equals(cmp.selector)) {
+        const existing = address.*;
+        if (existing.selector.equals(cmp.selector)) {
             address.* = cmp;
             return;
         }
-        const existing = address.*;
         if (self.isExternalCompiledMethod(existing)) { // an actual cmp - not internalx
-            const end = self.header.length-@offsetOf(Self,"methods")/@sizeOf(Object)-2;
+            const end = self.length-@offsetOf(Self,"methods")/@sizeOf(Object)-2;
             if (self.free < end) {
                 self.free += 3;
                 const disambiguator = disambiguate(self.methods[self.free-3..self.free],existing,cmp);
@@ -321,12 +317,12 @@ test "add methods" {
     try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
     dispatch.dispatch(tE.sp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,2);
-    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.self); // invoke DNU
+    dispatch.dispatch(tE.sp,&tE.thread,&tE.ctxt,symbols.self); // invoke DNU
     try std.testing.expectEqual(temp,3);
     try dispatch.add(symbols.@"at:",code2.asCompiledMethodPtr());
-    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.yourself);
+    dispatch.dispatch(tE.sp,&tE.thread,&tE.ctxt,symbols.yourself);
     try std.testing.expectEqual(temp,5);
-    dispatch.dispatch(tE.sp,tE.hp,&tE.thread,&tE.ctxt,symbols.@"at:");
+    dispatch.dispatch(tE.sp,&tE.thread,&tE.ctxt,symbols.@"at:");
     try std.testing.expectEqual(temp,9);
     try std.testing.expectEqual(dispatch.add(symbols.name,code2.asCompiledMethodPtr()),error.Conflict);
     // for (1..40) |n| {

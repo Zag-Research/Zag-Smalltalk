@@ -8,7 +8,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const heap = @import("heap.zig");
-const HeapPtr = heap.HeapPtr;
+const HeapObjectPtr = heap.HeapObjectPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -21,23 +21,27 @@ const MethodReturns = execute.MethodReturns;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
-    header: heap.Header,
+    header: heap.HeapObject, // only used while on stack
     tpc: [*]const Code, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
-    temps: [1]Object,
+    size: if (hasSizeField) u64 else void,
+    temps: [nTemps]Object,
     const Self = @This();
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) MethodReturns;
-    const baseSize = @sizeOf(Self)/@sizeOf(Object) - 1;
+    const hasSizeField = true;
+    const nTemps = 1;
+    const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
     pub fn init() Self {
         return Self {
-            .header = comptime heap.header(baseSize+1,Format.context,class.Context_I,0,Age.static),
+            .header = comptime heap.footer(baseSize+nTemps,Format.context,class.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = undefined,
             .prevCtxt = undefined,
             .method = undefined,
             .temps = undefined,
+            .size = undefined,
         };
     }
     pub fn format(
@@ -51,36 +55,38 @@ pub const Context = struct {
         
         try writer.print("context: {}",.{self.header});
         try writer.print(" prev: 0x{x}",.{@ptrToInt(self.prevCtxt)});
-        { @setRuntimeSafety(false);
-         try writer.print(" temps: {any}",.{self.temps[0..self.size]});
-         }
+        if (hasSizeField) {
+            @setRuntimeSafety(false);
+            try writer.print(" temps: {any}",.{self.temps[0..self.size]});
+        }
     }
     pub inline fn pop(self: ContextPtr, thread: *Thread) struct { sp: [*]Object,ctxt: ContextPtr } {
-        const wordsToDiscard = self.asHeapPtr().hash16();
+        const wordsToDiscard = self.header.hash16();
         if (self.isOnStack())
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
-        const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
-        const newSp = thread.endOfStack() - itemsToKeep.len;
-        for (itemsToKeep,0..) | obj,index | {
-            newSp[index] = obj;
-        }
-        return .{.sp=newSp,.ctxt=self.previous()};
+        _ = thread;@panic("incomplete");
+        // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
+        // const newSp = thread.endOfStack() - itemsToKeep.len;
+        // for (itemsToKeep,0..) | obj,index | {
+        //     newSp[index] = obj;
+        // }
+        // return .{.sp=newSp,.ctxt=self.previous()};
     }
     pub inline fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
         const newSp = sp - baseSize - locals;
-        if (thread.checkStack(newSp,5+maxStackNeeded)) @panic("grow heap1");
+        if (thread.checkStack(newSp,5+maxStackNeeded)) |grow| return grow.ctxt.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
-        ctxt.header = heap.Header.partialOnStack(selfOffset+baseSize);
-        //ctxt.size = ctxt.calculatedSize(thread); // ToDo: only needed if there is a format method
+        ctxt.header = heap.HeapObject.partialOnStack(selfOffset+baseSize);
+        if (hasSizeField) ctxt.size = ctxt.calculatedSize(thread);
         if (thread.needsCheck()) @panic("thread needsCheck");
        return ctxt;
     }
-    fn convertToProperHeapObject(self: ContextPtr, sp: [*]Object, thread: *Thread) void {
+    fn moveToHeap(self: ContextPtr, sp: [*]Object, thread: *Thread) ContextPtr {
         _=self;_=sp;_=thread;unreachable;
         // if (self.isIncomplete()) {
         //     self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
@@ -92,11 +98,8 @@ pub const Context = struct {
     pub inline fn isIncomplete(self: * const Self) bool {
         return @alignCast(8,&self.header).isIncompleteContext();
     }
-    pub inline fn isOnStack(self: * const Self) bool {
-        return @alignCast(8,&self.header).isOnStack();
-    }
     inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
-        return if (self.isOnStack()) self.asObjectPtr() else thread.endOfStack();
+        return if (self.isIncomplete()) self.asObjectPtr() else thread.endOfStack();
     }
     inline fn calculatedSize(self: ContextPtr, thread: *Thread) usize {
         return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps))/@sizeOf(Object);
@@ -105,10 +108,9 @@ pub const Context = struct {
         return sp[0..(@ptrToInt(self.endOfStack(thread))-@ptrToInt(sp))/@sizeOf(Object)];
     }
     pub inline fn allTemps(self: ContextPtr, thread: *Thread) []Object {
-        _ = self;_=thread;unreachable;
-        // const size = if (self.isIncomplete()) self.calculatedSize(thread) else self.size;
-        // @setRuntimeSafety(false);
-        // return self.temps[0..size];
+        const size = if (self.isIncomplete()) self.calculatedSize(thread) else self.size;
+        @setRuntimeSafety(false);
+        return self.temps[0..size];
     }
     pub inline fn getTPc(self: ContextPtr) [*]const Code {
         return self.tpc;
@@ -123,7 +125,7 @@ pub const Context = struct {
         self.npc = pc;
     }
     pub inline fn getSelf(self: ContextPtr) Object {
-        const wordsToDiscard = self.asHeapPtr().hash16();
+        const wordsToDiscard = self.asHeapObjectPtr().hash16();
         @setRuntimeSafety(false);
         return (self.asObjectPtr() + wordsToDiscard)[0];
     }
@@ -138,8 +140,8 @@ pub const Context = struct {
     pub inline fn previous(self: ContextPtr) ContextPtr {
         return self.prevCtxt;
     }
-    pub inline fn asHeapPtr(self : ContextPtr) HeapPtr {
-        return @ptrCast(HeapPtr,self);
+    pub inline fn asHeapObjectPtr(self : ContextPtr) HeapObjectPtr {
+        return @ptrCast(HeapObjectPtr,self);
     }
     pub inline fn asObjectPtr(self : ContextPtr) [*]Object {
         return @ptrCast([*]Object,self);
@@ -184,8 +186,8 @@ pub const TestExecution = struct {
     }
     pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
         const sp = self.thread.endOfStack() - source.len;
-        for (source,0..) |src,idx|
-            sp[idx] = src;
+        for (source,sp[0..source.len]) |src,*dst|
+            dst.* = src;
 //        const pc = method.codePtr();
         self.ctxt.setNPc(Self.end);
         endSp = sp;
@@ -207,6 +209,6 @@ test "init context" {
 //    try expectEqual(result.o()[3].u(),4);
 //    try expectEqual(result.o()[6],True);
     const sp = thread.endOfStack();
-    c.convertToProperHeapObject(sp, thread);
-    c.print(thread);
+    const newC = c.moveToHeap(sp, thread);
+    newC.print(thread);
 }

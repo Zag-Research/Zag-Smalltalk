@@ -158,7 +158,7 @@ test "check HeapAllocations" {
     var ha = HeapAllocation.init();
     defer ha.deinit();
     try ee(ha.freeSpace(),HeapAllocation.size);
-    try ee(ha.allocOfSize(0,HeapObject.maxLength+2,null,Object),error.HeapFull);
+    try ee(ha.allocOfSize(0,HeapObject.maxLength+2,null,Object),error.ObjectTooLarge);
     const alloc0 = try ha.allocOfSize(0,1,60,u8);
     try ee(alloc0.length,9);
     const alloc1 = try ha.allocOfSize(0,0,50,Object);

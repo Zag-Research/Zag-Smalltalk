@@ -13,8 +13,8 @@ const indexSymbol = object.indexSymbol;
 pub const Context = @import("context.zig").Context;
 const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
-const HeapPtr = heap.HeapPtr;
-const HeapConstPtr = heap.HeapConstPtr;
+const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
@@ -35,12 +35,9 @@ pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
-    header: heap.Header,
     stackStructure: Object, // number of local values beyond the parameters
     selector: Object, // must be the word before code
     code: [2] Code, // will typically be a lot more then 2, as it will be the threaded version of the method
-    //size: u64,
-    //address: [*]Object,
     //references: [n]Object,
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
@@ -58,8 +55,8 @@ pub const CompiledMethod = extern struct {
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
         return pc[0].prim(pc+1,sp,thread,context,selectorHash);
     }
-    inline fn asHeapPtr(self: * const Self) HeapConstPtr {
-        return @ptrCast(HeapConstPtr,self);
+    inline fn asHeapObjectPtr(self: * const Self) HeapObjectConstPtr {
+        return @ptrCast(HeapObjectConstPtr,self);
     }
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
@@ -77,7 +74,7 @@ pub const Code = extern union {
     int: i64,
     uint: u64,
     object: Object,
-    header: heap.Header,
+    header: heap.HeapObject,
     codeRef: [*]Code,
     compiledMethod: *const  CompiledMethod,
     pub inline fn prim(pp: ThreadedFn) Code {
@@ -95,7 +92,7 @@ pub const Code = extern union {
     inline fn ref(u: u64) Code {
         return Code{.object=indexSymbol(@truncate(u24,u))};
     }
-    inline fn header(h: heap.Header) Code {
+    inline fn header(h: heap.HeapObject) Code {
         return Code{.header=h};
     }
     inline fn codeRef(c: [*]Code) Code {
@@ -199,21 +196,20 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         selector: Object,
         code: [codeSize] Code,
         references: [refsSize]Object,
+        header: heap.HeapObject,
         const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
         const Self = @This();
-        comptime {
-            if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
-                @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
-        }
+        // comptime {
+        //     if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
+        //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
+        // }
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
             return .{
-                .header = heap.header(codeSize+2,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
-                .size = refsSize,
-                .address = undefined,
                 .references = [_]Object{object.NotAnObject}**refsSize,
+                .header = heap.footer(codeSize+2,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
             };
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
@@ -221,9 +217,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = code,
-                .size = refsSize,
-                .address = undefined,
                 .references = [_]Object{object.NotAnObject}**refsSize,
+                .header = heap.footer(codeSize+2,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
             };
         }
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
@@ -231,7 +226,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn setReferences(self: *Self, refs: []Object) void {
             if (refs.len>refsSize) @panic("refs count too big");
-            self.address = @ptrCast([*]Object,&self.references);
             for (refs,0..) |obj,idx|
                 self.references[idx] = obj;
             for (self.code[0..],0..) |*c,idx| {
