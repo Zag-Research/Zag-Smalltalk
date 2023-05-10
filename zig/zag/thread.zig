@@ -7,7 +7,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const ClassIndex = object.ClassIndex;
 const checkEqual = @import("utilities.zig").checkEqual;
-const dispatch = @import("dispatch.zig");
+//const dispatch = @import("dispatch.zig");
 const heap = @import("heap.zig");
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectArray = heap.HeapObjectArray;
@@ -17,11 +17,7 @@ const Age = heap.Age;
 const Format = heap.Format;
 const allocationInfo = Format.allocationInfo;
 const AllocErrors = heap.AllocErrors;
-const ex = @import("execute.zig");
-const Code = ex.Code;
-const ContextPtr = ex.CodeContextPtr;
-const Context = ex.Context;
-const tailCall = ex.tailCall;
+const ContextPtr = *@import("context.zig").Context;
 pub const AllocResult = struct {
     sp: [*]Object,
     hp: HeapObjectArray,
@@ -31,9 +27,9 @@ pub const AllocResult = struct {
 };
 pub const AllocReturn = AllocErrors!AllocResult;
 
-test "force dispatch load" {
-    dispatch.forTest();
-}
+//test "force dispatch load" {
+//    dispatch.forTest();
+//}
 const thread_total_size = 64*1024;
 pub const Thread = extern struct {
     stack: [stack_size] Object,
@@ -100,11 +96,6 @@ pub const Thread = extern struct {
     pub inline fn stack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
     }
-    pub fn check(pc: [*]const Code, sp: [*]Object, self: *Thread, context: ContextPtr, selectorHash: u32) void {
-//        if (self.ptr().debug) |debugger|
-//            return  @call(tailCall,debugger,.{pc,sp,self,context,selector});
-        @call(tailCall,pc[0].prim,.{pc+1,sp,self,context,selectorHash});
-    }
     pub inline fn checkStack(self: *Self, sp: [*]Object, context: ContextPtr, words: u64) ?GrowParameters {
         if (@ptrToInt(sp-words)>=@ptrToInt(self)) return null;
         _=context;unreachable;
@@ -159,49 +150,49 @@ test "check flag" {
     try testing.expect(thr.needsCheck());
 }
 
-pub const ArenaX = extern struct {
-    const Self = @This();
+// pub const ArenaX = extern struct {
+//     const Self = @This();
 
-    alloc: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
-    collect: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr) AllocErrors!void,
+//     alloc: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
+//     collect: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr) AllocErrors!void,
 
-    pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
-        var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
-        initAllocation(result.allocated,classIndex, Format.objectNP, ivSize, result.age, Nil);
-        return result;
-    }
-    pub fn allocArray(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
-        if (arraySize==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
-        const noIVs = ivSize==0;
-        var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
-        const width = @sizeOf(T);
-        const aSize = (arraySize*width+@sizeOf(Object)-width)/@sizeOf(Object);
-        const fill = if (T==Object) Nil else object.ZERO;
-        if (noIVs) {
-            if (aSize<HeapObject.maxLength) {
-                var result = try self.alloc(self,sp,hp,context,aSize+1,0);
-                initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
-                return result;
-            }
-        }
-        var result = try self.alloc(self,sp,hp,context,ivSize+3,aSize);
-        const offs = @ptrCast([*]u64,result.allocated)+ivSize+1;
-        mem.set(Object,@intToPtr([*]Object,offs[1])[0..aSize],fill);
-        offs[0] = arraySize;
-        initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
-        return result;
-    }
-    inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex: ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
+//     pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
+//         var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
+//         initAllocation(result.allocated,classIndex, Format.objectNP, ivSize, result.age, Nil);
+//         return result;
+//     }
+//     pub fn allocArray(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
+//         if (arraySize==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
+//         const noIVs = ivSize==0;
+//         var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
+//         const width = @sizeOf(T);
+//         const aSize = (arraySize*width+@sizeOf(Object)-width)/@sizeOf(Object);
+//         const fill = if (T==Object) Nil else object.ZERO;
+//         if (noIVs) {
+//             if (aSize<HeapObject.maxLength) {
+//                 var result = try self.alloc(self,sp,hp,context,aSize+1,0);
+//                 initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
+//                 return result;
+//             }
+//         }
+//         var result = try self.alloc(self,sp,hp,context,ivSize+3,aSize);
+//         const offs = @ptrCast([*]u64,result.allocated)+ivSize+1;
+//         mem.set(Object,@intToPtr([*]Object,offs[1])[0..aSize],fill);
+//         offs[0] = arraySize;
+//         initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
+//         return result;
+//     }
+//     inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex: ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
 
-        // should call allocObject or allocArray
+//         // should call allocObject or allocArray
         
-        const ivSize = (@sizeOf(T)+@sizeOf(Object)-1)/@sizeOf(Object)-1;
-        if (extra==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
-        return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
-    }
-    inline fn initAllocation(result: HeapObjectPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
-        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
-        mem.set(Object,result.asObjectPtr()[1..size+1],fill);
-        result.*=footer(@intCast(u12,size),form,classIndex,hash,age);
-    }
-};
+//         const ivSize = (@sizeOf(T)+@sizeOf(Object)-1)/@sizeOf(Object)-1;
+//         if (extra==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
+//         return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
+//     }
+//     inline fn initAllocation(result: HeapObjectPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
+//         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
+//         mem.set(Object,result.asObjectPtr()[1..size+1],fill);
+//         result.*=footer(@intCast(u12,size),form,classIndex,hash,age);
+//     }
+// };

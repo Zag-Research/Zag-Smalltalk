@@ -12,12 +12,9 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
-const execute = @import("execute.zig");
-const tailCall = execute.tailCall;
-const Code = execute.Code;
-const CompiledMethod = execute.CompiledMethod;
-const CompiledMethodPtr = execute.CompiledMethodPtr;
-const MethodReturns = execute.MethodReturns;
+const Code = @import("execute.zig").Code;
+const CompiledMethodPtr = @import("execute.zig").CompiledMethodPtr;
+const MethodReturns = void;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
@@ -149,66 +146,9 @@ pub const Context = struct {
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @ptrCast(ContextPtr,op);
     }
-    fn collectNursery(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr) MethodReturns {
-        if (true) @panic("need to collect nursery");
-        return @call(tailCall,push,.{pc,sp,thread,context});
-    }
     fn print(self: ContextPtr, thread: *Thread) void {
         const pr = std.debug.print;
         pr("Self: {} {any}\n",.{self.header,self.allTemps(thread)});
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,thread);}
     }
 };
-pub const TestExecution = struct {
-    thread: Thread,
-    ctxt: Context,
-    sp: [*]Object,
-    pc: [*]const Code,
-    const Self = @This();
-    var endSp: [*]Object = undefined;
-    var endPc: [*]const Code = undefined;
-    var baseMethod = CompiledMethod.init(Nil,0,2);
-    pub fn new() Self {
-        return Self {
-            .thread = Thread.new(),
-            .ctxt = Context.init(),
-            .sp = undefined,
-            .pc = undefined,
-        };
-    }
-    pub fn init(self: *Self) void {
-        self.thread.init();
-        self.sp = self.thread.endOfStack();
-    }
-    fn end(pc: [*]const Code, sp: [*]Object, _: *Thread, _: * Context, _: u32) void {
-        endPc = pc;
-        endSp = sp;
-    }
-    pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
-        const sp = self.thread.endOfStack() - source.len;
-        for (source,sp[0..source.len]) |src,*dst|
-            dst.* = src;
-//        const pc = method.codePtr();
-        self.ctxt.setNPc(Self.end);
-        endSp = sp;
-        //        endPc = pc;
-//        self.method=method;
-        method.execute(sp,&self.thread,&self.ctxt);
-        self.sp = endSp;
-        self.pc = endPc;
-        return self.ctxt.stack(self.sp,&self.thread);
-    }
-};
-test "init context" {
-//    const expectEqual = std.testing.expectEqual;
-//    const objs = comptime [_]Object{True,Object.from(42)};
-    var result = TestExecution.new();
-    var c = result.ctxt;
-    var thread = &result.thread;
-    c.print(thread);
-//    try expectEqual(result.o()[3].u(),4);
-//    try expectEqual(result.o()[6],True);
-    const sp = thread.endOfStack();
-    const newC = c.moveToHeap(sp, thread);
-    newC.print(thread);
-}

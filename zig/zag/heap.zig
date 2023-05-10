@@ -437,8 +437,9 @@ pub const HeapObject = packed struct(u64) {
     pub fn makeIterator(self: HeapObjectConstPtr) HeapObjectPtrIterator {
         return self.objectFormat.iterator()(self);
     }
+    const partialHeader = @bitCast(u64,HeapObject{.classIndex=0,.hash=0,.objectFormat=.context,.age=.incompleteContext,.length=0});
     pub inline fn partialOnStack(selfOffset: u16) HeapObject {
-        return @bitCast(HeapObject,@as(u64,selfOffset)<<16);
+        return @bitCast(HeapObject,partialHeader | @as(u64,selfOffset)<<16);
     }
     inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) HeapObject {
         return HeapObject {
@@ -463,13 +464,15 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
         return Format.allocationInfo(iVars,indexed,elementSize,mSize,makeWeak).fillFooters(self,classIndex,hash,age,indexed,elementSize);
     }
-    pub inline fn setFields(self: HeapObjectPtr,fill: Object) void {
+    pub inline fn setFields(self: HeapObjectPtr, fill: Object, age: ?Age) void {
         if (fill==Nil and !self.format.isExternal()) {
             unreachable;
             //mem.set(Object,result.wholeObjectSlice(),fill);
             //return;
+        } else {
+            unreachable;
         }
-        unreachable; 
+        _=age;// if (age) |newAge| self.age = newAge;
     }
     pub inline fn isOnStack(self: HeapObjectConstPtr) bool {
         _ = self; unreachable;

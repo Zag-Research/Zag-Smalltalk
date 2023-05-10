@@ -11,7 +11,7 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
 pub const Context = @import("context.zig").Context;
-const TestExecution = @import("context.zig").TestExecution;
+//const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
@@ -30,6 +30,12 @@ pub const MethodReturns = void;
 //         return self>=MethodReturns.NonLocal;
 //     }
 // };
+
+    pub fn check(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) void {
+//        if (thread.debugger()) |debugger|
+//            return  @call(tailCall,debugger,.{pc,sp,self,context,selector});
+        @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
+    }
 
 pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selectorHash: u32) MethodReturns;
 pub const CodeContextPtr = *Context;
@@ -592,6 +598,59 @@ pub const controlPrimitives = struct {
         @panic("unimplemented");
     }
 };
+pub const TestExecution = struct {
+    thread: Thread,
+    ctxt: Context,
+    sp: [*]Object,
+    pc: [*]const Code,
+    const Self = @This();
+    var endSp: [*]Object = undefined;
+    var endPc: [*]const Code = undefined;
+    var baseMethod = CompiledMethod.init(Nil,0,2);
+    pub fn new() Self {
+        return Self {
+            .thread = Thread.new(),
+            .ctxt = Context.init(),
+            .sp = undefined,
+            .pc = undefined,
+        };
+    }
+    pub fn init(self: *Self) void {
+        self.thread.init();
+        self.sp = self.thread.endOfStack();
+    }
+    fn end(pc: [*]const Code, sp: [*]Object, _: *Thread, _: * Context, _: u32) void {
+        endPc = pc;
+        endSp = sp;
+    }
+    pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
+        const sp = self.thread.endOfStack() - source.len;
+        for (source,sp[0..source.len]) |src,*dst|
+            dst.* = src;
+//        const pc = method.codePtr();
+        self.ctxt.setNPc(Self.end);
+        endSp = sp;
+        //        endPc = pc;
+//        self.method=method;
+        method.execute(sp,&self.thread,&self.ctxt);
+        self.sp = endSp;
+        self.pc = endPc;
+        return self.ctxt.stack(self.sp,&self.thread);
+    }
+};
+test "init context" {
+//    const expectEqual = std.testing.expectEqual;
+//    const objs = comptime [_]Object{True,Object.from(42)};
+    var result = TestExecution.new();
+    var c = result.ctxt;
+    var thread = &result.thread;
+    c.print(thread);
+//    try expectEqual(result.o()[3].u(),4);
+//    try expectEqual(result.o()[6],True);
+    const sp = thread.endOfStack();
+    const newC = c.moveToHeap(sp, thread);
+    newC.print(thread);
+}
 const p = struct {
     usingnamespace controlPrimitives;
 };
