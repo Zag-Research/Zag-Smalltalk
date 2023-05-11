@@ -51,9 +51,10 @@ pub const Number_I = c3o + 13;
 pub const ClassDescription_I = c3o + 14;
 pub const Boolean_I = c3o + 15;
 pub const Context_I = c3o + 16;
-pub const CatchingContext_I = c3o + 17;
-pub const EnsuringContext_I = c3o + 18;
-pub const ByteArray_I = c3o + 19;
+pub const StackContext_I = c3o + 17;
+pub const CatchingContext_I = c3o + 18;
+pub const EnsuringContext_I = c3o + 19;
+pub const ByteArray_I = c3o + 20;
 const initialClassStrings = heap.compileStrings(.{ // must be in same order as above
     "Object", "SmallInteger", "Float", "False", "True",
     "UndefinedObject", "Symbol", "Character", "BlockClosure", "Array",
@@ -61,7 +62,7 @@ const initialClassStrings = heap.compileStrings(.{ // must be in same order as a
     "Class", "Metaclass", "Behavior",
     "MethodDictionary", "System", "Return", "Send", "Literal", "Load",
     "Store", "Dispatch", "ClassTable", "Magnitude",
-    "Number", "ClassDescription", "Boolean", "Context",
+    "Number", "ClassDescription", "Boolean", "Context", "StackContext",
     "CatchingContext", "EnsuringContext", "ByteArray",
 });
 pub const ReservedNumberOfClasses = if (builtin.is_test) 60 else 500;

@@ -9,7 +9,7 @@ The IEEE 754 64-bit binary number is encoded as follows:
 	![IEEE 754 Binary-64](images/Pasted%20image%2020210311212924.png)
 When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
-So we have 52 bits to play with, as long as the number is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
+So we have 52 bits to play with, as long as at least one bit is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
 
 There are several ways to do NaN tagging/encoding. You can choose integers, pointers, or doubles to be naturally encoded and all the others be encoded with some shifting/adding. While integers and pointers are probably more common in most Smalltalk images, leaving doubles as naturally encoded means that vector instructions and/or GPUs could act directly on memory.
 
@@ -41,7 +41,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF9      | xxxx | xxxx | xxxx | (unused)                      |
 | FFFA      | xxxx | xxxx | xxxx | numeric thunk                 |
 | FFFB      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFFC      | xxxx | xxxx | xxxx | self thunk                    |
+| FFFC      | xxxx | xxxx | xxxx | heap thunk                    |
 | FFFD      | xxxx | xxxx | xxxx | non-local thunk               |
 | FFFE      | xxxx | xxxx | xxxx | heap closure                  |
 | FFFF      | xxxx | xxxx | xxxx | heap object                   |
@@ -69,7 +69,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
 1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers, 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
 2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
-3. a self thunk
+3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
 4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 5. all remaining closures are heap objects, and contain the following fields in order (omitting any unused fields):
 	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated);
@@ -77,7 +77,7 @@ Block closures are relatively expensive because they need to be heap allocated. 
 	3. the address of any (usually 0) Arrays that contain mutable fields that are shared between blocks or with the main method execution;
 	4. the values of `self` and any parameters or read-only locals that are referenced. 
 
-When a `[self]` closure is required, runtime code returns either a numeric or immediate thunk (if `self` is numeric/immediate and fits), or a full closure with 2 fields: the CompiledMethod reference and the `self` value.
+When a `[self]` closure is required, runtime code returns either a numeric or immediate thunk (if `self` is numeric/immediate and fits), a heap thunk when `self` is a heap object, with the low 48 bits referencing the object, or, if `self` doesn't fit any of these constraints, then it will fall back to a full closure with 2 fields: the CompiledMethod reference and the `self` value.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
