@@ -33,21 +33,22 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0006 | 0000 | 0002 | UndefinedObject               |
 | FFF0      | 0007 | aaxx | xxxx | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
+| FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
 | FFF1-8    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF1      | 0000 | 0000 | 0000 | SmallInteger minVal           |
 | FFF5      | 0000 | 0000 | 0000 | SmallInteger 0                |
 | FFF8      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
 | FFF9      | xxxx | xxxx | xxxx | (unused)                      |
-| FFFA      | xxxx | xxxx | xxxx | (unused)                      |
+| FFFA      | xxxx | xxxx | xxxx | numeric thunk                 |
 | FFFB      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFFC      | xxxx | xxxx | xxxx | closure-free block            |
+| FFFC      | xxxx | xxxx | xxxx | self thunk                    |
 | FFFD      | xxxx | xxxx | xxxx | non-local thunk               |
 | FFFE      | xxxx | xxxx | xxxx | heap closure                  |
 | FFFF      | xxxx | xxxx | xxxx | heap object                   |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFFA and FFF0 groups for encodings of new classes that need more than 32 auxiliary (hash) bits.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF9 group for encodings of new classes that need more than 32 auxiliary (hash) bits.
 Groups C through F have the low 48 bits being the address of an object.
-Groups B through E are all `BlockClosure`s - B through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
+Groups A through E are all `BlockClosure`s - A through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
@@ -66,16 +67,17 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 
 ### Thunks and Closures
 Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
-1. an immediate thunk acts as a niladic BlockClosure that returns a limited range of constant values, encoded in the low 48 bits. Hence this supports 46-bit SmallIntegers, 46-bit floats (any that has 0s in the least significant 18 bits) and the first 32k classes of FFF2 immediates. Examples: `[1]`, `[#foo]`, `[0.0]`, `[true]`.
-2. closure-free blocks are blocks with no closure - hence they have no access to method parameters, method locals or self, but can do any calculations with global values, constants, or block parameters. The low 48 bits are the address of the Method object for the block code. Examples: `[:x|x+1]`, `[:sum:x|sum+x]`.
-3. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced tto zero) are the address of the context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
-4. all remaining closures are heap allocated, and contain the following fields in order:
-	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation;
-	2. the address of the Context if there are any non-local returns;
+1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers, 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
+2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
+3. a self thunk
+4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
+5. all remaining closures are heap objects, and contain the following fields in order (omitting any unused fields):
+	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated);
+	2. the address of the Context if there are any non-local returns (a closure that references a Context will force that Context to be promoted to the heap);
 	3. the address of any (usually 0) Arrays that contain mutable fields that are shared between blocks or with the main method execution;
 	4. the values of `self` and any parameters or read-only locals that are referenced. 
 
-When a `[self]` closure is required, runtime code returns either an immediate thunk (if `self` is immediate and fits), or a full closure with 2 fields: the CompiledMethod reference and the `self` value.
+When a `[self]` closure is required, runtime code returns either a numeric or immediate thunk (if `self` is numeric/immediate and fits), or a full closure with 2 fields: the CompiledMethod reference and the `self` value.
 
 ### Object in Memory
 We are following some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).

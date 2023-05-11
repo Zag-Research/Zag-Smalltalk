@@ -59,7 +59,7 @@ pub const Context = struct {
     }
     pub inline fn pop(self: ContextPtr, thread: *Thread) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
-        if (self.isOnStack())
+        if (self.isIncomplete())
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
         _ = thread;@panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
@@ -69,9 +69,9 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub inline fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+    pub fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
         const newSp = sp - baseSize - locals;
-        if (thread.checkStack(newSp,5+maxStackNeeded)) |grow| return grow.ctxt.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
+        if (thread.checkStack(newSp,self,5+maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
@@ -83,7 +83,7 @@ pub const Context = struct {
         if (thread.needsCheck()) @panic("thread needsCheck");
        return ctxt;
     }
-    fn moveToHeap(self: ContextPtr, sp: [*]Object, thread: *Thread) ContextPtr {
+    pub fn moveToHeap(self: ContextPtr, sp: [*]Object, thread: *Thread) ContextPtr {
         _=self;_=sp;_=thread;unreachable;
         // if (self.isIncomplete()) {
         //     self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
@@ -146,7 +146,7 @@ pub const Context = struct {
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @ptrCast(ContextPtr,op);
     }
-    fn print(self: ContextPtr, thread: *Thread) void {
+    pub fn print(self: ContextPtr, thread: *Thread) void {
         const pr = std.debug.print;
         pr("Self: {} {any}\n",.{self.header,self.allTemps(thread)});
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,thread);}

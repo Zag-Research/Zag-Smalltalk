@@ -450,8 +450,8 @@ pub const HeapObject = packed struct(u64) {
             .length = length,
         };
     }
-    inline fn calcHeapObject(iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) !HeapObject {
-        const aI = Format.allocationInfo(iVars,indexed,elementSize,mSize,makeWeak);
+    pub inline fn calcHeapObject(iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
+        const aI = comptime Format.allocationInfo(iVars,indexed,elementSize,makeWeak);
         if (aI.moreThanOneWord()) return error.DoesntFit;
         return HeapObject {
             .classIndex = classIndex,
