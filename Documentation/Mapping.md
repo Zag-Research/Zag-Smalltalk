@@ -88,14 +88,14 @@ There are a few significant changes:
 3. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 #### Object addresses
-All object addresses point to the header word. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects in nursery and teen arenas should **not** be passed to Zig libraries, because the objects can move.
+All object addresses point to a HeapObject word.  Every object has a HeapObject word at the end (except 2 special cases mentioned below). This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move. In a few special cases there is also a shadow HeapObject word at the beginning. This is done when the object is variable size (like a CompiledMethod) and mostly used by Zig code so it is efficient to have a pointer to the start of the object. In 2 special cases (Contexts and Closures) when the object is on the stack there is only the shadow HeapObject word, and if copied to a heap, the object is fully reified (but the shadow remains as the first word of the resulting object).
 
 #### Length
-The length field encodes the number of instance variables (or the number of indexable values if there are no instance variables and the array fits in a heap allocation). If there are both instance variables and indexable values, the index variables are followed by a slice, that may reference the indexable values immediately following, or to a remote array. A remote object with no instance variables will be coded with a length of 0. This means that pure-indexable objects that fit in a heap allocation have no overhead, but large indaxable objects and mixed objects will have the slice.
+The length field encodes the total size of the heap allocation except for the HeapObject word itself.
 
 There are a number of special length values:
 - 4095 - this isn't a header, it would an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
-- 4094 - this is a forwarding pointer, the low 48 bits are the address.
+- 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The real length of the object (for garbage collection purposes) will be found by following the pointer.
 - 0-4093 - normal object 
 Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
 
