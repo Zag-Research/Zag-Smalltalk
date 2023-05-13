@@ -1,20 +1,20 @@
 const std = @import("std");
-const execute = @import("execute.zig");
+const execute = @import("../execute.zig");
 const trace = execute.trace;
 const ContextPtr = execute.CodeContextPtr;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const Thread = @import("thread.zig").Thread;
-const object = @import("object.zig");
+const Thread = @import("../thread.zig").Thread;
+const object = @import("../object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("symbol.zig").symbols;
-const heap = @import("heap.zig");
+const sym = @import("../symbol.zig").symbols;
+const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
