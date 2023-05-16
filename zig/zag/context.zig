@@ -26,13 +26,13 @@ pub const Context = struct {
     size: if (hasSizeField) u64 else void,
     temps: [nTemps]Object,
     const Self = @This();
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) MethodReturns;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) MethodReturns;
     const hasSizeField = true;
     const nTemps = 1;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
     pub fn init() Self {
         return Self {
-            .header = comptime heap.footer(baseSize+nTemps,Format.context,class.Context_I,0,Age.static),
+            .header = comptime heap.footer(baseSize+nTemps,Format.header,class.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = undefined,
             .prevCtxt = undefined,
@@ -59,7 +59,7 @@ pub const Context = struct {
     }
     pub inline fn pop(self: ContextPtr, thread: *Thread) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
-        if (self.isIncomplete())
+        if (self.isOnStack())
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
         _ = thread;@panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
@@ -92,11 +92,11 @@ pub const Context = struct {
         //     self.prevCtxt.convertToProperHeapObject(sp, thread);
         // }
     }
-    pub inline fn isIncomplete(self: * const Self) bool {
-        return @alignCast(8,&self.header).isIncompleteContext();
+    pub inline fn isOnStack(self: * const Self) bool {
+        return @alignCast(8,&self.header).isOnStack();
     }
     inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
-        return if (self.isIncomplete()) self.asObjectPtr() else thread.endOfStack();
+        return if (self.isOnStack()) self.asObjectPtr() else thread.endOfStack();
     }
     inline fn calculatedSize(self: ContextPtr, thread: *Thread) usize {
         return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps))/@sizeOf(Object);

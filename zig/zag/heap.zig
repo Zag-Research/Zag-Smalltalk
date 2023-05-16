@@ -16,7 +16,7 @@ pub const Format = enum(u8) {
     notIndexable, // this and below have no pointers in array portion
     immediateObjectOne,
     immediateObjectMax = ImmediateObjectMax,
-    context,
+    header, // this is a header word, which points to the proper HeapObject footer word
     directIndexed,
     directIndexedWithPointers, // this and below have no size/pointer
     indexed,
@@ -77,6 +77,9 @@ pub const Format = enum(u8) {
         if (isByteSize(s))
             return @intToEnum(Self,s);
         return .indexed;
+    }
+    pub inline fn isHeader(self: Self) bool {
+        return self == .header;
     }
     pub inline fn isIndexableWithPointers(self: Self) bool {
         return self == .indexedWithPointers;
@@ -183,7 +186,7 @@ test "raw size" {
     try ee(@intToEnum(Format,70).size(),Format.Size{.size=6});
     try ee(Format.immediateSizeZero.size(),Format.Size{.size=0});
 }
-test "header formats" {
+test "HeapObject formats" {
     const expect = std.testing.expect;
     try expect(Format.immediateSizeZero.immutable().isImmutable());
     try expect(!Format.notIndexable.isIndexable());
@@ -217,60 +220,65 @@ test "allocationInfo" {
     try ee(Format.allocationInfo(10,9000,8,true),AllocationInfo{.format=.externalWeakWithPointers,.size=10,.sizeField=3});
 }
 pub const Age = enum(u4) {
-    incompleteContext = IncompleteContext,
-    nursery = NurseryFirst,
-    global = Global,
-    aoo = AoO, aooMarked = AoOMarked, aooScanned = AoOScanned,
-    static = Static,
-    aStruct = Struct,
-    free = Free,
-    _,
-    const NurseryFirst: u4 = 0;
-    const NurseryLast: u4 = 5;
-    const IncompleteContext: u4 = 6;
-    const Static: u4 = 7;
-    const Global: u4 = 8;
-    const GlobalMarked: u4 = 9;
-    const Struct: u4 = 10;
-    const GlobalScanned: u4 = 11;
-    const AoO : u4 = 12;
-    const AoOMarked : u4 = 13;
-    const Free : u4 = 14;
-    const AoOScanned : u4 = 15;
-    const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
+    onStack,
+    nursery,
+    nursery1, nursery2, nursery3, nursery4, nurseryLast,
+    static,
+    global, globalMarked,
+    aStruct,
+    globalScanned,
+    aoo, aooMarked,
+    free,
+    aooScanned,
+    const Static: Age = .static;
+    // const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub inline fn isAoO(self: Self) bool {
         return switch (self) {
             .aoo, .aooMarked, .aooScanned => true,
-            else => false,
-        };
+            else => false};
     }
     pub inline fn isUnmoving(self: Self) bool {
-        return @enumToInt(self) >= Static;
+        return switch(self)  {
+            .static, .global, .globalMarked, .aStruct, .globalScanned, .aoo, .aooMarked, .free, .aooScanned => true,
+            else => false};
     }
     pub inline fn isGlobal(self: Self) bool {
-        return @enumToInt(self) >= Global;
+        return switch(self) {
+            .global, .globalMarked, .aStruct, .globalScanned, .aoo, .aooMarked, .free, .aooScanned => true,
+            else => false};
     }
     pub inline fn isNonHeap(self: Self) bool {
-        return switch (@enumToInt(self)) {
-            Static,IncompleteContext => true,
-            else => false,
-        };
+        return switch (self) {
+            .static,.onStack => true,
+            else => false};
     }
     pub inline fn isStatic(self: Self) bool {
         return self == .static;
     }
-    pub inline fn isIncompleteContext(self: Self) bool {
-        return self == .incompleteContext;
+    pub inline fn isOnStack(self: Self) bool {
+        return self == .onStack;
     }
-    pub inline fn marked(self: Self) Self {
+    pub inline fn isMarked(self: Self) bool {
         return switch (self) {
-            .global,.aoo => @intToEnum(Self,@enumToInt(self) | 1),
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => true,
+            else => false};
+    }
+    pub inline fn marked(self: Self) !Self {
+        return switch (self) {
+            .global => .globalMarked,
+            .aoo => .aooMarked,
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => error.alreadyMarked,
             else => self,
         };
     }
-    pub inline fn scanned(self: Self) Self {
-        return @intToEnum(Self,@enumToInt(self) | 2);
+    pub inline fn scanned(self: Self) !Self {
+        return switch (self) {
+            .globalMarked => .globalScanned,
+            .aooMarked => .aooScanned,
+            .globalScanned, .aooScanned => error.alreadyScanned,
+            else => error.notMarked,
+        };
     }
     // Note: assigning a ptr to a scanned object must block for collection
 };
@@ -437,9 +445,19 @@ pub const HeapObject = packed struct(u64) {
     pub fn makeIterator(self: HeapObjectConstPtr) HeapObjectPtrIterator {
         return self.objectFormat.iterator()(self);
     }
-    const partialHeader = @bitCast(u64,HeapObject{.classIndex=0,.hash=0,.objectFormat=.context,.age=.incompleteContext,.length=0});
+    const partialHeader = @bitCast(u64,HeapObject{.classIndex=0,.hash=0,.objectFormat=.header,.age=.onStack,.length=0});
     pub inline fn partialOnStack(selfOffset: u16) HeapObject {
         return @bitCast(HeapObject,partialHeader | @as(u64,selfOffset)<<16);
+    }
+    pub inline fn partialWithLength(size: u12) HeapObject {
+        return HeapObject{.classIndex=0,.hash=0,.objectFormat=.header,.age=.static,.length=size};
+    }
+    pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
+        const result = if (self.objectFormat.isHeader())
+            @ptrCast(HeapObjectPtr,@ptrCast(HeapObjectArray,@constCast(self))+self.length+1)
+            else @constCast(self);
+        std.io.getStdErr().writer().print("\nrHO: 0x{x} {} {} 0x{x}",.{@ptrToInt(self),self.objectFormat,self.length,@ptrToInt(result)}) catch unreachable;
+        return result;
     }
     inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) HeapObject {
         return HeapObject {
@@ -475,17 +493,13 @@ pub const HeapObject = packed struct(u64) {
         _=age;// if (age) |newAge| self.age = newAge;
     }
     pub inline fn isOnStack(self: HeapObjectConstPtr) bool {
-        _ = self; unreachable;
-//        return self.age.isOnStack();
+        return self.age.isOnStack();
     }
     pub inline fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.age.isUnmoving();
     }
     pub inline fn isStack(self: HeapObjectConstPtr) bool {
         return self.age.isStack();
-    }
-    pub inline fn isIncompleteContext(self: HeapObjectConstPtr) bool {
-        return self.age.isIncompleteContext();
     }
     pub inline fn forwardedTo(self: HeapObjectConstPtr) HeapObjectConstPtr {
         return @intToPtr(HeapObjectConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
@@ -511,8 +525,22 @@ pub const HeapObject = packed struct(u64) {
             return start[0..size];
         }
     }
+    pub inline fn asSliceWithoutHeader(self: HeapObjectConstPtr) ![]Object {
+        const head = self.*;
+        const size = head.length;
+//        std.io.getStdErr().writer().print("\naASWH {}",.{head}) catch unreachable;
+        if (size==forwardLength) {
+            const realSelf = self.forwardedTo();
+            const start = @intToPtr([*]Object,@ptrToInt(realSelf)-@sizeOf(Object)*realSelf.length);
+            return start[1..size];
+        } else {
+            const start = @intToPtr([*]Object,@ptrToInt(self)-@sizeOf(Object)*size);
+            return start[1..size];
+        }
+    }
     pub inline fn arrayAsSlice(self: HeapObjectConstPtr,comptime T:type) ![]T {
         const head = self.*;
+//        std.io.getStdErr().writer().print("\naAS {}",.{head}) catch unreachable;
         if (head.length==forwardLength) {
             const realSelf = self.forwardedTo();
             return realSelf.arrayAsSlice_(realSelf.*,T);
@@ -520,7 +548,8 @@ pub const HeapObject = packed struct(u64) {
             return self.arrayAsSlice_(head,T);
     }
     inline fn arrayAsSlice_(self: HeapObjectConstPtr, head: HeapObject, comptime T:type) ![]T {
-        if (head.age.isIncompleteContext()) unreachable;
+        //        if (head.age.isOnStack()) unreachable;
+//        std.io.getStdErr().writer().print("\nsize={} 0x{x} {}",.{head.objectFormat.size(),@ptrToInt(self),head}) catch unreachable;
         switch (head.objectFormat.size()) {
             .notIndexable => return error.NotIndexable,
             .size => |s| {
