@@ -456,7 +456,6 @@ pub const HeapObject = packed struct(u64) {
         const result = if (self.objectFormat.isHeader())
             @ptrCast(HeapObjectPtr,@ptrCast(HeapObjectArray,@constCast(self))+self.length+1)
             else @constCast(self);
-        std.io.getStdErr().writer().print("\nrHO: 0x{x} {} {} 0x{x}",.{@ptrToInt(self),self.objectFormat,self.length,@ptrToInt(result)}) catch unreachable;
         return result;
     }
     inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) HeapObject {

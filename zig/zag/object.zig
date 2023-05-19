@@ -63,7 +63,7 @@ pub const SymbolTable_I = @enumToInt(Level2.SymbolTable);
 pub const Method_I = @enumToInt(Level2.Method);
 pub const CompiledMethod_I = @enumToInt(Level2.CompiledMethod);
 pub const Group = enum(u16) {
-    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, unused1 = 0xfff9, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
+    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
     const Self = @This();
     inline fn base(cg: Self) u64 {
         return @as(u64,@enumToInt(cg))<<48;
@@ -111,10 +111,10 @@ pub const Object = packed struct(u64) {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object) bool {
-        return self.tag.u() >= Group.smallInt.u() and self.tag.u() < Group.unused1.u();
+        return self.tag.u() >= Group.smallInt.u() and self.tag.u() <= Group.smallIntMax.u();
     }
     pub inline fn isNat(self: Object) bool {
-        return self.tag.u() >= Group.smallInt0.u() and self.tag.u() < Group.unused1.u();
+        return self.tag.u() >= Group.smallInt0.u() and self.tag.u() <= Group.smallIntMax.u();
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;

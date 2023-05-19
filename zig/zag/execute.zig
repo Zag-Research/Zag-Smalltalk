@@ -76,16 +76,21 @@ pub const CompiledMethod = extern struct {
         writer: anytype,
     ) !void {
         _=fmt;_=options;
+        return self.write(writer);
+    }
+    pub fn write(
+        self: *const Self,
+        writer: anytype,
+    ) !void {
         const realHO = self.header.realHeapObject();
-        std.io.getStdErr().writer().print("\nFh={} FrHO={} 0x{x} 0x{x}",.{self.header,realHO,@ptrToInt(self),@ptrToInt(realHO)}) catch unreachable;
-        const a = realHO.asSlice() catch unreachable;
         const all = @ptrCast([]Code,realHO.asSlice() catch unreachable);
         const refs = realHO.arrayAsSlice(Object) catch unreachable;
         const locals = self.stackStructure.h0;
         const maxStackNeeded = self.stackStructure.h1;
         const selfOffset = self.stackStructure.l2;
-        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} {x} {x} ({x},{}) ({x},{}) ({x},{})",.{
-            self.selector,locals,maxStackNeeded,selfOffset,@ptrToInt(self),@ptrToInt(realHO),@ptrToInt(a.ptr),a.len,@ptrToInt(all.ptr),all.len,@ptrToInt(refs.ptr),refs.len});//all[2..all.len-refs.len],refs});
+        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} {any} ({any})",.{
+            self.selector,locals,maxStackNeeded,selfOffset,
+            all[codeOffset/8..all.len-refs.len],refs});
     }
 };
 pub const Code = extern union {
@@ -137,8 +142,10 @@ pub const Code = extern union {
     ) !void {
         _ = fmt;
         _ = options;
-        if (self.int>=-100 and self.int<100) {
-            try writer.print("{}",.{self.int});
+        if (!self.object.isDouble()) {
+            try writer.print("{}",.{self.object});
+        } else if (self.int>=-100 and self.int<100) {
+            try writer.print("({})",.{self.int});
         } else
             try writer.print("0x{x}",.{self.uint});
     }
@@ -408,11 +415,6 @@ pub const controlPrimitives = struct {
     pub fn branch(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const offset = pc[0].int;
         trace("\nbranch offset: {}\n",.{offset});
-        if (offset == -1) {
-            const target = context.getTPc();
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selector});
-            return @call(tailCall,target[0].prim,.{target+1,sp,thread,context,selector});
-        }
         if (offset>=0) {
             const target = pc+1+@intCast(u64, offset);
             if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selector});
@@ -486,8 +488,7 @@ pub const controlPrimitives = struct {
     pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         const offset = pc[0].uint;
-        newSp[0]=@ptrCast(*const Object,pc+offset).*;
-        trace("\npushLiteralIndirect: {}",.{newSp[0]});
+        newSp[0]=@ptrCast(*const Object,pc+1+offset).*;
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,context,selector});
     }
     pub fn pushNil(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -639,9 +640,7 @@ pub const TestExecution = struct {
         self.ctxt.setNPc(Self.end);
         endSp = sp;
         //        endPc = pc;
-        const realHO = method.header.realHeapObject();
-        std.debug.print("\nheader = {} realHO = {} {} 0x{x:0>16}",.{method.header,realHO,@enumToInt(realHO.objectFormat),@bitCast(u64,realHO.*)});
-        std.debug.print("\nmethod={}",.{method.*});
+        method.write(stdout) catch unreachable;
         method.execute(sp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.pc = endPc;
@@ -667,7 +666,6 @@ const p = struct {
 test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself,0,0,.{
-        &p.noop,
         &p.pushLiteral,comptime Object.from(42),
         &p.returnNoContext,
     });
@@ -675,8 +673,6 @@ test "simple return via TestExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     const compiledMethod = method.asCompiledMethodPtr();
-    for (@ptrCast([*]u64,compiledMethod)[0..@sizeOf(@TypeOf(method))/8],0..) |*u,idx|
-        std.debug.print("\n[0x{x:0>16}:{}]: 0x{x:0>16}",.{@ptrToInt(u),idx,u.*});
     var result = te.run(objs[0..],compiledMethod);
     try expectEqual(result.len,3);
     try expectEqual(result[0],Object.from(42));
@@ -686,7 +682,6 @@ test "simple return via TestExecution" {
 test "context return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.@"at:",0,0,.{
-        &p.noop,
         &p.pushContext,"^",
         &p.pushLiteral,comptime Object.from(42),
         &p.returnWithContext,
@@ -695,8 +690,6 @@ test "context return via TestExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     const compiledMethod = method.asCompiledMethodPtr();
-    for (@ptrCast([*]u64,compiledMethod)[0..@sizeOf(@TypeOf(method))/8],0..) |*u,idx|
-        std.debug.print("\n[0x{x:0>16}:{}]: 0x{x:0>16}",.{@ptrToInt(u),idx,u.*});
     var result = te.run(objs[0..],compiledMethod);
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);
@@ -704,7 +697,6 @@ test "context return via TestExecution" {
 test "context returnTop via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself,3,0,.{
-        &p.noop,
         &p.pushContext,"^",
         &p.pushLiteral,comptime Object.from(42),
         &p.returnTop,
@@ -713,8 +705,6 @@ test "context returnTop via TestExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     const compiledMethod = method.asCompiledMethodPtr();
-    for (@ptrCast([*]u64,compiledMethod)[0..@sizeOf(@TypeOf(method))/8],0..) |*u,idx|
-        std.debug.print("\n[0x{x:0>16}:{}]: 0x{x:0>16}",.{@ptrToInt(u),idx,u.*});
     var result = te.run(objs[0..],compiledMethod);
     try expectEqual(result.len,2);
     try expectEqual(result[0],Object.from(42));
@@ -732,8 +722,6 @@ test "context returnTop with indirect via TestExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     const compiledMethod = method.asCompiledMethodPtr();
-    for (@ptrCast([*]u64,compiledMethod)[0..@sizeOf(@TypeOf(method))/8],0..) |*u,idx|
-        std.debug.print("\n[0x{x:0>16}:{}]: 0x{x:0>16}",.{@ptrToInt(u),idx,u.*});
     var result = te.run(objs[0..],compiledMethod);
     try expectEqual(result.len,2);
     try expectEqual(result[0],Object.from(42));

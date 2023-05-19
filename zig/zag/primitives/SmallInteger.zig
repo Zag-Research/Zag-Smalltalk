@@ -131,10 +131,15 @@ test "inline primitives" {
     try expectEqual((try inlines.p_negated(Object.from(0))).toInt(),0);
     try expectEqual(inlines.p_negated(Object.from(-0x4_0000_0000_0000)),error.primitiveError);
 }
+const noFallback = execute.noFallback;
 pub const embedded = struct {
+    pub var @"SmallInteger>>#+" = noFallback;
     pub fn p1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
+        if (inlines.p1(sp[1],sp[0])) |result | {
+            sp[1] = result;
+            return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selectorHash});
+        }
+        return @call(tailCall, @"SmallInteger>>#+".setup,.{pc,sp,thread,context,sym.@"+"});
     }
 };
 pub const primitives = struct {
@@ -142,14 +147,6 @@ pub const primitives = struct {
         sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selectorHash});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selectorHash});
 // only this one has been corrected
-    }
-    pub fn ip1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch {
-            // call the SmallInteger>>#+ code
-            _ = pc;
-            @panic("ip1 failed");
-        };
-        return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selectorHash});
     }
     pub fn p1L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
         sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
