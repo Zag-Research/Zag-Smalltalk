@@ -2,7 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const ClassIndex = object.ClassIndex;
@@ -18,6 +18,9 @@ const Format = heap.Format;
 const allocationInfo = Format.allocationInfo;
 const AllocErrors = heap.AllocErrors;
 const ContextPtr = *@import("context.zig").Context;
+const tailCall: std.builtin.CallModifier = .always_tail;
+const Code = @import("execute.zig").Code;
+const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 pub const AllocResult = struct {
     sp: [*]Object,
     hp: HeapObjectArray,
@@ -30,27 +33,33 @@ pub const AllocReturn = AllocErrors!AllocResult;
 //test "force dispatch load" {
 //    dispatch.forTest();
 //}
-const thread_total_size = 64*1024;
+const thread_total_size = 64*1024; // must be more than HeapObject.maxLength*8 so externally allocated
 pub const Thread = extern struct {
     stack: [stack_size] Object,
     nursery0: [nursery_size] Object,
     nursery1: [nursery_size] Object,
     next: ?*Self,
-    id : u64,
+    id: u64,
+    debugFn: ?ThreadedFn,
     sp: [*]Object,
     currHeap: HeapObjectArray,
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
     const Self = @This();
-    const threadAvail = thread_total_size-@sizeOf(?*Self)+@sizeOf(u64)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
-    const stack_size = @min(threadAvail/7/@sizeOf(Object),heap.HeapObject.maxLength);
-    const nursery_size = (threadAvail-stack_size)/2/@sizeOf(Object);
+    const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ThreadedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) void;
+    const threadAvail = (thread_total_size-headerSize)/@sizeOf(Object);
+    const stack_size = threadAvail/9;
+    const nursery_size = (threadAvail-stack_size)/2;
     var allThreads: ?*Self = null;
     pub fn new() Self {
         return undefined;
     }
     pub fn init(self: *Self) void {
+//        @compileLog("stack_size",stack_size);
+//        @compileLog("threadAvail",threadAvail);
+//        @compileLog("nursery_size",nursery_size);
         const h = @ptrCast(HeapObjectArray,&self.stack[0]);
         const stack_end = h+stack_size;
         const at = allThreads;
@@ -82,6 +91,9 @@ pub const Thread = extern struct {
     pub inline fn noCheck(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
+    pub inline fn debugger(self: *Self) ?ThreadedFn {
+        return self.debugFn;
+    }
     inline fn ptr(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.HeapObject)
                          );
@@ -93,7 +105,7 @@ pub const Thread = extern struct {
     pub inline fn endOfStack(self: *Self) [*]Object {
         return @ptrCast([*]Object,&self.ptr().stack[0])+stack_size;
     }
-    pub inline fn stack(self: *Self, sp: [*]Object) []Object {
+    pub inline fn getStack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
     }
     pub inline fn checkStack(self: *Self, sp: [*]Object, context: ContextPtr, words: u64) ?GrowParameters {

@@ -1,7 +1,7 @@
 const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
 const Thread = @import("thread.zig").Thread;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
@@ -9,16 +9,19 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const heap = @import("heap.zig");
 const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObject = heap.HeapObject;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
-const Code = @import("execute.zig").Code;
-const CompiledMethodPtr = @import("execute.zig").CompiledMethodPtr;
+const execute = @import("execute.zig");
+const Code = execute.Code;
+const tailCall = execute.tailCall;
+const CompiledMethodPtr = execute.CompiledMethodPtr;
 const MethodReturns = void;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
-    header: heap.HeapObject, // only used while on stack
+    header: HeapObject, // only used while on stack
     tpc: [*]const Code, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
@@ -78,8 +81,8 @@ pub const Context = struct {
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
-        ctxt.header = heap.HeapObject.partialOnStack(selfOffset+baseSize);
-        if (hasSizeField) ctxt.size = ctxt.calculatedSize(thread);
+        ctxt.header = HeapObject.partialOnStack(selfOffset+baseSize);
+        if (hasSizeField) ctxt.size = ctxt.tempSize(thread);
         if (thread.needsCheck()) @panic("thread needsCheck");
        return ctxt;
     }
@@ -98,14 +101,14 @@ pub const Context = struct {
     inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
         return if (self.isOnStack()) self.asObjectPtr() else thread.endOfStack();
     }
-    inline fn calculatedSize(self: ContextPtr, thread: *Thread) usize {
+    inline fn tempSize(self: ContextPtr, thread: *Thread) usize {
         return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
     pub inline fn stack(self: *Self, sp: [*]Object, thread: *Thread) []Object {
         return sp[0..(@ptrToInt(self.endOfStack(thread))-@ptrToInt(sp))/@sizeOf(Object)];
     }
     pub inline fn allTemps(self: ContextPtr, thread: *Thread) []Object {
-        const size = if (self.isIncomplete()) self.calculatedSize(thread) else self.size;
+        const size = self.tempSize(thread);
         @setRuntimeSafety(false);
         return self.temps[0..size];
     }
@@ -138,7 +141,7 @@ pub const Context = struct {
         return self.prevCtxt;
     }
     pub inline fn asHeapObjectPtr(self : ContextPtr) HeapObjectPtr {
-        return @ptrCast(HeapObjectPtr,self);
+        return &self.header;
     }
     pub inline fn asObjectPtr(self : ContextPtr) [*]Object {
         return @ptrCast([*]Object,self);
@@ -146,9 +149,17 @@ pub const Context = struct {
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @ptrCast(ContextPtr,op);
     }
-    pub fn print(self: ContextPtr, thread: *Thread) void {
+    pub fn print(self: *const Context, thread: *const Thread) void {
         const pr = std.debug.print;
-        pr("Self: {} {any}\n",.{self.header,self.allTemps(thread)});
+        pr("Context: {*} {} {any}\n",.{self,self.header,self.allTemps(thread)});
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,thread);}
+    }
+    pub fn call(oldPc: [*]const Code, sp: [*]Object, thread: *Thread, self: ContextPtr, selector: Object) void {
+        self.tpc = oldPc+1;
+        self.npc = oldPc[0].prim;
+//        std.debug.print("\ncall: N={*} T={*}",.{self.getNPc(),self.getTPc()});
+        const method = @intToPtr(CompiledMethodPtr,@bitCast(u64,selector));
+        const pc = @ptrCast([*]const Code,&method.code);
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,self,method.selector});
     }
 };

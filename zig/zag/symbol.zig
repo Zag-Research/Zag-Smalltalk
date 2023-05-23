@@ -2,7 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 const builtin = @import("builtin");
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
@@ -63,8 +63,9 @@ pub const symbols = struct {
     pub const ClassDescription = symbol0(35);
     pub const Metaclass = symbol0(36);
     pub const SmallInteger = symbol0(37);
+    pub const noFallback = symbol0(38);
     // define any new symbols here
-    pub const Object = symbol0(38); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(39); // always have this the last initial symbol so the tests verify all the counts are correct
 };
 pub const predefinedSymbols = 38;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
@@ -75,6 +76,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "valueWithArguments:", "cull:cull:", "cull:cull:cull:",
     "cull:cull:cull:cull:", "self", "name", "<", "<=", ">=", ">",
     "class", "Class", "Behavior", "ClassDescription", "Metaclass","SmallInteger",
+    "noFallback",
     // add any new values here
     "Object"
 });

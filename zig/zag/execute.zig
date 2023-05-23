@@ -2,7 +2,7 @@ const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
 const Thread = @import("thread.zig").Thread;
 const ThreadPtr = @import("thread.zig").ThreadPtr;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const NotAnObject = object.NotAnObject;
@@ -33,12 +33,16 @@ pub const MethodReturns = void;
 // };
 
     pub fn check(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) void {
-//        if (thread.debugger()) |debugger|
-//            return  @call(tailCall,debugger,.{pc,sp,self,context,selector});
+        if (thread.debugger()) |debugger|
+            return  @call(tailCall,debugger,.{pc,sp,thread,context,selector});
         @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
     }
 
 pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) MethodReturns;
+fn noFallbackFn(_: [*]const Code, _: [*]Object, _: *Thread, _: CodeContextPtr, _: Object) MethodReturns {
+    @panic("no fall back");
+}
+pub const noFallback = &CompiledMethod.init(sym.noFallback,&noFallbackFn);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
@@ -47,19 +51,20 @@ pub const CompiledMethod = extern struct {
     selector: Object, // must be the word before code
     code: [2] Code, // will typically be a lot more then 2, as it will be the threaded version of the method
     //references: [n]Object,
+    footer: HeapObject,
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
     pub fn init(name: Object,methodFn: ThreadedFn) Self {
         return Self {
-            .header = heap.header(3,Format.objectNP,class.Method_I,name.hash24(),Age.static),
+            .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{Code.prim(methodFn),Code.uint(0)},
+            .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
     }
-    pub inline fn execute(self: * const Self, sp: [*]Object, thread: *Thread, context: CodeContextPtr) void {
-        std.debug.print("\nexecute: 0x{x}",.{@ptrToInt(self)});
-        const pc = @ptrCast([*]const Code,&self.code);
+    pub fn execute(self: * const Self, sp: [*]Object, thread: *Thread, context: CodeContextPtr) void {
+        const pc = self.codePtr();
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,self.selector});
         return pc[0].prim(pc+1,sp,thread,context,self.selector);
     }
@@ -68,6 +73,9 @@ pub const CompiledMethod = extern struct {
     }
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
+    }
+    pub inline fn codePtr(self: *const Self) [*]const Code {
+        return @ptrCast([*]const Code,&self.code);
     }
     pub fn format(
         self: *const Self,
@@ -88,9 +96,12 @@ pub const CompiledMethod = extern struct {
         const locals = self.stackStructure.h0;
         const maxStackNeeded = self.stackStructure.h1;
         const selfOffset = self.stackStructure.l2;
-        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} {any} ({any})",.{
-            self.selector,locals,maxStackNeeded,selfOffset,
+        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} realHO:{} {any} ({any})",.{
+            self.selector,locals,maxStackNeeded,selfOffset,realHO,
             all[codeOffset/8..all.len-refs.len],refs});
+    }
+    pub fn asFakeObject(self: *const Self) Object {
+        return @bitCast(Object,@ptrToInt(self));
     }
 };
 pub const Code = extern union {
@@ -231,13 +242,16 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
+            const footer = HeapObject.calcHeapObject(codeOffsetInUnits+codeSize, class.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+//            @compileLog(codeSize,refsSize);
+            trace("\nfooter={}",.{footer});
             return .{
                 .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
                 .references = [_]Object{object.NotAnObject}**refsSize,
-                .footer = HeapObject.calcHeapObject(codeOffsetInUnits+codeSize, class.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs"),
+                .footer = footer,
             };
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
@@ -253,7 +267,10 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
             return @ptrCast(* CompiledMethod,self);
         }
-        pub fn setReferences(self: *Self, refs: []Object) void {
+        pub fn asFakeObject(self: *const Self) Object {
+            return @bitCast(Object,self);
+        }
+        pub fn setReferences(self: *Self, refs: []const Object) void {
             for (refs,self.references[0..refs.len]) |obj,*srefs|
                 srefs.* = obj;
             for (self.code[0..]) |*c| {
@@ -383,8 +400,8 @@ test "compiling method" {
     const mcmp = m.asCompiledMethodPtr();
     m.setReferences(&[_]Object{Object.from(mcmp)});
     var t = m.code[0..];
-    for (t,0..) |tv,idx|
-        std.debug.print("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
+//    for (t,0..) |tv,idx|
+//        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
     try expectEqual(t[0].prim,controlPrimitives.noop);
     try expectEqual(t[1].prim,p.dnu);
     try expectEqual(t[2].int,2);
@@ -417,12 +434,12 @@ pub const controlPrimitives = struct {
         trace("\nbranch offset: {}\n",.{offset});
         if (offset>=0) {
             const target = pc+1+@intCast(u64, offset);
-            if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selector});
+            if (thread.needsCheck()) return @call(tailCall,check,.{target,sp,thread,context,selector});
             trace("\nbranch target: {}",.{target[0].uint});
             return @call(tailCall,target[0].prim,.{target+1,sp,thread,context,selector});
         }
         const target = pc+1-@intCast(u64, -offset);
-        if (thread.needsCheck()) return @call(tailCall,Thread.check,.{target,sp,thread,context,selector});
+        if (thread.needsCheck()) return @call(tailCall,check,.{target,sp,thread,context,selector});
         return @call(tailCall,target[0].prim,.{target+1,sp,thread.decCheck(),context,selector});
     }
     pub fn ifTrue(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -529,7 +546,7 @@ pub const controlPrimitives = struct {
     pub fn pushTemp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(pc[0].uint-1);
-        trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,thread),context.allTemps()});
+        trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,thread),context.allTemps(thread)});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,context,selector});
     }
     pub fn pushTemp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -552,14 +569,18 @@ pub const controlPrimitives = struct {
         // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selector});
     }
     pub fn call(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
-        context.setTPc(pc+1);
-        const newPc = pc[0].method.codePtr();
+        context.setNPc(pc[1].prim);
+        context.setTPc(pc+2);
+        const offset = pc[0].uint;
+        const method = pc[1+offset].object.to(CompiledMethodPtr);
+        const newPc = method.codePtr();
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selector});
     }
-    pub fn callLocal(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+    pub fn callRecursive(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         context.setTPc(pc+1);
+        context.setNPc(pc[1].prim);
         const offset = pc[0].int;
-        const newPc = if (offset>=0) pc+1+@intCast(u64, offset) else pc+1-@intCast(u64, -offset);
+        const newPc = pc+1-@intCast(u64, -offset);
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selector});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -570,11 +591,12 @@ pub const controlPrimitives = struct {
         const selfOffset = stackStructure.l2;
         const ctxt = context.push(sp,thread,method,locals,maxStackNeeded,selfOffset);
         ctxt.setNPc(returnTrampoline);
-//        trace("\npushContext: {any} {} {any}",.{thread.stack(sp),locals,thread.stack(ctxt.asObjectPtr())});
-        return @call(tailCall,pc[1].prim,.{pc+2,ctxt.asObjectPtr(),thread,ctxt,selector});
+        const newSp = ctxt.asObjectPtr();
+        trace("\npushContext: {any} {} {}",.{thread.getStack(sp),locals,method.selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,ctxt,selector});
     }
-    pub fn returnTrampoline(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
+    pub fn returnTrampoline(_: [*]const Code, _: [*]Object, _: *Thread, _: ContextPtr, _: Object) void {
+        unreachable;
     }
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const result = context.pop(thread);
@@ -585,17 +607,15 @@ pub const controlPrimitives = struct {
     }
     pub fn returnTop(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const top = sp[0];
-        trace("\nreturnTop: {any}",.{context.stack(sp,thread)});
-        trace(" 0x{x}:{}",.{@ptrToInt(context),context});
         const result = context.pop(thread);
         const newSp = result.sp;
         newSp[0] = top;
         const callerContext = result.ctxt;
-        trace(" ->",.{});
-        trace(" {any}",.{callerContext.stack(newSp,thread)});
+        trace("\nreturnTop: {any} -> {any}",.{context.stack(sp,thread),callerContext.stack(newSp,thread)});
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext,selector});
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+        trace("\nreturnNoContext: N={*} T={*}",.{context.getNPc(),context.getTPc()});
         return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,thread,context,selector});
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -640,7 +660,7 @@ pub const TestExecution = struct {
         self.ctxt.setNPc(Self.end);
         endSp = sp;
         //        endPc = pc;
-        method.write(stdout) catch unreachable;
+//        method.write(stdout) catch unreachable;
         method.execute(sp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.pc = endPc;
@@ -709,6 +729,28 @@ test "context returnTop via TestExecution" {
     try expectEqual(result.len,2);
     try expectEqual(result[0],Object.from(42));
 }
+test "context returnTop twice via TestExecution" {
+    const expectEqual = std.testing.expectEqual;
+    var method1 = compileMethod(sym.yourself,3,0,.{
+        &p.pushContext,"^",
+        &p.pushLiteral,comptime Object.from(1),
+        &p.call,"0Obj",
+        &p.returnTop,
+    });
+    var method2 = compileMethod(sym.name,3,0,.{
+        &p.pushContext,"^",
+        &p.pushLiteral,comptime Object.from(42),
+        &p.returnTop,
+    });
+    method1.setReferences(&[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    var te = TestExecution.new();
+    te.init();
+    var objs = [_]Object{Nil,True};
+    const compiledMethod = method1.asCompiledMethodPtr();
+    var result = te.run(objs[0..],compiledMethod);
+    try expectEqual(result.len,2);
+    try expectEqual(result[0],Object.from(42));
+}
 test "context returnTop with indirect via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself,3,0,.{
@@ -726,31 +768,31 @@ test "context returnTop with indirect via TestExecution" {
     try expectEqual(result.len,2);
     try expectEqual(result[0],Object.from(42));
 }
-// test "simple executable" {
-//     const expectEqual = std.testing.expectEqual;
-//     var method = compileMethod(sym.yourself,1,0,.{
-//         &p.pushContext,"^",
-//         ":label1",
-//         &p.pushLiteral,comptime Object.from(42),
-//         &p.popIntoTemp,1,
-//         &p.pushTemp1,
-//         &p.pushLiteral0,
-//         &p.pushTrue,
-//         &p.ifFalse,"label3",
-//         &p.branch,"label2",
-//         ":label3",
-//         &p.pushTemp,1,
-//         ":label4",
-//         &p.returnTop,
-//         ":label2",
-//         &p.pushLiteral0,
-//         &p.branch,"label4",
-//     });
-//     var objs = [_]Object{Nil};
-//     var te = TestExecution.new();
-//     te.init();
-//     const result = te.run(objs[0..],method.asCompiledMethodPtr());
-//     std.debug.print("result = {any}\n",.{result});
-//     try expectEqual(result.len,1);
-//     try expectEqual(result[0],Object.from(0));
-// }
+test "simple executable" {
+    const expectEqual = std.testing.expectEqual;
+    var method = compileMethod(sym.yourself,1,0,.{
+        &p.pushContext,"^",
+        ":label1",
+        &p.pushLiteral,comptime Object.from(42),
+        &p.popIntoTemp,1,
+        &p.pushTemp1,
+        &p.pushLiteral0,
+        &p.pushTrue,
+        &p.ifFalse,"label3",
+        &p.branch,"label2",
+        ":label3",
+        &p.pushTemp,1,
+        ":label4",
+        &p.returnTop,
+        ":label2",
+        &p.pushLiteral0,
+        &p.branch,"label4",
+    });
+    var objs = [_]Object{Nil};
+    var te = TestExecution.new();
+    te.init();
+    const result = te.run(objs[0..],method.asCompiledMethodPtr());
+    trace("result = {any}\n",.{result});
+    try expectEqual(result.len,1);
+    try expectEqual(result[0],Object.from(0));
+}

@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
@@ -9,10 +9,11 @@ const ClassIndex = object.ClassIndex;
 const utilities = @import("utilities.zig");
 const largerPowerOf2 = utilities.largerPowerOf2;
 const inversePhi = utilities.inversePhi;
-
+const assert = std.debug.assert;
 pub const Format = enum(u8) {
     immediateSizeZero = ImmediateSizeZero,
     immediateByteMax = ImmediateByteMax,
+    notObject, // this is an allocated struct, not an Object
     notIndexable, // this and below have no pointers in array portion
     immediateObjectOne,
     immediateObjectMax = ImmediateObjectMax,
@@ -31,7 +32,7 @@ pub const Format = enum(u8) {
     const Self = @This();
     const ImmediateSizeZero: u8 = 0;
     const ByteOffset = ImmediateSizeZero;
-    const ImmediateByteMax = NotIndexable - 1;
+    const ImmediateByteMax = NotIndexable - 2;
     const NumberOfBytes = ImmediateByteMax - ByteOffset;
     const NotIndexable = 64;
     const ObjectOffset = NotIndexable;
@@ -53,10 +54,11 @@ pub const Format = enum(u8) {
         const NotIndexable = Size{.notIndexable={}};
     };
     pub inline fn size(self: Self) Size {
+        assert(ImmediateObjectOne==65);
         const s = @enumToInt(self) & ~Immutable;
         return switch (s) {
             ImmediateSizeZero ... ImmediateByteMax => Size{.size = s},
-            ImmediateObjectOne ... ImmediateObjectMax => Size{.size = s & ImmediateByteMax},
+            ImmediateObjectOne ... ImmediateObjectMax => Size{.size = s & 63},
             NotIndexable => Size.NotIndexable,
             else => Size.Indexable,
         };
@@ -452,13 +454,16 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn partialWithLength(size: u12) HeapObject {
         return HeapObject{.classIndex=0,.hash=0,.objectFormat=.header,.age=.static,.length=size};
     }
+    pub inline fn partialWithClassLengthHash(classIndex: ClassIndex,size: u12, hash:u24) HeapObject {
+        return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.header,.age=.static,.length=size};
+    }
     pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
         const result = if (self.objectFormat.isHeader())
             @ptrCast(HeapObjectPtr,@ptrCast(HeapObjectArray,@constCast(self))+self.length+1)
             else @constCast(self);
         return result;
     }
-    inline fn init(length : u12, format : Format, classIndex : u16, hash: u24, age: Age) HeapObject {
+    inline fn init(length : u12, format : Format, classIndex : ClassIndex, hash: u24, age: Age) HeapObject {
         return HeapObject {
             .classIndex = classIndex,
             .hash = hash,
@@ -496,9 +501,6 @@ pub const HeapObject = packed struct(u64) {
     }
     pub inline fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.age.isUnmoving();
-    }
-    pub inline fn isStack(self: HeapObjectConstPtr) bool {
-        return self.age.isStack();
     }
     pub inline fn forwardedTo(self: HeapObjectConstPtr) HeapObjectConstPtr {
         return @intToPtr(HeapObjectConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));

@@ -38,9 +38,9 @@ pub fn fibObject(self: Object) Object {
     const fm2 = fibObject(m2);
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
-const fibHash = sym.value.hash32(); // made up hash value
-pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void {
-    if (selectorHash!=fibHash) @panic("wrong selector");
+const fibSym = sym.value;
+pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+    if (selector!=fibSym) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,thread,context,0});
@@ -51,7 +51,7 @@ pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: Conte
     newSp[0] = m1;
     newContext.tpc = pc+15; // label4 + callLocal
     newContext.npc = fibComp1;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,newContext,fibHash});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,newContext,fibSym});
 }
 fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
     const newSp = sp-1;
@@ -59,7 +59,7 @@ fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextP
     newSp[0] = m2;
     context.tpc = pc+6; // after 2nd callLocal
     context.npc = fibComp2;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,context,fibHash});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,context,fibSym});
 }
 fn fibComp2(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
@@ -87,19 +87,13 @@ var fibThread =
         &p.pushContext,"^",
         &p.pushTemp1,
         //&p.pushLiteral1,
-        //&p.p2, "label4",
-        &p.p2L1, "label4",
-        &p.primFailure,
-        ":label4",
-        &p.callLocal, "recurse",
+        //&embedded.p2,
+        &embedded.p2L1,
+        &p.callRecursive, "recurse",
         &p.pushTemp1,
-        &p.p2L2,"label5",
-        &p.primFailure,
-        ":label5",
-        &p.callLocal, "recurse",
-        &p.ip1,"label6",
-        &p.primFailure,
-        ":label6",
+        &embedded.p2L2,
+        &p.callRecursive, "recurse",
+        &embedded.ip1,
         &p.returnTop,
 });
 test "fibObject" {
