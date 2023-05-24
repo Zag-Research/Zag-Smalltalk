@@ -2,25 +2,21 @@ const std = @import("std");
 const debug = std.debug;
 const math = std.math;
 const stdout = std.io.getStdOut().writer();
-const Object = @import("zag/object.zig").Object;
-const Nil = @import("zag/object.zig").Nil;
+const Object = @import("zag/zobject.zig").Object;
+const Nil = @import("zag/zobject.zig").Nil;
 const tailCall = @import("zag/execute.zig").tailCall;
 const Code = @import("zag/execute.zig").Code;
 const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
-const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
+//const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = @import("zag/context.zig").TestExecution;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const sym = @import("zag/symbol.zig").symbols;
 
-const i = struct {
-    usingnamespace @import("zag/primitives.zig").inlines;
-};
-const p = struct {
-    usingnamespace @import("zag/execute.zig").controlPrimitives;
-    usingnamespace @import("zag/primitives.zig").primitives;
-};
+const i = @import("zag/primitives.zig").inlines;
+const e = @import("zag/primitives.zig").embedded;
+const p = @import("zag/primitives.zig").primitives;
 var fibCompM = compileMethod(sym.value,0,0,.{&fibComp});
 const fibCompT = @ptrCast([*]Code,&fibCompM.code[0]);
 // fibonacci
@@ -87,13 +83,13 @@ var fibThread =
         &p.pushContext,"^",
         &p.pushTemp1,
         //&p.pushLiteral1,
-        //&embedded.p2,
-        &embedded.p2L1,
+        //&e.p2,
+        &e.p2L1,
         &p.callRecursive, "recurse",
         &p.pushTemp1,
-        &embedded.p2L2,
+        &e.p2L2,
         &p.callRecursive, "recurse",
-        &embedded.ip1,
+        &e.ip1,
         &p.returnTop,
 });
 test "fibObject" {
@@ -152,90 +148,90 @@ fn timeComp(n: i64) void {
     te.init();
     _ = te.run(objs[0..],method.asCompiledMethodPtr());
 }
-const b = @import("zag/byte-interp.zig").ByteCode;
-test "fibByte" {
-    var fibByte =
-        compileByteCodeMethod(sym.value,0,0,.{
-            ":recurse",
-            b.dup,
-            b.pushLiteral, Object.from(2),
-            b.p5,"label1",
-            b.primFailure,
-            ":label1",
-            b.ifFalse,"label3",
-            b.drop,
-            b.pushLiteral, Object.from(1),
-            b.returnNoContext,
-            ":label3",
-            b.pushContext,"^",
-            b.pushTemp1,
-            b.pushLiteral, Object.from(1),
-            b.p2, "label4",
-            b.primFailure,
-            ":label4",
-            b.callLocal, "recurse",
-            b.pushTemp1,
-            b.pushLiteral, Object.from(2),
-            b.p2,"label5",
-            b.primFailure,
-            ":label5",
-            b.callLocal, "recurse",
-            b.p1,"label6",
-            b.primFailure,
-            ":label6",
-            b.returnTop,0,
-    });
-    const method = fibByte.asCompiledByteCodeMethodPtr();
-    var n:i32 = 1;
-    while (n<10) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te =  TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("fib({}) = {any}\n",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
-    }
-}
- fn timeByte(n: i64) void {
-     var fibByte =
-         compileByteCodeMethod(sym.value,0,0,.{
-             ":recurse",
-             b.dup,
-             b.pushLiteral, Object.from(2),
-             b.p5,"label1",
-             b.primFailure,
-             ":label1",
-             b.ifFalse,"label3",
-             b.drop,
-             b.pushLiteral, Object.from(1),
-             b.returnNoContext,
-             ":label3",
-             b.pushContext,"^",
-             b.pushTemp1,
-             b.pushLiteral, Object.from(1),
-             b.p2, "label4",
-             b.primFailure,
-             ":label4",
-             b.callLocal, "recurse",
-             b.pushTemp1,
-             b.pushLiteral, Object.from(2),
-             b.p2,"label5",
-             b.primFailure,
-             ":label5",
-             b.callLocal, "recurse",
-             b.p1,"label6",
-             b.primFailure,
-             ":label6",
-             b.returnTop,0,
-     });
-     fibByte.setReferences(&[0]Object{});
-     const method = fibByte.asCompiledMethodPtr();
-     var objs = [_]Object{Object.from(n)};
-     var te = TestExecution.new();
-     te.init();
-     _ = te.run(objs[0..],method);
-}
+// const b = @import("zag/byte-interp.zig").ByteCode;
+// test "fibByte" {
+//     var fibByte =
+//         compileByteCodeMethod(sym.value,0,0,.{
+//             ":recurse",
+//             b.dup,
+//             b.pushLiteral, Object.from(2),
+//             b.p5,"label1",
+//             b.primFailure,
+//             ":label1",
+//             b.ifFalse,"label3",
+//             b.drop,
+//             b.pushLiteral, Object.from(1),
+//             b.returnNoContext,
+//             ":label3",
+//             b.pushContext,"^",
+//             b.pushTemp1,
+//             b.pushLiteral, Object.from(1),
+//             b.p2, "label4",
+//             b.primFailure,
+//             ":label4",
+//             b.callLocal, "recurse",
+//             b.pushTemp1,
+//             b.pushLiteral, Object.from(2),
+//             b.p2,"label5",
+//             b.primFailure,
+//             ":label5",
+//             b.callLocal, "recurse",
+//             b.p1,"label6",
+//             b.primFailure,
+//             ":label6",
+//             b.returnTop,0,
+//     });
+//     const method = fibByte.asCompiledByteCodeMethodPtr();
+//     var n:i32 = 1;
+//     while (n<10) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te =  TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..],method);
+//         std.debug.print("fib({}) = {any}\n",.{n,result});
+//         try std.testing.expectEqual(result.len,1);
+//         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
+//     }
+// }
+//  fn timeByte(n: i64) void {
+//      var fibByte =
+//          compileByteCodeMethod(sym.value,0,0,.{
+//              ":recurse",
+//              b.dup,
+//              b.pushLiteral, Object.from(2),
+//              b.p5,"label1",
+//              b.primFailure,
+//              ":label1",
+//              b.ifFalse,"label3",
+//              b.drop,
+//              b.pushLiteral, Object.from(1),
+//              b.returnNoContext,
+//              ":label3",
+//              b.pushContext,"^",
+//              b.pushTemp1,
+//              b.pushLiteral, Object.from(1),
+//              b.p2, "label4",
+//              b.primFailure,
+//              ":label4",
+//              b.callLocal, "recurse",
+//              b.pushTemp1,
+//              b.pushLiteral, Object.from(2),
+//              b.p2,"label5",
+//              b.primFailure,
+//              ":label5",
+//              b.callLocal, "recurse",
+//              b.p1,"label6",
+//              b.primFailure,
+//              ":label6",
+//              b.returnTop,0,
+//      });
+//      fibByte.setReferences(&[0]Object{});
+//      const method = fibByte.asCompiledMethodPtr();
+//      var objs = [_]Object{Object.from(n)};
+//      var te = TestExecution.new();
+//      te.init();
+//      _ = te.run(objs[0..],method);
+// }
 pub fn timing(runs: u32) !void {
     const ts=std.time.nanoTimestamp;
     try stdout.print("for {} runs\n",.{runs});
@@ -259,10 +255,10 @@ pub fn timing(runs: u32) !void {
     _ = timeThread(runs);
     time = ts()-start;
     try stdout.print("fibThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    start=ts();
-    _ = timeByte(runs);
-    time = ts()-start;
-    try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    // start=ts();
+    // _ = timeByte(runs);
+    // time = ts()-start;
+    // try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
     try timing(40);

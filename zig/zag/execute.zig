@@ -460,6 +460,12 @@ pub const controlPrimitives = struct {
         if (Nil.equals(v)) return @call(tailCall,branch,.{pc,sp+1,thread,context,selector});
         return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selector});
     }
+    pub fn ifNotNil(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+        const v = sp[0];
+        if (Nil.equals(v)) return @call(tailCall,pc[1].prim,.{pc+2,sp+1,thread,context,selector});
+        return @call(tailCall,branch,.{pc,sp+1,thread,context,selector});
+        
+    }
     pub fn primFailure(_: [*]const Code, _: [*]Object, _: *Thread, _: ContextPtr, _: Object) void {
         @panic("primFailure");
     }
