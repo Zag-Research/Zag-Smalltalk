@@ -22,15 +22,13 @@ const MaxSmallInteger: i64 = object.MaxSmallInteger;
 pub const inlines = struct {
     pub inline fn p1(self: Object, other: Object) !Object { // Add
         if (other.isInt()) {
-            const result = @bitCast(Object,self.u()+%@bitCast(u64,other.toUnchecked(i64)));
-            if (result.isInt()) {
-                return result;
-            }
+            const result = @bitCast(Object,self.i()+%other.toUnchecked(i64));
+            if (result.isInt()) return result;
         }
         return error.primitiveError;
     }
     pub inline fn p1L(self: Object, other: i64) !Object { // Add a literal
-        const result = @bitCast(Object,self.i()+other);
+        const result = @bitCast(Object,self.i()+%other);
         if (result.isInt()) return result;
         return error.primitiveError;
     }
@@ -42,14 +40,12 @@ pub const inlines = struct {
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract
         if (other.isInt()) {
             const result = @bitCast(Object,self.i()-%other.toUnchecked(i64));
-            if (result.isInt()) {
-                return result;
-            }
+            if (result.isInt()) return result;
         }
         return error.primitiveError;
     }
     pub inline fn p2L(self: Object, other: i64) !Object { // Subtract a literal
-        const result = @bitCast(Object,self.i()-other);
+        const result = @bitCast(Object,self.i()-%other);
         if (result.isInt()) return result;
         return error.primitiveError;
     }
@@ -72,17 +68,17 @@ pub const inlines = struct {
         return self.u()<=other.u();
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
-        if (self<other) return false;
+        if (self.u()<other.u()) return false;
         if (other.isInt()) return true;
         return error.primitiveError;
     }
     pub inline fn p7(self: Object, other: Object) !bool { // Equal
-        if (self==other) return true;
+        if (self.u()==other.u()) return true;
         if (other.isInt()) return false;
         return error.primitiveError;
     }
     pub inline fn p8(self: Object, other: Object) !bool { // NotEqual
-        if (self==other) return false;
+        if (self.u()==other.u()) return false;
         if (other.isInt()) return true;
         return error.primitiveError;
     }
@@ -95,8 +91,7 @@ pub const inlines = struct {
             const s = @truncate(i51,self.toUnchecked(i64));
             const o = @truncate(i51,other.toUnchecked(i64));
             const result = @mulWithOverflow(s,o);
-            if (result.@"1"==0)
-                return Object.from(result.@"0");
+            if (result.@"1"==0) return Object.from(result.@"0");
         }
         return error.primitiveError;
     }
@@ -131,21 +126,65 @@ test "inline primitives" {
     try expectEqual((try inlines.p_negated(Object.from(0x3_ffff_ffff_ffff))).toInt(),-0x3_ffff_ffff_ffff);
     try expectEqual((try inlines.p_negated(Object.from(0))).toInt(),0);
     try expectEqual(inlines.p_negated(Object.from(-0x4_0000_0000_0000)),error.primitiveError);
+    try expectEqual(try inlines.p5(Object.from(0),Object.from(0)),true);
+    try expectEqual(try inlines.p5(Object.from(0),Object.from(1)),true);
+    try expectEqual(try inlines.p5(Object.from(1),Object.from(0)),false);
+    try expectEqual(inlines.p5N(Object.from(0),Object.from(0)),true);
+    try expectEqual(inlines.p5N(Object.from(0),Object.from(1)),true);
+    try expectEqual(inlines.p5N(Object.from(1),Object.from(0)),false);
+    try expectEqual(try inlines.p6(Object.from(0),Object.from(0)),true);
+    try expectEqual(try inlines.p6(Object.from(0),Object.from(1)),false);
+    try expectEqual(try inlines.p6(Object.from(1),Object.from(0)),true);
 }
 const noFallback = execute.noFallback;
 pub const embedded = struct {
     pub var @"SmallInteger>>#+" = noFallback;
     pub fn p1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
-        if (inlines.p1(sp[1],sp[0])) |result | {
-            sp[1] = result;
-            return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selector});
-        } else |_|
+        trace("\nep1: {any}",.{context.stack(sp,thread)});
+        sp[1] = inlines.p1(sp[1],sp[0]) catch
             return @call(tailCall,Context.call,.{pc,sp,thread,context,@"SmallInteger>>#+".asFakeObject()});
+        trace(" -> {any}",.{context.stack(sp+1,thread)});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selector});
+    }
+    pub fn p1L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+        sp[0]=inlines.p1L(sp[0],1) catch {
+            const newSp = sp - 1;
+            newSp[0] = Object.from(1);
+            return @call(tailCall,Context.call,.{pc,newSp,thread,context,@"SmallInteger>>#+".asFakeObject()});
+        };
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
+    }
+    pub var @"SmallInteger>>#-" = noFallback;
+    pub fn p2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#-
+        sp[1] = inlines.p1(sp[1],sp[0]) catch
+            return @call(tailCall,Context.call,.{pc,sp,thread,context,@"SmallInteger>>#-".asFakeObject()});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,thread,context,selector});
+    }
+    pub fn p2L1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+        trace("\nep2L1: {any}",.{context.stack(sp,thread)});
+        sp[0]=inlines.p2L(sp[0],1) catch {
+            const newSp = sp - 1;
+            newSp[0] = Object.from(1);
+            return @call(tailCall,Context.call,.{pc,newSp,thread,context,@"SmallInteger>>#-".asFakeObject()});
+        };
+        trace(" -> {any}",.{context.stack(sp,thread)});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
+    }
+    pub fn p2L2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+        trace("\nep2L2: {any}",.{context.stack(sp,thread)});
+        sp[0]=inlines.p2L(sp[0],2) catch {
+            const newSp = sp - 2;
+            newSp[0] = Object.from(1);
+            return @call(tailCall,Context.call,.{pc,newSp,thread,context,@"SmallInteger>>#-".asFakeObject()});
+        };
+        trace(" -> {any}",.{context.stack(sp,thread)});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
     }
 };
 pub const primitives = struct {
     pub fn p1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
-        sp[1] = inlines.p1(sp[1],sp[0]) catch return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
+        sp[1] = inlines.p1(sp[1],sp[0]) catch
+            return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,thread,context,selector});
 // only this one has been corrected
     }
@@ -153,7 +192,7 @@ pub const primitives = struct {
         sp[0]=inlines.p1L(sp[0],1) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp,thread,context,selector});
     }
-    pub fn p2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#+
+    pub fn p2(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {// SmallInteger>>#-
         sp[1] = inlines.p2(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selector});
         return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selector});
     }

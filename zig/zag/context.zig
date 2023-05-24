@@ -14,6 +14,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const execute = @import("execute.zig");
+const trace = execute.trace;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
@@ -26,11 +27,9 @@ pub const Context = struct {
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
-    size: if (hasSizeField) u64 else void,
     temps: [nTemps]Object,
     const Self = @This();
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) MethodReturns;
-    const hasSizeField = true;
     const nTemps = 1;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
     pub fn init() Self {
@@ -41,7 +40,6 @@ pub const Context = struct {
             .prevCtxt = undefined,
             .method = undefined,
             .temps = undefined,
-            .size = undefined,
         };
     }
     pub fn format(
@@ -55,7 +53,7 @@ pub const Context = struct {
         
         try writer.print("context: {}",.{self.header});
         try writer.print(" prev: 0x{x}",.{@ptrToInt(self.prevCtxt)});
-        if (hasSizeField) {
+        if (false) {
             @setRuntimeSafety(false);
             try writer.print(" temps: {any}",.{self.temps[0..self.size]});
         }
@@ -74,7 +72,7 @@ pub const Context = struct {
     }
     pub fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
         const newSp = sp - baseSize - locals;
-        if (thread.checkStack(newSp,self,5+maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
+        if (thread.checkStack(newSp,self,maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
@@ -82,9 +80,8 @@ pub const Context = struct {
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
         ctxt.header = HeapObject.partialOnStack(selfOffset+baseSize);
-        if (hasSizeField) ctxt.size = ctxt.tempSize(thread);
         if (thread.needsCheck()) @panic("thread needsCheck");
-       return ctxt;
+        return ctxt;
     }
     pub fn moveToHeap(self: ContextPtr, sp: [*]Object, thread: *Thread) ContextPtr {
         _=self;_=sp;_=thread;unreachable;
@@ -157,7 +154,7 @@ pub const Context = struct {
     pub fn call(oldPc: [*]const Code, sp: [*]Object, thread: *Thread, self: ContextPtr, selector: Object) void {
         self.tpc = oldPc+1;
         self.npc = oldPc[0].prim;
-//        std.debug.print("\ncall: N={*} T={*}",.{self.getNPc(),self.getTPc()});
+        trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,thread)});
         const method = @intToPtr(CompiledMethodPtr,@bitCast(u64,selector));
         const pc = @ptrCast([*]const Code,&method.code);
         return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,self,method.selector});

@@ -149,6 +149,10 @@ pub const Object = packed struct(u64) {
     pub inline fn isSymbol(self: Object) bool {
         return self.tagbitsL()==comptime indexSymbol(0).tagbitsL();
     }
+    pub inline fn toBool(self: Object) bool {
+        if (self.isBool()) return @truncate(u1,self.u())==1;
+        @panic("Trying to convert Object to bool");
+    }
     pub inline fn toInt(self: Object) i64 {
         if (self.isInt()) return @bitCast(i64, self.u() -% u64_ZERO);
         @panic("Trying to convert Object to i64");

@@ -32,11 +32,11 @@ pub const MethodReturns = void;
 //     }
 // };
 
-    pub fn check(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) void {
-        if (thread.debugger()) |debugger|
-            return  @call(tailCall,debugger,.{pc,sp,thread,context,selector});
-        @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
-    }
+pub fn check(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) void {
+    if (thread.debugger()) |debugger|
+        return  @call(tailCall,debugger,.{pc,sp,thread,context,selector});
+    @call(tailCall,pc[0].prim,.{pc+1,sp,thread,context,selector});
+}
 
 pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) MethodReturns;
 fn noFallbackFn(_: [*]const Code, _: [*]Object, _: *Thread, _: CodeContextPtr, _: Object) MethodReturns {
@@ -244,7 +244,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
             const footer = HeapObject.calcHeapObject(codeOffsetInUnits+codeSize, class.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
 //            @compileLog(codeSize,refsSize);
-            trace("\nfooter={}",.{footer});
+//            trace("\nfooter={}",.{footer});
             return .{
                 .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
@@ -558,6 +558,7 @@ pub const controlPrimitives = struct {
     pub fn pushTemp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(0);
+        trace("\npushTemp1: {any} {*}",.{context.stack(newSp,thread),pc});
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,thread,context,selector});
     }
     fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
@@ -583,10 +584,11 @@ pub const controlPrimitives = struct {
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selector});
     }
     pub fn callRecursive(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
-        context.setTPc(pc+1);
+        context.setTPc(pc+2);
         context.setNPc(pc[1].prim);
         const offset = pc[0].int;
         const newPc = pc+1-@intCast(u64, -offset);
+        trace("\ncallRecursive: {any} {}",.{context.stack(sp,thread)});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,thread,context,selector});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -596,13 +598,9 @@ pub const controlPrimitives = struct {
         const maxStackNeeded = stackStructure.h1;
         const selfOffset = stackStructure.l2;
         const ctxt = context.push(sp,thread,method,locals,maxStackNeeded,selfOffset);
-        ctxt.setNPc(returnTrampoline);
         const newSp = ctxt.asObjectPtr();
         trace("\npushContext: {any} {} {}",.{thread.getStack(sp),locals,method.selector});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,thread,ctxt,selector});
-    }
-    pub fn returnTrampoline(_: [*]const Code, _: [*]Object, _: *Thread, _: ContextPtr, _: Object) void {
-        unreachable;
     }
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
         const result = context.pop(thread);
@@ -621,7 +619,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext,selector});
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
-        trace("\nreturnNoContext: N={*} T={*}",.{context.getNPc(),context.getTPc()});
+        trace("\nreturnNoContext: N={*} T={*} {any}",.{context.getNPc(),context.getTPc(),context.stack(sp,thread)});
         return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,thread,context,selector});
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
@@ -666,7 +664,7 @@ pub const TestExecution = struct {
         self.ctxt.setNPc(Self.end);
         endSp = sp;
         //        endPc = pc;
-//        method.write(stdout) catch unreachable;
+        if (@TypeOf(trace)==@TypeOf(std.debug.print) and trace==std.debug.print) method.write(stdout) catch unreachable;
         method.execute(sp,&self.thread,&self.ctxt);
         self.sp = endSp;
         self.pc = endPc;

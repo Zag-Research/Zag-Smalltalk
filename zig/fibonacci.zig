@@ -9,7 +9,7 @@ const Code = @import("zag/execute.zig").Code;
 const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
 //const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
-const TestExecution = @import("zag/context.zig").TestExecution;
+const TestExecution = @import("zag/execute.zig").TestExecution;
 const Thread = @import("zag/thread.zig").Thread;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const sym = @import("zag/symbol.zig").symbols;
@@ -36,10 +36,10 @@ pub fn fibObject(self: Object) Object {
 }
 const fibSym = sym.value;
 pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
-    if (selector!=fibSym) @panic("wrong selector");
+    if (!fibSym.equals(selector)) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
-        return @call(tailCall,context.npc,.{context.tpc,sp,thread,context,0});
+        return @call(tailCall,context.npc,.{context.tpc,sp,thread,context,selector});
     }
     const newContext = context.push(sp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
     const newSp = newContext.asObjectPtr()-1;
@@ -49,7 +49,7 @@ pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: Conte
     newContext.npc = fibComp1;
     return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,newContext,fibSym});
 }
-fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
+fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: Object) void {
     const newSp = sp-1;
     const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
@@ -57,13 +57,24 @@ fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextP
     context.npc = fibComp2;
     return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,context,fibSym});
 }
-fn fibComp2(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: u32) void {
+fn fibComp2(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
     context.setTemp(0,sum);
     const result = context.pop(thread);
     const newSp = result.sp;
     const callerContext = result.ctxt;
-    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,thread,callerContext,0});
+    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,thread,callerContext,selector});
+}
+test "fibObject" {
+    var n:i32 = 1;
+    while (n<10) : (n += 1) {
+        const result = fibObject(Object.from(n));
+        std.debug.print("\nfib({}) = {any}",.{n,result});
+        try std.testing.expectEqual(result.toInt(),@truncate(i51,fibNative(n)));
+    }
+}
+fn timeObject(n: i64) void {
+    _ = fibObject(Object.from(n));
 }
 var fibThread =
     compileMethod(sym.value,0,2,.{
@@ -89,20 +100,9 @@ var fibThread =
         &p.pushTemp1,
         &e.p2L2,
         &p.callRecursive, "recurse",
-        &e.ip1,
+        &e.p1,
         &p.returnTop,
 });
-test "fibObject" {
-    var n:i32 = 1;
-    while (n<10) : (n += 1) {
-        const result = fibObject(Object.from(n));
-        std.debug.print("fib({}) = {any}\n",.{n,result});
-        try std.testing.expectEqual(result.toInt(),@truncate(i51,fibNative(n)));
-    }
-}
-fn timeObject(n: i64) void {
-    _ = fibObject(Object.from(n));
-}
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
 //    fibThread.update(fibThreadRef,method);
@@ -112,7 +112,7 @@ test "fibThread" {
         var te =  TestExecution.new();
         te.init();
         const result = te.run(objs[0..],method);
-        std.debug.print("fib({}) = {any}\n",.{n,result});
+        std.debug.print("\nfib({}) = {any}",.{n,result});
         try std.testing.expectEqual(result.len,1);
         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
     }
