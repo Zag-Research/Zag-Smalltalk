@@ -33,36 +33,36 @@ pub const AllocReturn = AllocErrors!AllocResult;
 //test "force dispatch load" {
 //    dispatch.forTest();
 //}
-const thread_total_size = 64*1024; // must be more than HeapObject.maxLength*8 so externally allocated
-pub const Thread = extern struct {
+const process_total_size = 64*1024; // must be more than HeapObject.maxLength*8 so externally allocated
+pub const Process = extern struct {
     stack: [stack_size] Object,
     nursery0: [nursery_size] Object,
     nursery1: [nursery_size] Object,
     next: ?*Self,
     id: u64,
-    debugFn: ?ThreadedFn,
+    debugFn: ?ProcessedFn,
     sp: [*]Object,
     currHeap: HeapObjectArray,
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
     const Self = @This();
-    const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ThreadedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: CodeContextPtr, selector: Object) void;
-    const threadAvail = (thread_total_size-headerSize)/@sizeOf(Object);
-    const stack_size = threadAvail/9;
-    const nursery_size = (threadAvail-stack_size)/2;
-    var allThreads: ?*Self = null;
+    const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ProcessedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
+    const ProcessedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) void;
+    const processAvail = (process_total_size-headerSize)/@sizeOf(Object);
+    const stack_size = processAvail/9;
+    const nursery_size = (processAvail-stack_size)/2;
+    var allProcesss: ?*Self = null;
     pub fn new() Self {
         return undefined;
     }
     pub fn init(self: *Self) void {
 //        @compileLog("stack_size",stack_size);
-//        @compileLog("threadAvail",threadAvail);
+//        @compileLog("processAvail",processAvail);
 //        @compileLog("nursery_size",nursery_size);
         const h = @ptrCast(HeapObjectArray,&self.stack[0]);
         const stack_end = h+stack_size;
-        const at = allThreads;
+        const at = allProcesss;
         self.sp = @ptrCast([*]Object,stack_end);
         self.currHeap = stack_end;
         self.currHp = stack_end;
@@ -71,7 +71,7 @@ pub const Thread = extern struct {
         while (true) {
             self.next = at;
             self.id = if (at) |p| p.id+1 else 1;
-            if (@cmpxchgWeak(?*Self,&allThreads,self.next,self,SeqCst,SeqCst)==null) break;
+            if (@cmpxchgWeak(?*Self,&allProcesss,self.next,self,SeqCst,SeqCst)==null) break;
         }
     }
     const checkType = u5;
@@ -91,7 +91,7 @@ pub const Thread = extern struct {
     pub inline fn noCheck(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
-    pub inline fn debugger(self: *Self) ?ThreadedFn {
+    pub inline fn debugger(self: *Self) ?ProcessedFn {
         return self.debugFn;
     }
     inline fn ptr(self: *Self) *Self {
@@ -115,7 +115,7 @@ pub const Thread = extern struct {
 //        copyBackwards(Object, newSp[0..size], sp[0..size]);
     }
     const GrowParameters = struct {
-        thread: *Self,
+        process: *Self,
         context: ContextPtr,
         sp: [*]Object,
     };
@@ -145,14 +145,14 @@ pub const Thread = extern struct {
 };
 test "check flag" {
     const testing = std.testing;
-    var thread = Thread.new();
-    var thr = &thread;
+    var process = Process.new();
+    var thr = &process;
     thr.init();
     try testing.expect(!thr.needsCheck());
     const origEOS = thr.endOfStack();
     thr = thr.maxCheck();
     try testing.expect(!thr.needsCheck());
-    var count = Thread.checkMax-1;
+    var count = Process.checkMax-1;
     while (count>1) : (count -= 1) {
         thr = thr.decCheck();
     }

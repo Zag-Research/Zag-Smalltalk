@@ -11,7 +11,7 @@ const Nil = O.Nil;
 const Object = O.Object;
 const Dispatch = @import("dispatch.zig");
 const returnE = Dispatch.returnE;
-const Thread = @import("thread.zig");
+const Process = @import("process.zig");
 const NEGATIVE_INF = @as(u64,0xfff0000000000000);
 
 test "printing objects" {
@@ -39,8 +39,8 @@ fn test1(stack : [*]Object, heap : [*]Object) returnE {
 }
 
 //test "run test1" {
-//    var thread = Thread.Thread.init();
-//    try expect(test1(thread.stack,thread.heap)==.Normal);
+//    var process = Process.Process.init();
+//    try expect(test1(process.stack,process.heap)==.Normal);
 //}
 
 test "hashes" {

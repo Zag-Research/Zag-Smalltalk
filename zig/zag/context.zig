@@ -1,6 +1,6 @@
 const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
-const Thread = @import("thread.zig").Thread;
+const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -23,13 +23,13 @@ pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
     header: HeapObject, // only used while on stack
-    tpc: [*]const Code, // threaded PC
-    npc: ThreadedFn, // native PC - in Continuation Passing Style
+    tpc: [*]const Code, // processed PC
+    npc: ProcessedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     temps: [nTemps]Object,
     const Self = @This();
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) MethodReturns;
+    const ProcessedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;
     const nTemps = 1;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
     pub fn init() Self {
@@ -58,21 +58,21 @@ pub const Context = struct {
             try writer.print(" temps: {any}",.{self.temps[0..self.size]});
         }
     }
-    pub inline fn pop(self: ContextPtr, thread: *Thread) struct { sp: [*]Object,ctxt: ContextPtr } {
+    pub inline fn pop(self: ContextPtr, process: *Process) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
         if (self.isOnStack())
             return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
-        _ = thread;@panic("incomplete");
+        _ = process;@panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
-        // const newSp = thread.endOfStack() - itemsToKeep.len;
+        // const newSp = process.endOfStack() - itemsToKeep.len;
         // for (itemsToKeep,0..) | obj,index | {
         //     newSp[index] = obj;
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub fn push(self: ContextPtr, sp: [*]Object, thread: *Thread, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+    pub fn push(self: ContextPtr, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
         const newSp = sp - baseSize - locals;
-        if (thread.checkStack(newSp,self,maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.thread,method,locals,maxStackNeeded,selfOffset);
+        if (process.checkStack(newSp,self,maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.process,method,locals,maxStackNeeded,selfOffset);
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
@@ -80,32 +80,32 @@ pub const Context = struct {
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
         ctxt.header = HeapObject.partialOnStack(selfOffset+baseSize);
-        if (thread.needsCheck()) @panic("thread needsCheck");
+        if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
-    pub fn moveToHeap(self: ContextPtr, sp: [*]Object, thread: *Thread) ContextPtr {
-        _=self;_=sp;_=thread;unreachable;
+    pub fn moveToHeap(self: ContextPtr, sp: [*]Object, process: *Process) ContextPtr {
+        _=self;_=sp;_=process;unreachable;
         // if (self.isIncomplete()) {
         //     self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
-        //     self.size = self.prevCtxt.calculatedSize(thread);
+        //     self.size = self.prevCtxt.calculatedSize(process);
         //     self.addr = @ptrCast(*Object,&self.temps);
-        //     self.prevCtxt.convertToProperHeapObject(sp, thread);
+        //     self.prevCtxt.convertToProperHeapObject(sp, process);
         // }
     }
     pub inline fn isOnStack(self: * const Self) bool {
         return @alignCast(8,&self.header).isOnStack();
     }
-    inline fn endOfStack(self: ContextPtr, thread: *Thread) [*]Object {
-        return if (self.isOnStack()) self.asObjectPtr() else thread.endOfStack();
+    inline fn endOfStack(self: ContextPtr, process: *Process) [*]Object {
+        return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
-    inline fn tempSize(self: ContextPtr, thread: *Thread) usize {
-        return (@ptrToInt(self.prevCtxt.endOfStack(thread))-@ptrToInt(&self.temps))/@sizeOf(Object);
+    inline fn tempSize(self: ContextPtr, process: *Process) usize {
+        return (@ptrToInt(self.prevCtxt.endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
-    pub inline fn stack(self: *Self, sp: [*]Object, thread: *Thread) []Object {
-        return sp[0..(@ptrToInt(self.endOfStack(thread))-@ptrToInt(sp))/@sizeOf(Object)];
+    pub inline fn stack(self: *Self, sp: [*]Object, process: *Process) []Object {
+        return sp[0..(@ptrToInt(self.endOfStack(process))-@ptrToInt(sp))/@sizeOf(Object)];
     }
-    pub inline fn allTemps(self: ContextPtr, thread: *Thread) []Object {
-        const size = self.tempSize(thread);
+    pub inline fn allTemps(self: ContextPtr, process: *Process) []Object {
+        const size = self.tempSize(process);
         @setRuntimeSafety(false);
         return self.temps[0..size];
     }
@@ -115,10 +115,10 @@ pub const Context = struct {
     pub inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
         self.tpc = pc;
     }
-    pub inline fn getNPc(self: ContextPtr) Context.ThreadedFn {
+    pub inline fn getNPc(self: ContextPtr) Context.ProcessedFn {
         return self.npc;
     }
-    pub inline fn setNPc(self: ContextPtr, pc: Context.ThreadedFn) void {
+    pub inline fn setNPc(self: ContextPtr, pc: Context.ProcessedFn) void {
         self.npc = pc;
     }
     pub inline fn getSelf(self: ContextPtr) Object {
@@ -146,17 +146,17 @@ pub const Context = struct {
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @ptrCast(ContextPtr,op);
     }
-    pub fn print(self: *const Context, thread: *const Thread) void {
+    pub fn print(self: *const Context, process: *const Process) void {
         const pr = std.debug.print;
-        pr("Context: {*} {} {any}\n",.{self,self.header,self.allTemps(thread)});
-        //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,thread);}
+        pr("Context: {*} {} {any}\n",.{self,self.header,self.allTemps(process)});
+        //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
     }
-    pub fn call(oldPc: [*]const Code, sp: [*]Object, thread: *Thread, self: ContextPtr, selector: Object) void {
+    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object) void {
         self.tpc = oldPc+1;
         self.npc = oldPc[0].prim;
-        trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,thread)});
+        trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,process)});
         const method = @intToPtr(CompiledMethodPtr,@bitCast(u64,selector));
         const pc = @ptrCast([*]const Code,&method.code);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,thread,self,method.selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };

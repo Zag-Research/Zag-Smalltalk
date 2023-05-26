@@ -6,7 +6,7 @@ const _object = @import("object.zig");
 const _class = @import("class.zig");
 const _init = _class.init_class;
 const _dispatch = @import("dispatch.zig");
-const _thread = @import("thread.zig");
+const _process = @import("process.zig");
 const _symbol = @import("symbol.zig");
 const _prim = @import("primitives.zig");
 const _O = _object.Object;
@@ -30,8 +30,8 @@ const _s = struct {
     const main = _s0(_n+2);
     usingnamespace _symbol.symbols;
 };
-fn _init_symbolTable(thread: *_thread.Thread) void {
-    _symbol.init(thread,250,
+fn _init_symbolTable(process: *_process.Process) void {
+    _symbol.init(process,250,
 \\ start main
                  ) catch @panic("_init_symbolTable failed");
 }
@@ -45,7 +45,7 @@ const Object_defs = struct {
     const class_methods = ([_]_SM{
         .{.selector=_s.class,.method=class_MI},
     })[0..];
-    inline fn init(t:*_thread.Thread) !_O { return _init(t,_s.System,instance_methods,class_methods);}
+    inline fn init(t:*_process.Process) !_O { return _init(t,_s.System,instance_methods,class_methods);}
 };
 const System_defs = struct {
     fn start_MC(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
@@ -57,19 +57,19 @@ const System_defs = struct {
     const class_methods = ([_]_dispatch.SymbolMethod{
         .{.selector=_s.start,.method=start_MC},
     })[0..];
-    fn init(t:*_thread.Thread) !_O { return _init(t,_s.System,instance_methods,class_methods);}
+    fn init(t:*_process.Process) !_O { return _init(t,_s.System,instance_methods,class_methods);}
 };
-test "try a thread" {
-    var thread = try _thread.Thread.initForTest();
-    defer thread.deinit();
-    _init_symbolTable(&thread);
+test "try a process" {
+    var process = try _process.Process.initForTest();
+    defer process.deinit();
+    _init_symbolTable(&process);
     var cxt = [_]_O{_nil,_s.main}++[_]_O{_nil}**3;
-    var context = _dispatch.make_init_cxt(cxt[0..],&thread);
-    const System = try System_defs.init(&thread);
+    var context = _dispatch.make_init_cxt(cxt[0..],&process);
+    const System = try System_defs.init(&process);
     try _stdout.writer().print("before dispatch\n",.{});
     switch (System.send(_s.start,_s.nil,context)) {
         .Normal => {
-            try _expect(thread.stack()[0].is_nil());
+            try _expect(process.stack()[0].is_nil());
         },
         else => |result| {
             try _stdout.writer().print("result={}\n",.{result});

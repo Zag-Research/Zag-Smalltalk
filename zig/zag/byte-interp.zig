@@ -1,6 +1,6 @@
 const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
-const Thread = @import("thread.zig").Thread;
+const Process = @import("process.zig").Process;
 const object = @import("object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -65,7 +65,7 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, thread: *Thread, _context: *Context, _: u32) MethodReturns {
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _: u32) MethodReturns {
         var pc:[*]align(1) const ByteCode = @ptrCast([*]align(1) const ByteCode,_pc);
         var sp = _sp;
         var context = _context;
@@ -131,7 +131,7 @@ pub const ByteCode = enum(i8) {
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
                         const selfOffset = stackStructure.l2;
-                        const ctxt = context.push(sp,thread,method,locals,maxStackNeeded,selfOffset);
+                        const ctxt = context.push(sp,process,method,locals,maxStackNeeded,selfOffset);
                         ctxt.setNPc(interpret);
                         sp = ctxt.asObjectPtr();
                         context = ctxt;
@@ -161,19 +161,19 @@ pub const ByteCode = enum(i8) {
                         continue :interp;
                     },
                     .returnWithContext => {
-                        const result = context.pop(thread);
+                        const result = context.pop(process);
                         const newSp = result.sp;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext});
                     },
-                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,thread,context,0}),
+                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,process,context,0}),
                     .returnTop => {
                         const top = sp[0];
-                        const result = context.pop(thread);
+                        const result = context.pop(process);
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,thread,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext});
                     },
                     .p1 => {// SmallInteger>>#+
                         sp[1] = inlines.p1(sp[1],sp[0]) catch {pc+=1;continue :interp;};

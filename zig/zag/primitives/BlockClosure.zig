@@ -6,7 +6,7 @@ const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const Thread = @import("../thread.zig").Thread;
+const Process = @import("../process.zig").Process;
 const object = @import("../object.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -43,22 +43,22 @@ pub const inlines = struct {
 pub const embedded = struct {
 }
 pub const primitives = struct {
-    pub fn p201(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // value
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p201(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selectorHash: u32) void { // value
+        _ = pc; _ = sp; _ = process; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p202(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // value:
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selectorHash: u32) void { // value:
+        _ = pc; _ = sp; _ = process; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p203(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // value:value:
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selectorHash; unreachable;
+    pub fn p203(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selectorHash: u32) void { // value:value:
+        _ = pc; _ = sp; _ = process; _ = context; _ = selectorHash; unreachable;
     }
-    pub fn p204(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // value:value:value:
+    pub fn p204(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selectorHash: u32) void { // value:value:value:
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,process,context,selectorHash});
     }
-    pub fn p205(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selectorHash: u32) void { // value:value:value:value:
-        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selectorHash});
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selectorHash});
+    pub fn p205(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selectorHash: u32) void { // value:value:value:value:
+        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,process,context,selectorHash});
+        return @call(tailCall,p.branch,.{pc,sp+1,process,context,selectorHash});
     }
 };
 const p = struct {

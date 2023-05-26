@@ -6,7 +6,7 @@ const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const Thread = @import("../thread.zig").Thread;
+const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -46,28 +46,28 @@ pub const inlines = struct {
 pub const embedded = struct {
 };
 pub const primitives = struct {
-    pub fn p60(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // at:
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selector; unreachable;
+    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // at:
+        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // at:
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selector; unreachable;
+    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // at:
+        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // at:
-        _ = pc; _ = sp; _ = thread; _ = context; _ = selector; unreachable;
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // at:
+        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
+    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // ProtoObject>>#==
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,process,context,selector});
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // atAllPut:
-        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,thread,context,selector});
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selector});
+    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // atAllPut:
+        inlines.p145(sp[1],sp[0]) catch return @call(tailCall,pc[1].prim,.{pc+2,sp,process,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,process,context,selector});
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void { // ProtoObject>>#~~
+    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // ProtoObject>>#~~
         sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,p.branch,.{pc,sp+1,thread,context,selector});
+        return @call(tailCall,p.branch,.{pc,sp+1,process,context,selector});
     }
-    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, thread: *Thread, caller: Context) Object { // ProtoObject>>class
+    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, process: *Process, caller: Context) Object { // ProtoObject>>class
 };
 const p = struct {
     usingnamespace execute.controlPrimitives;

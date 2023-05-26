@@ -10,7 +10,7 @@ const compileMethod = @import("zag/execute.zig").compileMethod;
 const ContextPtr = @import("zag/execute.zig").CodeContextPtr;
 //const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = @import("zag/execute.zig").TestExecution;
-const Thread = @import("zag/thread.zig").Thread;
+const Process = @import("zag/process.zig").Process;
 const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const sym = @import("zag/symbol.zig").symbols;
 
@@ -35,35 +35,35 @@ pub fn fibObject(self: Object) Object {
     return i.p1(fm1,fm2) catch @panic("int add failed in fibObject");
 }
 const fibSym = sym.value;
-pub fn fibComp(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+pub fn fibComp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
     if (!fibSym.equals(selector)) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
-        return @call(tailCall,context.npc,.{context.tpc,sp,thread,context,selector});
+        return @call(tailCall,context.npc,.{context.tpc,sp,process,context,selector});
     }
-    const newContext = context.push(sp,thread,fibThread.asCompiledMethodPtr(),0,2,0);
+    const newContext = context.push(sp,process,fibProcess.asCompiledMethodPtr(),0,2,0);
     const newSp = newContext.asObjectPtr()-1;
     const m1 = i.p2L(sp[0],1) catch @panic("int subtract failed in fibComp");
     newSp[0] = m1;
     newContext.tpc = pc+15; // label4 + callLocal
     newContext.npc = fibComp1;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,newContext,fibSym});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,process,newContext,fibSym});
 }
-fn fibComp1(pc: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, _: Object) void {
+fn fibComp1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) void {
     const newSp = sp-1;
     const m2 = i.p2L(context.getTemp(0),2) catch @panic("int add failed in fibComp1");
     newSp[0] = m2;
     context.tpc = pc+6; // after 2nd callLocal
     context.npc = fibComp2;
-    return @call(tailCall,fibComp,.{fibCompT+1,newSp,thread,context,fibSym});
+    return @call(tailCall,fibComp,.{fibCompT+1,newSp,process,context,fibSym});
 }
-fn fibComp2(_: [*]const Code, sp: [*]Object, thread: *Thread, context: ContextPtr, selector: Object) void {
+fn fibComp2(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
     const sum = i.p1(sp[1],sp[0]) catch @panic("int add failed in fibComp2");
     context.setTemp(0,sum);
-    const result = context.pop(thread);
+    const result = context.pop(process);
     const newSp = result.sp;
     const callerContext = result.ctxt;
-    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,thread,callerContext,selector});
+    return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,process,callerContext,selector});
 }
 test "fibObject" {
     var n:i32 = 1;
@@ -76,7 +76,7 @@ test "fibObject" {
 fn timeObject(n: i64) void {
     _ = fibObject(Object.from(n));
 }
-var fibThread =
+var fibProcess =
     compileMethod(sym.value,0,2,.{
         ":recurse",
         &p.dup,
@@ -103,9 +103,9 @@ var fibThread =
         &e.p1,
         &p.returnTop,
 });
-test "fibThread" {
-    const method = fibThread.asCompiledMethodPtr();
-//    fibThread.update(fibThreadRef,method);
+test "fibProcess" {
+    const method = fibProcess.asCompiledMethodPtr();
+//    fibProcess.update(fibProcessRef,method);
     var n:u32 = 1;
     while (n<10) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -117,8 +117,8 @@ test "fibThread" {
         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
     }
 }
-fn timeThread(n: i64) void {
-    const method = fibThread.asCompiledMethodPtr();
+fn timeProcess(n: i64) void {
+    const method = fibProcess.asCompiledMethodPtr();
     var objs = [_]Object{Object.from(n)};
     var te = TestExecution.new();
     te.init();
@@ -241,20 +241,20 @@ pub fn timing(runs: u32) !void {
     try stdout.print("fibNative: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/@intToFloat(f64,runs)});
     start=ts();
     _ = timeObject(runs);
-    _ = fibThread;
+    _ = fibProcess;
     _ = Object;
     var time = ts()-start;
     try stdout.print("fibObject: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     start=ts();
     _ = timeComp(runs);
-    _ = fibThread;
+    _ = fibProcess;
     _ = Object;
     time = ts()-start;
     try stdout.print("fibComp:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     start=ts();
-    _ = timeThread(runs);
+    _ = timeProcess(runs);
     time = ts()-start;
-    try stdout.print("fibThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    try stdout.print("fibProcess: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     // start=ts();
     // _ = timeByte(runs);
     // time = ts()-start;

@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-//const thread = @import("thread.zig");
+//const process = @import("process.zig");
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -210,7 +210,7 @@ fn setUpClassTable(st: *symbol.SymbolTable) !ClassTable {
     return ct;
 }
 test "classes match initialized class table" {
-//    var thr = thread.Thread.new();
+//    var thr = process.Process.new();
     //    thr.init();
     // var ga = arenas.GlobalArena.init();
     // defer ga.deinit();
