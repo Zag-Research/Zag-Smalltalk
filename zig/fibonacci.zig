@@ -254,7 +254,7 @@ pub fn timing(runs: u32) !void {
     start=ts();
     _ = timeProcess(runs);
     time = ts()-start;
-    try stdout.print("fibProcess: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    try stdout.print("fibProcess:{d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
     // start=ts();
     // _ = timeByte(runs);
     // time = ts()-start;
