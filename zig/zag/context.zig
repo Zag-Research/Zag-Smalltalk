@@ -24,12 +24,12 @@ pub var nullContext = Context.init();
 pub const Context = struct {
     header: HeapObject, // only used while on stack
     tpc: [*]const Code, // processed PC
-    npc: ProcessedFn, // native PC - in Continuation Passing Style
+    npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     temps: [nTemps]Object,
     const Self = @This();
-    const ProcessedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;
     const nTemps = 1;
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
     pub fn init() Self {
@@ -115,10 +115,10 @@ pub const Context = struct {
     pub inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
         self.tpc = pc;
     }
-    pub inline fn getNPc(self: ContextPtr) Context.ProcessedFn {
+    pub inline fn getNPc(self: ContextPtr) Context.ThreadedFn {
         return self.npc;
     }
-    pub inline fn setNPc(self: ContextPtr, pc: Context.ProcessedFn) void {
+    pub inline fn setNPc(self: ContextPtr, pc: Context.ThreadedFn) void {
         self.npc = pc;
     }
     pub inline fn getSelf(self: ContextPtr) Object {

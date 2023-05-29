@@ -1,7 +1,7 @@
 const std = @import("std");
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const NotAnObject = object.NotAnObject;
@@ -9,18 +9,18 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const Context = @import("context.zig").Context;
-pub const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
-const uniqueSymbol = @import("symbol.zig").uniqueSymbol;
+const uniqueSymbol = object.uniqueSymbol;
 const tailCall: std.builtin.CallModifier = .always_tail;
 const print = std.debug.print;
 const MethodReturns = void;
 const execute = @import("execute.zig");
+const TestExecution = execute.TestExecution;
 const CompiledMethodPtr = *CompiledMethod;
 const CompiledMethod = execute.CompiledMethod;
 const CompileTimeMethod = execute.CompileTimeMethod;
@@ -65,7 +65,7 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _: u32) MethodReturns {
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _: Object) MethodReturns {
         var pc:[*]align(1) const ByteCode = @ptrCast([*]align(1) const ByteCode,_pc);
         var sp = _sp;
         var context = _context;
@@ -74,6 +74,8 @@ pub const ByteCode = enum(i8) {
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
+            std.debug.print("interp: ",.{});
+            std.debug.print("interp: [{*}]: {}\n",.{pc,code});
             pc += 1;
             while (true) {
                 switch (code) {
@@ -164,16 +166,16 @@ pub const ByteCode = enum(i8) {
                         const result = context.pop(process);
                         const newSp = result.sp;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext,Nil});
                     },
-                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,process,context,0}),
+                    .returnNoContext => return @call(tailCall,context.getNPc(),.{context.getTPc(),sp,process,context,Nil}),
                     .returnTop => {
                         const top = sp[0];
                         const result = context.pop(process);
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
-                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext});
+                        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext,Nil});
                     },
                     .p1 => {// SmallInteger>>#+
                         sp[1] = inlines.p1(sp[1],sp[0]) catch {pc+=1;continue :interp;};

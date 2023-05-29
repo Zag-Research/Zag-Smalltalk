@@ -111,10 +111,19 @@ pub const Object = packed struct(u64) {
         return self.u() == other.u();
     }
     pub inline fn isInt(self: Object) bool {
-        return self.tag.u() >= Group.smallInt.u() and self.tag.u() <= Group.smallIntMax.u();
+        return self.atLeastInt() and self.atMostInt();
+    }
+    pub inline fn atLeastInt(self: Object) bool {
+        return self.tag.u() >= Group.smallInt.u();
+    }
+    pub inline fn atMostInt(self: Object) bool {
+        return self.tag.u() <= Group.smallIntMax.u();
     }
     pub inline fn isNat(self: Object) bool {
-        return self.tag.u() >= Group.smallInt0.u() and self.tag.u() <= Group.smallIntMax.u();
+        return self.atLeastZero() and self.atMostInt();
+    }
+    pub inline fn atLeastZero(self: Object) bool {
+        return self.tag.u() >= Group.smallInt0.u();
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;

@@ -38,10 +38,11 @@ pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeC
     @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
 }
 
-pub const ProcessedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns;
+pub const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns;
 fn noFallbackFn(_: [*]const Code, _: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
     @panic("no fall back");
 }
+pub const preferred_noFallback = (&CompiledMethod.init(sym.noFallback,&noFallbackFn)).asFakeObject();
 pub const noFallback = &CompiledMethod.init(sym.noFallback,&noFallbackFn);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
@@ -54,7 +55,7 @@ pub const CompiledMethod = extern struct {
     footer: HeapObject,
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
-    pub fn init(name: Object,methodFn: ProcessedFn) Self {
+    pub fn init(name: Object,methodFn: ThreadedFn) Self {
         return Self {
             .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
@@ -65,6 +66,7 @@ pub const CompiledMethod = extern struct {
     }
     pub fn execute(self: * const Self, sp: [*]Object, process: *Process, context: CodeContextPtr) void {
         const pc = self.codePtr();
+//        std.debug.print("execute [{*}]: {*}\n",.{pc,pc[0].prim});
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
         return pc[0].prim(pc+1,sp,process,context,self.selector);
     }
@@ -105,14 +107,14 @@ pub const CompiledMethod = extern struct {
     }
 };
 pub const Code = extern union {
-    prim: ProcessedFn,
+    prim: ThreadedFn,
     int: i64,
     uint: u64,
     object: Object,
     header: heap.HeapObject,
     codeRef: [*]Code,
     compiledMethod: *const  CompiledMethod,
-    pub inline fn prim(pp: ProcessedFn) Code {
+    pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
     inline fn int(i: i64) Code {
@@ -332,7 +334,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
             Object => {code[n]=Code.object(field);n=n+1;},
             @TypeOf(null) => {code[n]=Code.object(Nil);n=n+1;},
             comptime_int => {code[n]=Code.int(field);n = n+1;},
-            ProcessedFn => {code[n]=Code.prim(field);n=n+1;},
+            ThreadedFn => {code[n]=Code.prim(field);n=n+1;},
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
@@ -356,7 +358,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                 } else {
                                     comptime var lp = 0;
                                     inline for (tup) |t| {
-                                        if (@TypeOf(t) == ProcessedFn) lp=lp+1
+                                        if (@TypeOf(t) == ThreadedFn) lp=lp+1
                                             else
                                             switch (@typeInfo(@TypeOf(t))) {
                                                 .Pointer => |tPointer| {
@@ -514,17 +516,17 @@ pub const controlPrimitives = struct {
         newSp[0]=@ptrCast(*const Object,pc+1+offset).*;
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
-    pub fn pushNil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+    pub fn pushLiteralNil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=Nil;
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
     }
-    pub fn pushTrue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+    pub fn pushLiteralTrue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=True;
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
     }
-    pub fn pushFalse(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+    pub fn pushLiteralFalse(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=False;
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
@@ -537,10 +539,10 @@ pub const controlPrimitives = struct {
     }
     pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         trace("\npopIntoTemp: {} {}",.{pc[0].uint,sp[0]});
-        context.setTemp(pc[0].uint-1,sp[0]);
+        context.setTemp(pc[0].uint,sp[0]);
         return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
     }
-    pub fn popIntoTemp1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+    pub fn popIntoTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         context.setTemp(0,sp[0]);
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
@@ -555,7 +557,7 @@ pub const controlPrimitives = struct {
         trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,process),context.allTemps(process)});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
-    pub fn pushTemp1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+    pub fn pushTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
         const newSp = sp-1;
         newSp[0]=context.getTemp(0);
         trace("\npushTemp1: {any} {*}",.{context.stack(newSp,process),pc});
@@ -778,14 +780,14 @@ test "simple executable" {
         &p.pushContext,"^",
         ":label1",
         &p.pushLiteral,comptime Object.from(42),
-        &p.popIntoTemp,1,
-        &p.pushTemp1,
+        &p.popIntoTemp,0,
+        &p.pushTemp0,
         &p.pushLiteral0,
-        &p.pushTrue,
+        &p.pushLiteralTrue,
         &p.ifFalse,"label3",
         &p.branch,"label2",
         ":label3",
-        &p.pushTemp,1,
+        &p.pushTemp,0,
         ":label4",
         &p.returnTop,
         ":label2",

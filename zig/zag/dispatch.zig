@@ -15,7 +15,7 @@ const symbols = symbol.symbols;
 const execute = @import("execute.zig");
 const Context = execute.Context;
 const MethodReturns = execute.MethodReturns;
-const ProcessedFn = execute.ProcessedFn;
+const ThreadedFn = execute.ThreadedFn;
 const CompiledMethod = execute.CompiledMethod;
 const compileMethod = execute.compileMethod;
 const compiledMethodType = execute.compiledMethodType;
@@ -135,7 +135,7 @@ const Dispatch = extern struct {
         }
         return error.Conflict;
     }
-    const shifts = [_]ProcessedFn{&shift0,&shift1,&shift2,&shift3,&shift4,&shift5,&shift6,&shift7,&shift8,&shift9,&shift10,&shift11,&shift12,&shift13,&shift14,&shift15,&shift16,&shift17,&shift18,&shift19,&shift20,&shift21,&shift22,&shift23,&shift24,&shift25,&shift26,&shift27,&shift28,&shift29,&shift30,&shift31};
+    const shifts = [_]ThreadedFn{&shift0,&shift1,&shift2,&shift3,&shift4,&shift5,&shift6,&shift7,&shift8,&shift9,&shift10,&shift11,&shift12,&shift13,&shift14,&shift15,&shift16,&shift17,&shift18,&shift19,&shift20,&shift21,&shift22,&shift23,&shift24,&shift25,&shift26,&shift27,&shift28,&shift29,&shift30,&shift31};
     fn super(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         _ = .{programCounter, sp, process, context, selectorHash};
         @panic("called super function");
@@ -268,7 +268,7 @@ const Dispatch = extern struct {
         const pc = programCounter[(selectorHash>>1)&1].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selectorHash});
     }
-    const primes  = [_]?ProcessedFn{null,null,null,&prime3,null,&prime5};
+    const primes  = [_]?ThreadedFn{null,null,null,&prime3,null,&prime5};
     fn prime3(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selectorHash: u32) MethodReturns {
         const pc = programCounter[(preHash(selectorHash)*3)>>32].codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selectorHash});

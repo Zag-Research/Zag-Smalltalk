@@ -40,15 +40,15 @@ pub const Process = extern struct {
     nursery1: [nursery_size] Object,
     next: ?*Self,
     id: u64,
-    debugFn: ?ProcessedFn,
+    debugFn: ?ThreadedFn,
     sp: [*]Object,
     currHeap: HeapObjectArray,
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
     const Self = @This();
-    const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ProcessedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
-    const ProcessedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) void;
+    const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ThreadedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) void;
     const processAvail = (process_total_size-headerSize)/@sizeOf(Object);
     const stack_size = processAvail/9;
     const nursery_size = (processAvail-stack_size)/2;
@@ -91,7 +91,7 @@ pub const Process = extern struct {
     pub inline fn noCheck(self: *Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
-    pub inline fn debugger(self: *Self) ?ProcessedFn {
+    pub inline fn debugger(self: *Self) ?ThreadedFn {
         return self.debugFn;
     }
     inline fn ptr(self: *Self) *Self {
