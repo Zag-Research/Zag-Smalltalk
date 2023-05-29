@@ -227,29 +227,36 @@ const b = @import("zag/byte-interp.zig").ByteCode;
      std.debug.print("about to run\n",.{});
      _ = te.run(objs[0..],method);
 }
-pub fn timing(runs: u32) !void {
-    const ts=std.time.nanoTimestamp;
-    try stdout.print("for {} runs\n",.{runs});
-    var start=ts();
+const ts=std.time.nanoTimestamp;
+fn tstart() i128 {
+    const t = ts();
+    while (true) {
+        const newT = ts();
+        if (newT!=t) return newT;
+    }
+}
+pub fn timing(runs: u6) !void {
+    try stdout.print("for '{} fibonacci'\n",.{runs});
+    var start=tstart();
     _ = fibNative(runs);
     var base = ts()-start;
-    try stdout.print("fibNative: {d:8.3}s {d:8.3}ns\n",.{@intToFloat(f64,base)/1000000000,@intToFloat(f64,base)/@intToFloat(f64,runs)});
-    start=ts();
+    try stdout.print("fibNative: {d:8.3}s\n",.{@intToFloat(f64,base)/1000000000});
+    start=tstart();
     _ = timeObject(runs);
     var time = ts()-start;
-    try stdout.print("fibObject: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    start=ts();
+    try stdout.print("fibObject: {d:8.3}s +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    start=tstart();
     _ = timeCPS(runs);
     time = ts()-start;
-    try stdout.print("fibCPS:    {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    start=ts();
+    try stdout.print("fibCPS:    {d:8.3}s +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    start=tstart();
     _ = timeThread(runs);
     time = ts()-start;
-    try stdout.print("fibThread: {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
-    // start=ts();
+    try stdout.print("fibThread: {d:8.3}s +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    // start=tstart();
     // _ = timeByte(runs);
     // time = ts()-start;
-    // try stdout.print("fibByte:   {d:8.3}s {d:8.3}ns +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time)/@intToFloat(f64,runs),@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    // try stdout.print("fibByte:   {d:8.3}s +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
 }
 pub fn main() !void {
     try timing(40);
