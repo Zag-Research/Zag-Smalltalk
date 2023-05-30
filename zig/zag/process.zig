@@ -115,7 +115,6 @@ pub const Process = extern struct {
 //        copyBackwards(Object, newSp[0..size], sp[0..size]);
     }
     const GrowParameters = struct {
-        process: *Self,
         context: ContextPtr,
         sp: [*]Object,
     };

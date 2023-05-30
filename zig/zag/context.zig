@@ -70,16 +70,19 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub fn push(self: ContextPtr, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
-        const newSp = sp - baseSize - locals;
-        if (process.checkStack(newSp,self,maxStackNeeded)) |grow| return grow.context.push(grow.sp,grow.process,method,locals,maxStackNeeded,selfOffset);
+    pub fn pushStatic(self: ContextPtr, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+        return self.push(sp, process, method, locals, maxStackNeeded, selfOffset);
+    }
+    pub inline fn push(self: ContextPtr, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+        const newSp = sp - (baseSize + locals);
+        if (process.checkStack(newSp,self,maxStackNeeded)) |grow| return grow.context.pushStatic(grow.sp,process,method,locals,maxStackNeeded,selfOffset);
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = self;
         ctxt.method = method;
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
-        ctxt.header = HeapObject.partialOnStack(selfOffset+baseSize);
+        ctxt.header = HeapObject.partialOnStack(baseSize+selfOffset);
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
