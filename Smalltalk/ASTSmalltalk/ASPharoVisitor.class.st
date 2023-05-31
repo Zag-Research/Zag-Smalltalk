@@ -48,12 +48,15 @@ ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitBlockNode: aRBBlockNode [
-
-	^ ASBlock
+	| block |
+	block := ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
-		  body: (aRBBlockNode statements collect: [ :statement | 
-				   self visit: statement ] as: Array)
+		  body: OrderedCollection new.
+	compiler inScope: block do: [ 
+		aRBBlockNode statements do: [ :statement | 
+			block addStatement: (self visit: statement) ] ].
+	^ block
 ]
 
 { #category : #visiting }
@@ -107,7 +110,8 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 	target tell: compiler youAreSent: selector.
 	^ ASSend
 		  target: target
-		  selector: selector args: (aRBMessageNode arguments
+		  selector: selector 
+		  args: (aRBMessageNode arguments
 				   collect: [ :arg | self visit: arg ]
 				   as: Array)
 ]
