@@ -85,12 +85,12 @@ ASPharoCompilerTest >> testBlock [
 								    arguments: #( #each )
 								    locals: #( #temp )
 								    body: { 
-										    (ASAssign variable: #temp expression: (ASSend
-												      target: (ASVariable variable: #each)
+										    (ASAssign variable: (ASLocal name: #temp) expression: (ASSend
+												      target:  (ASRef variable: (ASArg name: #each))
 												      selector: #+
 												      args: { (ASLiteral literal: 5) })).
 										    (ASSend
-											     target: (ASVariable variable: #temp)
+											     target: (ASRef variable: (ASLocal name: #temp))
 											     selector: #+
 											     args: { (ASLiteral literal: 3) }) }) })) })
 ]
