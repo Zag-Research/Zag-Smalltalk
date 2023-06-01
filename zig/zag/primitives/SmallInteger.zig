@@ -50,37 +50,31 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn p3(self: Object, other: Object) !bool { // LessThan
-        if (self.u()<other.u()) return true;
-        if (other.isInt()) return false;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()<other.u();
     }
     pub inline fn p4(self: Object, other: Object) !bool { // GreaterThan
-        if (self.u()<=other.u()) return false;
-        if (other.isInt()) return true;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()>other.u();
     }
     pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
-        if (self.u()<=other.u()) return true;
-        if (other.isInt()) return false;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()<=other.u();
     }
     pub inline fn p5N(self: Object, other: Object) bool { // LessOrEqual when both known SmallIntegers
         return self.u()<=other.u();
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
-        if (self.u()<other.u()) return false;
-        if (other.isInt()) return true;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()>=other.u();
     }
     pub inline fn p7(self: Object, other: Object) !bool { // Equal
-        if (self.u()==other.u()) return true;
-        if (other.isInt()) return false;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()==other.u();
     }
     pub inline fn p8(self: Object, other: Object) !bool { // NotEqual
-        if (self.u()==other.u()) return false;
-        if (other.isInt()) return true;
-        return error.primitiveError;
+        if (!other.isInt()) return error.primitiveError;
+        return self.u()!=other.u();
     }
     inline fn unsafeAbs(x: i64) u64 {
         @setRuntimeSafety(false);

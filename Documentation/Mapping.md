@@ -70,7 +70,7 @@ Block closures are relatively expensive because they need to be heap allocated. 
 1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers, 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
 2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
 3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
-4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^nil]`, `[^true]`, `[^false]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
+4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 5. all remaining closures are full block closures and are heap objects (although they may still actually reside on the stack), and contain the following fields in order (omitting any unused fields):
 	1. a header
 	2. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated (which could be still on the stack));
