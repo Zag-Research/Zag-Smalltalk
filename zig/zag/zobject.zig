@@ -25,7 +25,7 @@ pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    o(.immediates); //0xfff0000000000000;
 // unused NaN fff00-fff4f
 const Start_of_Blocks: u64 =          o(.immediateThunk);
-const Start_of_Pointer_Objects: u64 = o(.closureFreeBlock);
+const Start_of_Pointer_Objects: u64 = o(.heapThunk);
 const Start_of_Heap_Objects: u64 =    o(.heap);
 pub const False             = of(oImm(.False,0x0));
 pub const True              = of(oImm(.True,0x1));
@@ -63,7 +63,7 @@ pub const SymbolTable_I = @enumToInt(Level2.SymbolTable);
 pub const Method_I = @enumToInt(Level2.Method);
 pub const CompiledMethod_I = @enumToInt(Level2.CompiledMethod);
 pub const Group = enum(u16) {
-    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
+    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, numericThunk, immediateThunk, heapThunk, nonLocalThunk, heapClosure, heap,  _,
     const Self = @This();
     inline fn base(cg: Self) u64 {
         return @as(u64,@enumToInt(cg))<<48;
@@ -79,6 +79,9 @@ pub const Object = packed struct(u64) {
     tag: Group,
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(low32|Group.immediates.base()|@as(u64,cls)<<32);
+    }
+    pub inline fn makeGroup(grp: Group, low48: u48) Object {
+        return cast(low48|grp.base());
     }
     pub inline fn cast(v: anytype) Object {
         return @bitCast(Object,v);
@@ -284,10 +287,10 @@ pub const Object = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .immediateThunk, .closureFreeBlock, .nonLocalThunk, .heapClosure => BlockClosure_I,
+            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .heapClosure => BlockClosure_I,
             .immediates => self.l2,
             .heap => if (full) self.to(HeapObjectPtr).*.getClass() else Object_I,
-            .unused1, .unused2 => unreachable,
+            .unused1 => unreachable,
             else => |tag| if (tag.u() <= Group.immediates.u()) Float_I else SmallInteger_I,
         };
     }
@@ -316,6 +319,7 @@ pub const Object = packed struct(u64) {
         
         try switch (self.immediate_class()) {
             Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
+            BlockClosure_I => writer.print("block:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             False_I => writer.print("false", .{}),
             True_I => writer.print("true", .{}),
             UndefinedObject_I => writer.print("nil", .{}),

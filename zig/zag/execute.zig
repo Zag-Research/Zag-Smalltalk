@@ -138,12 +138,7 @@ pub const Code = extern union {
     inline fn codeRef(c: [*]Code) Code {
         return Code{.codeRef=c};
     }
-    inline fn end() Code {
-        return Code{.object=NotAnObject};
-    }
-//    inline fn codePtr(self: * const Code) [*]const Code {
-//        return @ptrCast([*]const Code,self);
-//    }
+    pub const end = &[_]Code{.{.prim=&CompiledMethod.end}};
     inline fn compiledMethod(self: * const Code) *const CompiledMethod {
        return @ptrCast(*const CompiledMethod,self);
     }
