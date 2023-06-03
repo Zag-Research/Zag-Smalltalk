@@ -29,14 +29,14 @@ pub const inlines = struct {
 const noFallback = execute.noFallback.asFaceObject();
 pub const embedded = struct {
     var @"Behavior>>#new:" = noFallback;
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {// Object>>#new:
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#new:
         sp[1] = inlines.p71(sp[1],sp[0]) catch
             return @call(tailCall,Context.call,.{pc,sp,process,context,@"Behavior>>#new:".asFakeObject()});
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
 };
 pub const primitives = struct {
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void { // at:
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
         _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
 };

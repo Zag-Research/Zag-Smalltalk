@@ -135,6 +135,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isNil(self: Object) bool {
         return self.tagbitsL() == Nil.tagbitsL();
     }
+    pub inline fn isImmediate(self: Object) bool {
+        return self.tag == Group.immediates;
+    }
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == Group.heap;
     }
@@ -234,7 +237,6 @@ pub const Object = packed struct(u64) {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==Object) return value;
-        if (T==HeapObjectConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int, .ComptimeInt => return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO),
             .Float, .ComptimeFloat => return cast(@as(f64, value)),

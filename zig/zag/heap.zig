@@ -457,6 +457,9 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn partialWithClassLengthHash(classIndex: ClassIndex,size: u12, hash:u24) HeapObject {
         return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.header,.age=.static,.length=size};
     }
+    pub inline fn simpleStackObject(size: u12, classIndex: ClassIndex, hash: u24) HeapObject {
+        return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.directIndexed,.age=.stack,.length=size};
+    }
     pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
         const result = if (self.objectFormat.isHeader())
             @ptrCast(HeapObjectPtr,@ptrCast(HeapObjectArray,@constCast(self))+self.length+1)

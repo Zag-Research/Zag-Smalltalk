@@ -18,7 +18,7 @@ const trace = execute.trace;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const MethodReturns = void;
+const MethodReturns = [*]Object;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
@@ -154,7 +154,7 @@ pub const Context = struct {
         pr("Context: {*} {} {any}\n",.{self,self.header,self.allTemps(process)});
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
     }
-    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object) void {
+    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object) [*]Object {
         self.tpc = oldPc+1;
         self.npc = oldPc[0].prim;
         trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,process)});

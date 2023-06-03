@@ -48,7 +48,7 @@ pub const Process = extern struct {
     otherHeap: HeapObjectArray,
     const Self = @This();
     const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ThreadedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
-    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) void;
+    const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object;
     const processAvail = (process_total_size-headerSize)/@sizeOf(Object);
     const stack_size = processAvail/9;
     const nursery_size = (processAvail-stack_size)/2;
@@ -107,6 +107,11 @@ pub const Process = extern struct {
     }
     pub inline fn getStack(self: *Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
+    }
+    pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64) ![*]Object {
+        const newSp = sp - words;
+        if (@ptrToInt(newSp)>@ptrToInt(self)) return newSp;
+        return error.NoSpace;
     }
     pub inline fn checkStack(self: *Self, sp: [*]Object, context: ContextPtr, words: u64) ?GrowParameters {
         if (@ptrToInt(sp-words)>=@ptrToInt(self)) return null;
