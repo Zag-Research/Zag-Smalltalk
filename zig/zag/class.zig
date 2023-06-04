@@ -179,6 +179,7 @@ const ClassDescription_S = extern struct {
     super: Behavior_S,
     index: Object,
     organization: Object,
+    pub const includesHeader = true;
 };
 pub const Metaclass_S = extern struct{
     pub const ClassIndex = Metaclass_I;

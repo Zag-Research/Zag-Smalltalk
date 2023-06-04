@@ -55,12 +55,15 @@ pub const CompiledMethod = extern struct {
     footer: HeapObject,
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
-    pub fn init(name: Object,methodFn: ThreadedFn) Self {
+    pub fn init(name: Object, methodFn: ThreadedFn) Self {
+        return init2(name,methodFn,end);
+    }
+    pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
             .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
-            .code = [2]Code{Code.prim(methodFn),Code.prim(end)},
+            .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
             .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
     }
@@ -576,16 +579,14 @@ pub const controlPrimitives = struct {
         // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        context.setNPc(pc[1].prim);
-        context.setTPc(pc+2);
+        context.setReturn(pc+1);
         const offset = pc[0].uint;
         const method = pc[1+offset].object.to(CompiledMethodPtr);
         const newPc = method.codePtr();
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn callRecursive(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        context.setTPc(pc+2);
-        context.setNPc(pc[1].prim);
+        context.setReturn(pc+1);
         const offset = pc[0].int;
         const newPc = pc+1-@intCast(u64, -offset);
         trace("\ncallRecursive: {any} {}",.{context.stack(sp,process)});
@@ -651,7 +652,7 @@ pub const TestExecution = struct {
         const sp = self.process.endOfStack() - source.len;
         for (source,sp[0..source.len]) |src,*dst|
             dst.* = src;
-        self.ctxt.setNPc(CompiledMethod.end);
+        self.ctxt.setReturn(Code.end);
         if (@TypeOf(trace)==@TypeOf(std.debug.print) and trace==std.debug.print) method.write(stdout) catch unreachable;
         self.sp = method.execute(sp,&self.process,&self.ctxt);
         return self.ctxt.stack(self.sp,&self.process);

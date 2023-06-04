@@ -187,10 +187,10 @@ pub const Object = packed struct(u64) {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
                         if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapObjectConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
-                            if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
+                            if (@hasField(ptrInfo.child,"header") or (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader)) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
-                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
+                                unreachable; //return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
                             }
                         }
                         @panic("Trying to convert Object pointer to "++@typeName(T));

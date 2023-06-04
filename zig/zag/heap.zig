@@ -489,6 +489,14 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
         return Format.allocationInfo(iVars,indexed,elementSize,mSize,makeWeak).fillFooters(self,classIndex,hash,age,indexed,elementSize);
     }
+    pub inline fn prev(self: HeapObjectPtr) Object {
+        const ptr = @ptrCast([*]Object,self)-1;
+        return ptr[0];
+    }
+    pub inline fn prevPrev(self: HeapObjectPtr) Object {
+        const ptr = @ptrCast([*]Object,self)-2;
+        return ptr[0];
+    }
     pub inline fn setFields(self: HeapObjectPtr, fill: Object, age: ?Age) void {
         if (fill==Nil and !self.format.isExternal()) {
             unreachable;

@@ -115,15 +115,16 @@ pub const Context = struct {
     pub inline fn getTPc(self: ContextPtr) [*]const Code {
         return self.tpc;
     }
-    pub inline fn setTPc(self: ContextPtr, pc: [*]const Code) void {
-        self.tpc = pc;
+    pub inline fn setReturn(self: ContextPtr, tpc: [*]const Code) void {
+        self.npc = tpc[0].prim;
+        self.tpc = tpc+1;
     }
     pub inline fn getNPc(self: ContextPtr) Context.ThreadedFn {
         return self.npc;
     }
-    pub inline fn setNPc(self: ContextPtr, pc: Context.ThreadedFn) void {
-        self.npc = pc;
-    }
+//    pub inline fn setNPc(self: ContextPtr, pc: Context.ThreadedFn) void {
+//        self.npc = pc;
+//    }
     pub inline fn getSelf(self: ContextPtr) Object {
         const wordsToDiscard = self.asHeapObjectPtr().hash16();
         @setRuntimeSafety(false);
