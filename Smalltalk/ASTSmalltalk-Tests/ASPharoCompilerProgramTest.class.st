@@ -50,7 +50,7 @@ ASPharoCompilerProgramTest >> testStart42 [
 			ASTTrue.
 			ASTFalse.
 			ASTBoolean.
-			ASTBlockClosure.
+			"ASTBlockClosure. removed temporarily"
 			ASTString.
 			ASTArray.
 			ASTArrayedCollection.
@@ -61,10 +61,10 @@ ASPharoCompilerProgramTest >> testStart42 [
 		assert: result selectors
 		equals: #( at:put: do: negated bitOr: + perform:withArguments:
 			   numArgsError: minVal digitAt: new:neg: new: new or: digitCompare:
-			   #digitLogic:op:length: copyReplaceFrom:to:with:
+			   digitLogic:op:length: copyReplaceFrom:to:with:
 			   > cull: superclass primitiveFailed isKindOf: basicNew whileFalse:
 			   and: perform:with: at: copyto: digitSubtract: error: basicNew:
-			   * #digitDiv:neg: start42 & isEmpty digitRshift:bytes:lookfirst:
+			   * digitDiv:neg: start42 & isEmpty digitRshift:bytes:lookfirst:
 			   adaptToInteger:andSend: ~~ errorSubscriptBounds:
 			   numArgs normalize instSpec min: errorImproperStore
 			   negative isInteger quo: highBit basicAt: = species asInteger

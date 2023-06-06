@@ -96,7 +96,8 @@ ASSourceCompilerTest >> testStatements [
 	self assertEquivalent: #hello.
 	self assertEquivalent: 'abc'.
 	self assertEquivalent: nil.
-	self assertEquivalent: #( 1 (2 3) #(nil #nil)).
+	self assertEquivalent: #( 1 2 3).
+	self assertEquivalent: #( 1 (2 3) #(nil nil)).
 
 ]
 

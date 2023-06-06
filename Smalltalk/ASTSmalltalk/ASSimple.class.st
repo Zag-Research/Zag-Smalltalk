@@ -21,7 +21,7 @@ ASSimple >> binaryExpression: anASCompiler [
 { #category : #parsing }
 ASSimple >> keywordExpression: anASCompiler [
 
-	anASCompiler nextToken.
+	"anASCompiler nextToken."
 	^ anASCompiler peek
 		  keywordExpression: anASCompiler
 		  target: (self parseWith: anASCompiler)
@@ -29,7 +29,8 @@ ASSimple >> keywordExpression: anASCompiler [
 
 { #category : #parsing }
 ASSimple >> parseWith: anASCompiler [
-
+"^ASLiteral literal: value."
+^ self.
 ]
 
 { #category : #parsing }

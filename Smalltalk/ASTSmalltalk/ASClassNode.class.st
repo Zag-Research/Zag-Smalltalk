@@ -6,7 +6,9 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'name',
-		'classVariables'
+		'classVariables',
+		'scope',
+		'nestedScopeOf'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -20,13 +22,22 @@ ASClassNode >> = other [
 ASClassNode >> from: aClass [
 
 	name := aClass name.
-	self halt.
-	classVariables := aClass classPool keys
+	classVariables := aClass classPool keys.
 ]
 
 { #category : #comparing }
 ASClassNode >> hash [
 	^ name hash
+]
+
+{ #category : #initialization }
+ASClassNode >> initialize [ 
+	scope := Dictionary new
+]
+
+{ #category : #accessing }
+ASClassNode >> lookup: symbol [
+	^ scope at: symbol ifAbsent: [ ASClassVar name: symbol"nestedScopeOf lookup: symbol" ]
 ]
 
 { #category : #accessing }

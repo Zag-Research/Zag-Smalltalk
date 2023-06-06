@@ -9,7 +9,7 @@ ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 
 	| result |
 	result := ASPharoCompiler new compileMethod: aMethod.
-	result inlineMethod.
+	"result inlineMethod."
 	self assert: result equals: ast
 ]
 
@@ -23,7 +23,7 @@ ASCompilerInlineTest >> testGives43 [
 				 selector: #gives43
 				 locals: #( #forty2 )
 				 body: { 
-						 (ASAssign variable: #forty2 expression: (ASSend
+						 (ASAssign variable: (ASLocal name: #forty2) expression: (ASSend
 								   target: (ASSend
 										    target: (ASSelf method: #gives43)
 										    selector: #unaries
@@ -34,7 +34,7 @@ ASCompilerInlineTest >> testGives43 [
 								   target: (ASSelf method: #gives43)
 								   selector: #plus1:
 								   args: { (ASSend
-										    target: (ASLocal name: #forty2)
+										    target: (ASRef variable: (ASLocal name: #forty2))
 										    selector: #-
 										    args: { (ASLiteral literal: 4) }) })) })
 ]

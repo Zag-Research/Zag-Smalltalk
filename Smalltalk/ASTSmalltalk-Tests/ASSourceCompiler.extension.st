@@ -3,5 +3,6 @@ Extension { #name : #ASSourceCompiler }
 { #category : #'*ASTSmalltalk-Tests' }
 ASSourceCompiler >> statementForTest: aString [
 	aScanner := ASScanner new scanCode: aString readStream.
-	^ aScanner peek assignExpression: self
+	"^ aScanner peek kewordExpression: self"
+	^ aScanner peek parseWith: self
 ]

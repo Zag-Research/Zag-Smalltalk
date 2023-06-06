@@ -23,6 +23,15 @@ ASArray >> = other [
 ]
 
 { #category : #printing }
+ASArray >> baseValue [
+   | bv |
+	bv := OrderedCollection new.
+	statements 
+		do: [ :statement | bv add: statement baseValue].
+	^ bv asArray
+]
+
+{ #category : #printing }
 ASArray >> printOn: s [
 	s << self class name << ' statements: {'.
 	statements do: [: statement| statement printOn: s ] separatedBy: [ s << ' . ' ].
