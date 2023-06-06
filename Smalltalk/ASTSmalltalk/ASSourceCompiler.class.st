@@ -24,10 +24,12 @@ ASSourceCompiler >> compileMethodInClass: aClass [
 	args := OrderedCollection new.
 	selector := aScanner peek classSelector: self args: args.
 	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
-	args do: [ : arg | method add: arg ].
+	"args do: [ : arg | method arguments add: arg ]. //why are we doing this twice? "
 	savedScope := scope.
 	[
-		scope := method nestedScopeOf: aClass.
+		"scope := method nestedScopeOf: aClass."
+		method nestedScopeOf: aClass. 
+		scope := method scope.
 		method body: self methodBody
 	] ensure: [
 		scope := savedScope

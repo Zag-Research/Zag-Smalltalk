@@ -33,6 +33,7 @@ ASCompiler class >> initialize [
 	                   System Return Send Literal Load Store SymbolTable
 	                   Dispatch ClassTable Magnitude Number ClassDescription
 	                   Boolean ).
+	self halt.
 	ClassMap := Dictionary new.
 	ClassMap at: ByteString put: ASTString.
 	ClassMap at: ByteString class put: ASTString class.
@@ -94,7 +95,9 @@ ASCompiler >> definingClass: aClass [
 	definingClass := aClass.
 	classes add: aClass instanceSide.
 	classes add: aClass classSide.
-	currentScope := aClass
+	currentScope := aClass.
+	^ASClassNode new from: aClass
+	
 ]
 
 { #category : #accessing }

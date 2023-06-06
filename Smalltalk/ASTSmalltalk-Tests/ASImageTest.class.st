@@ -101,7 +101,7 @@ ASImageTest >> testMethods [
 	self assert: imageWriter methods size equals: 1.
 	imageWriter method: ASTSystem class >> #start.
 	self assert: imageWriter methods size equals: 1.
-	self assert: start class equals: ASTCode.
+	self assert: start class equals: ASImage."ASTCode."
 
 ]
 
