@@ -37,6 +37,7 @@ ASCompiler class >> initialize [
 	ClassMap := Dictionary new.
 	ClassMap at: ByteString put: ASTString.
 	ClassMap at: ByteString class put: ASTString class.
+	ClassMap at: BlockClosure put: ASTBlock.
 	ASTObject withAllSubclassesDo: [ :class | 
 		(Smalltalk
 			 at: (class name allButFirst: 3) asSymbol
@@ -95,8 +96,10 @@ ASCompiler >> definingClass: aClass [
 	definingClass := aClass.
 	classes add: aClass instanceSide.
 	classes add: aClass classSide.
-	currentScope := aClass.
-	^ASClassNode new from: aClass
+	"currentScope := aClass.
+	^ASClassNode new from: aClass"
+	currentScope := ASClassNode new from: aClass.
+	^currentScope
 	
 ]
 
@@ -129,6 +132,7 @@ ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [
 	| savedScope |
 	savedScope := currentScope.
 	currentScope := anASMethodOrBlock.
+	anASMethodOrBlock nestedScopeOf: savedScope. "if we are consistant with setting nestedScope as parent scope do we need a saved scope?"
 	aFullBlockClosure ensure: [ currentScope := savedScope ]
 ]
 

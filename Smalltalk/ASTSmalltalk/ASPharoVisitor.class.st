@@ -160,3 +160,8 @@ ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
 
 	^ ASRef variable: (ASLocal name: aRBVariableNode name)
 ]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitThisContextNode: anRBVariableNode [
+	^ ASInstance name: anRBVariableNode name
+]
