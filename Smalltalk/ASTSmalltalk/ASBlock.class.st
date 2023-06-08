@@ -39,6 +39,11 @@ ASBlock class >> locals: locals body: body [
 		  body: body
 ]
 
+{ #category : #compiling }
+ASBlock >> acceptVisitor: aVisitor [
+	^ aVisitor visitBlockNode: self
+]
+
 { #category : #printing }
 ASBlock >> printOn: s [
 

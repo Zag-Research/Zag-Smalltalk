@@ -21,6 +21,11 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
+{ #category : #visiting }
+ASRef >> acceptVisitor: aVisitor [
+	^ aVisitor visitVariable: self
+]
+
 { #category : #printing }
 ASRef >> printOn: s [
 

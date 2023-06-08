@@ -36,12 +36,18 @@ ASZigGenerator >> symbolRef: aSymbol [
 
 { #category : #visiting }
 ASZigGenerator >> visit: anASTNode [ 
-	^ anASTNode acceptVisitor: self
+	^ anASTNode printOn: stream
+	"^ anASTNode acceptVisitor: self"
 ]
 
 { #category : #visiting }
 ASZigGenerator >> visitAll: aCollection [
 	aCollection  do: [ :node | self visit: node ]
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitBlockNode: anASBlock [
+	anASBlock printOn: stream
 ]
 
 { #category : #visiting }
@@ -75,4 +81,9 @@ ASZigGenerator >> visitSend: anASSend [
 	self visit: anASSend target.
 	self visitAll: anASSend args.
 	stream << 'call(&thread,thread.stack()[0],'<< (self symbolRef: anASSend selector) <<');'
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitVariable: anASRef [
+	anASRef printOn: stream
 ]
