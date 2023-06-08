@@ -121,7 +121,6 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
 	selector := aRBMethodNode selector.
-	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode
 		          class: aRBMethodNode methodClass
 		          selector: selector
@@ -130,6 +129,7 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
 		          body: OrderedCollection new.
+	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
 		aRBMethodNode statements do: [ :statement | 
@@ -152,7 +152,6 @@ ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
-
 		^ ASSelf method: compiler definingMethod superclass: compiler definingClass superclass 
 ]
 
