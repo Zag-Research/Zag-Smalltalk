@@ -18,8 +18,8 @@ inline fn oImm(c: Level2, comptime h: comptime_int) u64 {
 inline fn o(g:Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(uniqueNumber: u64) Object {
-    return @bitCast(Object,oImm(.Symbol,0xff000000)|uniqueNumber);
+pub inline fn indexSymbol(comptime uniqueNumber: u24) Object {
+    return @bitCast(Object,oImm(.Symbol,0xff000000|@as(u32,uniqueNumber)));
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    o(.immediates); //0xfff0000000000000;
@@ -175,6 +175,9 @@ pub const Object = packed struct(u64) {
     pub inline fn toNat(self: Object) u64 {
         if (self.isNat()) return self.u() -% u64_ZERO;
         @panic("Trying to convert Object to u64");
+    }
+    pub inline fn rawWordAddress(self: Object) u64 {
+        return self.u()&0xffff_ffff_fff8;
     }
     pub fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
         switch (T) {

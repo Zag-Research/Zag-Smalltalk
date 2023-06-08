@@ -88,13 +88,13 @@ pub const Process = extern struct {
         @setRuntimeSafety(false);
         return @intToPtr(*Self,@ptrToInt(self)|checkMax);
     }
-    pub inline fn noCheck(self: *Self) *Self {
+    pub inline fn noCheck(self: *const Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
     }
     pub inline fn debugger(self: *Self) ?ThreadedFn {
         return self.debugFn;
     }
-    inline fn ptr(self: *Self) *Self {
+    inline fn ptr(self: *const Self) *Self {
         return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.HeapObject)
                          );
     }
@@ -102,27 +102,23 @@ pub const Process = extern struct {
         self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
-    pub inline fn endOfStack(self: *Self) [*]Object {
+    pub inline fn endOfStack(self: *const Self) [*]Object {
         return @ptrCast([*]Object,&self.ptr().stack[0])+stack_size;
     }
-    pub inline fn getStack(self: *Self, sp: [*]Object) []Object {
+    pub inline fn getStack(self: *const Self, sp: [*]Object) []Object {
         return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
     }
-    pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64) ![*]Object {
+    pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {
         const newSp = sp - words;
         if (@ptrToInt(newSp)>@ptrToInt(self)) return newSp;
-        return error.NoSpace;
+        return self.allocStack_(sp,words,contextMutable);
     }
-    pub inline fn checkStack(self: *Self, sp: [*]Object, context: ContextPtr, words: u64) ?GrowParameters {
-        if (@ptrToInt(sp-words)>=@ptrToInt(self)) return null;
-        _=context;unreachable;
-//        const newSp = self.stack();
-//        copyBackwards(Object, newSp[0..size], sp[0..size]);
+    fn allocStack_(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {
+        const newSp = sp - words;
+        if (@ptrToInt(newSp)>@ptrToInt(self)) return newSp;
+        _ = contextMutable;
+        @panic("move stack and cp");
     }
-    const GrowParameters = struct {
-        context: ContextPtr,
-        sp: [*]Object,
-    };
     //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
     //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
     pub fn alloc(self: *Self, sp: [*]Object, context: ContextPtr, classIndex: u16, iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) heap.AllocReturn {

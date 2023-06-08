@@ -132,8 +132,8 @@ pub const Code = extern union {
     pub inline fn object(o: Object) Code {
         return Code{.object=o};
     }
-    inline fn ref(u: u64) Code {
-        return Code{.object=indexSymbol(@truncate(u24,u))};
+    inline fn ref(comptime u: u24) Code {
+        return Code{.object=indexSymbol(u)};
     }
     inline fn header(h: heap.HeapObject) Code {
         return Code{.header=h};
@@ -164,7 +164,7 @@ pub const Code = extern union {
             try writer.print("0x{x}",.{self.uint});
     }
 };
-pub fn intOf(str: []const u8) usize {
+pub fn intOf(comptime str: []const u8) u16 {
     var n: u16 = 0;
     for (str) |c| {
         if (c>'9') return n;
@@ -174,8 +174,8 @@ pub fn intOf(str: []const u8) usize {
 }
 test "intOf" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(intOf("012Abc"),12);
-    try expectEqual(intOf("1230Abc"),1230);
+    try expectEqual(comptime intOf("012Abc"),12);
+    try expectEqual(comptime intOf("1230Abc"),1230);
 }
 pub const CountSizes = struct {codes: usize, refs: usize = 0, objects: usize = 0};
 pub fn countNonLabels(comptime tup: anytype) CountSizes {
@@ -237,7 +237,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         selector: Object,
         code: [codeSize] Code,
         references: [refsSize]Object,
-        footer: heap.HeapObject,
+        footer: HeapObject,
         const codeOffsetInUnits = CompiledMethod.codeOffset/@sizeOf(Code);
         const Self = @This();
         // comptime {
@@ -276,9 +276,14 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn setReferences(self: *Self, refs: []const Object) void {
             for (refs,self.references[0..refs.len]) |obj,*srefs|
                 srefs.* = obj;
-            for (self.code[0..]) |*c| {
+            for (&self.code) |*c| {
                 if (c.object.isIndexSymbol())
                     c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(c))/@sizeOf(Object)-1);
+            }
+        }
+        pub fn setLiteral(self: *Self, match: Object, replacement: Object) void {
+            for (&self.code) |*c| {
+                if (c.object.equals(match)) c.* = Code.object(replacement);
             }
         }
         pub fn getCodeSize(_: *Self) usize {
@@ -592,6 +597,10 @@ pub const controlPrimitives = struct {
         trace("\ncallRecursive: {any} {}",.{context.stack(sp,process)});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
+    pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        if (true) @panic("unimplemented");
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
+    }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].uint)-CompiledMethod.codeOffset);
         const stackStructure = method.stackStructure;
@@ -606,18 +615,18 @@ pub const controlPrimitives = struct {
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const result = context.pop(process);
         const newSp = result.sp;
-        const callerContext = result.ctxt;
+        var callerContext = result.ctxt;
         trace("\nreturnWithContext: {any} -> {any}",.{context.stack(sp,process),callerContext.stack(newSp,process)});
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext,selector});
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,@constCast(callerContext),selector});
     }
     pub fn returnTop(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const top = sp[0];
-        const result = context.pop(process);
+        var result = context.pop(process);
         const newSp = result.sp;
         newSp[0] = top;
-        const callerContext = result.ctxt;
+        var callerContext = result.ctxt;
         trace("\nreturnTop: {any} -> {any}",.{context.stack(sp,process),callerContext.stack(newSp,process)});
-        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,callerContext,selector});
+        return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,@constCast(callerContext),selector});
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         trace("\nreturnNoContext: N={*} T={*} {any}",.{context.getNPc(),context.getTPc(),context.stack(sp,process)});

@@ -64,10 +64,18 @@ pub const symbols = struct {
     pub const Metaclass = symbol0(36);
     pub const SmallInteger = symbol0(37);
     pub const noFallback = symbol0(38);
+    pub const @"ifTrue:" = symbol1(39);
+    pub const @"ifTrue:ifFalse" = symbol2(40);
+    pub const @"ifFalse:" = symbol1(41);
+    pub const @"ifFalse:ifTrue:" = symbol2(42);
+    pub const @"ifNil:" = symbol1(43);
+    pub const @"ifNil:ifNotNil" = symbol2(44);
+    pub const @"ifNotNil:" = symbol1(45);
+    pub const @"ifNotNil:ifNil:" = symbol2(46);
     // define any new symbols here
-    pub const Object = symbol0(39); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(47); // always have this the last initial symbol so the tests verify all the counts are correct
 };
-pub const predefinedSymbols = 38;
+pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
     "yourself", "doesNotUnderstand:", "=", "+", "-", "*", "size",
     "at:", "at:put:", "~=", "==", "~~", "value", "value:",
@@ -76,17 +84,17 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "valueWithArguments:", "cull:cull:", "cull:cull:cull:",
     "cull:cull:cull:cull:", "self", "name", "<", "<=", ">=", ">",
     "class", "Class", "Behavior", "ClassDescription", "Metaclass","SmallInteger",
-    "noFallback",
+    "noFallback", "ifTrue:", "ifTrue:ifFalse", "ifFalse:", "ifFalse:ifTrue:",
+    "ifNil:", "ifNil:ifNotNil", "ifNotNil:", "ifNotNil:ifNil:",
     // add any new values here
     "Object"
 });
 pub var symbolTable = SymbolTable.init(&globalAllocator);
-
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
 }
-pub fn loadSymbols(str:[]const heap.HeapConstPtr) void {
-    symbolTable.loadSymbols(str);
+pub fn loadSymbols(strs:[]const heap.HeapConstPtr) void {
+    symbolTable.loadSymbols(strs);
 }
 pub inline fn lookup(string: object.Object) object.Object {
     return symbolTable.lookup(string);
@@ -106,7 +114,7 @@ fn numArgs(obj: object.Object) u8 {
     }
     return count;
 }
-pub const SymbolTable = struct {
+const SymbolTable = struct {
     mem: []ObjectTreap.Element,
     treap: ObjectTreap,
     allocator: *Allocator,
@@ -137,7 +145,7 @@ pub const SymbolTable = struct {
         self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len]);
         return &self.treap;
     }
-    pub fn deinit(self: *Self) void {
+    fn deinit(self: *Self) void {
         self.allocator.free(self.mem);
         self.*=undefined;
     }
@@ -155,7 +163,7 @@ pub const SymbolTable = struct {
         }
         return Nil;
     }
-    pub fn intern(self: *Self,string: object.Object) object.Object {
+    fn intern(self: *Self,string: object.Object) object.Object {
         var trp = self.theTreap(1);
         while (true) {
             const lu = lookupDirect(trp,string);
@@ -206,7 +214,7 @@ test "symbols match initialized symbol table" {
     try expect(mem.eql(u8,"valueWithArguments:"[0..],symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
 }
 test "force second allocation of symbol treap" {
-    const moreSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
+    const moreSymbolStrings = heap.compileStrings(.{
         "xxx00", "xxx01", "xxx02", "xxx03", "xxx04", "xxx05", "xxx06", "xxx07", "xxx08", "xxx09",
         "xxx10", "xxx11", "xxx12", "xxx13", "xxx14", "xxx15", "xxx16", "xxx17", "xxx18", "xxx19",
         "xxx20", "xxx21", "xxx22", "xxx23", "xxx24", "xxx25", "xxx26", "xxx27", "xxx28", "xxx29",

@@ -72,11 +72,11 @@ Block closures are relatively expensive because they need to be heap allocated. 
 3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
 4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 5. all remaining closures are full block closures and are heap objects (although they may still actually reside on the stack), and contain the following fields in order (omitting any unused fields):
-	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated (which could be still on the stack));
+	1. the values of `self` and any parameters or read-only locals that are referenced.
+	2. the address of any (usually 0) ClosureData objects that contain mutable fields that are shared between blocks or with the main method execution;
 	3. the address of the Context if there are any non-local returns (if a closure that references a Context is forced to the heap, that will force that Context to be promoted to the heap);
-	4. the address of any (usually 0) ClosureData objects that contain mutable fields that are shared between blocks or with the main method execution;
-	5. the values of `self` and any parameters or read-only locals that are referenced.
-	6. a footer
+	4. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated (which could be still on the stack));
+	5. a footer
 
 When a `[`some-value`]` closure is required, runtime code returns either a numeric or immediate thunk (if the value is numeric/immediate and fits), a heap thunk when the value is a heap object, with the low 48 bits referencing the object, or, if the value doesn't fit any of these constraints, then it will fall back to a full closure with 2 fields: the CompiledMethod reference and the value. This applies to `self` or any other runtime value.
 
