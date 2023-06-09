@@ -19,6 +19,9 @@ const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
+pub fn init() void {
+}
+
 pub const inlines = struct {
     pub inline fn p71(self: Object, other: Object) !Object { // basicNew:
         _ = self; _ = other;

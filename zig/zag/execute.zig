@@ -667,19 +667,6 @@ pub const TestExecution = struct {
         return self.ctxt.stack(self.sp,&self.process);
     }
 };
-// test "init context" {
-// //    const expectEqual = std.testing.expectEqual;
-// //    const objs = comptime [_]Object{True,Object.from(42)};
-//     var result = TestExecution.new();
-//     var c = result.ctxt;
-//     var process = &result.process;
-//     c.print(process);
-// //    try expectEqual(result.o()[3].u(),4);
-// //    try expectEqual(result.o()[6],True);
-//     const sp = process.endOfStack();
-//     const newC = c.moveToHeap(sp, process);
-//     newC.print(process);
-// }
 const p = struct {
     usingnamespace controlPrimitives;
 };

@@ -12,6 +12,7 @@ const compileMethod = execute.compileMethod;
 const ContextPtr = execute.CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = execute.TestExecution;
+const primitives = @import("zag/primitives.zig");
 const Process = @import("zag/process.zig").Process;
 const symbol =  @import("zag/symbol.zig");
 const heap =  @import("zag/heap.zig");
@@ -37,6 +38,7 @@ const Sym = struct {
 };
 var sym: Sym = undefined;
 fn initSmalltalk() void {
+    primitives.init();
     sym = Sym.init();
     const fibonacci_ = comptime indexSymbol(1);
     var fibonacci =

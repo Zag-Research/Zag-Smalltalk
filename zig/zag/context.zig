@@ -15,6 +15,7 @@ const Age = heap.Age;
 const class = @import("class.zig");
 const execute = @import("execute.zig");
 const trace = execute.trace;
+const TestExecution = execute.TestExecution;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
@@ -165,3 +166,32 @@ pub const Context = struct {
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };
+const e = struct {
+    usingnamespace execute.controlPrimitives;
+};
+// test "init context" {
+// //    const expectEqual = std.testing.expectEqual;
+// //    const objs = comptime [_]Object{True,Object.from(42)};
+//     var result = TestExecution.new();
+//     var c = result.ctxt;
+//     var process = &result.process;
+//     c.print(process);
+// //    try expectEqual(result.o()[3].u(),4);
+// //    try expectEqual(result.o()[6],True);
+//     const sp = process.endOfStack();
+//     const newC = c.moveToHeap(sp, process);
+//     newC.print(process);
+// }
+test "init context" {
+//    const expectEqual = std.testing.expectEqual;
+//    const objs = comptime [_]Object{True,Object.from(42)};
+    var result = TestExecution.new();
+    var c = result.ctxt;
+    var process = &result.process;
+    c.print(process);
+//    try expectEqual(result.o()[3].u(),4);
+//    try expectEqual(result.o()[6],True);
+    const sp = process.endOfStack();
+    const newC = c.moveToHeap(sp, process);
+    newC.print(process);
+}
