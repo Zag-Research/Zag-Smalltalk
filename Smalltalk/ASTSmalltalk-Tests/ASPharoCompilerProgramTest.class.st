@@ -28,9 +28,9 @@ ASPharoCompilerProgramTest >> testCodeStart42 [
 		          buildFromClass: ASCompileTestClass1 class
 		          selector: #start42.
 	
-	"(FileSystem disk workingDirectory / 'zigString.txt') writeStream
+	(FileSystem disk workingDirectory / 'zigString.txt') writeStream
 	nextPutAll: result zigString;
-	close."
+	close.
 	
 	self assert: result zigString equals: ''
 ]
