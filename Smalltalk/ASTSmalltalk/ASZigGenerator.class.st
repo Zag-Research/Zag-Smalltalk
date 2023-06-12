@@ -36,8 +36,7 @@ ASZigGenerator >> symbolRef: aSymbol [
 
 { #category : #visiting }
 ASZigGenerator >> visit: anASTNode [ 
-	^ anASTNode printOn: stream
-	"^ anASTNode acceptVisitor: self"
+	^ anASTNode acceptVisitor: self
 ]
 
 { #category : #visiting }
@@ -46,13 +45,42 @@ ASZigGenerator >> visitAll: aCollection [
 ]
 
 { #category : #visiting }
+ASZigGenerator >> visitArg: anASArg [
+	self visitNamedAS: anASArg
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitAssign: anASAssgn [
+	self visit: anASAssgn variable.
+	stream << ' = '.
+	self visit: anASAssgn expression
+]
+
+{ #category : #visiting }
 ASZigGenerator >> visitBlockNode: anASBlock [
-	anASBlock printOn: stream
+	stream << ' BLOCK GOES HERE '.
+	self visitAll: anASBlock arguments
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitClassVar: anASClassVar [
+	stream << anASClassVar name
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitGlobal: anASGlobal [ 
+	stream << ' A GLOBAL GOES HERE '.
+	stream << anASGlobal name asString.
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitInstance: anASInstance [ 
+	self visitNamedAS: anASInstance 
 ]
 
 { #category : #visiting }
 ASZigGenerator >> visitLiteral: anASLiteral [ 
-	anASLiteral literal printOn: stream
+	stream << anASLiteral literal asString
 ]
 
 { #category : #visiting }
@@ -62,6 +90,11 @@ ASZigGenerator >> visitMethodNode: anASMethodNode [
 	<< '(thread : *Thread, self: Object) MethodReturns {'.
 	self visitAll: anASMethodNode body.
 	stream << '}'
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitNamedAS: aNamedAS [
+	stream << aNamedAS name
 ]
 
 { #category : #visiting }
@@ -85,5 +118,5 @@ ASZigGenerator >> visitSend: anASSend [
 
 { #category : #visiting }
 ASZigGenerator >> visitVariable: anASRef [
-	anASRef printOn: stream
+		self visit: anASRef variable
 ]

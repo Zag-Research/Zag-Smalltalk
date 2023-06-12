@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #compiling }
+ASGlobal >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitGlobal: self
+]
+
+{ #category : #compiling }
 ASGlobal >> tell: aCompiler youAreSent: aSymbol [
 
 	aCompiler sent: aSymbol toGlobal: name

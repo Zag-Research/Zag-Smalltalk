@@ -6,3 +6,8 @@ Class {
 	#superclass : #ASVariable,
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #visiting }
+ASArg >> acceptVisitor: aVisitor [ 
+	^ aVisitor visitArg: self
+]

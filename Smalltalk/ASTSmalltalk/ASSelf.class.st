@@ -41,7 +41,6 @@ ASSelf >> = other [
 
 { #category : #visiting }
 ASSelf >> acceptVisitor: aVisitor [
-
 	^ aVisitor visitSelfNode: self
 ]
 

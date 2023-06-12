@@ -22,6 +22,12 @@ ASAssign >> = other [
 	^ self class = other class and: [ self variable = other variable and: [ self expression = other expression ] ]
 ]
 
+{ #category : #visiting }
+ASAssign >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitAssign: self
+]
+
 { #category : #comparing }
 ASAssign >> expression [
 	^ expression
