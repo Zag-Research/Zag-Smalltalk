@@ -457,6 +457,9 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn partialWithClassLengthHash(classIndex: ClassIndex,size: u12, hash:u24) HeapObject {
         return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.header,.age=.static,.length=size};
     }
+    pub inline fn simpleStackObject(size: u12, classIndex: ClassIndex, hash: u24) HeapObject {
+        return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.directIndexed,.age=.onStack,.length=size};
+    }
     pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
         const result = if (self.objectFormat.isHeader())
             @ptrCast(HeapObjectPtr,@ptrCast(HeapObjectArray,@constCast(self))+self.length+1)
@@ -485,6 +488,14 @@ pub const HeapObject = packed struct(u64) {
     }
     pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
         return Format.allocationInfo(iVars,indexed,elementSize,mSize,makeWeak).fillFooters(self,classIndex,hash,age,indexed,elementSize);
+    }
+    pub inline fn prev(self: HeapObjectPtr) Object {
+        const ptr = @ptrCast([*]Object,self)-1;
+        return ptr[0];
+    }
+    pub inline fn prevPrev(self: HeapObjectPtr) Object {
+        const ptr = @ptrCast([*]Object,self)-2;
+        return ptr[0];
     }
     pub inline fn setFields(self: HeapObjectPtr, fill: Object, age: ?Age) void {
         if (fill==Nil and !self.format.isExternal()) {

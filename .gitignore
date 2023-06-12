@@ -51,6 +51,7 @@ pharo-local
 log1.txt
 zig/zag/execute
 zig/fibonacci 
+zig/fullfib
 zig/sieve
 *.a
 *-generated.zig

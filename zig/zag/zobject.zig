@@ -18,14 +18,14 @@ inline fn oImm(c: Level2, comptime h: comptime_int) u64 {
 inline fn o(g:Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(uniqueNumber: u64) Object {
-    return @bitCast(Object,oImm(.Symbol,0xff000000)|uniqueNumber);
+pub inline fn indexSymbol(comptime uniqueNumber: u24) Object {
+    return @bitCast(Object,oImm(.Symbol,0xff000000|@as(u32,uniqueNumber)));
 }
 pub const ZERO              = of(0);
 const Negative_Infinity: u64     =    o(.immediates); //0xfff0000000000000;
 // unused NaN fff00-fff4f
 const Start_of_Blocks: u64 =          o(.immediateThunk);
-const Start_of_Pointer_Objects: u64 = o(.closureFreeBlock);
+const Start_of_Pointer_Objects: u64 = o(.heapThunk);
 const Start_of_Heap_Objects: u64 =    o(.heap);
 pub const False             = of(oImm(.False,0x0));
 pub const True              = of(oImm(.True,0x1));
@@ -63,7 +63,7 @@ pub const SymbolTable_I = @enumToInt(Level2.SymbolTable);
 pub const Method_I = @enumToInt(Level2.Method);
 pub const CompiledMethod_I = @enumToInt(Level2.CompiledMethod);
 pub const Group = enum(u16) {
-    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, unused2, immediateThunk, closureFreeBlock, nonLocalThunk, heapClosure, heap,  _,
+    immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, numericThunk, immediateThunk, heapThunk, nonLocalThunk, heapClosure, heap,  _,
     const Self = @This();
     inline fn base(cg: Self) u64 {
         return @as(u64,@enumToInt(cg))<<48;
@@ -79,6 +79,9 @@ pub const Object = packed struct(u64) {
     tag: Group,
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(low32|Group.immediates.base()|@as(u64,cls)<<32);
+    }
+    pub inline fn makeGroup(grp: Group, low48: u48) Object {
+        return cast(low48|grp.base());
     }
     pub inline fn cast(v: anytype) Object {
         return @bitCast(Object,v);
@@ -135,6 +138,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isNil(self: Object) bool {
         return self.tagbitsL() == Nil.tagbitsL();
     }
+    pub inline fn isImmediate(self: Object) bool {
+        return self.tag == Group.immediates;
+    }
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == Group.heap;
     }
@@ -170,6 +176,9 @@ pub const Object = packed struct(u64) {
         if (self.isNat()) return self.u() -% u64_ZERO;
         @panic("Trying to convert Object to u64");
     }
+    pub inline fn rawWordAddress(self: Object) u64 {
+        return self.u()&0xffff_ffff_fff8;
+    }
     pub fn toWithCheck(self: Object, comptime T:type, comptime check: bool) T {
         switch (T) {
             f64 => {if (check and self.isDouble()) return @bitCast(f64, self);},
@@ -181,10 +190,10 @@ pub const Object = packed struct(u64) {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
                         if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapObjectConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
-                            if (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader) {
+                            if (@hasField(ptrInfo.child,"header") or (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader)) {
                                 return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
-                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
+                                unreachable; //return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
                             }
                         }
                         @panic("Trying to convert Object pointer to "++@typeName(T));
@@ -234,7 +243,6 @@ pub const Object = packed struct(u64) {
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T==Object) return value;
-        if (T==HeapObjectConstPtr) return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
         switch (@typeInfo(@TypeOf(value))) {
             .Int, .ComptimeInt => return cast(@bitCast(u64, @as(i64, value)) +% u64_ZERO),
             .Float, .ComptimeFloat => return cast(@as(f64, value)),
@@ -282,10 +290,10 @@ pub const Object = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .immediateThunk, .closureFreeBlock, .nonLocalThunk, .heapClosure => BlockClosure_I,
+            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .heapClosure => BlockClosure_I,
             .immediates => self.l2,
             .heap => if (full) self.to(HeapObjectPtr).*.getClass() else Object_I,
-            .unused1, .unused2 => unreachable,
+            .unused1 => unreachable,
             else => |tag| if (tag.u() <= Group.immediates.u()) Float_I else SmallInteger_I,
         };
     }
@@ -314,6 +322,7 @@ pub const Object = packed struct(u64) {
         
         try switch (self.immediate_class()) {
             Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
+            BlockClosure_I => writer.print("block:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             False_I => writer.print("false", .{}),
             True_I => writer.print("true", .{}),
             UndefinedObject_I => writer.print("nil", .{}),
