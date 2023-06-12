@@ -55,12 +55,12 @@ pub const inlines = struct {
         } else if (val.isHeapObject()) {
             sp[0].tag = .heapThunk;
         } else {
-            newSp = generalClosure(sp,process,val,contextMutable);
+            newSp = generalClosure(sp+1,process,val,contextMutable);
         }
         return newSp;
     }
     pub inline fn generalClosure(oldSp: [*]Object, process: *Process, value: Object, contextMutable: *ContextPtr) [*]Object {
-        const sp = process.allocStack(oldSp,3,contextMutable);
+        const sp = process.allocStack(oldSp,4,contextMutable);
         sp[0] = Object.from(&sp[3]);
         sp[0].tag = .heapClosure;
         sp[1] = value;
@@ -71,6 +71,21 @@ pub const inlines = struct {
     var valueClosureMethod = CompiledMethod.init2(sym.value,
                                                   pushValue,
                                                   e.returnNoContext);
+    pub inline fn fullClosure(oldSp: [*]Object, process: *Process, contextData: Object, block: CompiledMethodPtr, contextMutable: *ContextPtr) [*]Object {
+        const flags = block.stackStructure.h0;
+        const fields = (flags>>8)&63;
+        const sp = process.allocStack(oldSp,fields+2,contextMutable);
+        sp[0] = Object.from(&sp[fields+1]);
+        sp[0].tag = .heapClosure;
+        sp[fields] = Object.from(block);
+        var f = fields;
+        if (flags & 64 != 0) {f = f - 1; sp[f] = Object.from(contextMutable.*);}
+        if (flags & 128 != 0) {f = f - 1; sp[f] = contextData;}
+        for (sp[1..f]) |*op|
+            op.* = Nil;
+        sp[fields+1] = heap.HeapObject.simpleStackObject(fields,object.BlockClosure_I,sym.value.hash24()).o();
+        return sp;
+    }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         if (!sym.value.equals(selector)) return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
         const closure = sp[0].to(heap.HeapObjectPtr);
@@ -86,6 +101,7 @@ pub const inlines = struct {
 pub const embedded = struct {
     const nonLocalValues = [_]Object{object.NotAnObject,True,False,Nil,Object.from(-1),Object.from(0),Object.from(1),Object.from(2)};
     pub const value = p201;
+    pub const @"value:" = p202;
     pub fn nonLocalReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const self = context.getSelf();
         _ = .{pc,sp,self,process,selector};
@@ -116,8 +132,25 @@ pub const embedded = struct {
                     context.setReturn(pc);
                     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,sym.value});
                 }
-                if (!sym.value.equals(method.selector)) return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!sym.value.equals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 sp[0] = closure.prevPrev();
+            },
+            else => @panic("not closure"),
+        }
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
+    }
+    pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:
+        const val = sp[1];
+        switch (val.tag) {
+            .numericThunk,.immediateThunk,.heapThunk.nonLocalThunk => @panic("wrong number of parameters"),
+            .heapClosure => {
+                const closure = val.to(heap.HeapObjectPtr);
+                const method = closure.prev().to(CompiledMethodPtr);
+                if (!sym.@"value:".equals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                const newPc = method.codePtr();
+                context.setReturn(pc);
+                if (true) @panic("unfinished");
+                return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,sym.value});
             },
             else => @panic("not closure"),
         }
@@ -129,8 +162,9 @@ pub const embedded = struct {
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,mutableContext,selector});
     }
     pub fn generalClosure(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        const newSp = inlines.generalClosure(sp+1,process,sp[0]) catch unreachable;
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
+        var mutableContext = context;
+        const newSp = inlines.generalClosure(sp+1,process,sp[0],&mutableContext);
+        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,mutableContext,selector});
     }
     const literalNonLocalReturn = enum(u3) {self = 0, true_, false_, nil, minusOne, zero, one, two};
     inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn) [*]Object {

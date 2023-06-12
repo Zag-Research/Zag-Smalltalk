@@ -23,14 +23,6 @@ const sym = @import("symbol.zig").symbols;
 pub const tailCall: std.builtin.CallModifier = .always_tail;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
-// union(enum) {
-//     Normal: Object,
-//     NonLocal,
-//     ExceptionSignaled,
-//     pub fn nonLocal(self : MethodReturns) bool {
-//         return self>=MethodReturns.NonLocal;
-//     }
-// };
 
 pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object {
     if (process.debugger()) |debugger|
@@ -145,7 +137,7 @@ pub const Code = extern union {
     inline fn compiledMethod(self: * const Code) *const CompiledMethod {
        return @ptrCast(*const CompiledMethod,self);
     }
-    pub inline fn compiledMethodPtr(self: * const Code, index: usize) *const CompiledMethod {
+    pub inline fn compiledMethodPtr(self: *const Code, comptime index: comptime_int) *const CompiledMethod {
         return @fieldParentPtr(CompiledMethod,"code",@ptrCast(*const [2]Code,@ptrCast([*]const Code,self)-index));
     }
     pub fn format(
@@ -437,6 +429,11 @@ pub const controlPrimitives = struct {
     pub fn noop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
+    pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
+        if (!method.selector.equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
+    }
     pub fn branch(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const offset = pc[0].int;
         trace("\nbranch offset: {}\n",.{offset});
@@ -597,14 +594,10 @@ pub const controlPrimitives = struct {
         trace("\ncallRecursive: {any} {}",.{context.stack(sp,process)});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
-    pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        if (true) @panic("unimplemented");
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
-    }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].uint)-CompiledMethod.codeOffset);
         const stackStructure = method.stackStructure;
-        const locals = stackStructure.h0;
+        const locals = stackStructure.h0 & 255;
         const maxStackNeeded = stackStructure.h1;
         const selfOffset = stackStructure.l2;
         const ctxt = context.push(sp,process,method,locals,maxStackNeeded,selfOffset);

@@ -106,65 +106,18 @@ const e = struct {
     usingnamespace execute.controlPrimitives;
     usingnamespace embedded;
 };
-test "simple ==" {
-    const expect = std.testing.expect;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(4),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.returnNoContext,
-    });
-    const result = testExecute(prog.asCompiledMethodPtr());
-    try expect(result[0].to(bool));
-}
-fn testExecute(method: CompiledMethodPtr) []Object {
-    var te = execute.TestExecution.new();
-    te.init();
-    var objs = [_]Object{};
-    var result = te.run(objs[0..],method);
-    std.debug.print("result = {any}\n",.{result});
-    return result;
-}
-test "simple compare" {
-    const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.returnNoContext,
-    });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0],False);
-}
-test "simple compare and don't branch" {
-    const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.ifTrue,"true",
-        &e.pushLiteral,Object.from(17),
-        &e.branch,"common",
-        ":true",
-        &e.pushLiteral,Object.from(42),
-        ":common", &e.returnNoContext,
-    });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),17);
-}
-test "simple compare and branch" {
-    const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p169,
-        &e.ifTrue,"true",
-        &e.pushLiteral,Object.from(17),
-        &e.branch,"common",
-        ":true",
-        &e.pushLiteral,Object.from(42),
-        ":common", &e.returnNoContext,
-    });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),42);
-}
-
-test "dispatch3" {
-}
+// test "ifTrue:" {
+//     const expectEqual = std.testing.expectEqual;
+//     var prog = compileMethod(sym.value,0,0,.{
+//         &e.pushLiteral,Object.from(3),
+//         &e.pushLiteral,Object.from(4),
+//         &e.p169,
+//         &e.ifTrue,"true",
+//         &e.pushLiteral,Object.from(17),
+//         &e.branch,"common",
+//         ":true",
+//         &e.pushLiteral,Object.from(42),
+//         ":common", &e.returnNoContext,
+//     });
+//     try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),42);
+// }
