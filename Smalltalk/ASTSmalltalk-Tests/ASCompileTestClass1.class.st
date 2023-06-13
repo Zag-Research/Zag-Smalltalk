@@ -57,6 +57,13 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> fib: anInt [
+	^ anInt < 2
+		ifTrue: [1] 
+		ifFalse: [(self fib: anInt-1) + self fib: anInt-2]
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.

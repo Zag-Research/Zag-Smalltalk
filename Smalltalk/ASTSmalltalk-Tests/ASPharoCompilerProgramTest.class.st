@@ -36,6 +36,20 @@ ASPharoCompilerProgramTest >> testCodeStart42 [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFib [
+	| result |
+	result := self
+		          buildFromClass: ASCompileTestClass1 class
+		          selector: #fib.
+	
+	(FileSystem disk workingDirectory / 'zigFibString.txt') writeStream
+	nextPutAll: result zigString;
+	close.
+	
+	self assert: result zigString equals: ''
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testStart42 [
 
 	| result |
