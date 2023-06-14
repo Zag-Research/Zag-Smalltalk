@@ -33,7 +33,10 @@ pub const String_I = object.String_I;
 pub const SymbolTable_I = object.SymbolTable_I;
 pub const Method_I = object.Method_I;
 pub const CompiledMethod_I = object.CompiledMethod_I;
-const c3o = 15;
+pub const Dispatch_I = object.Dispatch_I;
+pub const ClosureData_I = object.ClosureData_I;
+pub const Context_I = object.Context_I;
+const c3o = 18;
 pub const Class_I = c3o + 0;
 pub const Metaclass_I = c3o + 1;
 pub const Behavior_I = c3o + 2;
@@ -44,25 +47,22 @@ pub const Send_I = c3o + 6;
 pub const Literal_I = c3o + 7;
 pub const Load_I = c3o + 8;
 pub const Store_I = c3o + 9;
-pub const Dispatch_I = c3o + 10;
-pub const ClassTable_I = c3o + 11;
-pub const Magnitude_I = c3o + 12;
-pub const Number_I = c3o + 13;
-pub const ClassDescription_I = c3o + 14;
-pub const Boolean_I = c3o + 15;
-pub const Context_I = c3o + 16;
-pub const StackContext_I = c3o + 17;
-pub const CatchingContext_I = c3o + 18;
-pub const EnsuringContext_I = c3o + 19;
-pub const ByteArray_I = c3o + 20;
+pub const ClassTable_I = c3o + 10;
+pub const Magnitude_I = c3o + 11;
+pub const Number_I = c3o + 12;
+pub const ClassDescription_I = c3o + 13;
+pub const Boolean_I = c3o + 14;
+pub const CatchingContext_I = c3o + 15;
+pub const EnsuringContext_I = c3o + 16;
+pub const ByteArray_I = c3o + 17;
 const initialClassStrings = heap.compileStrings(.{ // must be in same order as above
     "Object", "SmallInteger", "Float", "False", "True",
     "UndefinedObject", "Symbol", "Character", "BlockClosure", "Array",
-    "String", "SymbolTable", "Method", "CompiledMethod",
+    "String", "SymbolTable", "Method", "CompiledMethod", "Dispatch", "ClosureData", "Context", 
     "Class", "Metaclass", "Behavior",
     "MethodDictionary", "System", "Return", "Send", "Literal", "Load",
-    "Store", "Dispatch", "ClassTable", "Magnitude",
-    "Number", "ClassDescription", "Boolean", "Context", "StackContext",
+    "Store", "ClassTable", "Magnitude",
+    "Number", "ClassDescription", "Boolean",
     "CatchingContext", "EnsuringContext", "ByteArray",
 });
 pub const ReservedNumberOfClasses = if (builtin.is_test) 60 else 500;

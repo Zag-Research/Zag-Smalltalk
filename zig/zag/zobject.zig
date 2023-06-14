@@ -47,7 +47,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const Level2 = enum(ClassIndex) {
-    Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, _ };
+    Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
 pub const Object_I = @enumToInt(Level2.Object);
 pub const SmallInteger_I = @enumToInt(Level2.SmallInteger);
 pub const Float_I = @enumToInt(Level2.Float);
@@ -62,6 +62,9 @@ pub const String_I = @enumToInt(Level2.String);
 pub const SymbolTable_I = @enumToInt(Level2.SymbolTable);
 pub const Method_I = @enumToInt(Level2.Method);
 pub const CompiledMethod_I = @enumToInt(Level2.CompiledMethod);
+pub const Dispatch_I = @enumToInt(Level2.Dispatch);
+pub const ClosureData_I = @enumToInt(Level2.ClosureData);
+pub const Context_I = @enumToInt(Level2.Context);
 pub const Group = enum(u16) {
     immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, numericThunk, immediateThunk, heapThunk, nonLocalThunk, heapClosure, heap,  _,
     const Self = @This();

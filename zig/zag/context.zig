@@ -55,16 +55,16 @@ pub const Context = struct {
         _ = options;
         
         try writer.print("context: {}",.{self.header});
-        try writer.print(" prev: 0x{x}",.{@ptrToInt(self.prevCtxt)});
+        try writer.print(" prev: 0x{x}",.{@ptrToInt(self.previous())});
         if (false) {
             @setRuntimeSafety(false);
             try writer.print(" temps: {any}",.{self.temps[0..self.size]});
         }
     }
-    pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object,ctxt: *const Context } {
+    pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
         if (self.isOnStack())
-            return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
+            return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.previous()};
         _ = process;@panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         // const newSp = process.endOfStack() - itemsToKeep.len;
@@ -77,6 +77,7 @@ pub const Context = struct {
         return self.push(sp, process, method, locals, maxStackNeeded, selfOffset);
     }
     pub inline fn push(self: * Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+        if (@ptrToInt(self)==0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp,baseSize + locals + maxStackNeeded,&contextMutable)+maxStackNeeded;
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
@@ -105,7 +106,7 @@ pub const Context = struct {
         return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
-        return (@ptrToInt(self.prevCtxt.endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
+        return (@ptrToInt(self.previous().endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
     pub inline fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
         return sp[0..(@ptrToInt(self.endOfStack(process))-@ptrToInt(sp))/@sizeOf(Object)];
@@ -118,9 +119,12 @@ pub const Context = struct {
     pub inline fn getTPc(self: *const Context) [*]const Code {
         return self.tpc;
     }
+    pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: [*]const Code) void {
+        self.npc = npc;
+        self.tpc = tpc;
+    }
     pub inline fn setReturn(self: ContextPtr, tpc: [*]const Code) void {
-        self.npc = tpc[0].prim;
-        self.tpc = tpc+1;
+        self.setReturnBoth(tpc[0].prim,tpc+1);
     }
     pub inline fn getNPc(self: *const Context) Context.ThreadedFn {
         return self.npc;
@@ -141,6 +145,7 @@ pub const Context = struct {
         self.temps[n] = v;
     }
     pub inline fn previous(self: *const Context) ContextPtr {
+        if (@ptrToInt(self.prevCtxt)==0) @panic("0 prev");
         return self.prevCtxt;
     }
     pub inline fn asHeapObjectPtr(self : *const Context) HeapObjectPtr {

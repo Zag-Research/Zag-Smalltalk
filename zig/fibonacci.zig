@@ -37,7 +37,7 @@ pub fn fibObject(self: Object) Object {
 }
 const fibSym = sym.value;
 const dnu = execute.controlPrimitives.dnu;
-pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
     if (!fibSym.equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
@@ -46,23 +46,21 @@ pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: Cont
     const newContext = context.push(sp,process,fibThread.asCompiledMethodPtr(),0,2,0);
     const newSp = newContext.asObjectPtr()-1;
     newSp[0] = i.p2L(sp[0],1) catch return @call(tailCall,pc[10].prim,.{pc+11,newSp+1,process,context,fibSym});
-    newContext.tpc = pc+13; // after first callRecursive
-    newContext.npc = fibCPS1;
+    newContext.setReturnBoth(fibCPS1,pc+13); // after first callRecursive
     return @call(tailCall,fibCPS,.{fibCPST+1,newSp,process,newContext,fibSym});
 }
-fn fibCPS1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) void {
+fn fibCPS1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
     const newSp = sp-1;
     newSp[0] = i.p2L(context.getTemp(0),2) catch return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,fibSym});
-    context.tpc = pc+3; // after 2nd callRecursive
-    context.npc = fibCPS2;
+    context.setReturnBoth(fibCPS2,pc+3); // after 2nd callRecursive
     return @call(tailCall,fibCPS,.{fibCPST+1,newSp,process,context,fibSym});
 }
-fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
     const sum = i.p1(sp[1],sp[0]) catch return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,fibSym}); 
     context.setTemp(0,sum);
-    const result = context.pop(process);
+    var result = context.pop(process);
     const newSp = result.sp;
-    const callerContext = result.ctxt;
+    var callerContext = result.ctxt;
     return @call(tailCall,callerContext.npc,.{callerContext.tpc,newSp,process,callerContext,selector});
 }
 test "fibObject" {

@@ -2,7 +2,7 @@ pub const inlines = struct {
     pub usingnamespace @import("primitives/Object.zig").inlines;
     pub usingnamespace @import("primitives/Smallinteger.zig").inlines;
     pub usingnamespace @import("primitives/Behavior.zig").inlines;
-    pub usingnamespace @import("primitives/BlockClosure.zig").inines;
+    pub usingnamespace @import("primitives/BlockClosure.zig").inlines;
     pub usingnamespace @import("primitives/Boolean.zig").inlines;
 };
 pub const embedded = struct {

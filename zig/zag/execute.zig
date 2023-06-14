@@ -48,7 +48,7 @@ pub const CompiledMethod = extern struct {
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
     pub fn init(name: Object, methodFn: ThreadedFn) Self {
-        return init2(name,methodFn,end);
+        return init2(name,methodFn,Code.end);
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
@@ -58,9 +58,6 @@ pub const CompiledMethod = extern struct {
             .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
             .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
-    }
-    fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
-        return sp;
     }
     pub fn execute(self: * const Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
         const pc = self.codePtr();
@@ -133,12 +130,19 @@ pub const Code = extern union {
     inline fn codeRef(c: [*]Code) Code {
         return Code{.codeRef=c};
     }
-    pub const end = &[_]Code{.{.prim=&CompiledMethod.end}};
-    inline fn compiledMethod(self: * const Code) *const CompiledMethod {
+    fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
+        return sp;
+    }
+    pub const endThread = &[_]Code{.{.prim=&end}};
+    inline fn compiledMethodX(self: *const Code) *const CompiledMethod {
        return @ptrCast(*const CompiledMethod,self);
     }
     pub inline fn compiledMethodPtr(self: *const Code, comptime index: comptime_int) *const CompiledMethod {
         return @fieldParentPtr(CompiledMethod,"code",@ptrCast(*const [2]Code,@ptrCast([*]const Code,self)-index));
+    }
+    pub inline fn literalIndirect(self: *const Code) Object {
+        const offset = self.uint;
+        return @ptrCast(*const Object,self+1+offset).*;
     }
     pub fn format(
         self: *const Code,
@@ -515,8 +519,7 @@ pub const controlPrimitives = struct {
     }
     pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        const offset = pc[0].uint;
-        newSp[0]=@ptrCast(*const Object,pc+1+offset).*;
+        newSp[0]=pc.literalIndirect();
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
     pub fn pushLiteralNil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -654,7 +657,7 @@ pub const TestExecution = struct {
         const sp = self.process.endOfStack() - source.len;
         for (source,sp[0..source.len]) |src,*dst|
             dst.* = src;
-        self.ctxt.setReturn(Code.end);
+        self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace)==@TypeOf(std.debug.print) and trace==std.debug.print) method.write(stdout) catch unreachable;
         self.sp = method.execute(sp,&self.process,&self.ctxt);
         return self.ctxt.stack(self.sp,&self.process);

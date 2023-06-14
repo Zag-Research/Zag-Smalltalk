@@ -9,6 +9,7 @@ const Process = @import("process.zig").Process;
 const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
+const HeapObject = heap.HeapObject;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
@@ -28,12 +29,13 @@ pub const forTest = Dispatch.forTest;
 const DispatchState = enum(u8){clean,beingUpdated,dead};
 const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
+    header: HeapObject,
     hash: u32,
     free: u16,
     length: u16,
     state: DispatchState,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
-    methods: [minHash+extra]*const CompiledMethod, // this is just the default... normally a larger array
+    methods: [minHash+extra][*]const Code, // this is just the default... normally a larger array
     const Self = @This();
     const minHash = 13; // must be prime
     const extra = 8; // must be multiple of 8 to allow cast below
@@ -66,15 +68,16 @@ const Dispatch = extern struct {
         return undefined;
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
+        self.header = HeapObject.partialWithClassLengthHash(4,class.Dispatch_I,name.hash24());
         self.hash = minHash;
         self.superOrDNU = code;
         for (self.methods[0..minHash]) |*ptr|
-            ptr.* = (&self.superOrDNU[0]).compiledMethodPtr(0);
+            ptr.* = @ptrCast([*]const Code,self.superOrDNU);
         self.free = minHash;
         self.length = @sizeOf(Self);
         self.state = .clean;
         if (extra>0)
-            self.methods[minHash] = @intToPtr(*const CompiledMethod,extra);
+            self.methods[minHash] = @intToPtr([*]const Code,extra);
     }
     fn initSuper(self: *Self, superClass: ClassIndex) void {
         self.initPrivate(.{Code.prim(&super),Code.uint(superClass)});
@@ -118,11 +121,11 @@ const Dispatch = extern struct {
         if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    inline fn lookup(self: *Self, selector: u64) *const CompiledMethod {
+    inline fn lookup(self: *Self, selector: u64) [*]const Code {
         return self.lookupAddress(selector).*;
     }
-    inline fn lookupAddress(self: *Self, selector: u64) **const CompiledMethod {
-        return @ptrCast(**CompiledMethod,&self.methods[selector*@as(u64,self.hash)>>32]);
+    inline fn lookupAddress(self: *Self, selector: u64) *[*]const Code {
+        return @ptrCast(*[*]const Code,&self.methods[selector*@as(u64,self.hash)>>32]);
     }
     inline fn preHash(selector: u32) u64 {
         return @as(u64,selector*%u32_phi_inverse);
