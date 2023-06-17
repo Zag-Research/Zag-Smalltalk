@@ -38,7 +38,7 @@ pub const Context = struct {
         return Self {
             .header = comptime heap.footer(baseSize+nTemps,Format.header,class.Context_I,0,Age.static),
             .tpc = undefined,
-            .npc = undefined,
+            .npc = Code.end,
             .prevCtxt = undefined,
             .nonLocalLink = undefined,
             .method = undefined,

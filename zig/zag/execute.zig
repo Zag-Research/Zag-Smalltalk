@@ -108,7 +108,6 @@ pub const Code = extern union {
     object: Object,
     header: heap.HeapObject,
     codeRef: [*]Code,
-    compiledMethod: *const  CompiledMethod,
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -127,10 +126,10 @@ pub const Code = extern union {
     inline fn header(h: heap.HeapObject) Code {
         return Code{.header=h};
     }
-    inline fn codeRef(c: [*]Code) Code {
-        return Code{.codeRef=c};
+    pub inline fn codeRef(c: [*]const Code) Code {
+        return Code{.codeRef=@constCast(c)};
     }
-    fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
+    pub fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
         return sp;
     }
     pub const endThread = &[_]Code{.{.prim=&end}};
@@ -142,7 +141,7 @@ pub const Code = extern union {
     }
     pub inline fn literalIndirect(self: *const Code) Object {
         const offset = self.uint;
-        return @ptrCast(*const Object,self+1+offset).*;
+        return @ptrCast(*const Object,@ptrCast([*]const Code,self)+1+offset).*;
     }
     pub fn format(
         self: *const Code,
@@ -263,8 +262,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .footer = heap.footer(codeOffsetInUnits+codeSize,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
             };
         }
-        pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
-            return @ptrCast(* CompiledMethod,self);
+        pub fn asCompiledMethodPtr(self: *const Self) * CompiledMethod {
+            return @ptrCast(* CompiledMethod,@constCast(self));
         }
         pub fn asFakeObject(self: *const Self) Object {
             return @bitCast(Object,self);
@@ -519,7 +518,7 @@ pub const controlPrimitives = struct {
     }
     pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        newSp[0]=pc.literalIndirect();
+        newSp[0]=@ptrCast(*const Code,pc).literalIndirect();
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
     pub fn pushLiteralNil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {

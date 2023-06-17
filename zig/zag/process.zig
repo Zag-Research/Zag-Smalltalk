@@ -99,7 +99,6 @@ pub const Process = extern struct {
                          );
     }
     pub fn deinit(self : *Self) void {
-        self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
     pub inline fn endOfStack(self: *const Self) [*]Object {
