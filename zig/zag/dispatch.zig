@@ -47,10 +47,14 @@ const Dispatch = extern struct {
             internal[2] = fail;
             internal[3] = prime3;
             internal[4] = prime5;
+            std.debug.print("bitTest0 {}\n",.{&bitTest0});
+            std.debug.print("bitTest1 {}\n",.{&bitTest1});
+            std.debug.print("bitTest2 {}\n",.{&bitTest2});
             for (bitTests[0..],internal[5..]) |s,*i| {
                 std.debug.print("bitTests {}\n",.{s});
                 i.* = s;
             }
+            std.debug.print("bitTest31 {}\n",.{&bitTest31});
             for (internal[0..],0..) |*s1,i| {
                 const s1v = s1.*;
                 for (internal[i+1..]) |*s2| {
@@ -153,15 +157,15 @@ const Dispatch = extern struct {
         location[0]= Code.prim(bitTests[shift]);
         return location.ptr;
     }
-    fn add(self: *Self, selector: Object, cmp: *const CompiledMethod) !void {
-        const hashed = preHash(selector.hash32());
-        const address = self.lookupAddress(hashed);
+    fn add(self: *Self, cmp: *const CompiledMethod) !void {
         while (true) {
             if (@cmpxchgWeak(DispatchState,&self.state,.clean,.beingUpdated,.SeqCst,.SeqCst)) |notClean| {
                 if (notClean==.dead) return error.Conflict;
             } else break;
         }
         defer {self.state = .clean;}
+        const hashed = preHash(cmp.selector.hash32());
+        const address = self.lookupAddress(hashed);
         if (@cmpxchgWeak(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)==null)
             return; // we replaced DNU with mathod
         const existing = address.*;
@@ -180,7 +184,13 @@ const Dispatch = extern struct {
         }
         return error.Conflict;
     }
-    const bitTests = [_]ThreadedFn{&bitTest0,&bitTest1,&bitTest2,&bitTest3,&bitTest4,&bitTest5,&bitTest6,&bitTest7,&bitTest8,&bitTest9,&bitTest10,&bitTest11,&bitTest12,&bitTest13,&bitTest14,&bitTest15,&bitTest16,&bitTest17,&bitTest18,&bitTest19,&bitTest20,&bitTest21,&bitTest22,&bitTest23,&bitTest24,&bitTest25,&bitTest26,&bitTest27,&bitTest28,&bitTest29,&bitTest30,&bitTest31};
+    const bitTests = [_]ThreadedFn{
+        &bitTest0,&bitTest1,&bitTest2,&bitTest3,&bitTest4,&bitTest5,
+        &bitTest6,&bitTest7,&bitTest8,&bitTest9,&bitTest10,&bitTest11,
+        &bitTest12,&bitTest13,&bitTest14,&bitTest15,&bitTest16,&bitTest17,
+        &bitTest18,&bitTest19,&bitTest20,&bitTest21,&bitTest22,&bitTest23,
+        &bitTest24,&bitTest25,&bitTest26,&bitTest27,&bitTest28,&bitTest29,
+        &bitTest30,&bitTest31};
     fn bitTest0(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         const pc = (if (selector.hash32()&1<<0==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
@@ -194,119 +204,119 @@ const Dispatch = extern struct {
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest3(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<3==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest4(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<4==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest5(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<5==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest6(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<6==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest7(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<7==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest8(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<8==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest9(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<9==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest10(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<10==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest11(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<11==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest12(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<12==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest13(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<13==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest14(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<14==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest15(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<15==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest16(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<16==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest17(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<17==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest18(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<18==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest19(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<19==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest20(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<20==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest21(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<21==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest22(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<22==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest23(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<23==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest24(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<24==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest25(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<25==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest26(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<26==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest27(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<27==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest28(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<28==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest29(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<29==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest30(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<2==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<30==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     fn bitTest31(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        const pc = (if (selector.hash32()&1<<1==0) programCounter[0] else programCounter[1]).codeRef;
+        const pc = (if (selector.hash32()&1<<31==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     const primes  = [_]?ThreadedFn{null,null,null,&prime3,null,&prime5};
@@ -353,14 +363,26 @@ fn push2(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Obj
     newSp[0] = Object.from(2);
     return newSp;
 }
+fn push3(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
+    const newSp = sp - 1;
+    newSp[0] = Object.from(3);
+    return newSp;
+}
 test "disambiguate" {
     const ee = std.testing.expectEqual;
+    // value=01101 yourself=00001 @"<="=11101
     const method1 = compileMethod(symbols.value,0,0,.{&push1,&Code.end});
     const method2 = compileMethod(symbols.yourself,0,0,.{&push2,&Code.end});
+    const method3 = compileMethod(symbols.@"<=",0,0,.{&push3,&Code.end});
     var space = [_]Code{Code.object(Nil),Code.object(Nil),Code.object(Nil)};
-    const dispatcher = Dispatch.disambiguate(&space,method1.asCompiledMethodPtr(),method2.asCompiledMethodPtr());
-    const push2Code = @ptrCast([*]Code,&method1.asCompiledMethodPtr().code);
-    try ee(space[2].codeRef,push2Code);
+    var dispatcher = Dispatch.disambiguate(&space,method1.asCompiledMethodPtr(),method2.asCompiledMethodPtr());
+    const push1Code = @ptrCast([*]Code,&method1.asCompiledMethodPtr().code);
+    const push2Code = @ptrCast([*]Code,&method2.asCompiledMethodPtr().code);
+    try ee(space[2].codeRef,push1Code);
+    try ee(space[1].codeRef,push2Code);
+    dispatcher = Dispatch.disambiguate(&space,method2.asCompiledMethodPtr(),method1.asCompiledMethodPtr());
+    try ee(space[2].codeRef,push1Code);
+    try ee(space[1].codeRef,push2Code);
     var process = Process.new();
     process.init();
     defer process.deinit();
@@ -368,6 +390,11 @@ test "disambiguate" {
     const sp = process.endOfStack();
     try ee(dispatcher[0].prim(dispatcher+1,sp,&process,&context,symbols.value)[0].to(i64),1);
     try ee(dispatcher[0].prim(dispatcher+1,sp,&process,&context,symbols.yourself)[0].to(i64),2);
+    try ee(dispatcher[0].prim,&Dispatch.bitTest2);
+    dispatcher = Dispatch.disambiguate(&space,method3.asCompiledMethodPtr(),method1.asCompiledMethodPtr());
+    try ee(dispatcher[0].prim(dispatcher+1,sp,&process,&context,symbols.@"<=")[0].to(i64),3);
+    try ee(dispatcher[0].prim(dispatcher+1,sp,&process,&context,symbols.value)[0].to(i64),1);
+    try ee(dispatcher[0].prim,&Dispatch.bitTest4);
 }
 fn testAt(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
     _ = .{sp, process, context};
