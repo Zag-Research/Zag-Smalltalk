@@ -320,7 +320,6 @@ pub const Object = packed struct(u64) {
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
         _ = options;
         
         try switch (self.immediate_class()) {
@@ -335,6 +334,7 @@ pub const Object = packed struct(u64) {
             Float_I => writer.print("{}", .{self.to(f64)}),
             else => { try writer.print("0x{x:>16}", .{self.u()});@panic("format for unknown class");},
         };
+        if (fmt.len==1 and fmt[0]=='x') try writer.print("({x:>16})", .{self.u()});
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {

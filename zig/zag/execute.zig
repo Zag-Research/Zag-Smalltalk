@@ -59,7 +59,7 @@ pub const CompiledMethod = extern struct {
             .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
     }
-    pub fn execute(self: * const Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
+    pub fn execute(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
         const pc = self.codePtr();
 //        std.debug.print("execute [{*}]: {*}\n",.{pc,pc[0].prim});
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
@@ -71,8 +71,8 @@ pub const CompiledMethod = extern struct {
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
     }
-    pub inline fn codePtr(self: *const Self) [*]const Code {
-        return @ptrCast([*]const Code,&self.code);
+    pub inline fn codePtr(self: *Self) [*] Code {
+        return @ptrCast([*] Code,&self.code);
     }
     pub fn format(
         self: *const Self,
@@ -244,7 +244,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
 //            @compileLog(codeSize,refsSize);
 //            trace("\nfooter={}",.{footer});
             return .{
-                .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
+                .header = HeapObject.staticHeaderWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
@@ -254,7 +254,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
             return .{
-                .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
+                .header = HeapObject.staticHeaderWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = code,

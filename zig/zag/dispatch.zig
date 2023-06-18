@@ -6,7 +6,6 @@ const Nil = object.Nil;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
 const Process = @import("process.zig").Process;
-const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapObject = heap.HeapObject;
@@ -15,6 +14,7 @@ const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 const execute = @import("execute.zig");
 const Context = execute.Context;
+const TestExecution = execute.TestExecution;
 const MethodReturns = execute.MethodReturns;
 const ThreadedFn = execute.ThreadedFn;
 const CompiledMethod = execute.CompiledMethod;
@@ -39,44 +39,42 @@ const Dispatch = extern struct {
     const Self = @This();
     const minHash = 13; // must be prime
     const extra = 8; // must be multiple of 8 to allow cast below
-    var internal = [_]?ThreadedFn{null}**(bitTests.len+5);
+    var internal = [_]ThreadedFn{&super}**(bitTests.len+5);
+    pub var empty: Self = .{ // actually this should be a dispatch that has a single entry that DNUs everything
+        .header = HeapObject.staticHeaderWithClassLengthHash(4,class.Dispatch_I,0),
+        .hash = 0,
+        .free = 0,
+        .length = 0,
+        .state = .clean,
+        .superOrDNU = undefined,
+        .methods = undefined, // should make this a footer
+    };
+    var internalNeedsInitialization = true;
     fn new() Self {
-        if (internal[0]==null) {
+        if (internalNeedsInitialization) {
+            empty.header.addFooter();
             internal[0] = super;
             internal[1] = dnu;
             internal[2] = fail;
             internal[3] = prime3;
             internal[4] = prime5;
-            std.debug.print("bitTest0 {}\n",.{&bitTest0});
-            std.debug.print("bitTest1 {}\n",.{&bitTest1});
-            std.debug.print("bitTest2 {}\n",.{&bitTest2});
             for (bitTests[0..],internal[5..]) |s,*i| {
-                std.debug.print("bitTests {}\n",.{s});
                 i.* = s;
             }
-            std.debug.print("bitTest31 {}\n",.{&bitTest31});
-            for (internal[0..],0..) |*s1,i| {
-                const s1v = s1.*;
-                for (internal[i+1..]) |*s2| {
-                    const s2v = s2.*;
-                    if (@ptrToInt(s2v)<@ptrToInt(s1v)) {
-                        s1.* = s2v;
-                        s2.* = s1v;
-                    }
-                }
-            }
+            std.sort.insertionSort(ThreadedFn,&internal,{},lessThan);
+            internalNeedsInitialization = false;
         }
         return undefined;
     }
-    fn undefinedForTest() Self {
-        return undefined;
+    fn lessThan(_:void, lhs: ThreadedFn, rhs: ThreadedFn) bool {
+        return @ptrToInt(lhs)<@ptrToInt(rhs);
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
-        self.header = HeapObject.partialWithClassLengthHash(4,class.Dispatch_I,0);
+        self.header = HeapObject.staticHeaderWithClassLengthHash(4,class.Dispatch_I,0);
         self.hash = minHash;
         self.superOrDNU = code;
         for (self.methods[0..minHash]) |*ptr|
-            ptr.* = @ptrCast([*]const Code,self.superOrDNU);
+            ptr.* = @ptrCast([*]const Code,&self.superOrDNU);
         self.free = minHash;
         self.length = @sizeOf(Self);
         self.state = .clean;
@@ -102,15 +100,9 @@ const Dispatch = extern struct {
         if (ptr>=@ptrToInt(self)-cmpVsDispatchDifferential and ptr<=(@ptrToInt(self)+self.length)*@sizeOf(Object)) return false;
         var low: usize = 0;
         var high: usize = internal.len;
-        std.debug.print("isExternalCompiledMethod {x} {x} {x} {}\n",.{ptr,@ptrToInt(internal[0]),@ptrToInt(internal[internal.len-1]),cmp});
-        for (internal[0..],0..) |i,idx| {
-            std.debug.print(" {}: {?} {}\n",.{idx,i,i==cmp});
-        }
         while (low<high) {
             const mid = (low+high)/2;
-            std.debug.print("bs {} {} {}",.{low,mid,high});
             const v = internal[mid];
-            std.debug.print(" {x}\n",.{@ptrToInt(v)});
             if (v==cmp) return false;
             if (@ptrToInt(v)<ptr) {
                 low = mid+1;
@@ -125,11 +117,11 @@ const Dispatch = extern struct {
         if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    inline fn lookup(self: *Self, selector: u64) [*]const Code {
-        return self.lookupAddress(selector).*;
+    inline fn lookup(self: *Self, selector: u64) *const CompiledMethod {
+        return @ptrCast(*Code,self.lookupAddress(selector).*).compiledMethodPtr(0);
     }
-    inline fn lookupAddress(self: *Self, selector: u64) *[*]const Code {
-        return @ptrCast(*[*]const Code,&self.methods[selector*@as(u64,self.hash)>>32]);
+    inline fn lookupAddress(self: *Self, selector: u64) *[*]Code {
+        return @ptrCast(*[*]Code,&self.methods[selector*@as(u64,self.hash)>>32]);
     }
     inline fn preHash(selector: u32) u64 {
         return @as(u64,selector*%u32_phi_inverse);
@@ -139,7 +131,7 @@ const Dispatch = extern struct {
         const hashed = preHash(hash);
         const cmp = self.lookup(hashed);
         // all the ugly casting is to make signature match
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@intToPtr(*Dispatch,@ptrToInt(&cmp.code[1])),sp,process,context,@bitCast(Object,@as(u64,hash))});
+        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@ptrCast(*Dispatch,@constCast(&cmp.code[1])),sp,process,context,selector});
     }
     fn disambiguate(location: [] Code,one: *const CompiledMethod, another: *const CompiledMethod) [*]Code {
         const oneHash = one.selector.hash32();
@@ -157,7 +149,7 @@ const Dispatch = extern struct {
         location[0]= Code.prim(bitTests[shift]);
         return location.ptr;
     }
-    fn add(self: *Self, cmp: *const CompiledMethod) !void {
+    fn add(self: *Self, cmp: *CompiledMethod) !void {
         while (true) {
             if (@cmpxchgWeak(DispatchState,&self.state,.clean,.beingUpdated,.SeqCst,.SeqCst)) |notClean| {
                 if (notClean==.dead) return error.Conflict;
@@ -166,18 +158,18 @@ const Dispatch = extern struct {
         defer {self.state = .clean;}
         const hashed = preHash(cmp.selector.hash32());
         const address = self.lookupAddress(hashed);
-        if (@cmpxchgWeak(*const CompiledMethod,address,(&self.superOrDNU[0]).compiledMethodPtr(0),cmp,.SeqCst,.SeqCst)==null)
-            return; // we replaced DNU with mathod
-        const existing = address.*;
+        if (@cmpxchgWeak([*] Code,address,&self.superOrDNU,cmp.codePtr(),.SeqCst,.SeqCst)==null)
+            return; // we replaced DNU with method
+        const existing = @ptrCast(*Code,address.*).compiledMethodPtr(0);
         if (existing.selector.equals(cmp.selector)) {
-            address.* = cmp;
+            address.* = cmp.codePtr();
             return;
         }
-        if (self.isExternalCompiledMethod(existing)) { // an actual cmp - not internalx
+        if (self.isExternalCompiledMethod(@constCast(existing).codePtr()[0].prim)) { // an actual cmp - not internal
             const end = self.length-@offsetOf(Self,"methods")/@sizeOf(Object)-2;
             if (self.free < end) {
                 self.free += 3;
-                const disambiguator = disambiguate(self.methods[self.free-3..self.free],existing,cmp);
+                const disambiguator = disambiguate(@ptrCast([*]Code,&self.methods)[self.free-3..self.free],existing,cmp);
                 address.* = disambiguator;
                 return;
             }
@@ -190,7 +182,8 @@ const Dispatch = extern struct {
         &bitTest12,&bitTest13,&bitTest14,&bitTest15,&bitTest16,&bitTest17,
         &bitTest18,&bitTest19,&bitTest20,&bitTest21,&bitTest22,&bitTest23,
         &bitTest24,&bitTest25,&bitTest26,&bitTest27,&bitTest28,&bitTest29,
-        &bitTest30,&bitTest31};
+        &bitTest30,&bitTest31,
+    };
     fn bitTest0(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         const pc = (if (selector.hash32()&1<<0==0) programCounter[0] else programCounter[1]).codeRef;
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
@@ -343,37 +336,34 @@ const Dispatch = extern struct {
         @panic("called dnu function");
     }
     fn testIncrement(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        _ = .{sp, process, context, selector};
+        _ = .{process, context, selector};
         @intToPtr(*usize,programCounter[0].uint).* += 1;
+        return sp;
     }
 };
-fn testYourself(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-    _ = .{process, context};
-    if (selector.equals(symbols.yourself)) @panic("hash doesn't match");
-    @intToPtr(*usize,programCounter[0].uint).* += 2;
-    return sp;
-}
-fn push1(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
-    const newSp = sp - 1;
-    newSp[0] = Object.from(1);
-    return newSp;
-}
-fn push2(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
-    const newSp = sp - 1;
-    newSp[0] = Object.from(2);
-    return newSp;
-}
-fn push3(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
-    const newSp = sp - 1;
-    newSp[0] = Object.from(3);
-    return newSp;
-}
 test "disambiguate" {
     const ee = std.testing.expectEqual;
+    const fns = struct {
+        fn push1(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
+            const newSp = sp - 1;
+            newSp[0] = Object.from(1);
+            return newSp;
+        }
+        fn push2(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
+            const newSp = sp - 1;
+            newSp[0] = Object.from(2);
+            return newSp;
+        }
+        fn push3(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
+            const newSp = sp - 1;
+            newSp[0] = Object.from(3);
+            return newSp;
+        }
+    };
     // value=01101 yourself=00001 @"<="=11101
-    const method1 = compileMethod(symbols.value,0,0,.{&push1,&Code.end});
-    const method2 = compileMethod(symbols.yourself,0,0,.{&push2,&Code.end});
-    const method3 = compileMethod(symbols.@"<=",0,0,.{&push3,&Code.end});
+    const method1 = compileMethod(symbols.value,0,0,.{&fns.push1,&Code.end});
+    const method2 = compileMethod(symbols.yourself,0,0,.{&fns.push2,&Code.end});
+    const method3 = compileMethod(symbols.@"<=",0,0,.{&fns.push3,&Code.end});
     var space = [_]Code{Code.object(Nil),Code.object(Nil),Code.object(Nil)};
     var dispatcher = Dispatch.disambiguate(&space,method1.asCompiledMethodPtr(),method2.asCompiledMethodPtr());
     const push1Code = @ptrCast([*]Code,&method1.asCompiledMethodPtr().code);
@@ -396,47 +386,57 @@ test "disambiguate" {
     try ee(dispatcher[0].prim(dispatcher+1,sp,&process,&context,symbols.value)[0].to(i64),1);
     try ee(dispatcher[0].prim,&Dispatch.bitTest4);
 }
-fn testAt(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-    _ = .{sp, process, context};
-    if (selector!=symbols.@"at:".hash32()) @panic("hash doesn't match");
-    @intToPtr(*usize,programCounter[0].uint).* += 4;
-}
 test "isExternalCompiledMethod" {
     const e = std.testing.expect;
-    var d = Dispatch.undefinedForTest();
+    var d: Dispatch = undefined;
     try e(d.isExternalCompiledMethod(&Dispatch.bitTest0));
     d = Dispatch.new();
     try e(!d.isExternalCompiledMethod(&Dispatch.bitTest0));
     try e(!d.isExternalCompiledMethod(&Dispatch.bitTest31));
-    try e(d.isExternalCompiledMethod(&testYourself));
+    try e(!d.isExternalCompiledMethod(&Dispatch.super));
+    try e(d.isExternalCompiledMethod(&Dispatch.testIncrement));
 }
-// test "add methods" {
-//     var temp0: usize = 0;
-//     var temp: usize = 0;
-//     const methodType = compiledMethodType(2);
-//     var code0 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp0))});
-//     var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&testYourself),Code.uint(@ptrToInt(&temp))});
-//     var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&testAt),Code.uint(@ptrToInt(&temp))});
-//     var tE = TestExecution.new();
-//     tE.init();
-//     var dispatch = Dispatch.new();
-//     dispatch.initTest(&temp);
-//     try dispatch.add(symbols.yourself,code0.asCompiledMethodPtr());
-//     try dispatch.add(symbols.yourself,code1.asCompiledMethodPtr());
-//     dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.yourself);
-//     try std.testing.expectEqual(temp,2);
-//     dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.self); // invoke DNU
-//     try std.testing.expectEqual(temp,3);
-//     try dispatch.add(symbols.@"at:",code2.asCompiledMethodPtr());
-//     dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.yourself);
-//     try std.testing.expectEqual(temp,5);
-//     dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.@"at:");
-//     try std.testing.expectEqual(temp,9);
-//     try std.testing.expectEqual(dispatch.add(symbols.name,code2.asCompiledMethodPtr()),error.Conflict);
-//     // for (1..40) |n| {
-//     //     std.debug.print("{} = {} {}\n",.{symbol.symbol1(n),(Dispatch.preHash(symbol.symbol0(n).hash32())*%@as(u64,13))>>32,(Dispatch.preHash(symbol.symbol1(n).hash32())*%@as(u64,13))>>32});
-//     // }
-// }
+test "add methods" {
+    var temp0: usize = 0;
+    var temp: usize = 0;
+    const methodType = compiledMethodType(2);
+    const fns = struct {
+        fn testYourself(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
+            _ = .{process, context};
+            if (!selector.equals(symbols.yourself)) @panic("hash doesn't match");
+            @intToPtr(*usize,programCounter[0].uint).* += 2;
+            return sp;
+        }
+        fn testAt(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
+            _ = .{process, context};
+            if (!selector.equals(symbols.@"at:")) @panic("hash doesn't match");
+            @intToPtr(*usize,programCounter[0].uint).* += 4;
+            return sp;
+        }
+    };
+    var code0 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@ptrToInt(&temp0))});
+    var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@ptrToInt(&temp))});
+    var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&fns.testAt),Code.uint(@ptrToInt(&temp))});
+    var tE = TestExecution.new();
+    tE.init();
+    var dispatch = Dispatch.new();
+    dispatch.initTest(&temp);
+    try dispatch.add(code0.asCompiledMethodPtr());
+    try dispatch.add(code1.asCompiledMethodPtr());
+    _ = dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.yourself);
+    try std.testing.expectEqual(temp,2);
+    _ = dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.self); // invoke DNU
+    try std.testing.expectEqual(temp,3);
+    try dispatch.add(code2.asCompiledMethodPtr());
+    _ = dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.yourself);
+    try std.testing.expectEqual(temp,5);
+    _ = dispatch.dispatch(tE.sp,&tE.process,&tE.ctxt,symbols.@"at:");
+    try std.testing.expectEqual(temp,9);
+    try std.testing.expectEqual(dispatch.add(code2.asCompiledMethodPtr()),error.Conflict);
+    // for (1..40) |n| {
+    //     std.debug.print("{} = {} {}\n",.{symbol.symbol1(n),(Dispatch.preHash(symbol.symbol0(n).hash32())*%@as(u64,13))>>32,(Dispatch.preHash(symbol.symbol1(n).hash32())*%@as(u64,13))>>32});
+    // }
+}
 pub const DispatchPtr = *Dispatch;
 const ClassDispatch = extern struct {
     dispatch: ?*Dispatch,

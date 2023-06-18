@@ -86,7 +86,7 @@ pub const Context = struct {
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
-        ctxt.header = HeapObject.partialOnStack(baseSize+selfOffset);
+        ctxt.header = HeapObject.partialHeaderOnStack(baseSize+selfOffset);
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }

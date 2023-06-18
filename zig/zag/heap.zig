@@ -448,17 +448,22 @@ pub const HeapObject = packed struct(u64) {
         return self.objectFormat.iterator()(self);
     }
     const partialHeader = @bitCast(u64,HeapObject{.classIndex=0,.hash=0,.objectFormat=.header,.age=.onStack,.length=0});
-    pub inline fn partialOnStack(selfOffset: u16) HeapObject {
+    pub inline fn partialHeaderOnStack(selfOffset: u16) HeapObject {
         return @bitCast(HeapObject,partialHeader | @as(u64,selfOffset)<<16);
     }
-    pub inline fn partialWithLength(size: u12) HeapObject {
+    pub inline fn staticHeaderWithLength(size: u12) HeapObject {
         return HeapObject{.classIndex=0,.hash=0,.objectFormat=.header,.age=.static,.length=size};
     }
-    pub inline fn partialWithClassLengthHash(classIndex: ClassIndex,size: u12, hash:u24) HeapObject {
+    pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex,size: u12, hash:u24) HeapObject {
         return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.header,.age=.static,.length=size};
     }
     pub inline fn simpleStackObject(size: u12, classIndex: ClassIndex, hash: u24) HeapObject {
         return HeapObject{.classIndex=classIndex,.hash=hash,.objectFormat=.directIndexed,.age=.onStack,.length=size};
+    }
+    pub fn addFooter(headerPtr: HeapObjectPtr) void {
+        const footerPtr = realHeapObject(headerPtr);
+        footerPtr.* = headerPtr.*;
+        footerPtr.objectFormat = .directIndexed;
     }
     pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
         const result = if (self.objectFormat.isHeader())
