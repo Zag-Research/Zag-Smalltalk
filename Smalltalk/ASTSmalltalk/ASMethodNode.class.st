@@ -6,7 +6,8 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
-		'class'
+		'class',
+		'isRecursive'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -91,4 +92,14 @@ ASMethodNode >> selector [
 { #category : #accessing }
 ASMethodNode >> selector: aString [ 
 	selector := aString
+]
+
+{ #category : #accessing }
+ASMethodNode >> writeMethod: aStream [ 
+	aStream cr.
+	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
+	aStream << 'var ' << selector << ' ='. aStream cr.
+	aStream tab. aStream << 'compileMethod(sym.' << selector << ',' << '1' << ',' << '2' << ',.{'. aStream cr.
+	aStream << '});'. aStream cr.
+	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
 ]

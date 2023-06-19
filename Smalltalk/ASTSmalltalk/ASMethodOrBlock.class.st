@@ -5,7 +5,8 @@ Class {
 	#name : #ASMethodOrBlock,
 	#superclass : #ASCodeBlock,
 	#instVars : [
-		'arguments'
+		'arguments',
+		'instructions'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -34,11 +35,24 @@ ASMethodOrBlock >> arguments: aCollection [
 		as: Array
 ]
 
+{ #category : #printing }
+ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
+| method |
+	method := (ASPharoVisitor compiler: self) visit: aCompiledMethod ast.
+	method instructions:  (aCompiledMethod ir accept: (ASPharoVisitor compiler: self)).
+	^ method
+]
+
 { #category : #initialization }
 ASMethodOrBlock >> initialize [
 
 	super initialize.
 	arguments := #(  )
+]
+
+{ #category : #printing }
+ASMethodOrBlock >> instructions: someInstructions [ 
+	instructions := someInstructions
 ]
 
 { #category : #printing }

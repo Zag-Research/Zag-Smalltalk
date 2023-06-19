@@ -50,6 +50,19 @@ ASPharoCompilerProgramTest >> testFib [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testIntFib [
+	| result aStream |
+	result := self
+		          buildFromClass: Integer class
+		          selector: #fibonacci.
+	
+
+	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig') writeStream.
+	result writeZig: aStream.
+	aStream close.
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testStart42 [
 
 	| result |
