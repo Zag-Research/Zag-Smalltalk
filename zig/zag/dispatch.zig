@@ -61,7 +61,7 @@ const Dispatch = extern struct {
             for (bitTests[0..],internal[5..]) |s,*i| {
                 i.* = s;
             }
-            std.sort.insertionSort(ThreadedFn,&internal,{},lessThan);
+            std.sort.insertion(ThreadedFn,&internal,{},lessThan);
             internalNeedsInitialization = false;
         }
         return undefined;
