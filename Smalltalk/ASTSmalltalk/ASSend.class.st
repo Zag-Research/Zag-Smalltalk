@@ -43,6 +43,11 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : #parsing }
+ASSend >> isASSend [
+	^true
+]
+
 { #category : #printing }
 ASSend >> printOn: s [
 
@@ -79,4 +84,10 @@ ASSend >> target [
 { #category : #parsing }
 ASSend >> target: expression [
 	target := expression
+]
+
+{ #category : #building }
+ASSend >> zigString: syms [
+	syms at: selector ifPresent:[ :sym | ^'&e.send, ', sym ,',' ]
+	ifAbsent: [ ^'&e.send, ', selector ,',' ]
 ]

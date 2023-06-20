@@ -33,6 +33,11 @@ ASLiteral >> baseValue [
 ]
 
 { #category : #accessing }
+ASLiteral >> isASLiteral [
+	^true
+]
+
+{ #category : #accessing }
 ASLiteral >> literal [
 
 	^ literal

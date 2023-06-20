@@ -6,3 +6,23 @@ Class {
 	#superclass : #Object,
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #testing }
+ASStatement >> isASLiteral [
+	^false
+]
+
+{ #category : #testing }
+ASStatement >> isASRef [
+	^false
+]
+
+{ #category : #testing }
+ASStatement >> isASSelf [
+	^false
+]
+
+{ #category : #testing }
+ASStatement >> isASSend [
+	^false
+]

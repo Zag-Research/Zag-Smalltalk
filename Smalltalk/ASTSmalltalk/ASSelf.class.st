@@ -45,6 +45,11 @@ ASSelf >> acceptVisitor: aVisitor [
 ]
 
 { #category : #accessing }
+ASSelf >> isASSelf [
+	^true
+]
+
+{ #category : #accessing }
 ASSelf >> method [
 
 	^ method
@@ -80,4 +85,9 @@ ASSelf >> superclass: aClass [
 ASSelf >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toSelf: self
+]
+
+{ #category : #building }
+ASSelf >> zigString: syms [ 
+	^'&e.pushTemp, 1,', '&e.send, ', method selector, ','
 ]

@@ -26,6 +26,11 @@ ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
+{ #category : #comparing }
+ASRef >> isASRef [
+	^true
+]
+
 { #category : #printing }
 ASRef >> printOn: s [
 
@@ -44,4 +49,10 @@ ASRef >> variable [
 ASRef >> variable: aSymbol [
 
 	variable := aSymbol
+]
+
+{ #category : #comparing }
+ASRef >> zigString: syms [
+"load value of reference to the stack? where do I get the value from? local, global arg, instance "
+^ 'load ', variable name
 ]

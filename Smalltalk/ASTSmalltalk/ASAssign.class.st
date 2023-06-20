@@ -60,3 +60,10 @@ ASAssign >> variable: v expression: e [
 	variable := v.
 	expression := e
 ]
+
+{ #category : #accessing }
+ASAssign >> zigString: syms [
+"load value of expression into the variable?"
+	expression isASLiteral ifTrue: [ " can I just load the value directly?" ^'load ', expression literal asString].
+	^ (expression zigString: syms), 'how to do an assign?'
+]
