@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'selector',
 		'class',
-		'isRecursive'
+		'isRecursive',
+		'pragmas'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -80,6 +81,11 @@ ASMethodNode >> maxDepth: statements [
 	^statements ifEmpty: [ 0 ] ifNotEmpty:  [statements max: [ :statement |  statement maxDepth ]]
 ]
 
+{ #category : #private }
+ASMethodNode >> pragmas: somePragmas [ 
+	pragmas := somePragmas 
+]
+
 { #category : #printing }
 ASMethodNode >> printOn: s [
 
@@ -104,9 +110,10 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << selector << ' ='. aStream cr.
-	aStream tab. aStream << 'compileMethod(' << (syms at: selector ifPresent:[ :value| value] ifAbsent: [ 'sym.',selector asZigString ])
+	aStream tab. aStream << 'compileMethod(' 
+			<< (syms at: selector ifPresent:[ :value| value] ifAbsent: [ 'sym.',selector asZigString ])
 			<< ',' << locals size asString << ',' << (self maxDepth: body) asString << ',.{'. aStream cr.
-	body do: [ :asStatement | aStream tab.  aStream << (asStatement zigString: syms) ].
+	body do: [ :asStatement | aStream tab.  aStream << (asStatement zigString: syms). aStream cr ].
 	aStream << '});'. aStream cr.
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
 ]

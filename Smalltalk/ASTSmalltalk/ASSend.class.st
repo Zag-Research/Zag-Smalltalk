@@ -95,4 +95,5 @@ ASSend >> target: expression [
 ASSend >> zigString: syms [
 	syms at: selector ifPresent:[ :sym | ^'&e.send, ', sym ,',' ]
 	ifAbsent: [ ^'&e.send, ', selector ,',' ]
+	"what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
 ]

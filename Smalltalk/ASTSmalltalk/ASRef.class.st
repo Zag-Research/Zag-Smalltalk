@@ -54,5 +54,5 @@ ASRef >> variable: aSymbol [
 { #category : #comparing }
 ASRef >> zigString: syms [
 "load value of reference to the stack? where do I get the value from? local, global arg, instance "
-^ 'load ', variable name
+	^ 'load ', variable name
 ]

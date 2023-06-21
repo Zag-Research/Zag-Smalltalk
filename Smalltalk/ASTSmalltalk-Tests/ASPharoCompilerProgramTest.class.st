@@ -63,6 +63,19 @@ ASPharoCompilerProgramTest >> testIntFib [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testIntbitShiftMagnitude [
+	| result aStream |
+	result := self
+		          buildFromClass: Integer class
+		          selector: #bitShiftMagnitude:.
+	
+
+	aStream := (FileSystem disk workingDirectory / 'zigBitShiftMagnitudeString.zig') writeStream.
+	result writeZig: aStream.
+	aStream close.
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testStart42 [
 
 	| result |
