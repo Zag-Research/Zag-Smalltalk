@@ -5,6 +5,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const class = @import("class.zig");
 const ClassIndex = class.ClassIndex;
+const max_classes = class.ReservedNumberOfClasses;
 const Process = @import("process.zig").Process;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -26,32 +27,38 @@ const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const forTest = Dispatch.forTest;
-const DispatchState = enum(u8){clean,beingUpdated,dead};
 const noArgs = ([0]Object{})[0..];
 const Dispatch = extern struct {
     header: HeapObject,
-    hash: u32,
+    hash: u64,
     free: u16,
     length: u16,
     state: DispatchState,
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
     methods: [minHash+extra][*]const Code, // this is just the default... normally a larger array
     const Self = @This();
+    const classIndex = class.Dispatch_I;
+    const DispatchState = enum(u8){clean,beingUpdated,dead};
     const minHash = 13; // must be prime
     const extra = 8; // must be multiple of 8 to allow cast below
     var internal = [_]ThreadedFn{&super}**(bitTests.len+5);
-    pub var empty: Self = .{ // actually this should be a dispatch that has a single entry that DNUs everything
-        .header = HeapObject.staticHeaderWithClassLengthHash(4,class.Dispatch_I,0),
-        .hash = 0,
+    var empty: Self = .{
+        .header = HeapObject.staticHeaderWithClassLengthHash(classIndex,@offsetOf(Self,"methods")/8-1+1,0), // don't count header, but do count one element of methods
+        .hash = 1,
         .free = 0,
-        .length = 0,
+        .length = 1,
         .state = .clean,
-        .superOrDNU = undefined,
+        .superOrDNU = .{Code.prim(&dnu),Code.uint(0)},
         .methods = undefined, // should make this a footer
     };
+    var dispatches = [_]Self{&empty}**max_classes;
+    pub inline fn lookup(selector: Object,classIndex: ClassIndex) [*]const Code {
+        return dispatches[classIndex].lookupAddress(preHash(selector.hash32())).*;
+    }
     var internalNeedsInitialization = true;
     fn new() Self {
         if (internalNeedsInitialization) {
+            empty.methods[0] = @ptrCast([*]const Code,&empty.superOrDNU);
             empty.header.addFooter();
             internal[0] = super;
             internal[1] = dnu;
@@ -70,7 +77,7 @@ const Dispatch = extern struct {
         return @ptrToInt(lhs)<@ptrToInt(rhs);
     }
     inline fn initPrivate(self: *Self, code: [2]Code) void { // should only be used by next three functions or tests
-        self.header = HeapObject.staticHeaderWithClassLengthHash(4,class.Dispatch_I,0);
+        self.header = HeapObject.staticHeaderWithClassLengthHash(classIndex,4,0);
         self.hash = minHash;
         self.superOrDNU = code;
         for (self.methods[0..minHash]) |*ptr|
@@ -117,11 +124,8 @@ const Dispatch = extern struct {
         if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    inline fn lookup(self: *Self, selector: u64) *const CompiledMethod {
-        return @ptrCast(*Code,self.lookupAddress(selector).*).compiledMethodPtr(0);
-    }
-    inline fn lookupAddress(self: *Self, selector: u64) *[*]Code {
-        return @ptrCast(*[*]Code,&self.methods[selector*@as(u64,self.hash)>>32]);
+    fn lookupAddress(self: *Self, selector: u64) *[*]const Code {
+        return &self.methods[selector*self.hash>>32];
     }
     inline fn preHash(selector: u32) u64 {
         return @as(u64,selector*%u32_phi_inverse);
@@ -129,9 +133,9 @@ const Dispatch = extern struct {
     pub fn dispatch(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         const hash = selector.hash32();
         const hashed = preHash(hash);
-        const cmp = self.lookup(hashed);
+        const code = self.lookupAddress(hashed).*;
         // all the ugly casting is to make signature match
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,cmp.code[0].prim),.{@ptrCast(*Dispatch,@constCast(&cmp.code[1])),sp,process,context,selector});
+        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,code[0].prim),.{@ptrCast(*Dispatch,@constCast(code+1)),sp,process,context,selector});
     }
     fn disambiguate(location: [] Code,one: *const CompiledMethod, another: *const CompiledMethod) [*]Code {
         const oneHash = one.selector.hash32();
@@ -158,9 +162,9 @@ const Dispatch = extern struct {
         defer {self.state = .clean;}
         const hashed = preHash(cmp.selector.hash32());
         const address = self.lookupAddress(hashed);
-        if (@cmpxchgWeak([*] Code,address,&self.superOrDNU,cmp.codePtr(),.SeqCst,.SeqCst)==null)
+        if (@cmpxchgWeak([*]const Code,address,&self.superOrDNU,cmp.codePtr(),.SeqCst,.SeqCst)==null)
             return; // we replaced DNU with method
-        const existing = @ptrCast(*Code,address.*).compiledMethodPtr(0);
+        const existing = @ptrCast(*const Code,address.*).compiledMethodPtr(0);
         if (existing.selector.equals(cmp.selector)) {
             address.* = cmp.codePtr();
             return;
@@ -396,6 +400,12 @@ test "isExternalCompiledMethod" {
     try e(!d.isExternalCompiledMethod(&Dispatch.super));
     try e(d.isExternalCompiledMethod(&Dispatch.testIncrement));
 }
+test "empty dispatch" {
+    const ee = std.testing.expectEqual;
+    _ = Dispatch.new();
+    const empty = Dispatch.empty;
+    try ee(empty.lookupAddress(symbols.value),&empty.superOrDNUU);
+}
 test "add methods" {
     var temp0: usize = 0;
     var temp: usize = 0;
@@ -453,8 +463,7 @@ const ClassDispatch = extern struct {
 //    foo.store(bar);
 //    try std.testing.expectEqual(foo,bar);
 //}
-const max_classes = class.ReservedNumberOfClasses;
-var classDispatch : [max_classes]ClassDispatch = undefined;
+//var classDispatch : [max_classes]ClassDispatch = undefined;
 inline fn bumpSize(size:u16) u16 {
     return size*2;
 }

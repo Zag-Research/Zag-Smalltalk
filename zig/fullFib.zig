@@ -45,20 +45,22 @@ fn initSmalltalk() void {
         compileMethod(sym.fibonacci,1,2,.{
             &e.verifySelector,
             &e.pushContext,"^",
+            // define all blocks here
             &e.pushNonlocalBlock_one, // [^ 1]
-            &e.popIntoTemp, 0, // block reference
-            &e.pushTemp, 1, // self
+            &e.popLocal, 0, // block reference
+            // all blocks defined by now
+            &e.pushLocal, 1, // self
             &e.pushLiteral, Object.from(2),
-            &e.send, Sym.@"<=",
-            &e.pushTemp, 0,
-            &e.send, Sym.@"ifTrue:",
+            &e.send1, Sym.@"<=",
+            &e.pushLocal, 0,
+            &e.send1, Sym.@"ifTrue:",
             
-            &e.pushTemp,1, // self
+            &e.pushLocal,1, // self
             &e.pushLiteral, Object.from(1),
-            &e.send, Sym.@"-",
-            &e.send, fibonacci_,
+            &e.send1, Sym.@"-",
+            &e.send0, fibonacci_,
             
-            &e.pushTemp,1, // self
+            &e.pushLocal,1, // self
             &e.pushLiteral, Object.from(2),
             &e.send, Sym.@"-",
             &e.send, fibonacci_,

@@ -3,52 +3,69 @@
 This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
 
 ### Threaded Method Implementation
-The threaded implementation is a sequence of addresses of functions implementing primitives  and control operations. Every method has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every control operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
+The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every method has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every control operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
 
 ### Native Method Implementation
 The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
 
-When sending a message, the current Context will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to a trampoline function that will execute the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the trampoline function.
+When sending a message, the current Context will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
-When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. If we are executing in native mode, the first threaded address will simply point to the address of the first native function. Or, if there is no native version, the first address will point to a primitive to schedule compilation of this method. If we are executing in threaded mode (single-stepping, for example) we will skip the first word and thereby execute the first real instruction of the threaded implementation of the method.
+When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. If we are executing in native mode, the first threaded address will simply point to the address of the first native function. Or, if there is no native version, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. If we are executing in threaded mode (single-stepping, for example) we will skip the first word and thereby execute the first real instruction of the threaded implementation of the method.
 
 ## The stack and Contexts
 
-The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the top of the Nursery for a Thread (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be copied to the Thread's Nurseery arena (and potentially to the Teen and then Global arenas). Similarly, if `thisContext` is referenced, the Context (and ones it links to) will be copied to the heap.
+The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be copied to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be copied to the heap.
 
 There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context; and b) switching between interpreter and native implementation is seamless.
 
 #### Stack example
 
-When m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like:
+When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
 
 | Stack  | Description              | Pointers                                                  |
 | ------ | ------------------------ | --------------------------------------------------------- |
-| ...    | m3 stack                 |                                                           |
-| object | m2 self                  |                                                           |
-| object | m2 parameters and locals |                                                           |
-| ...    |                          |                                                           |
-| method | m2 method                |                                                           |
-| ctxt   | m2 ContextPtr            | ---> m3 header (which could be above this or on the heap) |
-| npc    | m2 native pc to return to       |                                                           |
-| tpc    | m2 threaded pc to return to       |                                                           |
-| header | m2 header                | <--- m1 ctxt                                              |
-| ...    | m2 stack                 |                                                           |
-| object | m1 self                  |                                                           |
-| object | m1 parameters and locals |                                                           |
-| ...    |                          |                                                           |
-| method | m1 method                |                                                           |
-| ctxt   | m1 ContextPtr            | ---> m2 header                                            |
-| npc    | m1 native pc to return to       |                                                           |
-| tpc    | m1 threaded pc to return to       |                                                           |
-| header | m1 header                | <--- aContext                                             |
-| ...    | m1 stack                 |                                                           |
+| ...    |               | space for stack growth                                                   |
+| object | m0 parameters            |  <--- sp                                                         |
 | object | m0 self                  |                                                           |
-| object | m0 parameters            |                                                           |
-| ...    | m0 temps                 | <--- sp                                                   |
+| ...    | m1 stack                 |                                                           |
+| header | m1 header                | <--- aContext                                             |
+| tpc    | m1 threaded pc to return to       |                                                           |
+| npc    | m1 native pc to return to       |                                                           |
+| ctxt   | m1 ContextPtr            | ---> m2 header                                            |
+| method | m1 method                |                                                           |
+| object | m1 locals |     allocated by pushContext                                                      |
+| object | m1 parameters  | pushed by m2                                                          |
+| object | m1 self                  | pushed by m2                                                          |
+| ...    | m2 stack                 |                                                           |
+| header | m2 header                | <--- m1 ctxt                                              |
+| tpc    | m2 threaded pc to return to       |                                                           |
+| npc    | m2 native pc to return to       |                                                           |
+| ctxt   | m2 ContextPtr            | ---> m3 Context header (see example below on the heap) |
+| method | m2 method                |                                                           |
+| object | m2 locals |                                                           |
+| object | m2 parameters |                                                           |
+| object | m2 self                  |                                                           |
+| ...    | m3 stack                 |                                                           |
+
+
+| m3 Context | Description | Pointers |
+| ----  | ------------------------ | --------------------------------------------------------- |
+| header | m3 header |
+| tpc    | m3 threaded pc to return to       |                                                           |
+| npc    | m3 native pc to return to       |                                                           |
+| ctxt   | m3 ContextPtr            | ---> m4 header                                            |
+| method | m3 method                |                                                           |
+| object | m3  locals |                                                           |
+| object | m3 parameters |                                                           |
+| ...    | ...                         |                                                           |
+| object | m3 self                  |                                                           |
+| ...    | m4 stack                 |                                                           |
+| footer  | m3 footer | needed for all heap objects |
+
+
 Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The partial header is also at the front of the object, rather than the end. The context is only turned into a proper object if it is promoted to the heap (via a spill or explicit reference).
 
-A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. Primitives that can fail are followed by an offset to branch to if successful. If the primitive can do the whole job of the method if it succeeds will have a -1 offset (which is otherwise meaningless) which says to return from the method on success. This will be followed by the thread-code to create the context.
+A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. If the primitive succeeds, it adjusts the stack and returns to the current context. Primitives that fail proceed to the next threaded function, which will typically create a Context.
 
 #### Non-local Return and Exceptions
 Non-local return does a return from the target Context, making all the intervening Contexts inaccessible (and hence garbage). In most cases this is within a couple of instructions of as efficient as a normal return.
@@ -59,11 +76,12 @@ One of the defining aspects of object-oriented programming is that methods are c
 
 #### Classic Smalltalk dispatch
 Logically, Smalltalk message dispatch follows these steps:
- 1. set C to the class of the target (or the current class's superclass if it's a `super` send)
- 2. look up the selector symbol in C's `methodDict`
- 3. if found, the value of the lookup is the method code - call it
- 4. if not found and C has a superclass, set C to the superclass and continue at 2
- 5. the method is not found, so create a Message object, set C to the class of the target and go back to 2 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
+ 1. set T to the class of the target (or the current class's superclass if it's a `super` send)
+ 2. set C to T
+ 3. look up the selector symbol in C's `methodDict`
+ 4. if found, the value of the lookup is the method code - call it
+ 5. if not found and C has a superclass, set C to the superclass and continue at 3
+ 6. the method is not found, so create a Message object, set C to T and go back to 3 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
 
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
@@ -89,20 +107,24 @@ We lazily build a single dispatch table for each class, which includes not just 
 | Hash multiplier                  | a u32                  |
 | second hash multiplier | a u16                                 |                        |
 | superclass index                 | a u16                  |
-| method pointers                  | an array of MethodType |
+| method pointers                  | an array of pointers to threads |
 
 The sequence to look up a method is:
 1. use the selector hash
 2. multiply with wrap by the hash multiplier
 3. shift right by the low 5 bits of the multiplier
 4. use that as the index into the array
-5. call the method
+5. jump to the threaded code
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
 The tables are built as a near-perfect for power-of-2 tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to some kind of second-level lookup - could be an and, could be linear scan with symbols - for any, the data will follow the first-level method pointers in the table.
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
+
+## Closures
+
+Closures are defined within 
 
 ## Interpretation Classes
 

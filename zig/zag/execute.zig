@@ -542,31 +542,41 @@ pub const controlPrimitives = struct {
         context.convertToProperHeapObject(sp,process);
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
     }
-    pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\npopIntoTemp: {} {}",.{pc[0].uint,sp[0]});
-        context.setTemp(pc[0].uint,sp[0]);
-        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
-    }
-    pub fn popIntoTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        context.setTemp(0,sp[0]);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
-    }
-    pub fn pushSelf(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn pushLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        newSp[0]=context.getSelf();
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
-    }
-    pub fn pushTemp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        const newSp = sp-1;
-        newSp[0]=context.getTemp(pc[0].uint-1);
-        trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,process),context.allTemps(process)});
+        newSp[0]=context.getLocal(pc[0].uint);
+        trace("\npushLocal: {} {any} {any}",.{pc[0].uint,context.stack(newSp,process),context.allLocals(process)});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
-    pub fn pushTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn pushLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        newSp[0]=context.getTemp(0);
-        trace("\npushTemp1: {any} {*}",.{context.stack(newSp,process),pc});
+        newSp[0]=context.getLocal(0);
+        trace("\npushLocal1: {any} {*}",.{context.stack(newSp,process),pc});
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
+    }
+    pub fn pushLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref&0xfff);
+        const newSp = sp-1;
+        newSp[0] = local.getField(ref>>12);
+        trace("\npushLocalField: {} {} {any} {any}",.{ref,local,context.stack(newSp,process),context.allLocals(process)});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
+    }
+    pub fn popLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref&0xfff);
+        trace("\npopLocalField: {} {}",.{ref,sp[0]});
+        local.setField(ref>>12,sp[0]);
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
+    }
+    pub fn popLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        trace("\npopIntoLocal: {} {}",.{pc[0].uint,sp[0]});
+        context.setLocal(pc[0].uint,sp[0]);
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
+    }
+    pub fn popLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        context.setLocal(0,sp[0]);
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
     fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
         _ = cls;
@@ -756,14 +766,14 @@ test "simple executable" {
         &p.pushContext,"^",
         ":label1",
         &p.pushLiteral,comptime Object.from(42),
-        &p.popIntoTemp,0,
-        &p.pushTemp0,
+        &p.popLocal,0,
+        &p.pushLocal0,
         &p.pushLiteral0,
         &p.pushLiteralTrue,
         &p.ifFalse,"label3",
         &p.branch,"label2",
         ":label3",
-        &p.pushTemp,0,
+        &p.pushLocal,0,
         ":label4",
         &p.returnTop,
         ":label2",

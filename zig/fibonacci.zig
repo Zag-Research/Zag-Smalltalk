@@ -86,10 +86,10 @@ var fibThread =
         &e.returnNoContext,
         ":label3",
         &e.pushContext,"^",
-        &e.pushTemp0,
+        &e.pushLocal0,
         &e.p2L1, // -1 &e.pushLiteral1,&e.p2,
         &e.callRecursive, "recurse",
-        &e.pushTemp0,
+        &e.pushLocal0,
         &e.p2L2, // -2
         &e.callRecursive, "recurse",
         &e.p1, // +
