@@ -77,8 +77,16 @@ ASMethodNode >> hash [
 ]
 
 { #category : #accessing }
-ASMethodNode >> maxDepth: statements [
-	^statements ifEmpty: [ 0 ] ifNotEmpty:  [statements max: [ :statement |  statement maxDepth ]]
+ASMethodNode >> maxDepth [
+	| argMaxDepth blockLocalMaxDepth |
+	argMaxDepth := body ifEmpty: [ 0 ] ifNotEmpty:  [body max: [ :statement |  statement maxDepth ]].
+	blockLocalMaxDepth := body ifEmpty: [ 0 ] 
+										ifNotEmpty: [body max: [ :statement |  statement isASSend ifTrue:[ 
+																														statement args 
+																															ifEmpty: [ 0 ] 
+																															ifNotEmpty: [ statement args max: [ :arg | arg maxDepth]] ] 
+																													 ifFalse: [0]]].
+	^argMaxDepth + blockLocalMaxDepth
 ]
 
 { #category : #private }
@@ -112,7 +120,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << 'var ' << selector << ' ='. aStream cr.
 	aStream tab. aStream << 'compileMethod(' 
 			<< (syms at: selector ifPresent:[ :value| value] ifAbsent: [ 'sym.',selector asZigString ])
-			<< ',' << locals size asString << ',' << (self maxDepth: body) asString << ',.{'. aStream cr.
+			<< ',' << locals size asString << ',' << (self maxDepth) asString << ',.{'. aStream cr.
 	body do: [ :asStatement | aStream tab.  aStream << (asStatement zigString: syms). aStream cr ].
 	aStream << '});'. aStream cr.
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."

@@ -44,6 +44,11 @@ ASBlock >> acceptVisitor: aVisitor [
 	^ aVisitor visitBlockNode: self
 ]
 
+{ #category : #accessing }
+ASBlock >> maxDepth [
+	^locals size
+]
+
 { #category : #printing }
 ASBlock >> printOn: s [
 
