@@ -24,6 +24,11 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
+{ #category : #parsing }
+ASCascade >> maxDepth [
+	^sends ifEmpty: [ 0 ] ifNotEmpty:  [sends max: [ :send |  send maxDepth ]]
+]
+
 { #category : #printing }
 ASCascade >> printOn: s [
 

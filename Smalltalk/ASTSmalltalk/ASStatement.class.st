@@ -26,3 +26,8 @@ ASStatement >> isASSelf [
 ASStatement >> isASSend [
 	^false
 ]
+
+{ #category : #accessing }
+ASStatement >> maxDepth [
+	^0
+]

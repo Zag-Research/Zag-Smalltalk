@@ -33,6 +33,11 @@ ASAssign >> expression [
 	^ expression
 ]
 
+{ #category : #comparing }
+ASAssign >> maxDepth [
+	^expression maxDepth
+]
+
 { #category : #printing }
 ASAssign >> printOn: s [
 

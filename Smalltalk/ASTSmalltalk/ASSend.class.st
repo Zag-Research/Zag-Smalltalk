@@ -48,6 +48,11 @@ ASSend >> isASSend [
 	^true
 ]
 
+{ #category : #parsing }
+ASSend >> maxDepth [
+	^selector numArgs
+]
+
 { #category : #printing }
 ASSend >> printOn: s [
 

@@ -75,6 +75,11 @@ ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
 ]
 
+{ #category : #accessing }
+ASMethodNode >> maxDepth: statements [
+	^statements ifEmpty: [ 0 ] ifNotEmpty:  [statements max: [ :statement |  statement maxDepth ]]
+]
+
 { #category : #printing }
 ASMethodNode >> printOn: s [
 
@@ -99,7 +104,8 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << selector << ' ='. aStream cr.
-	aStream tab. aStream << 'compileMethod(sym.' << selector << ',' << locals size << ',' << '2' << ',.{'. aStream cr.
+	aStream tab. aStream << 'compileMethod(' << (syms at: selector ifPresent:[ :value| value] ifAbsent: [ 'sym.',selector asZigString ])
+			<< ',' << locals size asString << ',' << (self maxDepth: body) asString << ',.{'. aStream cr.
 	body do: [ :asStatement | aStream tab.  aStream << (asStatement zigString: syms) ].
 	aStream << '});'. aStream cr.
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
