@@ -44,13 +44,13 @@ ASSourceCompiler >> localDefs [
 
 { #category : #parsing }
 ASSourceCompiler >> methodBody [
+
 	| statements |
 	self localDefs.
 	statements := OrderedCollection new.
 	self statements: statements.
-	(statements notEmpty and: [statements last isReturn]) ifFalse: [ 
-		statements add: (ASReturn new unaryExpression: #self asASSelf)
-	].
+	(statements notEmpty and: [ statements last isReturn ]) ifFalse: [
+		statements add: (ASReturn new unaryExpression: #self asASSelf) ].
 	aScanner peek expectEnd.
 	^ statements
 ]

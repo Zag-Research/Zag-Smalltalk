@@ -78,15 +78,14 @@ ASMethodNode >> hash [
 
 { #category : #accessing }
 ASMethodNode >> maxDepth [
+
 	| argMaxDepth blockLocalMaxDepth |
-	argMaxDepth := body ifEmpty: [ 0 ] ifNotEmpty:  [body max: [ :statement |  statement maxDepth ]].
-	blockLocalMaxDepth := body ifEmpty: [ 0 ] 
-										ifNotEmpty: [body max: [ :statement |  statement isASSend ifTrue:[ 
-																														statement args 
-																															ifEmpty: [ 0 ] 
-																															ifNotEmpty: [ statement args max: [ :arg | arg maxDepth]] ] 
-																													 ifFalse: [0]]].
-	^argMaxDepth + blockLocalMaxDepth
+	argMaxDepth := body
+		               ifEmpty: [ 0 ]
+		               ifNotEmpty: [
+		               body max: [ :statement | statement maxDepth ] ].
+	blockLocalMaxDepth := self blocks ifEmpty: [0] ifNotEmpty: [ blocks max: [ :block | block arguments size ] ].
+	^ argMaxDepth + blockLocalMaxDepth
 ]
 
 { #category : #private }
@@ -115,13 +114,37 @@ ASMethodNode >> selector: aString [
 
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
+
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << selector << ' ='. aStream cr.
-	aStream tab. aStream << 'compileMethod(' 
-			<< (syms at: selector ifPresent:[ :value| value] ifAbsent: [ 'sym.',selector asZigString ])
-			<< ',' << locals size asString << ',' << (self maxDepth) asString << ',.{'. aStream cr.
-	body do: [ :asStatement | aStream tab.  aStream << (asStatement zigString: syms). aStream cr ].
-	aStream << '});'. aStream cr.
+	aStream << 'var ' << selector << ' ='.
+	aStream cr.
+	aStream tab.
+	aStream << 'compileMethod(' << (syms
+		 at: selector
+		 ifPresent: [ :value | value ]
+		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
+	<< locals size asString << ',' << self maxDepth asString << ',.{'.
+	aStream cr.
+
+
+	"create dummy context"
+	aStream tab.
+	aStream << '&e.pushContext,"^",'.
+
+	"ouput any blocks"
+	self blocks ifNotEmpty: [ blocks do: [ :block | block ] ].
+
+	"output instructions"
+	body do: [ :asStatement |
+		aStream tab.
+		aStream << (asStatement zigString: syms).
+		aStream cr ].
+
+
+	aStream tab.
+	aStream << '&e.returnTop,'. "should this be hardcoded?"
+	aStream << '});'.
+	aStream cr
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
 ]

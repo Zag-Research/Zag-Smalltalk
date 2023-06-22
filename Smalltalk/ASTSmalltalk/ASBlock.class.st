@@ -44,6 +44,11 @@ ASBlock >> acceptVisitor: aVisitor [
 	^ aVisitor visitBlockNode: self
 ]
 
+{ #category : #testing }
+ASBlock >> isASBlock [
+	^true
+]
+
 { #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size

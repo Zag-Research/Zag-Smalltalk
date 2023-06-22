@@ -28,6 +28,11 @@ ASReturn >> acceptVisitor: aVisitor [
 ]
 
 { #category : #accessing }
+ASReturn >> blocks [
+	^expression blocks
+]
+
+{ #category : #accessing }
 ASReturn >> expression [
 
 	^ expression

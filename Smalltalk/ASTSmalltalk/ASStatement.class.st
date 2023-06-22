@@ -7,6 +7,23 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #accessing }
+ASStatement >> blocks [
+
+	^ OrderedCollection new:0
+]
+
+{ #category : #testing }
+ASStatement >> isASAssign [
+
+	^ false
+]
+
+{ #category : #testing }
+ASStatement >> isASBlock [
+	^false
+]
+
 { #category : #testing }
 ASStatement >> isASLiteral [
 	^false

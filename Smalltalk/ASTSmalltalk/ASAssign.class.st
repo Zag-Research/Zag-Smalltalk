@@ -28,6 +28,11 @@ ASAssign >> acceptVisitor: aVisitor [
 	^ aVisitor visitAssign: self
 ]
 
+{ #category : #accessing }
+ASAssign >> blocks [
+	^expression blocks
+]
+
 { #category : #comparing }
 ASAssign >> expression [
 	^ expression
