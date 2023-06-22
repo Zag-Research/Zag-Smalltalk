@@ -38,6 +38,11 @@ ASAssign >> expression [
 	^ expression
 ]
 
+{ #category : #testing }
+ASAssign >> isASAssign [
+	^ true
+]
+
 { #category : #comparing }
 ASAssign >> maxDepth [
 	^expression maxDepth

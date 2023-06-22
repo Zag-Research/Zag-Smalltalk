@@ -43,6 +43,15 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : #accessing }
+ASSend >> blocks [
+	| blocks |
+	blocks := OrderedCollection new.
+	args ifNotEmpty: [
+		blocks addAll: (args select: [ :arg | arg isASBlock ]) ].
+	^ blocks
+]
+
 { #category : #parsing }
 ASSend >> isASSend [
 	^true
