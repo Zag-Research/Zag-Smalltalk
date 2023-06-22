@@ -122,9 +122,53 @@ The tables are built as a near-perfect for power-of-2 tables, so there will be v
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
 
-## Closures
+## BlockClosures
 
-Closures are defined within 
+BlockClosures are defined within a method or another block. A closure may:
+1. contain a non-local return in which case it has to have a reference to the context in which it was created
+2. contain immutable values that are not modified after the block is created
+3. reference or modify values that are also referenced or modified by the main method code or another block
+
+```Smalltalk
+foo: p1 bar: p2
+	| l1 l2 l3 |
+	p1 < p2 ifTrue: [^ self].
+	l1 := p2.
+	l2 := p1 \\ p2.
+	l3 := p2 - l2.
+	[ l1 < p1 ] whileTrue: [ l1 := l1 + 1. l1 = l3 ifTrue: [^ 1]].
+```
+
+| Stack  | Description              | Pointers                                                  |
+| ------ | ------------------------ | --------------------------------------------------------- |
+| ...    |               | space for stack growth                                                   |
+| object   | l3            | <--- sp                                            |
+| clsDataPtr |  |   -->                                                      |
+| ptr | m2 header                |                                                           |
+| method | BlockClosure 2  | pushed by m2                                                          |
+| footer | BlockClosure 2  | pushed by m2                                                          |
+| object   | p2            |                                             |
+| clsDataPtr |  |   -->                                                      |
+| method | BlockClosure 1  | pushed by m2                                                          |
+| footer | BlockClosure 1  | pushed by m2                                                          |
+| object | l1                  |                                                           |
+| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
+| header | m2 header                | <--- m1 ctxt                                              |
+| tpc    | m2 threaded pc to return to       |                                                           |
+| npc    | m2 native pc to return to       |                                                           |
+| ctxt   | m2 ContextPtr            | ---> m3 Context header (see example below on the heap) |
+| method | m2                |                                                           |
+| clsDataPtr |  |  -->                                                         |
+| clsPtr | [ l1 := ... ] |  -->     BlockCClosure 2                                                    |
+| clsPtr | [ l1<p2 ] |         -->   BlockClosure 1                                               |
+| clsPtr | [^ self] |                --> m2 header                                           |
+| object | l2 |                                                           |
+| object | p2 |                                                           |
+| object | p1 |                                                           |
+| object | self                  |                                                           |
+| ...    | caller stack                 |                                                           |
+
+
 
 ## Interpretation Classes
 
@@ -142,13 +186,13 @@ Fields:
 ### ASLiteral
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
 - value - some literal value
-	- - could be atomic like a number, boolean, character
-	- - could be an array
-	- - - if all the values are literals (or arrays of literals) it will be represented as a literal array `#()`
-	- - - else it will be represented as a constructed array `{}`
-	- - could be an ASMethod for a block (name will be `value`, `value:`, etc.)
+	- could be atomic like a number, boolean, character
+	- could be an array
+		-  if all the values are literals (or arrays of literals) it will be represented as a literal array `#()`
+	- else it will be represented as a constructed array `{}`
+	- could be an ASMethod for a block (name will be `value`, `value:`, etc.)
 If whitespace is nil and value is literal or array of literal, the ASLiteral can be omitted, and the literal be the expression value.
- ### ASReturn
+### ASReturn
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
 - expression - the value to be returned
 - nonLocal - true if the return is a non-local return
@@ -162,7 +206,7 @@ If whitespace is nil, the ASSequence can be omitted, and the array be the expres
 - offset - field index - forced SmallInteger
 ### ASStore
 - whitespace - nil or a string that should follow the token in textual representation - ignored by interpreter
-- target - value of the base for the load
+- target - value of the base for the store
 - offset - field index
 - expression - the value to be stored
 ### ASMethod
