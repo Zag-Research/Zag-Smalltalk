@@ -127,46 +127,82 @@ The methods listed are from anywhere in the hierarchy, but only methods that hav
 BlockClosures are defined within a method or another block. A closure may:
 1. contain a non-local return in which case it has to have a reference to the context in which it was created
 2. contain immutable values that are not modified after the block is created
-3. reference or modify values that are also referenced or modified by the main method code or another block
+3. reference or modify values that are also referenced or modified by the main method code or another block in which case it has to have a reference to a ClosureData object where the mutable values are stored
 
+Consider the following method, defined in Integer and called with `3 foo: 7 bar: 2` at the start of the first execution of BlockClosure 2
 ```Smalltalk
 foo: p1 bar: p2
 	| l1 l2 l3 |
-	p1 < p2 ifTrue: [^ self].
+	p1 < p2 ifTrue: [ ^ self ].
 	l1 := p2.
 	l2 := p1 \\ p2.
 	l3 := p2 - l2.
-	[ l1 < p1 ] whileTrue: [ l1 := l1 + 1. l1 = l3 ifTrue: [^ 1]].
+	[ l1 < p1 ] whileTrue: [ 
+		l1 := l1 + 1.
+		l1 = l3 ifTrue: [ ^ 1 ] ].
+	^ l1
 ```
 
-| Stack  | Description              | Pointers                                                  |
-| ------ | ------------------------ | --------------------------------------------------------- |
-| ...    |               | space for stack growth                                                   |
-| object   | l3            | <--- sp                                            |
-| clsDataPtr |  |   -->                                                      |
-| ptr | m2 header                |                                                           |
-| method | BlockClosure 2  | pushed by m2                                                          |
-| footer | BlockClosure 2  | pushed by m2                                                          |
-| object   | p2            |                                             |
-| clsDataPtr |  |   -->                                                      |
-| method | BlockClosure 1  | pushed by m2                                                          |
-| footer | BlockClosure 1  | pushed by m2                                                          |
-| object | l1                  |                                                           |
-| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
-| header | m2 header                | <--- m1 ctxt                                              |
-| tpc    | m2 threaded pc to return to       |                                                           |
-| npc    | m2 native pc to return to       |                                                           |
-| ctxt   | m2 ContextPtr            | ---> m3 Context header (see example below on the heap) |
-| method | m2                |                                                           |
-| clsDataPtr |  |  -->                                                         |
-| clsPtr | [ l1 := ... ] |  -->     BlockCClosure 2                                                    |
-| clsPtr | [ l1<p2 ] |         -->   BlockClosure 1                                               |
-| clsPtr | [^ self] |                --> m2 header                                           |
-| object | l2 |                                                           |
-| object | p2 |                                                           |
-| object | p1 |                                                           |
-| object | self                  |                                                           |
-| ...    | caller stack                 |                                                           |
+| | BC1 Context  | Description              | Pointers                                                  |
+|  - | ------ | ------------------------ | --------------------------------------------------------- |
+| | ...    |               | space for stack growth                                                   |
+|0| header | BC1 Context header                |       <--- sp                                       |
+|1| tpc    | whileTrue: threaded pc to return       |                                                           |
+|2| npc    | whileTrue: native pc to return to       |                                                           |
+|3| ctxt   | whileTrue: ContextPtr            | ---> whileTrue: Context header (8)|
+|4| object | trapContextNumber | 0 |
+|5| method | foo:bar:1                |                                                           |
+|6| clsPtr | [^ 1] |                --> foo:bar: header   (27)                                        |
+|7| object | self                  |    BC1                                                       |
+
+| | whileTrue: Context | Description | Pointers |
+| - | - | - | - |
+|8| header | whileTrue: Context header                | <--- BC1 ctxt                                              |
+|9| tpc    | foo:bar: threaded pc to return      |                                                           |
+|10| npc    | foo:bar: native pc to return to       |                                                           |
+|11| ctxt   | foo:bar: ContextPtr            | ---> foo:bar: Context (27) |
+|12| object | trapContextNumber | 0 |
+|13| method | whileTrue:                |                                                           |
+|14| clsPtr | aBlock |       BC1                                                    |
+|15| clsPtr | self                  | BC2                                                          |
+
+| | BC2 | Description | Pointers| |
+| - | - | - | - |
+|16| object   |     l3        |                                             |
+|17| clsDataPtr |  |   -->  clsDataPtr       (26)                                             |
+|18| contextPtr | foo:bar: ContextPtr                |                                                           |
+|19| method | foo:bar:2  |                                                          |
+|20| footer | BlockClosure - 4 words  |                                                          |
+
+| | BC1| Description | Pointers |
+| - | - | - | - |
+|21| object   | p1            |                                             |
+|22| clsDataPtr |  |   -->  clsDataPtr         (26)                                            |
+|23| method | foo:bar:1  |                                                          |
+|24| footer | BlockClosure - 3 words |                                                          |
+
+| | ClosureData | Description | Pointers |
+| - | - | - | - |
+|25| object | l1                  |                                                           |
+|26| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
+
+| | foo:bar: | Description | Pointers| |
+| - | - | - | - |
+|27| header | foo:bar: header                | <--- whileTrue: ctxt                                              |
+|28| tpc    | caller threaded pc to return       |                                                           |
+|29| npc    | caller native pc to return to   (?)    |                                                           |
+|30| ctxt   | caller ContextPtr            | ---> caller Context (?) |
+|31| object | trapContextNumber | 0 |
+|32| method | foo:bar:                |                                                           |
+|33| clsPtr | [ l1 := ... ] |  -->     BC1  footer (24)                                                 |
+|34| clsPtr | [ l1<p2 ] |         -->   BC2 footer (20)                                             |
+|35| clsPtr | [^ self] |                --> foo:bar: header (27)                                          |
+|36| clsDataPtr |  |  -->    ClosureData footer      (26)                                               |
+|37| object | l2 |                                                           |
+|38| object | p2 |                                                           |
+|39| object | p1 |                                                           |
+|40| object | self                  |                                                           |
+|41| ...    | caller stack                 |                                                           |
 
 
 

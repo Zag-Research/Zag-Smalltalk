@@ -192,6 +192,7 @@ pub const embedded = struct {
     inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn) [*]Object {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         const newSp = sp+1;
+        if(true) unreachable;
         sp[0] = nonLocalValues[@enumToInt(tag)];
         return newSp;
     }
