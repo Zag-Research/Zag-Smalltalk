@@ -23,13 +23,15 @@ Same experiments as above, but now generating native code for methods
 
 ## Development Milestones
 
+Currently out of date!
+
 1. Generate AST forms from Opal visitor
-2. Generate C stand-alone programs for benchmarking
+2. Generate Zig stand-alone programs for benchmarking
 3. Export Classes/Methods to image file - Smalltalk
     - [x] symbols
     - [ ] classes
     - [ ] methods - parse to AST
-4. Load image file in interpreter - Rust
+4. Load image file in interpreter - Zig
 5. Pure AST interpretation
 6. Compiling AST to bytecode
     - [ ] raw sends

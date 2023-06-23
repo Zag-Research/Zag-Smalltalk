@@ -66,9 +66,10 @@ var @"Integer>>fibonacci" =
         &e.returnTop,
 });
 fn initSmalltalk() void {
+    const empty = &[0]Object{};
     primitives.init();
     sym = Sym.init();
-    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci});
+    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci},empty);
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
