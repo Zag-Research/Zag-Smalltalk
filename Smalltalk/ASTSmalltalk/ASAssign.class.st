@@ -77,8 +77,15 @@ ASAssign >> variable: v expression: e [
 ]
 
 { #category : #accessing }
-ASAssign >> zigString: syms [
-"load value of expression into the variable?"
-	expression isASLiteral ifTrue: [ " can I just load the value directly?" ^'&e.popIntoTemp ', expression literal asString].
-	^ (expression zigString: syms), 'how to do an assign?'
+ASAssign >> zigString: syms and: stackVariables [
+	"load value of expression into the variable?"
+
+	| zigString |
+	zigString := expression isASLiteral
+		             ifTrue: [ " can I just load the value directly?"
+			             '&e.popLocal, ' , expression literal asString ]
+		             ifFalse: [
+		             '&e.popLocal, ' , (expression zigString: syms and: stackVariables) ].
+	^ zigString , ' &e.pushLocal, '
+	  , (stackVariables indexOf: variable) asString
 ]

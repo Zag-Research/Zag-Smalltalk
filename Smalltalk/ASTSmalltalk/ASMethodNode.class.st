@@ -115,6 +115,7 @@ ASMethodNode >> selector: aString [
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
+	| stackVariables |
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << selector << ' ='.
@@ -127,23 +128,36 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	<< locals size asString << ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 
+	"verify selector or primitive?"
+	pragmas
+		ifEmpty: [
+			aStream tab.
+			aStream << '&e.verifySelector,'.
+			aStream cr ]
+		ifNotEmpty: [
+			aStream tab.
+			aStream << 'Primative Goes Here,'.
+			aStream cr ].
 
 	"create dummy context"
 	aStream tab.
 	aStream << '&e.pushContext,"^",'.
+	aStream cr.
 
 	"ouput any blocks"
 	self blocks ifNotEmpty: [ blocks do: [ :block | block ] ].
 
 	"output instructions"
+	stackVariables := scope keys asOrderedCollection.
+	stackVariables addLast: #self.
 	body do: [ :asStatement |
 		aStream tab.
-		aStream << (asStatement zigString: syms).
+		aStream << (asStatement zigString: syms and: stackVariables).
 		aStream cr ].
 
 
 	aStream tab.
-	aStream << '&e.returnTop,'. "should this be hardcoded?"
+	aStream << '&e.returnTop,'. aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
