@@ -91,6 +91,6 @@ ASSelf >> tell: aCompiler youAreSent: aSymbol [
 ASSelf >> zigString: syms and: stackVariables [
 	"^'&e.pushTemp, 1,', '&e.send, ', method selector, ','"
 
-	^ '&e.pushSelf,' , '&e.send, ' , method selector , ','
+	^ '&e.pushSelf,'
 	"I'm sending self a message?"
 ]

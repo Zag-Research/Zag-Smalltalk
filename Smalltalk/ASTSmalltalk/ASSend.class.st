@@ -102,9 +102,16 @@ ASSend >> target: expression [
 
 { #category : #building }
 ASSend >> zigString: syms and: stackVariables [
-	^ syms
-		at: selector
-		ifPresent: [ :sym | '&e.send, ' , sym , ',' ]
-		ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
-			'&e.send, ' , selector , ',' ]
+
+	| zigString |
+	zigString := target zigString: syms and: stackVariables.
+	args ifNotEmpty: [
+		args do: [ :arg |
+			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
+	zigString := zigString , (syms
+		             at: selector
+		             ifPresent: [ :sym | '&e.send, ' , sym , ',' ]
+		             ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
+			             '&e.send, ' , selector , ',' ]).
+		^zigString
 ]

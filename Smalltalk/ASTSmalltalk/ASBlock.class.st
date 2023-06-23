@@ -66,3 +66,8 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
 ]
+
+{ #category : #building }
+ASBlock >> zigString: aCollection and: aCollection2 [ 
+	^'@e.pushLocal, 0,'
+]

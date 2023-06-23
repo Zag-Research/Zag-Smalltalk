@@ -27,9 +27,9 @@ ASPharoCompilerProgramTest >> testAssignment [
 	result := self
 		          buildFromClass: ASCompileTestClass1
 		          selector: #testAssignment.
-
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigAssignmentString.zig') writeStream.
+	aStream truncate.
 	result writeZig: aStream.
 	aStream close
 ]
@@ -72,6 +72,7 @@ ASPharoCompilerProgramTest >> testIntFib [
 
 	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
 		           writeStream.
+	aStream truncate.
 	result writeZig: aStream.
 	aStream close
 ]
@@ -87,6 +88,20 @@ ASPharoCompilerProgramTest >> testIntbitShiftMagnitude [
 	aStream := (FileSystem disk workingDirectory / 'zigBitShiftMagnitudeString.zig') writeStream.
 	result writeZig: aStream.
 	aStream close.
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntegerBench [
+
+	| result aStream |
+	result := self
+		          buildFromClass: Integer
+		          selector: #benchmark.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigIntBenchString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
 ]
 
 { #category : #tests }

@@ -118,7 +118,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	| stackVariables |
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << selector << ' ='.
+	aStream << 'var ' << selector asZigString << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms

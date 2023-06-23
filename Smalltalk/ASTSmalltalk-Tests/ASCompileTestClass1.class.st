@@ -106,9 +106,13 @@ ASCompileTestClass1 >> simple1 [
 
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> testAssignment [
-| a1 a2 |
-a1 := 5.
-a2 := 5 negated
+
+	| a1 a2 a3 a4 |
+	a1 := 5.
+	a2 := 5 negated.
+	a3 := self.
+	a4 := self prim.
+	^ a1 + a2
 ]
 
 { #category : #'testing - examples' }
