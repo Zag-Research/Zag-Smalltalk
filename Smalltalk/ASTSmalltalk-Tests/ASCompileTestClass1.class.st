@@ -105,6 +105,13 @@ ASCompileTestClass1 >> simple1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> testAssignment [
+| a1 a2 |
+a1 := 5.
+a2 := 5 negated
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> unaries [
 	^ 23 negated abs
 ]

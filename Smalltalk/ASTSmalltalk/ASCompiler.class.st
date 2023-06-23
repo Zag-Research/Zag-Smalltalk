@@ -64,7 +64,8 @@ ASCompiler >> addClass: aClass [
 
 { #category : #building }
 ASCompiler >> addMethod: method [
-	(methodsAlreadyProcessed includes: method) ifFalse: [ methodsToProcess add: method ]
+	(methodsAlreadyProcessed includes: method) ifFalse: [
+		methodsToProcess add: method ]
 ]
 
 { #category : #building }
@@ -174,13 +175,16 @@ ASCompiler >> methods [
 
 { #category : #building }
 ASCompiler >> selector: selector fromClass: aClass [
-
 	^ aClass methodDictionary
 		  at: selector
 		  ifPresent: [ aClass >> selector ]
-		  ifAbsent: [ 
-			  aClass superclass ifNotNil: [ :sc | 
-				  self selector: selector fromClass: (self addClass: sc) ] ]
+		  ifAbsent: [
+			  aClass class methodDictionary
+				  at: selector
+				  ifPresent: [ aClass class >> selector ]
+				  ifAbsent: [
+					  aClass superclass ifNotNil: [ :sc |
+						  self selector: selector fromClass: (self addClass: sc) ] ] ]
 ]
 
 { #category : #accessing }
@@ -190,10 +194,10 @@ ASCompiler >> selectors [
 
 { #category : #building }
 ASCompiler >> send: selector toClass: aClass [
-
-	(self selector: selector fromClass: (self addClass: aClass)) ifNotNil: [ :method | 
-		selectors add: selector.
-		self addMethod: method ]
+	(self selector: selector fromClass: (self addClass: aClass))
+		ifNotNil: [ :method |
+			selectors add: selector.
+			self addMethod: method ]
 ]
 
 { #category : #notifying }
@@ -231,13 +235,11 @@ ASCompiler >> sentToUnknownObject: selector [
 ASCompiler >> transitiveClosure [
 
 	| toProcess |
-	[ methodsToProcess isEmpty ] whileFalse: [ 
+	[ methodsToProcess isEmpty ] whileFalse: [
 		toProcess := methodsToProcess.
 		methodsToProcess := Set new.
-				methodsAlreadyProcessed addAll: toProcess.
-		toProcess do: [: method |
-			self compileMethod: method ].
-		]
+		methodsAlreadyProcessed addAll: toProcess.
+		toProcess do: [ :method | self compileMethod: method ] ]
 ]
 
 { #category : #building }

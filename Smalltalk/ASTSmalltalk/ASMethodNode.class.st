@@ -135,9 +135,11 @@ ASMethodNode >> writeMethod: aStream with: syms [
 			aStream << '&e.verifySelector,'.
 			aStream cr ]
 		ifNotEmpty: [
-			aStream tab.
-			aStream << 'Primative Goes Here,'.
-			aStream cr ].
+			pragmas do: [ :pragma |
+				aStream tab.
+				aStream << '&p.p' << (pragma arguments at: 1) value asString
+				<< ','.
+				aStream cr ] ].
 
 	"create dummy context"
 	aStream tab.
@@ -157,7 +159,8 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 
 	aStream tab.
-	aStream << '&e.returnTop,'. aStream cr. "should this be hardcoded?"
+	aStream << '&e.returnTop,'.
+	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."

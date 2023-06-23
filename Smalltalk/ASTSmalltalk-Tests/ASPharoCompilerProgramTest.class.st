@@ -20,6 +20,20 @@ ASPharoCompilerProgramTest >> codeStart42 [
 	^ result zigString
 ]
 
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testAssignment [
+
+	| result aStream |
+	result := self
+		          buildFromClass: ASCompileTestClass1
+		          selector: #testAssignment.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAssignmentString.zig') writeStream.
+	result writeZig: aStream.
+	aStream close
+]
+
 { #category : #script }
 ASPharoCompilerProgramTest >> testCodeStart42 [
 
@@ -51,15 +65,15 @@ ASPharoCompilerProgramTest >> testFib [
 
 { #category : #tests }
 ASPharoCompilerProgramTest >> testIntFib [
-	| result aStream |
-	result := self
-		          buildFromClass: Integer class
-		          selector: #fibonacci.
-	
 
-	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig') writeStream.
+	| result aStream |
+	result := self buildFromClass: Integer selector: #fibonacci.
+
+
+	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
+		           writeStream.
 	result writeZig: aStream.
-	aStream close.
+	aStream close
 ]
 
 { #category : #tests }

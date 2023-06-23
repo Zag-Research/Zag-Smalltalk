@@ -81,11 +81,16 @@ ASAssign >> zigString: syms and: stackVariables [
 	"load value of expression into the variable?"
 
 	| zigString |
+	"evaluate the expression"
 	zigString := expression isASLiteral
-		             ifTrue: [ " can I just load the value directly?"
-			             '&e.popLocal, ' , expression literal asString ]
+		             ifTrue: [ "can I just load the value directly?"
+			             '&e.popLocal, Object.from('
+			             , expression literal asString , '),' ]
 		             ifFalse: [
-		             '&e.popLocal, ' , (expression zigString: syms and: stackVariables) ].
+		             '&e.popLocal, '
+		             , (expression zigString: syms and: stackVariables) ].
+	"should the argument just be a lookup?"
+	"push the result of the expression into the variable"
 	^ zigString , ' &e.pushLocal, '
-	  , (stackVariables indexOf: variable) asString
+	  , (stackVariables indexOf: variable name) asString
 ]
