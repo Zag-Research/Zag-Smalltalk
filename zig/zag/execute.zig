@@ -52,7 +52,7 @@ pub const CompiledMethod = extern struct {
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
-            .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
+            .header = HeapObject.staticHeaderWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
@@ -276,9 +276,15 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(c))/@sizeOf(Object)-1);
             }
         }
-        pub fn setLiteral(self: *Self, match: Object, replacement: Object) void {
-            for (&self.code) |*c| {
-                if (c.object.equals(match)) c.* = Code.object(replacement);
+        pub fn setLiterals(self: *Self, replacements: []const Object) void {
+            for (replacements,1..) |replacement,index| {
+                const match =  indexSymbol(@truncate(u24,index));
+                if (self.selector.equals(match))
+                    self.selector = replacement;
+                for (&self.code) |*c| {
+                    if (c.object.equals(match))
+                        c.* = Code.object(replacement);
+                }
             }
         }
         pub fn getCodeSize(_: *Self) usize {
@@ -583,15 +589,25 @@ pub const controlPrimitives = struct {
         _ = selector;
         @panic("unimplemented");
     }
-    pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _=pc; _=sp; _=process; _=context; _ = selector;
-        @panic("not implemented");
-        // const selector = pc[0].object;
-        // const numArgs = selector.numArgs();
-        // const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
-        // context.setTPc(pc+1);
-        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[0].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[1].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    }
+    // pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+    //     const selector = pc[0].object;
+    //     const numArgs = selector.numArgs();
+    //     const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
+    //     context.setTPc(pc+1);
+    //     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    // }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc+1);
         const offset = pc[0].uint;
