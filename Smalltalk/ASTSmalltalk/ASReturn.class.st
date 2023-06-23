@@ -60,3 +60,21 @@ ASReturn >> printOn: s [
 	expression printOn: s.
 	s << ')'
 ]
+
+{ #category : #building }
+ASReturn >> zigString: syms and: stackVariables [
+
+	expression isASLiteral ifTrue: [
+		expression literal isNumber ifTrue: [
+			^ '&e.pushLiteral, Object.from(' , expression literal asString
+			  , '),' , ' &e.returnTop,' ].
+		expression literal ifNil: [ ^ '&e.pushNonlocalBlock_nil,' ].
+		expression literal ifFalse: [ ^ '&e.pushNonlocalBlock_false,' ].
+		expression literal ifTrue: [ ^ '&e.pushNonlocalBlock_true,' ] ].
+	expression isASSend ifTrue: [
+		^ expression zigString: syms and: stackVariables , ' &e.returnTop,' ].
+	expression isASSelf ifTrue: [
+		^ expression zigString: syms and: stackVariables , ' &e.returnTop,' ].
+	expression isASRef ifTrue: [
+		^ expression zigString: syms and: stackVariables , ' &e.returnTop,' ].
+]
