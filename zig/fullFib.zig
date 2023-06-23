@@ -38,7 +38,7 @@ const Sym = struct {
 };
 var sym: Sym = undefined;
 const index_1 = indexSymbol(1);
-var fibonacci =
+var @"Integer>>fibonacci" =
     compileMethod(index_1,1,2,.{
         &e.verifySelector,
         &e.pushContext,"^",
@@ -68,7 +68,7 @@ var fibonacci =
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    fibonacci.setLiterals(&[_]Object{sym.fibonacci});
+    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci});
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
