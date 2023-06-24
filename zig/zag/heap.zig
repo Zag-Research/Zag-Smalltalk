@@ -98,7 +98,7 @@ pub const Format = enum(u8) {
 //    pub inline fn hasIndexFields(self: Self) bool {
 //        return @enumToInt(self) >= Indexed;
 //    }
-    pub inline fn isExternal(self: Self) Self {
+    pub inline fn isExternal(self: Self) bool {
         return switch (@enumToInt(self)) {
             External ... ExternalWeakWithPointers => true,
             else => false};
@@ -800,13 +800,6 @@ const strings = compileStrings(.{ // must be in same order as above
     "Object", "SmallInteger", "Float", "False", "True",
 });
 test "compile time" {
-//    const abcde_: []const u8 = "abcdefghijklm";
-//    try std.testing.expectEqual(abcde_, abcde.asObject().arrayAsSlice(u8));
-    std.debug.print("abcde: {any}\n",.{abcde.obj().*});
-    std.debug.print("abcde: {any}\n",.{abcde.asObject().arrayAsSlice(i8)});
-    std.debug.print("abcde: {any}\n",.{try abcde.obj().arrayAsSlice(i8)});
-    std.debug.print("abcde: {any}\n",.{abcde.h()});
-    std.debug.print("abcde: {any}\n",.{abcde.asObject()});
-    std.debug.print("strings[3]: {any}\n",.{strings[3].*});
-    std.debug.print("strings[3]: {any}\n",.{strings[3].arrayAsSlice(i8)});
+    try std.testing.expect(mem.eql(u8,abcde.asObject().arrayAsSlice(u8),"abcdefghijklm"));
+    try std.testing.expect(mem.eql(u8,try strings[3].arrayAsSlice(u8),"False"));
 }
