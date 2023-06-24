@@ -141,7 +141,7 @@ ASTInterval >> setFrom: startInteger to: stopInteger by: stepInteger [
 	step := stepInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTInterval >> size [
 	step < 0
 		ifTrue: [ start < stop

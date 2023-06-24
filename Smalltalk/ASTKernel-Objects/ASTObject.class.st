@@ -76,8 +76,9 @@ ASTObject >> at: index [
 		ifFalse: [ self errorNonIntegerIndex ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTObject >> at: index put: value [
+
 	"Primitive. Assumes receiver is indexable. Store the second argument 
 	value in the indexable element of the receiver indicated by index. Fail 
 	if the index is not an Integer or is out of bounds. Or fail if the value is 
@@ -86,10 +87,10 @@ ASTObject >> at: index put: value [
 	documentation whatIsAPrimitive."
 
 	<primitive: 61>
-	index isInteger
-		ifTrue: [ (index >= 1 and: [ index <= self size ])
-				ifTrue: [ self errorImproperStore ]
-				ifFalse: [ self errorSubscriptBounds: index ] ].
+	index isInteger ifTrue: [ 
+		(index between: 1 and: self size )
+			ifTrue: [ self errorImproperStore ]
+			ifFalse: [ self errorSubscriptBounds: index ] ].
 	index isNumber
 		ifTrue: [ ^ self basicAt: index asInteger put: value ]
 		ifFalse: [ self errorNonIntegerIndex ]
@@ -596,6 +597,18 @@ ASTObject >> shouldNotImplement [
 	"Announce that, although the receiver inherits this message, it should not implement it."
 
 	self error: 'This message is not appropriate for this object'
+]
+
+{ #category : #accessing }
+ASTObject >> size [
+
+	"Primitive. Answer the number of indexable variables in the receiver. 
+	This value is the same as the largest legal subscript. Essential. See Object 
+	documentation whatIsAPrimitive."
+
+	<primitive: 62>
+	self class isVariable ifFalse: [ self errorNotIndexable ].
+	^ 0
 ]
 
 { #category : #'as yet unclassified' }

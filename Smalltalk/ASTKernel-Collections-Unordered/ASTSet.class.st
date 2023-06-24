@@ -210,7 +210,7 @@ ASTSet >> scanFor: anObject [
 	^ 0	"No match AND no empty slot"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTSet >> size [
 	^ tally
 ]

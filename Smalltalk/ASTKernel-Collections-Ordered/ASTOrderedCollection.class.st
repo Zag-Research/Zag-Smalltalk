@@ -289,7 +289,7 @@ ASTOrderedCollection >> setCollection: anArray [
 	lastIndex := firstIndex - 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTOrderedCollection >> size [
 	^ lastIndex - firstIndex + 1
 ]

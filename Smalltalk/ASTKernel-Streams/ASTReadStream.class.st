@@ -100,7 +100,7 @@ ASTReadStream >> position: anInteger [
 		ifFalse: [ self error: 'Position out of bounds: ' , anInteger printString ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTReadStream >> size [
 	"Compatibility with other streams (e.g., FileStream)"
 

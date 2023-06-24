@@ -356,7 +356,7 @@ ASTString >> replaceFrom: start to: stop with: replacement startingAt: repStart 
 		startingAt: repStart
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTString >> size [
 	"Primitive. Answer the number of indexable fields in the receiver. This
 	value is the same as the largest legal subscript. Essential. See Object

@@ -189,7 +189,7 @@ ASTCollection >> select: aBlock [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTCollection >> size [
 	"Answer how many elements the receiver contains."
 

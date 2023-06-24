@@ -215,7 +215,7 @@ ASTSequenceableCollection >> select: aBlock [
 	^ s contents
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTSequenceableCollection >> size [
 	self subclassResponsibility
 ]

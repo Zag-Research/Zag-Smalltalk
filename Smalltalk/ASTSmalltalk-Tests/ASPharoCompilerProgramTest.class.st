@@ -60,15 +60,15 @@ ASPharoCompilerProgramTest >> testStart42 [
 	self
 		assert: result selectors
 		equals: #( at:put: do: negated bitOr: + perform:withArguments:
-			   numArgsError: minVal digitAt: new:neg: new: new or: digitCompare:
-			   digitLogic:op:length: copyReplaceFrom:to:with:
+			   numArgsError: minVal byteAt: new:neg: new: new or: digitCompare:
+			   igitLogic:op:length: copyReplaceFrom:to:with:
 			   > cull: superclass primitiveFailed isKindOf: basicNew whileFalse:
 			   and: perform:with: at: copyto: digitSubtract: error: basicNew:
 			   * digitDiv:neg: start42 & isEmpty digitRshift:bytes:lookfirst:
 			   adaptToInteger:andSend: ~~ errorSubscriptBounds:
 			   numArgs normalize instSpec min: errorImproperStore
 			   negative isInteger quo: highBit basicAt: = species asInteger
-			   first whileTrue: value digitLength digitAdd: cannotInstantiate
+			   first whileTrue: value bytesCount digitAdd: cannotInstantiate
 			   // ifNil:ifNotNil: asCharacter \\ emptyCheck errorEmptyCollection
 			   value: - replaceFrom:to:with:startingAt:
 			   ifFalse: errorNonIntegerIndex shouldNotImplement
@@ -76,7 +76,7 @@ ASPharoCompilerProgramTest >> testStart42 [
 			   bitAnd: isSmallInteger class add: < with: compare:with:collated:
 			   >= size <= growto: max: not == , ifTrue: bitInvert ifTrue:ifFalse:
 			   printOn: printString digitLshift: inheritsFrom: isVariable
-			   digitMultiply:neg: digitAt:put: abs basicSize with:with:
+			   digitMultiply:neg: byteAt:put: abs basicSize with:with:
 			   bitClear: basicAt:put: initialize last to:do: isNumber
 			   ~= truncated name lastDigit / ) asSet.
 	result inspect

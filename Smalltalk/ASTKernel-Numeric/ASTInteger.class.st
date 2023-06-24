@@ -276,6 +276,25 @@ ASTInteger >> byteAt: index [
 	self subclassResponsibility
 ]
 
+{ #category : #'system primitives' }
+ASTInteger >> byteAt: index put: value [
+
+	"Primitive. Store the second argument (value) in the indexable field of 
+	the receiver indicated by index. Fail if the value is negative or is larger 
+	than 255. Fail if the index is not an Integer or is out of bounds. Answer 
+	the value that was stored. Essential. See Object documentation 
+	whatIsAPrimitive."
+
+	<primitive: 61>
+	^ super byteAt: index put: value
+]
+
+{ #category : #'system primitives' }
+ASTInteger >> bytesCount [
+
+	self subclassResponsibility
+]
+
 { #category : #'truncation and round off' }
 ASTInteger >> ceiling [
 	"Refer to the comment in Number|ceiling."
@@ -294,35 +313,35 @@ ASTInteger >> copyto: x [
 		startingAt: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitAdd: arg [
 	| len arglen accum sum |
 	accum := 0.
-	(len := self digitLength) < (arglen := arg digitLength)
+	(len := self bytesCount) < (arglen := arg bytesCount)
 		ifTrue: [ len := arglen ].	"Open code max: for speed"
 	sum := ASTInteger new: len neg: self negative.
 	1 to: len do: [ :i | 
-		accum := (accum bitShift: -8) + (self digitAt: i) + (arg digitAt: i).
-		sum digitAt: i put: (accum bitAnd: 255) ].
+		accum := (accum bitShift: -8) + (self byteAt: i) + (arg byteAt: i).
+		sum byteAt: i put: (accum bitAnd: 255) ].
 	accum > 255
 		ifTrue: [ sum := sum growby: 1.
-			sum at: sum digitLength put: (accum bitShift: -8) ].
+			sum at: sum bytesCount put: (accum bitShift: -8) ].
 	^ sum
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitCompare: arg [
 	"Compare the magnitude of self with that of arg.
 	Return a code of 1, 0, -1 for self >, = , < arg"
 
 	| len arglen argDigit selfDigit |
-	len := self digitLength.
-	(arglen := arg digitLength) ~= len
+	len := self bytesCount.
+	(arglen := arg bytesCount) ~= len
 		ifTrue: [ arglen > len
 				ifTrue: [ ^ -1 ]
 				ifFalse: [ ^ 1 ] ].
 	[ len > 0 ]
-		whileTrue: [ (argDigit := arg digitAt: len) ~= (selfDigit := self digitAt: len)
+		whileTrue: [ (argDigit := arg byteAt: len) ~= (selfDigit := self byteAt: len)
 				ifTrue: [ argDigit < selfDigit
 						ifTrue: [ ^ 1 ]
 						ifFalse: [ ^ -1 ] ].
@@ -330,37 +349,37 @@ ASTInteger >> digitCompare: arg [
 	^ 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitDiv: arg neg: ng [
 	"Answer with an array of (quotient, remainder)."
 
 	| quo rem ql d div dh dnh dl qhi qlo j l hi lo r3 a t |
 	arg = 0
 		ifTrue: [ ^ self error: 'division by 0' ].
-	l := self digitLength - arg digitLength + 1.
+	l := self bytesCount - arg bytesCount + 1.
 	l <= 0
 		ifTrue: [ ^ ASTArray with: 0 with: self ].
 	d := 8 - arg lastDigit highBit.
 	div := arg digitLshift: d.
-	div := div growto: div digitLength + 1.	"shifts so high order word is >=128"
+	div := div growto: div bytesCount + 1.	"shifts so high order word is >=128"
 	rem := self digitLshift: d.
-	rem digitLength = self digitLength
-		ifTrue: [ rem := rem growto: self digitLength + 1 ].	"makes a copy and shifts"
+	rem bytesCount = self bytesCount
+		ifTrue: [ rem := rem growto: self bytesCount + 1 ].	"makes a copy and shifts"
 	quo := ASTInteger new: l neg: ng.
-	dl := div digitLength - 1.	"Last actual byte of data"
+	dl := div bytesCount - 1.	"Last actual byte of data"
 	ql := l.
-	dh := div digitAt: dl.
+	dh := div byteAt: dl.
 	dnh := dl = 1
 		ifTrue: [ 0 ]
-		ifFalse: [ div digitAt: dl - 1 ].
+		ifFalse: [ div byteAt: dl - 1 ].
 	1 to: ql do: [ :k | 
-		j := rem digitLength + 1 - k.	"r1 := rem digitAt: j."
-		(rem digitAt: j) = dh
+		j := rem bytesCount + 1 - k.	"r1 := rem digitAt: j."
+		(rem byteAt: j) = dh
 			ifTrue: [ qhi := qlo := 15	"i.e. q=255" ]
-			ifFalse: [ t := ((rem digitAt: j) bitShift: 4)
-					+ ((rem digitAt: j - 1) bitShift: -4).
+			ifFalse: [ t := ((rem byteAt: j) bitShift: 4)
+					+ ((rem byteAt: j - 1) bitShift: -4).
 				qhi := t // dh.
-				t := (t \\ dh bitShift: 4) + ((rem digitAt: j - 1) bitAnd: 15).
+				t := (t \\ dh bitShift: 4) + ((rem byteAt: j - 1) bitAnd: 15).
 				qlo := t // dh.
 				t := t \\ dh.	"Next compute (hi,lo) := q*dnh"
 				hi := qhi * dnh.
@@ -370,7 +389,7 @@ ASTInteger >> digitDiv: arg neg: ng [
 					Max of 2 iterations through loop -- see Knuth vol. 2"
 				r3 := j < 3
 					ifTrue: [ 0 ]
-					ifFalse: [ rem digitAt: j - 2 ].
+					ifFalse: [ rem byteAt: j - 2 ].
 				[ (t < hi or: [ t = hi and: [ r3 < lo ] ])
 					and: [ qlo := qlo - 1.
 						lo := lo - dnh.
@@ -388,23 +407,23 @@ ASTInteger >> digitDiv: arg neg: ng [
 		"r2 := (rem digitAt: j - 1)."	"Subtract q*div from rem"
 		l := j - dl.
 		a := 0.
-		1 to: div digitLength do: [ :i | 
-			hi := (div digitAt: i) * qhi.
-			lo := a + (rem digitAt: l) - ((hi bitAnd: 15) bitShift: 4)
-				- ((div digitAt: i) * qlo).
-			rem digitAt: l put: lo - (lo // 256 * 256).	"sign-tolerant form of (lo bitAnd: 255)"
+		1 to: div bytesCount do: [ :i | 
+			hi := (div byteAt: i) * qhi.
+			lo := a + (rem byteAt: l) - ((hi bitAnd: 15) bitShift: 4)
+				- ((div byteAt: i) * qlo).
+			rem byteAt: l put: lo - (lo // 256 * 256).	"sign-tolerant form of (lo bitAnd: 255)"
 			a := lo // 256 - (hi bitShift: -4).
 			l := l + 1 ].
 		a < 0
 			ifTrue: [ qlo := qlo - 1.
 				l := j - dl.
 				a := 0.
-				1 to: div digitLength do: [ :i | 
-					a := (a bitShift: -8) + (rem digitAt: l) + (div digitAt: i).
-					rem digitAt: l put: (a bitAnd: 255).
+				1 to: div bytesCount do: [ :i | 
+					a := (a bitShift: -8) + (rem byteAt: l) + (div byteAt: i).
+					rem byteAt: l put: (a bitAnd: 255).
 					l := l + 1 ] ].
 		"Add div back into rem, decrease q by 1"
-		quo digitAt: quo digitLength + 1 - k put: (qhi bitShift: 4) + qlo ].
+		quo byteAt: quo bytesCount + 1 - k put: (qhi bitShift: 4) + qlo ].
 	"maintain quo*arg+rem=self"
 	"Estimate rem/div by dividing the leading to bytes of rem by dh."
 	"The estimate is q = qhi*16+qlo, where qhi and qlo are nibbles."
@@ -412,7 +431,7 @@ ASTInteger >> digitDiv: arg neg: ng [
 	^ ASTArray with: quo with: rem
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitLogic: arg op: op length: len [
 	| result neg1 neg2 rneg z1 z2 rz b1 b2 b |
 	neg1 := self negative.
@@ -427,8 +446,8 @@ ASTInteger >> digitLogic: arg op: op length: len [
 				ifFalse: [ 0 ])) < 0.
 	result := ASTInteger new: len neg: rneg.
 	rz := z1 := z2 := true.
-	1 to: result digitLength do: [ :i | 
-		b1 := self digitAt: i.
+	1 to: result bytesCount do: [ :i | 
+		b1 := self byteAt: i.
 		neg1
 			ifTrue: [ b1 := z1
 					ifTrue: [ b1 = 0
@@ -436,7 +455,7 @@ ASTInteger >> digitLogic: arg op: op length: len [
 							ifFalse: [ z1 := false.
 								256 - b1 ] ]
 					ifFalse: [ 255 - b1 ] ].
-		b2 := arg digitAt: i.
+		b2 := arg byteAt: i.
 		neg2
 			ifTrue: [ b2 := z2
 					ifTrue: [ b2 = 0
@@ -446,9 +465,9 @@ ASTInteger >> digitLogic: arg op: op length: len [
 					ifFalse: [ 255 - b2 ] ].
 		b := b1 perform: op with: b2.
 		b = 0
-			ifTrue: [ result digitAt: i put: 0 ]
+			ifTrue: [ result byteAt: i put: 0 ]
 			ifFalse: [ result
-					digitAt: i
+					byteAt: i
 					put:
 						(rneg
 							ifTrue: [ rz
@@ -459,7 +478,7 @@ ASTInteger >> digitLogic: arg op: op length: len [
 	^ result normalize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitLshift: shiftCount [
 	| carry rShift mask len result digit byteShift bitShift highBit |
 	(highBit := self highBit) = 0
@@ -478,37 +497,37 @@ ASTInteger >> digitLshift: shiftCount [
 	carry := 0.
 	rShift := bitShift - 8.
 	mask := 255 bitShift: 0 - bitShift.
-	1 to: byteShift do: [ :i | result digitAt: i put: 0 ].
+	1 to: byteShift do: [ :i | result byteAt: i put: 0 ].
 	1 to: len - byteShift do: [ :i | 
-		digit := self digitAt: i.
+		digit := self byteAt: i.
 		result
-			digitAt: i + byteShift
+			byteAt: i + byteShift
 			put: (((digit bitAnd: mask) bitShift: bitShift) bitOr: carry).
 		carry := digit bitShift: rShift ].
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitMultiply: arg neg: ng [
 	| prod prodLen carry digit k ab |
-	(arg digitLength = 1 and: [ (arg digitAt: 1) = 0 ])
+	(arg bytesCount = 1 and: [ (arg byteAt: 1) = 0 ])
 		ifTrue: [ ^ 0 ].
-	prodLen := self digitLength + arg digitLength.
+	prodLen := self bytesCount + arg bytesCount.
 	prod := ASTInteger new: prodLen neg: ng.	"prod starts out all zero"
-	1 to: self digitLength do: [ :i | 
-		(digit := self digitAt: i) ~= 0
+	1 to: self bytesCount do: [ :i | 
+		(digit := self byteAt: i) ~= 0
 			ifTrue: [ k := i.
 				carry := 0.	"Loop invariant: 0<=carry<=0377, k=i+j-1"
-				1 to: arg digitLength do: [ :j | 
-					ab := (arg digitAt: j) * digit + carry + (prod digitAt: k).
+				1 to: arg bytesCount do: [ :j | 
+					ab := (arg byteAt: j) * digit + carry + (prod byteAt: k).
 					carry := ab bitShift: -8.
-					prod digitAt: k put: (ab bitAnd: 255).
+					prod byteAt: k put: (ab bitAnd: 255).
 					k := k + 1 ].
-				prod digitAt: k put: carry ] ].
+				prod byteAt: k put: carry ] ].
 	^ prod normalize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitRshift: anInteger bytes: b lookfirst: a [
 	"Shift right 8*b+anInteger bits, 0<=n<8.
 	Discard all digits beyond a, and all zeroes at or below a."
@@ -519,33 +538,33 @@ ASTInteger >> digitRshift: anInteger bytes: b lookfirst: a [
 	f := n + 8.
 	i := a.
 	m := 255 bitShift: 0 - f.
-	digit := self digitAt: i.
+	digit := self byteAt: i.
 	[ ((digit bitShift: n) bitOr: x) = 0 and: [ i ~= 1 ] ]
 		whileTrue: [ x := digit bitShift: f.	"Can't exceed 8 bits"
 			i := i - 1.
-			digit := self digitAt: i ].
+			digit := self byteAt: i ].
 	i <= b
 		ifTrue: [ ^ ASTInteger new: 0 neg: self negative ].	"All bits lost"
 	r := ASTInteger new: i - b neg: self negative.
 	count := i.
-	x := (self digitAt: b + 1) bitShift: n.
+	x := (self byteAt: b + 1) bitShift: n.
 	b + 1 to: count do: [ :j | 
-		digit := self digitAt: j + 1.
-		r digitAt: j - b put: (((digit bitAnd: m) bitShift: f) bitOr: x).	"Avoid values > 8 bits"
+		digit := self byteAt: j + 1.
+		r byteAt: j - b put: (((digit bitAnd: m) bitShift: f) bitOr: x).	"Avoid values > 8 bits"
 		x := digit bitShift: n ].
 	^ r
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> digitSubtract: arg [
 	| smaller larger z sum sl al ng |
-	sl := self digitLength.
-	al := arg digitLength.
+	sl := self bytesCount.
+	al := arg bytesCount.
 	(sl = al
-		ifTrue: [ [ (self digitAt: sl) = (arg digitAt: sl) and: [ sl > 1 ] ]
+		ifTrue: [ [ (self byteAt: sl) = (arg byteAt: sl) and: [ sl > 1 ] ]
 				whileTrue: [ sl := sl - 1 ].
 			al := sl.
-			(self digitAt: sl) < (arg digitAt: sl) ]
+			(self byteAt: sl) < (arg byteAt: sl) ]
 		ifFalse: [ sl < al ])
 		ifTrue: [ larger := arg.
 			smaller := self.
@@ -557,8 +576,8 @@ ASTInteger >> digitSubtract: arg [
 	sum := ASTInteger new: sl neg: ng.
 	z := 0.	"Loop invariant is -1<=z<=1"
 	1 to: sl do: [ :i | 
-		z := z + (larger digitAt: i) - (smaller digitAt: i).
-		sum digitAt: i put: z - (z // 256 * 256).	"sign-tolerant form of (z bitAnd: 255)"
+		z := z + (larger byteAt: i) - (smaller byteAt: i).
+		sum byteAt: i put: z - (z // 256 * 256).	"sign-tolerant form of (z bitAnd: 255)"
 		z := z // 256 ].
 	^ sum normalize
 ]
@@ -570,12 +589,12 @@ ASTInteger >> floor [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> growby: n [
-	^ self growto: self digitLength + n
+	^ self growto: self bytesCount + n
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> growto: n [
 	^ self copyto: (self species new: n)
 ]
@@ -642,20 +661,20 @@ ASTInteger >> printOn: aStream base: b [
 			pos := pos - 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> quo: aNumber [
+
 	"Refer to the comment in Number quo: "
 
 	| ng quo |
-	aNumber isInteger
-		ifTrue: [ ng := self negative == aNumber negative == false.
-			quo := (self
-				digitDiv:
-					(aNumber isSmallInteger
-						ifTrue: [ aNumber abs ]
-						ifFalse: [ aNumber ])
-				neg: ng) at: 1.
-			^ quo normalize ].
+	aNumber isInteger ifTrue: [ 
+		ng := self negative ~~ aNumber negative.
+		quo := (self
+			        digitDiv: (aNumber isSmallInteger
+					         ifTrue: [ aNumber abs ]
+					         ifFalse: [ aNumber ])
+			        neg: ng) at: 1.
+		^ quo normalize ].
 	^ aNumber adaptToInteger: self andSend: #quo:
 ]
 

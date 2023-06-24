@@ -6,3 +6,15 @@ Class {
 	#superclass : #PackageManifest,
 	#category : #'ASTKernel-Objects-Manifest'
 }
+
+{ #category : #'code-critics' }
+ManifestASTKernelObjects class >> ruleNotEliminationRuleV1FalsePositive [
+
+	^ #( #( #( #RGMethodDefinition #( #ASTObject #~~ false ) )
+	        #'2023-06-24T14:15:20.396425-04:00' ) )
+]
+
+{ #category : #'code-critics' }
+ManifestASTKernelObjects class >> ruleUtilityMethodsRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#ASTObject #error: #false)) #'2023-06-24T15:05:14.743216-04:00') )
+]

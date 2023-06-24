@@ -132,7 +132,7 @@ ASTArrayedCollection >> mergeSortFrom: first to: last src: src dst: dst by: aBlo
 		by: aBlock
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTArrayedCollection >> size [
 	"Primitive. Answer the number of indexable fields in the receiver. This value is the same as the largest legal subscript. Primitive is specified here to override MSequenceableCollection size. Essential. See Object documentation whatIsAPrimitive. "
 

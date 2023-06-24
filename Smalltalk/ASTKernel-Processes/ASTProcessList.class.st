@@ -86,7 +86,7 @@ ASTProcessList >> removeFirst [
 	^ oldLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTProcessList >> size [
 	"Answer the number of elements I contain."
 

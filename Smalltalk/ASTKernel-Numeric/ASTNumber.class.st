@@ -170,6 +170,13 @@ ASTNumber >> arcTan [
 ]
 
 { #category : #converting }
+ASTNumber >> asFloat [
+	"Answer a floating-point number approximating the receiver."
+
+	self subclassResponsibility
+]
+
+{ #category : #converting }
 ASTNumber >> asInteger [
 	"Answer an Integer nearest the receiver toward zero."
 
@@ -272,6 +279,15 @@ ASTNumber >> printOn: aStream [
 	"Default print radix is 10"
 
 	self printOn: aStream base: 10
+]
+
+{ #category : #printing }
+ASTNumber >> printOn: aStream base: base [
+
+	"This method should print a representation of the number for the given base,
+	excluding the base prefix (and the letter r for radix)"
+
+	self subclassResponsibility
 ]
 
 { #category : #printing }
