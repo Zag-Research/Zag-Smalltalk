@@ -12,13 +12,13 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
-inline fn oImm(c: Level2, comptime h: comptime_int) u64 {
+inline fn oImm(c: Level2, h: u64) u64 {
     return o(.immediates)|@as(u64,@enumToInt(c))<<32|h;
 }
 inline fn o(g:Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(comptime uniqueNumber: u24) Object {
+pub inline fn indexSymbol(uniqueNumber: u24) Object {
     return @bitCast(Object,oImm(.Symbol,0xff000000|@as(u32,uniqueNumber)));
 }
 pub const ZERO              = of(0);

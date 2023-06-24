@@ -51,13 +51,13 @@ pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: Cont
 }
 fn fibCPS1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
     const newSp = sp-1;
-    newSp[0] = i.p2L(context.getTemp(0),2) catch return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,fibSym});
+    newSp[0] = i.p2L(context.getLocal(0),2) catch return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,fibSym});
     context.setReturnBoth(fibCPS2,pc+3); // after 2nd callRecursive
     return @call(tailCall,fibCPS,.{fibCPST+1,newSp,process,context,fibSym});
 }
 fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
     const sum = i.p1(sp[1],sp[0]) catch return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,fibSym}); 
-    context.setTemp(0,sum);
+    context.setLocal(0,sum);
     var result = context.pop(process);
     const newSp = result.sp;
     var callerContext = result.ctxt;

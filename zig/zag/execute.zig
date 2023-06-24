@@ -52,7 +52,7 @@ pub const CompiledMethod = extern struct {
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
-            .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
+            .header = HeapObject.staticHeaderWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
@@ -108,6 +108,7 @@ pub const Code = extern union {
     object: Object,
     header: heap.HeapObject,
     codeRef: [*]Code,
+    const refFlag = 1024;
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -268,17 +269,23 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn asFakeObject(self: *const Self) Object {
             return @bitCast(Object,self);
         }
-        pub fn setReferences(self: *Self, refs: []const Object) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
+            for (replacements,1..) |replacement,index| {
+                const match =  indexSymbol(@truncate(u24,index));
+                if (self.selector.equals(match))
+                    self.selector = replacement;
+                for (&self.code) |*c| {
+                    if (c.object.equals(match))
+                        c.* = Code.object(replacement);
+                }
+            }
             for (refs,self.references[0..refs.len]) |obj,*srefs|
                 srefs.* = obj;
-            for (&self.code) |*c| {
-                if (c.object.isIndexSymbol())
-                    c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(c))/@sizeOf(Object)-1);
-            }
-        }
-        pub fn setLiteral(self: *Self, match: Object, replacement: Object) void {
-            for (&self.code) |*c| {
-                if (c.object.equals(match)) c.* = Code.object(replacement);
+            if (self.references.len>0) {
+                for (&self.code) |*c| {
+                    if (c.object.isIndexSymbol())
+                        c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()&(Code.refFlag-1)])-@ptrToInt(c))/@sizeOf(Object)-1);
+                }
             }
         }
         pub fn getCodeSize(_: *Self) usize {
@@ -299,6 +306,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
     };
 }
+const empty = &[0]Object{};
 test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
@@ -317,7 +325,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil,2,3);
     var r1r = [_]Object{Nil,True};
-    r1.setReferences(r1r[0..]);
+    r1.setLiterals(empty,&r1r);
     try expectEqual(r1.getCodeSize(),11);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -353,7 +361,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                     n=n+1;
                                     found = true;
                                 } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
-                                    code[n]=Code.ref(intOf(field[0..]));
+                                    code[n]=Code.ref(intOf(field[0..])+Code.refFlag);
                                     n+=1;
                                     found = true;
                                 } else {
@@ -401,7 +409,7 @@ test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
     const mcmp = m.asCompiledMethodPtr();
-    m.setReferences(&[_]Object{Object.from(mcmp)});
+    m.setLiterals(empty,&[_]Object{Object.from(mcmp)});
     var t = m.code[0..];
 //    for (t,0..) |tv,idx|
 //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -583,15 +591,25 @@ pub const controlPrimitives = struct {
         _ = selector;
         @panic("unimplemented");
     }
-    pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _=pc; _=sp; _=process; _=context; _ = selector;
-        @panic("not implemented");
-        // const selector = pc[0].object;
-        // const numArgs = selector.numArgs();
-        // const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
-        // context.setTPc(pc+1);
-        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[0].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[1].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    }
+    // pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+    //     const selector = pc[0].object;
+    //     const numArgs = selector.numArgs();
+    //     const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
+    //     context.setTPc(pc+1);
+    //     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    // }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc+1);
         const offset = pc[0].uint;
@@ -734,7 +752,7 @@ test "context returnTop twice via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnTop,
     });
-    method1.setReferences(&[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    method1.setLiterals(empty,&[_]Object{Object.from(method2.asCompiledMethodPtr())});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
@@ -751,7 +769,7 @@ test "context returnTop with indirect via TestExecution" {
         &p.pushLiteralIndirect,"0Obj",
         &p.returnTop,
     });
-    method.setReferences(&[_]Object{Object.from(42)});
+    method.setLiterals(empty,&[_]Object{Object.from(42)});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};

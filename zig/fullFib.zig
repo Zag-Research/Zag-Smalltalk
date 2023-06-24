@@ -37,38 +37,39 @@ const Sym = struct {
     }
 };
 var sym: Sym = undefined;
+const index_1 = indexSymbol(1);
+var @"Integer>>fibonacci" =
+    compileMethod(index_1,1,2,.{
+        &e.verifySelector,
+        &e.pushContext,"^",
+        // define all blocks here
+        &e.pushNonlocalBlock_one, // [^ 1]
+        &e.popLocal, 0, // block reference
+        // all blocks defined by now
+        &e.pushLocal, 1, // self
+        &e.pushLiteral, Object.from(2),
+        &e.send1, Sym.@"<=",
+        &e.pushLocal, 0,
+        &e.send1, Sym.@"ifTrue:",
+        
+        &e.pushLocal,1, // self
+        &e.pushLiteral, Object.from(1),
+        &e.send1, Sym.@"-",
+        &e.send0, index_1,
+        
+        &e.pushLocal,1, // self
+        &e.pushLiteral, Object.from(2),
+        &e.send1, Sym.@"-",
+        &e.send1, index_1,
+        
+        &e.send1, Sym.@"+",
+        &e.returnTop,
+});
 fn initSmalltalk() void {
+    const empty = &[0]Object{};
     primitives.init();
     sym = Sym.init();
-    const fibonacci_ = comptime indexSymbol(1);
-    var fibonacci =
-        compileMethod(sym.fibonacci,1,2,.{
-            &e.verifySelector,
-            &e.pushContext,"^",
-            // define all blocks here
-            &e.pushNonlocalBlock_one, // [^ 1]
-            &e.popLocal, 0, // block reference
-            // all blocks defined by now
-            &e.pushLocal, 1, // self
-            &e.pushLiteral, Object.from(2),
-            &e.send1, Sym.@"<=",
-            &e.pushLocal, 0,
-            &e.send1, Sym.@"ifTrue:",
-            
-            &e.pushLocal,1, // self
-            &e.pushLiteral, Object.from(1),
-            &e.send1, Sym.@"-",
-            &e.send0, fibonacci_,
-            
-            &e.pushLocal,1, // self
-            &e.pushLiteral, Object.from(2),
-            &e.send, Sym.@"-",
-            &e.send, fibonacci_,
-            
-            &e.send, Sym.@"+",
-            &e.returnTop,
-    });
-    fibonacci.setLiteral(fibonacci_,sym.fibonacci);
+    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci},empty);
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;

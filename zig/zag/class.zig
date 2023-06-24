@@ -1,12 +1,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
-//const process = @import("process.zig");
+const process = @import("process.zig");
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
 const u64_MINVAL = object.u64_MINVAL;
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
+const globalAllocator = symbol.globalAllocator;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
 const assert = std.debug.assert;
@@ -80,7 +81,7 @@ const ClassTable = struct {
     fn compareU32(l: u32, r: u32) std.math.Order {
         return std.math.order(l,r);
     }
-    fn init(st: *symbol.SymbolTable) !Self {
+    fn init(st: *symbol.SymbolTable) Self {
         return ClassTable {
             .theObject = Nil,
             .treap = objectTreap.initEmpty(compareU32,0),
@@ -170,7 +171,7 @@ const ClassTable = struct {
     }
 };
 const Behavior_S = extern struct {
-    header: heap.Header,
+    header: heap.HeapObject,
     superclass: Object,
     methodDict: Object,
     format: Object,
@@ -198,8 +199,8 @@ pub const Class_S = extern struct{
     subclasses: Object,
 };
 
-fn setUpClassTable(st: *symbol.SymbolTable) !ClassTable {
-    var ct = try ClassTable.init(st);
+fn setUpClassTable(st: *symbol.SymbolTable) ClassTable {
+    var ct = ClassTable.init(st);
     var context = @import("context.zig").Context.init();
     var obj = ct.subClass(null,symbols.Object,&context);
     const behavior = ct.subClass(obj,symbols.Behavior,&context);
@@ -211,13 +212,11 @@ fn setUpClassTable(st: *symbol.SymbolTable) !ClassTable {
     return ct;
 }
 test "classes match initialized class table" {
-//    var thr = process.Process.new();
-    //    thr.init();
-    // var ga = arenas.GlobalArena.init();
-    // defer ga.deinit();
-    // var st = symbol.SymbolTable.init(&ga);
-    // var ct = try setUpClassTable(&st);
-    // for(initialClassStrings) |string,idx| {
-    //     try std.testing.expectEqual(idx+1,ct.lookup(st.lookup(string.asObject())));
-    // }
+    var thr = process.Process.new();
+    thr.init();
+    var st = symbol.symbolTable;
+    var ct = setUpClassTable(&st);
+    for(initialClassStrings,0..) |string,idx| {
+        try std.testing.expectEqual(idx+1,ct.lookup(st.lookup(string.asObject())));
+    }
 }

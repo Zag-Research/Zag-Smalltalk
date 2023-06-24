@@ -82,7 +82,7 @@ pub const Context = struct {
         const newSp = process.allocStack(sp,baseSize + locals + maxStackNeeded,&contextMutable)+maxStackNeeded;
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = contextMutable;
-        ctxt.trapContextNumber = process.trapContextNumber
+        ctxt.trapContextNumber = process.trapContextNumber;
         ctxt.method = method;
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
