@@ -41,7 +41,7 @@ ASTDictionary >> associationsDo: aBlock [
 	super do: aBlock
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTDictionary >> at: key [
 	"Answer the value associated with the key."
 
@@ -58,18 +58,20 @@ ASTDictionary >> at: key ifAbsent: aBlock [
 	^ assoc value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTDictionary >> at: key put: anObject [
+
 	"Set the value at key to be anObject.  If key is not found, create a new
 	entry for key and set is value to anObject. Answer anObject."
 
 	| index element |
 	index := self findElementOrNil: key.
 	element := array at: index.
-	element == nil
-		ifTrue:
-			[ self atNewIndex: index put: (ASTAssociation key: key value: anObject) ]
-		ifFalse: [ element value: anObject ].
+	element ifNil: [ 
+			self
+				atNewIndex: index
+				put: (ASTAssociation key: key value: anObject) ]
+		ifNotNil: [ element value: anObject ].
 	^ anObject
 ]
 

@@ -8,7 +8,7 @@ Class {
 	#category : #'ASTKernel-Processes'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTProcessorScheduler class >> new [
 	"The VM depends on a unique scheduler."
 

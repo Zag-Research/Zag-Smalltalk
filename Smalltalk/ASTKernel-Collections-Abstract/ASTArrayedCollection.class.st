@@ -4,7 +4,7 @@ Class {
 	#category : #'ASTKernel-Collections-Abstract'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTArrayedCollection class >> new [
 	"Answer a new instance of me, with size = 0."
 

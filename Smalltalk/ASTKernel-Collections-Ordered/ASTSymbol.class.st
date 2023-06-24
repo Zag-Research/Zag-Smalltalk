@@ -17,12 +17,12 @@ ASTSymbol class >> new: size [
 	self cannotInstantiate
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTSymbol >> = anObject [
 	^ self == anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTSymbol >> asString [
 	"Answer a string containing my characters."
 
@@ -42,7 +42,7 @@ ASTSymbol >> asSymbol [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTSymbol >> at: anInteger put: anObject [
 	"You cannot modify the receiver."
 
@@ -64,7 +64,7 @@ ASTSymbol >> errorNoModification [
 	self error: 'Symbols can not be modified.'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTSymbol >> hash [
 	^ self identityHash
 ]
@@ -79,7 +79,7 @@ ASTSymbol >> printOn: aStream [
 	aStream nextPutAll: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTSymbol >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	self errorNoModification
 ]

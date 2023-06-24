@@ -13,7 +13,7 @@ ASTValueLink class >> value: aValue [
 	^ self new value: aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTValueLink >> = anotherObject [
 	^ self species == anotherObject species
 		and: [ self value = anotherObject value
@@ -25,7 +25,7 @@ ASTValueLink >> asLink [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTValueLink >> hash [
 	^ self value hash bitXor: nextLink identityHash
 ]

@@ -44,7 +44,7 @@ ASTInteger class >> readFrom: aStream base: base [
 	^ value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> * aNumber [
 	"Refer to the comment in Number * "
 
@@ -54,7 +54,7 @@ ASTInteger >> * aNumber [
 	^ aNumber adaptToInteger: self andSend: #*
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> + aNumber [
 	"Refer to the comment in Number + "
 
@@ -65,7 +65,7 @@ ASTInteger >> + aNumber [
 	^ aNumber adaptToInteger: self andSend: #+
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> - aNumber [
 	"Refer to the comment in Number - "
 
@@ -76,7 +76,7 @@ ASTInteger >> - aNumber [
 	^ aNumber adaptToInteger: self andSend: #-
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> / aNumber [
 	"Refer to the comment in Number / "
 
@@ -91,7 +91,7 @@ ASTInteger >> / aNumber [
 	^ aNumber adaptToInteger: self andSend: #/
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTInteger >> // aNumber [
 	| q |
 	aNumber = 0
@@ -106,7 +106,7 @@ ASTInteger >> // aNumber [
 		ifFalse: [ ^ q ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInteger >> < aNumber [
 	aNumber isInteger
 		ifTrue: [ self negative == aNumber negative
@@ -117,7 +117,7 @@ ASTInteger >> < aNumber [
 	^ aNumber adaptToInteger: self andSend: #<
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInteger >> = aNumber [
 	aNumber isNumber
 		ifFalse: [ ^ false ].
@@ -128,7 +128,7 @@ ASTInteger >> = aNumber [
 	^ aNumber adaptToInteger: self andSend: #=
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInteger >> > aNumber [
 	aNumber isInteger
 		ifTrue: [ self negative == aNumber negative
@@ -139,14 +139,7 @@ ASTInteger >> > aNumber [
 	^ aNumber adaptToInteger: self andSend: #>
 ]
 
-{ #category : #'as yet unclassified' }
-ASTInteger >> asCharacter [
-	"Answer the Character whose value is the receiver."
-
-	^ ASTCharacter asciiValue: self
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTInteger >> asFloat [
 	"Answer a Float that represents the value of the receiver.
 	Optimized to process only the significant digits of a LargeInteger."
@@ -156,12 +149,12 @@ ASTInteger >> asFloat [
 	sum := 0.
 	firstByte := self size - 7 max: 1.
 	firstByte to: self size do: [ :byteIndex | 
-		sum := ((self digitAt: byteIndex) asFloat timesTwoPower: shift) + sum.
+		sum := ((self byteAt: byteIndex) asFloat timesTwoPower: shift) + sum.
 		shift := shift + 8 ].
 	^ sum * self sign asFloat timesTwoPower: (firstByte - 1) * 8
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTInteger >> asInteger [
 	"Answer with the receiver itself."
 
@@ -206,7 +199,7 @@ ASTInteger >> benchmark [  "Handy bytecode-heavy benchmark"
 	^ count
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitAnd: n [
 	"Answer an Integer whose bits are the logical AND of the receiver's bits 
 	and those of the argument, n."
@@ -216,17 +209,17 @@ ASTInteger >> bitAnd: n [
 	^ self
 		digitLogic: norm
 		op: #bitAnd:
-		length: (self digitLength max: norm digitLength)
+		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitClear: aMask [
 	"Answer an Integer equal to the receiver, except with all bits cleared that are set in aMask."
 
 	^ (self bitOr: aMask) - aMask
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitInvert [
 	"Answer an Integer whose bits are the logical negation of the receiver's bits.
 	Numbers are interpreted as having 2's-complement representation."
@@ -234,7 +227,7 @@ ASTInteger >> bitInvert [
 	^ -1 - self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitOr: n [
 	"Answer an Integer whose bits are the logical OR of the receiver's bits 
 	and those of the argument, n."
@@ -244,10 +237,10 @@ ASTInteger >> bitOr: n [
 	^ self
 		digitLogic: norm
 		op: #bitOr:
-		length: (self digitLength max: norm digitLength)
+		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitShift: shiftCount [
 	"Answer an Integer whose value (in twos-complement representation) is 
 	the receiver's value (in twos-complement representation) shifted left by 
@@ -261,10 +254,10 @@ ASTInteger >> bitShift: shiftCount [
 	^ (self
 		digitRshift: (rShift bitAnd: 7)
 		bytes: (rShift bitShift: -3)
-		lookfirst: self digitLength) normalize
+		lookfirst: self bytesCount) normalize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'bit manipulation' }
 ASTInteger >> bitXor: n [
 	"Answer an Integer whose bits are the logical XOR of the receiver's bits 
 	and those of the argument, n."
@@ -274,20 +267,26 @@ ASTInteger >> bitXor: n [
 	^ self
 		digitLogic: norm
 		op: #bitXor:
-		length: (self digitLength max: norm digitLength)
+		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
+ASTInteger >> byteAt: index [
+
+	self subclassResponsibility
+]
+
+{ #category : #'truncation and round off' }
 ASTInteger >> ceiling [
 	"Refer to the comment in Number|ceiling."
 
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTInteger >> copyto: x [
 	| stop |
-	stop := self digitLength min: x digitLength.
+	stop := self bytesCount min: x bytesCount.
 	^ x
 		replaceFrom: 1
 		to: stop
@@ -564,7 +563,7 @@ ASTInteger >> digitSubtract: arg [
 	^ sum normalize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'truncation and round off' }
 ASTInteger >> floor [
 	"Refer to the comment in Number|floor."
 
@@ -581,35 +580,35 @@ ASTInteger >> growto: n [
 	^ self copyto: (self species new: n)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInteger >> hash [
 	"Hash is reimplemented because = is implemented."
 
-	^ (self lastDigit bitShift: 8) + (self digitAt: 1)
+	^ (self lastDigit bitShift: 8) + (self byteAt: 1)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTInteger >> isInteger [
 	"True for all subclasses of Integer."
 
 	^ true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTInteger >> lastDigit [
 	"Answer the last digit of the integer."
 
-	^ self digitAt: self digitLength
+	^ self byteAt: self bytesCount
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'truncation and round off' }
 ASTInteger >> normalize [
 	"SmallInts OK; LgInts override"
 
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTInteger >> printOn: aStream base: b [
 	"Print a representation of the receiver on the stream, aStream, in base, b, 
 	where 2<=b<=16."
@@ -618,7 +617,7 @@ ASTInteger >> printOn: aStream base: b [
 	b = 10
 		ifFalse: [ b printOn: aStream.
 			aStream nextPut: $r ].
-	i := self digitLength.	"Estimate size of result, conservatively"
+	i := self bytesCount.	"Estimate size of result, conservatively"
 	digits := ASTArray new: i * 8.
 	pos := 0.
 	dest := i <= 1
@@ -629,14 +628,14 @@ ASTInteger >> printOn: aStream base: b [
 		whileTrue: [ rem := 0.
 			j := i.
 			[ j > 0 ]
-				whileTrue: [ t := (rem bitShift: 8) + (source digitAt: j).
-					dest digitAt: j put: t // b.
+				whileTrue: [ t := (rem bitShift: 8) + (source byteAt: j).
+					dest byteAt: j put: t // b.
 					rem := t \\ b.
 					j := j - 1 ].
 			pos := pos + 1.
 			digits at: pos put: rem.
 			source := dest.
-			(source digitAt: i) = 0
+			(source byteAt: i) = 0
 				ifTrue: [ i := i - 1 ] ].	"(dest digitAt: 1) printOn: aStream base: b."
 	[ pos > 0 ]
 		whileTrue: [ aStream nextPut: (ASTCharacter digitValue: (digits at: pos)).
@@ -660,24 +659,24 @@ ASTInteger >> quo: aNumber [
 	^ aNumber adaptToInteger: self andSend: #quo:
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTInteger >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	| j |
 	"Catches failure if LgInt replace primitive fails"
 	j := repStart.
 	start to: stop do: [ :i | 
-		self digitAt: i put: (replacement digitAt: j).
+		self byteAt: i put: (replacement byteAt: j).
 		j := j + 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'truncation and round off' }
 ASTInteger >> rounded [
 	"Refer to the comment in Number|rounded."
 
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
 ASTInteger >> timesRepeat: aBlock [
 	"Evaluate the argument, aBlock, the number of times represented by the 
 	receiver."
@@ -689,7 +688,7 @@ ASTInteger >> timesRepeat: aBlock [
 			count := count + 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'truncation and round off' }
 ASTInteger >> truncated [
 	"Refer to the comment in Number|truncated."
 

@@ -5,17 +5,17 @@ Class {
 	#category : #'ASTKernel-Numeric'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTLargeNegativeInteger >> abs [
 	^ self negated
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #arithmetic }
 ASTLargeNegativeInteger >> negated [
-	^ self copyto: (ASTLargePositiveInteger new: self digitLength)
+	^ self copyto: (ASTLargePositiveInteger new: self bytesCount)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTLargeNegativeInteger >> negative [
 	"Answer whether the receiver is mathematically negative."
 
@@ -53,7 +53,7 @@ ASTLargeNegativeInteger >> normalize [
 		ifFalse: [ ^ self ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 ASTLargeNegativeInteger >> printOn: aStream base: b [
 	"Refer to the comment in Integer|printOn:base:."
 
@@ -61,7 +61,7 @@ ASTLargeNegativeInteger >> printOn: aStream base: b [
 	super printOn: aStream base: b
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTLargeNegativeInteger >> sign [
 	"Optimization. Answer -1 since receiver is less than 0."
 

@@ -8,7 +8,7 @@ Class {
 	#category : #'ASTKernel-Collections-Unordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTSet class >> new [
 	^ self new: 4
 ]
@@ -25,7 +25,7 @@ ASTSet class >> new: nElements [
 	^ self basicNew init: initialSize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTSet >> = aSet [
 	(aSet isKindOf: ASTSet)
 		ifFalse: [ ^ false ].
