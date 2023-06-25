@@ -28,13 +28,13 @@ ASTArray >> elementsExchangeIdentityWith: otherArray [
 	self primitiveFailed
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTArray >> hash [
+
 	"Make sure that equal (=) arrays hash equally."
 
-	self size = 0
-		ifTrue: [ ^ 17171 ].
-	^ (self at: 1) hash + (self at: self size) hash
+	self isEmpty ifTrue: [ ^ 17171 ].
+	^ (self at: 1) hash + self last hash
 ]
 
 { #category : #printing }
@@ -47,7 +47,7 @@ ASTArray >> printOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTArray >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 

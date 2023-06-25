@@ -39,15 +39,16 @@ ASTMethodDictionary >> at: key ifAbsent: aBlock [
 	^ array at: index
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTMethodDictionary >> at: key put: value [
+
 	"Set the value at key to be value."
 
 	| index |
 	index := self findElementOrNil: key.
-	(self basicAt: index) == nil
-		ifTrue: [ tally := tally + 1.
-			self basicAt: index put: key ].
+	(self basicAt: index) ifNil: [ 
+		tally := tally + 1.
+		self basicAt: index put: key ].
 	array at: index put: value.
 	self fullCheck.
 	^ value

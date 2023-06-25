@@ -27,20 +27,20 @@ pub const Context = struct {
     tpc: [*]const Code, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
-    nonLocalLink: ContextPtr, // note this is not an Object, so access and GC need to handle specially
+    trapContextNumber: u64,
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
-    temps: [nTemps]Object,
+    temps: [nLocals]Object,
     const Self = @This();
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;
-    const nTemps = 1;
-    const baseSize = @sizeOf(Self)/@sizeOf(Object) - nTemps;
+    const nLocals = 1;
+    const baseSize = @sizeOf(Self)/@sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self {
-            .header = comptime heap.footer(baseSize+nTemps,Format.header,class.Context_I,0,Age.static),
+            .header = comptime heap.footer(baseSize+nLocals,Format.header,class.Context_I,0,Age.static),
             .tpc = undefined,
-            .npc = undefined,
+            .npc = Code.end,
             .prevCtxt = undefined,
-            .nonLocalLink = undefined,
+            .trapContextNumber = undefined,
             .method = undefined,
             .temps = undefined,
         };
@@ -55,16 +55,16 @@ pub const Context = struct {
         _ = options;
         
         try writer.print("context: {}",.{self.header});
-        try writer.print(" prev: 0x{x}",.{@ptrToInt(self.prevCtxt)});
+        try writer.print(" prev: 0x{x}",.{@ptrToInt(self.previous())});
         if (false) {
             @setRuntimeSafety(false);
             try writer.print(" temps: {any}",.{self.temps[0..self.size]});
         }
     }
-    pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object,ctxt: *const Context } {
+    pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object,ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
         if (self.isOnStack())
-            return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.prevCtxt};
+            return .{.sp=self.asObjectPtr() + wordsToDiscard,.ctxt=self.previous()};
         _ = process;@panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         // const newSp = process.endOfStack() - itemsToKeep.len;
@@ -77,15 +77,17 @@ pub const Context = struct {
         return self.push(sp, process, method, locals, maxStackNeeded, selfOffset);
     }
     pub inline fn push(self: * Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
+        if (@ptrToInt(self)==0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp,baseSize + locals + maxStackNeeded,&contextMutable)+maxStackNeeded;
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = contextMutable;
+        ctxt.trapContextNumber = process.trapContextNumber;
         ctxt.method = method;
         { @setRuntimeSafety(false);
          for (ctxt.temps[0..locals]) |*local| {local.*=Nil;}
          }
-        ctxt.header = HeapObject.partialOnStack(baseSize+selfOffset);
+        ctxt.header = HeapObject.partialHeaderOnStack(baseSize+selfOffset);
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
@@ -105,12 +107,12 @@ pub const Context = struct {
         return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
-        return (@ptrToInt(self.prevCtxt.endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
+        return (@ptrToInt(self.previous().endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
     pub inline fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
         return sp[0..(@ptrToInt(self.endOfStack(process))-@ptrToInt(sp))/@sizeOf(Object)];
     }
-    pub inline fn allTemps(self: *const Context, process: *const Process) []Object {
+    pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
         const size = self.tempSize(process);
         @setRuntimeSafety(false);
         return @constCast(self.temps[0..size]);
@@ -118,9 +120,12 @@ pub const Context = struct {
     pub inline fn getTPc(self: *const Context) [*]const Code {
         return self.tpc;
     }
+    pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: [*]const Code) void {
+        self.npc = npc;
+        self.tpc = tpc;
+    }
     pub inline fn setReturn(self: ContextPtr, tpc: [*]const Code) void {
-        self.npc = tpc[0].prim;
-        self.tpc = tpc+1;
+        self.setReturnBoth(tpc[0].prim,tpc+1);
     }
     pub inline fn getNPc(self: *const Context) Context.ThreadedFn {
         return self.npc;
@@ -132,15 +137,16 @@ pub const Context = struct {
         const wordsToDiscard = self.asHeapObjectPtr().hash16();
         return self.asObjectPtr()[wordsToDiscard];
     }
-    pub inline fn getTemp(self: *const Context, n: usize) Object {
+    pub inline fn getLocal(self: *const Context, n: usize) Object {
         @setRuntimeSafety(false);
         return self.temps[n];
     }
-    pub inline fn setTemp(self: ContextPtr, n: usize, v: Object) void {
+    pub inline fn setLocal(self: ContextPtr, n: usize, v: Object) void {
         @setRuntimeSafety(false);
         self.temps[n] = v;
     }
     pub inline fn previous(self: *const Context) ContextPtr {
+        if (@ptrToInt(self.prevCtxt)==0) @panic("0 prev");
         return self.prevCtxt;
     }
     pub inline fn asHeapObjectPtr(self : *const Context) HeapObjectPtr {
@@ -154,7 +160,7 @@ pub const Context = struct {
     }
     pub fn print(self: *const Context, process: *const Process) void {
         const pr = std.debug.print;
-        pr("Context: {*} {} {any}\n",.{self,self.header,self.allTemps(process)});
+        pr("Context: {*} {} {any}\n",.{self,self.header,self.allLocals(process)});
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
     }
     pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object) [*]Object {

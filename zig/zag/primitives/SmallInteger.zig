@@ -152,7 +152,7 @@ pub const embedded = struct {
     }
     pub var @"SmallInteger>>#-" = noFallback;
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// SmallInteger>>#-
-        sp[1] = inlines.p1(sp[1],sp[0]) catch
+        sp[1] = inlines.p2(sp[1],sp[0]) catch
             return @call(tailCall,Context.call,.{pc,sp,process,context,@"SmallInteger>>#-".asFakeObject()});
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }

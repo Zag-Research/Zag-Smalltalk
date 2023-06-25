@@ -20,21 +20,21 @@ ASTObject class >> cannotInstantiate [
 	self error: 'You cannot create new instances of ' , self name
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTObject class >> new [
 	"Create a new instance of me and initialize it."
 
 	^ self basicNew initialize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #associating }
 ASTObject >> -> anObject [
 	"Answer an Association with myself as its key and anObject as its value."
 
 	^ ASTAssociation new key: self value: anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTObject >> = anObject [
 	"Answer whether the receiver and the argument represent the same 
 	object. If = is redefined in any subclass, consider also redefining the 
@@ -43,7 +43,7 @@ ASTObject >> = anObject [
 	^ self == anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTObject >> == anObject [
 	"Primitive. Answer whether the receiver and the argument are the same 
 	object (have the same object pointer). Do not redefine the message == in 
@@ -54,17 +54,17 @@ ASTObject >> == anObject [
 	self primitiveFailed
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTObject >> asLink [
 	^ ASTValueLink value: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTObject >> asString [
 	^ self printString
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTObject >> at: index [
 	"Primitive. Assumes receiver is indexable. Answer the value of an indexable element in the receiver. Fail if the argument index is not an  Integer or is out of bounds. Essential. Do not override in a subclass. See Object documentation whatIsAPrimitive."
 
@@ -76,8 +76,9 @@ ASTObject >> at: index [
 		ifFalse: [ self errorNonIntegerIndex ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTObject >> at: index put: value [
+
 	"Primitive. Assumes receiver is indexable. Store the second argument 
 	value in the indexable element of the receiver indicated by index. Fail 
 	if the index is not an Integer or is out of bounds. Or fail if the value is 
@@ -86,16 +87,16 @@ ASTObject >> at: index put: value [
 	documentation whatIsAPrimitive."
 
 	<primitive: 61>
-	index isInteger
-		ifTrue: [ (index >= 1 and: [ index <= self size ])
-				ifTrue: [ self errorImproperStore ]
-				ifFalse: [ self errorSubscriptBounds: index ] ].
+	index isInteger ifTrue: [ 
+		(index between: 1 and: self size )
+			ifTrue: [ self errorImproperStore ]
+			ifFalse: [ self errorSubscriptBounds: index ] ].
 	index isNumber
 		ifTrue: [ ^ self basicAt: index asInteger put: value ]
 		ifFalse: [ self errorNonIntegerIndex ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTObject >> basicAt: index [
 	"Primitive. Assumes receiver is indexable. Answer the value of an indexable element in the receiver. Fail if the argument index is not an  Integer or is out of bounds. Essential. Do not override in a subclass. See Object documentation whatIsAPrimitive."
 
@@ -193,7 +194,16 @@ ASTObject >> doesNotUnderstand: aMessage [
 	^ aMessage sentTo: self ""resend the message if the user proceeds from the debugger"""
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'error handling' }
+ASTObject >> error [
+
+	"Throw a generic Error exception."
+
+	<debuggerCompleteToSender>
+	^ self error: 'Error!'
+]
+
+{ #category : #'error handling' }
 ASTObject >> error: aString [
 
 	"The default behavior for error: is the same as halt:. The code is replicated in order to avoid having an extra message send on the stack. This additional message is the one a subclass should override in order to change the error handling behavior."
@@ -206,28 +216,36 @@ ASTObject >> error: aString [
 		ifNotNil: [ handler value: aString value: self ]"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTObject >> errorImproperStore [
 	"Error: an improper store was attempted."
 
 	self error: 'Improper store into indexable object.'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTObject >> errorNonIntegerIndex [
 	"Error: attempting to use a non-integer object as an index."
 
 	self error: 'Only integers should be used as indices.'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
+ASTObject >> errorNotIndexable [
+
+	"Create an error notification that the receiver is not indexable."
+
+	self error: 'Instances of ',self class name,' are not indexable'
+]
+
+{ #category : #private }
 ASTObject >> errorPharoImplementation [
 	"Error: an improper store was attempted."
 
 	self error: 'Incompatible implementation from Pharo.'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTObject >> errorSubscriptBounds: index [
 	"Error: the given index is out of range."
 
@@ -254,7 +272,15 @@ ASTObject >> handleExceptionName: aString context: aContext [
 		ifNotNil: [ super error: aString ]	"exit to the VM debugger"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'error handling' }
+ASTObject >> handles: exception [
+
+	"This method exists in case a non exception class is the first arg in an on:do: (for instance using a exception class that is not loaded). We prefer this to raising an error during error handling itself. Also, semantically it makes sense that the exception handler is not active if its exception class is not loaded"
+
+	^ false
+]
+
+{ #category : #comparing }
 ASTObject >> hash [
 	"Answer a SmallInteger whose value is related to the receiver's identity.
 	May be overridden, and should be overridden in any classes that define = "
@@ -262,7 +288,7 @@ ASTObject >> hash [
 	^ self identityHash
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTObject >> identityHash [
 	"Answer a SmallInteger whose value is related to the receiver's identity. This method must not be overridden, except by SmallInteger. Primitive. Fails if the receiver is a SmallInteger. Essential. See Object documentation whatIsAPrimitive. Do not override!"
 
@@ -566,11 +592,23 @@ ASTObject >> shouldBePrintedAsLiteral [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'error handling' }
 ASTObject >> shouldNotImplement [
 	"Announce that, although the receiver inherits this message, it should not implement it."
 
 	self error: 'This message is not appropriate for this object'
+]
+
+{ #category : #accessing }
+ASTObject >> size [
+
+	"Primitive. Answer the number of indexable variables in the receiver. 
+	This value is the same as the largest legal subscript. Essential. See Object 
+	documentation whatIsAPrimitive."
+
+	<primitive: 62>
+	self class isVariable ifFalse: [ self errorNotIndexable ].
+	^ 0
 ]
 
 { #category : #'as yet unclassified' }
@@ -588,7 +626,7 @@ ASTObject >> species [
 	^ self class
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'error handling' }
 ASTObject >> subclassResponsibility [
 	"This message sets up a framework for the behavior of subclasses of this class. Announce that the subclass should have implemented this message."
 
@@ -611,19 +649,19 @@ ASTObject >> yourself [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTObject >> ~= anObject [
+
 	"Answer whether the receiver and the argument do not represent the same object."
 
-	^ self = anObject == false
+	^ (self = anObject) not
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTObject >> ~~ anObject [
+
 	"Answer whether the receiver and the argument are not the same object 
 	(do not have the same object pointer)."
 
-	^ self == anObject
-		ifTrue: [ false ]
-		ifFalse: [ true ]
+	^ (self == anObject) not
 ]

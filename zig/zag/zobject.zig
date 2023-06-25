@@ -12,13 +12,13 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @bitCast(Object,v);
 }
-inline fn oImm(c: Level2, comptime h: comptime_int) u64 {
+inline fn oImm(c: Level2, h: u64) u64 {
     return o(.immediates)|@as(u64,@enumToInt(c))<<32|h;
 }
 inline fn o(g:Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(comptime uniqueNumber: u24) Object {
+pub inline fn indexSymbol(uniqueNumber: u24) Object {
     return @bitCast(Object,oImm(.Symbol,0xff000000|@as(u32,uniqueNumber)));
 }
 pub const ZERO              = of(0);
@@ -47,7 +47,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const Level2 = enum(ClassIndex) {
-    Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, _ };
+    Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
 pub const Object_I = @enumToInt(Level2.Object);
 pub const SmallInteger_I = @enumToInt(Level2.SmallInteger);
 pub const Float_I = @enumToInt(Level2.Float);
@@ -62,6 +62,9 @@ pub const String_I = @enumToInt(Level2.String);
 pub const SymbolTable_I = @enumToInt(Level2.SymbolTable);
 pub const Method_I = @enumToInt(Level2.Method);
 pub const CompiledMethod_I = @enumToInt(Level2.CompiledMethod);
+pub const Dispatch_I = @enumToInt(Level2.Dispatch);
+pub const ClosureData_I = @enumToInt(Level2.ClosureData);
+pub const Context_I = @enumToInt(Level2.Context);
 pub const Group = enum(u16) {
     immediates = 0xfff0, smallInt, smallInt0 = 0xfff5, smallIntMax = 0xfff8, unused1, numericThunk, immediateThunk, heapThunk, nonLocalThunk, heapClosure, heap,  _,
     const Self = @This();
@@ -317,7 +320,6 @@ pub const Object = packed struct(u64) {
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
         _ = options;
         
         try switch (self.immediate_class()) {
@@ -332,6 +334,7 @@ pub const Object = packed struct(u64) {
             Float_I => writer.print("{}", .{self.to(f64)}),
             else => { try writer.print("0x{x:>16}", .{self.u()});@panic("format for unknown class");},
         };
+        if (fmt.len==1 and fmt[0]=='x') try writer.print("({x:>16})", .{self.u()});
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {

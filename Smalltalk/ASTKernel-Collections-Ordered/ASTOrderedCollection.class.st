@@ -9,7 +9,7 @@ Class {
 	#category : #'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTOrderedCollection class >> new [
 	^ self new: 8
 ]
@@ -43,7 +43,7 @@ ASTOrderedCollection >> addFirst: newObject [
 	^ newObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTOrderedCollection >> at: anInteger [
 	"Answer my element at index anInteger. at: is used by a knowledgeable
 	client to access an existing element"
@@ -53,7 +53,7 @@ ASTOrderedCollection >> at: anInteger [
 		ifFalse: [ ^ array at: anInteger + firstIndex - 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTOrderedCollection >> at: anInteger put: anObject [
 	"Put anObject at element index anInteger. at:put: cannot be used to
 	append, front or back, to an ordered collection; it is used by a
@@ -289,7 +289,7 @@ ASTOrderedCollection >> setCollection: anArray [
 	lastIndex := firstIndex - 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTOrderedCollection >> size [
 	^ lastIndex - firstIndex + 1
 ]

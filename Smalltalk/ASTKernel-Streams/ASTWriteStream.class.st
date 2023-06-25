@@ -75,7 +75,7 @@ ASTWriteStream >> position: anInteger [
 	super position: anInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTWriteStream >> size [
 	^ readLimit := readLimit max: position
 ]

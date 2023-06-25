@@ -9,7 +9,7 @@ const bitsToRepresent = @import("utilities.zig").bitsToRepresent;
 const smallerPowerOf2 = @import("utilities.zig").smallerPowerOf2;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 const largerPowerOf2Not1 = @import("utilities.zig").largerPowerOf2Not1;
-const object = @import("object.zig");
+const object = @import("zobject.zig");
 const Object = object.Object;
 const objectWidth = @sizeOf(Object);
 const ClassIndex = object.ClassIndex;
@@ -100,7 +100,7 @@ const HeapAllocation = extern struct {
     fn putInFreeLists(self: SelfPtr, ptr: HeapObjectArray, from: usize, to: usize) void {
         if (to==from) return;
         const freeIndex = @min(nFreeLists-1,bitsToRepresent((to-from)>>1));
-        const freeSize = @as(usize,1)<<@truncate(u6,freeIndex);
+        const freeSize = @as(usize,1)<<freeIndex;
         const freeMask = freeSize-1;
         var start = (from+freeMask)&~freeMask;
         if (from<start) self.putInFreeLists(ptr,from,start);
@@ -150,9 +150,7 @@ const HeapAllocation = extern struct {
         }
     }
 };
-test "size of HeapAllocation" {
-    try std.testing.expectEqual(@sizeOf(HeapAllocation),heap_allocation_size);
-}
+comptime {std.debug.assert(@sizeOf(HeapAllocation)==heap_allocation_size);}
 test "check HeapAllocations" {
     const ee = std.testing.expectEqual;
     var ha = HeapAllocation.init();

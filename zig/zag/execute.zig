@@ -48,21 +48,18 @@ pub const CompiledMethod = extern struct {
     const Self = @This();
     pub const codeOffset = @offsetOf(CompiledMethod,"code");
     pub fn init(name: Object, methodFn: ThreadedFn) Self {
-        return init2(name,methodFn,end);
+        return init2(name,methodFn,Code.end);
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
-            .header = HeapObject.partialWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
+            .header = HeapObject.staticHeaderWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
             .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
     }
-    fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
-        return sp;
-    }
-    pub fn execute(self: * const Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
+    pub fn execute(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
         const pc = self.codePtr();
 //        std.debug.print("execute [{*}]: {*}\n",.{pc,pc[0].prim});
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
@@ -74,8 +71,8 @@ pub const CompiledMethod = extern struct {
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
         return selector.equals(self.selector);
     }
-    pub inline fn codePtr(self: *const Self) [*]const Code {
-        return @ptrCast([*]const Code,&self.code);
+    pub inline fn codePtr(self: *Self) [*] Code {
+        return @ptrCast([*] Code,&self.code);
     }
     pub fn format(
         self: *const Self,
@@ -111,7 +108,7 @@ pub const Code = extern union {
     object: Object,
     header: heap.HeapObject,
     codeRef: [*]Code,
-    compiledMethod: *const  CompiledMethod,
+    const refFlag = 1024;
     pub inline fn prim(pp: ThreadedFn) Code {
         return Code{.prim=pp};
     }
@@ -130,15 +127,22 @@ pub const Code = extern union {
     inline fn header(h: heap.HeapObject) Code {
         return Code{.header=h};
     }
-    inline fn codeRef(c: [*]Code) Code {
-        return Code{.codeRef=c};
+    pub inline fn codeRef(c: [*]const Code) Code {
+        return Code{.codeRef=@constCast(c)};
     }
-    pub const end = &[_]Code{.{.prim=&CompiledMethod.end}};
-    inline fn compiledMethod(self: * const Code) *const CompiledMethod {
+    pub fn end(_: [*]const Code, sp: [*]Object, _: *Process, _: * Context, _: Object) [*]Object {
+        return sp;
+    }
+    pub const endThread = &[_]Code{.{.prim=&end}};
+    inline fn compiledMethodX(self: *const Code) *const CompiledMethod {
        return @ptrCast(*const CompiledMethod,self);
     }
     pub inline fn compiledMethodPtr(self: *const Code, comptime index: comptime_int) *const CompiledMethod {
         return @fieldParentPtr(CompiledMethod,"code",@ptrCast(*const [2]Code,@ptrCast([*]const Code,self)-index));
+    }
+    pub inline fn literalIndirect(self: *const Code) Object {
+        const offset = self.uint;
+        return @ptrCast(*const Object,@ptrCast([*]const Code,self)+1+offset).*;
     }
     pub fn format(
         self: *const Code,
@@ -241,7 +245,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
 //            @compileLog(codeSize,refsSize);
 //            trace("\nfooter={}",.{footer});
             return .{
-                .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
+                .header = HeapObject.staticHeaderWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = undefined,
@@ -251,7 +255,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codeSize]Code) Self {
             return .{
-                .header = HeapObject.partialWithLength(codeOffsetInUnits-1+codeSize+refsSize),
+                .header = HeapObject.staticHeaderWithLength(codeOffsetInUnits-1+codeSize+refsSize),
                 .selector = name,
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = code,
@@ -259,23 +263,29 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .footer = heap.footer(codeOffsetInUnits+codeSize,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
             };
         }
-        pub fn asCompiledMethodPtr(self: *Self) * CompiledMethod {
-            return @ptrCast(* CompiledMethod,self);
+        pub fn asCompiledMethodPtr(self: *const Self) * CompiledMethod {
+            return @ptrCast(* CompiledMethod,@constCast(self));
         }
         pub fn asFakeObject(self: *const Self) Object {
             return @bitCast(Object,self);
         }
-        pub fn setReferences(self: *Self, refs: []const Object) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
+            for (replacements,1..) |replacement,index| {
+                const match =  indexSymbol(@truncate(u24,index));
+                if (self.selector.equals(match))
+                    self.selector = replacement;
+                for (&self.code) |*c| {
+                    if (c.object.equals(match))
+                        c.* = Code.object(replacement);
+                }
+            }
             for (refs,self.references[0..refs.len]) |obj,*srefs|
                 srefs.* = obj;
-            for (&self.code) |*c| {
-                if (c.object.isIndexSymbol())
-                    c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()])-@ptrToInt(c))/@sizeOf(Object)-1);
-            }
-        }
-        pub fn setLiteral(self: *Self, match: Object, replacement: Object) void {
-            for (&self.code) |*c| {
-                if (c.object.equals(match)) c.* = Code.object(replacement);
+            if (self.references.len>0) {
+                for (&self.code) |*c| {
+                    if (c.object.isIndexSymbol())
+                        c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()&(Code.refFlag-1)])-@ptrToInt(c))/@sizeOf(Object)-1);
+                }
             }
         }
         pub fn getCodeSize(_: *Self) usize {
@@ -296,6 +306,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
     };
 }
+const empty = &[0]Object{};
 test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
@@ -314,7 +325,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil,2,3);
     var r1r = [_]Object{Nil,True};
-    r1.setReferences(r1r[0..]);
+    r1.setLiterals(empty,&r1r);
     try expectEqual(r1.getCodeSize(),11);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -350,7 +361,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                     n=n+1;
                                     found = true;
                                 } else if (field.len>=1 and field[0]>='0' and field[0]<='9') {
-                                    code[n]=Code.ref(intOf(field[0..]));
+                                    code[n]=Code.ref(intOf(field[0..])+Code.refFlag);
                                     n+=1;
                                     found = true;
                                 } else {
@@ -398,7 +409,7 @@ test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     var m = compileMethod(sym.yourself,0,0,.{":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null});
     const mcmp = m.asCompiledMethodPtr();
-    m.setReferences(&[_]Object{Object.from(mcmp)});
+    m.setLiterals(empty,&[_]Object{Object.from(mcmp)});
     var t = m.code[0..];
 //    for (t,0..) |tv,idx|
 //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -515,8 +526,7 @@ pub const controlPrimitives = struct {
     }
     pub fn pushLiteralIndirect(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        const offset = pc[0].uint;
-        newSp[0]=@ptrCast(*const Object,pc+1+offset).*;
+        newSp[0]=@ptrCast(*const Code,pc).literalIndirect();
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
     pub fn pushLiteralNil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -540,46 +550,66 @@ pub const controlPrimitives = struct {
         context.convertToProperHeapObject(sp,process);
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
     }
-    pub fn popIntoTemp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\npopIntoTemp: {} {}",.{pc[0].uint,sp[0]});
-        context.setTemp(pc[0].uint,sp[0]);
-        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
-    }
-    pub fn popIntoTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        context.setTemp(0,sp[0]);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
-    }
-    pub fn pushSelf(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn pushLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        newSp[0]=context.getSelf();
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
-    }
-    pub fn pushTemp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        const newSp = sp-1;
-        newSp[0]=context.getTemp(pc[0].uint-1);
-        trace("\npushTemp: {} {any} {any}",.{pc[0].uint,context.stack(newSp,process),context.allTemps(process)});
+        newSp[0]=context.getLocal(pc[0].uint);
+        trace("\npushLocal: {} {any} {any}",.{pc[0].uint,context.stack(newSp,process),context.allLocals(process)});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
     }
-    pub fn pushTemp0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn pushLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
-        newSp[0]=context.getTemp(0);
-        trace("\npushTemp1: {any} {*}",.{context.stack(newSp,process),pc});
+        newSp[0]=context.getLocal(0);
+        trace("\npushLocal1: {any} {*}",.{context.stack(newSp,process),pc});
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
+    }
+    pub fn pushLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref&0xfff);
+        const newSp = sp-1;
+        newSp[0] = local.getField(ref>>12);
+        trace("\npushLocalField: {} {} {any} {any}",.{ref,local,context.stack(newSp,process),context.allLocals(process)});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,context,selector});
+    }
+    pub fn popLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref&0xfff);
+        trace("\npopLocalField: {} {}",.{ref,sp[0]});
+        local.setField(ref>>12,sp[0]);
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
+    }
+    pub fn popLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        trace("\npopIntoLocal: {} {}",.{pc[0].uint,sp[0]});
+        context.setLocal(pc[0].uint,sp[0]);
+        return @call(tailCall,pc[1].prim,.{pc+2,sp+1,process,context,selector});
+    }
+    pub fn popLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        context.setLocal(0,sp[0]);
+        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
     fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
         _ = cls;
         _ = selector;
         @panic("unimplemented");
     }
-    pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _=pc; _=sp; _=process; _=context; _ = selector;
-        @panic("not implemented");
-        // const selector = pc[0].object;
-        // const numArgs = selector.numArgs();
-        // const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
-        // context.setTPc(pc+1);
-        // return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[0].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookupMethod(sp[1].get_class(),selector.hash32()).codePtr();
+        context.setReturn(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    }
+    // pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+    //     const selector = pc[0].object;
+    //     const numArgs = selector.numArgs();
+    //     const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
+    //     context.setTPc(pc+1);
+    //     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
+    // }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc+1);
         const offset = pc[0].uint;
@@ -654,7 +684,7 @@ pub const TestExecution = struct {
         const sp = self.process.endOfStack() - source.len;
         for (source,sp[0..source.len]) |src,*dst|
             dst.* = src;
-        self.ctxt.setReturn(Code.end);
+        self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace)==@TypeOf(std.debug.print) and trace==std.debug.print) method.write(stdout) catch unreachable;
         self.sp = method.execute(sp,&self.process,&self.ctxt);
         return self.ctxt.stack(self.sp,&self.process);
@@ -722,7 +752,7 @@ test "context returnTop twice via TestExecution" {
         &p.pushLiteral,comptime Object.from(42),
         &p.returnTop,
     });
-    method1.setReferences(&[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    method1.setLiterals(empty,&[_]Object{Object.from(method2.asCompiledMethodPtr())});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
@@ -739,7 +769,7 @@ test "context returnTop with indirect via TestExecution" {
         &p.pushLiteralIndirect,"0Obj",
         &p.returnTop,
     });
-    method.setReferences(&[_]Object{Object.from(42)});
+    method.setLiterals(empty,&[_]Object{Object.from(42)});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{Nil,True};
@@ -754,14 +784,14 @@ test "simple executable" {
         &p.pushContext,"^",
         ":label1",
         &p.pushLiteral,comptime Object.from(42),
-        &p.popIntoTemp,0,
-        &p.pushTemp0,
+        &p.popLocal,0,
+        &p.pushLocal0,
         &p.pushLiteral0,
         &p.pushLiteralTrue,
         &p.ifFalse,"label3",
         &p.branch,"label2",
         ":label3",
-        &p.pushTemp,0,
+        &p.pushLocal,0,
         ":label4",
         &p.returnTop,
         ":label2",

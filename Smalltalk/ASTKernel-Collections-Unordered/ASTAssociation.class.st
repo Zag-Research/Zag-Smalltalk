@@ -15,14 +15,14 @@ ASTAssociation class >> key: newKey value: newValue [
 	^ self new key: newKey value: newValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTAssociation >> < aLookupKey [
 	"Sort by keys."
 
 	^ key < aLookupKey key
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTAssociation >> = anAssociation [
 	"True if the receiver and argument have equal keys."
 
@@ -31,7 +31,7 @@ ASTAssociation >> = anAssociation [
 		ifFalse: [ ^ false ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTAssociation >> hash [
 	"Hash is reimplemented because = is implemented."
 

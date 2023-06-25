@@ -23,7 +23,7 @@ ASTInterval class >> from: startInteger to: stopInteger by: stepInteger [
 	^ self basicNew setFrom: startInteger to: stopInteger by: stepInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInterval >> = anInterval [
 	"Answer true if my species and anInterval species are equal, and
 	if our starts, steps and sizes are equal."
@@ -41,7 +41,7 @@ ASTInterval >> add: newObject [
 	self shouldNotImplement
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTInterval >> at: anInteger [
 	"Answer the anInteger'th element."
 
@@ -50,7 +50,7 @@ ASTInterval >> at: anInteger [
 		ifFalse: [ self errorSubscriptBounds: anInteger ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTInterval >> at: anInteger put: anObject [
 	"Storing into an Interval is not allowed."
 
@@ -88,7 +88,7 @@ ASTInterval >> first [
 	^ start
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTInterval >> hash [
 	"Hash is reimplemented because = is implemented."
 
@@ -141,7 +141,7 @@ ASTInterval >> setFrom: startInteger to: stopInteger by: stepInteger [
 	step := stepInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTInterval >> size [
 	step < 0
 		ifTrue: [ start < stop

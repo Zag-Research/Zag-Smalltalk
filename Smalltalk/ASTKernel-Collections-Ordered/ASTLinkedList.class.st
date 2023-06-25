@@ -106,12 +106,12 @@ ASTLinkedList >> addLast: aLinkOrObject [
 	^ aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTLinkedList >> at: index [
 	^ (self linkAt: index) value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTLinkedList >> at: index put: anObject [
 	^ self
 		at: index

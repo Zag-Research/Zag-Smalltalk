@@ -6,7 +6,7 @@ const object = @import("zobject.zig");
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
+pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 inline fn symbol_of(index: usize, arity: u8) object.Object {
     return symbol0(index|(@as(usize,arity)<<24));
 }
@@ -114,7 +114,7 @@ fn numArgs(obj: object.Object) u8 {
     }
     return count;
 }
-const SymbolTable = struct {
+pub const SymbolTable = struct {
     mem: []ObjectTreap.Element,
     treap: ObjectTreap,
     allocator: *Allocator,

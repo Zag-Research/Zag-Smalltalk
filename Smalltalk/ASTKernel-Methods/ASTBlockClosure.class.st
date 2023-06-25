@@ -46,7 +46,7 @@ ASTBlockClosure >> cull: arg1 cull: arg2 cull: arg3 cull: arg4 [
 			ifFalse: [ self value: arg1 value: arg2 value: arg3 value: arg4 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #exceptions }
 ASTBlockClosure >> ifError: errorHandlerBlock [
 	"Evaluate the block represented by the receiver. If an error occurs the given handler block is evaluated. The handler block can be either a zero- or two-argument block; if the latter, then the error message and receiver are supplied to it as parameters. Answer the value returned by the handler block if the receiver gets an error."
 
@@ -106,7 +106,7 @@ ASTBlockClosure >> on: exception do: handlerAction [
 	^ self value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #timing }
 ASTBlockClosure >> timeToRun [
 	"Answer the number of milliseconds it took to evaluate this block."
 
@@ -164,46 +164,58 @@ ASTBlockClosure >> valueWithArguments: anArray [
 
 { #category : #controlling }
 ASTBlockClosure >> whileFalse [
+
 	"Evaluate the receiver, as long as its value is false."
- 
-	self value ifFalse: [ self whileFalse ]
+
+	self value ifTrue: [^ self].
+	^ self whileFalse
 ]
 
 { #category : #controlling }
-ASTBlockClosure >> whileFalse: aBlock [ 
+ASTBlockClosure >> whileFalse: aBlock [
+
 	"Evaluate the argument, aBlock, as long as the value of the receiver is false."
 
-	self value ifFalse: [ aBlock value. self whileFalse: aBlock ].
-	^ nil
+	self value ifTrue: [^ nil].
+	aBlock value.
+	^ self whileFalse: aBlock
 ]
 
 { #category : #controlling }
-ASTBlockClosure >> whileNil: aBlock [ 
+ASTBlockClosure >> whileNil: aBlock [
+
 	"Evaluate the argument, aBlock, as long as the value of the receiver is nil."
 
-	self value ifNil: [ aBlock value. self whileNil: aBlock ].
-	^ nil
+	self value ifNotNil: [^ nil].
+	aBlock value.
+	^ self whileNil: aBlock
 ]
 
 { #category : #controlling }
-ASTBlockClosure >> whileNotNil: aBlock [ 
+ASTBlockClosure >> whileNotNil: aBlock [
+
 	"Evaluate the argument, aBlock, as long as the value of the receiver is not nil."
 
-	self value ifNotNil: [ aBlock value. ^ self whileNotNil: aBlock ].
-	^ nil
+	self value ifNil: [ ^ nil ].
+	aBlock value.
+	^ self whileNotNil: aBlock
 ]
 
 { #category : #controlling }
 ASTBlockClosure >> whileTrue [
+
 	"Evaluate the receiver, as long as its value is true."
- 
-	self value ifTrue: [ self whileTrue ]
+
+	self value ifFalse: [^ self].
+	^ self whileTrue
 ]
 
 { #category : #controlling }
-ASTBlockClosure >> whileTrue: aBlock [ 
+ASTBlockClosure >> whileTrue: aBlock [
+
 	"Evaluate the argument, aBlock, as long as the value of the receiver is true."
 
-	self value ifTrue: [ aBlock value. self whileTrue: aBlock ].
-	^ nil
+	self value ifFalse: [ ^ nil ].
+	aBlock value.
+	^ self whileTrue: aBlock
 ]

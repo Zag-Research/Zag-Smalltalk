@@ -5,12 +5,12 @@ Eventually it wiil include a JIT compiler
 
 Methods are re-constituted from the AST for edit windows.
 
-Interpreter runs directly on the ASTs
+No Interpreter; uses Threaded and CPS execution models interchangeably
 
-Memory structure and some of execution principles modelled on OpenSmalltalk VM
+Memory structure and some of execution principles loosely modelled on OpenSmalltalk VM
 
 [More information in the Documentation](Documentation/Abstract.md)
 
-(Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
+[Papers and Talks](Documentation/Papers/README.md)
 
-[Slides from a recent talk at UK Smalltalk](https://sarg.torontomu.ca/dmason/UKSt2022-11-30.pdf)
+(Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)

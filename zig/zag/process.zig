@@ -46,6 +46,7 @@ pub const Process = extern struct {
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
+    trapContextNumber: u64,
     const Self = @This();
     const headerSize = @sizeOf(?*Self)+@sizeOf(u64)+@sizeOf(?ThreadedFn)+@sizeOf([*]Object)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray)+@sizeOf(HeapObjectArray);
     const ThreadedFn = * const fn(programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object;
@@ -73,6 +74,7 @@ pub const Process = extern struct {
             self.id = if (at) |p| p.id+1 else 1;
             if (@cmpxchgWeak(?*Self,&allProcesss,self.next,self,SeqCst,SeqCst)==null) break;
         }
+        self.trapContextNumber = 0;
     }
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,std.mem.page_size-1);
@@ -99,7 +101,6 @@ pub const Process = extern struct {
                          );
     }
     pub fn deinit(self : *Self) void {
-        self.ptr().heap.deinit();
         self.ptr().* = undefined;
     }
     pub inline fn endOfStack(self: *const Self) [*]Object {

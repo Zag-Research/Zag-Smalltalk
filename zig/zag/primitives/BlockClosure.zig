@@ -71,19 +71,29 @@ pub const inlines = struct {
     var valueClosureMethod = CompiledMethod.init2(sym.value,
                                                   pushValue,
                                                   e.returnNoContext);
-    pub inline fn fullClosure(oldSp: [*]Object, process: *Process, contextData: Object, block: CompiledMethodPtr, contextMutable: *ContextPtr) [*]Object {
-        const flags = block.stackStructure.h0;
-        const fields = (flags>>8)&63;
-        const sp = process.allocStack(oldSp,fields+2,contextMutable);
+    pub inline fn fullClosure(oldSp: [*]Object, process: *Process, block: CompiledMethodPtr, contextMutable: *ContextPtr) [*]Object {
+        const flags = block.stackStructure.h0>>8;
+        const fields = flags&63;
+        const sp = process.allocStack(oldSp,fields+2-(flags>>7),contextMutable);
         sp[0] = Object.from(&sp[fields+1]);
         sp[0].tag = .heapClosure;
         sp[fields] = Object.from(block);
         var f = fields;
         if (flags & 64 != 0) {f = f - 1; sp[f] = Object.from(contextMutable.*);}
-        if (flags & 128 != 0) {f = f - 1; sp[f] = contextData;}
+        if (flags & 128 != 0) {f = f - 1; sp[f] = oldSp[0];}
         for (sp[1..f]) |*op|
             op.* = Nil;
-        sp[fields+1] = heap.HeapObject.simpleStackObject(fields,object.BlockClosure_I,sym.value.hash24()).o();
+        sp[fields+1] = heap.HeapObject.simpleStackObject(fields,object.BlockClosure_I,block.selector.hash24()).o();
+        return sp;
+    }
+    pub inline fn closureData(oldSp: [*]Object, process: *Process, fields: usize, contextMutable: *ContextPtr) [*]Object {
+        const sp = process.allocStack(oldSp,fields+3,contextMutable);
+        const ptr = Object.from(&sp[fields+1]);
+        sp[0] = ptr;
+        sp[1] = ptr;
+        for (sp[2..fields+2]) |*op|
+            op.* = Nil;
+        sp[fields+2] = heap.HeapObject.simpleStackObject(fields,object.ClosureData_I,0).o();
         return sp;
     }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -159,43 +169,56 @@ pub const embedded = struct {
     pub fn immutableClosure(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         var mutableContext = context;
         const newSp = inlines.immutableClosure(sp,process,&mutableContext);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,mutableContext,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,mutableContext,selector});
     }
     pub fn generalClosure(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         var mutableContext = context;
         const newSp = inlines.generalClosure(sp+1,process,sp[0],&mutableContext);
-        return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,mutableContext,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,mutableContext,selector});
     }
+    pub fn fullClosure(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        var mutableContext = context;
+        const block = pc.indirectLiteral();
+        const newSp = inlines.fullClosure(sp,process,block,&mutableContext);
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,mutableContext,selector});
+    }
+    pub fn closureData(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        var mutableContext = context;
+        const newSp = inlines.closureData(sp,process,pc[0].uint,&mutableContext);
+        return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,mutableContext,selector});
+    }
+
     const literalNonLocalReturn = enum(u3) {self = 0, true_, false_, nil, minusOne, zero, one, two};
     inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn) [*]Object {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         const newSp = sp+1;
+        if(true) unreachable;
         sp[0] = nonLocalValues[@enumToInt(tag)];
         return newSp;
     }
     pub fn pushNonlocalBlock_self(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.self),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.self),process,context,selector});
     }
     pub fn pushNonlocalBlock_true(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.true_),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.true_),process,context,selector});
     }
     pub fn pushNonlocalBlock_false(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.false),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.false),process,context,selector});
     }
     pub fn pushNonlocalBlock_nil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.nil),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.nil),process,context,selector});
     }
     pub fn pushNonlocalBlock_minusOne(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.minusOne),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.minusOne),process,context,selector});
     }
     pub fn pushNonlocalBlock_zero(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.zero),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.zero),process,context,selector});
     }
     pub fn pushNonlocalBlock_one(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.one),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.one),process,context,selector});
     }
     pub fn pushNonlocalBlock_two(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall,pc[0].prim,.{pc+1,nonLocalBlock(sp,.two),process,context,selector});
+        return @call(tailCall,pc[1].prim,.{pc+2,nonLocalBlock(sp,pc[0].u(),.two),process,context,selector});
     }
 };
 fn testImmutableClosure(process: *Process,value: Object) !object.Group {
@@ -203,12 +226,12 @@ fn testImmutableClosure(process: *Process,value: Object) !object.Group {
     var context = Context.init();
     const sp = process.endOfStack()-1;
     sp[0] = value;
-    const newSp = embedded.immutableClosure(Code.end.ptr,sp,process,&context,Nil);
+    const newSp = embedded.immutableClosure(Code.endThread,sp,process,&context,Nil);
     if (newSp != sp) {
         try ee(value.u(),newSp[1].u());
     }
     const tag = newSp[0].tag;
-    const newerSp = embedded.value(Code.end.ptr,newSp,process,&context,Nil);
+    const newerSp = embedded.value(Code.endThread,newSp,process,&context,Nil);
     try ee(value.u(),newerSp[0].u());
     return tag;
 }

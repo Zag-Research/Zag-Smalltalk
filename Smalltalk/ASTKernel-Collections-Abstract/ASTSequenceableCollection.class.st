@@ -17,7 +17,7 @@ ASTSequenceableCollection >> , otherCollection [
 "
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTSequenceableCollection >> = otherCollection [
 	"Answer whether the species of the receiver is the same as
 	otherCollection's species, and the receiver's size is the same as
@@ -189,7 +189,7 @@ ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement [
 		startingAt: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"This destructively replaces elements from start to stop in the receiver 
 	starting at index, repStart, in the sequenceable collection, 
@@ -215,7 +215,7 @@ ASTSequenceableCollection >> select: aBlock [
 	^ s contents
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTSequenceableCollection >> size [
 	self subclassResponsibility
 ]

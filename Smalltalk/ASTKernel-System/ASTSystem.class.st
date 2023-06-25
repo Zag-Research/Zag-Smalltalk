@@ -115,7 +115,7 @@ ASTSystem class >> incrementalGarbageCollect [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'mathematical functions' }
 ASTSystem class >> log: aString [
 	<primitive: #log:> " unused in Pharo 9 image "
 	"self append: aString toFile: 'log.txt'"

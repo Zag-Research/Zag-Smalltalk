@@ -10,7 +10,7 @@ ASTByteArray >> asByteArray [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTByteArray >> asString [
 	"Answer the receiver converted to a String."
 
@@ -21,7 +21,7 @@ ASTByteArray >> asString [
 		startingAt: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'system primitives' }
 ASTByteArray >> replaceFrom: startIndex to: stopIndex with: source startingAt: srcStartIndex [
 	"Primitive. Destructively replace the elements from startIndex to stopIndex in the receiver with the elements starting at srcStartIndex in the source collection. Answer the receiver. Range checks are performed in the primitive. Optional. See Object documentation whatIsAPrimitive."
 

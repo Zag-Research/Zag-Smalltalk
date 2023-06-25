@@ -43,7 +43,7 @@ ASTMetaclass >> name [
 		ifNotNil: [ ^ soleInstance name , ' class' ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTMetaclass >> new [
 	"Each metaclass should have exactly one instance."
 

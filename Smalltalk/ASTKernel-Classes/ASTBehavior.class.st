@@ -200,7 +200,7 @@ ASTBehavior >> name [
 		ifNotNil: [ ^ 'a subclass of ' , superclass name ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTBehavior >> new [
 	^ self basicNew
 ]

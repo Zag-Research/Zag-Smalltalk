@@ -53,7 +53,7 @@ ASTCharacter class >> lf [
 	^ 10 asCharacter
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTCharacter class >> new [
 	"There are 256 unique Characters; creating new ones is not allowed."
 
@@ -86,14 +86,14 @@ ASTCharacter class >> value: anInteger [
 	^ CharacterTable at: anInteger + 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTCharacter >> < aCharacter [
 	"Answer true if my value is less than the given character's value."
 
 	^ self asciiValue < aCharacter asciiValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTCharacter >> = aCharacter [
 	"Primitive. Answer true if the receiver and the argument are the same object (have the same object pointer) and false otherwise. Optional. See Object documentation whatIsAPrimitive."
 
@@ -101,28 +101,28 @@ ASTCharacter >> = aCharacter [
 	^ self == aCharacter
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTCharacter >> > aCharacter [
 	"Answer true if my value is greater than the given character's value."
 
 	^ self asciiValue > aCharacter asciiValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> asCharacter [
 	"Answer the receiver itself."
 
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> asInteger [
 	"Answer the receiver's character code."
 	<primitive: 171>
 	^self primitiveFailed
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> asLowercase [
 	"If I am uppercase, answer the matching lowercase Character. Otherwise, answer myself."
 
@@ -131,12 +131,12 @@ ASTCharacter >> asLowercase [
 		ifFalse: [ ^ self ]	"self isLowercase"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> asString [
 	^ ASTString with: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> asUppercase [
 
 	"If the receiver is lowercase, answer its matching uppercase Character."
@@ -146,7 +146,7 @@ ASTCharacter >> asUppercase [
 		ifFalse: [ "self isUppercase" ^ self ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTCharacter >> asciiValue [
 	"Answer the value of the receiver that represents its ascii encoding."
 
@@ -163,7 +163,7 @@ ASTCharacter >> basicIdentityHash [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 ASTCharacter >> digitValue [
 	"Answer 0-9 if the receiver is $0-$9, 10-35 if it is $A-$Z, and -1 otherwise. This is used to parse literal numbers of radix 2-36."
 
@@ -175,21 +175,21 @@ ASTCharacter >> digitValue [
 	^ -1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #comparing }
 ASTCharacter >> hash [
 	"My hash is my value."
 
 	^ self asInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isDigit [
 	"Answer whether the receiver is a digit."
 
 	^ self asInteger between: 48 and: 57
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isLetter [
 
 	"Answer whether the receiver is a letter."
@@ -197,27 +197,27 @@ ASTCharacter >> isLetter [
 	^ self isUppercase or: [ self isLowercase ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isLowercase [
 
 	^ self asInteger between: 97 and: 122
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isSpecial [
 	"Answer whether the receiver is one of the special characters"
 
 	^ '+/\*~<>=@%|&?!' includes: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isUppercase [
 	"Answer whether the receiver is an uppercase letter."
 
 	^ self asInteger between: 65 and: 90
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> isVowel [
 	"Answer true if the receiver is one of the vowels AEIOU (either upper- or lowercase)."
 
@@ -230,7 +230,7 @@ ASTCharacter >> printOn: aStream [
 	aStream nextPut: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #private }
 ASTCharacter >> setValue: newValue [
 	^ self error: 'Characters are immutable'
 ]
@@ -242,7 +242,7 @@ ASTCharacter >> shallowCopy [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #converting }
 ASTCharacter >> to: other [
 	"Answer with a collection of all characters in the given ASCII range. For example, $a to: $z"
 
@@ -250,7 +250,7 @@ ASTCharacter >> to: other [
 		collect: [ :i | i asCharacter ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTCharacter >> tokenish [
 	"Answer true if the receiver is a valid token-character--that is, a letter, digit, or colon."
 

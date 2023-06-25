@@ -4,7 +4,7 @@ Class {
 	#category : #'ASTKernel-Objects'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instance creation' }
 ASTUndefinedObject class >> new [
 	"There is a single unique instance of me."
 
