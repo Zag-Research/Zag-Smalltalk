@@ -33,7 +33,6 @@ ASCompiler class >> initialize [
 	                   System Return Send Literal Load Store SymbolTable
 	                   Dispatch ClassTable Magnitude Number ClassDescription
 	                   Boolean ).
-	self halt.
 	ClassMap := Dictionary new.
 	ClassMap at: ByteString put: ASTString.
 	ClassMap at: ByteString class put: ASTString class.
