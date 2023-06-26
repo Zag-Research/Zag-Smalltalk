@@ -9,7 +9,8 @@ Class {
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
 	#instVars : [
-		'method'
+		'method',
+		'selector'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -43,6 +44,16 @@ ASBlock >> acceptVisitor: aVisitor [
 	^ aVisitor visitBlockNode: self
 ]
 
+{ #category : #accessing }
+ASBlock >> blocks [
+
+	| myBlocks |
+	myBlocks := OrderedCollection new.
+	myBlocks add: self.
+	self body do: [ :statement | myBlocks addAll: statement blocks ].
+	^ myBlocks
+]
+
 { #category : #testing }
 ASBlock >> isASBlock [
 	^true
@@ -60,6 +71,11 @@ ASBlock >> printOn: s [
 	super printOn: s
 ]
 
+{ #category : #accessing }
+ASBlock >> selector: aString [ 
+	selector := aString
+]
+
 { #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
@@ -67,22 +83,23 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 ]
 
 { #category : #writing }
-ASBlock >> writeBlock: aStream with: syms selector: selector and: stackVariables [
+ASBlock >> writeBlock: aStream with: syms and: stackVariables [
+
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << selector asZigString << ' ='.
+	aStream << 'var ' << selector << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
 		 at: selector
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
+		 ifAbsent: [ 'sym.' , selector ]) << ','
 	<< locals size asString << ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 
-			aStream tab.
-			aStream << '&e.verifySelector,'.
-			aStream cr.
+	aStream tab.
+	aStream << '&e.verifySelector,'.
+	aStream cr.
 
 	"create dummy context"
 	aStream tab.
@@ -104,15 +121,30 @@ ASBlock >> writeBlock: aStream with: syms selector: selector and: stackVariables
 	aStream << '&e.returnTop,'.
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
-	aStream cr.
+	aStream cr
 ]
 
 { #category : #building }
 ASBlock >> zigString: syms and: stackVariables [
 
-	(body size == 1 and: (body at: 1) isReturn)
-		ifTrue: [ "return a non local return clousure"
-		^ '&e.nonlocalClosure_self,2,' ]
-		ifFalse: [ "or return a clock closure"
-			^ '&e.blockClosure,"0foo:bar:1",1+(3<<16),' ]
+	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is not a simple local return so need to execute some block"
+		| return |
+		"return a non local return clousure""tests to see what non local return to return"
+		return := (body at: 1) expression.
+
+		return isASLiteral ifTrue: [
+			| literal |
+			literal := return literal.
+			literal = true ifTrue: [ ^ '&e.pushNonlocalBlock_true,' ].
+			literal = false ifTrue: [ ^ '&e.pushNonlocalBlock_false,' ].
+			literal = nil ifTrue: [ ^ '&e.pushNonlocalBlock_nil,' ].
+			literal = 1 ifTrue: [ ^ '&e.pushNonlocalBlock_one,' ].
+			literal = -1 ifTrue: [ ^ '&e.pushNonlocalBlock_minusOne,' ].
+			literal = 0 ifTrue: [ ^ '&e.pushNonlocalBlock_zero,' ].
+			literal = 2 ifTrue: [ ^ '&e.pushNonlocalBlock_two,' ] ].
+		return isASSelf ifTrue: [
+			^ '&e.pushNonlocalBlock_self,'
+			  , (stackVariables indexOf: 'self') asString , ',' ] ].
+	"or return a block closure"
+	^ '&e.blockClosure,"',selector ,'",1+(3<<16),'
 ]

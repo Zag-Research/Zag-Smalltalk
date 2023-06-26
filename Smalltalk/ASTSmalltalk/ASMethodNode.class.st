@@ -8,7 +8,8 @@ Class {
 		'selector',
 		'class',
 		'isRecursive',
-		'pragmas'
+		'pragmas',
+		'blocks'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -59,6 +60,25 @@ ASMethodNode >> = other [
 ASMethodNode >> acceptVisitor: aVisitor [
 
 	^ aVisitor visitMethodNode: self
+]
+
+{ #category : #accessing }
+ASMethodNode >> blocks [
+	blocks ifNil: [
+		blocks := OrderedCollection new.
+		body ifNotEmpty: [
+			body do: [ :statement | blocks addAll: statement blocks ] ] ].
+	"	statement isASSend and: [
+					statement args notEmpty and: [
+						blocks addAll: (statement args select: [ :arg | arg isASBlock ]) ] ].
+				statement isASAssign and: [
+					statement expression isASSend and: [
+						statement expression args notEmpty and: [
+							blocks addAll:
+								(statement expression args do: [ :arg | arg isASBlock ]) ] ] ] 
+				statement isReturn
+				] ] ]."
+	^ blocks
 ]
 
 { #category : #accessing }
@@ -157,7 +177,8 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
-		blocks do: [ :block |
+		blocks doWithIndex: [ :block :index |
+			block selector: selector asZigString , index asString.
 			aStream << (block zigString: syms and: stackVariables) ] ].
 
 	body do: [ :asStatement |
@@ -175,10 +196,9 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	"ouput compile methods for the blocks"
 	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index |
+		blocks do: [ :block |
 			block
 				writeBlock: aStream
 				with: syms
-				selector: selector , index asString
 				and: stackVariables ] ]
 ]

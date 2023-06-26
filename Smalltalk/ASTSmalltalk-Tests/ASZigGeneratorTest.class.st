@@ -38,10 +38,10 @@ ASZigGeneratorTest >> testASBlock [
 	stackVars := OrderedCollection new.
 	stackVars add: 'x'.
 
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := ((ASBlock arguments: Array new locals: Array new body: body) selector: '@foo:bar:1' )
 		          zigString: Dictionary new
 		          and: stackVars.
-	self assert: result equals: '&e.blockClosure,"0foo:bar:1",1+(3<<16),'.
+	self assert: result equals: '&e.blockClosure,"@foo:bar:1",1+(3<<16),'.
 ]
 
 { #category : #tests }
@@ -53,7 +53,7 @@ ASZigGeneratorTest >> testASBlockWithFalse [
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_false,'
 ]
 
 { #category : #tests }
@@ -66,7 +66,7 @@ ASZigGeneratorTest >> testASBlockWithMinusOne [
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_minusOne,'
 ]
 
 { #category : #tests }
@@ -79,34 +79,35 @@ ASZigGeneratorTest >> testASBlockWithNil [
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_nil,'
 ]
 
 { #category : #tests }
 ASZigGeneratorTest >> testASBlockWithOne [
 
 	| result body |
-
 	"pushNonlocalBlock_one"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 1)).
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'.
+	self assert: result equals: '&e.pushNonlocalBlock_one,'
 ]
 
 { #category : #tests }
 ASZigGeneratorTest >> testASBlockWithSelf [
 
-	| result body |
+	| result body stackVariables |
 	"pushNonlocalBlock_self"
+	stackVariables := OrderedCollection new.
+	stackVariables add: #self.
 	body := OrderedCollection new.
 	body add: (ASReturn expression: ASSelf new).
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
-		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+		          and: stackVariables.
+	self assert: result equals: '&e.pushNonlocalBlock_self,1,'
 ]
 
 { #category : #tests }
@@ -119,7 +120,7 @@ ASZigGeneratorTest >> testASBlockWithTrue [
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_true,'
 ]
 
 { #category : #tests }
@@ -128,11 +129,11 @@ ASZigGeneratorTest >> testASBlockWithTwo [
 	| result body |
 	"pushNonlocalBlock_two"
 	body := OrderedCollection new.
-	body add: (ASReturn expression: (ASLiteral literal: 1)).
+	body add: (ASReturn expression: (ASLiteral literal: 2)).
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_two,'
 ]
 
 { #category : #tests }
@@ -145,7 +146,7 @@ ASZigGeneratorTest >> testASBlockWithZero [
 	result := (ASBlock arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
-	self assert: result equals: '&e.nonlocalClosure_self,2,'
+	self assert: result equals: '&e.pushNonlocalBlock_zero,'
 ]
 
 { #category : #tests }

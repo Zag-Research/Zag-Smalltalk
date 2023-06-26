@@ -9,8 +9,7 @@ Class {
 		'nestedScopeOf',
 		'body',
 		'locals',
-		'scope',
-		'blocks'
+		'scope'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -26,25 +25,6 @@ ASCodeBlock >> = other [
 ASCodeBlock >> addStatement: anASStatement [
 
 	body add: anASStatement
-]
-
-{ #category : #accessing }
-ASCodeBlock >> blocks [
-	blocks ifNil: [
-		blocks := OrderedCollection new.
-		body ifNotEmpty: [
-			body do: [ :statement | blocks addAll: statement blocks ]]].
-			"	statement isASSend and: [
-					statement args notEmpty and: [
-						blocks addAll: (statement args select: [ :arg | arg isASBlock ]) ] ].
-				statement isASAssign and: [
-					statement expression isASSend and: [
-						statement expression args notEmpty and: [
-							blocks addAll:
-								(statement expression args do: [ :arg | arg isASBlock ]) ] ] ] 
-				statement isReturn
-				] ] ]."
-	^ blocks
 ]
 
 { #category : #accessing }
