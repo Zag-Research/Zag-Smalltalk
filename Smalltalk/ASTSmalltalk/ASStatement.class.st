@@ -44,6 +44,11 @@ ASStatement >> isASSend [
 	^false
 ]
 
+{ #category : #testing }
+ASStatement >> isReturn [
+	^false
+]
+
 { #category : #accessing }
 ASStatement >> maxDepth [
 	^0

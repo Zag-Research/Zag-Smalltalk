@@ -88,6 +88,11 @@ ASMethodNode >> maxDepth [
 	^ argMaxDepth + blockLocalMaxDepth
 ]
 
+{ #category : #accessing }
+ASMethodNode >> numLocals [
+	^ (arguments size + locals size) asString
+]
+
 { #category : #private }
 ASMethodNode >> pragmas: somePragmas [ 
 	pragmas := somePragmas 
@@ -125,7 +130,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		 at: selector
 		 ifPresent: [ :value | value ]
 		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
-	<< locals size asString << ',' << self maxDepth asString << ',.{'.
+	<< self numLocals << ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 
 	"verify selector or primitive?"
@@ -146,12 +151,15 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	"ouput any blocks"
-	self blocks ifNotEmpty: [ blocks do: [ :block | block ] ].
-
 	"output instructions"
 	stackVariables := scope keys asOrderedCollection.
 	stackVariables addLast: #self.
+
+	"ouput any blocks"
+	self blocks ifNotEmpty: [
+		blocks do: [ :block |
+			aStream << (block zigString: syms and: stackVariables) ] ].
+
 	body do: [ :asStatement |
 		aStream tab.
 		aStream << (asStatement zigString: syms and: stackVariables).
@@ -162,6 +170,15 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.returnTop,'.
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
-	aStream cr
+	aStream cr.
 	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
+
+	"ouput compile methods for the blocks"
+	self blocks ifNotEmpty: [
+		blocks doWithIndex: [ :block :index |
+			block
+				writeBlock: aStream
+				with: syms
+				selector: selector , index asString
+				and: stackVariables ] ]
 ]

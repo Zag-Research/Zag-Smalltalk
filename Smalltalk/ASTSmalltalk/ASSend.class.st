@@ -20,8 +20,9 @@ ASSend class >> selector: aSymbol args: aCollection [
 
 { #category : #'instance creation' }
 ASSend class >> target: expression selector: aSymbol args: aCollection [
-
-	^ self new target: expression; selector: aSymbol args: aCollection
+	^ self new
+		  target: expression;
+		  selector: aSymbol args: aCollection
 ]
 
 { #category : #comparing }
