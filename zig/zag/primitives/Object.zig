@@ -23,11 +23,15 @@ pub fn init() void {
 }
 
 pub const inlines = struct {
-    pub inline fn p60(self: Object, other: Object) !Object { // at:
+    pub inline fn p60(self: Object, other: Object) !Object { // basicAt:
         _ = self; _ = other;
         return error.primitiveError;
     }
-    pub inline fn p61(self: Object, other: Object) !Object { // at:put:
+    pub inline fn p61(self: Object, other: Object) !Object { // basicAt:put:
+        _ = self; _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p70(self: Object, other: Object) !Object { // basicNew
         _ = self; _ = other;
         return error.primitiveError;
     }
@@ -48,16 +52,16 @@ pub const inlines = struct {
 };
 const noFallback = execute.noFallback;
 pub const embedded = struct {
-    var @"Object>>#at:" = noFallback;
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#at:
+    var @"Object>>#basicAt:" = noFallback;
+    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#basicAt:
         sp[1] = inlines.p60(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#at:".asFakeObject()});
+            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#basicAt:".asFakeObject()});
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
-    var @"Object>>#at:put:" = noFallback;
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#at:put:
+    var @"Object>>#basicAt:put:" = noFallback;
+    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#basicAt:put:
         sp[1] = inlines.p61(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#at:put:".asFakeObject()});
+            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#basicAt:put:".asFakeObject()});
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
@@ -77,13 +81,16 @@ pub const embedded = struct {
 };
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
+    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:
         _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
+    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:put:
         _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
+    pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew
+        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
+    }
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew:
         _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
