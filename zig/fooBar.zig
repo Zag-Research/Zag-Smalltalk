@@ -37,115 +37,79 @@ const Sym = struct {
     }
 };
 var sym: Sym = undefined;
+// foo: p1 bar: p2
+//    | l1 l2 l3 |
+//    p1 < p2 ifTrue: [ ^ self ].
+//    l1 := p2.
+//    l2 := p1 \\ p2.
+//    l3 := p2 - l2.
+//    [ l1 < p1 ] whileTrue: [ 
+//        l1 := l1 + 1.
+//        l1 = l3 ifTrue: [ ^ 1 ] ].
+//    ^ l1
+var @"foo:bar:" =
+    compileMethod(sym.@"foo:bar:",5,2+11,.{ // self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
+        &e.verifySelector,
+        &e.pushContext,"^",
+        // define all blocks here
+        &e.closureData,3+(1<<8), // local:3 size:1 (offset 1 is l1)
+        &e.nonlocalClosure_self,2, // [^ self] local:2
+        &e.blockClosure,"0foo:bar:1",1+(3<<16), // local:1 closureData at local3
+        &e.blockClosure,"1foo:bar:2",0+(255<<8)+(3<<16), // local:0 includeContext closureData at local3
+        // all blocks defined by now
+        &e.pushLocal, 6, // p1
+        &e.pushLocal, 5, // p2
+        &e.send, Sym.@"<",
+        &e.pushLocal, 2, // [^ self]
+        &e.send, Sym.@"ifTrue:",
+        &e.pop, // discard result from ifTrue: (if it returned)
+        &e.pushLocal, 5, // p2
+        &e.popLocalData, 3+(1<<8), // l1
+        &e.pushLocal, 6, // p1
+        &e.pushLocal, 5, // p2
+        &e.send, Sym.@"\\",
+        &e.popLocal, 4, // l2
+        &e.pushLocal, 5, // p2
+        &e.pushLocal, 4, // l2
+        &e.send, Sym.@"-",
+        &e.popLocalData, 0+(4<<8), // l3 offset 4 in local 0
+        &e.pushLocal, 1, // BC1 [ l1 < p1 ]
+        &e.pushLocal, 0, // BC2 [ l1 := ... ]
+        &e.send, Sym.@"whileTrue:",
+        &e.pushLocalData, 3+(1<<8), // l1
+        &e.returnTop,
+});
+var @"foo:bar:1" =
+    // [ l1 < p1 ]
+    compileMethod(sym.value,0,2,.{ // self-0
+        &e.verifySelector,
+        &e.pushContext,"^",
+        &e.pushLocalDataData, 0+(2<<8)+(1<<16), // l1 offset 1 in offset 2 in local 0
+        &e.pushLocalData, 0+(3<<8), // p1 offset 3 in local 0
+        &e.send, Sym.@"<"
+            &e.returnTop,
+});
+var @"foo:bar:2" =
+    // [ l1 := l1 + 1.
+    //   l1 = l3 ifTrue: [ ^ 1 ] ]
+    compileMethod(sym.value,1,2+4,.{ // self-1 BCone-0
+        &e.verifySelector,
+        &e.pushContext,"^",
+        &e.nonlocalClosure_one,0+(1<<8)+(2<<16), // [^ 1] local:0 context at offset 2 in local 1
+        &e.pushLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
+        &e.pushLiteral, Object.from(1),
+        &e.send, Sym.@"+",
+        &e.popLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
+        &e.pushLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
+        &e.pushLocalData, 1+(4<<8), // l3 offset 4 in local 1
+        &e.send, Sym.@"=",
+        @e.pushLocal, 0, // [^ 1]
+        &e.send, Sym.@"ifTrue:",
+        &e.returnTop,
+});
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    // foo: p1 bar: p2
-    //    | l1 l2 l3 |
-    //    p1 < p2 ifTrue: [ ^ self ].
-    //    l1 := p2.
-    //    l2 := p1 \\ p2.
-    //    l3 := p2 - l2.
-    //    [ l1 < p1 ] whileTrue: [ 
-    //        l1 := l1 + 1.
-    //        l1 = l3 ifTrue: [ ^ 1 ] ].
-    //    ^ l1
-    var @"foo:bar:" =
-        compileMethod(sym.@"foo:bar:",5,2+12,.{ // self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
-            &e.verifySelector,
-            &e.pushContext,"^",
-            // define all blocks here
-            &e.closureData,3+(1<<8), // local:3 size:1 (offset 1 is l1)
-            &e.nonlocalClosure_self,2, // [^ self] local:2
-            &e.blockClosure,"0foo:bar:1",1+(3<<16), // local:1 closureData at local3
-            &e.blockClosure,"1foo:bar:2",0+(255<<8)+(3<<16), // local:0 includeContext closureData at local3
-            // all blocks defined by now
-            &e.pushLocal, 6, // p1
-            &e.pushLocal, 5, // p2
-            &e.send, Sym.@"<",
-            &e.pushLocal, 2, // [^ self]
-            &e.send, Sym.@"ifTrue:",
-            &e.pop, // discard result from ifTrue: (if it returned)
-            &e.pushLocal, 5, // p2
-            &e.popLocalData, 3+(1<<8), // l1
-            &e.pushLocal, 6, // p1
-            &e.pushLocal, 5, // p2
-            &e.send, Sym.@"\\",
-            &e.popLocal, 4, // l2
-            &e.pushLocal, 5, // p2
-            &e.pushLocal, 4, // l2
-            &e.send, Sym.@"-",
-            &e.popLocalData, 0+(4<<8), // l3 offset 4 in local 0
-            &e.pushLocal, 1, // BC1 [ l1 < p1 ]
-            &e.pushLocal, 0, // BC2 [ l1 := ... ]
-            &e.send, Sym.@"whileTrue:",
-            &e.pushLocalData, 3+(1<<8), // l1
-            &e.returnTop,
-    });
-    var @"foo:bar:1" =
-        // [ l1 < p1 ]
-        compileMethod(sym.value,0,2,.{ // self-0
-            &e.verifySelector,
-            &e.pushContext,"^",
-            &e.pushLocalDataData, 0+(2<<8)+(1<<16), // l1 offset 1 in offset 2 in local 0
-            &e.pushLocalData, 0+(3<<8), // p1 offset 3 in local 0
-            &e.send, Sym.@"<"
-            &e.returnTop,
-    });
-    var @"foo:bar:2" =
-        // [ l1 := l1 + 1.
-        //   l1 = l3 ifTrue: [ ^ 1 ] ]
-        compileMethod(sym.value,1,2+4,.{ // self-1 BCone-0
-            &e.verifySelector,
-            &e.pushContext,"^",
-            &e.nonlocalClosure_one,0+(1<<8)+(2<<16), // [^ 1] local:0 context at offset 2 in local 1
-            &e.pushLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
-            &e.pushLiteral, Object.from(1),
-            &e.send, Sym.@"+",
-            &e.popLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
-            &e.pushLocalDataData, 1+(3<<8)+(1<<16), // l1 offset 1 in offset 3 in local 1
-            &e.pushLocalData, 1+(4<<8), // l3 offset 4 in local 1
-            &e.send, Sym.@"=",
-            @e.pushLocal, 0, // [^ 1]
-            &e.send, Sym.@"ifTrue:",
-            &e.returnTop,
-    });
-pushLocal: #l1
-pushLiteral: 1
-popIntoLocal: #l1
-pushLocal: #l1
-pushLocal: #l3
-if: false goto: 7 else: 6
-
-label: 6
-returnLiteral: 1
-
-label: 7
-goto: 4
-
-label: 8
-pushLocal: #l1
-returnTop
-            &e.pushNonlocalBlock_one, // [^ 1]
-            &e.popIntoLocal, 0, // block reference
-            &e.pushLocal, 1, // self
-            &e.pushLiteral, Object.from(2),
-            &e.send, Sym.@"<=",
-            &e.pushLocal, 0,
-            &e.send, Sym.@"ifTrue:",
-            
-            &e.pushLocal,1, // self
-            &e.pushLiteral, Object.from(1),
-            &e.send, Sym.@"-",
-            &e.send, fibonacci_,
-            
-            &e.pushLocal,1, // self
-            &e.pushLiteral, Object.from(2),
-            &e.send, Sym.@"-",
-            &e.send, fibonacci_,
-            
-            &e.send, Sym.@"+",
-    });
     fibonacci.setLiteral(fibonacci_,sym.fibonacci);
 }
 const i = @import("zag/primitives.zig").inlines;

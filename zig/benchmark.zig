@@ -36,7 +36,7 @@ pub fn benchObject(self: Object) Object {
 }
 const benchSym = sym.value;
 pub fn benchComp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
-    if (!benchSym.equals(selector)) @panic("wrong selector");
+    if (!benchSym.hashEquals(selector)) @panic("wrong selector");
     if (i.p5N(sp[0],Object.from(2))) {
         sp[0] = Object.from(1);
         return @call(tailCall,context.npc,.{context.tpc,sp,process,context,selector});

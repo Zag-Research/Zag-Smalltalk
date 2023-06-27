@@ -12,7 +12,7 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObject = heap.HeapObject;
 const Format = heap.Format;
 const Age = heap.Age;
-const class = @import("class.zig");
+//const class = @import("class.zig");
 const execute = @import("execute.zig");
 const trace = execute.trace;
 const TestExecution = execute.TestExecution;
@@ -36,7 +36,7 @@ pub const Context = struct {
     const baseSize = @sizeOf(Self)/@sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self {
-            .header = comptime heap.footer(baseSize+nLocals,Format.header,class.Context_I,0,Age.static),
+            .header = comptime heap.footer(baseSize+nLocals,Format.header,object.Context_I,0,Age.static),
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,
@@ -80,6 +80,8 @@ pub const Context = struct {
         if (@ptrToInt(self)==0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp,baseSize + locals + maxStackNeeded,&contextMutable)+maxStackNeeded;
+        trace("\npush: {} {} {}",.{baseSize , locals, maxStackNeeded});
+        trace("\npush: sp={*} newSp={*}",.{sp,newSp});
         const ctxt = @ptrCast(ContextPtr,@alignCast(@alignOf(Self),newSp));
         ctxt.prevCtxt = contextMutable;
         ctxt.trapContextNumber = process.trapContextNumber;
@@ -109,7 +111,7 @@ pub const Context = struct {
     inline fn tempSize(self: *const Context, process: *const Process) usize {
         return (@ptrToInt(self.previous().endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
     }
-    pub inline fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
+    pub  fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
         return sp[0..(@ptrToInt(self.endOfStack(process))-@ptrToInt(sp))/@sizeOf(Object)];
     }
     pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
@@ -169,7 +171,8 @@ pub const Context = struct {
         trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,process)});
         const method = @intToPtr(CompiledMethodPtr,@bitCast(u64,selector));
         const pc = @ptrCast([*]const Code,&method.code);
-        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
+        _ = .{pc,oldPc,sp,process,selector};unreachable;
+//        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };
 const e = struct {

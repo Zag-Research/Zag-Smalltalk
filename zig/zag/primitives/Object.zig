@@ -94,18 +94,18 @@ pub const primitives = struct {
         _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        if (!sym.@"==".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (!sym.@"==".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
     pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // atAllPut:
-        if (!sym.@"atAllPut:".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (!sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         inlines.p1(sp[0]) catch
             return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
     }
     pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        if (!sym.@"~~".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (!sym.@"~~".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }

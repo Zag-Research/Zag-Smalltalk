@@ -18,6 +18,7 @@ const sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
+const empty = &[0]Object{};
 
 pub fn init() void {
 }
@@ -196,30 +197,30 @@ pub const embedded = struct {
 pub const primitives = struct {
     const dnu = execute.controlPrimitives.dnu;
     pub fn p1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// SmallInteger>>#+
-        if (!sym.@"+".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (!sym.@"+".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         sp[1] = inlines.p1(sp[1],sp[0]) catch
             return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
     }
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// SmallInteger>>#-
-        if (sym.@"-".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (sym.@"-".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         sp[1] = inlines.p2(sp[1],sp[0]) catch
             return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        if (sym.@"at:".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (sym.@"at:".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // SmallInteger>>#<=
-        if (sym.@"<=".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (sym.@"<=".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         trace("p5: {any}\n",.{context.stack(sp+1,process)});
         sp[1] = Object.from(inlines.p5(sp[1],sp[0])) catch
             return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
     }
     pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// SmallInteger>>#*
-        if (sym.@"*".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (sym.@"*".hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         sp[1] = inlines.p9(sp[1],sp[0]) catch
             return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
         return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
@@ -251,7 +252,7 @@ test "simple add" {
         &e.p1,
         &e.returnNoContext,
     });
-    prog.setReferences(&[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    prog.setLiterals(empty,&[_]Object{Object.from(method2.asCompiledMethodPtr())});
     const result = testExecute(prog.asCompiledMethodPtr());
     try expectEqual(result[0].toInt(),42);
 }

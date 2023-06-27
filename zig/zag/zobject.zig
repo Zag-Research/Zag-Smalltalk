@@ -116,6 +116,10 @@ pub const Object = packed struct(u64) {
     pub inline fn equals(self: Object,other: Object) bool {
         return self.u() == other.u();
     }
+    pub inline fn hashEquals(self: Object,other: Object) bool {
+        //@truncate(u24,self.u()^other.u())==0;
+        return self.hash32() == other.hash32();
+    }
     pub inline fn isInt(self: Object) bool {
         return self.atLeastInt() and self.atMostInt();
     }

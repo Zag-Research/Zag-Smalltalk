@@ -36,8 +36,9 @@ pub const inlines = struct {
         _ = self; _ = other;
         return error.primitiveError;
     }
-    pub inline fn p204(self: Object, other: Object) bool { // value:value:value:
-        return self.equals(other);
+    pub inline fn p204(self: Object, other: Object) !Object { // value:value:value:
+        _ = self; _ = other;
+        return error.primitiveError;
     }
     pub inline fn p205(self: Object, other: Object) !Object { // value:value:value:value:
         _ = self; _ = other;
@@ -97,7 +98,7 @@ pub const inlines = struct {
         return sp;
     }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        if (!sym.value.equals(selector)) return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+        if (!sym.value.hashEquals(selector)) return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
         const closure = sp[0].to(heap.HeapObjectPtr);
         sp[0] = closure.prevPrev();
         @panic("unfinished");
@@ -142,7 +143,7 @@ pub const embedded = struct {
                     context.setReturn(pc);
                     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,sym.value});
                 }
-                if (!sym.value.equals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!sym.value.hashEquals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 sp[0] = closure.prevPrev();
             },
             else => @panic("not closure"),
@@ -156,7 +157,7 @@ pub const embedded = struct {
             .heapClosure => {
                 const closure = val.to(heap.HeapObjectPtr);
                 const method = closure.prev().to(CompiledMethodPtr);
-                if (!sym.@"value:".equals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!sym.@"value:".hashEquals(method.selector)) @panic("wrong selector");//return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 const newPc = method.codePtr();
                 context.setReturn(pc);
                 if (true) @panic("unfinished");
@@ -253,7 +254,7 @@ test "immutableClosures" {
 }
 pub const primitives = struct {
     pub fn p201(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value
-        if (!sym.value.equals(selector)) return @call(tailCall,execute.dnu,.{pc,sp,process,context,selector});
+        if (!sym.value.hashEquals(selector)) return @call(tailCall,execute.dnu,.{pc,sp,process,context,selector});
         unreachable;
     }
     pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:

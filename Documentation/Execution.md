@@ -84,8 +84,8 @@ Logically, Smalltalk message dispatch follows these steps:
  6. the method is not found, so create a Message object, set C to T and go back to 3 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
 
 This is not the whole story for 2 reasons:
- 1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
- 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from another class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
+ 1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences, as an optimization.
+ 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from a different class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
  
  See:
  - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
@@ -95,9 +95,11 @@ This is not the whole story for 2 reasons:
 #### Java dispatch
 Java has five opcodes to invoke methods, but the one we're interested in is `invokevirtual` which does virtual dispatch the same as Smalltalk^[the other 4 are because of the impoverished nature of Java object structure].
 
-The difference is that the Java compiler statically knows the index into the dispatch table, so there is no need for a dictionary lookup. The same thing could be done for Smalltalk, if we knew which class the object was an instance of. Failing that, for every class (there are over 20,000 classes in a recent [Pharo](https://pharo.org) image, we would have to have a dispatch table with an entry for all message names (there are over 62,000 method names in the same image). Consuming over 10GB of memory for dispatch tables is clearly excessive.
+The difference is that the Java compiler statically knows the index into the dispatch table, so there is no need for a dictionary lookup. The dispatch table for each class has a prefix of a copy of the dispatch table from its superclass, followed by the methods defined in this class. Any methods that override superclass methods replace the corresponding method in the prefix. Since the names of all of the legal methods are known, finding the method for a particular name requires a simple index (which doesn't even have to be range checked)..
 
-Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods, leading to 80MB of dispatch tables - still excessive (and would have horrible cache locality).
+The same thing could be done for Smalltalk, if we knew which class the object was an instance of. Failing that, for every class (there are over 20,000 classes in a recent [Pharo](https://pharo.org) image, we could have to have a dispatch table with an entry for all message names (there are over 62,000 method names in the same image). Consuming over 10GB of memory for dispatch tables is clearly excessive.
+
+Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods. Because this approach to dispatch requires a superclass method prefix, this would lead to over 80MB of dispatch tables - still excessive (and would have horrible cache locality).
 
 #### Our approach
 We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
@@ -105,22 +107,24 @@ We lazily build a single dispatch table for each class, which includes not just 
 | Dispatch table entry for a class |                        |
 | -------------------------------- | ---------------------- |
 | Hash multiplier                  | a u32                  |
-| second hash multiplier | a u16                                 |                        |
 | superclass index                 | a u16                  |
 | method pointers                  | an array of pointers to threads |
 
 The sequence to look up a method is:
-1. use the selector hash
-2. multiply with wrap by the hash multiplier
-3. shift right by the low 5 bits of the multiplier
-4. use that as the index into the array
-5. jump to the threaded code
+1. use the selector hash (symbol id and arity)
+2. 32-bit multiply with wrap by a constant hash
+3. multiply by the hash multiplier
+4. shift right (the 2 multiplies and shift replace a modulo)
+5. use that as the index into the array
+6. jump to the threaded code
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
-The tables are built as a near-perfect for power-of-2 tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to some kind of second-level lookup - could be an and, could be linear scan with symbols - for any, the data will follow the first-level method pointers in the table.
+The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup.
 
-The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
+The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive.
+
+Note that because the hierarchy is flattened, and not all super sends can be inlined, there may be multiple methods with the same selector. These are disambiguated with tags in the arity field.
 
 ## BlockClosures
 

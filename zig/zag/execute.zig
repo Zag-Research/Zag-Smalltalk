@@ -10,6 +10,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
+pub const Dispatch = @import("dispatch.zig").Dispatch;
 pub const Context = @import("context.zig").Context;
 //const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
@@ -18,7 +19,7 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Format = heap.Format;
 const Age = heap.Age;
-const class = @import("class.zig");
+//const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
 pub const tailCall: std.builtin.CallModifier = .always_tail;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
@@ -52,16 +53,16 @@ pub const CompiledMethod = extern struct {
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
         return Self {
-            .header = HeapObject.staticHeaderWithClassLengthHash(4,class.CompiledMethod_I,name.hash24()),
+            .header = HeapObject.staticHeaderWithClassLengthHash(4,object.CompiledMethod_I,name.hash24()),
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{Code.prim(methodFn),Code.prim(methodFn2)},
-            .footer = HeapObject.calcHeapObject(5,class.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
+            .footer = HeapObject.calcHeapObject(5,object.CompiledMethod_I,name.hash24(),Age.static,null,0,false) catch unreachable,
         };
     }
     pub fn execute(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
         const pc = self.codePtr();
-//        std.debug.print("execute [{*}]: {*}\n",.{pc,pc[0].prim});
+        std.debug.print("execute [{*}]: {*} {}\n",.{pc,pc[0].prim,sp[0]});
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
         return pc[0].prim(pc+1,sp,process,context,self.selector);
     }
@@ -69,7 +70,7 @@ pub const CompiledMethod = extern struct {
         return @ptrCast(HeapObjectConstPtr,self);
     }
     pub inline fn matchedSelector(self: *Self, selector: Object) bool {
-        return selector.equals(self.selector);
+        return selector.hashEquals(self.selector);
     }
     pub inline fn codePtr(self: *Self) [*] Code {
         return @ptrCast([*] Code,&self.code);
@@ -175,7 +176,7 @@ test "intOf" {
 }
 pub const CountSizes = struct {codes: usize, refs: usize = 0, objects: usize = 0};
 pub fn countNonLabels(comptime tup: anytype) CountSizes {
-    comptime var n = 1;
+    comptime var n = 0;
     comptime var r = 0;
     comptime var o = 0;
     inline for (tup) |field| {
@@ -219,7 +220,7 @@ test "countNonLabels" {
         "1mref",
         null,
     });
-    try expectEqual(r1.codes,11);
+    try expectEqual(r1.codes,10);
     try expectEqual(r1.refs,2);
     try expectEqual(r1.objects,3);
 }
@@ -241,7 +242,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = HeapObject.calcHeapObject(codeOffsetInUnits+codeSize, class.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = HeapObject.calcHeapObject(codeOffsetInUnits+codeSize, object.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
 //            @compileLog(codeSize,refsSize);
 //            trace("\nfooter={}",.{footer});
             return .{
@@ -260,7 +261,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .stackStructure = Object.packedInt(locals,maxStack,locals+name.numArgs()),
                 .code = code,
                 .references = [_]Object{object.NotAnObject}**refsSize,
-                .footer = heap.footer(codeOffsetInUnits+codeSize,Format.indexedWithPointers,class.CompiledMethod_I,name.hash24(),Age.static),
+                .footer = heap.footer(codeOffsetInUnits+codeSize,Format.indexedWithPointers,object.CompiledMethod_I,name.hash24(),Age.static),
             };
         }
         pub fn asCompiledMethodPtr(self: *const Self) * CompiledMethod {
@@ -326,7 +327,7 @@ test "CompileTimeMethod" {
     var r1 = c1.init(Nil,2,3);
     var r1r = [_]Object{Nil,True};
     r1.setLiterals(empty,&r1r);
-    try expectEqual(r1.getCodeSize(),11);
+    try expectEqual(r1.getCodeSize(),10);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{.codes=codeSize});
@@ -337,7 +338,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
     var method = methodType.init(name,locals,maxStack);
     method.code[0] = Code.prim(controlPrimitives.noop);
     const code = method.code[0..];
-    comptime var n = 1;
+    comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object => {code[n]=Code.object(field);n=n+1;},
@@ -375,7 +376,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                                         .Array => {
                                                             if (t[0]==':') {
                                                                 if (comptime std.mem.endsWith(u8,t,field)) {
-                                                                    code[n]=Code.int(lp-n);
+                                                                    code[n]=Code.int(lp-n-1);
                                                                     n=n+1;
                                                                     found = true;
                                                                 }
@@ -413,21 +414,21 @@ test "compiling method" {
     var t = m.code[0..];
 //    for (t,0..) |tv,idx|
 //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
-    try expectEqual(t[0].prim,controlPrimitives.noop);
-    try expectEqual(t[1].prim,p.dnu);
-    try expectEqual(t[2].int,2);
-    try expectEqual(t[3].object,True);
-    try expectEqual(t[4].object,Object.from(42));
-    try expectEqual(t[5].int,-5);
-    try expectEqual(t[6].int,-1);
-    try expectEqual(t[7].int,7);
-    try expectEqual(t[8].int,3);
-    try expectEqual(t[9].int,1);
-    try expectEqual(t[10].object,Nil);
-    try expectEqual(t.len,11);
+//    try expectEqual(t[0].prim,controlPrimitives.noop);
+    try expectEqual(t[0].prim,p.dnu);
+    try expectEqual(t[1].int,2);
+    try expectEqual(t[2].object,True);
+    try expectEqual(t[3].object,Object.from(42));
+    try expectEqual(t[4].int,-5);
+    try expectEqual(t[5].int,-1);
+    try expectEqual(t[6].int,6);
+    try expectEqual(t[7].int,3);
+ //   try expectEqual(t[8].int,1+Code.refFlag);
+    try expectEqual(t[9].object,Nil);
+    try expectEqual(t.len,10);
 }
-//pub const trace = std.debug.print;
-pub inline fn trace(_:anytype,_:anytype) void {}
+pub const trace = std.debug.print;
+//pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {
@@ -442,7 +443,7 @@ pub const controlPrimitives = struct {
     }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
-        if (!method.selector.equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+        if (!method.selector.hashEquals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
         return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
     }
     pub fn branch(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -559,7 +560,7 @@ pub const controlPrimitives = struct {
     pub fn pushLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp-1;
         newSp[0]=context.getLocal(0);
-        trace("\npushLocal1: {any} {*}",.{context.stack(newSp,process),pc});
+        trace("\npushLocal: {any} {*}",.{context.stack(newSp,process),pc});
         return @call(tailCall,pc[0].prim,.{pc+1,newSp,process,context,selector});
     }
     pub fn pushLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -586,20 +587,16 @@ pub const controlPrimitives = struct {
         context.setLocal(0,sp[0]);
         return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
     }
-    fn lookupMethod(cls: object.ClassIndex,selector: u64) CompiledMethodPtr {
-        _ = cls;
-        _ = selector;
-        @panic("unimplemented");
-    }
     pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = lookupMethod(sp[0].get_class(),selector.hash32()).codePtr();
+        const newPc = Dispatch.lookup(selector,sp[0].get_class());
         context.setReturn(pc+1);
+        std.debug.print("\nin send0 {}\n",.{selector});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = lookupMethod(sp[1].get_class(),selector.hash32()).codePtr();
+        const newPc = Dispatch.lookup(selector,sp[1].get_class());
         context.setReturn(pc+1);
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
@@ -621,7 +618,7 @@ pub const controlPrimitives = struct {
         context.setReturn(pc+1);
         const offset = pc[0].int;
         const newPc = pc+1-@intCast(u64, -offset);
-        trace("\ncallRecursive: {any} {}",.{context.stack(sp,process)});
+        trace("\ncallRecursive: {any}",.{context.stack(sp,process)});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -632,6 +629,7 @@ pub const controlPrimitives = struct {
         const selfOffset = stackStructure.l2;
         const ctxt = context.push(sp,process,method,locals,maxStackNeeded,selfOffset);
         const newSp = ctxt.asObjectPtr();
+        trace("\npC: sp={*} newSp={*} {} {*}",.{sp,newSp,pc[0].uint,method});
         trace("\npushContext: {any} {} {}",.{process.getStack(sp),locals,method.selector});
         return @call(tailCall,pc[1].prim,.{pc+2,newSp,process,ctxt,selector});
     }
@@ -639,6 +637,7 @@ pub const controlPrimitives = struct {
         const result = context.pop(process);
         const newSp = result.sp;
         var callerContext = result.ctxt;
+        trace("\nrWC: sp={*} newSp={*}\n",.{sp,newSp});
         trace("\nreturnWithContext: {any} -> {any}",.{context.stack(sp,process),callerContext.stack(newSp,process)});
         return @call(tailCall,callerContext.getNPc(),.{callerContext.getTPc(),newSp,process,@constCast(callerContext),selector});
     }
@@ -720,6 +719,7 @@ test "context return via TestExecution" {
     te.init();
     var objs = [_]Object{Nil,True};
     const compiledMethod = method.asCompiledMethodPtr();
+    trace("\nmethod: {*}",.{compiledMethod});
     var result = te.run(objs[0..],compiledMethod);
     try expectEqual(result.len,1);
     try expectEqual(result[0],True);

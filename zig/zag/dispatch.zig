@@ -3,9 +3,9 @@ const tailCall: std.builtin.CallModifier = .always_tail;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
-const class = @import("class.zig");
-const ClassIndex = class.ClassIndex;
-const max_classes = class.ReservedNumberOfClasses;
+//const class = @import("class.zig");
+const ClassIndex = object.ClassIndex;
+const max_classes = 500;//class.ReservedNumberOfClasses;
 const Process = @import("process.zig").Process;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -28,7 +28,7 @@ const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
 
 pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
-const Dispatch = extern struct {
+pub const Dispatch = extern struct {
     header: HeapObject,
     hash: u64,
     free: u16,
@@ -37,7 +37,7 @@ const Dispatch = extern struct {
     superOrDNU: [2]Code, // could handle DNU separately, but no current reason
     methods: [minHash+extra][*]const Code, // this is just the default... normally a larger array
     const Self = @This();
-    const classIndex = class.Dispatch_I;
+    const classIndex = object.Dispatch_I;
     const DispatchState = enum(u8){clean,beingUpdated,dead};
     const minHash = 13; // must be prime
     const extra = 8; // must be multiple of 8 to allow cast below
@@ -51,9 +51,9 @@ const Dispatch = extern struct {
         .superOrDNU = .{Code.prim(&dnu),Code.uint(0)},
         .methods = undefined, // should make this a footer
     };
-    var dispatches = [_]Self{&empty}**max_classes;
-    pub inline fn lookup(selector: Object,classIndex: ClassIndex) [*]const Code {
-        return dispatches[classIndex].lookupAddress(preHash(selector.hash32())).*;
+    var dispatches = [_]*Self{@constCast(&empty)}**max_classes;
+    pub inline fn lookup(selector: Object,index: ClassIndex) [*]const Code {
+        return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
     }
     var internalNeedsInitialization = true;
     fn new() Self {
@@ -124,8 +124,8 @@ const Dispatch = extern struct {
         if (ptr==@ptrToInt((&self.superOrDNU[0]).compiledMethodPtr(0))) return true;
         return false;
     }
-    fn lookupAddress(self: *Self, selector: u64) *[*]const Code {
-        return &self.methods[selector*self.hash>>32];
+    fn lookupAddress(self: *const Self, selector: u64) *[*]const Code {
+        return @constCast(&self.methods[selector*self.hash>>32]);
     }
     inline fn preHash(selector: u32) u64 {
         return @as(u64,selector*%u32_phi_inverse);
@@ -404,7 +404,7 @@ test "empty dispatch" {
     const ee = std.testing.expectEqual;
     _ = Dispatch.new();
     const empty = Dispatch.empty;
-    try ee(empty.lookupAddress(symbols.value),&empty.superOrDNUU);
+    try ee(empty.lookupAddress(symbols.value.hash32()),@ptrCast(*[*]const Code,@constCast(&empty.superOrDNU)));
 }
 test "add methods" {
     var temp0: usize = 0;
