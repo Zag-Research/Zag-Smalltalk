@@ -20,15 +20,15 @@ pub const primitives = struct {
     pub usingnamespace @import("primitives/BlockClosure.zig").primitives;
     pub usingnamespace @import("primitives/Boolean.zig").primitives;
 };
-pub fn init() void{
+pub fn init() void {
     @import("primitives/Object.zig").init();
     @import("primitives/Smallinteger.zig").init();
     @import("primitives/Behavior.zig").init();
     @import("primitives/BlockClosure.zig").init();
     @import("primitives/Boolean.zig").init();
-//    @import("execute.zig").init();
+    //    @import("execute.zig").init();
 }
 test "prim" {
     const std = @import("std");
-    std.debug.print("dup = {*}\n",.{&embedded.dup});
+    std.debug.print("dup = {*}\n", .{&embedded.dup});
 }
