@@ -5,7 +5,11 @@ pub const smallerPowerOf2 = general.smallerPowerOf2;
 pub const largerPowerOf2 = general.largerPowerOf2;
 pub const largerPowerOf2Not1 = general.largerPowerOf2Not1;
 pub const Treap = @import("utilities/treap.zig").Treap;
-pub const next_prime_larger_than = @import("utilities/primes.zig").next_prime_larger_than;
+const primes = @import("utilities/primes.zig");
+pub const next_prime_larger_than = primes.next_prime_larger_than;
+pub const smallestPrimeAtLeast = primes.smallestPrimeAtLeast;
+pub const largestPrimeLessThan = primes.largestPrimeLessThan;
+
 pub const findFib =  @import("utilities/fibonacci.zig").findFib;
 pub const Stats = @import("utilities/stats.zig").Stats;
 pub fn checkEqual(comptime int: u32, comptime int2: u32) ?[]const u8 {

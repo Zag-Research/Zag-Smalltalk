@@ -24,6 +24,7 @@ const compiledMethodType = execute.compiledMethodType;
 const Code = execute.Code;
 const CodeContextPtr = execute.CodeContextPtr;
 const u32_phi_inverse=@import("utilities.zig").inversePhi(u32);
+const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const forTest = Dispatch.forTest;
@@ -51,7 +52,7 @@ const Dispatch = extern struct {
         .methods = undefined, // should make this a footer
     };
     const dnuThread = [_]Code{Code.prim(&dnu)};
-    const dnuInit = @ptrCast([*]const Code,&dnuThread[0]);
+    const dnuInit:[*]const Code = @ptrCast(&dnuThread[0]);
     var dispatches = [_]*Self{@constCast(&empty)}**max_classes;
     pub inline fn lookup(selector: Object,index: ClassIndex) [*]const Code {
         return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
@@ -75,7 +76,7 @@ const Dispatch = extern struct {
         return undefined;
     }
     fn lessThan(_:void, lhs: ThreadedFn, rhs: ThreadedFn) bool {
-        return @ptrToInt(lhs)<@ptrToInt(rhs);
+        return @intFromPtr(lhs)<@intFromPtr(rhs);
     }
     inline fn init(self: *Self) void {
         self.initOfSize(@sizeOf(Self)/8);
@@ -83,25 +84,25 @@ const Dispatch = extern struct {
     inline fn initOfSize(self: *Self, words: usize) void {
         self.header = HeapObject.staticHeaderWithClassLengthHash(classIndex,words-1,0);
         const nMethods = words - @offsetOf(Self,"methods")/8;
-        self.hash = minHash;
-        for (self.methods[0..minHash]) |*ptr|
+        const hash = smallestPrimeAtLeast(nMethods*3/2);
+        std.debug.print("\nwords: {} nM: {} hash: {}",.{words,nMethods,hash});
+        self.hash = hash;
+        for (self.methods[0..nMethods]) |*ptr|
             ptr.* = dnuInit;
-        self.free = minHash;
-        self.length = @sizeOf(Self);
+        self.free = hash;
+        self.length = words;
         self.state = .clean;
-        if (extra>0)
-            self.methods[minHash] = @intToPtr([*]const Code,extra);
     }
     fn isExternalCompiledMethod(self: *Self, cmp: ThreadedFn) bool {
-        const ptr = @ptrToInt(cmp);
-        if (ptr>=@ptrToInt(self) and ptr<=@ptrToInt(self)+self.length*@sizeOf(Object)) return false;
+        const ptr = @intFromPtr(cmp);
+        if (ptr>=@intFromPtr(self) and ptr<=@intFromPtr(self)+self.length*@sizeOf(Object)) return false;
         var low: usize = 0;
         var high: usize = internal.len;
         while (low<high) {
             const mid = (low+high)/2;
             const v = internal[mid];
             if (v==cmp) return false;
-            if (@ptrToInt(v)<ptr) {
+            if (@intFromPtr(v)<ptr) {
                 low = mid+1;
             } else {
                 high = mid;
@@ -126,7 +127,7 @@ const Dispatch = extern struct {
         const code = self.lookupAddress(hashed).*;
         std.debug.print("\ndispatch: {} {} {} {*} {*}",.{selector,hash,hashed,self.lookupAddress(hashed),code});
         // all the ugly casting is to make signature match
-        return @call(tailCall,@ptrCast(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,code[0].prim),.{@ptrCast(*Dispatch,@constCast(code+1)),sp,process,context,selector});
+        return @call(tailCall,@as(*const fn(*Self,[*]Object,*Process,CodeContextPtr,Object) MethodReturns,@ptrCast(code[0].prim)),.{@as(*Dispatch,@ptrCast(@constCast(code+1))),sp,process,context,selector});
     }
     fn disambiguate(location: [] Code,one: *const CompiledMethod, another: *const CompiledMethod) [*]Code {
         const oneHash = one.selector.hash32();
@@ -158,7 +159,7 @@ const Dispatch = extern struct {
             std.debug.print("\nexchange: {*} {*} {*}",.{address.*,dnuInit,cmp.codePtr()});
             return; // we replaced DNU with method
         }
-        const existing = @ptrCast(*const Code,address.*).compiledMethodPtr(0);
+        const existing = @as(*const Code,@ptrCast(address.*)).compiledMethodPtr(0);
         if (existing.selector.equals(cmp.selector)) {
             address.* = cmp.codePtr();
             return;
@@ -168,7 +169,7 @@ const Dispatch = extern struct {
             const end = self.length-@offsetOf(Self,"methods")/@sizeOf(Object)-2;
             if (self.free < end) {
                 self.free += 3;
-                const disambiguator = disambiguate(@ptrCast([*]Code,&self.methods)[self.free-3..self.free],existing,cmp);
+                const disambiguator = disambiguate(@as([*]Code,@ptrCast(&self.methods))[self.free-3..self.free],existing,cmp);
                 address.* = disambiguator;
                 return;
             }
@@ -336,12 +337,12 @@ const Dispatch = extern struct {
     }
     fn testIncrement(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         _ = .{process, context, selector};
-        @intToPtr(*usize,programCounter[0].uint).* += 1;
+        @as(*usize,@ptrFromInt(programCounter[0].uint)).* += 1;
         return sp;
     }
 };
 //fn initTest(self: *Self, target: *usize) void {
-//    self.initPrivate(.{Code.prim(&testIncrement),Code.uint(@ptrToInt(target))});
+//    self.initPrivate(.{Code.prim(&testIncrement),Code.uint(@intFromPtr(target))});
 //}
 //pub fn forTest() void {
 //    var foo = Self.new();
@@ -372,8 +373,8 @@ test "disambiguate" {
     const method3 = compileMethod(symbols.@"<=",0,0,.{&fns.push3,&Code.end});
     var space = [_]Code{Code.object(Nil),Code.object(Nil),Code.object(Nil)};
     var dispatcher = Dispatch.disambiguate(&space,method1.asCompiledMethodPtr(),method2.asCompiledMethodPtr());
-    const push1Code = @ptrCast([*]Code,&method1.asCompiledMethodPtr().code);
-    const push2Code = @ptrCast([*]Code,&method2.asCompiledMethodPtr().code);
+    const push1Code: [*]Code = @ptrCast(&method1.asCompiledMethodPtr().code);
+    const push2Code: [*]Code = @ptrCast(&method2.asCompiledMethodPtr().code);
     try ee(space[2].codeRef,push1Code);
     try ee(space[1].codeRef,push2Code);
     dispatcher = Dispatch.disambiguate(&space,method2.asCompiledMethodPtr(),method1.asCompiledMethodPtr());
@@ -429,9 +430,9 @@ test "add methods" {
             return sp;
         }
     };
-    var code0 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@ptrToInt(&temp0))});
-    var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@ptrToInt(&temp))});
-    var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&fns.testAt),Code.uint(@ptrToInt(&temp))});
+    var code0 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@intFromPtr(&temp0))});
+    var code1 = methodType.withCode(symbols.yourself,0,0,.{Code.prim(&fns.testYourself),Code.uint(@intFromPtr(&temp))});
+    var code2 = methodType.withCode(symbols.@"at:",0,0,.{Code.prim(&fns.testAt),Code.uint(@intFromPtr(&temp))});
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
@@ -452,7 +453,7 @@ const ClassDispatch = extern struct {
     const Self = @This();
     const init:Self =  .{.dispatch = null,.hash=0};
     fn store(self:*Self,value:Self) void {
-        @atomicStore(u128, @ptrCast(*u128,self), @bitCast(u128,value), std.builtin.AtomicOrder.Unordered);
+        @atomicStore(u128, @as(*u128,@ptrCast(self)), @as(u128,@bitCast(value)), std.builtin.AtomicOrder.Unordered);
     }
 };
 //test "128-bit atomic store" {
@@ -466,7 +467,7 @@ inline fn bumpSize(size:u16) u16 {
     return size*2;
 }
 inline fn initialSize(size:usize) u16 {
-    return @import("utilities.zig").largerPowerOf2(@max(@intCast(u16,size),4));
+    return @import("utilities.zig").largerPowerOf2(@max(@as(u16,@intCast(size)),4));
 }
 const Fix = struct {index:u16,a:u16,b:u16,c:u16};
 const CF = struct{size:u16,hash:u32};
@@ -579,7 +580,7 @@ fn stage2a(process : *Process, self: Object, selector: Object, ci:ClassIndex) Me
 //             const dispatchSize = Self.findTableSize(symbolMethods,null,&fixup) catch @panic("dispatch conflicts");
 //             const rand = dispatchSize.hash();
 //             const size = 0;//dispatchSize.size();
-//             const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(CompiledMethodPtr),Dispatch,@bitCast(Object,@ptrToInt(dnu)),8) catch unreachable;
+//             const strct = arena.allocStruct(class.Dispatch_I,@sizeOf(Dispatch)+size*@sizeOf(CompiledMethodPtr),Dispatch,@bitCast(Object,@intFromPtr(dnu)),8) catch unreachable;
 //             strct.hash = rand;
 //             strct.super = superClass;
 //             const methods=@ptrCast([*]CompiledMethodPtr,@alignCast(@alignOf([*]CompiledMethodPtr),&strct.methods));

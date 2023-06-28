@@ -178,7 +178,7 @@ const FreeList = extern struct {
     size: u16,
     list: FreeListPtr,
     inline fn addToFree(self: *Self, ptr: HeapObjectArray) void {
-        const fle = @intToPtr(*FreeListElement,@ptrToInt(ptr+self.size)-@sizeOf(FreeListElement));
+        const fle = @ptrFromInt(*FreeListElement,@intFromPtr(ptr+self.size)-@sizeOf(FreeListElement));
         fle.header = footer(@truncate(u12,self.size-1),Format.notIndexable,0,0,Age.free);
         if (self.size>=@sizeOf(FreeListElement)/@sizeOf(HeapObject)) {
             var prev = self.list;
@@ -199,7 +199,7 @@ const FreeList = extern struct {
                 if (@cmpxchgWeak(FreeListPtr,myList,fle,next,SeqCst,SeqCst)) |_| {
                     continue;
                 } else {
-                    return @intToPtr(HeapObjectArray,@ptrToInt(fle)+@sizeOf(FreeListElement)-self.size*@sizeOf(HeapObject))[0..self.size];
+                    return @ptrFromInt(HeapObjectArray,@intFromPtr(fle)+@sizeOf(FreeListElement)-self.size*@sizeOf(HeapObject))[0..self.size];
                 }
             }
             else return null;
@@ -316,7 +316,7 @@ test "check zig-compatible allocator" {
 //     const array = @ptrCast(HeapObjectPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
 //     var result = try GlobalArena.alloc(self,sp,hp,context,heapSize,0);
 //     const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;
-//     offs[1] = @ptrToInt(array);
+//     offs[1] = @intFromPtr(array);
 //     return result;
 // }
 fn collect() AllocErrors!void {
@@ -332,7 +332,7 @@ pub fn promote(obj: Object) !Object {
 inline fn boundaryCalc(space: []HeapObject) usize {
     const po2:usize = smallerPowerOf2(space.len);
     const mask = @bitCast(usize,-@intCast(isize,po2*@sizeOf(HeapObject)));
-    const alignedLen = ((@ptrToInt(space.ptr+space.len)&mask)-@ptrToInt(space.ptr))/@sizeOf(HeapObject);
+    const alignedLen = ((@intFromPtr(space.ptr+space.len)&mask)-@intFromPtr(space.ptr))/@sizeOf(HeapObject);
     return alignedLen;
 }
 // fn freeToList(self: *Self, space: []HeapObject) void {

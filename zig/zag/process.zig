@@ -79,25 +79,25 @@ pub const Process = extern struct {
     const checkType = u5;
     const checkMax:checkType = @truncate(checkType,std.mem.page_size-1);
     pub inline fn needsCheck(self: *const Self) bool {
-        return @truncate(checkType,@ptrToInt(self))==1;
+        return @truncate(checkType,@intFromPtr(self))==1;
     }
     pub inline fn decCheck(self: *Self) *Self {
         if (self.needsCheck()) return self;
         @setRuntimeSafety(false);
-        return @intToPtr(*Self,@ptrToInt(self)-1);
+        return @ptrFromInt(*Self,@intFromPtr(self)-1);
     }
     pub inline fn maxCheck(self: *const Self) *Self {
         @setRuntimeSafety(false);
-        return @intToPtr(*Self,@ptrToInt(self)|checkMax);
+        return @ptrFromInt(*Self,@intFromPtr(self)|checkMax);
     }
     pub inline fn noCheck(self: *const Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self) & ~@as(usize,checkMax));
+        return @ptrFromInt(*Self,@intFromPtr(self) & ~@as(usize,checkMax));
     }
     pub inline fn debugger(self: *Self) ?ThreadedFn {
         return self.debugFn;
     }
     inline fn ptr(self: *const Self) *Self {
-        return @intToPtr(*Self,@ptrToInt(self.noCheck()) // + @sizeOf(heap.HeapObject)
+        return @ptrFromInt(*Self,@intFromPtr(self.noCheck()) // + @sizeOf(heap.HeapObject)
                          );
     }
     pub fn deinit(self : *Self) void {
@@ -107,16 +107,16 @@ pub const Process = extern struct {
         return @ptrCast([*]Object,&self.ptr().stack[0])+stack_size;
     }
     pub inline fn getStack(self: *const Self, sp: [*]Object) []Object {
-        return sp[0..(@ptrToInt(self.endOfStack())-@ptrToInt(sp))/@sizeOf(Object)];
+        return sp[0..(@intFromPtr(self.endOfStack())-@intFromPtr(sp))/@sizeOf(Object)];
     }
     pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {
         const newSp = sp - words;
-        if (@ptrToInt(newSp)>@ptrToInt(self)) return newSp;
+        if (@intFromPtr(newSp)>@intFromPtr(self)) return newSp;
         return self.allocStack_(sp,words,contextMutable);
     }
     fn allocStack_(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {
         const newSp = sp - words;
-        if (@ptrToInt(newSp)>@ptrToInt(self)) return newSp;
+        if (@intFromPtr(newSp)>@intFromPtr(self)) return newSp;
         _ = contextMutable;
         @panic("move stack and cp");
     }
@@ -190,7 +190,7 @@ test "check flag" {
 //         }
 //         var result = try self.alloc(self,sp,hp,context,ivSize+3,aSize);
 //         const offs = @ptrCast([*]u64,result.allocated)+ivSize+1;
-//         mem.set(Object,@intToPtr([*]Object,offs[1])[0..aSize],fill);
+//         mem.set(Object,@ptrFromInt([*]Object,offs[1])[0..aSize],fill);
 //         offs[0] = arraySize;
 //         initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
 //         return result;
@@ -204,7 +204,7 @@ test "check flag" {
 //         return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
 //     }
 //     inline fn initAllocation(result: HeapObjectPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
-//         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(result))*%object.u32_phi_inverse>>8);
+//         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@intFromPtr(result))*%object.u32_phi_inverse>>8);
 //         mem.set(Object,result.asObjectPtr()[1..size+1],fill);
 //         result.*=footer(@intCast(u12,size),form,classIndex,hash,age);
 //     }

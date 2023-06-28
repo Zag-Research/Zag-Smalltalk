@@ -3,7 +3,7 @@ const phi = std.math.phi;
 pub fn inversePhi(comptime T: type) T {
     switch (@typeInfo(T)) {
         .Int => |int_info| switch (int_info.signedness) {
-            .unsigned => return @floatToInt(T,@intToFloat(f64,1<<int_info.bits)/phi)|1,
+            .unsigned => return @as(T,@intFromFloat(@as(f64,@floatFromInt(1<<int_info.bits))/phi))|1,
             else => {},
         },
         else => {},
@@ -63,7 +63,7 @@ test "randomness of /phi - all values enumerated" {
     var counts = [_]u32{0} ** 2;
     const phi16 = inversePhi(u16);
     for (data16,0..) |_,index| {
-        data16[@truncate(u16,index)*%phi16] += 1;
+        data16[@as(u16,@truncate(index))*%phi16] += 1;
     }
     for (data16) |count| {
         counts[count] += 1;
@@ -73,7 +73,7 @@ test "randomness of /phi - all values enumerated" {
     var data8 = [_]u16{0} ** 256;
     const phi8 = inversePhi(u8);
     for (data8,0..) |_,index| {
-        data8[@truncate(u8,index)*%phi8] += 1;
+        data8[@as(u8,@truncate(index))*%phi8] += 1;
     }
     counts[1]=0;
     for (data8) |count| {
@@ -158,7 +158,7 @@ pub inline fn bitsToRepresent(size:anytype) u7 {
             return comptime @ctz(~@as(u64,n));
         },
         .Int => |int_info| switch (int_info.signedness) {
-            .unsigned => return @intCast(u7,int_info.bits - @clz(size)),
+            .unsigned => return @intCast(int_info.bits - @clz(size)),
             else => {},
         },
         else => {},

@@ -163,7 +163,7 @@ pub const AllocationInfo = struct {
         return self.format.isExternal();
     }
     pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize) bool {
-        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@ptrToInt(theHeapObject)>>4)*%object.u32_phi_inverse>>8);
+        const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@intFromPtr(theHeapObject)>>4)*%object.u32_phi_inverse>>8);
         theHeapObject.* =  HeapObject {
             .classIndex = classIndex,
             .hash = hash,
@@ -175,7 +175,7 @@ pub const AllocationInfo = struct {
             const size = self.sizeField;
             const footers = @ptrCast([*]u64,theHeapObject)-size;
             footers[size-1] = nElements;
-            footers[size-2] = @ptrToInt(footers)-elementSize*nElements;
+            footers[size-2] = @intFromPtr(footers)-elementSize*nElements;
         }
         return self.format.isExternal();
     }
@@ -336,7 +336,7 @@ pub const HeapObjectPtrIterator = struct {
         if (!obj.isIndexableWithPtrs()) return noPointers(obj);
         const ivs = @ptrCast([*] const Object,obj);
         const size = ivs[1+obj.length].u();
-        const array = @intToPtr([*]Object,ivs[2+obj.length].u());
+        const array = @ptrFromInt([*]Object,ivs[2+obj.length].u());
         return .{
             .nextPointer = lastPointerGroup,
             .scanObject = undefined,
@@ -345,7 +345,7 @@ pub const HeapObjectPtrIterator = struct {
         };
     }
     fn lastPointerGroup(self:*Self) ?HeapObjectPtr {
-        while (@ptrToInt(self.current)<@ptrToInt(self.beyond)) {
+        while (@intFromPtr(self.current)<@intFromPtr(self.beyond)) {
             const obj = self.current[0];
             self.current += 1;
             if (obj.isHeapAllocated())
@@ -355,7 +355,7 @@ pub const HeapObjectPtrIterator = struct {
         return null;
     }
     fn firstPointerGroup(self:*Self) ?HeapObjectPtr {
-        while (@ptrToInt(self.current)<@ptrToInt(self.beyond)) {
+        while (@intFromPtr(self.current)<@intFromPtr(self.beyond)) {
             const obj = self.current[0];
             self.current += 1;
             if (obj.isHeapAllocated())
@@ -364,7 +364,7 @@ pub const HeapObjectPtrIterator = struct {
         const obj = self.scanObject;
         const ivs = @ptrCast([*]const Object,obj);
         const size = ivs[1+obj.length].u();
-        const array = @intToPtr([*]Object,ivs[2+obj.length].u());
+        const array = @ptrFromInt([*]Object,ivs[2+obj.length].u());
         self.current = array;
         self.beyond = array+size-1;
         self.nextPointer = lastPointerGroup;
@@ -407,7 +407,7 @@ pub const HeapObjectPtrIterator = struct {
 //     try testing.expectEqual(i.next().?,&h2);
 //     try testing.expectEqual(i.next(),null);
 //     o1[3] = @bitCast(Object,@as(u64,2));
-//     o1[4] = @bitCast(Object,@ptrToInt(&o1[5]));
+//     o1[4] = @bitCast(Object,@intFromPtr(&o1[5]));
 //     o1[0] = header(2,Format.bothOP, 0x27, 0x129,Age.nursery).o();
 //     i = HeapObjectPtrIterator.ivPointers(ho1);
 //     try testing.expectEqual(i.next().?,&h1);
@@ -519,7 +519,7 @@ pub const HeapObject = packed struct(u64) {
         return self.age.isUnmoving();
     }
     pub inline fn forwardedTo(self: HeapObjectConstPtr) HeapObjectConstPtr {
-        return @intToPtr(HeapObjectConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
+        return @ptrFromInt(HeapObjectConstPtr,@intCast(u64,@intCast(i64,@bitCast(u64,self.*)<<16)>>16));
     }
     pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
         return self.length==forwardLength;
@@ -535,10 +535,10 @@ pub const HeapObject = packed struct(u64) {
         const size = head.length;
         if (size==forwardLength) {
             const realSelf = self.forwardedTo();
-            const start = @intToPtr([*]Object,@ptrToInt(realSelf)-@sizeOf(Object)*realSelf.length);
+            const start = @ptrFromInt([*]Object,@intFromPtr(realSelf)-@sizeOf(Object)*realSelf.length);
             return start[0..size];
         } else {
-            const start = @intToPtr([*]Object,@ptrToInt(self)-@sizeOf(Object)*size);
+            const start = @ptrFromInt([*]Object,@intFromPtr(self)-@sizeOf(Object)*size);
             return start[0..size];
         }
     }
@@ -548,10 +548,10 @@ pub const HeapObject = packed struct(u64) {
 //        std.io.getStdErr().writer().print("\naASWH {}",.{head}) catch unreachable;
         if (size==forwardLength) {
             const realSelf = self.forwardedTo();
-            const start = @intToPtr([*]Object,@ptrToInt(realSelf)-@sizeOf(Object)*realSelf.length);
+            const start = @ptrFromInt([*]Object,@intFromPtr(realSelf)-@sizeOf(Object)*realSelf.length);
             return start[1..size];
         } else {
-            const start = @intToPtr([*]Object,@ptrToInt(self)-@sizeOf(Object)*size);
+            const start = @ptrFromInt([*]Object,@intFromPtr(self)-@sizeOf(Object)*size);
             return start[1..size];
         }
     }
@@ -566,16 +566,16 @@ pub const HeapObject = packed struct(u64) {
     }
     inline fn arrayAsSlice_(self: HeapObjectConstPtr, head: HeapObject, comptime T:type) ![]T {
         //        if (head.age.isOnStack()) unreachable;
-//        std.io.getStdErr().writer().print("\nsize={} 0x{x} {}",.{head.objectFormat.size(),@ptrToInt(self),head}) catch unreachable;
+//        std.io.getStdErr().writer().print("\nsize={} 0x{x} {}",.{head.objectFormat.size(),@intFromPtr(self),head}) catch unreachable;
         switch (head.objectFormat.size()) {
             .notIndexable => return error.NotIndexable,
             .size => |s| {
-                const oa = @intToPtr([*]T,@ptrToInt(self)-@sizeOf(T)*s);
+                const oa = @ptrFromInt([*]T,@intFromPtr(self)-@sizeOf(T)*s);
                 return oa[0..s];
             },
             .indexable => {
-                const oa = @intToPtr([*]usize,@ptrToInt(self)-@sizeOf(usize)*2);
-                return @intToPtr([*]T,oa[0])[0..oa[1]];
+                const oa = @ptrFromInt([*]usize,@intFromPtr(self)-@sizeOf(usize)*2);
+                return @ptrFromInt([*]T,oa[0])[0..oa[1]];
             },
         }
     }
@@ -587,7 +587,7 @@ pub const HeapObject = packed struct(u64) {
                 return s;
             },
             .indexable => {
-                const oa = @intToPtr([*]u64,@ptrToInt(self)-@sizeOf(u64));
+                const oa = @ptrFromInt([*]u64,@intFromPtr(self)-@sizeOf(u64));
                 return oa[0];
             },
         }
@@ -598,7 +598,7 @@ pub const HeapObject = packed struct(u64) {
         if (!form.isIndexable()) return error.NotIndexable;
         var size: usize = self.length;
         if (form.hasInstVars()) {
-            const oa = @intToPtr([*]u64,@ptrToInt(self));
+            const oa = @ptrFromInt([*]u64,@intFromPtr(self));
             size = form.wordSize(oa[size+1]);
         }
         size = largerPowerOf2(size * 2);
@@ -610,8 +610,8 @@ pub const HeapObject = packed struct(u64) {
         const form = self.objectFormat;
         const size = self.length;
         if (form.isIndexable() and form.hasInstVars()) {
-            var oa = @intToPtr([*]u64,@ptrToInt(self))+size;
-            return size+3+if (oa[2]!=@ptrToInt(oa+3)) 0 else form.wordSize(oa[1]);
+            var oa = @ptrFromInt([*]u64,@intFromPtr(self))+size;
+            return size+3+if (oa[2]!=@intFromPtr(oa+3)) 0 else form.wordSize(oa[1]);
         }
         return size+1;
     }
@@ -621,8 +621,8 @@ pub const HeapObject = packed struct(u64) {
         var size : usize = self.length;
         if (!form.isIndexable()) return false;
         if (form.hasInstVars()) {
-            var oa = @intToPtr([*]u64,@ptrToInt(self))+size;
-            return oa[2]!=@ptrToInt(oa+3);
+            var oa = @ptrFromInt([*]u64,@intFromPtr(self))+size;
+            return oa[2]!=@intFromPtr(oa+3);
         }
         return false;
     }
@@ -639,13 +639,13 @@ pub const HeapObject = packed struct(u64) {
         return @ptrCast([*]Object,self);
     }
     pub inline fn fromObjectPtr(op:  [*]const Object) HeapObjectArray {
-        return @intToPtr(HeapObjectArray,@ptrToInt(op));
+        return @ptrFromInt(HeapObjectArray,@intFromPtr(op));
     }
     pub inline fn o(self: HeapObject) Object {
         return @bitCast(Object,self);
     }
     pub inline fn asObjectArray(self: HeapObjectConstPtr) [*]align(@alignOf(u64)) Object {
-        return @intToPtr([*]align(@alignOf(u64)) Object, @ptrToInt(self)) + 1;
+        return @ptrFromInt([*]align(@alignOf(u64)) Object, @intFromPtr(self)) + 1;
     }
     pub inline fn setHash(self: HeapObjectPtr,hash: u24) HeapObject {
         self.hash=hash;

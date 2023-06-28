@@ -55,7 +55,7 @@ pub const Context = struct {
         _ = options;
         
         try writer.print("context: {}",.{self.header});
-        try writer.print(" prev: 0x{x}",.{@ptrToInt(self.previous())});
+        try writer.print(" prev: 0x{x}",.{@intFromPtr(self.previous())});
         if (false) {
             @setRuntimeSafety(false);
             try writer.print(" temps: {any}",.{self.temps[0..self.size]});
@@ -77,7 +77,7 @@ pub const Context = struct {
         return self.push(sp, process, method, locals, maxStackNeeded, selfOffset);
     }
     pub inline fn push(self: * Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16)  ContextPtr {
-        if (@ptrToInt(self)==0) @panic("0 self");
+        if (@intFromPtr(self)==0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp,baseSize + locals + maxStackNeeded,&contextMutable)+maxStackNeeded;
         trace("\npush: {} {} {}",.{baseSize , locals, maxStackNeeded});
@@ -109,10 +109,10 @@ pub const Context = struct {
         return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
-        return (@ptrToInt(self.previous().endOfStack(process))-@ptrToInt(&self.temps))/@sizeOf(Object);
+        return (@intFromPtr(self.previous().endOfStack(process))-@intFromPtr(&self.temps))/@sizeOf(Object);
     }
     pub  fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
-        return sp[0..(@ptrToInt(self.endOfStack(process))-@ptrToInt(sp))/@sizeOf(Object)];
+        return sp[0..(@intFromPtr(self.endOfStack(process))-@intFromPtr(sp))/@sizeOf(Object)];
     }
     pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
         const size = self.tempSize(process);
@@ -148,7 +148,7 @@ pub const Context = struct {
         self.temps[n] = v;
     }
     pub inline fn previous(self: *const Context) ContextPtr {
-        if (@ptrToInt(self.prevCtxt)==0) @panic("0 prev");
+        if (@intFromPtr(self.prevCtxt)==0) @panic("0 prev");
         return self.prevCtxt;
     }
     pub inline fn asHeapObjectPtr(self : *const Context) HeapObjectPtr {
@@ -169,7 +169,7 @@ pub const Context = struct {
         self.tpc = oldPc+1;
         self.npc = oldPc[0].prim;
         trace("\ncall: N={*} T={*} {any}",.{self.getNPc(),self.getTPc(),self.stack(sp,process)});
-        const method = @intToPtr(CompiledMethodPtr,@bitCast(u64,selector));
+        const method = @ptrFromInt(CompiledMethodPtr,@bitCast(u64,selector));
         const pc = @ptrCast([*]const Code,&method.code);
         _ = .{pc,oldPc,sp,process,selector};unreachable;
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});

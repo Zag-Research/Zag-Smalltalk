@@ -99,7 +99,7 @@ pub const CompiledMethod = extern struct {
             all[codeOffset/8..all.len-refs.len],refs});
     }
     pub fn asFakeObject(self: *const Self) Object {
-        return @bitCast(Object,@ptrToInt(self));
+        return @bitCast(Object,@intFromPtr(self));
     }
 };
 pub const Code = extern union {
@@ -285,7 +285,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             if (self.references.len>0) {
                 for (&self.code) |*c| {
                     if (c.object.isIndexSymbol())
-                        c.* = Code.uint((@ptrToInt(&self.references[c.object.hash24()&(Code.refFlag-1)])-@ptrToInt(c))/@sizeOf(Object)-1);
+                        c.* = Code.uint((@intFromPtr(&self.references[c.object.hash24()&(Code.refFlag-1)])-@intFromPtr(c))/@sizeOf(Object)-1);
                 }
             }
         }
@@ -622,7 +622,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        const method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].uint)-CompiledMethod.codeOffset);
+        const method =  @ptrFromInt(CompiledMethodPtr,@intFromPtr(pc-pc[0].uint)-CompiledMethod.codeOffset);
         const stackStructure = method.stackStructure;
         const locals = stackStructure.h0 & 255;
         const maxStackNeeded = stackStructure.h1;

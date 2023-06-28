@@ -127,7 +127,7 @@ pub const ByteCode = enum(i8) {
                         continue :interp;
                     },
                     .pushContext => {
-                        method =  @intToPtr(CompiledMethodPtr,@ptrToInt(pc-pc[0].u())-@sizeOf(Code)-CompiledMethod.codeOffset);
+                        method =  @ptrFromInt(CompiledMethodPtr,@intFromPtr(pc-pc[0].u())-@sizeOf(Code)-CompiledMethod.codeOffset);
                         references = (&method.header).arrayAsSlice(Object) catch unreachable;
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
@@ -226,7 +226,7 @@ pub const ByteCode = enum(i8) {
     }
     inline fn asCodePtr(self: [*]const Self) [*]const Code {
         @setRuntimeSafety(false);
-        return @intToPtr([*]const Code,@ptrToInt(self));
+        return @ptrFromInt([*]const Code,@intFromPtr(self));
     }
     var methods: [128] CompiledMethodPtr = undefined;
     var nMethods = 0;
@@ -270,7 +270,7 @@ pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, compti
     const methodType = CompileTimeMethod(convertCountSizes(counts));
     var method = methodType.init(name,locals,maxStack);
     method.code[0] = Code.prim(ByteCode.interpret);
-    const code = @intToPtr([*]ByteCode,@ptrToInt(&method.code[1]));
+    const code = @ptrFromInt([*]ByteCode,@intFromPtr(&method.code[1]));
     comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {

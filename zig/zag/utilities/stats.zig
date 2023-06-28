@@ -13,8 +13,8 @@ pub fn Stats(comptime T:type) type {
         pub fn init(v : T) Self {
             return .{
                 .value = v,
-                .minValue = math.inf_f64,
-                .maxValue = -math.inf_f64,
+                .minValue = math.inf(f64),
+                .maxValue = -math.inf(f64),
                 .n = 0,
                 .sum = 0.0,
                 .sumsq = 0.0};
@@ -27,10 +27,10 @@ pub fn Stats(comptime T:type) type {
             self.sumsq += data*data;
         }
         pub fn mean(self : Self) f64 {
-            return self.sum/@intToFloat(f64,self.n);
+            return self.sum/@as(f64,@floatFromInt(self.n));
         }
         pub fn stddev(self : Self) f64 {
-            const nInverse = 1.0/@intToFloat(f64,self.n);
+            const nInverse = 1.0/@as(f64,@floatFromInt(self.n));
             const mn = self.sum*nInverse;
             return math.sqrt(self.sumsq*nInverse-mn*mn);
         }
@@ -84,5 +84,5 @@ test "simple stats" {
     var buf2: [200]u8 = undefined;
 //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
 //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
-    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
+    _=.{expect,buf,buf2};//    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }

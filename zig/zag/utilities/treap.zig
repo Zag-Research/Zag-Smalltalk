@@ -67,7 +67,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             }
             for (self.table[start..],start+1..) |*element,index| {
                 element.key=self.empty;
-                element.left=@intCast(Index,index);
+                element.left=@intCast(index);
                 element.right=0;
                 element.value=undefined;
             }
@@ -77,7 +77,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
             var treap = if (self.table.len>0) ref(memory,self.compare,self.empty)
                 else init(memory,self.compare,self.empty);
             for (self.table,treap.table[0..self.table.len]) | element,*tElement | tElement.* = element;
-            treap.extend(@intCast(Index,self.table.len));
+            treap.extend(@intCast(self.table.len));
             self.table = memory;
         }
         inline fn root(self: *const Self) Index {
@@ -264,7 +264,7 @@ pub fn Treap(comptime Key:type, comptime Index:type,comptime Value:type) type {
                 self.inorderWalkPrint(node.right);
             }
         }
-        fn depths(self: *Self, data: []Index) void {
+        pub fn depths(self: *Self, data: []Index) void {
             self.walk(self.root(),1,data);
         }
         fn walk(self: *Self, pos: Index, depth: Index, data: []Index) void {

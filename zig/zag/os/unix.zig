@@ -54,12 +54,12 @@ fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: 
     if (@as(usize,alignment)>>@truncate(u6,@ctz(alignment))!=1) unreachable; // alignedMap must have a power-of-2 alignment
     if (alignment<page_size) unreachable; // alignedMap must have a alignment >= than page_size
     const slice = try mmap(hint,allocation,-1);
-    const addr = @ptrToInt(slice.ptr);
+    const addr = @intFromPtr(slice.ptr);
     const first = mem.alignForward(usize,addr, alignment);
-    const end = @ptrToInt(slice.ptr+slice.len);
+    const end = @intFromPtr(slice.ptr+slice.len);
     const last = mem.alignBackward(usize,end, alignment);
     if (addr<first) os.munmap(slice[0..first-addr]);
-    if (last<end) os.munmap(@intToPtr([*]align(page_size)u8,last)[0..end-last]);
+    if (last<end) os.munmap(@ptrFromInt([*]align(page_size)u8,last)[0..end-last]);
     if (first==last) unreachable;
     return slice[first-addr..last-addr];
 }
@@ -85,8 +85,8 @@ test "simple allocation" {
         var block0 = try memAlloc.allocBlock();
         const other1 = try memAlloc.map(100,null);
         const other2 = try memAlloc.map(100,null);
-        std.debug.print("other1.ptr={x} len={}\n",.{@ptrToInt(other1.ptr),other1.len});
-        std.debug.print("other2.ptr={x} len={}\n",.{@ptrToInt(other2.ptr),other2.len});
+        std.debug.print("other1.ptr={x} len={}\n",.{@intFromPtr(other1.ptr),other1.len});
+        std.debug.print("other2.ptr={x} len={}\n",.{@intFromPtr(other2.ptr),other2.len});
         var block1 = try memAlloc.allocBlock();
         var block2 = try memAlloc.allocBlock();
         var block3 = try memAlloc.allocBlock();
@@ -97,16 +97,16 @@ test "simple allocation" {
         var block7 = try memAlloc.allocBlock();
         const other3 = try memAlloc.map(100,null);
         const other4 = try memAlloc.map(100,null);
-        std.debug.print("other3.ptr={x} len={}\n",.{@ptrToInt(other3.ptr),other3.len});
-        std.debug.print("other4.ptr={x} len={}\n",.{@ptrToInt(other4.ptr),other4.len});
+        std.debug.print("other3.ptr={x} len={}\n",.{@intFromPtr(other3.ptr),other3.len});
+        std.debug.print("other4.ptr={x} len={}\n",.{@intFromPtr(other4.ptr),other4.len});
         memAlloc.reset();
         var block8 = try memAlloc.allocBlock();
         var block9 = try memAlloc.allocBlock();
         var block10 = try memAlloc.allocBlock();
         const other5 = try memAlloc.map(100,null);
         const other6 = try memAlloc.map(100,null);
-        std.debug.print("other5.ptr={x} len={}\n",.{@ptrToInt(other5.ptr),other3.len});
-        std.debug.print("other6.ptr={x} len={}\n",.{@ptrToInt(other6.ptr),other4.len});
+        std.debug.print("other5.ptr={x} len={}\n",.{@intFromPtr(other5.ptr),other3.len});
+        std.debug.print("other6.ptr={x} len={}\n",.{@intFromPtr(other6.ptr),other4.len});
         block0[5]=42;
         std.debug.print("blocks = {any}\n",.{[_]*Test{block0,block1,block2,block3,block4,}});
         std.debug.print("blocks = {any}\n",.{[_]*Test{block5,block6,block7,}});

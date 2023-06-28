@@ -27,7 +27,7 @@ const ContextPtr = @import("context.zig").ContextPtr;
 const os = @import("os.zig");
 const blockAllocation = os.BlockAllocation(HeapAllocation).new();
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
-    return @divFloor(@bitCast(isize,(@ptrToInt(stackPointer)-%@ptrToInt(heapPointer))),@sizeOf(Object));
+    return @divFloor(@bitCast(isize,(@intFromPtr(stackPointer)-%@intFromPtr(heapPointer))),@sizeOf(Object));
 }
 test "arenaFree" {
     _ = try blockAllocation;
@@ -101,7 +101,7 @@ pub const GlobalArena = struct {
         const array = @ptrCast(HeapPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
         var result = try GlobalArena.alloc(self,sp,hp,context,heapSize,0);
         const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;
-        offs[1] = @ptrToInt(array);
+        offs[1] = @intFromPtr(array);
         return result;
     }
     fn alloc(self: *Self, sp:[*]Object, hp:HeaderArray, context:ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
@@ -120,7 +120,7 @@ pub const GlobalArena = struct {
         self.freeToList(allocation[totalSize..]);
         if (arraySize>0) {
             const offs = @ptrCast([*]u64,allocation.ptr)+heapSize-2;
-            offs[1] = @ptrToInt(offs+2);
+            offs[1] = @intFromPtr(offs+2);
         }
         return @ptrCast(HeapPtr,allocation.ptr);
     }
@@ -143,7 +143,7 @@ pub const GlobalArena = struct {
     inline fn boundaryCalc(space: []Header) usize {
         const po2:usize = smallerPowerOf2(space.len);
         const mask = @bitCast(usize,-@intCast(isize,po2*@sizeOf(Header)));
-        const alignedLen = ((@ptrToInt(space.ptr+space.len)&mask)-@ptrToInt(space.ptr))/@sizeOf(Header);
+        const alignedLen = ((@intFromPtr(space.ptr+space.len)&mask)-@intFromPtr(space.ptr))/@sizeOf(Header);
         return alignedLen;
     }
     fn freeToList(self: *Self, space: []Header) void {
@@ -186,7 +186,7 @@ pub const GlobalArena = struct {
     }
     pub inline fn allocStruct(self:*Self, classIndex:ClassIndex, comptime T: type, extra: usize, comptime T2: type) *T {
         var result = self.asSelf().allocStruct(([0]Object{})[0..],([0]Header{})[0..],&junkContext,classIndex,T,extra,T2) catch @panic("allocStruct failed");
-        return @intToPtr(*T,@ptrToInt(result.allocated));
+        return @ptrFromInt(*T,@intFromPtr(result.allocated));
     }
     const HeapAllocation = extern struct {
         flags: u64,
@@ -199,7 +199,7 @@ pub const GlobalArena = struct {
         const returnType = []u8;
         fn getAligned() []align(heap_allocation_size)u8 { // ToDo: align larger size without wasting 1/2 the space
             //var buf = std.heap.page_allocator.alloc(u8, heap_allocation_size*2-std.mem.page_size) catch @panic("page allocator failed");
-            //const base = @ptrToInt(buf.ptr) & (heap_allocation_size-1);
+            //const base = @intFromPtr(buf.ptr) & (heap_allocation_size-1);
             //const offs = if (base==0) 0 else heap_allocation_size-base;
             //if (!std.heap.page_allocator.resize(buf,offs+heap_allocation_size)) @panic("resize failed");
             //return @alignCast(heap_allocation_size,buf[offs..offs+page_allocation_size]);

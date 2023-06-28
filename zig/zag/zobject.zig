@@ -198,9 +198,9 @@ pub const Object = packed struct(u64) {
                     .Pointer => |ptrInfo| {
                         if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child,"ClassIndex") or self.to(HeapObjectConstPtr).classIndex==ptrInfo.child.ClassIndex))) {
                             if (@hasField(ptrInfo.child,"header") or (@hasDecl(ptrInfo.child,"includesHeader") and ptrInfo.child.includesHeader)) {
-                                return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
+                                return @ptrFromInt(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16));
                             } else {
-                                unreachable; //return @intToPtr(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
+                                unreachable; //return @ptrFromInt(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
                             }
                         }
                         @panic("Trying to convert Object pointer to "++@typeName(T));
@@ -258,7 +258,7 @@ pub const Object = packed struct(u64) {
             .Pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
-                        return cast(@truncate(u48,@ptrToInt(value)) + Start_of_Heap_Objects);
+                        return cast(@truncate(u48,@intFromPtr(value)) + Start_of_Heap_Objects);
                     },
                     else => {},
                 }

@@ -34,7 +34,7 @@ test "printing objects" {
 }
 
 fn test1(stack : [*]Object, heap : [*]Object) returnE {
-    assert(@ptrToInt(stack)>@ptrToInt(heap));
+    assert(@intFromPtr(stack)>@intFromPtr(heap));
     return .Normal;
 }
 

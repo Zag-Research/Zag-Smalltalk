@@ -131,7 +131,7 @@ pub const embedded = struct {
             .immediateThunk => sp[0].tag = .immediates,
             .heapThunk => sp[0].tag = .heap,
             .nonLocalThunk => {
-                const targetContext = @intToPtr(ContextPtr,val.rawWordAddress());
+                const targetContext = @ptrFromInt(ContextPtr,val.rawWordAddress());
                 sp[0] = nonLocalValues[val.u()&7];
                 return @call(tailCall,inlines.nonLocalReturn,.{pc,sp,process,targetContext,selector});
             },

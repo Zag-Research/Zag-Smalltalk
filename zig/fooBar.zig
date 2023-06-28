@@ -79,7 +79,7 @@ var @"foo:bar:" =
         &e.pushLocalData, 3+(1<<8), // l1
         &e.returnTop,
 });
-var @"foo:bar:1" =
+var @"foo:bar::1" =
     // [ l1 < p1 ]
     compileMethod(sym.value,0,2,.{ // self-0
         &e.verifySelector,
@@ -89,7 +89,7 @@ var @"foo:bar:1" =
         &e.send, Sym.@"<"
             &e.returnTop,
 });
-var @"foo:bar:2" =
+var @"foo:bar::2" =
     // [ l1 := l1 + 1.
     //   l1 = l3 ifTrue: [ ^ 1 ] ]
     compileMethod(sym.value,1,2+4,.{ // self-1 BCone-0

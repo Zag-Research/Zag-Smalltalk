@@ -31,9 +31,12 @@ fn init_bits(array: []bool) void {
         }
     }
 }
-fn isPrime(p: u32) bool {
+inline fn isPrime(p: u32) bool {
+    if (p % 2 == 0) return p==2;
     if (p < bits.len) return bits[p];
-    if (p % 2 == 0) return false;
+    return isPrimeSearch(p);
+}
+fn isPrimeSearch(p: u32) bool {
     var i: usize = 3;
     while (i * i < p) : (i += 2) {
         if (bits[i]) {
@@ -42,12 +45,29 @@ fn isPrime(p: u32) bool {
     }
     return true;
 }
-fn smallestPrimeAtLeast(min: u32) u32 {
+test "prime diffs" {
+    var prev: usize = 0;
+    var sum: usize = 0;
+    var n: usize = 0;
+    var p: usize = 10;
+    for (&bits,0..) |b,i| {
+        if (b) {
+            sum += i-prev;
+            prev = i;
+            n+=1;
+        }
+        if (i+1==p) {
+            std.debug.print("\naverage diff - first {}: {d:.2} ",.{p,@as(f64,@floatFromInt(sum))/@as(f64,@floatFromInt(n))});
+            p*= 10;
+        }
+    }
+}
+pub fn smallestPrimeAtLeast(min: u32) u32 {
     var i = (min & ~@as(u32,1)) + 1;
     while (!isPrime(i)) : (i += 2) {}
     return i;
 }
-fn largestPrimeLessThan(max: u32) u32 {
+pub fn largestPrimeLessThan(max: u32) u32 {
     if (max <= 4) return max - 1;
     var i = (max & ~@as(u32, 1)) - 1;
     while (!isPrime(i)) : (i -= 2) {}
@@ -67,13 +87,10 @@ test "primes1" {
 }
 
 var prime: u32 = 0;
-fn priority(pos:u32) u32 {
-    return (pos+1)*%prime;
-}
 fn compareU64(l: u64, r: u64) Order {
     return math.order(l,r);
 }
-const Treap_u64 = treap.Treap(u64);
+const Treap_u64 = treap.Treap(u64,u32,u0);
 const stats_u32 = stats.Stats(u32);
 
 var best = stats_u32.init(0);
@@ -85,7 +102,7 @@ pub fn main() void {
     });
     const rand = prng.random();
     
-    var memory_ = [_]u8{0} ** (32767*16);
+    var memory_ = [_]Treap_u64.Element{undefined} ** (32767*16);
     var depths_ = [_]u32{0} ** 32767;
     var b : u5 = 5;
     while (b<16) : (b += 1) {
@@ -121,7 +138,7 @@ pub fn main() void {
         while (i > 0)
             : (i -= 1) {
                 const j = largestPrimeLessThan(rand.int(u32)|0x80000000);
-                tryTreap(false,@intCast(u32,j),memory,depths);
+                tryTreap(false,@intCast(j),memory,depths);
         }
         // stdout.print("*",.{}) catch unreachable;
         // const max = 0x100000000;
@@ -133,9 +150,9 @@ pub fn main() void {
         // }
     }
 }
-fn tryTreap(printAnyway: bool,i: u32, memory: []u8, depths: []u32) void {
+fn tryTreap(printAnyway: bool,i: u32, memory: []Treap_u64.Element, depths: []u32) void {
     prime =i;
-    var trp = Treap_u64.init(memory,compareU64,0,priority);
+    var trp = Treap_u64.init(memory,compareU64,0);
     var index : u64 = 1;
     while (index<depths.len) : (index += 1) {
         _ = trp.insert(index) catch unreachable;
@@ -143,7 +160,7 @@ fn tryTreap(printAnyway: bool,i: u32, memory: []u8, depths: []u32) void {
     trp.depths(depths);
     var current = stats_u32.init(i);
     for (depths[1..]) |depth| {
-        current.addData(@intToFloat(f64,depth));
+        current.addData(@floatFromInt(depth));
     }
     var print = printAnyway;
     if (best.noData() or best.max()>current.max() or (best.max()==current.max() and best.mean()>current.mean())) {
@@ -221,7 +238,7 @@ fn generated(rand: std.rand.Random) [nGenerate]u32 {
     return result;
 }
 fn hashEfficiency(selectors: []u32) void {
-    var p = @truncate(u32,selectors.len);
+    var p:u32 = @truncate(selectors.len);
     nextPrime: while (p<maxSelectors) {
         var used = [_]u8{0}**maxSelectors;
         var conflicts: u32 = 0;
@@ -244,7 +261,11 @@ fn hashEfficiency(selectors: []u32) void {
             p += @max(1,p>>7);
             continue :nextPrime;
         }
-        std.debug.print("\nhash {} keys needs {} buckets for efficiency of {}%",.{selectors.len,p,@floatToInt(u32,@intToFloat(f64,selectors.len)*100/@intToFloat(f64,p))});
+        std.debug.print("\nhash {} keys needs {} buckets for efficiency of {}%",.{selectors.len,p,
+                                                                                  @as(u32,@truncate(@as(u32,@intFromFloat(
+                                                                                      @as(f64,@floatFromInt(selectors.len))
+                                                                                          * 100/@as(f64,@floatFromInt(p))))))
+                                                                                      });
         return;
     }
     std.debug.print("\nhash not found for {} keys",.{selectors.len});
@@ -259,10 +280,10 @@ test "hashs" {
     std.debug.print("\nphi = {x:0>8}",.{phi32});
     var v1 = generated(rand);
     var counts: [16]u32 = undefined;
-    const pc = 100.0/@intToFloat(f64,v1.len);
+    const pc = 100.0/@as(f64,@floatFromInt(v1.len));
     var shift: u5 = 28;
     while (shift>0) : (shift -= 1) {
-        for (counts) |*s| {
+        for (&counts) |*s| {
             s.* = 0;
         }
         for (v1) |s| {
@@ -270,20 +291,20 @@ test "hashs" {
         }
         var stat = @import("stats.zig").Stats(u5).init(shift);
         for (counts) |s| {
-            stat.addData(@intToFloat(f64,s)*pc);
+            stat.addData(@as(f64,@floatFromInt(s))*pc);
         }
-        std.debug.print("\nshift: {} stats={rs:.2}",.{shift,stat});
+//        std.debug.print("\nshift: {} stats={rs:.2}",.{shift,stat});
     }
     var index: u32 = 4;
     while (index <= 50) : (index += 1) {
         hashEfficiency(v1[0..index]);
     }
-    for (v1,0..) |*s,idx| {
-        s.*=@truncate(u32,idx)+1;
+    for (&v1,0..) |*s,idx| {
+        s.*=@as(u32,@truncate(idx))+1;
     }
     shift = 28;
     while (shift>0) : (shift -= 1) {
-        for (counts) |*s| {
+        for (&counts) |*s| {
             s.* = 0;
         }
         for (v1) |s| {
@@ -291,9 +312,9 @@ test "hashs" {
         }
         var stat = @import("stats.zig").Stats(u5).init(shift);
         for (counts) |s| {
-            stat.addData(@intToFloat(f64,s)*pc);
+            stat.addData(@as(f64,@floatFromInt(s))*pc);
         }
-        std.debug.print("\nshift: {} stats={rs:.2}",.{shift,stat});
+//        std.debug.print("\nshift: {} stats={rs:.2}",.{shift,stat});
     }
     index = 4;
     while (index <= 50) : (index += 1) {
