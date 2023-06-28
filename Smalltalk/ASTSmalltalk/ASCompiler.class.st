@@ -174,6 +174,7 @@ ASCompiler >> methods [
 
 { #category : #building }
 ASCompiler >> selector: selector fromClass: aClass [
+
 	^ aClass methodDictionary
 		  at: selector
 		  ifPresent: [ aClass >> selector ]
@@ -182,8 +183,16 @@ ASCompiler >> selector: selector fromClass: aClass [
 				  at: selector
 				  ifPresent: [ aClass class >> selector ]
 				  ifAbsent: [
-					  aClass superclass ifNotNil: [ :sc |
-						  self selector: selector fromClass: (self addClass: sc) ] ] ]
+					  (ClassMap keyAtValue: aClass ifAbsent: [ nil ])
+						  ifNil: [
+							  aClass superclass ifNotNil: [ :sc |
+								  self selector: selector fromClass: (self addClass: sc) ] ]
+						  ifNotNil: [ :originalClass |
+						  		originalClass methodDictionary
+				  at: selector
+				  ifPresent: [ originalClass >> selector ] ifAbsent: [ 
+						originalClass class methodDictionary at:selector ifPresent: [ originalClass  class >> selector ]
+					] ] ]]
 ]
 
 { #category : #accessing }

@@ -70,7 +70,11 @@ ASPharoCompiler >> initializeSyms [
 
 { #category : #compiling }
 ASPharoCompiler >> writeInitSmalltalk: aStream [
+
 	aStream << 'var sym: Sym = undefined;'.
+	aStream cr.
+	"write the methods"
+	methods do: [ :aMethod | aMethod writeMethod: aStream with: syms ].
 	aStream cr.
 	aStream << 'fn initSmalltalk() void {'.
 	aStream cr.
@@ -81,8 +85,7 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 	aStream << 'sym = Sym.init();'.
 	aStream cr.
 	"write all the classes"
-	"write the methods"
-	methods do: [ :aMethod | aMethod writeMethod: aStream with: syms ].
+	methods do: [ :aMethod | aMethod setLiterals: aStream ].
 
 	aStream << '}'.
 	aStream cr

@@ -72,6 +72,11 @@ ASBlock >> printOn: s [
 ]
 
 { #category : #accessing }
+ASBlock >> selector [
+	^ selector
+]
+
+{ #category : #accessing }
 ASBlock >> selector: aString [ 
 	selector := aString
 ]
@@ -91,10 +96,10 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
-		 at: selector
+		 at: selector asZigString
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector ]) << ','
-	<< locals size asString << ',' << self maxDepth asString << ',.{'.
+		 ifAbsent: [ 'sym.' , selector ]) << ',' << locals size asString
+	<< ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 
 	aStream tab.
@@ -146,5 +151,5 @@ ASBlock >> zigString: syms and: stackVariables [
 			^ '&e.pushNonlocalBlock_self,'
 			  , (stackVariables indexOf: 'self') asString , ',' ] ].
 	"or return a block closure"
-	^ '&e.blockClosure,"',selector ,'",1+(3<<16),'
+	selector ifNil: [ ^ '&e.blockClosure,"',nestedScopeOf selector ,'",1+(3<<16),' ] ifNotNil: [ ^ '&e.blockClosure,"',selector ,'",1+(3<<16),']
 ]

@@ -91,9 +91,19 @@ ASMethodNode >> className [
 	^ class name
 ]
 
+{ #category : #accessing }
+ASMethodNode >> clousreSize [
+	^0
+]
+
 { #category : #comparing }
 ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
+]
+
+{ #category : #accessing }
+ASMethodNode >> maxBlockLocals [
+	^0
 ]
 
 { #category : #accessing }
@@ -137,6 +147,16 @@ ASMethodNode >> selector: aString [
 	selector := aString
 ]
 
+{ #category : #initialization }
+ASMethodNode >> setLiterals: aZnCharacterWriteStream [ 
+	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
+]
+
+{ #category : #utilities }
+ASMethodNode >> stackSize [
+	^0
+]
+
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
@@ -150,7 +170,9 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		 at: selector
 		 ifPresent: [ :value | value ]
 		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
-	<< self numLocals << ',' << self maxDepth asString << ',.{'.
+	<< self stackSize asString << ','
+	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
+	<< ',.{'.
 	aStream cr.
 
 	"verify selector or primitive?"
@@ -178,7 +200,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
-			block selector: selector asZigString , index asString.
+			block selector: selector , ':', index asString.
 			aStream << (block zigString: syms and: stackVariables) ] ].
 
 	body do: [ :asStatement |
@@ -197,8 +219,5 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"ouput compile methods for the blocks"
 	self blocks ifNotEmpty: [
 		blocks do: [ :block |
-			block
-				writeBlock: aStream
-				with: syms
-				and: stackVariables ] ]
+			block writeBlock: aStream with: syms and: stackVariables ] ]
 ]
