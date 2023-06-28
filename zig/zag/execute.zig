@@ -10,7 +10,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
-pub const Dispatch = @import("dispatch.zig").Dispatch;
+pub const lookup = @import("dispatch.zig").lookup;
 pub const Context = @import("context.zig").Context;
 //const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
@@ -62,7 +62,7 @@ pub const CompiledMethod = extern struct {
     }
     pub fn execute(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr) [*]Object {
         const pc = self.codePtr();
-        std.debug.print("execute [{*}]: {*} {}\n",.{pc,pc[0].prim,sp[0]});
+//        std.debug.print("execute [{*}]: {*} {}\n",.{pc,pc[0].prim,sp[0]});
 //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
         return pc[0].prim(pc+1,sp,process,context,self.selector);
     }
@@ -427,8 +427,8 @@ test "compiling method" {
     try expectEqual(t[9].object,Nil);
     try expectEqual(t.len,10);
 }
-pub const trace = std.debug.print;
-//pub inline fn trace(_:anytype,_:anytype) void {}
+//pub const trace = std.debug.print;
+pub inline fn trace(_:anytype,_:anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {
@@ -589,14 +589,14 @@ pub const controlPrimitives = struct {
     }
     pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = Dispatch.lookup(selector,sp[0].get_class());
+        const newPc = lookup(selector,sp[0].get_class());
         context.setReturn(pc+1);
         std.debug.print("\nin send0 {}\n",.{selector});
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = Dispatch.lookup(selector,sp[1].get_class());
+        const newPc = lookup(selector,sp[1].get_class());
         context.setReturn(pc+1);
         return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
     }
@@ -679,14 +679,20 @@ pub const TestExecution = struct {
         self.process.init();
         self.sp = self.process.endOfStack();
     }
-    pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
-        const sp = self.process.endOfStack() - source.len;
-        for (source,sp[0..source.len]) |src,*dst|
+    pub fn initStack(self: *Self, source: [] const Object) void {
+        self.sp = self.process.endOfStack() - source.len;
+        for (source,self.sp[0..source.len]) |src,*dst|
             dst.* = src;
+    }
+    pub fn stack(self: *Self, sp: [*]Object) []Object {
+        self.sp = sp;
+        return self.ctxt.stack(self.sp,&self.process);
+    }
+    pub fn run(self: *Self, source: [] const Object, method: CompiledMethodPtr) []Object {
+        self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace)==@TypeOf(std.debug.print) and trace==std.debug.print) method.write(stdout) catch unreachable;
-        self.sp = method.execute(sp,&self.process,&self.ctxt);
-        return self.ctxt.stack(self.sp,&self.process);
+        return self.stack(method.execute(self.sp,&self.process,&self.ctxt));
     }
 };
 const p = struct {

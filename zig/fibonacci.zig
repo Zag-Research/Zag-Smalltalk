@@ -33,6 +33,7 @@ var sym: Sym = undefined;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
+const testReps = 4;
 var fibCPSM = compileMethod(Sym.value,0,0,.{&fibCPS});
 const fibCPST = @ptrCast([*]Code,&fibCPSM.code[0]);
 // fibonacci
@@ -80,7 +81,7 @@ fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: Context
 }
 test "fibObject" {
     var n:i32 = 1;
-    while (n<10) : (n += 1) {
+    while (n<testReps) : (n += 1) {
         const result = fibObject(Object.from(n));
         std.debug.print("\nfib({}) = {any}",.{n,result});
         try std.testing.expectEqual(result.toInt(),@truncate(i51,fibNative(n)));
@@ -114,7 +115,7 @@ test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
 //    fibThread.update(fibThreadRef,method);
     var n:u32 = 1;
-    while (n<10) : (n += 1) {
+    while (n<testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te =  TestExecution.new();
         te.init();
@@ -158,7 +159,7 @@ test "fibDispatch" {
     var n:u32 = 1;
     sym = Sym.init();
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci},empty);
-    while (n<10) : (n += 1) {
+    while (n<testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te =  TestExecution.new();
         te.init();
@@ -234,7 +235,7 @@ const b = @import("zag/byte-interp.zig").ByteCode;
 //     });
 //     const method = fibByte.asCompiledByteCodeMethodPtr();
 //     var n:i32 = 1;
-//     while (n<10) : (n += 1) {
+//     while (n<testReps) : (n += 1) {
 //         var objs = [_]Object{Object.from(n)};
 //         var te =  TestExecution.new();
 //         te.init();
