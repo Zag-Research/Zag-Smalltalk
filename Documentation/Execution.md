@@ -170,7 +170,7 @@ foo: p1 bar: p2
 |14| clsPtr | aBlock |       BC1                                                    |
 |15| clsPtr | self                  | BC2                                                          |
 
-| | BC2 | Description | Pointers| |
+| | BC2 | Description | Pointers|
 | - | - | - | - |
 |16| object   |     l3        |                                             |
 |17| clsDataPtr |  |   -->  clsDataPtr       (26)                                             |
@@ -190,7 +190,7 @@ foo: p1 bar: p2
 |25| object | l1                  |                                                           |
 |26| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
 
-| | foo:bar: | Description | Pointers| |
+| | foo:bar: | Description | Pointers|
 | - | - | - | - |
 |27| header | foo:bar: header                | <--- whileTrue: ctxt                                              |
 |28| tpc    | caller threaded pc to return       |                                                           |
