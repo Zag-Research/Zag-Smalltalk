@@ -200,7 +200,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
-			block selector: selector , ':', index asString.
+			block selector: selector , ':' , index asString.
 			aStream << (block zigString: syms and: stackVariables) ] ].
 
 	body do: [ :asStatement |
@@ -218,6 +218,6 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	"ouput compile methods for the blocks"
 	self blocks ifNotEmpty: [
-		blocks do: [ :block |
-			block writeBlock: aStream with: syms and: stackVariables ] ]
+		blocks do: [ :block | block isNonLocalReturn ifFalse: [ 
+			block writeBlock: aStream with: syms and: stackVariables ] ] ]
 ]
