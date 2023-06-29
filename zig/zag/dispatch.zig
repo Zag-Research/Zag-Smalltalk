@@ -5,7 +5,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 //const class = @import("class.zig");
 const ClassIndex = object.ClassIndex;
-const max_classes = 500; //class.ReservedNumberOfClasses;
+const max_classes = 100; //class.ReservedNumberOfClasses;
 const Process = @import("process.zig").Process;
 const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
@@ -30,18 +30,20 @@ const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
 pub const lookup = Dispatch.lookup;
+pub fn init() void {
+    _ = Dispatch.new();
+}
+pub const addMethod = Dispatch.addMethod;
 const Dispatch = extern struct {
     header: HeapObject,
     hash: u64,
     free: u16,
     length: u16,
     state: DispatchState,
-    methods: [minHash + extra][*]const Code, // this is just the default... normally a larger array
+    methods: [21][*]const Code, // this is just the default... normally a larger array
     const Self = @This();
     const classIndex = object.Dispatch_I;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
-    const minHash = 13; // must be prime
-    const extra = 8; // must be multiple of 8 to allow cast below
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 5);
     var empty: Self = .{
         .header = HeapObject.staticHeaderWithClassLengthHash(classIndex, @offsetOf(Self, "methods") / 8 - 1 + 1, 0), // don't count header, but do count one element of methods
@@ -53,26 +55,36 @@ const Dispatch = extern struct {
     };
     const dnuThread = [_]Code{Code.prim(&dnu)};
     const dnuInit: [*]const Code = @ptrCast(&dnuThread[0]);
+    var dispatchData: [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
         return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
     }
+    pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
+        if (internalNeedsInitialization) initialize();
+        const dispatchP = dispatches[index];
+        if (dispatchP!=&empty) return try dispatchP.add(method);
+        dispatches[index] = &dispatchData[index];
+        dispatches[index].init();
+        try Dispatch.addMethod(index,method);
+    }
     var internalNeedsInitialization = true;
-    fn new() Self {
-        if (internalNeedsInitialization) {
-            empty.methods[0] = dnuInit;
-            empty.header.addFooter();
-            internal[0] = super;
-            internal[1] = dnu;
-            internal[2] = fail;
-            internal[3] = prime3;
-            internal[4] = prime5;
-            for (bitTests[0..], internal[5..]) |s, *i| {
-                i.* = s;
-            }
-            std.sort.insertion(ThreadedFn, &internal, {}, lessThan);
-            internalNeedsInitialization = false;
+    fn initialize() void {
+        empty.methods[0] = dnuInit;
+        empty.header.addFooter();
+        internal[0] = super;
+        internal[1] = dnu;
+        internal[2] = fail;
+        internal[3] = prime3;
+        internal[4] = prime5;
+        for (bitTests[0..], internal[5..]) |s, *i| {
+            i.* = s;
         }
+        std.sort.insertion(ThreadedFn, &internal, {}, lessThan);
+        internalNeedsInitialization = false;
+    }
+    fn new() Self {
+        if (internalNeedsInitialization) initialize();
         return undefined;
     }
     fn lessThan(_: void, lhs: ThreadedFn, rhs: ThreadedFn) bool {
@@ -83,8 +95,8 @@ const Dispatch = extern struct {
     }
     inline fn initOfSize(self: *Self, words: usize) void {
         self.header = HeapObject.staticHeaderWithClassLengthHash(classIndex, words - 1, 0);
-        const nMethods = words - @offsetOf(Self, "methods") / 8;
-        const hash = smallestPrimeAtLeast(nMethods * 3 / 2);
+        const nMethods: u16 = words - @offsetOf(Self, "methods") / 8;
+        const hash = smallestPrimeAtLeast(nMethods * 6 / 10);
         std.debug.print("\nwords: {} nM: {} hash: {}", .{ words, nMethods, hash });
         self.hash = hash;
         for (self.methods[0..nMethods]) |*ptr|
@@ -148,7 +160,7 @@ const Dispatch = extern struct {
     fn add(self: *Self, cmp: *CompiledMethod) !void {
         while (true) {
             if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .SeqCst, .SeqCst)) |notClean| {
-                if (notClean == .dead) return error.Conflict;
+                if (notClean == .dead) return error.DeadDispatch;
             } else break;
         }
         defer {
@@ -334,6 +346,11 @@ const Dispatch = extern struct {
     }
     fn dnu(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         _ = .{ programCounter, sp, process, context, selector };
+        if (@import("builtin").is_test) {
+            const newSp = sp-1;
+            newSp[0] = object.NotAnObject;
+            return newSp;
+        }
         @panic("called dnu function");
     }
     fn testIncrement(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
@@ -437,7 +454,7 @@ test "add methods" {
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
-    //    dispatch.initTest(&temp);
+    dispatch.init();
     try dispatch.add(code0.asCompiledMethodPtr());
     try dispatch.add(code1.asCompiledMethodPtr());
     try ee(doDispatch(&tE, &dispatch, symbols.yourself)[0], Object.from(2));

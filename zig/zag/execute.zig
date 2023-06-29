@@ -621,7 +621,7 @@ pub const controlPrimitives = struct {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        std.debug.print("\nin send0 {}\n", .{selector});
+        std.debug.print("\nin send0 {} {}\n", .{selector,sp[0].get_class()});
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {

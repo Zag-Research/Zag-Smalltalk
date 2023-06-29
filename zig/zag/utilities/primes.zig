@@ -31,12 +31,12 @@ fn init_bits(array: []bool) void {
         }
     }
 }
-inline fn isPrime(p: u32) bool {
+inline fn isPrime(p: anytype) bool {
     if (p % 2 == 0) return p == 2;
     if (p < bits.len) return bits[p];
     return isPrimeSearch(p);
 }
-fn isPrimeSearch(p: u32) bool {
+fn isPrimeSearch(p: anytype) bool {
     var i: usize = 3;
     while (i * i < p) : (i += 2) {
         if (bits[i]) {
@@ -62,8 +62,8 @@ test "prime diffs" {
         }
     }
 }
-pub fn smallestPrimeAtLeast(min: u32) u32 {
-    var i = (min & ~@as(u32, 1)) + 1;
+pub fn smallestPrimeAtLeast(min: anytype) @TypeOf(min) {
+    var i = (min & ~@as(@TypeOf(min), 1)) + 1;
     while (!isPrime(i)) : (i += 2) {}
     return i;
 }

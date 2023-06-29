@@ -74,16 +74,13 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub fn pushStatic(self: *const Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
-        return self.push(sp, process, method, locals, maxStackNeeded, selfOffset);
-    }
     pub inline fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
         if (@intFromPtr(self) == 0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable) + maxStackNeeded;
         trace("\npush: {} {} {}", .{ baseSize, locals, maxStackNeeded });
         trace("\npush: sp={*} newSp={*}", .{ sp, newSp });
-        const ctxt = @as(ContextPtr, @ptrCast(@as(@alignOf(Self), @alignCast(newSp))));
+        const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
         ctxt.prevCtxt = contextMutable;
         ctxt.trapContextNumber = process.trapContextNumber;
         ctxt.method = method;
@@ -199,16 +196,3 @@ const e = struct {
 //     const newC = c.moveToHeap(sp, process);
 //     newC.print(process);
 // }
-test "init context" {
-    //    const expectEqual = std.testing.expectEqual;
-    //    const objs = comptime [_]Object{True,Object.from(42)};
-    var result = TestExecution.new();
-    var c = result.ctxt;
-    var process = &result.process;
-    c.print(process);
-    //    try expectEqual(result.o()[3].u(),4);
-    //    try expectEqual(result.o()[6],True);
-    const sp = process.endOfStack();
-    const newC = c.moveToHeap(sp, process);
-    newC.print(process);
-}

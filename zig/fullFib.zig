@@ -14,15 +14,15 @@ const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMeth
 const TestExecution = execute.TestExecution;
 const primitives = @import("zag/primitives.zig");
 const Process = @import("zag/process.zig").Process;
-const symbol =  @import("zag/symbol.zig");
-const heap =  @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const heap = @import("zag/heap.zig");
 
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
 pub fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
-    return fibNative(self-1) + fibNative(self-2);
+    return fibNative(self - 1) + fibNative(self - 2);
 }
 const Sym = struct {
     fibonacci: Object,
@@ -39,37 +39,36 @@ const Sym = struct {
 var sym: Sym = undefined;
 const index_1 = indexSymbol(1);
 var @"Integer>>fibonacci" =
-    compileMethod(index_1,1,2,.{
-        &e.verifySelector,
-        &e.pushContext,"^",
-        // define all blocks here
-        &e.pushNonlocalBlock_one, // [^ 1]
-        &e.popLocal, 0, // block reference
-        // all blocks defined by now
-        &e.pushLocal, 1, // self
-        &e.pushLiteral, Object.from(2),
-        &e.send1, Sym.@"<=",
-        &e.pushLocal, 0,
-        &e.send1, Sym.@"ifTrue:",
-        
-        &e.pushLocal,1, // self
-        &e.pushLiteral, Object.from(1),
-        &e.send1, Sym.@"-",
-        &e.send0, index_1,
-        
-        &e.pushLocal,1, // self
-        &e.pushLiteral, Object.from(2),
-        &e.send1, Sym.@"-",
-        &e.send1, index_1,
-        
-        &e.send1, Sym.@"+",
-        &e.returnTop,
+    compileMethod(index_1, 1, 2, .{
+    &e.verifySelector,
+    &e.pushContext,
+    "^",
+    // define all blocks here
+    &e.pushNonlocalBlock_one, // [^ 1]
+    &e.popLocal, 0, // block reference
+    // all blocks defined by now
+    &e.pushLocal,   1, // self
+    &e.pushLiteral, Object.from(2),
+    &e.send1,       Sym.@"<=",
+    &e.pushLocal,   0,
+    &e.send1,       Sym.@"ifTrue:",
+    &e.pushLocal,   1, // self
+    &e.pushLiteral, Object.from(1),
+    &e.send1,       Sym.@"-",
+    &e.send0,       index_1,
+    &e.pushLocal,   1, // self
+    &e.pushLiteral, Object.from(2),
+    &e.send1,       Sym.@"-",
+    &e.send1,       index_1,
+
+    &e.send1,       Sym.@"+",
+    &e.returnTop,
 });
 fn initSmalltalk() void {
     const empty = &[0]Object{};
     primitives.init();
     sym = Sym.init();
-    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci},empty);
+    @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci}, empty);
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
@@ -95,20 +94,20 @@ const p = @import("zag/primitives.zig").primitives;
 //     te.init();
 //     _ = te.run(objs[0..],method);
 // }
-const ts=std.time.nanoTimestamp;
+const ts = std.time.nanoTimestamp;
 fn tstart() i128 {
     const t = ts();
     while (true) {
         const newT = ts();
-        if (newT!=t) return newT;
+        if (newT != t) return newT;
     }
 }
 pub fn timing(runs: u6) !void {
-    try stdout.print("for '{} fibonacci'\n",.{runs});
-    var start=tstart();
+    try stdout.print("for '{} fibonacci'\n", .{runs});
+    var start = tstart();
     _ = fibNative(runs);
-    var base = ts()-start;
-    try stdout.print("fibNative: {d:8.3}s\n",.{@intToFloat(f64,base)/1000000000});
+    var base = ts() - start;
+    try stdout.print("fibNative: {d:8.3}s\n", .{@as(f64, @floatFromInt(base)) / 1000000000});
     // start=tstart();
     // _ = timeThread(runs);
     // time = ts()-start;
@@ -116,6 +115,6 @@ pub fn timing(runs: u6) !void {
 }
 pub fn main() !void {
     initSmalltalk();
-    std.debug.print("{} {} {}  {}\n",.{sym.fibonacci,sym.fibonacci.hash32(),Sym.value,Sym.value.hash32()});
+    std.debug.print("{} {} {}  {}\n", .{ sym.fibonacci, sym.fibonacci.hash32(), Sym.value, Sym.value.hash32() });
     try timing(40);
 }
