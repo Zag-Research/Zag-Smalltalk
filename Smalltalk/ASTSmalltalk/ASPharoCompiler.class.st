@@ -125,7 +125,7 @@ ASPharoCompiler >> writeZigConsts: aStream [
 { #category : #compiling }
 ASPharoCompiler >> writeZigSyms: aStream [
 	aStream << 'const Sym = struct {' . aStream cr.
-	selectors do: [ :selector | aStream tab. aStream << selector  asZigString << ': Object,'. aStream cr ].
+	selectors do: [ :selector | aStream tab. aStream << selector asZigString << ': Object,'. aStream cr ].
 	aStream tab. aStream << 'const ss = heap.compileStrings(.{'. aStream cr.
 	selectors do: [ :aSelector | aStream tab. aStream tab. aStream << '"' << aSelector << '",'. aStream cr ].
 	aStream tab. aStream << '});'. aStream cr.
