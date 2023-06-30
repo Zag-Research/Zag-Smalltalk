@@ -258,6 +258,83 @@ var size =
 ]
 
 { #category : #tests }
+ASZigGeneratorTest >> testASMethodTrivialSend [
+
+	| result arguments locals string bytes stream value body |
+	string := '
+var @"size:" =
+	compileMethod(sym.@"size:",0,0+0,.{
+	&e.verifySelector,
+	&e.pushContext,"^",
+	&e.pushLiteral, Object.from(aCollection),&e.send, size,
+	&e.returnTop,
+});
+'.
+	bytes := ZnUTF8Encoder new encodeString: string.
+	stream := ZnCharacterWriteStream on: ByteArray new writeStream.
+	"stream nextPutAll: string."
+
+	"size: aCollection
+		^aCollection size"
+	arguments := OrderedCollection new.
+	arguments add: #aCollection.
+	locals := OrderedCollection new.
+	body := OrderedCollection new.
+	body add:
+		(ASReturn expression: (ASSend target: (ASLiteral literal: #aCollection) selector: #size)).
+	result := (ASMethodNode
+		           class: self
+		           selector: #size:
+		           arguments: arguments
+		           locals: locals
+		           body: body) writeMethod: stream with: Dictionary new.
+	value := stream wrappedStream contents asString.
+	self assert: stream wrappedStream contents equals: bytes
+]
+
+{ #category : #tests }
+ASZigGeneratorTest >> testASMethodTwoSends [
+
+	| result arguments sendArguments locals string bytes stream value body |
+	string := '
+var @"size:" =
+	compileMethod(sym.@"size:",0,0+0,.{
+	&e.verifySelector,
+	&e.pushContext,"^",
+	&e.pushLocal, 0, &e.send, size,&e.pushLiteral, Object.from(5),&e.send, +,
+	&e.returnTop,
+});
+'.
+	bytes := ZnUTF8Encoder new encodeString: string.
+	stream := ZnCharacterWriteStream on: ByteArray new writeStream.
+	"stream nextPutAll: string."
+
+	"size: aCollection
+		^aCollection size + 5"
+	arguments := OrderedCollection new.
+	arguments add: #aCollection.
+	sendArguments := OrderedCollection new.
+	sendArguments add: (ASLiteral literal: 5).
+	locals := OrderedCollection new.
+	body := OrderedCollection new.
+	body add: (ASReturn expression: (ASSend
+				  target:
+				  (ASSend
+					   target: (ASArg name: #aCollection)
+					   selector: #size)
+				  selector: #+
+				  args: sendArguments)).
+	result := (ASMethodNode
+		           class: self
+		           selector: #size:
+		           arguments: arguments
+		           locals: locals
+		           body: body) writeMethod: stream with: Dictionary new.
+	value := stream wrappedStream contents asString.
+	self assert: stream wrappedStream contents equals: bytes
+]
+
+{ #category : #tests }
 ASZigGeneratorTest >> testASRef [
 
 	| result stackVars |

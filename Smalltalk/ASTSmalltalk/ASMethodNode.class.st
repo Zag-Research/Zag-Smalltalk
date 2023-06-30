@@ -225,6 +225,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	"ouput compile methods for the blocks"
 	self blocks ifNotEmpty: [
-		blocks do: [ :block | block isNonLocalReturn ifFalse: [ 
-			block writeBlock: aStream with: syms and: stackVariables ] ] ]
+		blocks do: [ :block |
+			block isNonLocalReturn ifFalse: [
+				block writeBlock: aStream with: syms and: stackVariables ] ] ]
 ]

@@ -19,6 +19,12 @@ ASSend class >> selector: aSymbol args: aCollection [
 ]
 
 { #category : #'instance creation' }
+ASSend class >> target: aTarget selector: aSymbol [
+
+	^ self new target: aTarget; selector: aSymbol 
+]
+
+{ #category : #'instance creation' }
 ASSend class >> target: expression selector: aSymbol args: aCollection [
 	^ self new
 		  target: expression;
@@ -49,7 +55,7 @@ ASSend >> blocks [
 
 	| blocks |
 	blocks := OrderedCollection new.
-	args ifNotEmpty: [ args do: [ :arg | blocks addAll: arg blocks ] ].
+	args ifNotNil: [ args do: [ :arg | blocks addAll: arg blocks ] ].
 	target isASBlock ifTrue: [ blocks addAll: target blocks ].
 	^ blocks
 ]
@@ -84,6 +90,11 @@ ASSend >> selector [
 	^ selector
 ]
 
+{ #category : #accessing }
+ASSend >> selector: aSelector [
+	selector := aSelector
+]
+
 { #category : #parsing }
 ASSend >> selector: aSymbol args: aCollection [
 
@@ -107,7 +118,7 @@ ASSend >> zigString: syms and: stackVariables [
 
 	| zigString |
 	zigString := target zigString: syms and: stackVariables.
-	args ifNotEmpty: [
+	args ifNotNil: [
 		args do: [ :arg |
 			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
 	zigString := zigString , (syms

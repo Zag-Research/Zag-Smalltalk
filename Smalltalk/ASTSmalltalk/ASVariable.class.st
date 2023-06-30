@@ -30,6 +30,12 @@ ASVariable >> = other [
 ]
 
 { #category : #comparing }
+ASVariable >> isASBlock [
+
+	^ false
+]
+
+{ #category : #comparing }
 ASVariable >> name [
 
 	^ name
