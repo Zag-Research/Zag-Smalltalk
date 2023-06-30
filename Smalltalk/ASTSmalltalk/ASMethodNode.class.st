@@ -25,8 +25,15 @@ ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol  arguments: args locals: locals body: body [
-^ self new class: aClass; selector: aSymbol;  arguments: args; locals: locals; body: body
+ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
+
+	^ self new
+		  class: aClass;
+		  selector: aSymbol;
+		  arguments: args;
+		  locals: locals;
+		  body: body;
+		  pragmas: OrderedCollection new
 ]
 
 { #category : #'tests - instance creation' }

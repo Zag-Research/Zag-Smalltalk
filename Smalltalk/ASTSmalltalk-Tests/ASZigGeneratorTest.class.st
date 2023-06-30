@@ -160,6 +160,104 @@ ASZigGeneratorTest >> testASLiteral [
 ]
 
 { #category : #tests }
+ASZigGeneratorTest >> testASMethod [
+
+	| result selector arguments locals string bytes stream value body |
+	string := '
+var size =
+	compileMethod(sym.size,0,0+0,.{
+	&e.verifySelector,
+	&e.pushContext,"^",
+	&e.returnTop,
+});
+'.
+	bytes := ZnUTF8Encoder new encodeString: string.
+	stream := ZnCharacterWriteStream on: ByteArray new writeStream.
+	"stream nextPutAll: string."
+
+	selector := #size.
+
+	arguments := OrderedCollection new.
+	locals := OrderedCollection new.
+	body := OrderedCollection new.
+	result := (ASMethodNode
+		           class: self
+		           selector: selector
+		           arguments: arguments
+		           locals: locals
+		           body: body)
+		          writeMethod: stream
+		          with: Dictionary new.
+	value := stream wrappedStream contents asString.
+	self assert: stream wrappedStream contents equals: bytes
+]
+
+{ #category : #tests }
+ASZigGeneratorTest >> testASMethodNoBody [
+
+	| result selector arguments locals string bytes stream value |
+	string := '
+var size =
+	compileMethod(sym.size,0,0+0,.{
+	&e.verifySelector,
+	&e.pushContext,"^",
+	&e.returnTop,
+});
+'.
+	bytes := ZnUTF8Encoder new encodeString: string.
+	stream := ZnCharacterWriteStream on: ByteArray new writeStream.
+	"stream nextPutAll: string."
+
+	selector := #size.
+
+	arguments := OrderedCollection new.
+	locals := OrderedCollection new.
+	result := (ASMethodNode
+		           class: self
+		           selector: selector
+		           arguments: arguments
+		           locals: locals
+		           body: OrderedCollection new)
+		          writeMethod: stream
+		          with: Dictionary new.
+	value := stream wrappedStream contents asString.
+	self assert: stream wrappedStream contents equals: bytes
+]
+
+{ #category : #tests }
+ASZigGeneratorTest >> testASMethodTrivialReturn [
+
+	| result selector arguments locals string bytes stream value body |
+	string := '
+var size =
+	compileMethod(sym.size,0,0+0,.{
+	&e.verifySelector,
+	&e.pushContext,"^",
+	&e.pushLiteral, Object.from(5),
+	&e.returnTop,
+});
+'.
+	bytes := ZnUTF8Encoder new encodeString: string.
+	stream := ZnCharacterWriteStream on: ByteArray new writeStream.
+	"stream nextPutAll: string."
+
+	selector := #size.
+
+	arguments := OrderedCollection new.
+	locals := OrderedCollection new.
+	body := OrderedCollection new.
+	body add: (ASReturn expression: (ASLiteral literal: 5)).
+	result := (ASMethodNode
+		           class: self
+		           selector: selector
+		           arguments: arguments
+		           locals: locals
+		           body: body) writeMethod: stream with: Dictionary new.
+	value := stream wrappedStream contents asString.
+	self assert: stream wrappedStream contents equals: bytes
+]
+
+{ #category : #tests }
 ASZigGeneratorTest >> testASRef [
 
 	| result stackVars |

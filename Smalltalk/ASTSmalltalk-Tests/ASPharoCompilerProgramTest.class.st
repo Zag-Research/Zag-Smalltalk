@@ -69,7 +69,6 @@ ASPharoCompilerProgramTest >> testIntFib [
 	| result aStream |
 	result := self buildFromClass: Integer selector: #fibonacci.
 
-
 	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
 		           writeStream.
 	aStream truncate.

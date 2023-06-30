@@ -174,7 +174,12 @@ ASCompiler >> methods [
 
 { #category : #building }
 ASCompiler >> selector: selector fromClass: aClass [
-
+"Tries to find a method from the given class using the selectors
+assumes the aClass is an ASTClass, and will look in its method dictionary.
+If the selector does not match any method will look at the classes class for the method.
+If non can be found there then look at the superclass.
+The last fall back is to look at the class the ast class references and its class side 
+for the method."
 	^ aClass methodDictionary
 		  at: selector
 		  ifPresent: [ aClass >> selector ]
@@ -188,11 +193,13 @@ ASCompiler >> selector: selector fromClass: aClass [
 							  aClass superclass ifNotNil: [ :sc |
 								  self selector: selector fromClass: (self addClass: sc) ] ]
 						  ifNotNil: [ :originalClass |
-						  		originalClass methodDictionary
-				  at: selector
-				  ifPresent: [ originalClass >> selector ] ifAbsent: [ 
-						originalClass class methodDictionary at:selector ifPresent: [ originalClass  class >> selector ]
-					] ] ]]
+							  originalClass methodDictionary
+								  at: selector
+								  ifPresent: [ originalClass >> selector ]
+								  ifAbsent: [
+									  originalClass class methodDictionary
+										  at: selector
+										  ifPresent: [ originalClass class >> selector ] ] ] ] ]
 ]
 
 { #category : #accessing }

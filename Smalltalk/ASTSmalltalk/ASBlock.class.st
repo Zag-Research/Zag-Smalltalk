@@ -142,7 +142,7 @@ ASBlock >> zigString: syms and: stackVariables [
 	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is not a simple local return so need to execute some block"
 		| return |
 		"return a non local return clousure""tests to see what non local return to return"
-		return := (body at: 1) expression.
+				return := (body at: 1) expression.
 		return isASLiteral ifTrue: [
 			| literal |
 			literal := return literal.
