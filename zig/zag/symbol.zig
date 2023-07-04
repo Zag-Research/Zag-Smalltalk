@@ -72,8 +72,14 @@ pub const symbols = struct {
     pub const @"ifNil:ifNotNil" = symbol2(44);
     pub const @"ifNotNil:" = symbol1(45);
     pub const @"ifNotNil:ifNil:" = symbol2(46);
+    pub const @"perform:" = symbol1(47);
+    pub const @"perform:with:" = symbol2(48);
+    pub const @"perform:with:with:" = symbol3(49);
+    pub const @"perform:with:with:with:" = symbol4(50);
+    pub const @"perform:withArguments:" = symbol2(51);
+    pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
     // define any new symbols here
-    pub const Object = symbol0(47); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
@@ -84,6 +90,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "<=",                  ">=",                 ">",               "class",                "Class",          "Behavior",           "ClassDescription",
     "Metaclass",           "SmallInteger",       "noFallback",      "ifTrue:",              "ifTrue:ifFalse", "ifFalse:",           "ifFalse:ifTrue:",
     "ifNil:",              "ifNil:ifNotNil",     "ifNotNil:",       "ifNotNil:ifNil:",
+    "perform:", "perform:with:", "perform:with:with:", "perform:with:with:with:", "perform:withArguments:",  "perform:withArguments:inSuperclass:",
     // add any new values here
          "Object",
 });

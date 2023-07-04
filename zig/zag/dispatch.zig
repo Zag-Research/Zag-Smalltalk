@@ -66,7 +66,7 @@ const Dispatch = extern struct {
         if (dispatchP!=&empty) return try dispatchP.add(method);
         dispatches[index] = &dispatchData[index];
         dispatches[index].init();
-        try Dispatch.addMethod(index,method);
+        return try dispatches[index].add(method);
     }
     var internalNeedsInitialization = true;
     fn initialize() void {

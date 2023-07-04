@@ -24,8 +24,9 @@ pub fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
     return fibNative(self - 1) + fibNative(self - 2);
 }
+const empty = &[0]Object{};
 const Sym = struct {
-    fibonacci: Object,
+    @"foo:bar:": Object,
     const ss = heap.compileStrings(.{
         "foo:bar:",
     });
@@ -55,8 +56,8 @@ var @"foo:bar:" =
     // define all blocks here
     &e.closureData, 3 + (1 << 8), // local:3 size:1 (offset 1 is l1)
     &e.nonlocalClosure_self, 2, // [^ self] local:2
-    &e.blockClosure, "0foo:bar:1", 1 + (3 << 16), // local:1 closureData at local3
-    &e.blockClosure, "1foo:bar:2", 0 + (255 << 8) + (3 << 16), // local:0 includeContext closureData at local3
+    &e.blockClosure, "0foo:bar::1", 1 + (3 << 16), // local:1 closureData at local3
+    &e.blockClosure, "1foo:bar::2", 0 + (255 << 8) + (3 << 16), // local:0 includeContext closureData at local3
     // all blocks defined by now
     &e.pushLocal, 6, // p1
     &e.pushLocal, 5, // p2
@@ -113,7 +114,7 @@ var @"foo:bar::2" =
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    fibonacci.setLiteral(fibonacci_, sym.fibonacci);
+    @"foo:bar:".setLiterals(empty,&[_]Object{@"foo:bar::1",@"foo:bar::2"});
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;

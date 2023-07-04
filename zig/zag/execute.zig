@@ -350,7 +350,6 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     var method = methodType.init(name, locals, maxStack);
-    method.code[0] = Code.prim(controlPrimitives.noop);
     const code = method.code[0..];
     comptime var n = 0;
     inline for (tup) |field| {
@@ -469,9 +468,9 @@ pub const controlPrimitives = struct {
         _ = sp;
         _ = needed;
     }
-    pub fn noop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-    }
+    // pub fn noop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    //     return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+    // }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         if (!method.selector.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
@@ -550,7 +549,7 @@ pub const controlPrimitives = struct {
         newSp[0] = Object.from(2);
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector });
     }
-    pub fn pushLiteralM1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn pushLiteral_1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp - 1;
         newSp[0] = Object.from(-1);
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector });
@@ -578,7 +577,6 @@ pub const controlPrimitives = struct {
     pub fn pushThisContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp - 1;
         newSp[0] = Object.from(context);
-        context.convertToProperHeapObject(sp, process);
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector });
     }
     pub fn pushLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -630,13 +628,21 @@ pub const controlPrimitives = struct {
         context.setReturn(pc + 1);
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
-    // pub fn send(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
-    //     const selector = pc[0].object;
-    //     const numArgs = selector.numArgs();
-    //     const newPc = lookupMethod(sp[numArgs].get_class(),selector.hash32()).codePtr();
-    //     context.setTPc(pc+1);
-    //     return @call(tailCall,newPc[0].prim,.{newPc+1,sp,process,context,selector});
-    // }
+    pub fn perform(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = sp[0];
+        if (selector.numArgs()!=0) @panic("wrong number of args");
+        const newPc = lookup(selector,sp[1].get_class());
+        context.setTPc(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp+1,process,context,selector});
+    }
+    pub fn performWith(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = sp[1];
+        sp[1]=sp[0];
+        if (selector.numArgs()!=1) @panic("wrong number of args");
+        const newPc = lookup(selector,sp[2].get_class());
+        context.setTPc(pc+1);
+        return @call(tailCall,newPc[0].prim,.{newPc+1,sp+1,process,context,selector});
+    }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc + 1);
         const offset = pc[0].uint;
@@ -685,12 +691,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector });
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        @panic("unimplemented");
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
 };
 pub const TestExecution = struct {
@@ -800,7 +801,7 @@ test "context returnTop twice via TestExecution" {
 test "context returnTop with indirect via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself, 3, 0, .{
-        &p.noop,
+//        &p.noop,
         &p.pushContext,
         "^",
         &p.pushLiteralIndirect,

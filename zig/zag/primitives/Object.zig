@@ -86,36 +86,25 @@ pub const embedded = struct {
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
     pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:put:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
+    }
+    pub fn p83(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform: perform:with: perform:with:with: perform:with:with:with:
+        _ = .{pc,sp,process,context,selector}; unreachable;
+    }
+    pub fn p84(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:
+        _ = .{pc,sp,process,context,selector}; unreachable;
+    }
+    pub fn p100(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:inSuperclass:
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
         if (!sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });

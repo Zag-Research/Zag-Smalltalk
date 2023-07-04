@@ -147,22 +147,28 @@ pub const Process = extern struct {
 test "check flag" {
     const testing = std.testing;
     var process = Process.new();
-    var thr = &process;
-    thr.init();
-    try testing.expect(!thr.needsCheck());
-    const origEOS = thr.endOfStack();
-    thr = thr.maxCheck();
-    try testing.expect(!thr.needsCheck());
+    var pr = &process;
+    pr.init();
+    try testing.expect(!pr.needsCheck());
+    const origEOS = pr.endOfStack();
+    pr = pr.maxCheck();
+    try testing.expect(!pr.needsCheck());
     var count = Process.checkMax - 1;
     while (count > 1) : (count -= 1) {
-        thr = thr.decCheck();
+        pr = pr.decCheck();
     }
-    try testing.expect(!thr.needsCheck());
-    try testing.expectEqual(thr.endOfStack(), origEOS);
-    thr = thr.decCheck();
-    try testing.expect(thr.needsCheck());
+    try testing.expect(!pr.needsCheck());
+    try testing.expectEqual(pr.endOfStack(), origEOS);
+    pr = pr.decCheck();
+    try testing.expect(pr.needsCheck());
 }
-
+test "allocStack" {
+//    const testing = std.testing;
+    var process = Process.new();
+    var pr = &process;
+    pr.init();
+   
+}
 // pub const ArenaX = extern struct {
 //     const Self = @This();
 
