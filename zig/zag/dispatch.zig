@@ -127,7 +127,7 @@ const Dispatch = extern struct {
         if (ptr == dnuInit) return true;
         return false;
     }
-    fn lookupAddress(self: *const Self, selector: u64) *[*]const Code {
+    inline fn lookupAddress(self: *const Self, selector: u64) *[*]const Code {
         return @constCast(&self.methods[selector * self.hash >> 32]);
     }
     inline fn preHash(selector: u32) u64 {
