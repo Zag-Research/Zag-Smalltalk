@@ -74,6 +74,15 @@ ASCompiler >> buildFromClass: aClass selector: selector [
 	self transitiveClosure
 ]
 
+{ #category : #building }
+ASCompiler >> buildFromClasses: someClasses withSelectors: someSelectors [
+
+	someClasses
+		with: someSelectors
+		do: [ :aClass :aSelector | self send: aSelector toClass: aClass ].
+	self transitiveClosure
+]
+
 { #category : #accessing }
 ASCompiler >> classes [
 
@@ -209,6 +218,7 @@ ASCompiler >> selectors [
 
 { #category : #building }
 ASCompiler >> send: selector toClass: aClass [
+
 	(self selector: selector fromClass: (self addClass: aClass))
 		ifNotNil: [ :method |
 			selectors add: selector.

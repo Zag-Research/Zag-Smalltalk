@@ -170,23 +170,21 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	| stackVariables stackSize |
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
-	
+
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
 			block selector: selector , ':' , index asString.
 			stackVariables add: block selector asZigString ] ].
-	stackVariables addAll: (locals collect: [:local | local name]).
+	stackVariables addAll: (locals collect: [ :local | local name ]).
 	"capture the size of the stack before arguments are added"
 	stackSize := stackVariables size.
 	"add the locals, arguments and self"
-	stackVariables addAll: (arguments collect: [:arg | arg name]).
+	stackVariables addAll: (arguments collect: [ :arg | arg name ]).
 	stackVariables addLast: #self.
-	
-	self halt.
-	
+
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << selector asZigString << ' ='.
+	aStream << 'var ' << nestedScopeOf name, '>>', selector asZigString << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
@@ -215,13 +213,13 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream tab.
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
-	
+
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
 			aStream << (block zigString: syms and: stackVariables) ] ].
-	
-	
+
+
 	body do: [ :asStatement |
 		aStream tab.
 		aStream << (asStatement zigString: syms and: stackVariables).
