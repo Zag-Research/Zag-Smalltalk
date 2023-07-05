@@ -51,16 +51,30 @@ ASPharoCompilerProgramTest >> testCodeStart42 [
 
 { #category : #tests }
 ASPharoCompilerProgramTest >> testFib [
+
 	| result |
 	result := self
 		          buildFromClass: ASCompileTestClass1 class
-		          selector: #fib.
-	
-	(FileSystem disk workingDirectory / 'zigFibString.txt') writeStream
-	nextPutAll: result zigString;
-	close.
-	
+		          selector: #foo:bar:.
+
+	(FileSystem disk workingDirectory / 'zigFooBarString.txt') writeStream
+		nextPutAll: result zigString;
+		close.
+
 	self assert: result zigString equals: ''
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBar [
+
+	| result aStream |
+	result := self buildFromClass: ASCompileTestClass1 selector: #foo:bar:.
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
 ]
 
 { #category : #tests }
@@ -98,6 +112,20 @@ ASPharoCompilerProgramTest >> testIntegerBench [
 		          selector: #benchmark.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigIntBenchString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testPlusWithLocal [
+
+	| result aStream |
+	result := self
+		          buildFromClass: ASCompileTestClass1
+		          selector: #plusWithLocal:and:and:.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigPlusWithLocalString.zig') writeStream.
 	aStream truncate.
 	result writeZig: aStream.
 	aStream close

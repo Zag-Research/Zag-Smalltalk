@@ -51,7 +51,6 @@ ASBlock >> blocks [
 	| myBlocks |
 	myBlocks := OrderedCollection new.
 	myBlocks add: self.
-	self body do: [ :statement | myBlocks addAll: statement blocks ].
 	^ myBlocks
 ]
 

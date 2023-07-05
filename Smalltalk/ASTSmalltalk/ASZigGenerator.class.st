@@ -4,13 +4,6 @@ I generate Zig code equivalent to the built program captured by an ASCompiler
 Class {
 	#name : #ASZigGenerator,
 	#superclass : #Object,
-	#instVars : [
-		'compiler',
-		'stream'
-	],
-	#classVars : [
-		'Symbols'
-	],
 	#category : #'ASTSmalltalk-Compiler'
 }
 

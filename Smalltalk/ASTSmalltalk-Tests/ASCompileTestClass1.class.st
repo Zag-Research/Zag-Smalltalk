@@ -64,6 +64,19 @@ ASCompileTestClass1 >> fib: anInt [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> foo: p1 bar: p2 [
+    | l1 l2 l3 |
+    p1 < p2 ifTrue: [ ^ self ].
+    l1 := p2.
+    l2 := p1 \\ p2.
+    l3 := p2 - l2.
+    [ l1 < p1 ] whileTrue: [
+        l1 := l1 + 1.
+        l1 = l3 ifTrue: [ ^ 1 ] ].
+    ^ l1
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
@@ -90,6 +103,13 @@ ASCompileTestClass1 >> plus1: aNumber [
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
 	^ n1 + n2 + n3
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
+| sum |
+	sum := n1 + n2 + n3.
+	^sum
 ]
 
 { #category : #'testing - examples' }

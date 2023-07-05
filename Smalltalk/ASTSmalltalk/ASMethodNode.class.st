@@ -167,7 +167,23 @@ ASMethodNode >> stackSize [
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
-	| stackVariables |
+	| stackVariables stackSize |
+	"what are the stack variables?"
+	stackVariables := OrderedCollection new.
+	
+	self blocks ifNotEmpty: [
+		blocks doWithIndex: [ :block :index |
+			block selector: selector , ':' , index asString.
+			stackVariables add: block selector asZigString ] ].
+	stackVariables addAll: (locals collect: [:local | local name]).
+	"capture the size of the stack before arguments are added"
+	stackSize := stackVariables size.
+	"add the locals, arguments and self"
+	stackVariables addAll: (arguments collect: [:arg | arg name]).
+	stackVariables addLast: #self.
+	
+	self halt.
+	
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << selector asZigString << ' ='.
@@ -177,7 +193,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		 at: selector
 		 ifPresent: [ :value | value ]
 		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
-	<< self stackSize asString << ','
+	<< stackSize asString << ','
 	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
 	<< ',.{'.
 	aStream cr.
@@ -199,17 +215,13 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream tab.
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
-
-	"output instructions"
-	stackVariables := scope keys asOrderedCollection.
-	stackVariables addLast: #self.
-
+	
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
-			block selector: selector , ':' , index asString.
 			aStream << (block zigString: syms and: stackVariables) ] ].
-
+	
+	
 	body do: [ :asStatement |
 		aStream tab.
 		aStream << (asStatement zigString: syms and: stackVariables).
