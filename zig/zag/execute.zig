@@ -469,7 +469,7 @@ pub const controlPrimitives = struct {
     // }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\nverifySelector: {} {} {*}",.{method.selector,selector,pc});
+        trace("\nverifySelector: {} {} {*}", .{ method.selector, selector, pc });
         if (!method.selector.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
@@ -616,14 +616,14 @@ pub const controlPrimitives = struct {
         const arity = selector.numArgs();
         const newPc = lookup(selector, sp[arity].get_class());
         context.setReturn(pc);
-        std.debug.print("\nin fallback {} {} {*} {}\n", .{selector,sp[arity].get_class(),newPc,newPc[0]});
+        std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, sp[arity].get_class(), newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        std.debug.print("\nin send0 {} {} {*} {}\n", .{selector,sp[0].get_class(),newPc,newPc[0]});
+        std.debug.print("\nin send0 {} {} {*} {}\n", .{ selector, sp[0].get_class(), newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
@@ -634,18 +634,18 @@ pub const controlPrimitives = struct {
     }
     pub fn perform(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = sp[0];
-        if (selector.numArgs()!=0) @panic("wrong number of args");
-        const newPc = lookup(selector,sp[1].get_class());
-        context.setTPc(pc+1);
-        return @call(tailCall,newPc[0].prim,.{newPc+1,sp+1,process,context,selector});
+        if (selector.numArgs() != 0) @panic("wrong number of args");
+        const newPc = lookup(selector, sp[1].get_class());
+        context.setTPc(pc + 1);
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp + 1, process, context, selector });
     }
     pub fn performWith(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = sp[1];
-        sp[1]=sp[0];
-        if (selector.numArgs()!=1) @panic("wrong number of args");
-        const newPc = lookup(selector,sp[2].get_class());
-        context.setTPc(pc+1);
-        return @call(tailCall,newPc[0].prim,.{newPc+1,sp+1,process,context,selector});
+        sp[1] = sp[0];
+        if (selector.numArgs() != 1) @panic("wrong number of args");
+        const newPc = lookup(selector, sp[2].get_class());
+        context.setTPc(pc + 1);
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp + 1, process, context, selector });
     }
     pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc + 1);
@@ -674,20 +674,22 @@ pub const controlPrimitives = struct {
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, ctxt, selector });
     }
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        trace("\nreturnWithContext: {any} -> ", .{context.stack(sp, process)});
         const result = context.pop(process);
         const newSp = result.sp;
         var callerContext = result.ctxt;
+        trace("{any}", .{callerContext.stack(newSp, process)});
         trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
-        trace("\nreturnWithContext: {any} -> {any}", .{ context.stack(sp, process), callerContext.stack(newSp, process) });
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
     pub fn returnTop(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        trace("\nreturnTop: {any} -> ", .{context.stack(sp, process)});
         const top = sp[0];
         var result = context.pop(process);
         const newSp = result.sp;
         newSp[0] = top;
         var callerContext = result.ctxt;
-        trace("\nreturnTop: {any} -> {any}", .{ context.stack(sp, process), callerContext.stack(newSp, process) });
+        trace("{any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -695,7 +697,8 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector });
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
 };
 pub const TestExecution = struct {
@@ -805,7 +808,7 @@ test "context returnTop twice via TestExecution" {
 test "context returnTop with indirect via TestExecution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(sym.yourself, 3, 0, .{
-//        &p.noop,
+        //        &p.noop,
         &p.pushContext,
         "^",
         &p.pushLiteralIndirect,

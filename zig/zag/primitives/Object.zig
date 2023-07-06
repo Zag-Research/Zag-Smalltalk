@@ -80,25 +80,32 @@ pub const embedded = struct {
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
     pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:put:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p83(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform: perform:with: perform:with:with: perform:with:with:with:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p84(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p100(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:inSuperclass:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
         if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
@@ -127,7 +134,7 @@ test "simple ==" {
     var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral, Object.from(4),
         &e.pushLiteral, Object.from(4),
-        &e.p110,        &e.returnNoContext,
+        &e.@"==",       &e.returnNoContext,
     });
     const result = testExecute(prog.asCompiledMethodPtr());
     try expect(result[0].to(bool));
@@ -145,7 +152,7 @@ test "simple compare" {
     var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral, Object.from(3),
         &e.pushLiteral, Object.from(4),
-        &e.p110,        &e.returnNoContext,
+        &e.@"==",       &e.returnNoContext,
     });
     try expectEqual(testExecute(prog.asCompiledMethodPtr())[0], False);
 }
@@ -154,7 +161,7 @@ test "simple compare and don't branch" {
     var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
-        &e.p110,         &e.ifTrue,
+        &e.@"==",        &e.ifTrue,
         "true",          &e.pushLiteral,
         Object.from(17), &e.branch,
         "common",        ":true",
@@ -168,7 +175,7 @@ test "simple compare and branch" {
     var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
-        &e.p169,         &e.ifTrue,
+        &e.@"~~",        &e.ifTrue,
         "true",          &e.pushLiteral,
         Object.from(17), &e.branch,
         "common",        ":true",

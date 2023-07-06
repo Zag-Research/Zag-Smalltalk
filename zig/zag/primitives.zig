@@ -9,9 +9,7 @@ pub const embedded = struct {
     pub const Object = struct {
         pub usingnamespace @import("primitives/Object.zig").embedded;
     };
-    pub const Smallinteger = struct {
-        pub usingnamespace @import("primitives/Smallinteger.zig").embedded;
-    };
+    pub usingnamespace @import("primitives/Smallinteger.zig").embedded;
     pub const Behavior = struct {
         pub usingnamespace @import("primitives/Behavior.zig").embedded;
     };

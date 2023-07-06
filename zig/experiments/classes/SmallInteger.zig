@@ -27,7 +27,7 @@ fn factorial(thread : *Thread, self: Object) MethodReturns {
     return Normal;
 }
     
-pub fn init(arena: *heap.Arena) {
+pub fn init(arena: *heap.Arena) void {
     const symbolMethods = [_]SymbolMethod{
         {getSym("+"),@"+"},
         {getSym("-"),@"-"},

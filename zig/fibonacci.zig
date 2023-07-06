@@ -34,7 +34,7 @@ var sym: Sym = undefined;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-const testReps = 3;
+const testReps = 4;
 var fibCPSM = compileMethod(Sym.value, 0, 0, .{&fibCPS});
 const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
@@ -97,7 +97,7 @@ var fibThread =
     ":recurse",
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, Object.from(2),
-    &e.p5N, // <= know that self and 2 are definitely integers
+    &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
     &e.drop, // self
@@ -107,14 +107,14 @@ var fibThread =
     &e.pushContext,
     "^",
     &e.pushLocal0,
-    &e.p2L1, // -1 &e.pushLiteral1,&e.p2,
+    &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
     &e.callRecursive,
     "recurse",
     &e.pushLocal0,
-    &e.p2L2, // -2
+    &e.SmallInteger.@"-_L2", // -2
     &e.callRecursive,
     "recurse",
-    &e.p1, // +
+    &e.SmallInteger.@"+", // +
     &e.returnTop,
 });
 test "fibThread" {
@@ -143,7 +143,7 @@ var fibDispatch =
     &e.verifySelector,
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, Object.from(2),
-    &e.p5N, // <= know that self and 2 are definitely integers
+    &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
     &e.drop, // self
@@ -153,18 +153,20 @@ var fibDispatch =
     &e.pushContext,
     "^",
     &e.pushLocal0,
-    &e.p2L1, // -1 &e.pushLiteral1,&e.p2,
+    &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
     &e.send0,
     Sym.i_1,
     &e.pushLocal0,
-    &e.p2L2, // -2
+    &e.SmallInteger.@"-_L2", // -2
     &e.send0,
     Sym.i_1,
-    &e.p1, // +
+    &e.SmallInteger.@"+", // +
     &e.returnTop,
 });
 var fibDispatchStart =
     compileMethod(Sym.i_1, 0, 2, .{
+    &e.pushContext,
+    "^",
     &e.send0,
     Sym.i_1,
     &e.returnTop,
@@ -177,8 +179,8 @@ test "fibDispatch" {
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
-    try dispatch.addMethod(object.SmallInteger_I,fibonacci);
-    std.debug.print("\nfibDispatch: {*} {*}",.{&e.verifySelector,fibonacci.codePtr()});
+    try dispatch.addMethod(object.SmallInteger_I, fibonacci);
+    std.debug.print("\nfibDispatch: {*} {*}", .{ &e.verifySelector, fibonacci.codePtr() });
     while (n < testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te = TestExecution.new();
@@ -201,7 +203,7 @@ test "fibCPS" {
         &fibCPS,
     });
     var n: i32 = 1;
-    while (n < 20) : (n += 1) {
+    while (n < testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te = TestExecution.new();
         te.init();

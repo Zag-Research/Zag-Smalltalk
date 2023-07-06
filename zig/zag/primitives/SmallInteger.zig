@@ -134,58 +134,60 @@ test "inline primitives" {
 }
 pub const embedded = struct {
     const fallback = execute.fallback;
-    pub fn @"+"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\n+: {any}", .{context.stack(sp, process)});
-        sp[1] = inlines.p1(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"+"});
-        trace(" -> {any}", .{context.stack(sp + 1, process)});
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-    }
-    pub fn @"+_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        sp[0] = inlines.p1L(sp[0], 1) catch {
-            const newSp = sp - 1;
-            newSp[0] = Object.from(1);
-            return @call(tailCall, fallback, .{ pc+1, newSp, process, context, Sym.@"+" });
-        };
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-    }
-    pub fn @"-"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"-" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-    }
-    pub fn @"-_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\n-_L1: {any}", .{context.stack(sp, process)});
-        sp[0] = inlines.p2L(sp[0], 1) catch {
-            const newSp = sp - 1;
-            newSp[0] = Object.from(1);
-            return @call(tailCall, fallback, .{ pc, newSp, process, context, Sym.@"-" });
-        };
-        trace(" -> {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-    }
-    pub fn @"-_L2"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\n-_L2: {any}", .{context.stack(sp, process)});
-        sp[0] = inlines.p2L(sp[0], 2) catch {
-            const newSp = sp - 1;
-            newSp[0] = Object.from(2);
-            return @call(tailCall, fallback, .{ pc, newSp, process, context, Sym.@"-" });
-        };
-        trace(" -> {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-    }
-    pub fn @"<="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch {
-            return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"<=" });
-        });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-    }
-    pub fn @"<=_N"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        sp[1] = Object.from(inlines.p5N(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-    }
-    pub fn @"*"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        sp[1] = inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"*" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-    }
+    pub const SmallInteger = struct {
+        pub fn @"+"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            trace("\n+: {any}", .{context.stack(sp, process)});
+            sp[1] = inlines.p1(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"+" });
+            trace(" -> {any}", .{context.stack(sp + 1, process)});
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        }
+        pub fn @"+_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            sp[0] = inlines.p1L(sp[0], 1) catch {
+                const newSp = sp - 1;
+                newSp[0] = Object.from(1);
+                return @call(tailCall, fallback, .{ pc + 1, newSp, process, context, Sym.@"+" });
+            };
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+        }
+        pub fn @"-"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"-" });
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        }
+        pub fn @"-_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            trace("\n-_L1: {any}", .{context.stack(sp, process)});
+            sp[0] = inlines.p2L(sp[0], 1) catch {
+                const newSp = sp - 1;
+                newSp[0] = Object.from(1);
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, Sym.@"-" });
+            };
+            trace(" -> {any}", .{context.stack(sp, process)});
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+        }
+        pub fn @"-_L2"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            trace("\n-_L2: {any}", .{context.stack(sp, process)});
+            sp[0] = inlines.p2L(sp[0], 2) catch {
+                const newSp = sp - 1;
+                newSp[0] = Object.from(2);
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, Sym.@"-" });
+            };
+            trace(" -> {any}", .{context.stack(sp, process)});
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+        }
+        pub fn @"<="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch {
+                return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"<=" });
+            });
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        }
+        pub fn @"<=_N"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            sp[1] = Object.from(inlines.p5N(sp[1], sp[0]));
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        }
+        pub fn @"*"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+            sp[1] = inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"*" });
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        }
+    };
 };
 pub const primitives = struct {
     const dnu = execute.controlPrimitives.dnu;
@@ -242,7 +244,7 @@ test "simple add" {
         &e.returnTop,
     });
     var method2 = compileMethod(Sym.@"+", 0, 0, .{
-        &e.p1,
+        &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
     prog.setLiterals(empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())});
@@ -252,11 +254,11 @@ test "simple add" {
 test "embedded add" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Sym.value, 0, 0, .{
-        &e.pushContext,  "^",
-        &e.pushLiteral,  Object.from(3),
-        &e.pushLiteral,  Object.from(40),
-        &e.p1,           &e.pushLiteral,
-        Object.from(-1), &e.p1,
+        &e.pushContext,       "^",
+        &e.pushLiteral,       Object.from(3),
+        &e.pushLiteral,       Object.from(40),
+        &e.SmallInteger.@"+", &e.pushLiteral,
+        Object.from(-1),      &e.SmallInteger.@"+",
         &e.returnTop,
     });
     const result = testExecute(prog.asCompiledMethodPtr());
@@ -265,16 +267,16 @@ test "embedded add" {
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Sym.value, 0, 0, .{
-        &e.pushContext, "^",
-        &e.pushLiteral, Object.from(4),
-        &e.pushLiteral, Object.from(0x3_ffff_ffff_ffff),
-        &e.p1,          &e.returnTop,
+        &e.pushContext,       "^",
+        &e.pushLiteral,       Object.from(4),
+        &e.pushLiteral,       Object.from(0x3_ffff_ffff_ffff),
+        &e.SmallInteger.@"+", &e.returnTop,
     });
     var prog2 = compileMethod(Sym.@"+", 0, 0, .{
         &e.pushLiteral,     Sym.noFallback,
         &e.returnNoContext,
     });
-    try @import("../dispatch.zig").addMethod(object.SmallInteger_I,prog2.asCompiledMethodPtr());
+    try @import("../dispatch.zig").addMethod(object.SmallInteger_I, prog2.asCompiledMethodPtr());
     const result = testExecute(prog.asCompiledMethodPtr());
     try expectEqual(result[0], Sym.noFallback);
 }

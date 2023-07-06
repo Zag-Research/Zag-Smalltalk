@@ -265,16 +265,20 @@ pub const primitives = struct {
         unreachable;
     }
     pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p203(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p204(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:value:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
     pub fn p205(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:value:value:
-        _ = .{pc,sp,process,context,selector}; unreachable;
+        _ = .{ pc, sp, process, context, selector };
+        unreachable;
     }
 };
 const e = struct {

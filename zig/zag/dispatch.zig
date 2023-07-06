@@ -60,13 +60,13 @@ const Dispatch = extern struct {
     pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
         const hashed = preHash(selector.hash32());
         const address = dispatches[index].lookupAddress(hashed);
-        std.debug.print("\nlookup: {} {} {*} {*}",.{selector,hashed,address,address.*});
+        std.debug.print("\nlookup: {} {} {*} {*}", .{ selector, hashed, address, address.* });
         return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
     }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
         const dispatchP = dispatches[index];
-        if (dispatchP!=&empty) return try dispatchP.add(method);
+        if (dispatchP != &empty) return try dispatchP.add(method);
         dispatches[index] = &dispatchData[index];
         dispatches[index].init();
         return try dispatches[index].add(method);
@@ -173,7 +173,7 @@ const Dispatch = extern struct {
         const address = self.lookupAddress(hashed);
         std.debug.print("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
         if (@cmpxchgWeak([*]const Code, address, dnuInit, cmp.codePtr(), .SeqCst, .SeqCst) == null) {
-            std.debug.print("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0]});
+            std.debug.print("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
             return; // we replaced DNU with method
         }
         const existing = @as(*const Code, @ptrCast(address.*)).compiledMethodPtr(0);
@@ -350,7 +350,7 @@ const Dispatch = extern struct {
     fn dnu(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         _ = .{ programCounter, sp, process, context, selector };
         if (@import("builtin").is_test) {
-            const newSp = sp-1;
+            const newSp = sp - 1;
             newSp[0] = object.NotAnObject;
             return newSp;
         }

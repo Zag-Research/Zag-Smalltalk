@@ -202,7 +202,7 @@ fn time(count: u64) !void {
         key ^= @as(u32, @truncate(loop)) ^ mask;
         while (size > 0) : (size -= 1) {
             key += size;
-            key = @intCast(key *% 2654435769 * @as(u64,size) >> 32);
+            key = @intCast(key *% 2654435769 * @as(u64, size) >> 32);
         }
     }
     try stdout.print("our:  {d:12} {d:12} {any}\n", .{ ts() - start, ts() - start - base, key });

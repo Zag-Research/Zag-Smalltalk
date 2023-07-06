@@ -114,7 +114,7 @@ var @"foo:bar::2" =
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    @"foo:bar:".setLiterals(empty,&[_]Object{@"foo:bar::1",@"foo:bar::2"});
+    @"foo:bar:".setLiterals(empty, &[_]Object{ @"foo:bar::1", @"foo:bar::2" });
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;

@@ -528,6 +528,9 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn isOnStack(self: HeapObjectConstPtr) bool {
         return self.age.isOnStack();
     }
+    pub inline fn isNonHeap(self: HeapObjectConstPtr) bool {
+        return self.age.isNonHeap();
+    }
     pub inline fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.age.isUnmoving();
     }

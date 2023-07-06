@@ -163,11 +163,10 @@ test "check flag" {
     try testing.expect(pr.needsCheck());
 }
 test "allocStack" {
-//    const testing = std.testing;
+    //    const testing = std.testing;
     var process = Process.new();
     var pr = &process;
     pr.init();
-   
 }
 // pub const ArenaX = extern struct {
 //     const Self = @This();

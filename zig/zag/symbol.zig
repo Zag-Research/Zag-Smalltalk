@@ -93,16 +93,16 @@ pub const symbols = struct {
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "yourself",            "doesNotUnderstand:", "=",               "+",                    "-",              "*",                  "size",
-    "at:",                 "at:put:",            "~=",              "==",                   "~~",             "value",              "value:",
-    "value:value:",        "negated",            "new",             "new:",                 "cull:",          "value:value:value:", "value:value:value:value:",
-    "valueWithArguments:", "cull:cull:",         "cull:cull:cull:", "cull:cull:cull:cull:", "self",           "name",               "<",
-    "<=",                  ">=",                 ">",               "class",                "Class",          "Behavior",           "ClassDescription",
-    "Metaclass",           "SmallInteger",       "noFallback",      "ifTrue:",              "ifTrue:ifFalse", "ifFalse:",           "ifFalse:ifTrue:",
-    "ifNil:",              "ifNil:ifNotNil",     "ifNotNil:",       "ifNotNil:ifNil:",
-    "perform:", "perform:with:", "perform:with:with:", "perform:with:with:with:", "perform:withArguments:",  "perform:withArguments:inSuperclass:",
+    "yourself",                "doesNotUnderstand:",     "=",                                   "+",                    "-",              "*",                  "size",
+    "at:",                     "at:put:",                "~=",                                  "==",                   "~~",             "value",              "value:",
+    "value:value:",            "negated",                "new",                                 "new:",                 "cull:",          "value:value:value:", "value:value:value:value:",
+    "valueWithArguments:",     "cull:cull:",             "cull:cull:cull:",                     "cull:cull:cull:cull:", "self",           "name",               "<",
+    "<=",                      ">=",                     ">",                                   "class",                "Class",          "Behavior",           "ClassDescription",
+    "Metaclass",               "SmallInteger",           "noFallback",                          "ifTrue:",              "ifTrue:ifFalse", "ifFalse:",           "ifFalse:ifTrue:",
+    "ifNil:",                  "ifNil:ifNotNil",         "ifNotNil:",                           "ifNotNil:ifNil:",      "perform:",       "perform:with:",      "perform:with:with:",
+    "perform:with:with:with:", "perform:withArguments:", "perform:withArguments:inSuperclass:",
     // add any new values here
-         "Object",
+    "Object",
 });
 pub var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: object.Object) object.Object {
