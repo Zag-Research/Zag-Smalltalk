@@ -57,6 +57,26 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> fib: anInt [
+	^ anInt < 2
+		ifTrue: [1] 
+		ifFalse: [(self fib: anInt-1) + self fib: anInt-2]
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> foo: p1 bar: p2 [
+    | l1 l2 l3 |
+    p1 < p2 ifTrue: [ ^ self ].
+    l1 := p2.
+    l2 := p1 \\ p2.
+    l3 := p2 - l2.
+    [ l1 < p1 ] whileTrue: [
+        l1 := l1 + 1.
+        l1 = l3 ifTrue: [ ^ 1 ] ].
+    ^ l1
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
@@ -86,6 +106,13 @@ ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
+| sum |
+	sum := n1 + n2 + n3.
+	^sum
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> prim [
 	<primitive: 1>
 	^ false
@@ -95,6 +122,17 @@ ASCompileTestClass1 >> prim [
 ASCompileTestClass1 >> simple1 [
 	..
 	^ 42..
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> testAssignment [
+
+	| a1 a2 a3 a4 |
+	a1 := 5.
+	a2 := 5 negated.
+	a3 := self.
+	a4 := self prim.
+	^ a1 + a2
 ]
 
 { #category : #'testing - examples' }

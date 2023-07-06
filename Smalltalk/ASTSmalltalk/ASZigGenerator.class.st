@@ -4,13 +4,6 @@ I generate Zig code equivalent to the built program captured by an ASCompiler
 Class {
 	#name : #ASZigGenerator,
 	#superclass : #Object,
-	#instVars : [
-		'compiler',
-		'stream'
-	],
-	#classVars : [
-		'Symbols'
-	],
 	#category : #'ASTSmalltalk-Compiler'
 }
 
@@ -45,8 +38,42 @@ ASZigGenerator >> visitAll: aCollection [
 ]
 
 { #category : #visiting }
+ASZigGenerator >> visitArg: anASArg [
+	self visitNamedAS: anASArg
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitAssign: anASAssgn [
+	self visit: anASAssgn variable.
+	stream << ' = '.
+	self visit: anASAssgn expression
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitBlockNode: anASBlock [
+	stream << ' BLOCK GOES HERE '.
+	self visitAll: anASBlock arguments
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitClassVar: anASClassVar [
+	stream << anASClassVar name
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitGlobal: anASGlobal [ 
+	stream << ' A GLOBAL GOES HERE '.
+	stream << anASGlobal name asString.
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitInstance: anASInstance [ 
+	self visitNamedAS: anASInstance 
+]
+
+{ #category : #visiting }
 ASZigGenerator >> visitLiteral: anASLiteral [ 
-	anASLiteral literal printOn: stream
+	stream << anASLiteral literal asString
 ]
 
 { #category : #visiting }
@@ -56,6 +83,11 @@ ASZigGenerator >> visitMethodNode: anASMethodNode [
 	<< '(thread : *Thread, self: Object) MethodReturns {'.
 	self visitAll: anASMethodNode body.
 	stream << '}'
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitNamedAS: aNamedAS [
+	stream << aNamedAS name
 ]
 
 { #category : #visiting }
@@ -75,4 +107,9 @@ ASZigGenerator >> visitSend: anASSend [
 	self visit: anASSend target.
 	self visitAll: anASSend args.
 	stream << 'call(&thread,thread.stack()[0],'<< (self symbolRef: anASSend selector) <<');'
+]
+
+{ #category : #visiting }
+ASZigGenerator >> visitVariable: anASRef [
+		self visit: anASRef variable
 ]

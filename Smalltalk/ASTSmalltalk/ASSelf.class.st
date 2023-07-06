@@ -41,8 +41,12 @@ ASSelf >> = other [
 
 { #category : #visiting }
 ASSelf >> acceptVisitor: aVisitor [
-
 	^ aVisitor visitSelfNode: self
+]
+
+{ #category : #accessing }
+ASSelf >> isASSelf [
+	^true
 ]
 
 { #category : #accessing }
@@ -81,4 +85,12 @@ ASSelf >> superclass: aClass [
 ASSelf >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toSelf: self
+]
+
+{ #category : #building }
+ASSelf >> zigString: syms and: stackVariables [
+	"^'&e.pushTemp, 1,', '&e.send, ', method selector, ','"
+
+	^ '&e.pushSelf,'
+	"I'm sending self a message?"
 ]

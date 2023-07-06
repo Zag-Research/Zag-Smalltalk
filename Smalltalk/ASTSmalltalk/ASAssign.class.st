@@ -22,9 +22,30 @@ ASAssign >> = other [
 	^ self class = other class and: [ self variable = other variable and: [ self expression = other expression ] ]
 ]
 
+{ #category : #visiting }
+ASAssign >> acceptVisitor: aVisitor [
+
+	^ aVisitor visitAssign: self
+]
+
+{ #category : #accessing }
+ASAssign >> blocks [
+	^expression blocks
+]
+
 { #category : #comparing }
 ASAssign >> expression [
 	^ expression
+]
+
+{ #category : #testing }
+ASAssign >> isASAssign [
+	^ true
+]
+
+{ #category : #comparing }
+ASAssign >> maxDepth [
+	^expression maxDepth
 ]
 
 { #category : #printing }
@@ -53,4 +74,11 @@ ASAssign >> variable: v expression: e [
 
 	variable := v.
 	expression := e
+]
+
+{ #category : #accessing }
+ASAssign >> zigString: syms and: stackVariables [
+	"load value of expression into the variable?"
+	^ (expression zigString: syms and: stackVariables) , ' &e.popLocal, '
+	  , (stackVariables indexOf: variable name) asString
 ]

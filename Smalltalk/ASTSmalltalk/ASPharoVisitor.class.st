@@ -130,11 +130,17 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          (aRBMethodNode temporaries collect: #name as: Array)
 		          body: OrderedCollection new.
 	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
+	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
 		aRBMethodNode statements do: [ :statement | 
 			method addStatement: (self visit: statement) ] ].
 	^ method
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitPragmaNode: aRBPragmaNode [ 
+	^ASParama args: (aRBPragmaNode arguments collect: [ :arg | self visit: arg])
 ]
 
 { #category : #visiting }
@@ -159,4 +165,9 @@ ASPharoVisitor >> visitSuperNode: aRBVariableNode [
 ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
 
 	^ ASRef variable: (ASLocal name: aRBVariableNode name)
+]
+
+{ #category : #visiting }
+ASPharoVisitor >> visitThisContextNode: anRBVariableNode [
+	^ ASInstance name: anRBVariableNode name
 ]

@@ -10,15 +10,34 @@ ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 	^ ASPharoCompiler new buildFromClass: class selector: method
 ]
 
+{ #category : #compiling }
+ASPharoCompilerProgramTest >> buildFromClasses: class withSelctors: selectors [
+
+	^ ASPharoCompiler new buildFromClasses: class withSelectors: selectors
+]
+
 { #category : #script }
 ASPharoCompilerProgramTest >> codeStart42 [
-
 	<script>
 	| result |
 	result := self
 		          buildFromClass: ASCompileTestClass1 class
 		          selector: #start42.
 	^ result zigString
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testAssignment [
+
+	| result aStream |
+	result := self
+		          buildFromClass: ASCompileTestClass1
+		          selector: #testAssignment.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAssignmentString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
 ]
 
 { #category : #script }
@@ -28,7 +47,99 @@ ASPharoCompilerProgramTest >> testCodeStart42 [
 	result := self
 		          buildFromClass: ASCompileTestClass1 class
 		          selector: #start42.
+	
+	(FileSystem disk workingDirectory / 'zigString.txt') writeStream
+	nextPutAll: result zigString;
+	close.
+	
 	self assert: result zigString equals: ''
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFib [
+
+	| result |
+	result := self
+		          buildFromClass: ASCompileTestClass1 class
+		          selector: #foo:bar:.
+
+	(FileSystem disk workingDirectory / 'zigFooBarString.txt') writeStream
+		nextPutAll: result zigString;
+		close.
+
+	self assert: result zigString equals: ''
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBar [
+
+	| result aStream |
+	result := self buildFromClass: ASCompileTestClass1 selector: #foo:bar:.
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntFib [
+
+	| result aStream classes selectors |
+	"result := self buildFromClass: Integer selector: #fibonacci."
+	classes := OrderedCollection new.
+	classes add: Integer.
+	selectors := OrderedCollection new.
+	selectors add: #fibonacci.
+	result := self buildFromClasses: classes withSelctors: selectors.
+
+	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntbitShiftMagnitude [
+	| result aStream |
+	result := self
+		          buildFromClass: Integer class
+		          selector: #bitShiftMagnitude:.
+	
+
+	aStream := (FileSystem disk workingDirectory / 'zigBitShiftMagnitudeString.zig') writeStream.
+	result writeZig: aStream.
+	aStream close.
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntegerBench [
+
+	| result aStream |
+	result := self
+		          buildFromClass: Integer
+		          selector: #benchmark.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigIntBenchString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testPlusWithLocal [
+
+	| result aStream |
+	result := self
+		          buildFromClass: ASCompileTestClass1
+		          selector: #plusWithLocal:and:and:.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigPlusWithLocalString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
 ]
 
 { #category : #tests }
@@ -41,6 +152,8 @@ ASPharoCompilerProgramTest >> testStart42 [
 	self assert: result classes equals: { 
 			ASTObject.
 			ASTBehavior.
+			ASTMetaclass .
+			Metaclass.
 			ASTClass.
 			ASTClassDescription.
 			ASTSmallInteger.
@@ -50,7 +163,8 @@ ASPharoCompilerProgramTest >> testStart42 [
 			ASTTrue.
 			ASTFalse.
 			ASTBoolean.
-			"ASTBlockClosure. removed temporarily"
+			ASTBlockClosure.
+			ASTCharacter.
 			ASTString.
 			ASTArray.
 			ASTArrayedCollection.

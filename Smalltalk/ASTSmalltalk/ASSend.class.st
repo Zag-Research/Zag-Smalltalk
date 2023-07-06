@@ -19,9 +19,16 @@ ASSend class >> selector: aSymbol args: aCollection [
 ]
 
 { #category : #'instance creation' }
-ASSend class >> target: expression selector: aSymbol args: aCollection [
+ASSend class >> target: aTarget selector: aSymbol [
 
-	^ self new target: expression; selector: aSymbol args: aCollection
+	^ self new target: aTarget; selector: aSymbol 
+]
+
+{ #category : #'instance creation' }
+ASSend class >> target: expression selector: aSymbol args: aCollection [
+	^ self new
+		  target: expression;
+		  selector: aSymbol args: aCollection
 ]
 
 { #category : #comparing }
@@ -41,6 +48,26 @@ ASSend >> acceptVisitor: aVisitor [
 { #category : #parsing }
 ASSend >> args [
 	^ args
+]
+
+{ #category : #accessing }
+ASSend >> blocks [
+
+	| blocks |
+	blocks := OrderedCollection new.
+	args ifNotNil: [ args do: [ :arg | blocks addAll: arg blocks ] ].
+	target isASBlock ifTrue: [ blocks addAll: target blocks ].
+	^ blocks
+]
+
+{ #category : #parsing }
+ASSend >> isASSend [
+	^true
+]
+
+{ #category : #parsing }
+ASSend >> maxDepth [
+	^selector numArgs
 ]
 
 { #category : #printing }
@@ -63,6 +90,11 @@ ASSend >> selector [
 	^ selector
 ]
 
+{ #category : #accessing }
+ASSend >> selector: aSelector [
+	selector := aSelector
+]
+
 { #category : #parsing }
 ASSend >> selector: aSymbol args: aCollection [
 
@@ -79,4 +111,20 @@ ASSend >> target [
 { #category : #parsing }
 ASSend >> target: expression [
 	target := expression
+]
+
+{ #category : #building }
+ASSend >> zigString: syms and: stackVariables [
+
+	| zigString |
+	zigString := target zigString: syms and: stackVariables.
+	args ifNotNil: [
+		args do: [ :arg |
+			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
+	zigString := zigString , (syms
+		             at: selector
+		             ifPresent: [ :sym | '&e.send, ' , sym , ',' ]
+		             ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
+			             '&e.send, ' , selector , ',' ]).
+		^zigString
 ]

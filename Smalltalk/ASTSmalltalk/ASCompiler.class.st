@@ -33,10 +33,10 @@ ASCompiler class >> initialize [
 	                   System Return Send Literal Load Store SymbolTable
 	                   Dispatch ClassTable Magnitude Number ClassDescription
 	                   Boolean ).
-	self halt.
 	ClassMap := Dictionary new.
 	ClassMap at: ByteString put: ASTString.
 	ClassMap at: ByteString class put: ASTString class.
+	ClassMap at: BlockClosure put: ASTBlock.
 	ASTObject withAllSubclassesDo: [ :class | 
 		(Smalltalk
 			 at: (class name allButFirst: 3) asSymbol
@@ -63,13 +63,23 @@ ASCompiler >> addClass: aClass [
 
 { #category : #building }
 ASCompiler >> addMethod: method [
-	(methodsAlreadyProcessed includes: method) ifFalse: [ methodsToProcess add: method ]
+	(methodsAlreadyProcessed includes: method) ifFalse: [
+		methodsToProcess add: method ]
 ]
 
 { #category : #building }
 ASCompiler >> buildFromClass: aClass selector: selector [
 
 	self send: selector toClass: aClass.
+	self transitiveClosure
+]
+
+{ #category : #building }
+ASCompiler >> buildFromClasses: someClasses withSelectors: someSelectors [
+
+	someClasses
+		with: someSelectors
+		do: [ :aClass :aSelector | self send: aSelector toClass: aClass ].
 	self transitiveClosure
 ]
 
@@ -95,8 +105,10 @@ ASCompiler >> definingClass: aClass [
 	definingClass := aClass.
 	classes add: aClass instanceSide.
 	classes add: aClass classSide.
-	currentScope := aClass.
-	^ASClassNode new from: aClass
+	"currentScope := aClass.
+	^ASClassNode new from: aClass"
+	currentScope := ASClassNode new from: aClass.
+	^currentScope
 	
 ]
 
@@ -129,6 +141,7 @@ ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [
 	| savedScope |
 	savedScope := currentScope.
 	currentScope := anASMethodOrBlock.
+	anASMethodOrBlock nestedScopeOf: savedScope. "if we are consistant with setting nestedScope as parent scope do we need a saved scope?"
 	aFullBlockClosure ensure: [ currentScope := savedScope ]
 ]
 
@@ -170,13 +183,32 @@ ASCompiler >> methods [
 
 { #category : #building }
 ASCompiler >> selector: selector fromClass: aClass [
-
+"Tries to find a method from the given class using the selectors
+assumes the aClass is an ASTClass, and will look in its method dictionary.
+If the selector does not match any method will look at the classes class for the method.
+If non can be found there then look at the superclass.
+The last fall back is to look at the class the ast class references and its class side 
+for the method."
 	^ aClass methodDictionary
 		  at: selector
 		  ifPresent: [ aClass >> selector ]
-		  ifAbsent: [ 
-			  aClass superclass ifNotNil: [ :sc | 
-				  self selector: selector fromClass: (self addClass: sc) ] ]
+		  ifAbsent: [
+			  aClass class methodDictionary
+				  at: selector
+				  ifPresent: [ aClass class >> selector ]
+				  ifAbsent: [
+					  (ClassMap keyAtValue: aClass ifAbsent: [ nil ])
+						  ifNil: [
+							  aClass superclass ifNotNil: [ :sc |
+								  self selector: selector fromClass: (self addClass: sc) ] ]
+						  ifNotNil: [ :originalClass |
+							  originalClass methodDictionary
+								  at: selector
+								  ifPresent: [ originalClass >> selector ]
+								  ifAbsent: [
+									  originalClass class methodDictionary
+										  at: selector
+										  ifPresent: [ originalClass class >> selector ] ] ] ] ]
 ]
 
 { #category : #accessing }
@@ -187,9 +219,10 @@ ASCompiler >> selectors [
 { #category : #building }
 ASCompiler >> send: selector toClass: aClass [
 
-	(self selector: selector fromClass: (self addClass: aClass)) ifNotNil: [ :method | 
-		selectors add: selector.
-		self addMethod: method ]
+	(self selector: selector fromClass: (self addClass: aClass))
+		ifNotNil: [ :method |
+			selectors add: selector.
+			self addMethod: method ]
 ]
 
 { #category : #notifying }
@@ -227,13 +260,11 @@ ASCompiler >> sentToUnknownObject: selector [
 ASCompiler >> transitiveClosure [
 
 	| toProcess |
-	[ methodsToProcess isEmpty ] whileFalse: [ 
+	[ methodsToProcess isEmpty ] whileFalse: [
 		toProcess := methodsToProcess.
 		methodsToProcess := Set new.
-				methodsAlreadyProcessed addAll: toProcess.
-		toProcess do: [: method |
-			self compileMethod: method ].
-		]
+		methodsAlreadyProcessed addAll: toProcess.
+		toProcess do: [ :method | self compileMethod: method ] ]
 ]
 
 { #category : #building }

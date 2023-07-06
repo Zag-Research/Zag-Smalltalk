@@ -33,6 +33,11 @@ ASLiteral >> baseValue [
 ]
 
 { #category : #accessing }
+ASLiteral >> isASLiteral [
+	^true
+]
+
+{ #category : #accessing }
 ASLiteral >> literal [
 
 	^ literal
@@ -55,4 +60,9 @@ ASLiteral >> printOn: s [
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toLiteral: literal
+]
+
+{ #category : #accessing }
+ASLiteral >> zigString: syms and: stackVariables [
+^ '&e.pushLiteral, Object.from(' , literal asString , '),'
 ]
