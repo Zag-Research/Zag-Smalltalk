@@ -11,6 +11,6 @@ Memory structure and some of execution principles loosely modelled on OpenSmallt
 
 [More information in the Documentation](Documentation/Abstract.md)
 
-[Papers and Talks](Documentation/Papers/README.md)
+[Papers and Talks](Documentation/papers/README.md)
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
