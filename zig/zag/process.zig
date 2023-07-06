@@ -106,7 +106,7 @@ pub const Process = extern struct {
     pub inline fn endOfStack(self: *const Self) [*]Object {
         return @as([*]Object, @ptrCast(&self.ptr().stack[0])) + stack_size;
     }
-    pub inline fn getStack(self: *const Self, sp: [*]Object) []Object {
+    pub  fn getStack(self: *const Self, sp: [*]Object) []Object { // INLINE
         return sp[0 .. (@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object)];
     }
     pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {

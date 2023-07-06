@@ -90,6 +90,7 @@ pub const Object = packed struct(u64) {
     h1: u16,
     l2: ClassIndex,
     tag: Group,
+    pub const empty = &[0]Object{};
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(low32 | Group.immediates.base() | @as(u64, cls) << 32);
     }

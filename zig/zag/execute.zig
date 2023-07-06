@@ -21,7 +21,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const sym = @import("symbol.zig").symbols;
-pub const tailCall: std.builtin.CallModifier = .always_tail;
+pub const tailCall: std.builtin.CallModifier = .never_inline;//.always_tail;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
 
@@ -317,7 +317,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
     };
 }
-const empty = &[0]Object{};
 test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
@@ -336,7 +335,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil, 2, 3);
     var r1r = [_]Object{ Nil, True };
-    r1.setLiterals(empty, &r1r);
+    r1.setLiterals(Object.empty, &r1r);
     try expectEqual(r1.getCodeSize(), 10);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -436,7 +435,7 @@ test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     var m = compileMethod(sym.yourself, 0, 0, .{ ":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null });
     const mcmp = m.asCompiledMethodPtr();
-    m.setLiterals(empty, &[_]Object{Object.from(mcmp)});
+    m.setLiterals(Object.empty, &[_]Object{Object.from(mcmp)});
     var t = m.code[0..];
     //    for (t,0..) |tv,idx|
     //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -623,7 +622,7 @@ pub const controlPrimitives = struct {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        std.debug.print("\nin send0 {} {} {*} {}\n", .{ selector, sp[0].get_class(), newPc, newPc[0] });
+        std.debug.print("\nin send0 {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
@@ -689,7 +688,7 @@ pub const controlPrimitives = struct {
         const newSp = result.sp;
         newSp[0] = top;
         var callerContext = result.ctxt;
-        trace("{any}", .{callerContext.stack(newSp, process)});
+//        trace("{any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -724,6 +723,7 @@ pub const TestExecution = struct {
     }
     pub fn stack(self: *Self, sp: [*]Object) []Object {
         self.sp = sp;
+        std.debug.print("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
@@ -796,7 +796,7 @@ test "context returnTop twice via TestExecution" {
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
     });
-    method1.setLiterals(empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    method1.setLiterals(Object.empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
@@ -815,7 +815,7 @@ test "context returnTop with indirect via TestExecution" {
         "0Obj",
         &p.returnTop,
     });
-    method.setLiterals(empty, &[_]Object{Object.from(42)});
+    method.setLiterals(Object.empty, &[_]Object{Object.from(42)});
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };

@@ -34,7 +34,7 @@ var sym: Sym = undefined;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-const testReps = 4;
+const testReps = 2;
 var fibCPSM = compileMethod(Sym.value, 0, 0, .{&fibCPS});
 const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
@@ -167,6 +167,7 @@ var fibDispatchStart =
     compileMethod(Sym.i_1, 0, 2, .{
     &e.pushContext,
     "^",
+    &e.pushLocal0,
     &e.send0,
     Sym.i_1,
     &e.returnTop,

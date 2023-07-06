@@ -117,14 +117,16 @@ pub const Context = struct {
         return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object);
     }
     pub fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
-        return sp[0 .. (@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object)];
+        if (self.isOnStack())
+            return sp[0 .. (@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object)];
+        return process.getStack(sp);
     }
     pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
         const size = self.tempSize(process);
         @setRuntimeSafety(false);
         return @constCast(self.temps[0..size]);
     }
-    pub inline fn getTPc(self: *const Context) [*]const Code {
+    pub  fn getTPc(self: *const Context) [*]const Code { // INLINE
         return self.tpc;
     }
     pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: [*]const Code) void {
