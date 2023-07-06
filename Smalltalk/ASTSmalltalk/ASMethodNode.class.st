@@ -184,7 +184,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << nestedScopeOf name, '>>', selector asZigString << ' ='.
+	aStream << 'var ' << (nestedScopeOf name, '>>', selector) asSymbol asZigString << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms

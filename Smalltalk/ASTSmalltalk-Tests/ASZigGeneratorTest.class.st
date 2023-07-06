@@ -162,9 +162,9 @@ ASZigGeneratorTest >> testASLiteral [
 { #category : #tests }
 ASZigGeneratorTest >> testASMethod [
 
-	| result selector arguments locals string bytes stream value body |
+	| result selector arguments locals string bytes stream value body method |
 	string := '
-var size =
+var @"Integer>>size" =
 	compileMethod(sym.size,0,0+0,.{
 	&e.verifySelector,
 	&e.pushContext,"^",
@@ -180,14 +180,14 @@ var size =
 	arguments := OrderedCollection new.
 	locals := OrderedCollection new.
 	body := OrderedCollection new.
-	result := (ASMethodNode
+	method := ASMethodNode
 		           class: self
 		           selector: selector
 		           arguments: arguments
 		           locals: locals
-		           body: body)
-		          writeMethod: stream
-		          with: Dictionary new.
+		           body: body.
+	method nestedScopeOf: (ASClassNode new from: Integer).
+	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
 ]
@@ -195,9 +195,9 @@ var size =
 { #category : #tests }
 ASZigGeneratorTest >> testASMethodNoBody [
 
-	| result selector arguments locals string bytes stream value |
+	| result selector arguments locals string bytes stream value method |
 	string := '
-var size =
+var @"Integer>>size" =
 	compileMethod(sym.size,0,0+0,.{
 	&e.verifySelector,
 	&e.pushContext,"^",
@@ -212,14 +212,15 @@ var size =
 
 	arguments := OrderedCollection new.
 	locals := OrderedCollection new.
-	result := (ASMethodNode
-		           class: self
-		           selector: selector
-		           arguments: arguments
-		           locals: locals
-		           body: OrderedCollection new)
-		          writeMethod: stream
-		          with: Dictionary new.
+	method := ASMethodNode
+		          class: self
+		          selector: selector
+		          arguments: arguments
+		          locals: locals
+		          body: OrderedCollection new.
+	method nestedScopeOf: (ASClassNode new from: Integer).
+
+	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
 ]
@@ -227,9 +228,9 @@ var size =
 { #category : #tests }
 ASZigGeneratorTest >> testASMethodTrivialReturn [
 
-	| result selector arguments locals string bytes stream value body |
+	| result selector arguments locals string bytes stream value body method |
 	string := '
-var size =
+var @"Integer>>size" =
 	compileMethod(sym.size,0,0+0,.{
 	&e.verifySelector,
 	&e.pushContext,"^",
@@ -247,12 +248,14 @@ var size =
 	locals := OrderedCollection new.
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 5)).
-	result := (ASMethodNode
+	method := ASMethodNode
 		           class: self
 		           selector: selector
 		           arguments: arguments
 		           locals: locals
-		           body: body) writeMethod: stream with: Dictionary new.
+		           body: body.
+	method nestedScopeOf: (ASClassNode new from: Integer).
+	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
 ]
@@ -260,9 +263,9 @@ var size =
 { #category : #tests }
 ASZigGeneratorTest >> testASMethodTrivialSend [
 
-	| result arguments locals string bytes stream value body |
+	| result arguments locals string bytes stream value body method |
 	string := '
-var @"size:" =
+var @"Integer>>size:" =
 	compileMethod(sym.@"size:",0,0+0,.{
 	&e.verifySelector,
 	&e.pushContext,"^",
@@ -280,14 +283,17 @@ var @"size:" =
 	arguments add: #aCollection.
 	locals := OrderedCollection new.
 	body := OrderedCollection new.
-	body add:
-		(ASReturn expression: (ASSend target: (ASLiteral literal: #aCollection) selector: #size)).
-	result := (ASMethodNode
+	body add: (ASReturn expression:
+			 (ASSend target: (ASLiteral literal: #aCollection) selector: #size)).
+	method := ASMethodNode
 		           class: self
 		           selector: #size:
 		           arguments: arguments
 		           locals: locals
-		           body: body) writeMethod: stream with: Dictionary new.
+		           body: body.
+	method nestedScopeOf: (ASClassNode new from: Integer).
+	
+	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
 ]
@@ -295,9 +301,9 @@ var @"size:" =
 { #category : #tests }
 ASZigGeneratorTest >> testASMethodTwoSends [
 
-	| result arguments sendArguments locals string bytes stream value body |
+	| result arguments sendArguments locals string bytes stream value body method |
 	string := '
-var @"size:" =
+var @"Integer>>size:" =
 	compileMethod(sym.@"size:",0,0+0,.{
 	&e.verifySelector,
 	&e.pushContext,"^",
@@ -319,17 +325,18 @@ var @"size:" =
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASSend
 				  target:
-				  (ASSend
-					   target: (ASArg name: #aCollection)
-					   selector: #size)
+				  (ASSend target: (ASArg name: #aCollection) selector: #size)
 				  selector: #+
 				  args: sendArguments)).
-	result := (ASMethodNode
+	method := ASMethodNode
 		           class: self
 		           selector: #size:
 		           arguments: arguments
 		           locals: locals
-		           body: body) writeMethod: stream with: Dictionary new.
+		           body: body.
+	method nestedScopeOf: (ASClassNode new from: Integer).
+
+	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
 ]

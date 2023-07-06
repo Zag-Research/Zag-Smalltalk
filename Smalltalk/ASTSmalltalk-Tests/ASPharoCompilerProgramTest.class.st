@@ -86,16 +86,28 @@ ASPharoCompilerProgramTest >> testFooBar [
 { #category : #tests }
 ASPharoCompilerProgramTest >> testIntFib [
 
+	| result aStream |
+	result := self buildFromClass: Integer selector: #fibonacci.
+
+	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntFibIsolated [
+
 	| result aStream classes selectors |
-	"result := self buildFromClass: Integer selector: #fibonacci."
 	classes := OrderedCollection new.
 	classes add: Integer.
 	selectors := OrderedCollection new.
 	selectors add: #fibonacci.
 	result := self buildFromClasses: classes withSelctors: selectors.
 
-	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
-		           writeStream.
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigIntFibIsolatedString.zig') writeStream.
 	aStream truncate.
 	result writeZig: aStream.
 	aStream close

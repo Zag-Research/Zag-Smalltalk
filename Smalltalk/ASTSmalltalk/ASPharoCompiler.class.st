@@ -92,7 +92,7 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 ]
 
 { #category : #compiling }
-ASPharoCompiler >> writeZig: aStream [ 
+ASPharoCompiler >> writeZig: aStream [
 	self initializeSyms.
 	self writeZigConsts: aStream.
 	self writeZigSyms: aStream.

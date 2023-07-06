@@ -49,14 +49,13 @@ ASCompiler class >> initialize [
 ASCompiler >> addClass: aClass [
 
 	| astClass |
-	astClass := ClassMap at: aClass ifAbsent: [ 
-		            aClass ].
+	astClass := ClassMap at: aClass ifAbsent: [ aClass ].
 	(classes includes: astClass) ifTrue: [ ^ astClass ].
 	classes add: astClass.
 	astClass isClassSide
 		ifTrue: [ classes add: astClass instanceSide ]
 		ifFalse: [ classes add: astClass classSide ].
-	freeSelectors do: [ :selector | 
+	freeSelectors do: [ :selector |
 		self send: selector toClass: astClass ].
 	^ astClass
 ]
