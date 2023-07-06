@@ -37,9 +37,8 @@ const Sym = struct {
     }
 };
 var sym: Sym = undefined;
-const index_1 = indexSymbol(1);
 var @"Integer>>fibonacci" =
-    compileMethod(index_1, 1, 2, .{
+    compileMethod(Sym.i_1, 1, 2, .{ // self-1 block-1
     &e.verifySelector,
     &e.pushContext,
     "^",
@@ -55,11 +54,11 @@ var @"Integer>>fibonacci" =
     &e.pushLocal,   1, // self
     &e.pushLiteral, Object.from(1),
     &e.send1,       Sym.@"-",
-    &e.send0,       index_1,
+    &e.send0,       Sym.i_1,
     &e.pushLocal,   1, // self
     &e.pushLiteral, Object.from(2),
     &e.send1,       Sym.@"-",
-    &e.send1,       index_1,
+    &e.send1,       Sym.i_1,
 
     &e.send1,       Sym.@"+",
     &e.returnTop,
