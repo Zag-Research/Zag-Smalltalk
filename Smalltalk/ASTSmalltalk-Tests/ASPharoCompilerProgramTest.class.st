@@ -13,7 +13,9 @@ ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 { #category : #compiling }
 ASPharoCompilerProgramTest >> buildFromClasses: class withSelctors: selectors [
 
-	^ ASPharoCompiler new buildFromClasses: class withSelectors: selectors
+	^ ASPharoCompiler new
+		  buildFromClasses: class
+		  withSelectors: selectors
 ]
 
 { #category : #script }

@@ -79,6 +79,9 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 	aStream << 'fn initSmalltalk() void {'.
 	aStream cr.
 	aStream tab.
+	aStream << 'const empty = &[0]Object{};'.
+	aStream cr.
+	aStream tab.
 	aStream << 'primitives.init();'.
 	aStream cr.
 	aStream tab.
@@ -88,7 +91,11 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 	methods do: [ :aMethod | aMethod setLiterals: aStream ].
 
 	aStream << '}'.
-	aStream cr
+	aStream cr.
+	aStream << 'const i = @import("zag/primitives.zig").inlines;'.
+	aStream cr.
+	aStream << 'const e = @import("zag/primitives.zig").embedded;'.
+	aStream cr.aStream << 'const p = @import("zag/primitives.zig").primitives;'
 ]
 
 { #category : #compiling }
@@ -124,17 +131,50 @@ ASPharoCompiler >> writeZigConsts: aStream [
 
 { #category : #compiling }
 ASPharoCompiler >> writeZigSyms: aStream [
-	aStream << 'const Sym = struct {' . aStream cr.
-	selectors do: [ :selector | aStream tab. aStream << selector asZigString << ': Object,'. aStream cr ].
-	aStream tab. aStream << 'const ss = heap.compileStrings(.{'. aStream cr.
-	selectors do: [ :aSelector | aStream tab. aStream tab. aStream << '"' << aSelector << '",'. aStream cr ].
-	aStream tab. aStream << '});'. aStream cr.
-	aStream tab. aStream << 'usingnamespace symbol.symbols;'. aStream cr.
-	aStream tab. aStream << 'fn init() Sym {'. aStream cr.
-	aStream tab. aStream tab. aStream << 'fn init() Sym {'. aStream cr.
-	selectors withIndexDo: [ :aSelector :index | aStream tab. aStream tab. aStream tab. aStream << '.' << aSelector asZigString << ' = symbol.intern(ss['  << (index-1) asString << '].asObject()),'. aStream cr ].
-	aStream tab. aStream tab. aStream << '}'. aStream cr.
-	aStream tab. aStream << '};'. aStream cr.
-	aStream << '};' . aStream cr.
-   aStream cr
+
+	selectors removeAllFoundIn: syms keys.
+	aStream << 'const Sym = struct {'.
+	aStream cr.
+	selectors do: [ :selector |
+		aStream tab.
+		aStream << selector asZigString << ': Object,'.
+		aStream cr ].
+	aStream tab.
+	aStream << 'const ss = heap.compileStrings(.{'.
+	aStream cr.
+	selectors do: [ :aSelector |
+		aStream tab.
+		aStream tab.
+		aStream << '"' << aSelector << '",'.
+		aStream cr ].
+	aStream tab.
+	aStream << '});'.
+	aStream cr.
+	aStream tab.
+	aStream << 'usingnamespace symbol.symbols;'.
+	aStream cr.
+	aStream tab.
+	aStream << 'fn init() Sym {'.
+	aStream cr.
+	aStream tab.
+	aStream tab.
+	aStream << 'return .{'.
+	aStream cr.
+	selectors withIndexDo: [ :aSelector :index |
+		aStream tab.
+		aStream tab.
+		aStream tab.
+		aStream << '.' << aSelector asZigString << ' = symbol.intern(ss['
+		<< (index - 1) asString << '].asObject()),'.
+		aStream cr ].
+	aStream tab.
+	aStream tab.
+	aStream << '};'.
+	aStream cr.
+	aStream tab.
+	aStream << '}'.
+	aStream cr.
+	aStream << '};'.
+	aStream cr.
+	aStream cr
 ]
