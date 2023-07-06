@@ -32,11 +32,7 @@ pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeC
 }
 
 pub const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns;
-fn noFallbackFn(_: [*]const Code, _: [*]Object, _: *Process, _: CodeContextPtr, _: Object) MethodReturns {
-    @panic("no fall back");
-}
-pub const preferred_noFallback = (&CompiledMethod.init(sym.noFallback, &noFallbackFn)).asFakeObject();
-pub const noFallback = &CompiledMethod.init(sym.noFallback, &noFallbackFn);
+pub const fallback = controlPrimitives.fallback;
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
@@ -457,8 +453,8 @@ test "compiling method" {
     try expectEqual(t[9].object, Nil);
     try expectEqual(t.len, 10);
 }
-//pub const trace = std.debug.print;
-pub inline fn trace(_: anytype, _: anytype) void {}
+pub const trace = std.debug.print;
+//pub inline fn trace(_: anytype, _: anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {
@@ -473,6 +469,7 @@ pub const controlPrimitives = struct {
     // }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
+        trace("\nverifySelector: {} {} {*}",.{method.selector,selector,pc});
         if (!method.selector.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
@@ -615,11 +612,18 @@ pub const controlPrimitives = struct {
         context.setLocal(0, sp[0]);
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
+    pub fn fallback(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const arity = selector.numArgs();
+        const newPc = lookup(selector, sp[arity].get_class());
+        context.setReturn(pc);
+        std.debug.print("\nin fallback {} {} {*} {}\n", .{selector,sp[arity].get_class(),newPc,newPc[0]});
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
+    }
     pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        std.debug.print("\nin send0 {} {}\n", .{selector,sp[0].get_class()});
+        std.debug.print("\nin send0 {} {} {*} {}\n", .{selector,sp[0].get_class(),newPc,newPc[0]});
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {

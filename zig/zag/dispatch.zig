@@ -58,6 +58,9 @@ const Dispatch = extern struct {
     var dispatchData: [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
+        const hashed = preHash(selector.hash32());
+        const address = dispatches[index].lookupAddress(hashed);
+        std.debug.print("\nlookup: {} {} {*} {*}",.{selector,hashed,address,address.*});
         return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
     }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
@@ -168,9 +171,9 @@ const Dispatch = extern struct {
         }
         const hashed = preHash(cmp.selector.hash32());
         const address = self.lookupAddress(hashed);
-        std.debug.print("\nadd: {*} {} {*} {*}", .{ cmp, hashed, address, address.* });
+        std.debug.print("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
         if (@cmpxchgWeak([*]const Code, address, dnuInit, cmp.codePtr(), .SeqCst, .SeqCst) == null) {
-            std.debug.print("\nexchange: {*} {*} {*}", .{ address.*, dnuInit, cmp.codePtr() });
+            std.debug.print("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0]});
             return; // we replaced DNU with method
         }
         const existing = @as(*const Code, @ptrCast(address.*)).compiledMethodPtr(0);

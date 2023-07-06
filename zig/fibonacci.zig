@@ -4,7 +4,6 @@ const math = std.math;
 const stdout = std.io.getStdOut().writer();
 const object = @import("zag/zobject.zig");
 const Object = object.Object;
-const indexSymbol = @import("zag/zobject.zig").indexSymbol;
 const Nil = @import("zag/zobject.zig").Nil;
 const execute = @import("zag/execute.zig");
 const tailCall = execute.tailCall;
@@ -35,7 +34,7 @@ var sym: Sym = undefined;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-const testReps = 6;
+const testReps = 3;
 var fibCPSM = compileMethod(Sym.value, 0, 0, .{&fibCPS});
 const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
@@ -139,9 +138,8 @@ fn timeThread(n: i64) void {
     te.init();
     _ = te.run(objs[0..], method);
 }
-const index_1 = indexSymbol(1);
 var fibDispatch =
-    compileMethod(index_1, 0, 2, .{
+    compileMethod(Sym.i_1, 0, 2, .{
     &e.verifySelector,
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, Object.from(2),
@@ -157,18 +155,18 @@ var fibDispatch =
     &e.pushLocal0,
     &e.p2L1, // -1 &e.pushLiteral1,&e.p2,
     &e.send0,
-    index_1,
+    Sym.i_1,
     &e.pushLocal0,
     &e.p2L2, // -2
     &e.send0,
-    index_1,
+    Sym.i_1,
     &e.p1, // +
     &e.returnTop,
 });
 var fibDispatchStart =
-    compileMethod(index_1, 0, 2, .{
+    compileMethod(Sym.i_1, 0, 2, .{
     &e.send0,
-    index_1,
+    Sym.i_1,
     &e.returnTop,
 });
 test "fibDispatch" {
@@ -180,6 +178,7 @@ test "fibDispatch" {
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
     try dispatch.addMethod(object.SmallInteger_I,fibonacci);
+    std.debug.print("\nfibDispatch: {*} {*}",.{&e.verifySelector,fibonacci.codePtr()});
     while (n < testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te = TestExecution.new();

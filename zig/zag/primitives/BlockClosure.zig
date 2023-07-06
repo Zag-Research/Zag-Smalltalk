@@ -119,15 +119,13 @@ pub const inlines = struct {
 };
 pub const embedded = struct {
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
-    pub const value = p201;
-    pub const @"value:" = p202;
     pub fn nonLocalReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const self = context.getSelf();
         _ = .{ pc, sp, self, process, selector };
         //        return @call(tailCall,inlines.nonLocalReturn,.{pc,sp,process,targetContext,selector});
         @panic("nonLocalReturn");
     }
-    pub fn p201(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value
+    pub fn value(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const val = sp[0];
         switch (val.tag) {
             .numericThunk => {
@@ -159,7 +157,7 @@ pub const embedded = struct {
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
-    pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:
+    pub fn @"value:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const val = sp[1];
         switch (val.tag) {
             .numericThunk, .immediateThunk, .heapThunk.nonLocalThunk => @panic("wrong number of parameters"),
@@ -267,36 +265,16 @@ pub const primitives = struct {
         unreachable;
     }
     pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p203(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p204(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:value:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p205(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:value:value:value:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
 };
 const e = struct {

@@ -108,8 +108,8 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @as(u32, @truncate(self.u()));
     }
-    pub inline fn numArgs(self: Object) u8 {
-        return @as(u8, @truncate(self.u() >> 24));
+    pub inline fn numArgs(self: Object) u4 {
+        return @as(u4, @truncate(self.u() >> 24));
     }
     pub inline fn u(self: Object) u64 {
         return @as(u64, @bitCast(self));

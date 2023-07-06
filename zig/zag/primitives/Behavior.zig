@@ -14,7 +14,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
@@ -29,23 +29,16 @@ pub const inlines = struct {
         unreachable;
     }
 };
-const noFallback = execute.noFallback.asFaceObject();
 pub const embedded = struct {
-    var @"Behavior>>#new:" = noFallback;
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // Object>>#new:
-        sp[1] = inlines.p71(sp[1], sp[0]) catch
-            return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Behavior>>#new:".asFakeObject() });
+    const fallback = execute.fallback;
+    pub fn @"new:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"new:"});
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
 };
 pub const primitives = struct {
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // new:
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
 };
 const p = struct {

@@ -6,11 +6,21 @@ pub const inlines = struct {
     pub usingnamespace @import("primitives/Boolean.zig").inlines;
 };
 pub const embedded = struct {
-    pub usingnamespace @import("primitives/Object.zig").embedded;
-    pub usingnamespace @import("primitives/Smallinteger.zig").embedded;
-    pub usingnamespace @import("primitives/Behavior.zig").embedded;
-    pub usingnamespace @import("primitives/BlockClosure.zig").embedded;
-    pub usingnamespace @import("primitives/Boolean.zig").embedded;
+    pub const Object = struct {
+        pub usingnamespace @import("primitives/Object.zig").embedded;
+    };
+    pub const Smallinteger = struct {
+        pub usingnamespace @import("primitives/Smallinteger.zig").embedded;
+    };
+    pub const Behavior = struct {
+        pub usingnamespace @import("primitives/Behavior.zig").embedded;
+    };
+    pub const BlockClosure = struct {
+        pub usingnamespace @import("primitives/BlockClosure.zig").embedded;
+    };
+    pub const Boolean = struct {
+        pub usingnamespace @import("primitives/Boolean.zig").embedded;
+    };
     pub usingnamespace @import("execute.zig").controlPrimitives;
 };
 pub const primitives = struct {

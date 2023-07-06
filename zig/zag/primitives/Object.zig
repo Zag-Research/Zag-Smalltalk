@@ -14,7 +14,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
@@ -54,32 +54,26 @@ pub const inlines = struct {
         return !self.equals(other);
     }
 };
-const noFallback = execute.noFallback;
+const fallback = execute.fallback;
 pub const embedded = struct {
-    var @"Object>>#basicAt:" = noFallback;
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // Object>>#basicAt:
-        sp[1] = inlines.p60(sp[1], sp[0]) catch
-            return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Object>>#basicAt:".asFakeObject() });
+    pub fn @"basicAt:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        sp[1] = inlines.p60(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
-    var @"Object>>#basicAt:put:" = noFallback;
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // Object>>#basicAt:put:
-        sp[1] = inlines.p61(sp[1], sp[0]) catch
-            return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Object>>#basicAt:put:".asFakeObject() });
+    pub fn @"basicAt:put:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        sp[1] = inlines.p61(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:put:" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
+    pub fn @"=="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
+    pub fn @"~~"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
-    var @"Object>>#atAllPut:" = noFallback;
-    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // Object>>#atAllPut:
-        sp[1] = inlines.p145(sp[1], sp[0]) catch
-            return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Object>>#atAllPut:".asFakeObject() });
+    pub fn @"atAllPut:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        sp[1] = inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
 };
@@ -107,18 +101,18 @@ pub const primitives = struct {
         _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        if (!sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
     pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // atAllPut:
-        if (!sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         inlines.p1(sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
     }
     pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        if (!sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
@@ -130,7 +124,7 @@ const e = struct {
 };
 test "simple ==" {
     const expect = std.testing.expect;
-    var prog = compileMethod(sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral, Object.from(4),
         &e.pushLiteral, Object.from(4),
         &e.p110,        &e.returnNoContext,
@@ -148,7 +142,7 @@ fn testExecute(method: CompiledMethodPtr) []Object {
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral, Object.from(3),
         &e.pushLiteral, Object.from(4),
         &e.p110,        &e.returnNoContext,
@@ -157,7 +151,7 @@ test "simple compare" {
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
         &e.p110,         &e.ifTrue,
@@ -171,7 +165,7 @@ test "simple compare and don't branch" {
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
         &e.p169,         &e.ifTrue,

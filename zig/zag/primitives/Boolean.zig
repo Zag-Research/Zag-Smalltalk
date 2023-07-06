@@ -14,7 +14,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const blockClosure = @import("BlockClosure.zig");
 
@@ -26,10 +26,8 @@ pub const inlines = struct {
         return error.primitiveError;
     }
 };
-const noFallback = execute.noFallback;
 pub const embedded = struct {
-    var @"Boolean>>#mustBeBoolean:" = noFallback;
-    var @"Boolean>>#mustBeBoolean:with:" = noFallback;
+    const fallback = execute.fallback;
     pub fn @"ifTrue:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const v = sp[1];
         if (True.equals(v)) {
@@ -37,7 +35,7 @@ pub const embedded = struct {
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, selector });
         }
         if (False.equals(v)) return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-        return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Boolean>>#mustBeBoolean:".asFakeObject() });
+        return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"mustBeBoolean:" });
     }
     pub fn @"ifFalse:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const v = sp[1];
@@ -46,7 +44,7 @@ pub const embedded = struct {
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, selector });
         }
         if (True.equals(v)) return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
-        return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Boolean>>#mustBeBoolean:".asFakeObject() });
+        return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"mustBeBoolean:" });
     }
     pub fn @"ifTrue:ifFalse:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const v = sp[2];
@@ -58,7 +56,7 @@ pub const embedded = struct {
             sp[2] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, selector });
         }
-        return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Boolean>>#mustBeBoolean:with:".asFakeObject() });
+        return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"mustBeBoolean:with:" });
     }
     pub fn @"ifFalse:ifTrue:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const v = sp[2];
@@ -70,48 +68,33 @@ pub const embedded = struct {
             sp[2] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, selector });
         }
-        return @call(tailCall, Context.call, .{ pc, sp, process, context, @"Boolean>>#mustBeBoolean:with:".asFakeObject() });
+        return @call(tailCall, fallback, .{ pc+1, sp, process, context, Sym.@"mustBeBoolean:with:" });
     }
 };
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
     pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc;
-        _ = sp;
-        _ = process;
-        _ = context;
-        _ = selector;
-        unreachable;
+        _ = .{pc,sp,process,context,selector}; unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        if (!sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
     pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // atAllPut:
-        if (!sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         inlines.p1(sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
     }
     pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        if (!sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
