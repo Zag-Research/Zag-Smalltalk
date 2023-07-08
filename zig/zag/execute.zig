@@ -452,8 +452,8 @@ test "compiling method" {
     try expectEqual(t[9].object, Nil);
     try expectEqual(t.len, 10);
 }
-pub const trace = std.debug.print;
-//pub inline fn trace(_: anytype, _: anytype) void {}
+//pub const trace = std.debug.print;
+pub inline fn trace(_: anytype, _: anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {
@@ -723,7 +723,7 @@ pub const TestExecution = struct {
     }
     pub fn stack(self: *Self, sp: [*]Object) []Object {
         self.sp = sp;
-        std.debug.print("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
+        trace("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
