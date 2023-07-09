@@ -44,8 +44,10 @@ pub fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
     return fibNative(self - 1) + fibNative(self - 2);
 }
+const one = Object.from(1);
+const two = Object.from(2);
 pub fn fibObject(self: Object) Object {
-    if (self.u() <= Object.from(2).u()) return Object.from(1);
+    if (i.p5N(self,two)) return one;
     const m1 = i.p2L(self, 1) catch @panic("int subtract failed in fibObject");
     const fm1 = fibObject(m1);
     const m2 = i.p2L(self, 2) catch @panic("int subtract failed in fibObject");
@@ -56,8 +58,8 @@ const fibSym = Sym.value;
 const dnu = execute.controlPrimitives.dnu;
 pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
     if (!fibSym.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
-    if (i.p5N(sp[0], Object.from(2))) {
-        sp[0] = Object.from(1);
+    if (i.p5N(sp[0], two)) {
+        sp[0] = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector });
     }
     const newContext = context.push(sp, process, fibThread.asCompiledMethodPtr(), 0, 2, 0);
@@ -96,7 +98,7 @@ var fibThread =
     &e.verifySelector,
     ":recurse",
     &e.dup, // self
-    &e.pushLiteral2, //&e.pushLiteral, Object.from(2),
+    &e.pushLiteral2, //&e.pushLiteral, two,
     &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
@@ -142,7 +144,7 @@ var fibDispatch =
     compileMethod(Sym.i_1, 0, 2, .{
     &e.verifySelector,
     &e.dup, // self
-    &e.pushLiteral2, //&e.pushLiteral, Object.from(2),
+    &e.pushLiteral2, //&e.pushLiteral, two,
     &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
@@ -229,24 +231,24 @@ const b = @import("zag/byte-interp.zig").ByteCode;
 //         compileByteCodeMethod(Sym.value,0,0,.{
 //             ":recurse",
 //             b.dup,
-//             b.pushLiteral, Object.from(2),
+//             b.pushLiteral, two,
 //             b.p5,"label1",
 //             b.primFailure,
 //             ":label1",
 //             b.ifFalse,"label3",
 //             b.drop,
-//             b.pushLiteral, Object.from(1),
+//             b.pushLiteral, one,
 //             b.returnNoContext,
 //             ":label3",
 //             b.pushContext,"^",
 //             b.pushTemp1,
-//             b.pushLiteral, Object.from(1),
+//             b.pushLiteral, one,
 //             b.p2, "label4",
 //             b.primFailure,
 //             ":label4",
 //             b.callLocal, "recurse",
 //             b.pushTemp1,
-//             b.pushLiteral, Object.from(2),
+//             b.pushLiteral, two,
 //             b.p2,"label5",
 //             b.primFailure,
 //             ":label5",
@@ -274,7 +276,7 @@ fn timeByte(n: i64) void {
         ":recurse",
         b.dup,
         b.pushLiteral,
-        Object.from(2),
+        two,
         b.p5,
         "label1",
         b.primFailure,
@@ -283,14 +285,14 @@ fn timeByte(n: i64) void {
         "label3",
         b.drop,
         b.pushLiteral,
-        Object.from(1),
+        one,
         b.returnNoContext,
         ":label3",
         b.pushContext,
         "^",
         b.pushTemp1,
         b.pushLiteral,
-        Object.from(1),
+        one,
         b.p2,
         "label4",
         b.primFailure,
@@ -299,7 +301,7 @@ fn timeByte(n: i64) void {
         "recurse",
         b.pushTemp1,
         b.pushLiteral,
-        Object.from(2),
+        two,
         b.p2,
         "label5",
         b.primFailure,
