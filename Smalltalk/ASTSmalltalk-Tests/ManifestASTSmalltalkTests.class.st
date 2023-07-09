@@ -53,6 +53,11 @@ ManifestASTSmalltalkTests class >> rulePrecedenceRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleReNoPrintStringInPrintOnRuleV1FalsePositive [
+	^ #(#(#(#RGMethodDefinition #(#ASFindPrimitives #printOn: #false)) #'2023-07-09T10:39:44.76397-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalkTests class >> ruleReTemporaryVariableCapitalizationRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:38.367969-05:00') )
 ]
