@@ -5,7 +5,8 @@ Class {
 	#name : #ASPharoCompiler,
 	#superclass : #ASCompiler,
 	#instVars : [
-		'syms'
+		'syms',
+		'index'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
@@ -18,6 +19,7 @@ ASPharoCompiler >> compileMethod: aCompiledMethod [
 { #category : #compiling }
 ASPharoCompiler >> initializeSyms [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
+	index := 0.
 	syms := Dictionary new.
 	syms at: 'yourself' put: 'Sym.yourself'.
    syms at: 'doesNotUnderstand:' put: 'Sym.@"doesNotUnderstand:"'.
@@ -68,13 +70,21 @@ ASPharoCompiler >> initializeSyms [
    syms at: 'Object' put: 'Sym.Object'
 ]
 
+{ #category : #accessing }
+ASPharoCompiler >> nextIndex [
+index := index + 1.
+	^ 'index_', index asString
+]
+
 { #category : #compiling }
 ASPharoCompiler >> writeInitSmalltalk: aStream [
 
 	aStream << 'var sym: Sym = undefined;'.
 	aStream cr.
 	"write the methods"
-	methods do: [ :aMethod | aMethod writeMethod: aStream with: syms ].
+	methods do: [ :aMethod |
+		syms at: aMethod selector ifAbsentPut: [ self nextIndex ].
+		aMethod writeMethod: aStream with: syms ].
 	aStream cr.
 	aStream << 'fn initSmalltalk() void {'.
 	aStream cr.
@@ -88,14 +98,15 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 	aStream << 'sym = Sym.init();'.
 	aStream cr.
 	"write all the classes"
-	methods do: [ :aMethod | aMethod setLiterals: aStream ].
+	methods do: [ :aMethod | aMethod writeLiterals: aStream with: syms].
 
 	aStream << '}'.
 	aStream cr.
 	aStream << 'const i = @import("zag/primitives.zig").inlines;'.
 	aStream cr.
 	aStream << 'const e = @import("zag/primitives.zig").embedded;'.
-	aStream cr.aStream << 'const p = @import("zag/primitives.zig").primitives;'
+	aStream cr.
+	aStream << 'const p = @import("zag/primitives.zig").primitives;'
 ]
 
 { #category : #compiling }

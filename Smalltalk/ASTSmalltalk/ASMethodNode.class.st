@@ -126,8 +126,8 @@ ASMethodNode >> maxDepth [
 ]
 
 { #category : #accessing }
-ASMethodNode >> numLocals [
-	^ (arguments size + locals size) asString
+ASMethodNode >> nameSpace [
+	^(nestedScopeOf name, '>>', selector) asSymbol asZigString
 ]
 
 { #category : #private }
@@ -154,14 +154,33 @@ ASMethodNode >> selector: aString [
 	selector := aString
 ]
 
-{ #category : #initialization }
-ASMethodNode >> setLiterals: aZnCharacterWriteStream [ 
-	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
-]
-
 { #category : #utilities }
 ASMethodNode >> stackSize [
 	^0
+]
+
+{ #category : #initialization }
+ASMethodNode >> writeLiterals: aStream with: syms [
+	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
+
+	aStream tab.
+	aStream << self nameSpace.
+	aStream << '.setLiterals('.
+	syms
+		associationAt: selector
+		ifPresent: [ :sym |
+		aStream << ('&[_]Object{''.sym.' , sym key , '}, ') ]
+		ifAbsent: [ aStream << 'empty,' ].
+
+	self blocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
+		aStream << '&[_]Object{'.
+		blocks
+			do: [ :block | aStream << block selector asZigString ]
+			separatedBy: [ aStream << ', ' ].
+		aStream << '}' ].
+
+	aStream << ');'.
+	aStream cr
 ]
 
 { #category : #accessing }
@@ -184,7 +203,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << (nestedScopeOf name, '>>', selector) asSymbol asZigString << ' ='.
+	aStream << 'var ' << self nameSpace << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
