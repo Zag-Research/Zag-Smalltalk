@@ -107,10 +107,11 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 	| target selector |
 	target := self visit: aRBMessageNode receiver.
 	selector := aRBMessageNode selector.
-	target tell: compiler youAreSent: selector.
+	compiler visitMessages ifTrue: [
+		target tell: compiler youAreSent: selector ].
 	^ ASSend
 		  target: target
-		  selector: selector 
+		  selector: selector
 		  args: (aRBMessageNode arguments
 				   collect: [ :arg | self visit: arg ]
 				   as: Array)

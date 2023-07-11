@@ -103,6 +103,13 @@ ASMethodNode >> clousreSize [
 	^0
 ]
 
+{ #category : #accessing }
+ASMethodNode >> complexBlocks [
+
+	^ self blocks reject: [ :block |
+		                 block isNonLocalReturn ].
+]
+
 { #category : #comparing }
 ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
@@ -163,18 +170,20 @@ ASMethodNode >> stackSize [
 ASMethodNode >> writeLiterals: aStream with: syms [
 	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
 
+	| complexBlocks |
 	aStream tab.
 	aStream << self nameSpace.
 	aStream << '.setLiterals('.
 	syms
 		associationAt: selector
 		ifPresent: [ :sym |
-		aStream << ('&[_]Object{''.sym.' , sym key , '}, ') ]
+		aStream << ('&[_]Object{sym.' , sym key , '}, ') ]
 		ifAbsent: [ aStream << 'empty,' ].
 
-	self blocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
+	complexBlocks := self complexBlocks.
+	complexBlocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
 		aStream << '&[_]Object{'.
-		blocks
+		 complexBlocks
 			do: [ :block | aStream << block selector asZigString ]
 			separatedBy: [ aStream << ', ' ].
 		aStream << '}' ].
@@ -236,7 +245,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
-			aStream << (block zigString: syms and: stackVariables) ] ].
+			aStream << (block createString: stackVariables ) ] ].
 
 
 	body do: [ :asStatement |

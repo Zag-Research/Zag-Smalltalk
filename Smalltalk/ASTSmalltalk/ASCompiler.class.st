@@ -15,7 +15,8 @@ Class {
 		'currentScope',
 		'freeSelectors',
 		'methodsAlreadyProcessed',
-		'methodsToProcess'
+		'methodsToProcess',
+		'visitMessages'
 	],
 	#classVars : [
 		'ClassIndices',
@@ -69,17 +70,16 @@ ASCompiler >> addMethod: method [
 { #category : #building }
 ASCompiler >> buildFromClass: aClass selector: selector [
 
+	visitMessages := true.
 	self send: selector toClass: aClass.
 	self transitiveClosure
 ]
 
 { #category : #building }
-ASCompiler >> buildFromClasses: someClasses withSelectors: someSelectors [
-
-	someClasses
-		with: someSelectors
-		do: [ :aClass :aSelector | self send: aSelector toClass: aClass ].
-	methodsToProcess  do: [ :method | self compileMethod: method ]
+ASCompiler >> buildFromClassShallow: aClass selector: selector [
+	visitMessages := false.
+	self send: selector toClass: aClass.
+	self transitiveClosure
 ]
 
 { #category : #accessing }
@@ -263,6 +263,12 @@ ASCompiler >> transitiveClosure [
 		methodsToProcess := Set new.
 		methodsAlreadyProcessed addAll: toProcess.
 		toProcess do: [ :method | self compileMethod: method ] ]
+]
+
+{ #category : #compiling }
+ASCompiler >> visitMessages [
+
+	^ visitMessages
 ]
 
 { #category : #building }

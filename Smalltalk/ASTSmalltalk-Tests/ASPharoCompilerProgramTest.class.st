@@ -10,12 +10,12 @@ ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 	^ ASPharoCompiler new buildFromClass: class selector: method
 ]
 
-{ #category : #compiling }
-ASPharoCompilerProgramTest >> buildFromClasses: class withSelctors: selectors [
+{ #category : #testing }
+ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 
 	^ ASPharoCompiler new
-		  buildFromClasses: class
-		  withSelectors: selectors
+		  buildFromClassShallow: class
+		  selector: method
 ]
 
 { #category : #script }
@@ -101,12 +101,8 @@ ASPharoCompilerProgramTest >> testIntFib [
 { #category : #tests }
 ASPharoCompilerProgramTest >> testIntFibIsolated [
 
-	| result aStream classes selectors |
-	classes := OrderedCollection new.
-	classes add: Integer.
-	selectors := OrderedCollection new.
-	selectors add: #fibonacci.
-	result := self buildFromClasses: classes withSelctors: selectors.
+	| result aStream |
+	result := self buildFromClassShallow: Integer selector: #fibonacci.
 
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigIntFibIsolatedString.zig') writeStream.
