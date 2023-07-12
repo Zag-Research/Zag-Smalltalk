@@ -46,6 +46,12 @@ ASBlock >> acceptVisitor: aVisitor [
 ]
 
 { #category : #accessing }
+ASBlock >> assignments [
+self halt.
+body do: [ :instruction | instruction name ]
+]
+
+{ #category : #accessing }
 ASBlock >> blocks [
 
 	| myBlocks |

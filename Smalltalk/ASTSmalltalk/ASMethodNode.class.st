@@ -202,7 +202,9 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
 			block selector: selector , ':' , index asString.
-			stackVariables add: block selector asZigString ] ].
+			stackVariables add: block selector asZigString.
+			block assignments] ].
+
 	stackVariables addAll: (locals collect: [ :local | local name ]).
 	"capture the size of the stack before arguments are added"
 	stackSize := stackVariables size.
@@ -245,7 +247,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"ouput any blocks"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
-			aStream << (block createString: stackVariables ) ] ].
+			aStream << (block createString: stackVariables) ] ].
 
 
 	body do: [ :asStatement |
