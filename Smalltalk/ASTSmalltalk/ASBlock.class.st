@@ -54,53 +54,17 @@ body do: [ :instruction | instruction name ]
 { #category : #accessing }
 ASBlock >> blocks [
 
-	| myBlocks |
-	myBlocks := OrderedCollection new.
-	myBlocks add: self.
-	^ myBlocks
+	| blocks |
+	blocks := OrderedCollection new.
+	blocks add: self.
+	^ blocks
 ]
 
-{ #category : #building }
-ASBlock >> createString: stackVariables [
-	isNonLocalReturn := false.
-	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
-		| return |
-		"tests to see if there is a built in literal function"
-		return := (body at: 1) expression.
-		return isASLiteral ifTrue: [
-			| literal |
-			literal := return literal.
-			literal = true ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_true,' ].
-			literal = false ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_false,' ].
-			literal isNil ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_nil,' ].
-			literal = 1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_one,' ].
-			literal = -1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_minusOne,' ].
-			literal = 0 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_zero,' ].
-			literal = 2 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_two,' ] ].
-		return isASSelf ifTrue: [
-			isNonLocalReturn := true.
-			^ '&e.pushNonlocalBlock_self,'
-			  , (stackVariables indexOf: 'self') asString , ',' ] ].
-	"or return a block closure"
-	selector
-		ifNil: [
-			isNonLocalReturn := false.
-			^ '&e.blockClosure,"' , nestedScopeOf selector , '",1+(3<<16),' ]
-		ifNotNil: [ ^ '&e.blockClosure,"' , selector , '",1+(3<<16),' ]
+{ #category : #accessing }
+ASBlock >> initialize [
+
+	super initialize.
+	isNonLocalReturn := true
 ]
 
 { #category : #testing }
@@ -183,7 +147,67 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream cr
 ]
 
+{ #category : #printing }
+ASBlock >> zigClosureString: aCollection [ 
+	isNonLocalReturn ifFalse: [
+			selector
+		ifNil: [^ '&e.blockClosure,"' , nestedScopeOf selector , '",1+(3<<16),' ]
+		ifNotNil: [ ^ '&e.blockClosure,"' , selector , '",1+(3<<16),' ]]
+	
+
+]
+
+{ #category : #building }
+ASBlock >> zigNonLocalBlockString: stackVariables [
+
+	isNonLocalReturn := false.
+	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
+		| return |
+		"tests to see if there is a built in literal function"
+		return := (body at: 1) expression.
+		return isASLiteral ifTrue: [
+			| literal |
+			literal := return literal.
+			literal = true ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_true,' ].
+			literal = false ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_false,' ].
+			literal isNil ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_nil,' ].
+			literal = 1 ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_one,' ].
+			literal = -1 ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_minusOne,' ].
+			literal = 0 ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_zero,' ].
+			literal = 2 ifTrue: [
+				isNonLocalReturn := true.
+				^ '&e.pushNonlocalBlock_two,' ] ].
+		return isASSelf ifTrue: [
+			isNonLocalReturn := true.
+			^ '&e.pushNonlocalBlock_self,'
+			  , (stackVariables indexOf: 'self') asString , ',' ] ].
+
+]
+
+{ #category : #building }
+ASBlock >> zigPushBlockString: syms and: stackVariables [
+
+	isNonLocalReturn ifTrue: [ ^ self zigNonLocalBlockString: stackVariables ].
+
+	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
+]
+
 { #category : #building }
 ASBlock >> zigString: syms and: stackVariables [
-	^ '&e.pushLocal,', (stackVariables indexOf: selector) asString, ','
+
+	isNonLocalReturn ifTrue: [ ^self zigNonLocalBlockString: stackVariables  ].
+
+	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
 ]

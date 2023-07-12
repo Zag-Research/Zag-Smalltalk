@@ -123,9 +123,11 @@ ASSend >> zigString: syms and: stackVariables [
 			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
 	zigString := zigString , (syms
 		              at: selector
-		              ifPresent: [ :sym | '&e.send, ' , sym , ',' ]
+		              ifPresent: [ :sym |
+			              '&e.send' , selector numArgs asString , ', ' , sym
+			              , ',' ]
 		              ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
 			              self halt.
-								'&e.send, ' , selector , ',' ]).
+			              '&e.send, ' , selector , ',' ]).
 	^ zigString
 ]

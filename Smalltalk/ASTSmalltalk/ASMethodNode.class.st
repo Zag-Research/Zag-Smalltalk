@@ -7,7 +7,6 @@ Class {
 	#instVars : [
 		'selector',
 		'class',
-		'isRecursive',
 		'pragmas',
 		'blocks'
 	],
@@ -199,11 +198,12 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
 
+	"set the selector for each block that needs a closure and add it to the stack variables"
 	self blocks ifNotEmpty: [
 		blocks doWithIndex: [ :block :index |
 			block selector: selector , ':' , index asString.
-			stackVariables add: block selector asZigString.
-			block assignments] ].
+			stackVariables add: block selector asZigString
+			"block assignments" ] ].
 
 	stackVariables addAll: (locals collect: [ :local | local name ]).
 	"capture the size of the stack before arguments are added"
@@ -213,7 +213,6 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	stackVariables addLast: #self.
 
 	aStream cr.
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << self nameSpace << ' ='.
 	aStream cr.
 	aStream tab.
@@ -244,10 +243,9 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	"ouput any blocks"
+	"ouput any block closure"
 	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index |
-			aStream << (block createString: stackVariables) ] ].
+		blocks doWithIndex: [ :block :index | block isNonLocalReturn ifFalse: [ 	aStream << (block zigClosureString: stackVariables) ] ] ].
 
 
 	body do: [ :asStatement |
@@ -261,7 +259,6 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr.
-	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
 
 	"ouput compile methods for the blocks"
 	self blocks ifNotEmpty: [
