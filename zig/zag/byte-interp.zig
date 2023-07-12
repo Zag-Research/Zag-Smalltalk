@@ -14,11 +14,11 @@ const HeapPtr = heap.HeapPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
-const sym = @import("symbol.zig").symbols;
-const uniqueSymbol = object.uniqueSymbol;
+const Sym = @import("symbol.zig").symbols;
+const indexSymbol = object.indexSymbol;
 const tailCall: std.builtin.CallModifier = .always_tail;
 const print = std.debug.print;
-const MethodReturns = void;
+const MethodReturns = [*]Object;
 const execute = @import("execute.zig");
 const TestExecution = execute.TestExecution;
 const CompiledMethodPtr = *CompiledMethod;
@@ -151,23 +151,23 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushTemp => {
                         sp -= 1;
-                        sp[0] = context.getTemp(pc[0].u() - 1);
+                        sp[0] = context.getLocal(pc[0].u() - 1);
                         pc += 1;
                         continue :interp;
                     },
                     .pushTemp1 => {
                         sp -= 1;
-                        sp[0] = context.getTemp(0);
+                        sp[0] = context.getLocal(0);
                         continue :interp;
                     },
                     .popIntoTemp => {
-                        context.setTemp(pc[0].u(), sp[0]);
+                        context.setLocal(pc[0].u(), sp[0]);
                         sp += 1;
                         pc += 1;
                         continue :interp;
                     },
                     .popIntoTemp1 => {
-                        context.setTemp(0, sp[0]);
+                        context.setLocal(0, sp[0]);
                         sp += 1;
                         continue :interp;
                     },
@@ -287,6 +287,51 @@ fn countNonLabels(comptime tup: anytype) usize {
     }
     return n;
 }
+pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
+    const codeSize = counts.codes;
+    const refsSize = counts.refs;
+    return extern struct { // structure must exactly match CompiledMethod
+        header: heap.HeapObject,
+        stackStructure: Object,
+        selector: Object,
+        interpreter: Code,
+        code: [codeSize]ByteCode,
+        references: [refsSize]Object,
+        footer: heap.HeapObject,
+        const Self = @This();
+        pub fn init(name: Object, locals: u16, maxStack: u16) Self {
+            const footer = heap.HeapObject.calcHeapObject(@sizeOf(Self)/8, object.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+            const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8);
+            //            @compileLog(codeSize,refsSize);
+            //            trace("\nfooter={}",.{footer});
+            return .{
+                .header = header,
+                .selector = name,
+                .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
+                .interpreter = Code.prim(ByteCode.interpret),
+                .code = undefined,
+                .references = [_]Object{object.NotAnObject} ** refsSize,
+                .footer = footer,
+            };
+        }
+        pub fn findObject(self: *Self, search: Object) usize {
+            var index = self.references.len - 1;
+            while (index >= 0) : (index -= 1) {
+                const v = self.references[index];
+                if (search.equals(v))
+                    return index;
+                if (object.NotAnObject.equals(v)) {
+                    self.references[index] = search;
+                    return index;
+                }
+            }
+            unreachable;
+        }
+        pub fn asCompileTimeMethod(self: *Self) *CompileTimeMethod {
+            return @as(*CompileTimeMethod,@ptrCast(self));
+        }
+    };
+}
 fn convertCountSizes(comptime counts: execute.CountSizes) execute.CountSizes {
     return .{
         .codes = (counts.codes + 7) / 8,
@@ -294,22 +339,17 @@ fn convertCountSizes(comptime counts: execute.CountSizes) execute.CountSizes {
         .objects = 0,
     };
 }
-pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(convertCountSizes(execute.countNonLabels(tup))) {
+pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeByteCodeMethod(convertCountSizes(execute.countNonLabels(tup))) {
     @setEvalBranchQuota(20000);
     const counts = comptime execute.countNonLabels(tup);
-    const methodType = CompileTimeMethod(convertCountSizes(counts));
+    const methodType = CompileTimeByteCodeMethod(convertCountSizes(counts));
     var method = methodType.init(name, locals, maxStack);
-    method.code[0] = Code.prim(ByteCode.interpret);
-    const code = @as([*]ByteCode, @ptrFromInt(@intFromPtr(&method.code[1])));
+    const code = @as([*]ByteCode, @ptrCast(&method.code[0]));
     comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object => {
                 code[n] = ByteCode.uint(@as(u8, @intCast(method.findObject(field))));
-                n += 1;
-            },
-            @TypeOf(null) => {
-                code[n] = ByteCode.int(0);
                 n += 1;
             },
             comptime_int => {
@@ -372,8 +412,8 @@ pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, compti
 const b = ByteCode;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    const mref = comptime uniqueSymbol(42);
-    var m = compileByteCodeMethod(Nil, 0, 0, .{ ":abc", b.return_tos, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, mref, Nil });
+    const mref = comptime indexSymbol(42);
+    var m = compileByteCodeMethod(Sym.value, 0, 0, .{ ":abc", b.return_tos, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, mref, Nil });
     //    const mcmp = m.asCompiledMethodPtr();
     //    m.update(mref,mcmp);
     var t = m.code[0..];
@@ -394,15 +434,15 @@ test "compiling method" {
     try expectEqual(t[9].o(), Nil);
 }
 pub const TestByteCodeExecution = TestExecution(ByteCode, CompiledMethod);
-test "simple return via TestByteCodeExecution" {
+test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(sym.yourself, 0, 0, .{
+    var method = compileByteCodeMethod(Sym.yourself, 0, 0, .{
         b.noop,
         b.pushLiteral,
         comptime Object.from(42),
         b.returnNoContext,
     });
-    var te = TestByteCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
@@ -412,9 +452,9 @@ test "simple return via TestByteCodeExecution" {
     try expectEqual(result[1], Nil);
     try expectEqual(result[2], True);
 }
-test "context return via TestByteCodeExecution" {
+test "context return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(sym.@"at:", 0, 0, .{
+    var method = compileByteCodeMethod(Sym.@"at:", 0, 0, .{
         b.noop,
         b.pushContext,
         "^",
@@ -422,7 +462,7 @@ test "context return via TestByteCodeExecution" {
         comptime Object.from(42),
         b.returnWithContext,
     });
-    var te = TestByteCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
@@ -430,9 +470,9 @@ test "context return via TestByteCodeExecution" {
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
-test "context returnTop via TestByteCodeExecution" {
+test "context returnTop via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(sym.yourself, 0, 0, .{
+    var method = compileByteCodeMethod(Sym.yourself, 0, 0, .{
         b.noop,
         b.pushContext,
         "^",
@@ -440,7 +480,7 @@ test "context returnTop via TestByteCodeExecution" {
         comptime Object.from(42),
         b.returnTop,
     });
-    var te = TestByteCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
@@ -450,7 +490,7 @@ test "context returnTop via TestByteCodeExecution" {
 }
 test "simple executable" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileByteCodeMethod(sym.yourself, 0, 1, .{
+    var method = compileByteCodeMethod(Sym.yourself, 0, 1, .{
         b.pushContext,            "^",
         ":label1",                b.pushLiteral,
         comptime Object.from(42), b.popIntoTemp,
@@ -465,7 +505,7 @@ test "simple executable" {
         "label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestByteCodeExecution.new();
+    var te = TestExecution.new();
     te.init();
     const result = te.run(objs[0..], method.asCompiledMethodPtr());
     std.debug.print("result = {any}\n", .{result});

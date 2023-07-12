@@ -40,7 +40,7 @@ const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
-const callsToFib40 = 204668309;
+const callsToFib40 = 204_668_309;
 pub fn fibNative(self: i64) i64 {
     // count += 1;
     if (self <= 2) return 1;
@@ -234,53 +234,8 @@ fn timeCPS(n: i64) void {
     _ = te.run(objs[0..], method.asCompiledMethodPtr());
 }
 const b = @import("zag/byte-interp.zig").ByteCode;
-// test "fibByte" {
-//     var fibByte =
-//         compileByteCodeMethod(Sym.value,0,0,.{
-//             ":recurse",
-//             b.dup,
-//             b.pushLiteral, two,
-//             b.p5,"label1",
-//             b.primFailure,
-//             ":label1",
-//             b.ifFalse,"label3",
-//             b.drop,
-//             b.pushLiteral, one,
-//             b.returnNoContext,
-//             ":label3",
-//             b.pushContext,"^",
-//             b.pushTemp1,
-//             b.pushLiteral, one,
-//             b.p2, "label4",
-//             b.primFailure,
-//             ":label4",
-//             b.callLocal, "recurse",
-//             b.pushTemp1,
-//             b.pushLiteral, two,
-//             b.p2,"label5",
-//             b.primFailure,
-//             ":label5",
-//             b.callLocal, "recurse",
-//             b.p1,"label6",
-//             b.primFailure,
-//             ":label6",
-//             b.returnTop,0,
-//     });
-//     const method = fibByte.asCompiledByteCodeMethodPtr();
-//     var n:i32 = 1;
-//     while (n<=testReps) : (n += 1) {
-//         var objs = [_]Object{Object.from(n)};
-//         var te =  TestExecution.new();
-//         te.init();
-//         const result = te.run(objs[0..],method);
-//         std.debug.print("fib({}) = {any}\n",.{n,result});
-//         try std.testing.expectEqual(result.len,1);
-//         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
-//     }
-// }
-fn timeByte(n: i64) void {
-    var fibByte =
-        compileByteCodeMethod(Sym.value, 0, 0, .{
+var fibByte =
+    compileByteCodeMethod(Sym.value, 0, 0, .{
         ":recurse",
         b.dup,
         b.pushLiteral,
@@ -322,7 +277,21 @@ fn timeByte(n: i64) void {
         ":label6",
         b.returnTop,
         0,
-    });
+});
+ test "fibByte" {
+    const method = fibByte.asCompiledByteCodeMethodPtr();
+    var n:i32 = 1;
+    while (n<=testReps) : (n += 1) {
+        var objs = [_]Object{Object.from(n)};
+        var te =  TestExecution.new();
+        te.init();
+        const result = te.run(objs[0..],method);
+        std.debug.print("fib({}) = {any}\n",.{n,result});
+        try std.testing.expectEqual(result.len,1);
+        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+    }
+}
+fn timeByte(n: i64) void {
     fibByte.setReferences(&[0]Object{});
     const method = fibByte.asCompiledMethodPtr();
     var objs = [_]Object{Object.from(n)};

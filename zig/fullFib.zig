@@ -38,30 +38,26 @@ const Sym = struct {
 };
 var sym: Sym = undefined;
 var @"Integer>>fibonacci" =
-    compileMethod(Sym.i_1, 1, 2, .{ // self-1 block-1
-    &e.verifySelector,
-    &e.pushContext,
-    "^",
-    // define all blocks here
-    &e.pushNonlocalBlock_one, // [^ 1]
-    &e.popLocal, 0, // block reference
-    // all blocks defined by now
-    &e.pushLocal,   1, // self
-    &e.pushLiteral, Object.from(2),
-    &e.send1,       Sym.@"<=",
-    &e.pushLocal,   0,
-    &e.send1,       Sym.@"ifTrue:",
-    &e.pushLocal,   1, // self
-    &e.pushLiteral, Object.from(1),
-    &e.send1,       Sym.@"-",
-    &e.send0,       Sym.i_1,
-    &e.pushLocal,   1, // self
-    &e.pushLiteral, Object.from(2),
-    &e.send1,       Sym.@"-",
-    &e.send1,       Sym.i_1,
-
-    &e.send1,       Sym.@"+",
-    &e.returnTop,
+    compileMethod(Sym.i_1, 0, 2, .{ // self-0
+        &e.verifySelector,
+        &e.pushContext,
+        "^",
+        &e.pushLocal,   0, // self
+        &e.pushLiteral, Object.from(2),
+        &e.send1,       Sym.@"<=",
+        &e.pushNonlocalBlock_one, // [^ 1]
+        &e.send1,       Sym.@"ifTrue:",
+        &e.pop,
+        &e.pushLocal,   0, // self
+        &e.pushLiteral, Object.from(1),
+        &e.send1,       Sym.@"-",
+        &e.send0,       Sym.i_1,
+        &e.pushLocal,   0, // self
+        &e.pushLiteral, Object.from(2),
+        &e.send1,       Sym.@"-",
+        &e.send1,       Sym.i_1,
+        &e.send1,       Sym.@"+",
+        &e.returnTop,
 });
 fn initSmalltalk() void {
     const empty = &[0]Object{};

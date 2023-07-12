@@ -170,49 +170,49 @@ test "intOf" {
 }
 pub const CountSizes = struct { codes: usize, refs: usize = 0, objects: usize = 0 };
 pub fn countNonLabels(comptime tup: anytype) CountSizes {
-    comptime var n = 0;
+    comptime var c = 0;
     comptime var r = 0;
     comptime var o = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object => {
-                n += 1;
+                c += 1;
                 if (!comptime field.isLiteral()) @compileError("use reference for non-literal object");
                 o += 1;
             },
             @TypeOf(null) => {
-                n += 1;
+                c += 1;
                 o += 1;
             },
             comptime_int, comptime_float => {
-                n += 1;
+                c += 1;
             },
             else => switch (@typeInfo(@TypeOf(field))) {
                 .Pointer => |pointer| {
                     switch (@typeInfo(pointer.child)) {
-                        .Fn => n += 1,
+                        .Fn => c += 1,
                         else => {
                             if (@hasField(pointer.child, "len"))
                                 switch (field[0]) {
                                     ':' => {},
                                     '0'...'9' => {
                                         r = comptime @max(r, intOf(field[0..]) + 1);
-                                        n += 1;
+                                        c += 1;
                                     },
-                                    else => n += 1,
+                                    else => c += 1,
                                 }
                             else
-                                n += 1;
+                                c += 1;
                         },
                     }
                 },
                 else => {
-                    n += 1;
+                    c += 1;
                 },
             },
         }
     }
-    return .{ .codes = n, .refs = r, .objects = o };
+    return .{ .codes = c, .refs = r, .objects = o };
 }
 test "countNonLabels" {
     const expectEqual = std.testing.expectEqual;
@@ -613,6 +613,11 @@ pub const controlPrimitives = struct {
         context.setLocal(0, sp[0]);
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
+    pub fn storeLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        trace("\nstoreIntoLocal: {} {}", .{ pc[0].uint, sp[0] });
+        context.setLocal(pc[0].uint, sp[0]);
+        return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector });
+    }
     pub fn fallback(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const arity = selector.numArgs();
         const newPc = lookup(selector, sp[arity].get_class());
@@ -635,9 +640,10 @@ pub const controlPrimitives = struct {
     }
     pub fn perform(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = sp[0];
-        if (selector.numArgs() != 0) @panic("wrong number of args");
-        const newPc = lookup(selector, sp[1].get_class());
-        context.setTPc(pc + 1);
+        const numArgs = selector.numArgs();
+        if (numArgs != 0) @panic("wrong number of args");
+        const newPc = lookup(selector, sp[numArgs+1].get_class());
+        context.setReturn(pc);
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp + 1, process, context, selector });
     }
     pub fn performWith(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
