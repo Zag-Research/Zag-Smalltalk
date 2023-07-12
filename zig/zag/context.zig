@@ -63,6 +63,7 @@ pub const Context = struct {
     }
     pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object, ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
+        trace("\npop: {x} {} {}", .{ @intFromPtr(self.asObjectPtr()), self.header, wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asObjectPtr() + wordsToDiscard, .ctxt = self.previous() };
         _ = process;
@@ -75,12 +76,12 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub inline fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
+    pub  fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr { //INLINE
         if (@intFromPtr(self) == 0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable) + maxStackNeeded;
-        trace("\npush: {} {} {}", .{ baseSize, locals, maxStackNeeded });
-        trace("\npush: sp={*} newSp={*}", .{ sp, newSp });
+        trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
+        trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
         const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
         ctxt.prevCtxt = contextMutable;
         ctxt.trapContextNumber = process.trapContextNumber;
@@ -92,6 +93,7 @@ pub const Context = struct {
             }
         }
         ctxt.header = HeapObject.partialHeaderOnStack(baseSize + selfOffset);
+        trace("\npush: {}",.{ ctxt.header });
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }

@@ -20,8 +20,8 @@ const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
-const sym = @import("symbol.zig").symbols;
-pub const tailCall: std.builtin.CallModifier = .never_inline;//.always_tail;
+const Sym = @import("symbol.zig").symbols;
+pub const tailCall: std.builtin.CallModifier = .always_tail;//.never_inline;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
 
@@ -283,8 +283,10 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
             for (replacements, 1..) |replacement, index| {
                 const match = indexSymbol(@as(u24, @truncate(index)));
-                if (self.selector.equals(match))
+                if (self.selector.equals(match)) {
+                    self.stackStructure.l2 -= match.numArgs()-replacement.numArgs();
                     self.selector = replacement;
+                }
                 for (&self.code) |*c| {
                     if (c.object.equals(match))
                         c.* = Code.object(replacement);
@@ -433,7 +435,7 @@ const stdout = std.io.getStdOut().writer();
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(sym.yourself, 0, 0, .{ ":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null });
+    var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.dnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null });
     const mcmp = m.asCompiledMethodPtr();
     m.setLiterals(Object.empty, &[_]Object{Object.from(mcmp)});
     var t = m.code[0..];
@@ -622,7 +624,7 @@ pub const controlPrimitives = struct {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        std.debug.print("\nin send0 {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
+        trace("\nin send0 {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
@@ -669,7 +671,7 @@ pub const controlPrimitives = struct {
         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
         const newSp = ctxt.asObjectPtr();
         trace("\npC: sp={*} newSp={*} {} {*}", .{ sp, newSp, pc[0].uint, method });
-        trace("\npushContext: {any} {} {}", .{ process.getStack(sp), locals, method.selector });
+        trace("\npushContext: {any} {} {} {}", .{ process.getStack(sp), locals, method.selector, selfOffset });
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, ctxt, selector });
     }
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -682,17 +684,17 @@ pub const controlPrimitives = struct {
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
     pub fn returnTop(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\nreturnTop: {any} -> ", .{context.stack(sp, process)});
+        trace("\nreturnTop: {any} ", .{context.stack(sp, process)});
         const top = sp[0];
         var result = context.pop(process);
         const newSp = result.sp;
         newSp[0] = top;
         var callerContext = result.ctxt;
-//        trace("{any}", .{callerContext.stack(newSp, process)});
+        trace("-> {any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
     pub fn returnNoContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        trace("\nreturnNoContext: N={*} T={*} {any}", .{ context.getNPc(), context.getTPc(), context.stack(sp, process) });
+        trace("\nreturnNoContext: {} {any} N={*} T={*}", .{ context.method.selector, context.stack(sp, process), context.getNPc(), context.getTPc() });
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector });
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -714,18 +716,21 @@ pub const TestExecution = struct {
     }
     pub fn init(self: *Self) void {
         self.process.init();
+        self.ctxt.method = &yourself;
         self.sp = self.process.endOfStack();
     }
     pub fn initStack(self: *Self, source: []const Object) void {
         self.sp = self.process.endOfStack() - source.len;
         for (source, self.sp[0..source.len]) |src, *dst|
             dst.* = src;
+        trace("\ninitial stack: {x} {x}",.{@intFromPtr(self.sp),@intFromPtr(self.process.endOfStack())});
     }
     pub fn stack(self: *Self, sp: [*]Object) []Object {
         self.sp = sp;
         trace("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
+    var yourself = CompiledMethod.init(Sym.yourself,Code.end);
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
@@ -738,7 +743,7 @@ const p = struct {
 };
 test "simple return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself, 0, 0, .{
+    var method = compileMethod(Sym.yourself, 0, 0, .{
         &p.pushLiteral,     comptime Object.from(42),
         &p.returnNoContext,
     });
@@ -754,7 +759,7 @@ test "simple return via TestExecution" {
 }
 test "context return via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.@"at:", 0, 0, .{
+    var method = compileMethod(Sym.@"at:", 0, 0, .{
         &p.pushContext,       "^",
         &p.pushLiteral,       comptime Object.from(42),
         &p.returnWithContext,
@@ -770,7 +775,7 @@ test "context return via TestExecution" {
 }
 test "context returnTop via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself, 3, 0, .{
+    var method = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
@@ -785,13 +790,13 @@ test "context returnTop via TestExecution" {
 }
 test "context returnTop twice via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method1 = compileMethod(sym.yourself, 3, 0, .{
+    var method1 = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(1),
         &p.call,        "0Obj",
         &p.returnTop,
     });
-    var method2 = compileMethod(sym.name, 3, 0, .{
+    var method2 = compileMethod(Sym.name, 3, 0, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
@@ -807,7 +812,7 @@ test "context returnTop twice via TestExecution" {
 }
 test "context returnTop with indirect via TestExecution" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself, 3, 0, .{
+    var method = compileMethod(Sym.yourself, 3, 0, .{
         //        &p.noop,
         &p.pushContext,
         "^",
@@ -826,7 +831,7 @@ test "context returnTop with indirect via TestExecution" {
 }
 test "simple executable" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(sym.yourself, 1, 0, .{
+    var method = compileMethod(Sym.yourself, 1, 0, .{
         &p.pushContext,           "^",
         ":label1",                &p.pushLiteral,
         comptime Object.from(42), &p.popLocal,
