@@ -21,7 +21,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
-pub const tailCall: std.builtin.CallModifier = .always_tail;//.never_inline;
+pub const tailCall: std.builtin.CallModifier = .never_inline;// .always_tail
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
 
@@ -465,9 +465,6 @@ pub const controlPrimitives = struct {
         _ = sp;
         _ = needed;
     }
-    // pub fn noop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-    //     return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-    // }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\nverifySelector: {} {} {*}", .{ method.selector, selector, pc });
@@ -617,6 +614,10 @@ pub const controlPrimitives = struct {
         trace("\nstoreIntoLocal: {} {}", .{ pc[0].uint, sp[0] });
         context.setLocal(pc[0].uint, sp[0]);
         return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector });
+    }
+    pub fn primitiveFailed(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        _ = .{ pc, sp, process, context, selector };
+        @panic("primitiveFailed");
     }
     pub fn fallback(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const arity = selector.numArgs();

@@ -198,24 +198,24 @@ pub const primitives = struct {
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
     }
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // SmallInteger>>#-
-        if (Sym.@"-".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"-".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = inlines.p2(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        if (Sym.@"at:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"at:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // SmallInteger>>#<=
-        if (Sym.@"<=".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"<=".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         trace("p5: {any}\n", .{context.stack(sp + 1, process)});
-        sp[1] = Object.from(inlines.p5(sp[1], sp[0])) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+        sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch
+                                return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector }));
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
     }
     pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // SmallInteger>>#*
-        if (Sym.@"*".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.@"*".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
         sp[1] = inlines.p9(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });

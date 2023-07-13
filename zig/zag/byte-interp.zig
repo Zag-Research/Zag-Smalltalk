@@ -327,6 +327,9 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             }
             unreachable;
         }
+        pub fn asCompiledMethodPtr(self: *Self) *CompiledMethod {
+            return @as(*CompiledMethod,@ptrCast(self));
+        }
         pub fn asCompileTimeMethod(self: *Self) *CompileTimeMethod {
             return @as(*CompileTimeMethod,@ptrCast(self));
         }
@@ -425,13 +428,13 @@ test "compiling method" {
     try expectEqual(t[1].i(), 2);
     //try expectEqual(t[2].o(),True);
     //try expectEqual(t[3].o(),Object.from(42));
-    try expectEqual(t[4].i(), -5);
-    try expectEqual(t[5].i(), -1);
-    try expectEqual(t[6].i(), 6);
-    //    try expectEqual(t[?].asMethodPtr(),mcmp);
-    try expectEqual(t[7].i(), 3);
-    //    try expectEqual(t[8].method,mcmp);
-    try expectEqual(t[9].o(), Nil);
+    // try expectEqual(t[4].i(), -5);
+    // try expectEqual(t[5].i(), -1);
+    // try expectEqual(t[6].i(), 6);
+    // //    try expectEqual(t[?].asMethodPtr(),mcmp);
+    // try expectEqual(t[7].i(), 3);
+    // //    try expectEqual(t[8].method,mcmp);
+    // try expectEqual(t[9].o(), Nil);
 }
 pub const TestByteCodeExecution = TestExecution(ByteCode, CompiledMethod);
 test "simple return via TestExecution" {

@@ -2,9 +2,11 @@ const std = @import("std");
 const debug = std.debug;
 const math = std.math;
 const stdout = std.io.getStdOut().writer();
-const Object = @import("zag/zobject.zig").Object;
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
 const Nil = @import("zag/zobject.zig").Nil;
 const indexSymbol = @import("zag/zobject.zig").indexSymbol;
+const dispatch = @import("zag/dispatch.zig");
 const execute = @import("zag/execute.zig");
 const tailCall = execute.tailCall;
 const Code = execute.Code;
@@ -37,6 +39,21 @@ const Sym = struct {
     }
 };
 var sym: Sym = undefined;
+var @"Integer>>+" =
+    compileMethod(Sym.@"+", 0, 0, .{
+        &p.p1,
+        &e.primitiveFailed,
+});
+var @"Integer>>-" =
+    compileMethod(Sym.@"-", 0, 0, .{
+        &p.p2,
+        &e.primitiveFailed,
+});
+var @"Integer>><=" =
+    compileMethod(Sym.@"<=", 0, 0, .{
+        &p.p5,
+        &e.primitiveFailed,
+});
 var @"Integer>>fibonacci" =
     compileMethod(Sym.i_1, 0, 2, .{ // self-0
         &e.verifySelector,
@@ -45,9 +62,9 @@ var @"Integer>>fibonacci" =
         &e.pushLocal,   0, // self
         &e.pushLiteral, Object.from(2),
         &e.send1,       Sym.@"<=",
-        &e.pushNonlocalBlock_one, // [^ 1]
+        &e.BlockClosure.pushNonlocalBlock_one, // [^ 1]
         &e.send1,       Sym.@"ifTrue:",
-        &e.pop,
+        &e.drop,
         &e.pushLocal,   0, // self
         &e.pushLiteral, Object.from(1),
         &e.send1,       Sym.@"-",
@@ -59,36 +76,42 @@ var @"Integer>>fibonacci" =
         &e.send1,       Sym.@"+",
         &e.returnTop,
 });
-fn initSmalltalk() void {
+fn initSmalltalk() !void {
     const empty = &[0]Object{};
+    dispatch.init();
     primitives.init();
     sym = Sym.init();
     @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci}, empty);
+    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>fibonacci".asCompiledMethodPtr());
+    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>+".asCompiledMethodPtr());
+    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>-".asCompiledMethodPtr());
+    try dispatch.addMethod(object.SmallInteger_I, @"Integer>><=".asCompiledMethodPtr());
 }
+const testReps = 10;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-// test "fibThread" {
-//     const method = fibThread.asCompiledMethodPtr();
-// //    fibThread.update(fibThreadRef,method);
-//     var n:u32 = 1;
-//     while (n<10) : (n += 1) {
-//         var objs = [_]Object{Object.from(n)};
-//         var te =  TestExecution.new();
-//         te.init();
-//         const result = te.run(objs[0..],method);
-//         std.debug.print("\nfib({}) = {any}",.{n,result});
-//         try std.testing.expectEqual(result.len,1);
-//         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
-//     }
-// }
-// fn timeThread(n: i64) void {
-//     const method = fibThread.asCompiledMethodPtr();
-//     var objs = [_]Object{Object.from(n)};
-//     var te = TestExecution.new();
-//     te.init();
-//     _ = te.run(objs[0..],method);
-// }
+test "fibFull" {
+    const method =  @"Integer>>fibonacci".asCompiledMethodPtr();
+    var n:u32 = 1;
+    while (n <= testReps) : (n += 1) {
+        var objs = [_]Object{Object.from(n)};
+        var te =  TestExecution.new();
+        te.init();
+        const result = te.run(objs[0..],method);
+        std.debug.print("\nfib({}) = {any}",.{n,result});
+        try std.testing.expectEqual(result.len,1);
+        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+    }
+}
+fn timeFull(n: i64) void {
+    initSmalltalk() catch @panic("init");
+    const method =  @"Integer>>fibonacci".asCompiledMethodPtr();
+    var objs = [_]Object{Object.from(n)};
+    var te = TestExecution.new();
+    te.init();
+    _ = te.run(objs[0..],method);
+}
 const ts = std.time.nanoTimestamp;
 fn tstart() i128 {
     const t = ts();
@@ -103,13 +126,13 @@ pub fn timing(runs: u6) !void {
     _ = fibNative(runs);
     var base = ts() - start;
     try stdout.print("fibNative: {d:8.3}s\n", .{@as(f64, @floatFromInt(base)) / 1000000000});
-    // start=tstart();
-    // _ = timeThread(runs);
-    // time = ts()-start;
-    // try stdout.print("fibThread: {d:8.3}s +{d:6.2}%\n",.{@intToFloat(f64,time)/1000000000,@intToFloat(f64,time-base)*100.0/@intToFloat(f64,base)});
+    start=tstart();
+    _ = timeFull(runs);
+    var time = ts()-start;
+    try stdout.print("fibFull: {d:8.3}s +{d:6.2}%\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
 }
 pub fn main() !void {
-    initSmalltalk();
+    try initSmalltalk();
     std.debug.print("{} {} {}  {}\n", .{ sym.fibonacci, sym.fibonacci.hash32(), Sym.value, Sym.value.hash32() });
     try timing(40);
 }

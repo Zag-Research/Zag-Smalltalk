@@ -205,28 +205,28 @@ pub const embedded = struct {
         return newSp;
     }
     pub fn pushNonlocalBlock_self(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .self), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .self), process, context, selector });
     }
     pub fn pushNonlocalBlock_true(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .true_), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .true_), process, context, selector });
     }
     pub fn pushNonlocalBlock_false(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .false), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .false), process, context, selector });
     }
     pub fn pushNonlocalBlock_nil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .nil), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .nil), process, context, selector });
     }
     pub fn pushNonlocalBlock_minusOne(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .minusOne), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .minusOne), process, context, selector });
     }
     pub fn pushNonlocalBlock_zero(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .zero), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .zero), process, context, selector });
     }
     pub fn pushNonlocalBlock_one(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .one), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .one), process, context, selector });
     }
     pub fn pushNonlocalBlock_two(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, pc[0].u(), .two), process, context, selector });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .two), process, context, selector });
     }
 };
 fn testImmutableClosure(process: *Process, value: Object) !object.Group {
