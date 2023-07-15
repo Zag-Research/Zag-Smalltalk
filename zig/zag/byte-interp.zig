@@ -300,7 +300,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         footer: heap.HeapObject,
         const Self = @This();
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = heap.HeapObject.calcHeapObject(@sizeOf(Self)/8, object.CompiledMethod_I, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @sizeOf(Self)/8, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
             const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8);
             //            @compileLog(codeSize,refsSize);
             //            trace("\nfooter={}",.{footer});

@@ -227,7 +227,7 @@ fn timeDispatch(n: i64) void {
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
-    dispatch.addMethod(object.SmallInteger_I, fibonacci) catch @panic("add failed");
+    dispatch.addMethod(object.ClassIndex.SmallInteger, fibonacci) catch @panic("add failed");
     var objs = [_]Object{Object.from(n)};
     var te = TestExecution.new();
     te.init();
@@ -334,11 +334,11 @@ pub fn timing(runs: u6) !void {
     _ = timeDispatch(runs);
     time = ts() - start;
     try stdout.print("fibDispatch: {d:8.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    base = time;
-    start=tstart();
-    _ = timeByte(runs);
-    time = ts()-start;
-    try stdout.print("fibByte:   {d:8.3}s +{d:6.2}%\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
+    // base = time;
+    // start=tstart();
+    // _ = timeByte(runs);
+    // time = ts()-start;
+    // try stdout.print("fibByte:   {d:8.3}s +{d:6.2}%\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
 }
 pub fn main() !void {
     try timing(40);

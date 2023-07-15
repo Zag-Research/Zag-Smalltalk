@@ -467,8 +467,8 @@ test "compiling method" {
     try expectEqual(t[9].object, Nil);
     try expectEqual(t.len, 10);
 }
-pub const trace = std.debug.print;
-//pub inline fn trace(_: anytype, _: anytype) void {}
+//pub const trace = std.debug.print;
+pub inline fn trace(_: anytype, _: anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {
