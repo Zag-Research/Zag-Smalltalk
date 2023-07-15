@@ -4,6 +4,7 @@ const math = std.math;
 const stdout = std.io.getStdOut().writer();
 const object = @import("zag/zobject.zig");
 const Object = object.Object;
+const ClassIndex = object.ClassIndex;
 const Nil = @import("zag/zobject.zig").Nil;
 const indexSymbol = @import("zag/zobject.zig").indexSymbol;
 const dispatch = @import("zag/dispatch.zig");
@@ -81,17 +82,24 @@ fn initSmalltalk() !void {
     dispatch.init();
     primitives.init();
     sym = Sym.init();
+    @"Integer>>fibonacci".checkFooter();
     @"Integer>>fibonacci".setLiterals(&[_]Object{sym.fibonacci}, empty);
-    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>fibonacci".asCompiledMethodPtr());
-    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>+".asCompiledMethodPtr());
-    try dispatch.addMethod(object.SmallInteger_I, @"Integer>>-".asCompiledMethodPtr());
-    try dispatch.addMethod(object.SmallInteger_I, @"Integer>><=".asCompiledMethodPtr());
+    @"Integer>>fibonacci".checkFooter();
+    @"Integer>>+".checkFooter();
+    try dispatch.addMethod(ClassIndex.SmallInteger, @"Integer>>+".asCompiledMethodPtr());
+    try dispatch.addMethod(ClassIndex.SmallInteger, @"Integer>>-".asCompiledMethodPtr());
+    try dispatch.addMethod(ClassIndex.SmallInteger, @"Integer>><=".asCompiledMethodPtr());
+    @"Integer>>fibonacci".checkFooter();
+    try dispatch.addMethod(ClassIndex.SmallInteger, @"Integer>>fibonacci".asCompiledMethodPtr());
+    @"Integer>>fibonacci".checkFooter();
+    @"Integer>>fibonacci".asCompiledMethodPtr().checkFooter();
 }
 const testReps = 10;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
 test "fibFull" {
+    try initSmalltalk();
     const method =  @"Integer>>fibonacci".asCompiledMethodPtr();
     var n:u32 = 1;
     while (n <= testReps) : (n += 1) {

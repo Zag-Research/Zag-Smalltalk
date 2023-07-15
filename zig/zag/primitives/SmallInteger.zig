@@ -276,7 +276,7 @@ test "simple add with overflow" {
         &e.pushLiteral,     Sym.noFallback,
         &e.returnNoContext,
     });
-    try @import("../dispatch.zig").addMethod(object.SmallInteger_I, prog2.asCompiledMethodPtr());
+    try @import("../dispatch.zig").addMethod(object.ClassIndex.SmallInteger, prog2.asCompiledMethodPtr());
     const result = testExecute(prog.asCompiledMethodPtr());
     try expectEqual(result[0], Sym.noFallback);
 }

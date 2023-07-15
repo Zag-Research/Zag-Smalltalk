@@ -70,7 +70,7 @@ pub const inlines = struct {
         sp[0].tag = .heapClosure;
         sp[1] = value;
         sp[2] = Object.from(&valueClosureMethod);
-        sp[3] = heap.HeapObject.simpleStackObject(2, object.BlockClosure_I, sym.value.hash24()).o();
+        sp[3] = heap.HeapObject.simpleStackObject(object.ClassIndex.BlockClosure, 2, sym.value.hash24()).o();
         return sp;
     }
     var valueClosureMethod = CompiledMethod.init2(sym.value, pushValue, e.returnNoContext);
@@ -92,7 +92,7 @@ pub const inlines = struct {
         }
         for (sp[1..f]) |*op|
             op.* = Nil;
-        sp[fields + 1] = heap.HeapObject.simpleStackObject(fields, object.BlockClosure_I, block.selector.hash24()).o();
+        sp[fields + 1] = heap.HeapObject.simpleStackObject(object.BlockClosure_C, fields, block.selector.hash24()).o();
         return sp;
     }
     pub inline fn closureData(oldSp: [*]Object, process: *Process, fields: usize, contextMutable: *ContextPtr) [*]Object {
@@ -102,7 +102,7 @@ pub const inlines = struct {
         sp[1] = ptr;
         for (sp[2 .. fields + 2]) |*op|
             op.* = Nil;
-        sp[fields + 2] = heap.HeapObject.simpleStackObject(fields, object.ClosureData_I, 0).o();
+        sp[fields + 2] = heap.HeapObject.simpleStackObject(fields, object.ClosureData_C, 0).o();
         return sp;
     }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {

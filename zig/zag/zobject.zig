@@ -7,12 +7,11 @@ const heap = @import("heap.zig");
 const HeapObject = heap.HeapObject;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
-pub const ClassIndex = u16;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @as(Object, @bitCast(v));
 }
-inline fn oImm(c: Level2, h: u64) u64 {
+inline fn oImm(c: ClassIndex, h: u64) u64 {
     return o(.immediates) | @as(u64, @intFromEnum(c)) << 32 | h;
 }
 inline fn o(g: Group) u64 {
@@ -46,24 +45,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return of(mem.readIntLittle(T, val));
 }
 pub const compareObject = Object.compare;
-pub const Level2 = enum(ClassIndex) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
-pub const Object_I = @intFromEnum(Level2.Object);
-pub const SmallInteger_I = @intFromEnum(Level2.SmallInteger);
-pub const Float_I = @intFromEnum(Level2.Float);
-pub const False_I = @intFromEnum(Level2.False);
-pub const True_I = @intFromEnum(Level2.True);
-pub const UndefinedObject_I = @intFromEnum(Level2.UndefinedObject);
-pub const Symbol_I = @intFromEnum(Level2.Symbol);
-pub const Character_I = @intFromEnum(Level2.Character);
-pub const BlockClosure_I = @intFromEnum(Level2.BlockClosure);
-pub const Array_I = @intFromEnum(Level2.Array);
-pub const String_I = @intFromEnum(Level2.String);
-pub const SymbolTable_I = @intFromEnum(Level2.SymbolTable);
-pub const Method_I = @intFromEnum(Level2.Method);
-pub const CompiledMethod_I = @intFromEnum(Level2.CompiledMethod);
-pub const Dispatch_I = @intFromEnum(Level2.Dispatch);
-pub const ClosureData_I = @intFromEnum(Level2.ClosureData);
-pub const Context_I = @intFromEnum(Level2.Context);
+pub const ClassIndex = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
 pub const Group = enum(u16) {
     immediates = 0xfff0,
     smallInt,
@@ -88,14 +70,23 @@ pub const Group = enum(u16) {
 pub const Object = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
-    l2: ClassIndex,
+    classIndex: ClassIndex,
     tag: Group,
     pub const empty = &[0]Object{};
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
-        return cast(low32 | Group.immediates.base() | @as(u64, cls) << 32);
+        return cast(low32 | Group.immediates.base() | @as(u64, @intFromEnum(cls)) << 32);
     }
     pub inline fn makeGroup(grp: Group, low48: u48) Object {
         return cast(low48 | grp.base());
+    }
+    pub inline fn low16(self: Object) u16 {
+        return self.h0;
+    }
+    pub inline fn mid16(self: Object) u16 {
+        return self.h1;
+    }
+    pub inline fn high16(self: Object) u16 {
+        return @intFromEnum(self.classIndex);
     }
     pub inline fn cast(v: anytype) Object {
         return @as(Object, @bitCast(v));
@@ -318,11 +309,11 @@ pub const Object = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .heapClosure => BlockClosure_I,
-            .immediates => self.l2,
-            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else Object_I,
+            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .heapClosure => .BlockClosure,
+            .immediates => self.classIndex,
+            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
             .unused1 => unreachable,
-            else => |tag| if (tag.u() <= Group.immediates.u()) Float_I else SmallInteger_I,
+            else => |tag| if (tag.u() <= Group.immediates.u()) .Float else .SmallInteger,
         };
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
@@ -348,15 +339,15 @@ pub const Object = packed struct(u64) {
         _ = options;
 
         try switch (self.immediate_class()) {
-            Object_I => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
-            BlockClosure_I => writer.print("block:0x{x:>16}", .{self.u()}), //,as_pointer(x));
-            False_I => writer.print("false", .{}),
-            True_I => writer.print("true", .{}),
-            UndefinedObject_I => writer.print("nil", .{}),
-            Symbol_I => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
-            Character_I => writer.print("${c}", .{self.to(u8)}),
-            SmallInteger_I => writer.print("{d}", .{self.toInt()}),
-            Float_I => writer.print("{}", .{self.to(f64)}),
+            .Object => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
+            .BlockClosure => writer.print("block:0x{x:>16}", .{self.u()}), //,as_pointer(x));
+            .False => writer.print("false", .{}),
+            .True => writer.print("true", .{}),
+            .UndefinedObject => writer.print("nil", .{}),
+            .Symbol => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
+            .Character => writer.print("${c}", .{self.to(u8)}),
+            .SmallInteger => writer.print("{d}", .{self.toInt()}),
+            .Float => writer.print("{}", .{self.to(f64)}),
             else => {
                 try writer.print("0x{x:>16}", .{self.u()});
                 @panic("format for unknown class");
@@ -366,7 +357,7 @@ pub const Object = packed struct(u64) {
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object{ .tag = .smallInt0, .h0 = f0, .h1 = f1, .l2 = f2 };
+        return Object{ .tag = .smallInt0, .h0 = f0, .h1 = f1, .classIndex = @enumFromInt(f2) };
     }
 };
 
@@ -383,15 +374,15 @@ test "from conversion" {
     try ee(@as(u64, @bitCast(Object.packedInt(1, 2, 3))), u64_ZERO + 0x000300020001);
     try ee(@as(f64, @bitCast(Object.from(3.14))), 3.14);
     try ee(Object.from(42).u(), u64_ZERO +% 42);
-    try ee(Object.from(3.14).immediate_class(), Float_I);
+    try ee(Object.from(3.14).immediate_class(), .Float);
     try std.testing.expect(Object.from(3.14).isDouble());
-    try ee(Object.from(3).immediate_class(), SmallInteger_I);
+    try ee(Object.from(3).immediate_class(), .SmallInteger);
     try std.testing.expect(Object.from(3).isInt());
     try std.testing.expect(Object.from(false).isBool());
-    try ee(Object.from(false).immediate_class(), False_I);
-    try ee(Object.from(true).immediate_class(), True_I);
+    try ee(Object.from(false).immediate_class(), .False);
+    try ee(Object.from(true).immediate_class(), .True);
     try std.testing.expect(Object.from(true).isBool());
-    try ee(Object.from(null).immediate_class(), UndefinedObject_I);
+    try ee(Object.from(null).immediate_class(), .UndefinedObject);
     try std.testing.expect(Object.from(null).isNil());
 }
 test "to conversion" {
@@ -405,14 +396,14 @@ test "to conversion" {
 }
 test "immediate_class" {
     const ee = std.testing.expectEqual;
-    try ee(Object.from(3.14).immediate_class(), Float_I);
-    try ee(Object.from(42).immediate_class(), SmallInteger_I);
-    try ee(Object.from(true).immediate_class(), True_I);
-    try ee(Object.from(false).immediate_class(), False_I);
-    try ee(Nil.immediate_class(), UndefinedObject_I);
-    try ee(True.immediate_class(), True_I);
-    try ee(False.immediate_class(), False_I);
-    try ee(symbol.symbols.yourself.immediate_class(), Symbol_I);
+    try ee(Object.from(3.14).immediate_class(), .Float);
+    try ee(Object.from(42).immediate_class(), .SmallInteger);
+    try ee(Object.from(true).immediate_class(), .True);
+    try ee(Object.from(false).immediate_class(), .False);
+    try ee(Nil.immediate_class(), .UndefinedObject);
+    try ee(True.immediate_class(), .True);
+    try ee(False.immediate_class(), .False);
+    try ee(symbol.symbols.yourself.immediate_class(), .Symbol);
 }
 test "printing" {
     var buf: [255]u8 = undefined;

@@ -152,7 +152,7 @@ pub const AllocationInfo = struct {
     size: u12,
     sizeField: u8 = 0,
     const Self = @This();
-    pub inline fn moreThanOneWord(self: Self) bool {
+    pub inline fn requiresIndex(self: Self) bool {
         return self.sizeField > 0;
     }
     pub inline fn objectSize(self: Self, maxLength: u12) !u12 {
@@ -443,7 +443,7 @@ pub const HeapObjectSlice = []align(@alignOf(u64)) HeapObject;
 pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct(u64) {
-    classIndex: u16,
+    classIndex: ClassIndex,
     hash: u24,
     objectFormat: Format,
     age: Age,
@@ -459,23 +459,29 @@ pub const HeapObject = packed struct(u64) {
     pub fn makeIterator(self: HeapObjectConstPtr) HeapObjectPtrIterator {
         return self.objectFormat.iterator()(self);
     }
-    const partialHeader = @as(u64, @bitCast(HeapObject{ .classIndex = 0, .hash = 0, .objectFormat = .header, .age = .onStack, .length = 0 }));
+    const partialHeader = @as(u64, @bitCast(HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .objectFormat = .header, .age = .onStack, .length = 0 }));
     pub inline fn partialHeaderOnStack(selfOffset: u16) HeapObject {
         return @as(HeapObject, @bitCast(partialHeader | @as(u64, selfOffset) << 16));
     }
     pub inline fn staticHeaderWithLength(size: u12) HeapObject {
-        return HeapObject{ .classIndex = 0, .hash = 0, .objectFormat = .header, .age = .static, .length = size };
+        return HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .objectFormat = .header, .age = .static, .length = size };
     }
     pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
         return HeapObject{ .classIndex = classIndex, .hash = hash, .objectFormat = .header, .age = .static, .length = size };
     }
-    pub inline fn simpleStackObject(size: u12, classIndex: ClassIndex, hash: u24) HeapObject {
+    pub inline fn simpleStackObject(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
         return HeapObject{ .classIndex = classIndex, .hash = hash, .objectFormat = .directIndexed, .age = .onStack, .length = size };
     }
     pub fn addFooter(headerPtr: HeapObjectPtr) void {
         const footerPtr = realHeapObject(headerPtr);
         footerPtr.* = headerPtr.*;
         footerPtr.objectFormat = .directIndexed;
+    }
+    pub fn asHeader(self: HeapObject) HeapObject {
+        var result = self;
+        result.objectFormat = .header;
+        result.length -= 1;
+        return result;
     }
     pub inline fn realHeapObject(self: HeapObjectConstPtr) HeapObjectPtr {
         const result = if (self.objectFormat.isHeader())
@@ -493,9 +499,9 @@ pub const HeapObject = packed struct(u64) {
             .length = length,
         };
     }
-    pub inline fn calcHeapObject(iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
+    pub inline fn calcHeapObject(classIndex: ClassIndex, iVars: u12, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
         const aI = comptime Format.allocationInfo(iVars, indexed, elementSize, makeWeak);
-        if (aI.moreThanOneWord()) return error.DoesntFit;
+        if (aI.requiresIndex()) return error.DoesntFit;
         return HeapObject{
             .classIndex = classIndex,
             .hash = hash,
@@ -782,7 +788,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
         const Self = @This();
         pub fn init() Self {
             var result = Self{
-                .footer = footer(words, @as(Format, @enumFromInt(size)), object.String_I, hash, Age.static),
+                .footer = footer(words, @as(Format, @enumFromInt(size)), ClassIndex.String, hash, Age.static),
                 .chars = [_]u8{0} ** (size + fill),
             };
             for (str, result.chars[fill..]) |c, *r| {

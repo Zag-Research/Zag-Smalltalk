@@ -43,7 +43,7 @@ const Dispatch = extern struct {
     state: DispatchState,
     methods: [12][*]const Code, // this is just the default... normally a larger array
     const Self = @This();
-    const classIndex = object.Dispatch_I;
+    const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 5);
     var empty: Self = .{
@@ -64,17 +64,22 @@ const Dispatch = extern struct {
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
         const hashed = preHash(selector.hash32());
-        const address = dispatches[index].lookupAddress(hashed);
-        trace("\nlookup: {} {} {*} {*}", .{ selector, hashed, address, address.* });
-        return dispatches[index].lookupAddress(preHash(selector.hash32())).*;
+        const address = dispatches[@intFromEnum(index)].lookupAddress(hashed);
+        trace("\nlookup: {} {} {} {*} {*}", .{ index, selector, hashed, address, address.* });
+        return dispatches[@intFromEnum(index)].lookupAddress(preHash(selector.hash32())).*;
     }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
-        const dispatchP = dispatches[index];
-        if (dispatchP != &empty) return try dispatchP.add(method);
-        dispatches[index] = &dispatchData[index];
-        dispatches[index].init();
-        return try dispatches[index].add(method);
+        trace("\naddMethod: {} {}",.{index,method.selector});
+        method.checkFooter();
+        const idx = @intFromEnum(index);
+        var dispatchP = dispatches[idx];
+        if (dispatchP == &empty) {
+            dispatchP = &dispatchData[idx];
+            dispatches[idx] = dispatchP;
+            dispatchP.init();
+        }
+        return try dispatchP.add(method);
     }
     var internalNeedsInitialization = true;
     fn initialize() void {
@@ -136,7 +141,9 @@ const Dispatch = extern struct {
         return false;
     }
     inline fn lookupAddress(self: *const Self, selector: u64) *[*]const Code {
-        return @constCast(&self.methods[selector * self.hash >> 32]);
+        const hash = selector * self.hash >> 32;
+        trace("\nlookupAddress: {} {}",.{selector,hash});
+        return @constCast(&self.methods[hash]);
     }
     inline fn preHash(selector: u32) u64 {
         return @as(u64, selector *% u32_phi_inverse);

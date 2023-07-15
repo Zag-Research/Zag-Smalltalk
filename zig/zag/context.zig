@@ -36,7 +36,7 @@ pub const Context = struct {
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self{
-            .header = comptime heap.footer(baseSize + nLocals, Format.header, object.Context_I, 0, Age.static),
+            .header = comptime heap.footer(baseSize + nLocals, Format.header, object.ClassIndex.Context, 0, Age.static),
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,
@@ -103,7 +103,7 @@ pub const Context = struct {
         _ = process;
         unreachable;
         // if (self.isIncomplete()) {
-        //     self.header = heap.header(4, Format.bothAP, class.Context_I,0,Age.stack);
+        //     self.header = heap.header(4, Format.bothAP, class.Context_C,0,Age.stack);
         //     self.size = self.prevCtxt.calculatedSize(process);
         //     self.addr = @ptrCast(*Object,&self.temps);
         //     self.prevCtxt.convertToProperHeapObject(sp, process);
