@@ -59,3 +59,11 @@ ASVariable >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
 ]
+
+{ #category : #building }
+ASVariable >> zigString: syms and: stackVariables [
+	"The argument is on the stack already so should not need to push it"
+
+	^ '&e.pushLocal, ' , ((stackVariables indexOf: name) - 1) asString
+	  , ', '
+]

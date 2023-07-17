@@ -32,9 +32,8 @@ ASPharoCompilerProgramTest >> codeStart42 [
 ASPharoCompilerProgramTest >> testAssignment [
 
 	| result aStream |
-	result := self
-		          buildFromClass: ASCompileTestClass1
-		          selector: #testAssignment.
+	result := self buildFromClassShallow: ASCompileTestClass1 selector: #testAssignment.
+	
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigAssignmentString.zig') writeStream.
 	aStream truncate.

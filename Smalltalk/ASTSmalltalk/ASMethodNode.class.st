@@ -194,13 +194,13 @@ ASMethodNode >> writeLiterals: aStream with: syms [
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
-	| stackVariables stackSize |
+	| stackVariables stackSize statementVisitor |
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
 
 	"set the selector for each block that needs a closure and add it to the stack variables"
-	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index |
+	self complexBlocks ifNotEmpty: [
+		self complexBlocks doWithIndex: [ :block :index |
 			block selector: selector , ':' , index asString.
 			stackVariables add: block selector asZigString
 			"block assignments" ] ].
@@ -245,17 +245,25 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	"ouput any block closure"
 	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index | block isNonLocalReturn ifFalse: [ 	aStream << (block zigClosureString: stackVariables) ] ] ].
+		blocks doWithIndex: [ :block :index |
+			block isNonLocalReturn ifFalse: [
+				aStream << (block zigClosureString: stackVariables) ] ] ].
 
 
+	statementVisitor := ASStatementVisitor
+		                    symbols: syms
+		                    stackVars: stackVariables
+		                    with: aStream.
 	body do: [ :asStatement |
 		aStream tab.
-		aStream << (asStatement zigString: syms and: stackVariables).
+		"aStream << (asStatement zigString: syms and: stackVariables)."
+		asStatement acceptVisitor: statementVisitor.
+		asStatement isASSend ifTrue: [ aStream <<  '&e.drop,'. ].
 		aStream cr ].
 
-
+body last isReturn ifFalse: [
 	aStream tab.
-	aStream << '&e.returnTop,'.
+	aStream << '&e.returnTop,' ].
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr.
