@@ -48,7 +48,7 @@ pub const ByteCode = enum(i8) {
     lookupByteCodeMethod,
     send,
     call,
-    callLocal,
+    callRecursive,
     pushContext,
     returnTrampoline,
     returnWithContext,
@@ -65,14 +65,15 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    const trace = std.debug.print;
-    //inline fn trace(_: anytype, _: anytype) void {}
+    //const trace = std.debug.print;
+    inline fn trace(_: anytype, _: anytype) void {}
     fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object) MethodReturns {
-        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(context.method)) });
+        trace("\ninterpretReturn: 0x{x}", .{ @intFromPtr(context.method) });
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))) });
     }
     fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object) MethodReturns {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\ninterpretFn: {} {} {*}", .{ method.selector, selector, pc });
+        trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.hashEquals(selector)) return @call(tailCall, execute.controlPrimitives.dnu, .{ pc, sp, process, context, selector });
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))) });
     }
@@ -131,7 +132,6 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushLiteral => {
                         sp -= 1;
-                        trace(" [{}]: {x}", .{ pc[0].u(), references[pc[0].u()]});
                         sp[0] = references[pc[0].u()];
                         pc += 1;
                         continue :interp;
@@ -150,11 +150,12 @@ pub const ByteCode = enum(i8) {
                         method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc - pc[0].u()) - @sizeOf(Code) - CompiledMethod.codeOffset));
                         references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
                         const stackStructure = method.stackStructure;
-                        const locals = stackStructure.h0;
-                        const maxStackNeeded = stackStructure.h1;
-                        const selfOffset = stackStructure.classIndex;
-                        const ctxt = context.push(sp, process, method, locals, maxStackNeeded, @intFromEnum(selfOffset));
-                        ctxt.setNPc(interpret);
+                        trace(" {}",.{stackStructure});
+                        const locals = stackStructure.low16() & 255;
+                        const maxStackNeeded = stackStructure.mid16();
+                        const selfOffset = stackStructure.high16();
+                        const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
+                        ctxt.setNPc(interpretReturn);
                         sp = ctxt.asObjectPtr();
                         context = ctxt;
                         pc += 1;
@@ -195,6 +196,7 @@ pub const ByteCode = enum(i8) {
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
+                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack())});
                         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil });
                     },
                     .p1 => { // SmallInteger>>#+
@@ -212,11 +214,11 @@ pub const ByteCode = enum(i8) {
                         sp += 1;
                         continue :interp;
                     },
-                    .callLocal => {
+                    .callRecursive => {
                         context.setTPc(asCodePtr(pc + 1));
                         const offset = pc[0].i();
                         if (offset >= 0) pc += 1 + @as(u64, @intCast(offset)) else pc -= @as(u64, @intCast(@as(i32, -offset) - 1));
-                        continue :interp;
+                        return @call(tailCall, interpret, .{ @as([*]const Code, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))) });
                     },
                     .exit => @panic("fell off the end"),
                     else => {
@@ -306,6 +308,23 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         }
         pub fn asCompileTimeMethod(self: *Self) *CompileTimeMethod {
             return @as(*CompileTimeMethod,@ptrCast(self));
+        }
+        pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
+            for (replacements, 1..) |replacement, index| {
+                const match = indexSymbol(@as(u24, @truncate(index)));
+                if (self.selector.equals(match)) {
+                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
+                    self.selector = replacement;
+                }
+                for (&self.references) |*r| {
+                    if (r.equals(match))
+                        r.* = replacement;
+                }
+            }
+            for (refs, 1..) |obj, index|{
+                _ = .{obj,index};
+                @panic("handle refs");
+            }
         }
     };
 }

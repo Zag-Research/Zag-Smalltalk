@@ -36,7 +36,7 @@ const dnu = execute.controlPrimitives.dnu;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-const testReps = 4;
+const testReps = 7;
 var fibCPSM = compileMethod(Sym.value, 0, 0, .{&fibCPS});
 const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
@@ -120,7 +120,7 @@ fn timeCPS(n: i64) void {
     _ = te.run(objs[0..], method.asCompiledMethodPtr());
 }
 var fibThread =
-    compileMethod(Sym.value, 0, 2, .{
+    compileMethod(Sym.i_1, 0, 2, .{
     &e.verifySelector,
     ":recurse",
     &e.dup, // self
@@ -147,7 +147,7 @@ var fibThread =
 });
 test "fibThread" {
     const method = fibThread.asCompiledMethodPtr();
-    //    fibThread.update(fibThreadRef,method);
+    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty);
     var n: u32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -235,7 +235,7 @@ fn timeDispatch(n: i64) void {
 }
 const b = @import("zag/byte-interp.zig").ByteCode;
 var fibByte =
-    compileByteCodeMethod(Sym.i_1, 0, 0, .{
+    compileByteCodeMethod(Sym.i_1, 0, 2, .{
         ":recurse",
         b.dup,
         b.pushLiteral,
@@ -254,13 +254,13 @@ var fibByte =
         b.pushLiteral,
         one,
         b.p2,
-        b.callLocal,
+        b.callRecursive,
         "recurse",
         b.pushTemp1,
         b.pushLiteral,
         two,
         b.p2,
-        b.callLocal,
+        b.callRecursive,
         "recurse",
         b.p1,
         b.returnTop,
@@ -268,7 +268,7 @@ var fibByte =
  test "fibByte" {
     const method = fibByte.asCompiledMethodPtr();
     sym = Sym.init();
-    fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
+    fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
     var n:i32 = 1;
     while (n<=testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -281,12 +281,12 @@ var fibByte =
     }
 }
 fn timeByte(n: i64) void {
-    fibByte.setReferences(&[0]Object{});
+    sym = Sym.init();
+    fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
     const method = fibByte.asCompiledMethodPtr();
     var objs = [_]Object{Object.from(n)};
     var te = TestExecution.new();
     te.init();
-    std.debug.print("about to run\n", .{});
     _ = te.run(objs[0..], method);
 }
 const ts = std.time.nanoTimestamp;
@@ -302,32 +302,29 @@ pub fn timing(runs: u6) !void {
     var start = tstart();
     _ = fibNative(runs);
     var base = ts() - start;
-    try stdout.print("fibNative: {d:8.3}s\n", .{@as(f64, @floatFromInt(base)) / 1000000000});
+    try stdout.print("fibNative:  {d:7.3}s\n", .{@as(f64, @floatFromInt(base)) / 1000000000});
     //std.debug.print("calls to fib {}\n",.{count});
     start = tstart();
     _ = timeObject(runs);
     var time = ts() - start;
-    try stdout.print("fibObject: {d:8.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
+    try stdout.print("fibObject:  {d:7.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
     base = time;
     start = tstart();
     _ = timeCPS(runs);
     time = ts() - start;
-    try stdout.print("fibCPS:    {d:8.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    base = time;
+    try stdout.print("fibCPS:     {d:7.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
     start = tstart();
-    _ = timeThread(runs);
+    //_ = timeThread(runs);
     time = ts() - start;
-    try stdout.print("fibThread: {d:8.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    base = time;
+    try stdout.print("fibThread:  {d:7.3}s +{d:6.2}% from CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
     start = tstart();
     _ = timeDispatch(runs);
     time = ts() - start;
-    try stdout.print("fibDispatch: {d:8.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    // base = time;
-    // start=tstart();
-    // _ = timeByte(runs);
-    // time = ts()-start;
-    // try stdout.print("fibByte:   {d:8.3}s +{d:6.2}%\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
+    try stdout.print("fibDispatch:{d:7.3}s +{d:6.2}% from CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
+    start=tstart();
+    _ = timeByte(runs);
+    time = ts()-start;
+    try stdout.print("fibByte:    {d:7.3}s +{d:6.2}% from CPS\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
 }
 pub fn main() !void {
     try timing(40);

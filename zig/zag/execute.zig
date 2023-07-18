@@ -710,7 +710,7 @@ pub const controlPrimitives = struct {
         var result = context.pop(process);
         const newSp = result.sp;
         newSp[0] = top;
-        var callerContext = result.ctxt;
+        const callerContext = result.ctxt;
         trace("-> {any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector });
     }
