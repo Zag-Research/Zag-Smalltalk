@@ -148,7 +148,7 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushContext => {
                         method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc - pc[0].u()) - @sizeOf(Code) - CompiledMethod.codeOffset));
-                        references = (&method.header).arrayAsSlice(Object) catch unreachable;
+                        references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
