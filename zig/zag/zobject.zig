@@ -347,13 +347,13 @@ pub const Object = packed struct(u64) {
             .Symbol => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toInt()}),
-            .Float => writer.print("{}", .{self.to(f64)}),
+            .Float => writer.print("{}(0x{x})", .{self.to(f64), self.u()}),
             else => {
                 try writer.print("0x{x:>16}", .{self.u()});
                 @panic("format for unknown class");
             },
         };
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("({x:>16})", .{self.u()});
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.u()});
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {

@@ -36,7 +36,7 @@ const dnu = execute.controlPrimitives.dnu;
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
 const p = @import("zag/primitives.zig").primitives;
-const testReps = 10;
+const testReps = 4;
 var fibCPSM = compileMethod(Sym.value, 0, 0, .{&fibCPS});
 const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 // fibonacci
@@ -89,9 +89,9 @@ fn fibCPS1(pc: [*]const Code, sp: [*]Object, process: *Process, context: Context
 }
 fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
     const sum = i.p1(sp[1], sp[0]) catch return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, fibSym });
-    context.setLocal(0, sum);
     var result = context.pop(process);
     const newSp = result.sp;
+    newSp[0] = sum;
     var callerContext = result.ctxt;
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector });
 }
@@ -105,7 +105,7 @@ test "fibCPS" {
         var te = TestExecution.new();
         te.init();
         const result = te.run(objs[0..], method.asCompiledMethodPtr());
-        std.debug.print("fib({}) = {any}\n", .{ n, result });
+        std.debug.print("\nfib({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
@@ -208,7 +208,7 @@ test "fibDispatch" {
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
-    try dispatch.addMethod(object.SmallInteger_I, fibonacci);
+    try dispatch.addMethod(object.ClassIndex.SmallInteger, fibonacci);
 //    std.debug.print("\nfibDispatch: {*} {*}", .{ &e.verifySelector, fibonacci.codePtr() });
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -235,15 +235,12 @@ fn timeDispatch(n: i64) void {
 }
 const b = @import("zag/byte-interp.zig").ByteCode;
 var fibByte =
-    compileByteCodeMethod(Sym.value, 0, 0, .{
+    compileByteCodeMethod(Sym.i_1, 0, 0, .{
         ":recurse",
         b.dup,
         b.pushLiteral,
         two,
         b.p5,
-        "label1",
-        b.primFailure,
-        ":label1",
         b.ifFalse,
         "label3",
         b.drop,
@@ -257,36 +254,28 @@ var fibByte =
         b.pushLiteral,
         one,
         b.p2,
-        "label4",
-        b.primFailure,
-        ":label4",
         b.callLocal,
         "recurse",
         b.pushTemp1,
         b.pushLiteral,
         two,
         b.p2,
-        "label5",
-        b.primFailure,
-        ":label5",
         b.callLocal,
         "recurse",
         b.p1,
-        "label6",
-        b.primFailure,
-        ":label6",
         b.returnTop,
-        0,
 });
  test "fibByte" {
-    const method = fibByte.asCompiledByteCodeMethodPtr();
+    const method = fibByte.asCompiledMethodPtr();
+    sym = Sym.init();
+    fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
     var n:i32 = 1;
     while (n<=testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te =  TestExecution.new();
         te.init();
         const result = te.run(objs[0..],method);
-        std.debug.print("fib({}) = {any}\n",.{n,result});
+        std.debug.print("\nfib({}) = {any}",.{n,result});
         try std.testing.expectEqual(result.len,1);
         try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
     }

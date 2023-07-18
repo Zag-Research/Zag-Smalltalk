@@ -24,11 +24,11 @@ pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
     header: HeapObject, // if not on stack there is also a footer
+    method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     tpc: [*]const Code, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     trapContextNumber: u64,
-    method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     temps: [nLocals]Object,
     const Self = @This();
     const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;

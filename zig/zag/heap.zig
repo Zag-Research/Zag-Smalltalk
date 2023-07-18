@@ -473,7 +473,7 @@ pub const HeapObject = packed struct(u64) {
         return HeapObject{ .classIndex = classIndex, .hash = hash, .objectFormat = .directIndexed, .age = .onStack, .length = size };
     }
     pub fn addFooter(headerPtr: HeapObjectPtr) void {
-        const footerPtr = realHeapObject(headerPtr);
+        const footerPtr = headerPtr.realHeapObject();
         footerPtr.* = headerPtr.*;
         footerPtr.objectFormat = .directIndexed;
     }

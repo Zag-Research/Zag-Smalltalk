@@ -65,25 +65,35 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _: Object) MethodReturns {
+    const trace = std.debug.print;
+    //inline fn trace(_: anytype, _: anytype) void {}
+    fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object) MethodReturns {
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(context.method)) });
+    }
+    fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object) MethodReturns {
+        const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
+        trace("\ninterpretFn: {} {} {*}", .{ method.selector, selector, pc });
+        if (!method.selector.hashEquals(selector)) return @call(tailCall, execute.controlPrimitives.dnu, .{ pc, sp, process, context, selector });
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))) });
+    }
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object) MethodReturns {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
-        var method = context.method;
-        var references = (&method.header).arrayAsSlice(Object) catch unreachable;
+        var method: *execute.CompiledMethod = @ptrFromInt(_method.u());
+        var references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
-            std.debug.print("interp: ", .{});
-            std.debug.print("interp: [{*}]: {}\n", .{ pc, code });
+            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
             pc += 1;
-            while (true) {
+            branch: while (true) {
                 switch (code) {
                     .noop => {
                         continue :interp;
                     },
                     .branch => {
-                        break; // to common code
+                        break :branch; // to common code
                     },
                     .ifTrue => {
                         const v = sp[0];
@@ -93,7 +103,7 @@ pub const ByteCode = enum(i8) {
                             continue :interp;
                         }
                         if (!True.equals(v)) @panic("non boolean");
-                        break; // to branch
+                        break :branch; // to branch
                     },
                     .ifFalse => {
                         const v = sp[0];
@@ -103,7 +113,7 @@ pub const ByteCode = enum(i8) {
                             continue :interp;
                         }
                         if (!False.equals(v)) @panic("non boolean");
-                        break; // to branch
+                        break :branch; // to branch
                     },
                     .dup => {
                         sp -= 1;
@@ -121,6 +131,7 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushLiteral => {
                         sp -= 1;
+                        trace(" [{}]: {x}", .{ pc[0].u(), references[pc[0].u()]});
                         sp[0] = references[pc[0].u()];
                         pc += 1;
                         continue :interp;
@@ -141,8 +152,8 @@ pub const ByteCode = enum(i8) {
                         const stackStructure = method.stackStructure;
                         const locals = stackStructure.h0;
                         const maxStackNeeded = stackStructure.h1;
-                        const selfOffset = stackStructure.l2;
-                        const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
+                        const selfOffset = stackStructure.classIndex;
+                        const ctxt = context.push(sp, process, method, locals, maxStackNeeded, @intFromEnum(selfOffset));
                         ctxt.setNPc(interpret);
                         sp = ctxt.asObjectPtr();
                         context = ctxt;
@@ -187,25 +198,19 @@ pub const ByteCode = enum(i8) {
                         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil });
                     },
                     .p1 => { // SmallInteger>>#+
-                        sp[1] = inlines.p1(sp[1], sp[0]) catch {
-                            pc += 1;
-                            continue :interp;
-                        };
+                        sp[1] = inlines.p1(sp[1], sp[0]) catch @panic("+");
                         sp += 1;
-                        break;
+                        continue :interp;
                     },
                     .p2 => { // SmallInteger>>#+
-                        sp[1] = inlines.p2(sp[1], sp[0]) catch {
-                            pc += 1;
-                            continue :interp;
-                        };
+                        sp[1] = inlines.p2(sp[1], sp[0]) catch @panic("-");
                         sp += 1;
-                        break;
+                        continue :interp;
                     },
                     .p5 => { // SmallInteger>>#<=
                         sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch @panic("<= error"));
                         sp += 1;
-                        break; // to branch
+                        continue :interp;
                     },
                     .callLocal => {
                         context.setTPc(asCodePtr(pc + 1));
@@ -219,17 +224,14 @@ pub const ByteCode = enum(i8) {
                         @panic(std.fmt.bufPrint(buf[0..], "unexpected bytecode {}", .{code}) catch unreachable);
                     },
                 }
-            }
+            } // branch:
             const offset = pc[0].i();
             if (offset >= 0) {
                 pc = pc + 1 + @as(u64, @intCast(offset));
-                continue;
-            }
-            if (offset == -1) {
-                @panic("return branch");
+                continue :interp;
             }
             pc = pc + 1 - @as(u64, @intCast(-offset));
-        }
+        } // interp
     }
     inline fn i(self: Self) i8 {
         return @intFromEnum(self);
@@ -259,36 +261,8 @@ pub const ByteCode = enum(i8) {
         return nMethods - 1;
     }
 };
-fn countNonLabels(comptime tup: anytype) usize {
-    var n = 1;
-    inline for (tup) |field| {
-        switch (@TypeOf(field)) {
-            Object => {
-                n += 1;
-            },
-            @TypeOf(null) => {
-                n += 1;
-            },
-            comptime_int, comptime_float => {
-                n += 1;
-            },
-            ByteCode => {
-                n += 1;
-            },
-            else => switch (@typeInfo(@TypeOf(field))) {
-                .Pointer => |pointer| {
-                    if (@hasField(pointer.child, "len") and field[0] != ':') n = n + 1;
-                },
-                else => {
-                    n = n + 1;
-                },
-            },
-        }
-    }
-    return n;
-}
 pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
-    const codeSize = counts.codes;
+    const codeSize = counts.codes+1;
     const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.HeapObject,
@@ -300,15 +274,15 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         footer: heap.HeapObject,
         const Self = @This();
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @sizeOf(Self)/8, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
-            const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8);
+            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self,"references")/8, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+            const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8-2);
             //            @compileLog(codeSize,refsSize);
             //            trace("\nfooter={}",.{footer});
             return .{
                 .header = header,
                 .selector = name,
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
-                .interpreter = Code.prim(ByteCode.interpret),
+                .interpreter = Code.prim(ByteCode.interpretFn),
                 .code = undefined,
                 .references = [_]Object{object.NotAnObject} ** refsSize,
                 .footer = footer,
@@ -337,7 +311,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
 }
 fn convertCountSizes(comptime counts: execute.CountSizes) execute.CountSizes {
     return .{
-        .codes = (counts.codes + 7) / 8,
+        .codes = counts.codes,
         .refs = counts.refs + counts.objects,
         .objects = 0,
     };
