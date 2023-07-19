@@ -73,7 +73,7 @@ var @"Integer>>fibonacci" =
         &e.pushLocal,   0, // self
         &e.pushLiteral, Object.from(2),
         &e.send1,       Sym.@"-",
-        &e.send1,       Sym.i_1,
+        &e.send0,       Sym.i_1,
         &e.send1,       Sym.@"+",
         &e.returnTop,
 });
