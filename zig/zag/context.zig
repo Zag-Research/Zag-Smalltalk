@@ -169,6 +169,9 @@ pub const Context = struct {
     pub inline fn asObjectPtr(self: *const Context) [*]Object {
         return @as([*]Object, @ptrCast(@constCast(self)));
     }
+    pub inline fn cleanAddress(self: *const Context) u64 {
+        return @intFromPtr(self);
+    }
     inline fn fromObjectPtr(op: [*]Object) ContextPtr {
         return @as(ContextPtr, @ptrCast(op));
     }
@@ -183,8 +186,7 @@ pub const Context = struct {
         trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
         const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
         const pc = @as([*]const Code, @ptrCast(&method.code));
-        _ = .{ pc, oldPc, sp, process, selector };
-        unreachable;
+        _ = .{ pc, oldPc, sp, process, selector, @panic("unimplemented")};
         //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };

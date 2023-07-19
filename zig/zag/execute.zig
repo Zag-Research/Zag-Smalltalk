@@ -632,8 +632,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector });
     }
     pub fn primitiveFailed(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _ = .{ pc, sp, process, context, selector };
-        @panic("primitiveFailed");
+        _ = .{ pc, sp, process, context, selector, @panic("primitiveFailed")};
     }
     pub fn fallback(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const arity = selector.numArgs();
@@ -722,8 +721,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector });
     }
     pub fn dnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        _ = .{ pc, sp, process, context, selector };
-        unreachable;
+        _ = .{ pc, sp, process, context, selector, @panic("unimplemented")};
     }
 };
 pub const TestExecution = struct {

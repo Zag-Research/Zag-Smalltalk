@@ -350,8 +350,7 @@ const Dispatch = extern struct {
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
     fn super(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
-        _ = .{ programCounter, sp, process, context, selector };
-        @panic("called super function");
+        _ = .{ programCounter, sp, process, context, selector, @panic("called super function")};
     }
     fn fail(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) MethodReturns {
         _ = .{ programCounter, sp, process, context, selector };

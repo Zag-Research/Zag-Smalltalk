@@ -49,7 +49,7 @@ var sym: Sym = undefined;
 //        l1 = l3 ifTrue: [ ^ 1 ] ].
 //    ^ l1
 var @"foo:bar:" =
-    compileMethod(sym.@"foo:bar:", 5, 2 + 11, .{ // self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
+    compileMethod(Sym.i_1, 5, 2 + 11, .{ // self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
         &e.verifySelector,
         &e.pushContext,
         "^",
@@ -115,7 +115,7 @@ var @"foo:bar::2" =
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    @"foo:bar:".setLiterals(empty, &[_]Object{ @"foo:bar::1", @"foo:bar::2" });
+    @"foo:bar:".setLiterals(&[_]Object{ sym.@"foo:bar:"}, &[_]Object{ @"foo:bar::1", @"foo:bar::2" });
 }
 const i = @import("zag/primitives.zig").inlines;
 const e = @import("zag/primitives.zig").embedded;
@@ -162,6 +162,5 @@ pub fn timing(runs: u6) !void {
 }
 pub fn main() !void {
     initSmalltalk();
-    std.debug.print("{} {} {}  {}\n", .{ sym.fibonacci, sym.fibonacci.hash32(), Sym.value, Sym.value.hash32() });
     try timing(40);
 }

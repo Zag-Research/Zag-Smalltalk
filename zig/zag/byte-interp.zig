@@ -322,8 +322,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
                 }
             }
             for (refs, 1..) |obj, index|{
-                _ = .{obj,index};
-                @panic("handle refs");
+                _ = .{obj,index, @panic("handle refs")};
             }
         }
     };

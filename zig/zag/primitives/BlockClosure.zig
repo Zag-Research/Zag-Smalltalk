@@ -15,7 +15,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
@@ -70,10 +70,10 @@ pub const inlines = struct {
         sp[0].tag = .heapClosure;
         sp[1] = value;
         sp[2] = Object.from(&valueClosureMethod);
-        sp[3] = heap.HeapObject.simpleStackObject(object.ClassIndex.BlockClosure, 2, sym.value.hash24()).o();
+        sp[3] = heap.HeapObject.simpleStackObject(object.ClassIndex.BlockClosure, 2, Sym.value.hash24()).o();
         return sp;
     }
-    var valueClosureMethod = CompiledMethod.init2(sym.value, pushValue, e.returnNoContext);
+    var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, e.returnNoContext);
     pub inline fn fullClosure(oldSp: [*]Object, process: *Process, block: CompiledMethodPtr, contextMutable: *ContextPtr) [*]Object {
         const flags = block.stackStructure.h0 >> 8;
         const fields = flags & 63;
@@ -106,7 +106,7 @@ pub const inlines = struct {
         return sp;
     }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        if (!sym.value.hashEquals(selector)) return @call(tailCall, e.dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.value.hashEquals(selector)) return @call(tailCall, e.dnu, .{ pc, sp, process, context, selector });
         const closure = sp[0].to(heap.HeapObjectPtr);
         sp[0] = closure.prevPrev();
         @panic("unfinished");
@@ -118,13 +118,9 @@ pub const inlines = struct {
     }
 };
 pub const embedded = struct {
+    const fallback = execute.fallback;
+    const literalNonLocalReturn = enum(u3) { self = 0, true_, false_, nil, minusOne, zero, one, two };
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
-    pub fn nonLocalReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        const self = context.getSelf();
-        _ = .{ pc, sp, self, process, selector };
-        //        return @call(tailCall,inlines.nonLocalReturn,.{pc,sp,process,targetContext,selector});
-        @panic("nonLocalReturn");
-    }
     pub fn value(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const val = sp[0];
         switch (val.tag) {
@@ -139,7 +135,8 @@ pub const embedded = struct {
             .heapThunk => sp[0].tag = .heap,
             .nonLocalThunk => {
                 const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
-                sp[0] = nonLocalValues[val.u() & 7];
+                const index = val.u() & 7;
+                sp[0] = nonLocalValues[index];
                 return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector });
             },
             .heapClosure => {
@@ -148,12 +145,12 @@ pub const embedded = struct {
                 if (method != &inlines.valueClosureMethod) {
                     const newPc = method.codePtr();
                     context.setReturn(pc);
-                    return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, sym.value });
+                    return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
                 }
-                if (!sym.value.hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!Sym.value.hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 sp[0] = closure.prevPrev();
             },
-            else => @panic("not closure"),
+            else =>  return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.value }),
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
@@ -164,11 +161,11 @@ pub const embedded = struct {
             .heapClosure => {
                 const closure = val.to(heap.HeapObjectPtr);
                 const method = closure.prev().to(CompiledMethodPtr);
-                if (!sym.@"value:".hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!Sym.@"value:".hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 const newPc = method.codePtr();
                 context.setReturn(pc);
                 if (true) @panic("unfinished");
-                return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, sym.value });
+                return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
             },
             else => @panic("not closure"),
         }
@@ -196,37 +193,35 @@ pub const embedded = struct {
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector });
     }
 
-    const literalNonLocalReturn = enum(u3) { self = 0, true_, false_, nil, minusOne, zero, one, two };
-    inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn) [*]Object {
+    inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn, context: ContextPtr) [*]Object {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
-        const newSp = sp + 1;
-        if (true) unreachable;
-        sp[0] = nonLocalValues[@intFromEnum(tag)];
+        const newSp = sp - 1;
+        newSp[0] = Object.tagged(.nonLocalThunk,@intFromEnum(tag),context.cleanAddress());
         return newSp;
     }
     pub fn pushNonlocalBlock_self(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .self), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .self, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_true(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .true_), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .true_, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_false(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .false), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .false_, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_nil(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .nil), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .nil, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_minusOne(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .minusOne), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .minusOne, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_zero(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .zero), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .zero, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_one(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .one), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .one, context), process, context, selector });
     }
     pub fn pushNonlocalBlock_two(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
-        return @call(tailCall, pc[1].prim, .{ pc + 2, nonLocalBlock(sp, .two), process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .two, context), process, context, selector });
     }
 };
 fn testImmutableClosure(process: *Process, value: Object) !object.Group {
@@ -261,7 +256,7 @@ test "immutableClosures" {
 }
 pub const primitives = struct {
     pub fn p201(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value
-        if (!sym.value.hashEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, selector });
+        if (!Sym.value.hashEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, selector });
         unreachable;
     }
     pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // value:

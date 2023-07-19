@@ -45,7 +45,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return of(mem.readIntLittle(T, val));
 }
 pub const compareObject = Object.compare;
-pub const ClassIndex = enum(u16) { Object = 1, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
+pub const ClassIndex = enum(u16) { none = 0, Object, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
 pub const Group = enum(u16) {
     immediates = 0xfff0,
     smallInt,
@@ -108,6 +108,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn i(self: Object) i64 {
         return @as(i64, @bitCast(self));
+    }
+    pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
+        return cast((Object{.tag=tag,.classIndex=.none,.h1=0,.h0=low}).u()+addr);
     }
     pub inline fn tagbits(self: Object) u16 {
         return @intFromEnum(self.tag);
