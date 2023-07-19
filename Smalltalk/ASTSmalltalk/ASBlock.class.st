@@ -11,7 +11,9 @@ Class {
 	#instVars : [
 		'method',
 		'selector',
-		'isNonLocalReturn'
+		'isNonLocalReturn',
+		'modifies',
+		'references'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -64,7 +66,9 @@ ASBlock >> blocks [
 ASBlock >> initialize [
 
 	super initialize.
-	isNonLocalReturn := true
+	isNonLocalReturn := true.
+	modifies := OrderedCollection new.
+	references := OrderedCollection new.
 ]
 
 { #category : #testing }
@@ -74,12 +78,30 @@ ASBlock >> isASBlock [
 
 { #category : #accessing }
 ASBlock >> isNonLocalReturn [
-	^ isNonLocalReturn
+	body size == 1 ifTrue: [
+		| returnStmt |
+		returnStmt := body at: 1.
+		returnStmt isReturn ifTrue: [
+			| expression |
+			expression := returnStmt expression.
+			expression isASLiteral ifTrue: [ ^ expression isSimple ].
+			expression isASSelf ifTrue: [ ^ true ] ] ].
+	^ false
 ]
 
 { #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size
+]
+
+{ #category : #accessing }
+ASBlock >> modifiers [
+	^ modifies 
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> modifies: anASVariable [
+	modifies add: anASVariable
 ]
 
 { #category : #accessing }
@@ -128,6 +150,11 @@ ASBlock >> printOn: s [
 ]
 
 { #category : #accessing }
+ASBlock >> references: anASLocal [ 
+	references add: anASLocal
+]
+
+{ #category : #accessing }
 ASBlock >> selector [
 	^ selector
 ]
@@ -167,16 +194,7 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	"ouput any blocks"
-	"self blocks ifNotEmpty: [
-		blocks do: [ :block |
-			aStream << (block zigString: syms and: stackVariables) ] ]."
-
-	body do: [ :asStatement |
-		aStream tab.
-		aStream << (asStatement zigString: syms and: stackVariables).
-		aStream cr ].
-
+	self writeBody: syms with: stackVariables and: aStream.
 
 	aStream tab.
 	aStream << '&e.returnTop,'.
@@ -186,13 +204,12 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 ]
 
 { #category : #printing }
-ASBlock >> zigClosureString: aCollection [ 
-	isNonLocalReturn ifFalse: [
-			selector
-		ifNil: [^ '&e.blockClosure,"' , nestedScopeOf selector , '",1+(3<<16),' ]
-		ifNotNil: [ ^ '&e.blockClosure,"' , selector , '",1+(3<<16),' ]]
-	
+ASBlock >> zigClosureString: aCollection [
 
+		selector
+			ifNil: [
+			^ '&e.blockClosure,"' , nestedScopeOf selector , '",1+(3<<16),' ]
+			ifNotNil: [ ^ '&e.blockClosure,"' , selector , '",1+(3<<16),' ]
 ]
 
 { #category : #building }

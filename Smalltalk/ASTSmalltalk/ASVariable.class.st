@@ -29,6 +29,11 @@ ASVariable >> = other [
 	^ self class = other class and: [ self name = other name ]
 ]
 
+{ #category : #testing }
+ASVariable >> isASArg [
+	^false
+]
+
 { #category : #comparing }
 ASVariable >> isASBlock [
 

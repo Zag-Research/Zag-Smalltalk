@@ -11,3 +11,8 @@ Class {
 ASArg >> acceptVisitor: aVisitor [ 
 	^ aVisitor visitArg: self
 ]
+
+{ #category : #visiting }
+ASArg >> isASArg [
+	^true
+]

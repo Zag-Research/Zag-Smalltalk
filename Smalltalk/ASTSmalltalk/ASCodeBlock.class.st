@@ -90,3 +90,18 @@ ASCodeBlock >> printOn: s [
 ASCodeBlock >> scope [
 	^ scope
 ]
+
+{ #category : #accessing }
+ASCodeBlock >> writeBody: symbols with: stackVariables and: aStream [
+	| statementVisitor |
+	statementVisitor := ASStatementVisitor
+		                    symbols: symbols
+		                    stackVars: stackVariables
+		                    with: aStream.
+	body do: [ :asStatement |
+		aStream tab.
+		"aStream << (asStatement zigString: syms and: stackVariables)."
+		asStatement acceptVisitor: statementVisitor.
+		asStatement isASSend ifTrue: [ aStream << '&e.drop,' ].
+		aStream cr ].
+]

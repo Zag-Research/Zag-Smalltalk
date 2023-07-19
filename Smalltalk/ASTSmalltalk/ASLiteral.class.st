@@ -37,6 +37,12 @@ ASLiteral >> isASLiteral [
 	^true
 ]
 
+{ #category : #testing }
+ASLiteral >> isSimple [
+	^ literal = true or: (literal = false or: (literal = 1 or: (literal = -1
+	  or: (literal = 0 or: (literal = 2)))))
+]
+
 { #category : #accessing }
 ASLiteral >> literal [
 

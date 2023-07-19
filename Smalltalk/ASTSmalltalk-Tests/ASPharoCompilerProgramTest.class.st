@@ -85,6 +85,20 @@ ASPharoCompilerProgramTest >> testFooBar [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarIsolated [
+
+	| result aStream |	
+		result := self buildFromClassShallow: ASCompileTestClass1 selector: #foo:bar:.
+
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntFib [
 
 	| result aStream |
