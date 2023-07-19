@@ -106,6 +106,9 @@ pub const Process = extern struct {
     pub inline fn endOfStack(self: *const Self) [*]Object {
         return @as([*]Object, @ptrCast(&self.ptr().stack[0])) + stack_size;
     }
+    pub inline fn freeStack(self: *const Self, sp: [*]Object) usize {
+        return (@intFromPtr(sp)-@intFromPtr(self.ptr()))/8;
+    }
     pub  fn getStack(self: *const Self, sp: [*]Object) []Object { // INLINE
         return sp[0 .. (@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object)];
     }

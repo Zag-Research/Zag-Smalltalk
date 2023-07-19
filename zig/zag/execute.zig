@@ -22,9 +22,12 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
-pub const tailCall: std.builtin.CallModifier = .never_inline;// .always_tail
+pub const tailCall: std.builtin.CallModifier = .always_tail;
+//pub const tailCall: std.builtin.CallModifier = .never_inline;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
+//pub const trace = std.debug.print;
+pub inline fn trace(_: anytype, _: anytype) void {}
 
 pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object {
     if (process.debugger()) |debugger|
@@ -297,7 +300,9 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             for (replacements, 1..) |replacement, index| {
                 const match = indexSymbol(@as(u24, @truncate(index)));
                 if (self.selector.equals(match)) {
+                    trace("\nsetLiterals: {x}",.{self.stackStructure});
                     self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
+                    trace(" ->  {x}",.{self.stackStructure});
                     self.selector = replacement;
                 }
                 for (&self.code) |*c| {
@@ -467,8 +472,6 @@ test "compiling method" {
     try expectEqual(t[9].object, Nil);
     try expectEqual(t.len, 10);
 }
-//pub const trace = std.debug.print;
-pub inline fn trace(_: anytype, _: anytype) void {}
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, needed: usize) void {

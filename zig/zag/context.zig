@@ -63,7 +63,7 @@ pub const Context = struct {
     }
     pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object, ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: {x} {} {}", .{ @intFromPtr(self.asObjectPtr()), self.header, wordsToDiscard });
+        trace("\npop: {x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asObjectPtr() + wordsToDiscard, .ctxt = self.previous() };
         _ = process;

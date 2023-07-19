@@ -161,6 +161,7 @@ test "fibThread" {
 }
 fn timeThread(n: i64) void {
     const method = fibThread.asCompiledMethodPtr();
+    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty);
     var objs = [_]Object{Object.from(n)};
     var te = TestExecution.new();
     te.init();
@@ -313,19 +314,21 @@ pub fn timing(runs: u6) !void {
     _ = timeCPS(runs);
     time = ts() - start;
     try stdout.print("fibCPS:     {d:7.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
+    base = time;
     start = tstart();
-    //_ = timeThread(runs);
+    _ = timeThread(runs);
     time = ts() - start;
-    try stdout.print("fibThread:  {d:7.3}s +{d:6.2}% from CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
+    try stdout.print("fibThread:  {d:7.3}s +{d:6.2} x CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(base)) });
     start = tstart();
     _ = timeDispatch(runs);
     time = ts() - start;
-    try stdout.print("fibDispatch:{d:7.3}s +{d:6.2}% from CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
+    try stdout.print("fibDispatch:{d:7.3}s +{d:6.2} x CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(base)) });
     start=tstart();
     _ = timeByte(runs);
     time = ts()-start;
-    try stdout.print("fibByte:    {d:7.3}s +{d:6.2}% from CPS\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time-base))*100.0/@as(f64,@floatFromInt(base))});
+    try stdout.print("fibByte:    {d:7.3}s +{d:6.2} x CPS\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time)) / @as(f64,@floatFromInt(base))});
 }
 pub fn main() !void {
+    try stdout.print("@sizeOf(fibThread) = {}, @sizeOf(fibByte) = {}\n",.{@sizeOf(@TypeOf(fibThread)), @sizeOf(@TypeOf(fibByte))});
     try timing(40);
 }
