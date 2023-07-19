@@ -72,8 +72,9 @@ ASPharoCompiler >> initializeSyms [
 
 { #category : #accessing }
 ASPharoCompiler >> nextIndex [
-index := index + 1.
-	^ 'index_', index asString
+
+	index := index + 1.
+	^ 'Sym.i_' , index asString
 ]
 
 { #category : #compiling }
@@ -92,13 +93,17 @@ ASPharoCompiler >> writeInitSmalltalk: aStream [
 	aStream << 'const empty = &[0]Object{};'.
 	aStream cr.
 	aStream tab.
+	aStream << 'dispatch.init();'.
+	aStream cr.
+	aStream tab.
 	aStream << 'primitives.init();'.
 	aStream cr.
 	aStream tab.
 	aStream << 'sym = Sym.init();'.
 	aStream cr.
 	"write all the classes"
-	methods do: [ :aMethod | aMethod writeLiterals: aStream with: syms].
+	methods do: [ :aMethod | aMethod writeLiterals: aStream with: syms ].
+	methods do: [ :aMethod | aMethod writeDispatch: aStream with: syms ].
 
 	aStream << '}'.
 	aStream cr.

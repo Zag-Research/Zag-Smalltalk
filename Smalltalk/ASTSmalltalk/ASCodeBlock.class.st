@@ -93,6 +93,7 @@ ASCodeBlock >> scope [
 
 { #category : #accessing }
 ASCodeBlock >> writeBody: symbols with: stackVariables and: aStream [
+
 	| statementVisitor |
 	statementVisitor := ASStatementVisitor
 		                    symbols: symbols
@@ -102,6 +103,6 @@ ASCodeBlock >> writeBody: symbols with: stackVariables and: aStream [
 		aStream tab.
 		"aStream << (asStatement zigString: syms and: stackVariables)."
 		asStatement acceptVisitor: statementVisitor.
-		asStatement isASSend ifTrue: [ aStream << '&e.drop,' ].
-		aStream cr ].
+		asStatement isASSend ifTrue: [ self isASBlock ifTrue:[self halt]. aStream << '&e.drop,' ].
+		aStream cr ]
 ]

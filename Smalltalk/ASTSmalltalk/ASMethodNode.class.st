@@ -112,6 +112,11 @@ ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
 ]
 
+{ #category : #testing }
+ASMethodNode >> isASBlock [
+	^false
+]
+
 { #category : #accessing }
 ASMethodNode >> maxBlockLocals [
 	^0
@@ -163,6 +168,13 @@ ASMethodNode >> stackSize [
 	^0
 ]
 
+{ #category : #writing }
+ASMethodNode >> writeDispatch: aStream with: smys [ 
+	aStream tab.
+	aStream << 'try dispatch.addMethod(ClassIndex.' << class name << ', ' << self nameSpace << '.asCompiledMethodPtr());'.
+	aStream cr
+]
+
 { #category : #initialization }
 ASMethodNode >> writeLiterals: aStream with: syms [
 	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
@@ -200,7 +212,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	blockVisitor := ASBlockVisitor new.
 	blockVisitor visit: body.
 	blockVisitor blocks do: [ :b | Transcript show: b selector ].
-	
+
 	self complexBlocks ifNotEmpty: [
 		self complexBlocks doWithIndex: [ :block :index |
 			block selector: selector , ':' , index asString.
@@ -246,12 +258,13 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	blockVisitor modifiers size > 0 ifTrue: [  
-		aStream tab. 
-		aStream << '&e.closureData, 3 + (1 << 8), // local:3 size:1 (offset 1 is l1)'.
-		aStream cr.
-	].
-	
+	blockVisitor modifiers isNotEmpty ifTrue: [
+		aStream tab.
+		aStream
+		<<
+		'&e.closureData, 3 + (1 << 8), // local:3 size:1 (offset 1 is l1)'.
+		aStream cr ].
+
 	"ouput any block closure"
 	self complexBlocks ifNotEmpty: [
 		self complexBlocks doWithIndex: [ :block :index |

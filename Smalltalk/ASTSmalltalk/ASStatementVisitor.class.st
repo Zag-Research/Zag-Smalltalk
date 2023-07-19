@@ -25,11 +25,13 @@ ASStatementVisitor >> symbols: syms stackVars: stackVariables with: aStreamWrite
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitAssign: anASAssign [ 
+ASStatementVisitor >> visitAssign: anASAssign [
+
 	anASAssign expression acceptVisitor: self.
 	aStream cr.
 	aStream << '&e.popLocal, '.
-	anASAssign variable acceptVisitor:  self 
+	anASAssign variable acceptVisitor: self.
+	aStream << ','
 ]
 
 { #category : #visiting }
@@ -64,8 +66,10 @@ ASStatementVisitor >> visitReturn: anASReturn [
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitSelfNode: anASSelf [ 
-	aStream << '&e.pushLocal, ' << ((stackVars indexOf: 'self') - 1) asString.
+ASStatementVisitor >> visitSelfNode: anASSelf [
+
+	aStream << '&e.pushLocal, '
+	<< ((stackVars indexOf: 'self') - 1) asString<< ','.
 	aStream cr
 ]
 
