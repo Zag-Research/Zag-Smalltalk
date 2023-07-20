@@ -18,6 +18,8 @@ The system is being developed on https://github.com/dvmason/Zag-Smalltalk
 
 ## [Experiments](Experiments.md)
 
+## [Hacking](Hacking.md) has some guidance on working with the code
+
 Everything below here is out of date
 
 ## The [AST class structure](AST_Classes.md) is described here.
