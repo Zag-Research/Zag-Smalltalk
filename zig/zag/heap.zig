@@ -225,10 +225,10 @@ test "allocationInfo" {
 pub const Age = enum(u4) {
     onStack,
     nursery,
-    nursery1,
     nursery2,
     nursery3,
     nursery4,
+    nursery5,
     nurseryLast,
     static,
     global,

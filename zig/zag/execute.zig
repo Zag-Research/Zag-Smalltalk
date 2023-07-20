@@ -14,7 +14,7 @@ const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol = object.indexSymbol;
-pub const lookup = @import("dispatch.zig").lookup;
+const lookup = @import("dispatch.zig").lookup;
 pub const Context = @import("context.zig").Context;
 //const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
@@ -645,12 +645,9 @@ pub const controlPrimitives = struct {
         std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, sp[arity].get_class(), newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
-    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
-        const selector = pc[0].object;
-        const newPc = lookup(selector, sp[0].get_class());
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         context.setReturn(pc + 1);
-        trace("\nsend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
+        return @call(tailCall, tailSend0, .{ pc, sp, process, context, selector });
     }
     pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
@@ -658,11 +655,14 @@ pub const controlPrimitives = struct {
         trace("\ntailSend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
-    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        context.setReturn(pc + 1);
+        return @call(tailCall, tailSend1, .{ pc, sp, process, context, selector });
+    }
+    pub fn tailSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[1].get_class());
         trace("\nsend1: {} {} {any}",.{selector,sp[1].get_class(), process.getStack(sp)});
-        context.setReturn(pc + 1);
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn perform(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {

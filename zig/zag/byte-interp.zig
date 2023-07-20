@@ -40,6 +40,7 @@ pub const ByteCode = enum(i8) {
     pushLiteral,
     pushLiteral0,
     pushLiteral1,
+    pushLiteral2,
     pushNil,
     pushTrue,
     pushFalse,
@@ -139,6 +140,16 @@ pub const ByteCode = enum(i8) {
                     .pushLiteral0 => {
                         sp -= 1;
                         sp[0] = Object.from(0);
+                        continue :interp;
+                    },
+                    .pushLiteral1 => {
+                        sp -= 1;
+                        sp[0] = Object.from(1);
+                        continue :interp;
+                    },
+                    .pushLiteral2 => {
+                        sp -= 1;
+                        sp[0] = Object.from(2);
                         continue :interp;
                     },
                     .pushTrue => {

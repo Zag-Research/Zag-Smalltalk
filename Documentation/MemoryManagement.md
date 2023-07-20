@@ -23,24 +23,24 @@ AST Smalltalk has several features that minimize the amount of work required by 
 The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself and the global collector thread) and a global arena accessible by all threads.
 
 ## Per-Thread Arenas
-Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena.
+Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows down. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena.
 
-The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack of contexts.
+The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack and current context.
 
-If, after an allocation in the nursery, there is not enough free space in the currrent arena to copy the entire stack, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occuupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtain a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the stack.
+If, after an allocation in the nursery, there is not enough free space in the current arena to copy the entire stack, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as, (a) much of the content is likely garbage, and (b) we must have room into which to copy the stack.
 
 ### Stack of Contexts
-The execution stack is allocated at the top of the nursery arena, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap.
+The execution stack is allocated in the stack area of the Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
 
 The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the top of the stack area.
 
-On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
 
 #### Object age fields
 The age field for local objects is as follows:
 - 0 Incomplete Context object on the stack
-- 1 Allocated in Nursery
-- 7 Nursery object about to be promoted to Global Arean
+- 1-5 Allocated in Nursery
+- 6 Nursery object about to be promoted to Global Arena
 
 ### Copying Collector
 Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-thread arena, where no locks are required. This is why Zag uses this for per-thread arenas.
@@ -78,9 +78,10 @@ All objects are allocated with the data followed by a footer. As all global obje
 
 #### Object age fields
 The age field for global objects is as follows:
+7. Static
 8. Global
 9. GlobalMarked
-10. Static
+10. Structs
 11. GlobalScanned
 12. AoO
 13. AoOMarked
@@ -112,20 +113,20 @@ There is a complex approach that we considered, but full  `become:` is rare enou
 2. if both are forwarding pointers, we just swap those (after swapping the hashes)
 3. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
 4. otherwise, the larger is copied to a fresh location, the smaller is copied to the old location of the larger (with the rest becoming free space), and a forward to the fresh location replaces the header of the smaller, with the rest becoming free space
-5. We may have to do something to prevent forwarding pointers pointing to forwarding pointers.
+5. We may have to do something to prevent forwarding pointers pointing to forwarding pointers. (Probably if a forward points to a forward, replace the original forward.)
 
 This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from thread-local heaps to the global heap.
 
-The way we had proposed to do it had 4 cases:
+The previous proposed way to do it had 4 cases:
 1. if it's a one-way become, the source header is replaced with with a simple forwarding pointer 
 2. if both objects are thread-local and of the same size, then the contents are swapped (thread local guarantees "small")
 3. If at least one of the objects is in the global arena, if the other isn't it is promoted to the global arena (leaving a forwarding pointer behind). Now both objects are in the global arena, and the global collector is asked to do the `become`.
 4. the default handling is to create a become structure which is a table of header+address pairs for the objects from the `become`. Then each header is replaced with a 'become' forwarding pointer. The 'become' forwarding pointer is a length of 4080+offset, where offset is the position in the become structure that should now be used for this object, and the address portion is the address of the become structure. Become structures disappear when the arena in which they reside is collected.
 
 ### Array of Objects
-Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situattion, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.
+Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situation, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.
 
-The allocation of an array of objects creates an object that encompasses a sequence of objects of a given size. The objects at those locations are complete object (including headers) and do not have to be homogeneous, but have to be no larger than that size. In fact, when the AoO is first allocated, all the elements will be initialized to Nil. This means that polymorphic dispatch could be used as long as the AoO is created with the largest of the objects. The `at:put:` message will fail if a larger object is provided. Elements also cannot be `Float` (for encoding reasons) but this is not a limitatiion since an array of flosts is already efficiently handled.
+The allocation of an array of objects creates an object that encompasses a sequence of objects of a given size. The objects at those locations are complete object (including headers) and do not have to be homogeneous, but have to be no larger than that size. In fact, when the AoO is first allocated, all the elements will be initialized to Nil. This means that polymorphic dispatch could be used as long as the AoO is created with the largest of the objects. The `at:put:` message will fail if a larger object is provided. Elements also cannot be `Float` (for encoding reasons) but this is not a limitatiion since an array of floats is already efficiently handled.
 
 The low 6 bits of the hash field for an element are the log2 of the size of the total array and allow accessing its header.
 
@@ -140,7 +141,7 @@ The disadvantages relate to garbage collection:
 `at:`, `do:`, `collect:`, etc. for an array of objects return the immediate value if that is what is at the particular position, or a created heap reference.
 `at:put:` verifies that either:
 -  the value is a non-double immediate, or 
-- a heap-allocated object with a length <= the specified limit, and that value is currently on a per-thread heap - because we must move the object into the AoO and we don't move global objects (this should not be an onerous limitation)
+- a heap-allocated object with a length <= the specified limit, and that value is currently on a per-thread heap (or immutable) - because we must move the object into the AoO and we don't move mutable global objects (this should not be an onerous limitation) - in this case we leave a forwarding pointer behind
 
 ## Notes
 - when the stack is being copied, 
