@@ -1,4 +1,7 @@
 const std = @import("std");
+const config = @import("config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const ProcessPtr = @import("process.zig").ProcessPtr;
@@ -22,12 +25,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
-const debugging = false;
-pub const tailCall: std.builtin.CallModifier = if (debugging) .never_inline else .always_tail;
-const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
-pub const trace = if (debugging) std.debug.print else trace_;
-inline fn trace_(_: anytype, _: anytype) void {}
 
 pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object {
     if (process.debugger()) |debugger|

@@ -22,4 +22,11 @@ zig build-exe -OReleaseFast -fomit-frame-pointer -freference-trace --main-pkg-pa
 zig test -freference-trace --main-pkg-path ~/git/Zag-Smalltalk/zig/zag fibonacci.zig
 zig test -freference-trace primitives.zig
 ```
-Edit the code in the 
+Edit the code in an editor of your choice.
+
+#### Debugging
+Normally threaded code uses tail-calls to go from word to word. But this means that tracebacks when something goes wrong are of limited value.
+
+The file [`config.zig`](../zig/zag/config.zig) contains debugging parameters. Setting `debugging` to true will turn tail-calls into normal calls which will give reasonable tracebacks, as well as enabling `trace` calls to actually log traces (each of these can also be turned on individually).
+
+You need to disable `debugging` for full valid program execution, because any real program will blow the stack with tail-call turned off.

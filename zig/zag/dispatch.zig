@@ -1,4 +1,7 @@
 const std = @import("std");
+const config = @import("config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -13,8 +16,6 @@ const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 const execute = @import("execute.zig");
-const tailCall = execute.tailCall;
-const trace = execute.trace;
 const Context = execute.Context;
 const TestExecution = execute.TestExecution;
 const MethodReturns = execute.MethodReturns;

@@ -1,4 +1,7 @@
 const std = @import("std");
+const config = @import("config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
@@ -19,7 +22,6 @@ const indexSymbol = object.indexSymbol;
 const print = std.debug.print;
 const MethodReturns = [*]Object;
 const execute = @import("execute.zig");
-const tailCall = execute.tailCall;
 const TestExecution = execute.TestExecution;
 const CompiledMethodPtr = *CompiledMethod;
 const CompiledMethod = execute.CompiledMethod;
@@ -65,8 +67,6 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    //const trace = std.debug.print;
-    inline fn trace(_: anytype, _: anytype) void {}
     fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object) MethodReturns {
         trace("\ninterpretReturn: 0x{x}", .{ @intFromPtr(context.method) });
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))) });

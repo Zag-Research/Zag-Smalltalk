@@ -1,4 +1,7 @@
 const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const debug = std.debug;
 const math = std.math;
 const stdout = std.io.getStdOut().writer();
@@ -7,7 +10,6 @@ const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const Nil = @import("zag/zobject.zig").Nil;
 const execute = @import("zag/execute.zig");
-const tailCall = execute.tailCall;
 const Code = execute.Code;
 const compileMethod = execute.compileMethod;
 const ContextPtr = execute.CodeContextPtr;
