@@ -111,10 +111,15 @@ pub const inlines = struct {
         sp[0] = closure.prevPrev();
         @panic("unfinished");
     }
-    fn nonLocalReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    fn nonLocalReturn(_: [*]const Code, sp: [*]Object, process: *Process, targetContext: ContextPtr, selector: Object) [*]Object {
         const val = sp[0];
-        if (true) _ = .{ val, process, context, selector, @panic("nonLocalReturn") };
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+        var result = targetContext.pop(process);
+        const newSp = result.sp;
+        if (!val.equals(object.NotAnObject))
+            newSp[0] = val;
+        const callerContext = result.ctxt;
+        trace("-> {any}", .{callerContext.stack(newSp, process)});
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector});
     }
 };
 pub const embedded = struct {
@@ -123,34 +128,37 @@ pub const embedded = struct {
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
     pub fn value(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const val = sp[0];
+        trace("\nvalue: {}",.{val});
         switch (val.tag) {
-            .numericThunk => {
-                if (((val.u() >> 47) & 1) == 0) {
-                    sp[0] = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
-                } else {
-                    sp[0] = @as(Object, @bitCast(val.u() << 17));
-                }
-            },
-            .immediateThunk => sp[0].tag = .immediates,
-            .heapThunk => sp[0].tag = .heap,
+            // .numericThunk => {
+            //     if (((val.u() >> 47) & 1) == 0) {
+            //         sp[0] = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
+            //     } else {
+            //         sp[0] = @as(Object, @bitCast(val.u() << 17));
+            //     }
+            // },
+            // .immediateThunk => sp[0].tag = .immediates,
+            // .heapThunk => sp[0].tag = .heap,
             .nonLocalThunk => {
                 const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
                 const index = val.u() & 7;
                 sp[0] = nonLocalValues[index];
+                trace(" {*} {}",.{targetContext,index});
                 return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector });
             },
-            .heapClosure => {
-                const closure = val.to(heap.HeapObjectPtr);
-                const method = closure.prev().to(CompiledMethodPtr);
-                if (method != &inlines.valueClosureMethod) {
-                    const newPc = method.codePtr();
-                    context.setReturn(pc);
-                    return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
-                }
-                if (!Sym.value.hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
-                sp[0] = closure.prevPrev();
-            },
-            else =>  return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.value }),
+            // .heapClosure => {
+            //     const closure = val.to(heap.HeapObjectPtr);
+            //     const method = closure.prev().to(CompiledMethodPtr);
+            //     if (method != &inlines.valueClosureMethod) {
+            //         const newPc = method.codePtr();
+            //         context.setReturn(pc);
+            //         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
+            //     }
+            //     if (!Sym.value.hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+            //     sp[0] = closure.prevPrev();
+            // },
+            else =>  @panic("unknown block type"),
+            //return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.value }),
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
     }
@@ -193,7 +201,7 @@ pub const embedded = struct {
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector });
     }
 
-    inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn, context: ContextPtr) [*]Object {
+    fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn, context: ContextPtr) [*]Object { // INLINE
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         const newSp = sp - 1;
         newSp[0] = Object.tagged(.nonLocalThunk,@intFromEnum(tag),context.cleanAddress());

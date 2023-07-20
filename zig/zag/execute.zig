@@ -22,12 +22,12 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
-pub const tailCall: std.builtin.CallModifier = .always_tail;
-//pub const tailCall: std.builtin.CallModifier = .never_inline;
+const debugging = false;
+pub const tailCall: std.builtin.CallModifier = if (debugging) .never_inline else .always_tail;
 const noInlineCall: std.builtin.CallModifier = .never_inline;
 pub const MethodReturns = [*]Object;
-//pub const trace = std.debug.print;
-pub inline fn trace(_: anytype, _: anytype) void {}
+pub const trace = if (debugging) std.debug.print else trace_;
+inline fn trace_(_: anytype, _: anytype) void {}
 
 pub fn check(pc: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object {
     if (process.debugger()) |debugger|
@@ -539,10 +539,16 @@ pub const controlPrimitives = struct {
     pub fn drop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
     }
+    pub fn swap(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+        const saved = sp[0];
+        sp[0] = sp[1];
+        sp[1] = saved;
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
+    }
     pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp - 1;
         newSp[0] = pc[0].object;
-        trace("\npushLiteral: {}", .{newSp[0]});
+        trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, context, selector });
     }
     pub fn pushLiteral0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -593,13 +599,13 @@ pub const controlPrimitives = struct {
     pub fn pushLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp - 1;
         newSp[0] = context.getLocal(pc[0].uint);
-        trace("\npushLocal: {} {any} {any}", .{ pc[0].uint, context.stack(newSp, process), context.allLocals(process) });
+        trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, context, selector });
     }
     pub fn pushLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
         const newSp = sp - 1;
         newSp[0] = context.getLocal(0);
-        trace("\npushLocal: {any} {*}", .{ context.stack(newSp, process), pc });
+        trace("\npushLocal: {any}", .{ context.stack(newSp, process) });
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector });
     }
     pub fn pushLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
@@ -645,13 +651,19 @@ pub const controlPrimitives = struct {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[0].get_class());
         context.setReturn(pc + 1);
-        trace("\nin send0 {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
+        trace("\nsend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
+    }
+    pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+        const selector = pc[0].object;
+        const newPc = lookup(selector, sp[0].get_class());
+        trace("\ntailSend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
     pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
         const newPc = lookup(selector, sp[1].get_class());
-        trace("\nsend1: {} {} {} {x}",.{selector,sp[1],sp[1].get_class(),@intFromPtr(newPc)});
+        trace("\nsend1: {} {} {any}",.{selector,sp[1].get_class(), process.getStack(sp)});
         context.setReturn(pc + 1);
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
@@ -693,8 +705,7 @@ pub const controlPrimitives = struct {
         const selfOffset = stackStructure.high16();
         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
         const newSp = ctxt.asObjectPtr();
-        trace("\npC: sp={*} newSp={*} {} {*}", .{ sp, newSp, pc[0].uint, method });
-        trace("\npushContext: {any} {} {} {}", .{ process.getStack(sp), locals, method.selector, selfOffset });
+        trace("\npushContext: {any} {} {} {} 0x{x}", .{ process.getStack(sp), locals, method.selector, selfOffset, @intFromPtr(ctxt) });
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, ctxt, selector });
     }
     pub fn returnWithContext(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {

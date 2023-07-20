@@ -18,8 +18,9 @@ const Format = heap.Format;
 const allocationInfo = Format.allocationInfo;
 const AllocErrors = heap.AllocErrors;
 const ContextPtr = *@import("context.zig").Context;
-const tailCall: std.builtin.CallModifier = .always_tail;
-const Code = @import("execute.zig").Code;
+const execute = @import("execute.zig");
+const tailCall = execute.tailCall;
+const Code = execute.Code;
 const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 pub const AllocResult = struct {
     sp: [*]Object,

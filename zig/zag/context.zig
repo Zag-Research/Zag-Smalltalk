@@ -151,6 +151,10 @@ pub const Context = struct {
         const wordsToDiscard = self.asHeapObjectPtr().hash16();
         return self.asObjectPtr()[wordsToDiscard];
     }
+    pub inline fn setResult(self: *const Context, value: Object) void {
+        const wordsToDiscard = self.asHeapObjectPtr().hash16();
+        self.asObjectPtr()[wordsToDiscard] = value;
+    }
     pub inline fn getLocal(self: *const Context, n: usize) Object {
         @setRuntimeSafety(false);
         return self.temps[n];

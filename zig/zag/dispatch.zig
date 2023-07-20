@@ -1,5 +1,4 @@
 const std = @import("std");
-const tailCall: std.builtin.CallModifier = .always_tail;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -14,6 +13,7 @@ const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 const execute = @import("execute.zig");
+const tailCall = execute.tailCall;
 const trace = execute.trace;
 const Context = execute.Context;
 const TestExecution = execute.TestExecution;
@@ -71,7 +71,7 @@ const Dispatch = extern struct {
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
         trace("\naddMethod: {} {}",.{index,method.selector});
-        method.checkFooter();
+        //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
         if (dispatchP == &empty) {
@@ -142,7 +142,7 @@ const Dispatch = extern struct {
     }
     inline fn lookupAddress(self: *const Self, selector: u64) *[*]const Code {
         const hash = selector * self.hash >> 32;
-        trace("\nlookupAddress: {} {}",.{selector,hash});
+        //trace("\nlookupAddress: {} {}",.{selector,hash});
         return @constCast(&self.methods[hash]);
     }
     inline fn preHash(selector: u32) u64 {
@@ -183,9 +183,9 @@ const Dispatch = extern struct {
         }
         const hashed = preHash(cmp.selector.hash32());
         const address = self.lookupAddress(hashed);
-        trace("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
+        //trace("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
         if (@cmpxchgWeak([*]const Code, address, dnuInit, cmp.codePtr(), .SeqCst, .SeqCst) == null) {
-            trace("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
+            //trace("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
             return; // we replaced DNU with method
         }
         const existing = @as(*const Code, @ptrCast(address.*)).compiledMethodPtr(0);
