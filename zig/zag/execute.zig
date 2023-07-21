@@ -127,7 +127,7 @@ pub const Code = extern union {
     pub inline fn object(o: Object) Code {
         return Code{ .object = o };
     }
-    inline fn ref(comptime u: u24) Code {
+    inline fn ref(comptime u: u12) Code {
         return Code{ .object = indexSymbol(u) };
     }
     inline fn header(h: heap.HeapObject) Code {
@@ -296,8 +296,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
             for (replacements, 1..) |replacement, index| {
-                const match = indexSymbol(@as(u24, @truncate(index)));
-                if (self.selector.equals(match)) {
+                const match = indexSymbol(@truncate(index));
+                if (self.selector.indexEquals(match)) {
                     trace("\nsetLiterals: {x}",.{self.stackStructure});
                     self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
                     trace(" ->  {x}",.{self.stackStructure});
@@ -313,7 +313,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             if (self.references.len > 0) {
                 for (&self.code) |*c| {
                     if (c.object.isIndexSymbol())
-                        c.* = Code.uint((@intFromPtr(&self.references[c.object.hash24() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1);
+                        c.* = Code.uint((@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1);
                 }
             }
         }
@@ -645,26 +645,26 @@ pub const controlPrimitives = struct {
         std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, sp[arity].get_class(), newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
-    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         context.setReturn(pc + 1);
-        return @call(tailCall, tailSend0, .{ pc, sp, process, context, selector });
-    }
-    pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = lookup(selector, sp[0].get_class());
-        trace("\ntailSend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
+        const self = sp[0];
+        const newPc = lookup(selector, self.get_class());
+        trace("\nsend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
-    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+//    pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+//    }
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         context.setReturn(pc + 1);
-        return @call(tailCall, tailSend1, .{ pc, sp, process, context, selector });
-    }
-    pub fn tailSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = pc[0].object;
-        const newPc = lookup(selector, sp[1].get_class());
+        const self = sp[1];
+        const newPc = lookup(selector, self.get_class());
         trace("\nsend1: {} {} {any}",.{selector,sp[1].get_class(), process.getStack(sp)});
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector });
     }
+//    pub fn tailSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
+//    }
     pub fn perform(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) [*]Object {
         const selector = sp[0];
         const numArgs = selector.numArgs();

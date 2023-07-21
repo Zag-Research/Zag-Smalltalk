@@ -77,7 +77,7 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub  fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr { //INLINE
+    pub inline fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
         if (@intFromPtr(self) == 0) @panic("0 self");
         var contextMutable = self;
         const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable) + maxStackNeeded;
@@ -129,7 +129,7 @@ pub const Context = struct {
         @setRuntimeSafety(false);
         return @constCast(self.temps[0..size]);
     }
-    pub  fn getTPc(self: *const Context) [*]const Code { // INLINE
+    pub inline fn getTPc(self: *const Context) [*]const Code {
         return self.tpc;
     }
     pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: [*]const Code) void {

@@ -7,7 +7,7 @@
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
 - [point-free Smalltalk](https://smalltalkthoughts.blogspot.com/2011/08/point-free-programming-in-smalltalk.html)
 - [Marcus Denker blog](https://blog.marcusdenker.de/)
-- [Cog blog - build me a JIT as fastt as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
+- [Cog blog - build me a JIT as fast as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
 - [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
 - [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
 - [building Pharo VM](https://github.com/pharo-project/pharo-vm)

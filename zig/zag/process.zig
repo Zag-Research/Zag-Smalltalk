@@ -110,7 +110,7 @@ pub const Process = extern struct {
     pub inline fn freeStack(self: *const Self, sp: [*]Object) usize {
         return (@intFromPtr(sp)-@intFromPtr(self.ptr()))/8;
     }
-    pub  fn getStack(self: *const Self, sp: [*]Object) []Object { // INLINE
+    pub inline fn getStack(self: *const Self, sp: [*]Object) []Object {
         return sp[0 .. (@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object)];
     }
     pub inline fn allocStack(self: *Self, sp: [*]Object, words: u64, contextMutable: *ContextPtr) [*]Object {

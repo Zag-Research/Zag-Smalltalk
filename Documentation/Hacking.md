@@ -30,3 +30,12 @@ Normally threaded code uses tail-calls to go from word to word. But this means t
 The file [`config.zig`](../zig/zag/config.zig) contains debugging parameters. Setting `debugging` to true will turn tail-calls into normal calls which will give reasonable tracebacks, as well as enabling `trace` calls to actually log traces (each of these can also be turned on individually).
 
 You need to disable `debugging` for full valid program execution, because any real program will blow the stack with tail-call turned off.
+
+Many functions are `inline` for performance reasons. When debugging, this can obscure tracebacks, so it may be useful to remove the `inline`. When you do this, please add the string ` // INLINE` to the end of the line so it can be found easily later. So, for example:
+```
+inline foo(self: *Self) void {
+```
+would become:
+```
+foo(self: *Self) void { // INLINE
+```

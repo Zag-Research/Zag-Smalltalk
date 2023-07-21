@@ -17,7 +17,7 @@ inline fn oImm(c: ClassIndex, h: u64) u64 {
 inline fn o(g: Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(uniqueNumber: u24) Object {
+pub inline fn indexSymbol(uniqueNumber: u12) Object {
     return @as(Object, @bitCast(oImm(.Symbol, 0xff000000 | @as(u32, uniqueNumber))));
 }
 pub const ZERO = of(0);
@@ -124,6 +124,12 @@ pub const Object = packed struct(u64) {
     pub inline fn hashEquals(self: Object, other: Object) bool {
         //@truncate(u24,self.u()^other.u())==0;
         return self.hash32() == other.hash32();
+    }
+    pub inline fn indexEquals(self: Object, other: Object) bool {
+        return @as(u12,@truncate((self.u()^other.u())))==0;
+    }
+    pub inline fn indexNumber(self: Object) u12 {
+        return @truncate(self.u()>>12);
     }
     pub inline fn isInt(self: Object) bool {
         return self.atLeastInt() and self.atMostInt();

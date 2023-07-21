@@ -202,7 +202,7 @@ pub const embedded = struct {
         return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector });
     }
 
-    fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn, context: ContextPtr) [*]Object { // INLINE
+    inline fn nonLocalBlock(sp: [*]Object, tag: literalNonLocalReturn, context: ContextPtr) [*]Object {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         const newSp = sp - 1;
         newSp[0] = Object.tagged(.nonLocalThunk,@intFromEnum(tag),context.cleanAddress());

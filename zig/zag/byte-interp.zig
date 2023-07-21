@@ -322,7 +322,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
             for (replacements, 1..) |replacement, index| {
-                const match = indexSymbol(@as(u24, @truncate(index)));
+                const match = indexSymbol(@truncate(index));
                 if (self.selector.equals(match)) {
                     self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
                     self.selector = replacement;
