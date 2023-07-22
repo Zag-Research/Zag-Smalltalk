@@ -88,18 +88,18 @@ pub const primitives = struct {
         unreachable;
     }
     pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#==
-        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"==".selectorEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
     pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // atAllPut:
-        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"atAllPut:".selectorEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         inlines.p1(sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#~~
-        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"~~".selectorEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }

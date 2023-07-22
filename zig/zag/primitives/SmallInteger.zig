@@ -192,34 +192,34 @@ pub const embedded = struct {
     };
 };
 pub const primitives = struct {
-    const dnu = execute.controlPrimitives.dnu;
+    const SmallInteger = object.ClassIndex.SmallInteger;
     pub fn p1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#+
-        if (!Sym.@"+".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"+".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         trace("\np1: {any}", .{context.stack(sp, process)});
         sp[1] = inlines.p1(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#-
-        if (!Sym.@"-".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"-".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         trace("\np2: {any}", .{context.stack(sp, process)});
         sp[1] = inlines.p2(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // at:
-        if (!Sym.@"at:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"at:".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#<=
-        if (!Sym.@"<=".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"<=".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         trace("\np5: {any}", .{context.stack(sp, process)});
         sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch
                                 return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#*
-        if (!Sym.@"*".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.@"*".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         sp[1] = inlines.p9(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });

@@ -37,15 +37,11 @@ const Sym = struct {
     }
 };
 var sym: Sym = undefined;
-const dnu = execute.controlPrimitives.dnu;
 const i = primitives.inlines;
 const e = primitives.embedded;
 const p = primitives.primitives;
 const testReps = 7;
-var fibCPSM = compileMethod(Sym.i_1, 0, 0, .{&fibCPS});
-const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
-var fibCPSSendM = compileMethod(Sym.i_1, 0, 0, .{&fibCPSSend});
-const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
+
 // fibonacci
 //	self <= 2 ifTrue: [ ^ 1 ].
 //	^ (self - 1) fibonacci + (self - 2) fibonacci
@@ -73,11 +69,17 @@ test "fibObject" {
         try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn timeObject(n: i64) void {
-    _ = fibObject(Object.from(n));
+fn runObject(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
+    const start = tstart();
+    _ = fibObject(Object.from(runs));
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
+var fibCPSM = compileMethod(Sym.i_1, 0, 0, .{&fibCPS});
+const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
 pub fn fibCPS(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-    if (!sym.fibonacci.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+    if (!sym.fibonacci.hashEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
     if (i.p5N(sp[0], two)) {
         sp[0] = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
@@ -116,16 +118,22 @@ test "fibCPS" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn timeCPS(n: i64) void {
+fn runCPS(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
     const method = fibCPSM.asCompiledMethodPtr();
     fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty);
-    var objs = [_]Object{Object.from(n)};
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
+    const start = tstart();
     _ = te.run(objs[0..], method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
+var fibCPSSendM = compileMethod(Sym.i_1, 0, 0, .{&fibCPSSend});
+const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
 pub fn fibCPSSend(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-    if (!sym.fibonacci.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+    if (!sym.fibonacci.selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
     if (i.p5N(sp[0], two)) {
         sp[0] = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
@@ -173,13 +181,17 @@ test "fibCPSSend" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn timeCPSSend(n: i64) void {
+fn runCPSSend(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
     const method = fibCPSSendSetup();
-    var objs = [_]Object{Object.from(n)};
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
+    const start = tstart();
     _ = te.run(objs[0..], method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
 var fibThread =
     compileMethod(Sym.i_1, 0, 2, .{
     &e.verifySelector,
@@ -220,14 +232,18 @@ test "fibThread" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn timeThread(n: i64) void {
+fn runThread(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
     const method = fibThread.asCompiledMethodPtr();
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty);
-    var objs = [_]Object{Object.from(n)};
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
+    const start = tstart();
     _ = te.run(objs[0..], method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
 var fibDispatch =
     compileMethod(Sym.i_1, 0, 2, .{
     &e.verifySelector,
@@ -285,13 +301,17 @@ test "fibDispatch" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn timeDispatch(n: i64) void {
-    const start = fibDispatchSetup();
-    var objs = [_]Object{Object.from(n)};
+fn runDispatch(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
+    const method = fibDispatchSetup();
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    _ = te.run(objs[0..], start);
+    const start = tstart();
+    _ = te.run(objs[0..], method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
 const b = @import("zag/byte-interp.zig").ByteCode;
 var fibByte =
     compileByteCodeMethod(Sym.i_1, 0, 2, .{
@@ -335,15 +355,18 @@ var fibByte =
         try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
     }
 }
-fn timeByte(n: i64) void {
-    sym = Sym.init();
+fn runByte(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
     fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
     const method = fibByte.asCompiledMethodPtr();
-    var objs = [_]Object{Object.from(n)};
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
+    const start = tstart();
     _ = te.run(objs[0..], method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
+
 var @"Integer>>+" =
     compileMethod(Sym.@"+", 0, 0, .{
         &p.p1,
@@ -419,13 +442,17 @@ test "fibFull" {
         try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
     }
 }
-fn timeFull(n: i64) void {
+const debugPrint = false;
+fn runFull(run:usize) usize {
     initSmalltalk() catch @panic("init");
     const method =  fibFull.asCompiledMethodPtr();
-    var objs = [_]Object{Object.from(n)};
+    var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
+    if (debugPrint) std.debug.print("{},",.{run});
+    const start = tstart();
     _ = te.run(objs[0..],method);
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
 const ts = std.time.nanoTimestamp;
 fn tstart() i128 {
@@ -435,45 +462,61 @@ fn tstart() i128 {
         if (newT != t) return newT;
     }
 }
-pub fn timing(runs: u6) !void {
-    try stdout.print("for '{} fibonacci'\n", .{runs});
-    var start = tstart();
+fn runNative(run:usize) usize {
+    if (debugPrint) std.debug.print("{},",.{run});
+    const start = tstart();
     _ = fibNative(runs);
-    var base = ts() - start;
-    try stdout.print("fibNative:  {d:7.3}s\n", .{@as(f64, @floatFromInt(base)) / 1000000000});
-    //std.debug.print("calls to fib {}\n",.{count});
-    start = tstart();
-    _ = timeObject(runs);
-    var time = ts() - start;
-    try stdout.print("fibObject:  {d:7.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    base = time;
-    start = tstart();
-    _ = timeCPS(runs);
-    time = ts() - start;
-    try stdout.print("fibCPS:     {d:7.3}s +{d:6.2}%\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time - base)) * 100.0 / @as(f64, @floatFromInt(base)) });
-    base = time;
-    start = tstart();
-    _ = timeCPSSend(runs);
-    time = ts() - start;
-    try stdout.print("fibCPSSend: {d:7.3}s :{d:6.2} x CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(base)) });
-    start = tstart();
-    _ = timeThread(runs);
-    time = ts() - start;
-    try stdout.print("fibThread:  {d:7.3}s :{d:6.2} x CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(base)) });
-    start = tstart();
-    _ = timeDispatch(runs);
-    time = ts() - start;
-    try stdout.print("fibDispatch:{d:7.3}s :{d:6.2} x CPS\n", .{ @as(f64, @floatFromInt(time)) / 1000000000, @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(base)) });
-    start=tstart();
-    _ = timeByte(runs);
-    time = ts()-start;
-    try stdout.print("fibByte:    {d:7.3}s :{d:6.2} x CPS\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time)) / @as(f64,@floatFromInt(base))});
-    start=tstart();
-    _ = timeFull(runs);
-    time = ts()-start;
-    try stdout.print("fibFull:    {d:7.3}s :{d:6.2} x CPS\n",.{@as(f64,@floatFromInt(time))/1000000000,@as(f64,@floatFromInt(time)) / @as(f64,@floatFromInt(base))});
+    return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
+}
+const Stats = @import("zag/utilities/stats.zig").Stats;
+pub fn timing() !void {
+    const nRuns = 5;
+    const print = std.debug.print;
+    print("for '{} fibonacci'\n", .{runs});
+    var stat = Stats(usize,nRuns).init();
+    print("          Median   Mean   StdDev\n", .{});
+    print("Native:  ", .{});
+    stat.run(runNative);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{stat.median(), stat.mean(), stat.stdDev()});
+
+    stat = Stats(usize,nRuns).init();
+    print("Object:  ", .{});
+    stat.run(runObject);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("CPS:     ", .{});
+    stat.run(runCPS);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("CPSSend: ", .{});
+    stat.run(runCPSSend);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("Thread:  ", .{});
+    stat.run(runThread);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("Dispatch:", .{});
+    stat.run(runDispatch);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("Byte:    ", .{});
+    stat.run(runByte);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
+    stat = Stats(usize,nRuns).init();
+    print("Full: ", .{});
+    stat.run(runFull);
+    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
+    
 }
 pub fn main() !void {
     try stdout.print("@sizeOf(fibThread) = {}, @sizeOf(fibByte) = {}\n",.{@sizeOf(@TypeOf(fibThread)), @sizeOf(@TypeOf(fibByte))});
-    try timing(40);
+    try timing();
 }
+const runs: u6 = 40;

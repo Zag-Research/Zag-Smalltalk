@@ -25,20 +25,28 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
+
 pub const SendCache = *SendCacheStruct;
 const SendCacheStruct = struct {
-    firstKey: Object,
     firstFn: *const TFn,
-    secondKey: Object,
     secondFn: *const TFn,
+    endFn: *const TFn,
     const Self = @This();
     fn init() Self {
         return .{
-            .firstKey = object.NotAnObject,
-            .firstFn = &controlPrimitives.dnu,
-            .secondKey = object.NotAnObject,
-            .secondFn = &controlPrimitives.dnu,
+            .firstFn = &controlPrimitives.cacheDnu,
+            .secondFn = &controlPrimitives.cacheDnu,
+            .endFn = &controlPrimitives.hardDnu,
         };
+    }
+    pub inline fn current(self: *Self) ThreadedFn {
+        return self.firstFn;
+    }
+    pub inline fn next(self: *Self) SendCache {
+        return @as(SendCache,@ptrCast(&self.secondFn));
+    }
+    pub inline fn noCache(self: *const Self) SendCache {
+        return @as(SendCache,@constCast(@ptrCast(&self.endFn)));
     }
 };
 
@@ -498,7 +506,7 @@ pub const controlPrimitives = struct {
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\nverifySelector: {} {} {*}", .{ method.selector, selector, pc });
-        if (!method.selector.hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        if (!method.selector.selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
     pub fn branch(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
@@ -745,8 +753,11 @@ pub const controlPrimitives = struct {
         trace("\nreturnNoContext: {} {any} N={*} T={*}", .{ context.method.selector, context.stack(sp, process), context.getNPc(), context.getTPc() });
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector, cache });
     }
-    pub fn dnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        _ = .{ pc, sp, process, context, selector, cache, @panic("unimplemented")};
+    pub fn hardDnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        _ = .{ pc, sp, process, context, selector, cache, @panic("hardDnu unimplemented")};
+    }
+    pub fn cacheDnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        _ = .{ pc, sp, process, context, selector, cache, @panic("cacheDnu unimplemented")};
     }
 };
 pub const TestExecution = struct {
@@ -779,11 +790,11 @@ pub const TestExecution = struct {
     }
     var yourself = CompiledMethod.init(Sym.yourself,Code.end);
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
-        var cache = SendCacheStruct.init();
+        const cache = SendCacheStruct.init();
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace) == @TypeOf(std.debug.print) and trace == std.debug.print) method.write(stdout) catch unreachable;
-        return self.stack(method.execute(self.sp, &self.process, &self.ctxt,&cache));
+        return self.stack(method.execute(self.sp, &self.process, &self.ctxt,cache.noCache()));
     }
 };
 const p = struct {

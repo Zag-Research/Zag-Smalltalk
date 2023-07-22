@@ -191,7 +191,7 @@ pub const Context = struct {
         trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
         const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
         const pc = @as([*]const Code, @ptrCast(&method.code));
-        _ = .{ pc, oldPc, sp, process, selector, cache, @panic("unimplemented")};
+        _ = .{ pc, oldPc, sp, process, selector, cache, @panic("call unimplemented")};
         //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };

@@ -75,7 +75,7 @@ pub const ByteCode = enum(i8) {
     fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
-        if (!method.selector.hashEquals(selector)) return @call(tailCall, execute.controlPrimitives.dnu, .{ pc, sp, process, context, selector, cache });
+        if (!method.selector.selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))), cache });
     }
     fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object, cache: SendCache) [*]Object {

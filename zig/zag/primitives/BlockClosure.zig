@@ -108,7 +108,7 @@ pub const inlines = struct {
         return sp;
     }
     fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        if (!Sym.value.hashEquals(selector)) return @call(tailCall, e.dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.value.selectorEquals(selector)) return @call(tailCall, e.dnu, .{ pc, sp, process, context, selector, cache });
         const closure = sp[0].to(heap.HeapObjectPtr);
         sp[0] = closure.prevPrev();
         @panic("unfinished");
@@ -156,7 +156,7 @@ pub const embedded = struct {
             //         context.setReturn(pc);
             //         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
             //     }
-            //     if (!Sym.value.hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+            //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
             //     sp[0] = closure.prevPrev();
             // },
             else =>  @panic("unknown block type"),
@@ -171,7 +171,7 @@ pub const embedded = struct {
             .heapClosure => {
                 const closure = val.to(heap.HeapObjectPtr);
                 const method = closure.prev().to(CompiledMethodPtr);
-                if (!Sym.@"value:".hashEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 const newPc = method.codePtr();
                 context.setReturn(pc);
                 if (true) @panic("unfinished");
@@ -266,7 +266,7 @@ test "immutableClosures" {
 }
 pub const primitives = struct {
     pub fn p201(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // value
-        if (!Sym.value.hashEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, selector, cache });
+        if (!Sym.value.selectorEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, selector, cache });
         unreachable;
     }
     pub fn p202(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // value:

@@ -45,7 +45,18 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return of(mem.readIntLittle(T, val));
 }
 pub const compareObject = Object.compare;
-pub const ClassIndex = enum(u16) { none = 0, Object, SmallInteger, Float, False, True, UndefinedObject, Symbol, Character, BlockClosure, Array, String, SymbolTable, Method, CompiledMethod, Dispatch, ClosureData, Context, _ };
+pub const ClassIndex = enum(u16) {
+    none = 0, Object, SmallInteger, Float,
+    False, True, UndefinedObject, Symbol,
+    Character, BlockClosure, Array, String,
+    SymbolTable, Method, CompiledMethod,
+    Dispatch, ClosureData, Context,
+    max = 0xffff, _,
+    const Self = @This();
+    inline fn base(ci: Self) u64 {
+        return @as(u64, @intFromEnum(ci)) << 32;
+    }
+};
 pub const Group = enum(u16) {
     immediates = 0xfff0,
     smallInt,
@@ -75,6 +86,9 @@ pub const Object = packed struct(u64) {
     pub const empty = &[0]Object{};
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(low32 | Group.immediates.base() | @as(u64, @intFromEnum(cls)) << 32);
+    }
+    pub inline fn setImmClass(self: Object, cls: ClassIndex) Object {
+        return cast(self.u()&~ClassIndex.max.base() | cls.base());
     }
     pub inline fn makeGroup(grp: Group, low48: u48) Object {
         return cast(low48 | grp.base());
@@ -124,6 +138,9 @@ pub const Object = packed struct(u64) {
     pub inline fn hashEquals(self: Object, other: Object) bool {
         //@truncate(u24,self.u()^other.u())==0;
         return self.hash32() == other.hash32();
+    }
+    pub inline fn selectorEquals(self: Object, other: Object) bool {
+        return @as(u48,@truncate((self.u()^other.u())))==0;
     }
     pub inline fn indexEquals(self: Object, other: Object) bool {
         return @as(u12,@truncate((self.u()^other.u())))==0;
