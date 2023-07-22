@@ -62,6 +62,17 @@ ASBlock >> blocks [
 	^ blocks
 ]
 
+{ #category : #'as yet unclassified' }
+ASBlock >> filter [
+self halt.
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> filter: zigInstructions [
+zigInstructions last = '&e.drop,' ifTrue: [ zigInstructions removeLast ].
+	^ zigInstructions
+]
+
 { #category : #accessing }
 ASBlock >> initialize [
 

@@ -18,6 +18,15 @@ ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 		  selector: method
 ]
 
+{ #category : #testing }
+ASPharoCompilerProgramTest >> buildFromMethods: methods [
+| compiler |
+	compiler := ASPharoCompiler new.
+	compiler dontVisitMessages.
+	methods do: [ :method | compiler addMethod: method ].
+	^compiler transitiveClosure 
+]
+
 { #category : #script }
 ASPharoCompilerProgramTest >> codeStart42 [
 	<script>
@@ -72,6 +81,26 @@ ASPharoCompilerProgramTest >> testFib [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFibSubset [
+
+	| result methods aStream |
+	methods := OrderedCollection new.
+	methods add: ASCompileTestClass1 >> #fib:.
+	methods add: SmallInteger >> #+.
+	methods add: SmallInteger >> #-.
+	methods add: SmallInteger >> #<=.
+	methods add: True >> #ifTrue:.
+	methods add: False >> #ifTrue:.
+	result := self buildFromMethods: methods.
+
+	aStream := (FileSystem disk workingDirectory / 'zigFibSubset.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBar [
 
 	| result aStream |
@@ -90,6 +119,21 @@ ASPharoCompilerProgramTest >> testFooBarIsolated [
 	| result aStream |	
 		result := self buildFromClassShallow: ASCompileTestClass1 selector: #foo:bar:.
 
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarSubset [
+
+	| result methods aStream |
+	methods := OrderedCollection new.
+	methods add: ASCompileTestClass1 >> #foo:bar:.
+	result := self buildFromMethods: methods.
 
 	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
 		           writeStream.

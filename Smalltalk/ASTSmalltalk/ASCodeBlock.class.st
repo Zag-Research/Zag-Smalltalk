@@ -97,12 +97,13 @@ ASCodeBlock >> writeBody: symbols with: stackVariables and: aStream [
 	| statementVisitor |
 	statementVisitor := ASStatementVisitor
 		                    symbols: symbols
-		                    stackVars: stackVariables
-		                    with: aStream.
+		                    stackVars: stackVariables.
 	body do: [ :asStatement |
-		aStream tab.
-		"aStream << (asStatement zigString: syms and: stackVariables)."
 		asStatement acceptVisitor: statementVisitor.
-		asStatement isASSend ifTrue: [ self isASBlock ifTrue:[self halt]. aStream << '&e.drop,' ].
+		asStatement isASSend ifTrue: [ statementVisitor addDrop ] ].
+
+	(self filter: statementVisitor instructionStack) do: [ :instruction |
+		aStream tab.
+		aStream << instruction.
 		aStream cr ]
 ]

@@ -51,11 +51,6 @@ ASMethodOrBlock >> initialize [
 ]
 
 { #category : #printing }
-ASMethodOrBlock >> instructions: someInstructions [ 
-	instructions := someInstructions
-]
-
-{ #category : #printing }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 

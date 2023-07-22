@@ -4,16 +4,42 @@ Class {
 	#instVars : [
 		'symbols',
 		'stackVars',
-		'aStream'
+		'aStream',
+		'instructionStack'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #instantiating }
+ASStatementVisitor class >> symbols: syms stackVars: stackVars [
+
+	^ self new symbols: syms stackVars: stackVars
+]
 
 { #category : #instantiating }
 ASStatementVisitor class >> symbols: syms stackVars: stackVars with: aStream [
 
 	
 	^ self new symbols: syms stackVars: stackVars with: aStream
+]
+
+{ #category : #adding }
+ASStatementVisitor >> addDrop [
+	instructionStack add:  '&e.drop,'
+]
+
+{ #category : #accessing }
+ASStatementVisitor >> instructionStack [
+	^ instructionStack
+]
+
+{ #category : #constructor }
+ASStatementVisitor >> symbols: syms stackVars: stackVariables [
+
+	symbols := syms.
+	stackVars := stackVariables.
+	instructionStack := OrderedCollection new.
+	
 ]
 
 { #category : #constructor }
@@ -28,29 +54,26 @@ ASStatementVisitor >> symbols: syms stackVars: stackVariables with: aStreamWrite
 ASStatementVisitor >> visitAssign: anASAssign [
 
 	anASAssign expression acceptVisitor: self.
-	aStream cr.
-	aStream << '&e.popLocal, '.
-	anASAssign variable acceptVisitor: self.
-	aStream << ','
+	instructionStack add: '&e.popLocal, ', ((stackVars indexOf: anASAssign variable name) - 1) asString, ','.
+	
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitBlockNode: anASBlock [ 
-| nonLocalReturnValue |
-nonLocalReturnValue := anASBlock nonLocalReturn: stackVars.
-	nonLocalReturnValue ifNotNil: [
-		aStream << nonLocalReturnValue ]
-	ifNil: [ 
-	aStream << '&e.pushLocal,' << (stackVars indexOf: anASBlock selector) asString << ',' ].
-	aStream cr.
+ASStatementVisitor >> visitBlockNode: anASBlock [
+
+	| nonLocalReturnValue |
+	nonLocalReturnValue := anASBlock nonLocalReturn: stackVars.
+	nonLocalReturnValue
+		ifNotNil: [
+			instructionStack add: nonLocalReturnValue ]
+		ifNil: [
+			instructionStack add: '&e.pushLocal, ', (stackVars indexOf: anASBlock selector) asString, ',' ].
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitLiteral: anASLiteral [
 
-	aStream << ' &e.pushLiteral, Object.from('
-	<< anASLiteral literal asString << '),'.
-	aStream cr
+	instructionStack add: ' &e.pushLiteral, Object.from(', anASLiteral literal asString, '),'.
 ]
 
 { #category : #visiting }
@@ -59,40 +82,36 @@ ASStatementVisitor >> visitNamedAS: anASLocal [
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitReturn: anASReturn [ 
+ASStatementVisitor >> visitReturn: anASReturn [
 	anASReturn expression acceptVisitor: self.
-	aStream << ' &e.returnTop,'.
-	aStream cr
+	instructionStack add: ' &e.returnTop,'
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitSelfNode: anASSelf [
 
-	aStream << '&e.pushLocal, '
-	<< ((stackVars indexOf: 'self') - 1) asString<< ','.
-	aStream cr
+	instructionStack add: '&e.pushLocal, ', ((stackVars indexOf: 'self') - 1) asString, ','
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitSend: anASSend [
 
+	| send |
 	anASSend target acceptVisitor: self.
 	anASSend args ifNotNil: [
 		anASSend args do: [ :arg | arg acceptVisitor: self ] ].
-	aStream << '&e.send' << anASSend selector numArgs asString << ', '.
+	send := '&e.send' , anASSend selector numArgs asString , ', '.
 	symbols
 		at: anASSend selector
-		ifPresent: [ :sym | aStream << sym ]
+		ifPresent: [ :sym | send := send, sym ]
 		ifAbsent: [
 			self halt.
-			aStream << anASSend selector ].
-	aStream << ','.
-	aStream cr
+			send := send, anASSend selector ].
+	instructionStack add: send , ','
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitVariable: anASRef [ 
-	aStream << '&e.pushLocal, ' << (stackVars indexOf: anASRef variable name) asString
-	 << ','.
-	aStream cr.
+ASStatementVisitor >> visitVariable: anASRef [
+
+	instructionStack add: '&e.pushLocal, ', (stackVars indexOf: anASRef variable name) asString, ','
 ]

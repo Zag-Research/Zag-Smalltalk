@@ -16,6 +16,11 @@ ASPharoCompiler >> compileMethod: aCompiledMethod [
 	^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast
 ]
 
+{ #category : #accessing }
+ASPharoCompiler >> dontVisitMessages [
+	visitMessages := false
+]
+
 { #category : #compiling }
 ASPharoCompiler >> initializeSyms [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"

@@ -107,6 +107,13 @@ ASMethodNode >> complexBlocks [
 	^ self blocks reject: [ :block | block isNonLocalReturn ]
 ]
 
+{ #category : #accessing }
+ASMethodNode >> filter: zigInstructions [
+	"nothing to do here"
+
+	^ zigInstructions
+]
+
 { #category : #comparing }
 ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
