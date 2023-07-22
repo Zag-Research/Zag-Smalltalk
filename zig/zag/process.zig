@@ -1,6 +1,9 @@
 const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
+const config = @import("config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const object = @import("zobject.zig");
 const Object = object.Object;
@@ -19,7 +22,7 @@ const allocationInfo = Format.allocationInfo;
 const AllocErrors = heap.AllocErrors;
 const ContextPtr = *@import("context.zig").Context;
 const execute = @import("execute.zig");
-const tailCall = execute.tailCall;
+const SendCache = execute.SendCache;
 const Code = execute.Code;
 const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 pub const AllocResult = struct {
@@ -50,7 +53,7 @@ pub const Process = extern struct {
     trapContextNumber: u64,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf([*]Object) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray);
-    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object) [*]Object;
+    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object;
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const stack_size = processAvail / 9;
     const nursery_size = (processAvail - stack_size) / 2;

@@ -17,10 +17,10 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const execute = @import("execute.zig");
+const SendCache = execute.SendCache;
 const TestExecution = execute.TestExecution;
 const Code = execute.Code;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const MethodReturns = [*]Object;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
@@ -32,7 +32,7 @@ pub const Context = struct {
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object) MethodReturns;
+    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
@@ -185,13 +185,13 @@ pub const Context = struct {
         pr("Context: {*} {} {any}\n", .{ self, self.header, self.allLocals(process) });
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
     }
-    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object) [*]Object {
+    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         self.tpc = oldPc + 1;
         self.npc = oldPc[0].prim;
         trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
         const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
         const pc = @as([*]const Code, @ptrCast(&method.code));
-        _ = .{ pc, oldPc, sp, process, selector, @panic("unimplemented")};
+        _ = .{ pc, oldPc, sp, process, selector, cache, @panic("unimplemented")};
         //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };

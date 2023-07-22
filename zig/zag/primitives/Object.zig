@@ -3,6 +3,7 @@ const config = @import("../config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
 const execute = @import("../execute.zig");
+const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
@@ -57,72 +58,72 @@ pub const inlines = struct {
 };
 const fallback = execute.fallback;
 pub const embedded = struct {
-    pub fn @"basicAt:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn @"basicAt:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         sp[1] = inlines.p60(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"basicAt:put:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn @"basicAt:put:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         sp[1] = inlines.p61(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:put:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"=="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn @"=="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"~~"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn @"~~"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"atAllPut:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+    pub fn @"atAllPut:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         sp[1] = inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
 };
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicAt:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicAt:put:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicAt:put:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicNew
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // basicNew:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicNew:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p83(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform: perform:with: perform:with:with: perform:with:with:with:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p83(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform: perform:with: perform:with:with: perform:with:with:with:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p84(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p84(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform:withArguments:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p100(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // perform:withArguments:inSuperclass:
-        _ = .{ pc, sp, process, context, selector };
+    pub fn p100(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform:withArguments:inSuperclass:
+        _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#==
+        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // atAllPut:
-        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // atAllPut:
+        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         inlines.p1(sp[0]) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector });
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector });
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector });
+    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#~~
+        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
     // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, process: *Process, caller: Context) Object { // ProtoObject>>class
 };

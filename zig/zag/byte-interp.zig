@@ -20,8 +20,8 @@ const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
 const indexSymbol = object.indexSymbol;
 const print = std.debug.print;
-const MethodReturns = [*]Object;
 const execute = @import("execute.zig");
+const SendCache = execute.SendCache;
 const TestExecution = execute.TestExecution;
 const CompiledMethodPtr = *CompiledMethod;
 const CompiledMethod = execute.CompiledMethod;
@@ -68,17 +68,17 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object) MethodReturns {
+    fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object, cache: SendCache) [*]Object {
         trace("\ninterpretReturn: 0x{x}", .{ @intFromPtr(context.method) });
-        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))) });
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))), cache });
     }
-    fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object) MethodReturns {
+    fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
-        if (!method.selector.hashEquals(selector)) return @call(tailCall, execute.controlPrimitives.dnu, .{ pc, sp, process, context, selector });
-        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))) });
+        if (!method.selector.hashEquals(selector)) return @call(tailCall, execute.controlPrimitives.dnu, .{ pc, sp, process, context, selector, cache });
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))), cache });
     }
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object) MethodReturns {
+    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object, cache: SendCache) [*]Object {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
@@ -198,17 +198,17 @@ pub const ByteCode = enum(i8) {
                         const result = context.pop(process);
                         const newSp = result.sp;
                         const callerContext = result.ctxt;
-                        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil });
+                        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil, cache });
                     },
-                    .returnNoContext => return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, Nil }),
+                    .returnNoContext => return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, Nil, cache }),
                     .returnTop => {
                         const top = sp[0];
                         const result = context.pop(process);
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
-                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack())});
-                        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil });
+                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack()), cache});
+                        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil, cache });
                     },
                     .p1 => { // SmallInteger>>#+
                         sp[1] = inlines.p1(sp[1], sp[0]) catch @panic("+");
@@ -229,7 +229,7 @@ pub const ByteCode = enum(i8) {
                         context.setTPc(asCodePtr(pc + 1));
                         const offset = pc[0].i();
                         if (offset >= 0) pc += 1 + @as(u64, @intCast(offset)) else pc -= @as(u64, @intCast(@as(i32, -offset) - 1));
-                        return @call(tailCall, interpret, .{ @as([*]const Code, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))) });
+                        return @call(tailCall, interpret, .{ @as([*]const Code, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))), cache });
                     },
                     .exit => @panic("fell off the end"),
                     else => {
