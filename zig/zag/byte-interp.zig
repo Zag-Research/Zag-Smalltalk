@@ -75,7 +75,10 @@ pub const ByteCode = enum(i8) {
     fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
-        if (!method.selector.selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!method.selector.selectorEquals(selector)) {
+            const dPc = cache.current();
+            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+        }
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))), cache });
     }
     fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object, cache: SendCache) [*]Object {
@@ -87,7 +90,7 @@ pub const ByteCode = enum(i8) {
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
-            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
+//            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
             pc += 1;
             branch: while (true) {
                 switch (code) {
@@ -207,7 +210,7 @@ pub const ByteCode = enum(i8) {
                         const newSp = result.sp;
                         newSp[0] = top;
                         const callerContext = result.ctxt;
-                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack()), cache});
+                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack())});
                         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil, cache });
                     },
                     .p1 => { // SmallInteger>>#+
@@ -342,7 +345,6 @@ fn convertCountSizes(comptime counts: execute.CountSizes) execute.CountSizes {
     return .{
         .codes = counts.codes,
         .refs = counts.refs + counts.objects,
-        .objects = 0,
     };
 }
 pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeByteCodeMethod(convertCountSizes(execute.countNonLabels(tup))) {

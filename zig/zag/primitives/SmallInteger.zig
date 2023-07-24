@@ -194,32 +194,41 @@ pub const embedded = struct {
 pub const primitives = struct {
     const SmallInteger = object.ClassIndex.SmallInteger;
     pub fn p1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#+
-        if (!Sym.@"+".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"+".setImmClass(SmallInteger).selectorEquals(selector)) {
+            const dPc = cache.current();
+            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+        }
         trace("\np1: {any}", .{context.stack(sp, process)});
         sp[1] = inlines.p1(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#-
-        if (!Sym.@"-".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"-".setImmClass(SmallInteger).selectorEquals(selector)) {
+            const dPc = cache.current();
+            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+        }
         trace("\np2: {any}", .{context.stack(sp, process)});
         sp[1] = inlines.p2(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // at:
-        if (!Sym.@"at:".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"at:".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#<=
-        if (!Sym.@"<=".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"<=".setImmClass(SmallInteger).selectorEquals(selector)) {
+            const dPc = cache.current();
+            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+        }
         trace("\np5: {any}", .{context.stack(sp, process)});
         sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch
                                 return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#*
-        if (!Sym.@"*".selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"*".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         sp[1] = inlines.p9(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
@@ -251,7 +260,7 @@ test "simple add" {
         &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
-    prog.setLiterals(empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())});
+    prog.setLiterals(empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())}, null);
     const result = testExecute(prog.asCompiledMethodPtr());
     try expectEqual(result[0].toInt(), 42);
 }
@@ -280,7 +289,7 @@ test "simple add with overflow" {
         &e.pushLiteral,     Sym.noFallback,
         &e.returnNoContext,
     });
-    try @import("../dispatch.zig").addMethod(object.ClassIndex.SmallInteger, prog2.asCompiledMethodPtr());
+    prog2.asCompiledMethodPtr().forDispatch(object.ClassIndex.SmallInteger);
     const result = testExecute(prog.asCompiledMethodPtr());
     try expectEqual(result[0], Sym.noFallback);
 }

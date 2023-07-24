@@ -107,8 +107,11 @@ pub const inlines = struct {
         sp[fields + 2] = heap.HeapObject.simpleStackObject(fields, object.ClosureData_C, 0).o();
         return sp;
     }
-    fn pushValue(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        if (!Sym.value.selectorEquals(selector)) return @call(tailCall, e.dnu, .{ pc, sp, process, context, selector, cache });
+    fn pushValue(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        if (!Sym.value.selectorEquals(selector)) {
+            const dPc = cache.current();
+            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+        }
         const closure = sp[0].to(heap.HeapObjectPtr);
         sp[0] = closure.prevPrev();
         @panic("unfinished");
@@ -239,12 +242,13 @@ fn testImmutableClosure(process: *Process, value: Object) !object.Group {
     var context = Context.init();
     const sp = process.endOfStack() - 1;
     sp[0] = value;
-    const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil);
+    var cache = execute.SendCacheStruct.init();
+    const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil,cache.dontCache());
     if (newSp != sp) {
         try ee(value.u(), newSp[1].u());
     }
     const tag = newSp[0].tag;
-    const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil);
+    const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil,cache.dontCache());
     try ee(value.u(), newerSp[0].u());
     return tag;
 }

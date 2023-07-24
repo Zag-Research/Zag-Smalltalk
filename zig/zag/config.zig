@@ -1,5 +1,5 @@
 const std = @import("std");
-const debugging = false;
+const debugging = true;
 const show_error_stack = debugging;
 const show_trace = debugging;
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;

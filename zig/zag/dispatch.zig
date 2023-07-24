@@ -46,7 +46,7 @@ const Dispatch = extern struct {
     const Self = @This();
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
-    var internal = [_]ThreadedFn{&super} ** (bitTests.len + 5);
+    var internal = [_]ThreadedFn{&super} ** (bitTests.len + 6);
     var empty: Self = .{
         .header = HeapObject.staticHeaderWithClassLengthHash(classIndex, @offsetOf(Self, "methods") / 8 - 1 + 1, 0), // don't count header, but do count one element of methods
         .hash = 1,
@@ -59,14 +59,15 @@ const Dispatch = extern struct {
         // @compileLog(@sizeOf(Self));
         std.debug.assert(@as(usize,1)<<@ctz(@as(u62,@sizeOf(Self)+8))==@sizeOf(Self)+8);
     }
-    const dnuThread = [_]Code{Code.prim(&dnu)};
+    const dnu = if (@import("builtin").is_test) &testDnu else &execute.controlPrimitives.forceDnu;
+    const dnuThread = [_]Code{Code.prim(dnu)};
     const dnuInit: [*]const Code = @ptrCast(&dnuThread[0]);
     var dispatchData: [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
         const hashed = preHash(selector.hash32());
         const address = dispatches[@intFromEnum(index)].lookupAddress(hashed);
-        trace("\nlookup: {} {} {} {*} {*}", .{ index, selector, hashed, address, address.* });
+        trace("\nlookup: {} {} {} {*} {*}", .{ index, selector.asSymbol(), hashed, address, address.* });
         return dispatches[@intFromEnum(index)].lookupAddress(preHash(selector.hash32())).*;
     }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
@@ -87,11 +88,12 @@ const Dispatch = extern struct {
         empty.methods[0] = dnuInit;
         empty.header.addFooter();
         internal[0] = super;
-        internal[1] = dnu;
+        internal[1] = testDnu;
         internal[2] = fail;
-        internal[3] = prime3;
-        internal[4] = prime5;
-        for (bitTests[0..], internal[5..]) |s, *i| {
+        internal[3] = execute.controlPrimitives.forceDnu;
+        internal[4] = prime3;
+        internal[5] = prime5;
+        for (bitTests[0..], internal[6..]) |s, *i| {
             i.* = s;
         }
         std.sort.insertion(ThreadedFn, &internal, {}, lessThan);
@@ -155,7 +157,7 @@ const Dispatch = extern struct {
         const code = self.lookupAddress(hashed).*;
         trace("\ndispatch: {} {} {} {*} {*}", .{ selector, hash, hashed, self.lookupAddress(hashed), code });
         // all the ugly casting is to make signature match
-        return @call(tailCall, @as(*const fn (*Self, [*]Object, *Process, CodeContextPtr, Object) [*]Object, @ptrCast(code[0].prim)), .{ @as(*Dispatch, @ptrCast(@constCast(code + 1))), sp, process, context, selector, cache });
+        return @call(tailCall, @as(*const fn (*Self, [*]Object, *Process, CodeContextPtr, Object, SendCache) [*]Object, @ptrCast(code[0].prim)), .{ @as(*Dispatch, @ptrCast(@constCast(code + 1))), sp, process, context, selector, cache });
     }
     fn disambiguate(location: []Code, one: *const CompiledMethod, another: *const CompiledMethod) [*]Code {
         const oneHash = one.selector.hash32();
@@ -359,14 +361,11 @@ const Dispatch = extern struct {
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
-    fn dnu(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
+    fn testDnu(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
         _ = .{ programCounter, sp, process, context, selector, cache };
-        if (@import("builtin").is_test) {
-            const newSp = sp - 1;
-            newSp[0] = object.NotAnObject;
-            return newSp;
-        }
-        @panic("called dnu function");
+        const newSp = sp - 1;
+        newSp[0] = object.NotAnObject;
+        return newSp;
     }
     fn testIncrement(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
         _ = .{ process, context, selector, cache };
@@ -418,12 +417,13 @@ test "disambiguate" {
     defer process.deinit();
     var context = Context.init();
     const sp = process.endOfStack();
-    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.value)[0].to(i64), 1);
-    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.yourself)[0].to(i64), 2);
+    var cache = execute.SendCacheStruct.init();
+    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.value,cache.dontCache())[0].to(i64), 1);
+    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.yourself,cache.dontCache())[0].to(i64), 2);
     try ee(dispatcher[0].prim, &Dispatch.bitTest2);
     dispatcher = Dispatch.disambiguate(&space, method3.asCompiledMethodPtr(), method1.asCompiledMethodPtr());
-    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.@"<=")[0].to(i64), 3);
-    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.value)[0].to(i64), 1);
+    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.@"<=",cache.dontCache())[0].to(i64), 3);
+    try ee(dispatcher[0].prim(dispatcher + 1, sp, &process, &context, symbols.value,cache.dontCache())[0].to(i64), 1);
     try ee(dispatcher[0].prim, &Dispatch.bitTest4);
 }
 test "isExternalCompiledMethod" {
@@ -443,8 +443,9 @@ test "empty dispatch" {
     try ee(empty.lookupAddress(symbols.value.hash32()).*, Dispatch.dnuInit);
 }
 fn doDispatch(tE: *TestExecution, dispatch: *Dispatch, selector: Object) []Object {
+    var cache = execute.SendCacheStruct.init();
     tE.initStack(&[_]Object{Object.from(0)});
-    return tE.stack(dispatch.dispatch(tE.sp, &tE.process, &tE.ctxt, selector));
+    return tE.stack(dispatch.dispatch(tE.sp, &tE.process, &tE.ctxt, selector, cache.dontCache()));
 }
 test "add methods" {
     const ee = std.testing.expectEqual;

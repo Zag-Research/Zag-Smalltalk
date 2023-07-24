@@ -85,13 +85,19 @@ pub const Object = packed struct(u64) {
     tag: Group,
     pub const empty = &[0]Object{};
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
-        return cast(low32 | Group.immediates.base() | @as(u64, @intFromEnum(cls)) << 32);
+        return cast(Group.immediates.base() | cls.base() | low32);
     }
     pub inline fn setImmClass(self: Object, cls: ClassIndex) Object {
         return cast(self.u()&~ClassIndex.max.base() | cls.base());
     }
+    pub inline fn withOffset(self: Object, offset: u32) Object {
+        return cast(@as(u64,offset)<<32 | self.hash32());
+    }
+    pub inline fn asSymbol(self: Object) Object {
+        return makeImmediate(.Symbol, self.hash32());
+    }
     pub inline fn makeGroup(grp: Group, low48: u48) Object {
-        return cast(low48 | grp.base());
+        return cast(grp.base() | low48);
     }
     pub inline fn low16(self: Object) u16 {
         return self.h0;
@@ -139,11 +145,9 @@ pub const Object = packed struct(u64) {
         //@truncate(u24,self.u()^other.u())==0;
         return self.hash32() == other.hash32();
     }
-    pub inline fn selectorEquals(self: Object, other: Object) bool {
-        return @as(u48,@truncate((self.u()^other.u())))==0;
-    }
-    pub inline fn indexEquals(self: Object, other: Object) bool {
-        return @as(u12,@truncate((self.u()^other.u())))==0;
+    pub const selectorEquals = equals;
+    pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
+        return self.setImmClass(.none).equals(other.setImmClass(.none));
     }
     pub inline fn indexNumber(self: Object) u12 {
         return @truncate(self.u()>>12);
