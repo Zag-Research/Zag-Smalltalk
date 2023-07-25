@@ -103,11 +103,6 @@ ASMethodNode >> clousreSize [
 ]
 
 { #category : #accessing }
-ASMethodNode >> complexBlocks [
-	^ self blocks reject: [ :block | block isNonLocalReturn ]
-]
-
-{ #category : #accessing }
 ASMethodNode >> filter: zigInstructions [
 	"nothing to do here"
 
@@ -196,7 +191,7 @@ ASMethodNode >> writeLiterals: aStream with: syms [
 		aStream << ('&[_]Object{sym.' , sym key , '}, ') ]
 		ifAbsent: [ aStream << 'empty,' ].
 
-	complexBlocks := self complexBlocks.
+	complexBlocks := OrderedCollection new.
 	complexBlocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
 		aStream << '&[_]Object{'.
 		complexBlocks
@@ -211,38 +206,34 @@ ASMethodNode >> writeLiterals: aStream with: syms [
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
-	| stackVariables stackSize statementVisitor blockVisitor |
+	| stackVariables stackSize blockVisitor |
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
 
 	"set the selector for each block that needs a closure and add it to the stack variables"
-	blockVisitor := ASBlockVisitor new.
+	blockVisitor := ASBlockVisitor selector: selector.
 	blockVisitor visit: body.
-	blockVisitor blocks do: [ :b | Transcript show: b selector ].
 
-	self complexBlocks ifNotEmpty: [
-		self complexBlocks doWithIndex: [ :block :index |
-			block selector: selector , ':' , index asString.
-			stackVariables add: block selector asZigString
-			"self halt.
-			block acceptVisitor: blockVisitor" ] ].
-
-	stackVariables addAll: (locals collect: [ :local | local name ]).
+	stackVariables addAll: blockVisitor closures.
+	stackVariables addAll:
+		((blockVisitor filterVars: locals) collect: [ :local | local name ]).
 	"capture the size of the stack before arguments are added"
+
 	stackSize := stackVariables size.
 	"add the locals, arguments and self"
-	stackVariables addAll: (arguments collect: [ :arg | arg name ]).
+	stackVariables addAll:
+		(arguments collect: [ :arg | arg name ]) reverse.
 	stackVariables addLast: #self.
 
 	aStream cr.
 	aStream << 'var ' << self nameSpace << ' ='.
 	aStream cr.
 	aStream tab.
+
 	aStream << 'compileMethod(' << (syms
 		 at: selector
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
-	<< stackSize asString << ','
+		 ifAbsent: [ syms virutalName ]) << ',' << stackSize asString << ','
 	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
 	<< ',.{'.
 	aStream cr.
@@ -267,18 +258,17 @@ ASMethodNode >> writeMethod: aStream with: syms [
 
 	blockVisitor modifiers isNotEmpty ifTrue: [
 		aStream tab.
-		aStream
-		<<
-		'&e.closureData, 3 + (1 << 8), // local:3 size:1 (offset 1 is l1)'.
+		aStream << '&e.closureData, '
+		<< ((stackVariables indexOf: 'closureData') - 1) asString << ' + ('
+		<< blockVisitor modifiers size asString
+		<< ' << 8), // local:3 size:1 (offset 1 is l1)'.
 		aStream cr ].
 
 	"ouput any block closure"
-	self complexBlocks ifNotEmpty: [
-		self complexBlocks doWithIndex: [ :block :index |
-			block isNonLocalReturn ifFalse: [
-				aStream tab.
-				aStream << (block zigClosureString: stackVariables).
-				aStream cr ] ] ].
+	blockVisitor blocks do: [ :block |
+		aStream tab.
+		aStream << (block zigClosureString: stackVariables).
+		aStream cr ].
 
 	self writeBody: syms with: stackVariables and: aStream.
 

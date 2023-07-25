@@ -43,7 +43,8 @@ ASCodeBlock >> initialize [
 	super initialize.
 	locals := #(  ).
 	body := OrderedCollection new.
-	scope := Dictionary new
+	scope := Dictionary new.
+	index := 0
 ]
 
 { #category : #accessing }

@@ -192,7 +192,7 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream << 'compileMethod(' << (syms
 		 at: selector asZigString
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector ]) << ',' << locals size asString
+		 ifAbsent: [ syms virutalName ]) << ',' << locals size asString
 	<< ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 

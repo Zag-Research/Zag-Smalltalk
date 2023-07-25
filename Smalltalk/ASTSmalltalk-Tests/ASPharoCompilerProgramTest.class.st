@@ -135,7 +135,7 @@ ASPharoCompilerProgramTest >> testFooBarSubset [
 	methods add: ASCompileTestClass1 >> #foo:bar:.
 	result := self buildFromMethods: methods.
 
-	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarSubset.zig')
 		           writeStream.
 	aStream truncate.
 	result writeZig: aStream.
