@@ -45,8 +45,7 @@ pub const SendCacheStruct = extern struct {
             .dnu = @ptrCast(&dnus[2]),
         };
     }
-    pub inline fn current(self: *Self) [*]const Code {
-        trace("\ncurrent: {}",.{self});
+    pub fn current(self: *Self) [*]const Code { // INLINE
         return self.cache1;
     }
     pub inline fn next(self: *Self) SendCache {
@@ -149,9 +148,7 @@ pub const CompiledMethod = extern struct {
         const refs = realHO.arrayAsSlice(Object) catch unreachable;
         const locals = self.stackStructure.h0;
         const maxStackNeeded = self.stackStructure.h1;
-        const selfOffset = self.stackStructure.classIndex;
-        try writer.print("\n**** {} {} {}",.{codeOffset / 8, all.len, refs.len});
-        try writer.print("\n** {} {}",.{self.header, realHO});
+        const selfOffset = @intFromEnum(self.stackStructure.classIndex);
         try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} realHO:{} {any} ({any})", .{ self.selector, locals, maxStackNeeded, selfOffset, realHO, all[codeOffset / 8 .. all.len - refs.len], refs });
     }
     pub fn asFakeObject(self: *const Self) Object {
@@ -827,7 +824,11 @@ pub const controlPrimitives = struct {
         const result = context.pop(process);
         const newSp = result.sp;
         var callerContext = result.ctxt;
-        trace("{any}", .{callerContext.stack(newSp, process)});
+        const stack = callerContext.stack(newSp, process);
+        if (stack.len<20) {
+            trace("{any}", .{stack});
+        } else
+            trace("{}", .{stack.len});
         trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector, cache });
     }
@@ -898,8 +899,8 @@ pub const TestExecution = struct {
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace) == @TypeOf(std.debug.print) and trace == std.debug.print) method.write(stdout) catch unreachable;
-        trace("\nrun: {*} {*}",.{cache.dontCache(),cache.dontCache().current()});
-        return self.stack(method.execute(self.sp, &self.process, &self.ctxt,cache.dontCache()));
+        trace("\nrun: {} {*}",.{cache.dontCache(),cache.dontCache().current()});
+        return self.stack(method.execute(self.sp, &self.process, &self.ctxt,&cache));
     }
 };
 const p = struct {

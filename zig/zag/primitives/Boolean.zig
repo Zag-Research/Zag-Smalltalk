@@ -36,7 +36,10 @@ pub const embedded = struct {
             sp[1] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, selector, cache });
         }
-        if (False.equals(v)) return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+        if (False.equals(v)) {
+            sp[1] = Nil;
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+        }
         return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"mustBeBoolean:", cache });
     }
     pub fn @"ifFalse:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {

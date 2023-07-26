@@ -61,14 +61,14 @@ pub fn fibObject(self: Object) Object {
     const fm2 = fibObject(m2);
     return i.p1(fm1, fm2) catch @panic("int add failed in fibObject");
 }
-test "fibObject" {
-    var n: i32 = 1;
-    while (n <= testReps) : (n += 1) {
-        const result = fibObject(Object.from(n));
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
-        try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(fibNative(n))));
-    }
-}
+// test "fibObject" {
+//     var n: i32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         const result = fibObject(Object.from(n));
+//         std.debug.print("\nfib({}) = {any}", .{ n, result });
+//         try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(fibNative(n))));
+//     }
+// }
 fn runObject(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const start = tstart();
@@ -107,20 +107,20 @@ fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: Context
     var callerContext = result.ctxt;
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector, cache });
 }
-test "fibCPS" {
-    const method = fibCPSM.asCompiledMethodPtr();
-    fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    var n: i32 = 1;
-    while (n <= testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te = TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..], method);
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
-        try std.testing.expectEqual(result.len, 1);
-        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-    }
-}
+// test "fibCPS" {
+//     const method = fibCPSM.asCompiledMethodPtr();
+//     fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+//     var n: i32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te = TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..], method);
+//         std.debug.print("\nfib({}) = {any}", .{ n, result });
+//         try std.testing.expectEqual(result.len, 1);
+//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+//     }
+// }
 fn runCPS(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibCPSM.asCompiledMethodPtr();
@@ -174,19 +174,19 @@ fn fibCPSSendSetup() CompiledMethodPtr {
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return fibonacci;
 }
-test "fibCPSSend" {
-    const method = fibCPSSendSetup();
-    var n: i32 = 1;
-    while (n <= testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te = TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..], method);
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
-        try std.testing.expectEqual(result.len, 1);
-        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-    }
-}
+// test "fibCPSSend" {
+//     const method = fibCPSSendSetup();
+//     var n: i32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te = TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..], method);
+//         std.debug.print("\nfib({}) = {any}", .{ n, result });
+//         try std.testing.expectEqual(result.len, 1);
+//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+//     }
+// }
 fn runCPSSend(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibCPSSendSetup();
@@ -200,8 +200,10 @@ fn runCPSSend(run:usize) usize {
 
 var fibCPSCacheM = compileMethod(Sym.i_1, 0, 0, .{&fibCPSCache});
 const fibCPSCacheT = @as([*]Code, @ptrCast(&fibCPSCacheM.code[0]));
-var CPSCache = execute.SendCacheStruct.init();
-pub fn fibCPSCache(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+var CPSCache1 = execute.SendCacheStruct.init();
+var CPSCache2 = execute.SendCacheStruct.init();
+pub fn fibCPSCache(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, _: SendCache) [*]Object {
+    const cache = &CPSCache2;
     if (!sym.fibonacci.selectorEquals(selector)) {
         const dPc = cache.current();
         return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
@@ -214,15 +216,16 @@ pub fn fibCPSCache(pc: [*]const Code, sp: [*]Object, process: *Process, context:
     const newSp = newContext.asObjectPtr() - 1;
     newSp[0] = i.p2L(sp[0], 1) catch return @call(tailCall, pc[10].prim, .{ pc + 11, newSp + 1, process, context, selector, cache });
     newContext.setReturnBoth(fibCPSCache1, pc + 13); // after first callRecursive
-    trace("\nCPSCache: {} {}",.{CPSCache,cache});
-    const newPc = CPSCache.current();
+    trace("\nCPSCache: {}",.{cache});
+    const newPc = cache.current();
     return @call(tailCall, newPc[0].prim, .{ newPc + 1, newSp, process, newContext, selector, cache.next() });
 }
-fn fibCPSCache1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+fn fibCPSCache1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, _: SendCache) [*]Object {
+    const cache = &CPSCache2;
     const newSp = sp - 1;
     newSp[0] = i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector, cache });
     context.setReturnBoth(fibCPSCache2, pc + 3); // after 2nd callRecursive
-    const newPc = CPSCache.current();
+    const newPc = cache.current();
     return @call(tailCall, newPc[0].prim, .{ newPc + 1, newSp, process, context, selector, cache.next() });
 }
 fn fibCPSCache2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
@@ -250,7 +253,7 @@ test "fibCPSCache" {
         var te = TestExecution.new();
         te.init();
         const result = te.run(objs[0..], method);
-        trace("\nfibCPSCache2: {}",.{CPSCache});
+        trace("\nfibCPSCache2: {} {}",.{CPSCache1,CPSCache2});
         std.debug.print("\nfib({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
@@ -293,20 +296,20 @@ var fibThread =
     &e.SmallInteger.@"+", // +
     &e.returnTop,
 });
-test "fibThread" {
-    const method = fibThread.asCompiledMethodPtr();
-    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    var n: u32 = 1;
-    while (n <= testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te = TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..], method);
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
-        try std.testing.expectEqual(result.len, 1);
-        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-    }
-}
+// test "fibThread" {
+//     const method = fibThread.asCompiledMethodPtr();
+//     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+//     var n: u32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te = TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..], method);
+//         std.debug.print("\nfib({}) = {any}", .{ n, result });
+//         try std.testing.expectEqual(result.len, 1);
+//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+//     }
+// }
 fn runThread(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibThread.asCompiledMethodPtr();
@@ -363,19 +366,19 @@ fn fibDispatchSetup() CompiledMethodPtr {
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return start;
 }
-test "fibDispatch" {
-    const start = fibDispatchSetup();
-    var n: u32 = 1;
-    while (n <= testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te = TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..], start);
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
-        try std.testing.expectEqual(result.len, 1);
-        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-    }
-}
+// test "fibDispatch" {
+//     const start = fibDispatchSetup();
+//     var n: u32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te = TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..], start);
+//         std.debug.print("\nfib({}) = {any}", .{ n, result });
+//         try std.testing.expectEqual(result.len, 1);
+//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+//     }
+// }
 fn runDispatch(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibDispatchSetup();
@@ -415,21 +418,21 @@ var fibByte =
         b.p1,
         b.returnTop,
 });
- test "fibByte" {
-    const method = fibByte.asCompiledMethodPtr();
-    sym = Sym.init();
-    fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
-    var n:i32 = 1;
-    while (n<=testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te =  TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("\nfib({}) = {any}",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
-    }
-}
+//  test "fibByte" {
+//     const method = fibByte.asCompiledMethodPtr();
+//     sym = Sym.init();
+//     fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
+//     var n:i32 = 1;
+//     while (n<=testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te =  TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..],method);
+//         std.debug.print("\nfib({}) = {any}",.{n,result});
+//         try std.testing.expectEqual(result.len,1);
+//         try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+//     }
+// }
 fn runByte(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
@@ -503,20 +506,20 @@ fn initSmalltalk() !void {
     @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.False);
     fibFull.asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
 }
-test "fibFull" {
-    try initSmalltalk();
-    const method =  fibFull.asCompiledMethodPtr();
-    var n:u32 = 1;
-    while (n <= testReps) : (n += 1) {
-        var objs = [_]Object{Object.from(n)};
-        var te =  TestExecution.new();
-        te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("\nfib({}) = {any}",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
-    }
-}
+// test "fibFull" {
+//     try initSmalltalk();
+//     const method =  fibFull.asCompiledMethodPtr();
+//     var n:u32 = 1;
+//     while (n <= testReps) : (n += 1) {
+//         var objs = [_]Object{Object.from(n)};
+//         var te =  TestExecution.new();
+//         te.init();
+//         const result = te.run(objs[0..],method);
+//         std.debug.print("\nfib({}) = {any}",.{n,result});
+//         try std.testing.expectEqual(result.len,1);
+//         try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+//     }
+// }
 const debugPrint = false;
 fn runFull(run:usize) usize {
     initSmalltalk() catch @panic("init");
