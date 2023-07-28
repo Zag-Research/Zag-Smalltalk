@@ -270,8 +270,9 @@ test "embedded add" {
         &e.pushContext,       "^",
         &e.pushLiteral,       Object.from(3),
         &e.pushLiteral,       Object.from(40),
-        &e.SmallInteger.@"+", &e.pushLiteral,
-        Object.from(-1),      &e.SmallInteger.@"+",
+        &e.SmallInteger.@"+",
+        &e.pushLiteral,        Object.from(-1),
+        &e.SmallInteger.@"+",
         &e.returnTop,
     });
     const result = testExecute(prog.asCompiledMethodPtr());

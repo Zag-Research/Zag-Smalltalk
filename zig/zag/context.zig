@@ -68,7 +68,7 @@ pub const Context = struct {
         if (self.isOnStack())
             return .{ .sp = self.asObjectPtr() + wordsToDiscard, .ctxt = self.previous() };
         _ = process;
-        std.debug.print("\npop: {}", .{self.*});
+        std.debug.print("\npop: {*}", .{self});
         @panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         // const newSp = process.endOfStack() - itemsToKeep.len;

@@ -60,6 +60,8 @@ var @"foo:bar:" =
         &e.blockClosure, "1foo:bar::2", 0 + (1 << 8) + (255 << 16) + (3 << 24), // local:0, 1 field, includeContext, closureData at local3
         // all blocks defined by now
         &e.pushLocal, 6, // p1
+        &e.popLocalData, 1 + (3 << 8), // p1 (read-only) copy offset 3 in local 1 (field in BC1)
+        &e.pushLocal, 6, // p1
         &e.pushLocal, 5, // p2
         &e.send1,      Sym.@"<",
         &e.pushLocal, 2, // [^ self]
@@ -92,6 +94,19 @@ var @"foo:bar::1" =
     &e.pushLocalData, 0 + (3 << 8), // p1 offset 3 in local 0
     &e.send,          Sym.@"<",
     &e.returnTop,
+        //        &e.classCase, "4:falseBranch,5:trueBranch"
+        // fall through if not False or True
+        //            &e.send, Sym....
+        // special case for Booleans
+        //        &e.ifTrue, "trueBranch"
+        //        &e.ifFalse, "falseBranch"
+        // other inlines instead of
+        //        &e.send2, Sym.@"ifTrue:ifFalse:"
+        //   do
+        //        &e.Boolean.@"ifTrue:ifFalse:" // faster way to do theses sends
+        // all the ifs, all the whiles, simple values
+        // also for +, - , etc. if receiver is known to be SmallInteger
+        
 });
 var @"foo:bar::2" =
     // [ l1 := l1 + 1.
