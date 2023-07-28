@@ -4,7 +4,7 @@ const tailCall = config.tailCall;
 const trace = config.trace;
 const debug = std.debug;
 const math = std.math;
-const stdout = std.io.getStdOut().writer();
+// const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows
 const object = @import("zag/zobject.zig");
 const Object = object.Object;
 const ClassIndex = object.ClassIndex;
@@ -56,7 +56,7 @@ const two = Object.from(2);
 pub fn fibObject(self: Object) Object {
     if (i.p5N(self,two)) return one;
     const m1 = i.p2L(self, 1) catch @panic("int subtract failed in fibObject");
-    const fm1 = fibObject(m1);
+    const fm1 = fibObject(m1); // this takes long to execute
     const m2 = i.p2L(self, 2) catch @panic("int subtract failed in fibObject");
     const fm2 = fibObject(m2);
     return i.p1(fm1, fm2) catch @panic("int add failed in fibObject");
@@ -595,7 +595,8 @@ pub fn timing() !void {
     print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
     
 }
-pub fn main() !void {
+pub fn main() !void { 
+    const stdout = std.io.getStdOut().writer();
     try stdout.print("@sizeOf(fibThread) = {}, @sizeOf(fibByte) = {}\n",.{@sizeOf(@TypeOf(fibThread)), @sizeOf(@TypeOf(fibByte))});
     try timing();
 }
