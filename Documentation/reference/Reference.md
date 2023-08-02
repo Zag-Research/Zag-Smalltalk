@@ -12,7 +12,10 @@
 - [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
 - [building Pharo VM](https://github.com/pharo-project/pharo-vm) 
 ```
-cmake -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE  -S pharo-vm -B build -DFLAVOUR=StackVM
+$ git clone git@github.com:pharo-project/pharo-vm.git
+$ cmake -S pharo-vm -B build -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE  -DFLAVOUR=StackVM
+$ cd build
+$ make install
 ```
 - 
 

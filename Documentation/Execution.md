@@ -133,7 +133,7 @@ BlockClosures are defined within a method or another block. A closure may:
 2. contain immutable values that are not modified after the block is created
 3. reference or modify values that are also referenced or modified by the main method code or another block in which case it has to have a reference to a ClosureData object where the mutable values are stored
 
-Consider the following method, defined in Integer and called with `3 foo: 7 bar: 2` at the start of the first execution of BlockClosure 2
+Consider the following method, defined in Integer
 ```Smalltalk
 foo: p1 bar: p2
 	| l1 l2 l3 |
@@ -146,6 +146,86 @@ foo: p1 bar: p2
 		l1 = l3 ifTrue: [ ^ 1 ] ].
 	^ l1
 ```
+
+The method would compile to:
+```zig
+// self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
+	&e.verifySelector,
+    &e.pushContext, "^",
+	// define all blocks here
+    &e.closureData, 3 + (1 << 12), // local:3 size:1 (offset 1 is l1)
+    &e.nonlocalClosure_self, 2, // [^ self] local:2
+    &e.blockClosure, "0foo:bar::1", 1 + (1 << 12) + (0 << 20)   + (3 << 32),
+	    // local:1, 1 field, no includeContext, closureData at local3
+    &e.blockClosure, "1foo:bar::2", 0 + (1 << 12) + (255 << 20) + (3 << 32),
+		// local:0, 1 field, includeContext, closureData at local3
+    // all blocks defined by now
+    &e.pushLocal, 6, // p1
+    &e.popLocalData, 1 + (3 << 12),
+	    // p1 (read-only) copy offset 3 in local 1 (field in BC1)
+    &e.pushLocal, 6, // p1
+    &e.pushLocal, 5, // p2
+    &e.send1,      Sym.@"<",
+    &e.pushLocal, 2, // [^ self]
+    &e.send1,      Sym.@"ifTrue:",
+    &e.drop, // discard result from ifTrue: (if it returned)
+    &e.pushLocal, 5, // p2
+    &e.popLocalData, 3 + (1 << 12), // l1
+    &e.pushLocal, 6, // p1
+    &e.pushLocal, 5, // p2
+    &e.send1,      Sym.@"\\",
+    &e.popLocal, 4, // l2
+    &e.pushLocal, 5, // p2
+    &e.pushLocal, 4, // l2
+    &e.send1,      Sym.@"-",
+    &e.popLocalData, 0 + (4 << 12), // l3 offset 4 in local 0
+    &e.pushLocal, 1, // BC1 [ l1 < p1 ]
+    &e.pushLocal, 0, // BC2 [ l1 := ... ]
+    &e.send1,      Sym.@"whileTrue:",
+    &e.drop,
+    &e.pushLocalData, 3 + (1 << 12), // l1
+    &e.returnTop,
+```
+
+The first block would be:
+```zig
+// foo:bar::1    [ l1 < p1 ]
+// self-0
+    &e.verifySelector,
+    &e.pushContext, "^",
+    &e.pushLocalDataData, 0 + (2 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 2 in local 0
+    &e.pushLocalData, 0 + (3 << 12),
+	    // p1 offset 3 in local 0
+    &e.send,          Sym.@"<",
+    &e.returnTop,
+```
+
+and the second block would be:
+```zig
+// foo:bar::2"   [ l1 := l1 + 1.  l1 = l3 ifTrue: [ ^ 1 ] ]
+// self-1 BCone-0
+    &e.verifySelector,
+    &e.pushContext, "^",
+    &e.nonlocalClosure_one, 0 + (1 << 12) + (2 << 24),
+	    // [^ 1] local:0 context at offset 2 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLiteral,       Object.from(1),
+    &e.send,              Sym.@"+",
+    &e.popLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalData, 1 + (4 << 12),
+	    // l3 offset 4 in local 1
+    &e.send,          Sym.@"=",
+    &e.pushLocal, 0, // [^ 1]
+    &e.send,      Sym.@"ifTrue:",
+    &e.returnTop,
+```
+
+The following stack contents reflect the state after the expression `3 foo: 7 bar: 2` has partially executed and is at the start of the first execution of BlockClosure 2
 
 | | BC1 Context  | Description              | Pointers                                                  |
 |  - | ------ | ------------------------ | --------------------------------------------------------- |
@@ -190,7 +270,7 @@ foo: p1 bar: p2
 |25| object | l1                  |                                                           |
 |26| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
 
-| | foo:bar: | Description | Pointers|
+| | foo:bar: Context | Description | Pointers|
 | - | - | - | - |
 |27| header | foo:bar: header                | <--- whileTrue: ctxt                                              |
 |28| tpc    | caller threaded pc to return       |                                                           |
