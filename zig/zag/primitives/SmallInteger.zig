@@ -147,7 +147,7 @@ pub const embedded = struct {
             sp[0] = inlines.p1L(sp[0], 1) catch {
                 const newSp = sp - 1;
                 newSp[0] = Object.from(1);
-                return @call(tailCall, fallback, .{ pc + 1, newSp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
             };
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         }

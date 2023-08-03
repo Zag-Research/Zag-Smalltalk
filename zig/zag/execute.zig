@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const dispatchCache = config.dispatchCache;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const ProcessPtr = @import("process.zig").ProcessPtr;
@@ -694,9 +695,18 @@ pub const controlPrimitives = struct {
         trace("\npushLocal: {any}", .{ context.stack(newSp, process) });
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector, cache });
     }
+    pub fn popLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        context.setLocal(0, sp[0]);
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    }
+    pub fn storeLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        trace("\nstoreIntoLocal: {} {}", .{ pc[0].uint, sp[0] });
+        context.setLocal(pc[0].uint, sp[0]);
+        return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector, cache });
+    }
     pub fn pushLocalField(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const ref = pc[0].uint;
-        const local = context.getLocal(ref & 0xfff);
+        const local = context.getLocal(ref & 0xff);
         const newSp = sp - 1;
         newSp[0] = local.getField(ref >> 12);
         trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
@@ -709,41 +719,47 @@ pub const controlPrimitives = struct {
         local.setField(ref >> 12, sp[0]);
         return @call(tailCall, pc[1].prim, .{ pc + 2, sp + 1, process, context, selector, cache });
     }
+    pub fn pushLocalData(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref & 0xfff);
+        const newSp = sp - 1;
+        newSp[0] = local - (ref >> 12);
+        trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
+        return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, context, selector, cache });
+    }
+    pub fn popLocalData(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        const ref = pc[0].uint;
+        const local = context.getLocal(ref & 0xff);
+        trace("\npopLocalData: {} {}", .{ ref, sp[0] });
+        local.setData(ref >> 12, sp[0]);
+        return @call(tailCall, pc[1].prim, .{ pc + 2, sp + 1, process, context, selector, cache });
+    }
     pub fn popLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         trace("\npopIntoLocal: {} {}", .{ pc[0].uint, sp[0] });
         context.setLocal(pc[0].uint, sp[0]);
         return @call(tailCall, pc[1].prim, .{ pc + 2, sp + 1, process, context, selector, cache });
     }
-    pub fn popLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        context.setLocal(0, sp[0]);
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
-    }
-    pub fn storeLocal(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        trace("\nstoreIntoLocal: {} {}", .{ pc[0].uint, sp[0] });
-        context.setLocal(pc[0].uint, sp[0]);
-        return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector, cache });
-    }
     pub fn primitiveFailed(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         _ = .{ pc, sp, process, context, selector, cache, @panic("primitiveFailed")};
     }
     pub fn fallback(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        const arity = selector.numArgs();
-        const newPc = lookup(selector, sp[arity].get_class());
+        const self = sp[selector.numArgs()];
         context.setReturn(pc);
-        std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, sp[arity].get_class(), newPc, newPc[0] });
+        const class = self.get_class();
+        const newPc = lookup(selector, class);
+        std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, class, newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
     }
-    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, _: SendCache) [*]Object {
-        var selector = pc[0].object;
+    pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) [*]Object {
         const self = sp[0];
+        var selector = pc[0].object;
         context.setReturn(pc + 1);
         const class = self.get_class();
-        const offset = @intFromEnum(selector.classIndex);
-        selector.classIndex = class;
-        const cache = @as(SendCache,@constCast(@ptrCast(pc+offset)));
-        const newPc = cache.current();
-        trace("\nsend1: {x} {} {} {*} {any}",.{selector.u(),class, offset, newPc, process.getStack(sp)});
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache.next() });
+        const cache = if (dispatchCache) @as(SendCache,@constCast(@ptrCast(pc+@intFromEnum(selector.classIndex)))) else prevCache;
+        if (dispatchCache) selector.classIndex = class;
+        const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
+        trace("\nsend1: 0x{x} {} {*} {any}",.{selector.u(), class, newPc, process.getStack(sp)});
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, if (dispatchCache) cache.next() else prevCache});
       }
 //    pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
 //    }
@@ -758,23 +774,6 @@ pub const controlPrimitives = struct {
         const newPc = cache.current();
         trace("\nsend1: {x} {} {} {*} {any}",.{selector.u(),class, offset, newPc, process.getStack(sp)});
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache.next() });
-    }
-    pub fn directSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
-        const selector = pc[0].object;
-        const self = sp[0];
-        context.setReturn(pc + 1);
-        const newPc = lookup(selector, self.get_class());
-        trace("\nsend0: {} {} {any}\n", .{ selector, sp[0].get_class(), process.getStack(sp) });
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
-    }
-    pub fn directSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
-        const selector = pc[0].object;
-        const self = sp[1];
-        context.setReturn(pc + 1);
-        const class = self.get_class();
-        const newPc = lookup(selector, class);
-        trace("\ndirectSend1: {} {} {any}",.{selector.setImmClass(ClassIndex.Symbol),class, process.getStack(sp)});
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector.setImmClass(class), cache });
     }
 //    pub fn tailSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
 //    }

@@ -2,6 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
+const dispatchCache = @import("config.zig").dispatchCache;
 const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
 const HeapObject = heap.HeapObject;

@@ -163,7 +163,7 @@ pub const embedded = struct {
             //     sp[0] = closure.prevPrev();
             // },
             else =>  @panic("unknown block type"),
-            //return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.value }),
+            //return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.value }),
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
