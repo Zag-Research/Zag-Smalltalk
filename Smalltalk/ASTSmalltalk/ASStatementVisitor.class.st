@@ -5,22 +5,16 @@ Class {
 		'symbols',
 		'stackVars',
 		'aStream',
-		'instructionStack'
+		'instructionStack',
+		'closure'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #instantiating }
-ASStatementVisitor class >> symbols: syms stackVars: stackVars [
+ASStatementVisitor class >> symbols: syms stackVars: stackVars closure: aClosure [
 
-	^ self new symbols: syms stackVars: stackVars
-]
-
-{ #category : #instantiating }
-ASStatementVisitor class >> symbols: syms stackVars: stackVars with: aStream [
-
-	
-	^ self new symbols: syms stackVars: stackVars with: aStream
+	^ self new symbols: syms stackVars: stackVars closure: aClosure
 ]
 
 { #category : #adding }
@@ -29,33 +23,34 @@ ASStatementVisitor >> addDrop [
 ]
 
 { #category : #accessing }
+ASStatementVisitor >> findClosures: anASVar [
+	self shouldBeImplemented.
+]
+
+{ #category : #accessing }
 ASStatementVisitor >> instructionStack [
 	^ instructionStack
 ]
 
 { #category : #constructor }
-ASStatementVisitor >> symbols: syms stackVars: stackVariables [
+ASStatementVisitor >> symbols: syms stackVars: stackVariables closure: aClosure [
 
 	symbols := syms.
 	stackVars := stackVariables.
-	instructionStack := OrderedCollection new.
-	
+	closure := aClosure.
+	instructionStack := OrderedCollection new
 ]
 
-{ #category : #constructor }
-ASStatementVisitor >> symbols: syms stackVars: stackVariables with: aStreamWriter [
-
-	symbols := syms.
-	stackVars := stackVariables.
-	aStream := aStreamWriter
+{ #category : #visiting }
+ASStatementVisitor >> variableIndex: varName [
+	^((stackVars indexOf: varName) - 1) asString
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitAssign: anASAssign [
 
 	anASAssign expression acceptVisitor: self.
-	instructionStack add: '&e.popLocal, ', ((stackVars indexOf: anASAssign variable name) - 1) asString, ','.
-	
+	self popValue: anASAssign variable.
 ]
 
 { #category : #visiting }
@@ -64,10 +59,12 @@ ASStatementVisitor >> visitBlockNode: anASBlock [
 	| nonLocalReturnValue |
 	nonLocalReturnValue := anASBlock nonLocalReturn: stackVars.
 	nonLocalReturnValue
-		ifNotNil: [
-			instructionStack add: nonLocalReturnValue ]
+		ifNotNil: [ instructionStack add: nonLocalReturnValue ]
 		ifNil: [
-			instructionStack add: '&e.pushLocal, ', (stackVars indexOf: anASBlock selector) asString, ',' ].
+			instructionStack add: '&e.pushLocal, '
+				,
+				(self variableIndex: anASBlock selector asZigString)
+				, ', //' , anASBlock selector asZigString ]
 ]
 
 { #category : #visiting }
@@ -77,8 +74,9 @@ ASStatementVisitor >> visitLiteral: anASLiteral [
 ]
 
 { #category : #visiting }
-ASStatementVisitor >> visitNamedAS: anASLocal [ 
-	aStream << ((stackVars indexOf: anASLocal name) - 1) asString
+ASStatementVisitor >> visitNamedAS: anASLocal [
+
+	aStream << (self variableIndex: anASLocal name)
 ]
 
 { #category : #visiting }
@@ -90,7 +88,8 @@ ASStatementVisitor >> visitReturn: anASReturn [
 { #category : #visiting }
 ASStatementVisitor >> visitSelfNode: anASSelf [
 
-	instructionStack add: '&e.pushLocal, ', ((stackVars indexOf: 'self') - 1) asString, ','
+	instructionStack add:
+		'&e.pushLocal, ' , (self variableIndex: #self) , ', //self'
 ]
 
 { #category : #visiting }
@@ -108,10 +107,4 @@ ASStatementVisitor >> visitSend: anASSend [
 			self halt.
 			send := send, anASSend selector ].
 	instructionStack add: send , ','
-]
-
-{ #category : #visiting }
-ASStatementVisitor >> visitVariable: anASRef [
-
-	instructionStack add: '&e.pushLocal, ', (stackVars indexOf: anASRef variable name) asString, ','
 ]

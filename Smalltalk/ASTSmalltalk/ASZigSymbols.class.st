@@ -18,5 +18,6 @@ ASZigSymbols >> initialize: size [
 ASZigSymbols >> virutalName [
 
 	index := index + 1.
-	^ 'Sym.i_' , index asString
+	^ 'Sym.i_' , index asString.
+	
 ]

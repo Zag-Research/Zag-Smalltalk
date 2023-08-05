@@ -83,6 +83,11 @@ ASVariable >> referencedBy: anASBlock [
 	referencedBy add: anASBlock 
 ]
 
+{ #category : #accessing }
+ASVariable >> references [
+	^referencedBy 
+]
+
 { #category : #compiling }
 ASVariable >> tell: aCompiler youAreSent: aSymbol [
 

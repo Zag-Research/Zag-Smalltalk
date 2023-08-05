@@ -7,15 +7,14 @@ Class {
 	#instVars : [
 		'selector',
 		'class',
-		'pragmas',
-		'blocks'
+		'pragmas'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
-
+self halt.
 	^ self new
 		  class: aClass;
 		  selector: aSymbol;
@@ -25,7 +24,6 @@ ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body
 
 { #category : #'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
-
 	^ self new
 		  class: aClass;
 		  selector: aSymbol;
@@ -69,25 +67,6 @@ ASMethodNode >> acceptVisitor: aVisitor [
 ]
 
 { #category : #accessing }
-ASMethodNode >> blocks [
-	blocks ifNil: [
-		blocks := OrderedCollection new.
-		body ifNotEmpty: [
-			body do: [ :statement | blocks addAll: statement blocks ] ] ].
-	"	statement isASSend and: [
-					statement args notEmpty and: [
-						blocks addAll: (statement args select: [ :arg | arg isASBlock ]) ] ].
-				statement isASAssign and: [
-					statement expression isASSend and: [
-						statement expression args notEmpty and: [
-							blocks addAll:
-								(statement expression args do: [ :arg | arg isASBlock ]) ] ] ] 
-				statement isReturn
-				] ] ]."
-	^ blocks
-]
-
-{ #category : #accessing }
 ASMethodNode >> class: anASClassNode [ 
 	class := anASClassNode
 ]
@@ -125,18 +104,6 @@ ASMethodNode >> maxBlockLocals [
 ]
 
 { #category : #accessing }
-ASMethodNode >> maxDepth [
-
-	| argMaxDepth blockLocalMaxDepth |
-	argMaxDepth := body
-		               ifEmpty: [ 0 ]
-		               ifNotEmpty: [
-		               body max: [ :statement | statement maxDepth ] ].
-	blockLocalMaxDepth := self blocks ifEmpty: [0] ifNotEmpty: [ blocks max: [ :block | block arguments size ] ].
-	^ argMaxDepth + blockLocalMaxDepth
-]
-
-{ #category : #accessing }
 ASMethodNode >> nameSpace [
 	^(nestedScopeOf name, '>>', selector) asSymbol asZigString
 ]
@@ -168,6 +135,19 @@ ASMethodNode >> selector: aString [
 { #category : #utilities }
 ASMethodNode >> stackSize [
 	^0
+]
+
+{ #category : #comparing }
+ASMethodNode >> statementVisitor: symbols stackVars: stackVariables [ 
+	^ ASMethodStatementVisitor new
+		  symbols: symbols
+		  stackVars: stackVariables
+		  closure: self
+]
+
+{ #category : #visiting }
+ASMethodNode >> variableIndex: anASVar [
+	^ (clsrData indexOf: anASVar name) asString.
 ]
 
 { #category : #writing }
@@ -214,12 +194,16 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	blockVisitor := ASBlockVisitor selector: selector.
 	blockVisitor visit: body.
 
+	self buildClosureData: blockVisitor modifiers.
+	blockVisitor blocks do: [ :b | b closureData: clsrData ].
+
 	stackVariables addAll: blockVisitor closures.
 	stackVariables addAll:
 		((blockVisitor filterVars: locals) collect: [ :local | local name ]).
-	"capture the size of the stack before arguments are added"
 
+	"capture the size of the stack before arguments are added"
 	stackSize := stackVariables size.
+
 	"add the locals, arguments and self"
 	stackVariables addAll:
 		(arguments collect: [ :arg | arg name ]) reverse.
@@ -233,7 +217,8 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << 'compileMethod(' << (syms
 		 at: selector
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ syms virutalName ]) << ',' << stackSize asString << ','
+		 ifAbsentPut: [ syms virutalName ]) << ',' << stackSize asString
+	<< ','
 	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
 	<< ',.{'.
 	aStream cr.
@@ -256,33 +241,33 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	blockVisitor modifiers isNotEmpty ifTrue: [
-		aStream tab.
-		aStream << '&e.closureData, '
-		<< ((stackVariables indexOf: 'closureData') - 1) asString << ' + ('
-		<< blockVisitor modifiers size asString
-		<< ' << 8), // local:3 size:1 (offset 1 is l1)'.
-		aStream cr ].
+	blockVisitor writeClosureData: aStream stackVariables: stackVariables.
 
 	"ouput any block closure"
-	blockVisitor blocks do: [ :block |
+	blockVisitor blocks doWithIndex: [ :block :index |
 		aStream tab.
-		aStream << (block zigClosureString: stackVariables).
+		aStream
+		<<
+		(block zigClosureString: stackVariables index: (index - 1) asString).
 		aStream cr ].
 
-	self writeBody: syms with: stackVariables and: aStream.
+	"write the instructions"
+	self
+		writeBody: syms
+		stackVars: stackVariables
+		writer: aStream
+		blocks: blockVisitor.
 
-	body ifNotEmpty: [
-		body last isReturn ifFalse: [
-			aStream tab.
-			aStream << '&e.returnTop,' ] ].
+	"write out the implicit return"
+	body isEmpty | body last isReturn not ifTrue: [
+		aStream tab.
+		aStream << '&e.returnTop,' ].
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr.
 
 	"ouput compile methods for the blocks"
-	self blocks ifNotEmpty: [
-		blocks do: [ :block |
-			block isNonLocalReturn ifFalse: [
-				block writeBlock: aStream with: syms and: stackVariables ] ] ]
+	blockVisitor blocks do: [ :block |
+		block isNonLocalReturn ifFalse: [
+			block writeBlock: aStream with: syms] ]
 ]

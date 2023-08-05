@@ -30,6 +30,15 @@ ASBlockVisitor >> block: anASBlock references: anASVar [
 	variables at: anASVar name ifPresent: [ :var | var referencedBy: anASBlock ] ifAbsentPut: [ anASVar referencedBy: anASBlock. anASVar  ]
 ]
 
+{ #category : #'as yet unclassified' }
+ASBlockVisitor >> blockClosureForVar: anASVar [
+
+	| var |
+	self halt.
+	var := variables at: anASVar name
+	"var modifiers ifEmpty:  [] ifNotEmpty: [ ]"
+]
+
 { #category : #accessing }
 ASBlockVisitor >> blocks [
 	^ blocks
@@ -40,7 +49,11 @@ ASBlockVisitor >> closures [
 
 	| closureNames |
 	closureNames := OrderedCollection new.
-	self hasModifiers ifTrue: [ closureNames add: 'closureData' ].
+	self modifiers ifEmpty: [ blocks do:[ :b | b buildClosureData: self modifiers ] ] ifNotEmpty: [ "add closureData to the names and to each block"
+		closureNames add: #closureData.
+		"add a closureData to each blocks closure data"
+		blocks do:[ :b | b buildClosureDataWithModifiers: self modifiers ]  ].
+	
 	closureNames addAll:
 		(blocks collect: [ :b | b selector asZigString ]).
 	^ closureNames reverse
@@ -56,12 +69,6 @@ ASBlockVisitor >> filterVars: locals [
 	^ (locals reject: [:l | variables includesKey: l name]) 
 ]
 
-{ #category : #testing }
-ASBlockVisitor >> hasModifiers [
-	variables do: [ :var |  var hasModifiers ifTrue: [ ^true ] ].
-	^false
-]
-
 { #category : #visiting }
 ASBlockVisitor >> initialize [
 
@@ -70,11 +77,31 @@ ASBlockVisitor >> initialize [
 	index := 0
 ]
 
+{ #category : #initialization }
+ASBlockVisitor >> initializeClosureData: aStream stackVariables: stackVariables [
+
+	variables do: [ :var |
+		var isASArg ifTrue: [
+			var references do: [ :blockRef |
+				aStream tab.
+				aStream << '&e.pushLocal, '
+				<< ((stackVariables indexOf: var name) - 1) asString << ', // '
+				<< var name.
+				aStream cr.
+				aStream tab.
+				aStream << '&e.popLocalData, '
+				<<
+				((stackVariables indexOf: blockRef selector asZigString) - 1)
+					asString << ' + (' << (blockRef location: var name) << ' << 8), // ' << var name
+				<< ' (read-only) copy offset 3 in local 1 (field in BC1)' ] ] ]
+]
+
 { #category : #accessing }
 ASBlockVisitor >> modifiers [
+
 	| modifiers |
 	modifiers := Set new.
-	blocks do: [ :b | modifiers addAll: b modifiers ].
+	blocks do: [ :b | modifiers addAll: (b modifiers collect: [ :m | m name ]) ].
 	^ modifiers
 ]
 
@@ -116,14 +143,19 @@ ASBlockVisitor >> visitAssign: anASAssign [
 { #category : #visiting }
 ASBlockVisitor >> visitBlockNode: anASBlock [
 
-	block := anASBlock.
+	
 
-	anASBlock isNonLocalReturn ifFalse: [
-		block selector: selector , ':' , self nextBlockPostfixIndex.
-		anASBlock body ifNotEmpty: [
-			blocks add: anASBlock.
-			anASBlock body do: [ :statement | statement acceptVisitor: self ] ] ].
-	block := nil
+	anASBlock isNonLocalReturn
+		ifTrue: [ block ifNotNil: [ block includeContext ] ]
+		ifFalse: [ | parentBlock |
+	parentBlock := block.
+	block := anASBlock.
+			block selector: selector , ':' , self nextBlockPostfixIndex.
+			anASBlock body ifNotEmpty: [
+				blocks add: anASBlock.
+				anASBlock body do: [ :statement | statement acceptVisitor: self ] ].
+			block := parentBlock ].
+	
 ]
 
 { #category : #visiting }
@@ -139,9 +171,9 @@ ASBlockVisitor >> visitNamedAS: anASLocal [
 
 { #category : #visiting }
 ASBlockVisitor >> visitReturn: anASReturn [
-	anASReturn expression acceptVisitor: self.
-
-	
+	block ifNotNil: [ 
+		block includeContext ].
+	anASReturn expression acceptVisitor: self
 ]
 
 { #category : #visiting }
@@ -162,7 +194,18 @@ ASBlockVisitor >> visitSend: anASSend [
 ASBlockVisitor >> visitVariable: anASRef [
 
 	block ifNotNil: [
-		anASRef variable isASArg ifFalse: [
 			self block: block references: anASRef variable.
-			block references: anASRef variable ] ]
+			block references: anASRef variable ]
+]
+
+{ #category : #writing }
+ASBlockVisitor >> writeClosureData: aStream stackVariables: stackVariables [
+
+	self modifiers ifNotEmpty: [ "write the closure data instruction to the stream"
+		aStream tab.
+		aStream << '&e.closureData, '
+		<< ((stackVariables indexOf: #closureData) - 1) asString << ' + ('
+		<< self modifiers size asString
+		<< ' << 8), // local:3 size:1 (offset 1 is l1)'.
+		aStream cr ]
 ]

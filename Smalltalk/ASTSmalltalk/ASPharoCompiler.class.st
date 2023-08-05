@@ -73,6 +73,20 @@ ASPharoCompiler >> initializeSyms [
 	syms at: 'ifNil:ifNotNil' put: 'Sym.@"ifNil:ifNotNil"'.
 	syms at: 'ifNotNil:' put: 'Sym.@"ifNotNil:"'.
 	syms at: 'ifNotNil:ifNil:' put: 'Sym.@"ifNotNil:ifNil:"'.
+	syms at: 'perform:' put: 'Sym.@"perform:"'.
+	syms at: 'perform:with:' put: 'Sym.@"perform:with:"'.
+	syms at: 'perform:with:with:' put: 'Sym.@"perform:with:with:"'.
+	syms
+		at: 'perform:with:with:with:'
+		put: 'Sym.@"perform:with:with:with:"'.
+	syms
+		at: 'perform:withArguments:'
+		put: 'Sym.@"perform:withArguments:"'.
+	syms
+		at: 'perform:withArguments:inSuperclass:'
+		put: 'Sym.@"perform:withArguments:inSuperclass:"'.
+	syms at: '\\' put: 'Sym.@"\\"'.
+	syms at: 'whileTrue:' put: 'Sym.@"whileTrue:"'.
 	syms at: 'Object' put: 'Sym.Object'
 ]
 

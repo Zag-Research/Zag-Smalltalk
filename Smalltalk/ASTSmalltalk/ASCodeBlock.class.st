@@ -9,7 +9,8 @@ Class {
 		'nestedScopeOf',
 		'body',
 		'locals',
-		'scope'
+		'scope',
+		'clsrData'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -37,14 +38,25 @@ ASCodeBlock >> body: anASNode [
 	body := anASNode
 ]
 
+{ #category : #'instance creation' }
+ASCodeBlock >> buildClosureData: variables [
+	clsrData := OrderedCollection new.
+	clsrData add: #footer.
+	clsrData addAll: variables
+]
+
+{ #category : #accessing }
+ASCodeBlock >> filter: instructions [
+	self subclassResponsibility 
+]
+
 { #category : #initialization }
 ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
 	body := OrderedCollection new.
-	scope := Dictionary new.
-	index := 0
+	scope := Dictionary new
 ]
 
 { #category : #accessing }
@@ -92,12 +104,17 @@ ASCodeBlock >> scope [
 	^ scope
 ]
 
-{ #category : #accessing }
-ASCodeBlock >> writeBody: symbols with: stackVariables and: aStream [
+{ #category : #writing }
+ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
 
 	| statementVisitor |
-	statementVisitor := ASStatementVisitor
-		                    symbols: symbols
+	anASBlockVisitor
+		initializeClosureData: aStream
+		stackVariables: stackVariables.
+
+	aStream cr.
+	statementVisitor := self
+		                    statementVisitor: symbols
 		                    stackVars: stackVariables.
 	body do: [ :asStatement |
 		asStatement acceptVisitor: statementVisitor.
