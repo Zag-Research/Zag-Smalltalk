@@ -57,6 +57,9 @@ pub const ClassIndex = enum(u16) {
     inline fn base(ci: Self) u64 {
         return @as(u64, @intFromEnum(ci)) << 32;
     }
+    inline fn immediate(cg: Self) u64 {
+        return ((@as(u64, @intFromEnum(Group.immediates)) << 16) | @as(u64,@intFromEnum(cg))) << 32;
+    }
 };
 pub const Group = enum(u16) {
     immediates = 0xfff0,
@@ -86,12 +89,18 @@ pub const Object = packed struct(u64) {
     tag: Group,
     pub const empty = &[0]Object{};
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
-        return cast(Group.immediates.base() | cls.base() | low32);
+        return cast(cls.immediate() | low32);
     }
-    pub inline fn setImmClass(self: Object, cls: ClassIndex) Object {
-        return cast(self.u()&~ClassIndex.max.base() | cls.base());
+    pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
+        return cast(self.hash32() | cls.immediate());
     }
-    pub inline fn withOffset(self: Object, offset: u32) Object {
+    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
+        if (dispatchCache) {
+            return cast(@as(u64,@intFromEnum(cls))<<32 | self.hash32());
+        } else
+            return self;
+    }
+    pub inline fn withOffsetx(self: Object, offset: u32) Object {
         return cast(@as(u64,offset)<<32 | self.hash32());
     }
     pub inline fn asSymbol(self: Object) Object {
@@ -146,9 +155,12 @@ pub const Object = packed struct(u64) {
         //@truncate(u24,self.u()^other.u())==0;
         return self.hash32() == other.hash32();
     }
-    pub const selectorEquals = equals;
+    pub inline fn selectorEquals(self: Object, other: Object) bool { // may be false positive
+//        return (self.u()^other.u())&0xffffffffffff == 0;
+        return self.u()==other.u();
+    }
     pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
-        return self.setImmClass(.none).equals(other.setImmClass(.none));
+        return self.equals(other.withImmClass(.Symbol));
     }
     pub inline fn indexNumber(self: Object) u12 {
         return @truncate(self.u()>>12);
@@ -210,7 +222,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toInt(self: Object) i64 {
         if (self.isInt()) return @as(i64, @bitCast(self.u() -% u64_ZERO));
-        @panic("Trying to convert Object to i64");
+        return -42;//        @panic("Trying to convert Object to i64");
     }
     pub inline fn toNat(self: Object) u64 {
         if (self.isNat()) return self.u() -% u64_ZERO;

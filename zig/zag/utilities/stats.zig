@@ -7,8 +7,8 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
         minValue: T = undefined,
         maxValue: T = undefined,
         n: usize = 0,
-        sum: T = undefined,
-        sumsq: T = undefined,
+        sum: T = 0,
+        sumsq: T = 0,
         const Self = @This();
         const isInt = switch (@typeInfo(T)) {
             .Int => true,
@@ -35,9 +35,9 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
                 }
                 self.values[i] = data;
             }
-            self.n += 1;
             self.sum += data;
             self.sumsq += data * data;
+            self.n += 1;
         }
         pub fn median(self: *Self) ?T {
             if (runs == 0 or runs < self.n) return null;

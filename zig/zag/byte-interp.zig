@@ -454,7 +454,6 @@ test "simple return via TestExecution" {
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
-    std.debug.print("result = {any}\n", .{result});
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
     try expectEqual(result[1], Nil);
@@ -474,7 +473,6 @@ test "context return via TestExecution" {
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
-    std.debug.print("result = {any}\n", .{result});
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
@@ -492,7 +490,6 @@ test "context returnTop via TestExecution" {
     te.init();
     var objs = [_]Object{ Nil, True };
     var result = te.run(objs[0..], method.asCompiledMethodPtr());
-    std.debug.print("result = {any}\n", .{result});
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(42));
 }
@@ -516,7 +513,6 @@ test "simple executable" {
     var te = TestExecution.new();
     te.init();
     const result = te.run(objs[0..], method.asCompiledMethodPtr());
-    std.debug.print("result = {any}\n", .{result});
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }

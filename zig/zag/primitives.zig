@@ -36,7 +36,3 @@ pub fn init() void {
     @import("primitives/Boolean.zig").init();
     //    @import("execute.zig").init();
 }
-test "prim" {
-    const std = @import("std");
-    std.debug.print("dup = {*}\n", .{&embedded.dup});
-}

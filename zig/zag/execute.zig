@@ -29,6 +29,7 @@ const Age = heap.Age;
 const Sym = @import("symbol.zig").symbols;
 
 pub const SendCache = *SendCacheStruct;
+pub const sendCacheSize = if (dispatchCache) @sizeOf(SendCacheStruct)/@sizeOf(Code) else 0;
 pub const SendCacheStruct = extern struct {
     cache1: [*]const Code,
     cache2: [*]const Code,
@@ -51,13 +52,16 @@ pub const SendCacheStruct = extern struct {
     }
     pub inline fn next(self: *Self) SendCache {
         trace("\nnext: {}",.{self});
-        return @as(SendCache,@ptrCast(&self.cache2));
+        return @ptrCast(&self.cache2);
+    }
+    pub inline fn fromDnu(self: *Self) SendCache {
+        return @fieldParentPtr(SendCacheStruct,"dnu",@as(*[*]const Code,@ptrCast(self))).previous();
     }
     pub inline fn dontCache(self: *Self) SendCache { // don't use on a SendCache that is the result of `next`
-        return @as(SendCache,@ptrCast(&self.noCache));
+        return @ptrCast(&self.dnu);
     }
     pub inline fn previous(self: *Self) SendCache {
-        return @ptrCast(@as([*]SendCacheStruct,@ptrCast(self)) - 1);
+        return @ptrCast(@as([*][*]const Code,@ptrCast(self)) - 1);
     }
 };
 const dnus = [_]Code{
@@ -69,7 +73,7 @@ test "SendCache" {
     const expectEqual = std.testing.expectEqual;
     var cache = SendCacheStruct.init();
     try expectEqual(cache.current()[0].prim,&controlPrimitives.cacheDnu);
-    try expectEqual(cache.dontCache().current()[0].prim,&controlPrimitives.hardDnu);
+    try expectEqual(cache.dontCache().current()[0].prim,&controlPrimitives.forceDnu);
     try expectEqual(cache.next().next().current()[0].prim,&controlPrimitives.hardDnu);
     try expectEqual(cache.next().next().next().current()[0].prim,&controlPrimitives.forceDnu);
 }
@@ -111,11 +115,12 @@ pub const CompiledMethod = extern struct {
     }
     pub fn execute(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr, cache: SendCache) [*]Object {
         const pc = self.codePtr();
-        //        std.debug.print("execute [{*}]: {*} {}\n",.{pc,pc[0].prim,sp[0]});
+        trace("\nexecute: [{*}]: {*} {} {}",.{ pc, pc[0]. prim,sp[0], self.selector });
         //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,self.selector});
         return pc[0].prim(pc + 1, sp, process, context, self.selector, cache);
     }
     pub fn forDispatch(self: *Self,class: ClassIndex) void {
+        if (dispatchCache) self.selector = self.selector.withClass(class);
         dispatch.addMethod(class,self) catch @panic("addMethod failed");
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -305,9 +310,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         header: HeapObject,
         stackStructure: Object,
         selector: Object,
-        code: [codes]Code,
+        code: [codes + caches*sendCacheSize]Code,
         references: [refs]Object,
-        caches: [caches]SendCacheStruct,
         footer: HeapObject,
         const codeOffsetInUnits = CompiledMethod.codeOffsetInUnits;
         const Self = @This();
@@ -326,7 +330,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
                 .code = undefined,
                 .references = [_]Object{object.NotAnObject} ** refs,
-                .caches = undefined,
                 .footer = footer,
             };
         }
@@ -341,7 +344,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
                 .code = code,
                 .references = [_]Object{object.NotAnObject} ** refs,
-                .caches = undefined,
                 .footer = footer,
             };
         }
@@ -355,33 +357,49 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             return @as(Object, @bitCast(self));
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object, cache: ?SendCache) void {
-            for (replacements, 1..) |replacement, index| {
-                const match = indexSymbol(@truncate(index));
-                if (self.selector.indexEquals(match)) {
-                    trace("\nsetLiterals: {x}",.{self.stackStructure});
-                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
-                    trace(" ->  {x}",.{self.stackStructure});
-                    self.selector = replacement;
-                }
-                for (&self.code) |*c| {
-                    if (c.object.indexEquals(match))
-                        c.* = Code.object(replacement.withOffset(@intFromEnum(c.object.classIndex)));
+            trace("\nsetLiterals: 0x{x:0>16} {any}",.{self.selector.u(), replacements});
+            var cachedSend = false;
+            for (&self.code) |*c| {
+                if (dispatchCache and (c.prim == &controlPrimitives.send0
+                                             or c.prim == &controlPrimitives.send1
+                                         )) {
+                    cachedSend = true;
+                } else {
+                    if (c.object.isIndexSymbol()) {
+                        for (replacements, 1..) |replacement, index| {
+                            const match = indexSymbol(@truncate(index));
+                            if (match.indexEquals(c.object)) {
+                                c.* = Code.object(replacement);
+                                break;
+                            }
+                        }
+                    }
+                    if (dispatchCache and cachedSend) {
+                        c.* = Code.object(c.object);
+                        @as(SendCache,@ptrCast(@as([*]Code,@ptrCast(c))+1)).* = if (cache) |aSendCache| aSendCache.* else SendCacheStruct.init();
+                        cachedSend = false;
+                    }
                 }
             }
-            for (refReplacements, self.references[0..refReplacements.len]) |obj, *srefs|
+            for (replacements, 1..) |replacement, index| {
+                const match = indexSymbol(@truncate(index));
+                if (match.indexEquals(self.selector)) {
+                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
+                    self.selector = replacement;
+                    break;
+                }
+            }
+            for (refReplacements, &self.references) |obj, *srefs|
                 srefs.* = obj;
             if (self.references.len > 0) {
                 for (&self.code) |*c| {
-                    if (c.object.isIndexSymbol())
-                        c.* = Code.uint((@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1);
+                    if (c.object.isIndexSymbol()) {
+                        const newValue = (@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
+                        c.* = Code.uint(newValue);
+                    }
                 }
             }
-            for (&self.caches) |*c| {
-                if (cache) |aSendCache| {
-                    c.* = aSendCache.*;
-                } else
-                    c.* = SendCacheStruct.init();
-            }
+            trace("-> 0x{x:0>16}",.{self.selector.u()});
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
@@ -431,19 +449,20 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
     var method = methodType.init(name, locals, maxStack);
     const code = method.code[0..];
     comptime var n = 0;
-    comptime var cacheOffset = 0;
     comptime var cachedSend = false;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object => {
-                if (cachedSend) {
-                    const offset = method.cacheOffset(n,cacheOffset);
-                    code[n] = Code.object(field.withOffset(offset));
-                    cacheOffset += 1;
-                    cachedSend = false;
-                } else
-                    code[n] = Code.object(field);
+                code[n] = Code.object(field);
                 n = n + 1;
+                if (cachedSend) {
+                    code[n] = dnus[0];
+                    code[n+1] = dnus[0];
+                    code[n+2] = dnus[1];
+                    code[n+3] = dnus[2];
+                    n += sendCacheSize;
+                    cachedSend = false;
+                }
             },
             @TypeOf(null) => {
                 code[n] = Code.object(Nil);
@@ -456,7 +475,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
             ThreadedFn => {
                 if (field == &controlPrimitives.send0 or
                         field == &controlPrimitives.send1
-                    ) cachedSend = true;
+                    ) cachedSend = dispatchCache;
                 code[n] = Code.prim(field);
                 n = n + 1;
             },
@@ -483,7 +502,12 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                 } else {
                                     comptime var lp = 0;
                                     inline for (tup) |t| {
-                                        if (@TypeOf(t) == ThreadedFn) lp = lp + 1 else switch (@typeInfo(@TypeOf(t))) {
+                                        if (@TypeOf(t) == ThreadedFn) {
+                                            lp += 1;
+                                            if (t == &controlPrimitives.send0 or
+                                                    t == &controlPrimitives.send1
+                                                ) lp += 4;
+                                        } else switch (@typeInfo(@TypeOf(t))) {
                                             .Pointer => |tPointer| {
                                                 switch (@typeInfo(tPointer.child)) {
                                                     .Array => {
@@ -492,6 +516,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                                                 code[n] = Code.int(lp - n - 1);
                                                                 n = n + 1;
                                                                 found = true;
+                                                                break;
                                                             }
                                                         } else lp = lp + 1;
                                                     },
@@ -558,7 +583,7 @@ pub const controlPrimitives = struct {
     }
     pub fn verifySelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\nverifySelector: {} {} {*}", .{ method.selector, selector, pc });
+        trace("\nverifySelector: 0x{x} 0x{x} {*}", .{ method.selector.u(), selector.u(), pc });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
@@ -567,7 +592,7 @@ pub const controlPrimitives = struct {
     }
     pub fn verifyDirectSelector(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\nverifySelector: {} {} {*}", .{ method.selector, selector, pc });
+        trace("\nverifyDirectSelector: {} {} {*}", .{ method.selector, selector, pc });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
@@ -692,7 +717,7 @@ pub const controlPrimitives = struct {
     pub fn pushLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const newSp = sp - 1;
         newSp[0] = context.getLocal(0);
-        trace("\npushLocal: {any}", .{ context.stack(newSp, process) });
+        trace("\npushLocal0: {any}", .{ context.stack(newSp, process) });
         return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector, cache });
     }
     pub fn popLocal0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
@@ -750,30 +775,43 @@ pub const controlPrimitives = struct {
         std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, class, newPc, newPc[0] });
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
     }
+    pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        context.setReturn(pc + 1);
+        const offset = pc[0].uint;
+        const method = pc[1 + offset].object.to(CompiledMethodPtr);
+        const newPc = method.codePtr();
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
+    }
+    pub fn callRecursive(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        context.setReturn(pc + 1);
+        const offset = pc[0].int;
+        const newPc = pc + 1 - @as(u64, @intCast(-offset));
+        trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
+    }
     pub fn send0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) [*]Object {
         const self = sp[0];
-        var selector = pc[0].object;
-        context.setReturn(pc + 1);
+        context.setReturn(pc + 1 + sendCacheSize);
         const class = self.get_class();
-        const cache = if (dispatchCache) @as(SendCache,@constCast(@ptrCast(pc+@intFromEnum(selector.classIndex)))) else prevCache;
-        if (dispatchCache) selector.classIndex = class;
+        const selector = pc[0].object.withClass(class);
+        trace("\nsend0: 0x{x} {}",.{ selector.u(), class });
+        const cache = if (dispatchCache) @as(SendCache,@constCast(@ptrCast(pc+1))) else prevCache;
         const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
-        trace("\nsend1: 0x{x} {} {*} {any}",.{selector.u(), class, newPc, process.getStack(sp)});
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, if (dispatchCache) cache.next() else prevCache});
+        trace(" {*} {any}",.{ newPc, process.getStack(sp) });
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
       }
 //    pub fn tailSend0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
 //    }
-    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, _: SendCache) [*]Object {
-        var selector = pc[0].object;
+    pub fn send1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) [*]Object {
         const self = sp[1];
-        context.setReturn(pc + 1);
+        context.setReturn(pc + 1 + sendCacheSize);
         const class = self.get_class();
-        const offset = @intFromEnum(selector.classIndex);
-        selector.classIndex = class;
-        const cache = @as(SendCache,@constCast(@ptrCast(pc+offset)));
-        const newPc = cache.current();
-        trace("\nsend1: {x} {} {} {*} {any}",.{selector.u(),class, offset, newPc, process.getStack(sp)});
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache.next() });
+        const selector = pc[0].object.withClass(class);
+        trace("\nsend1: 0x{x} {}",.{ selector.u(), class });
+        const cache = if (dispatchCache) @as(SendCache,@constCast(@ptrCast(pc+1))) else prevCache;
+        const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
+        trace(" {*} {any}",.{ newPc, process.getStack(sp) });
+        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
     }
 //    pub fn tailSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object, cache: SendCache) [*]Object {
 //    }
@@ -792,20 +830,6 @@ pub const controlPrimitives = struct {
         const newPc = lookup(selector, sp[2].get_class());
         context.setTPc(pc + 1);
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp + 1, process, context, selector, cache });
-    }
-    pub fn call(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        context.setReturn(pc + 1);
-        const offset = pc[0].uint;
-        const method = pc[1 + offset].object.to(CompiledMethodPtr);
-        const newPc = method.codePtr();
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
-    }
-    pub fn callRecursive(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        context.setReturn(pc + 1);
-        const offset = pc[0].int;
-        const newPc = pc + 1 - @as(u64, @intCast(-offset));
-        trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
     }
     pub fn pushContext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc - pc[0].uint) - CompiledMethod.codeOffset));
@@ -846,6 +870,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector, cache });
     }
     pub fn forceDnu(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        std.debug.print("\nforceDnu: 0x{x} {} {} {}",.{selector.u(),selector.classIndex,selector.asSymbol(), cache.fromDnu()});
         _ = .{ pc, sp, process, context, selector, cache, @panic("forceDnu unimplemented")};
     }
     fn hardDnu(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
@@ -858,7 +883,7 @@ pub const controlPrimitives = struct {
         const newPc = lookup(selector, selector.classIndex);
         const newCache = cache.previous();
         newCache.cache1 = newPc;
-        trace("\ncacheDnu: {} {}",.{newCache,cache});
+        trace("\ncacheDnu: {} {*} {*}",.{newCache, newCache, cache});
         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, selector, cache });
 //        const pc = cache.current();
 //        return @call(tailCall, pc[0].prim, .{ pc+1, sp, process, context, selector, cache.next() });
@@ -881,6 +906,7 @@ pub const TestExecution = struct {
         self.ctxt.method = &yourself;
         self.sp = self.process.endOfStack();
     }
+    var yourself = CompiledMethod.init(Sym.noFallback,Code.end);
     pub fn initStack(self: *Self, source: []const Object) void {
         self.sp = self.process.endOfStack() - source.len;
         for (source, self.sp[0..source.len]) |src, *dst|
@@ -892,34 +918,60 @@ pub const TestExecution = struct {
         trace("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
-    var yourself = CompiledMethod.init(Sym.yourself,Code.end);
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
         var cache = SendCacheStruct.init();
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace) == @TypeOf(std.debug.print) and trace == std.debug.print) method.write(stdout) catch unreachable;
         trace("\nrun: {} {*}",.{cache.dontCache(),cache.dontCache().current()});
-        return self.stack(method.execute(self.sp, &self.process, &self.ctxt,&cache));
+        return self.stack(method.execute(self.sp, &self.process, &self.ctxt, cache.dontCache()));
     }
 };
 const p = struct {
     usingnamespace controlPrimitives;
 };
-fn myDnuFn(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) [*]Object {
+fn push42(_: [*]const Code, sp: [*]Object, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) [*]Object {
     const newSp = sp - 1;
     newSp[0] = Object.from(42);
     return newSp;
 }
 test "SendCache direct" {
+    if (dispatchCache) {
+        const expectEqual = std.testing.expectEqual;
+        var method = compileMethod(Sym.yourself, 0, 0, .{
+            &p.send0,  Sym.value,
+            &p.primitiveFailed,
+        });
+        const myDnu = Code.prim(&push42);
+        var cache = SendCacheStruct.initWith(&myDnu);
+        //    _ = cache;    method.setLiterals(Object.empty, Object.empty, null);
+        trace("\ncache: {}",.{cache});
+        trace("\nmethod:< {}",.{method});
+        method.setLiterals(Object.empty, Object.empty, &cache);
+        trace("\nmethod:> {}",.{method});
+        var te = TestExecution.new();
+        te.init();
+        var objs = [_]Object{ Nil, True };
+        const compiledMethod = method.asCompiledMethodPtr();
+        var result = te.run(objs[0..], compiledMethod);
+        try expectEqual(result.len, 3);
+        try expectEqual(result[0], Object.from(42));
+    } else
+        std.debug.print("dispatch cache not enabled - succeeds vacuously ",.{});
+}
+test "send with dispatch direct" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 0, 0, .{
-        &p.send1,  Sym.value,
+        &p.send0,  Sym.value,
         &p.primitiveFailed,
     });
-    const myDnu = Code.prim(&myDnuFn);
-    var cache = SendCacheStruct.initWith(&myDnu);
-//    _ = cache;    method.setLiterals(Object.empty, Object.empty, null);
-    method.setLiterals(Object.empty, Object.empty, &cache);
+    var methodV = compileMethod(Sym.value, 0, 0, .{
+        &push42,
+        &p.primitiveFailed,
+    });
+    method.setLiterals(Object.empty, Object.empty, null);
+    dispatch.init();
+    methodV.asCompiledMethodPtr().forDispatch(ClassIndex.UndefinedObject);
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
@@ -1036,7 +1088,6 @@ test "simple executable" {
     var te = TestExecution.new();
     te.init();
     const result = te.run(objs[0..], method.asCompiledMethodPtr());
-    trace("result = {any}\n", .{result});
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }

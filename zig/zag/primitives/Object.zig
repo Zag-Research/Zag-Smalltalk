@@ -146,7 +146,6 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     te.init();
     var objs = [_]Object{};
     var result = te.run(objs[0..], method);
-    std.debug.print("result = {any}\n", .{result});
     return result;
 }
 test "simple compare" {
