@@ -13,17 +13,17 @@ AST Smalltalk has several features that minimize garbage creation:
 
 AST Smalltalk has several features that minimize the amount of work required by garbage collection:
 - all interpreter stacks and code addresses are outside the range of valid heap pointers, so by being careful to never save anything in a stack frame that looks like a heap reference, no scanning is required for the interpreter stack;
-- scanning for roots can proceed very quickly. A single comparison filters all non-heap, non-float values, and if necessary a second filters the floats
+- scanning for roots can proceed very quickly. A single comparison filters all non-heap values.
 - the format of indexable objects encodes if they are pointer-free, so don't need to be scanned
-- each thread has its own nursery heaps, so there is no contention on allocation
+- each thread has its own nursery heap, so there is no contention on allocation
 - the list of weak objects that must be scanned at the end of the collection is outside the heap
 
 ## Heap structure
 
-The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself and the global collector thread) and a global arena accessible by all threads.
+The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself) and a global arena accessible by all threads.
 
 ## Per-Thread Arenas
-Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows down. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena.
+Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows down. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena, nor for collection.
 
 The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack and current context.
 
@@ -32,9 +32,9 @@ If, after an allocation in the nursery, there is not enough free space in the cu
 ### Stack of Contexts
 The execution stack is allocated in the stack area of the Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
 
-The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the top of the stack area.
+The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
 
-On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that other working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
 
 #### Object age fields
 The age field for local objects is as follows:
