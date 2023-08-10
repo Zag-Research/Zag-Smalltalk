@@ -651,10 +651,29 @@ pub const controlPrimitives = struct {
     pub fn drop(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
+    pub fn dropNext(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        sp[1] = sp[0];
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    }
     pub fn swap(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const saved = sp[0];
         sp[0] = sp[1];
         sp[1] = saved;
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+    }
+    pub fn replaceLiteral(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        sp[0] = pc[0].object;
+        trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc[1].prim, .{ pc + 2, sp, process, context, selector, cache });
+    }
+    pub fn replaceLiteral0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        sp[0] = Object.from(0);
+        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+    }
+    pub fn replaceLiteral1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        sp[0] = Object.from(1);
+        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
     pub fn pushLiteral(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {

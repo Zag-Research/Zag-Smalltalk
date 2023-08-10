@@ -229,8 +229,7 @@ var fibThread =
     &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
-    &e.drop, // self
-    &e.pushLiteral1,
+    &e.replaceLiteral1, // self
     &e.returnNoContext,
     ":label3",
     &e.pushContext,
@@ -280,8 +279,7 @@ var fibDispatch =
     &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
     &e.ifFalse,
     "label3",
-    &e.drop, // self
-    &e.pushLiteral1,
+    &e.replaceLiteral1, // self
     &e.returnNoContext,
     ":label3",
     &e.pushContext,
@@ -414,8 +412,7 @@ var @"Integer>><=" =
 var @"True>>ifTrue:" =
     compileMethod(Sym.@"ifTrue:", 0, 0, .{
         &e.verifySelector,
-        &e.swap,
-        &e.drop,
+        &e.dropNext,
         &e.BlockClosure.value,
         &e.returnNoContext,
 });
@@ -512,62 +509,67 @@ fn runNative(run:usize) usize {
     return @bitCast(@divTrunc(@as(i64,@truncate(ts() - start)),1000000));
 }
 const Stats = @import("zag/utilities/stats.zig").Stats;
-pub fn timing() !void {
+pub fn timing(args: [][]const u8) !void {
     const nRuns = 5;
+    const eql = std.mem.eql;
     const print = std.debug.print;
-    print("for '{} fibonacci'\n", .{runs});
     var stat = Stats(usize,nRuns).init();
-    print("          Median   Mean   StdDev   ({} runs)\n", .{nRuns});
-    print("Native:  ", .{});
-    stat.run(runNative);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{stat.median(), stat.mean(), stat.stdDev()});
-
-    stat = Stats(usize,nRuns).init();
-    print("Object:  ", .{});
-    stat.run(runObject);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
-    
-    stat = Stats(usize,nRuns).init();
-    print("CPS:     ", .{});
-    stat.run(runCPS);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
-    
-    stat = Stats(usize,nRuns).init();
-    print("CPSSend: ", .{});
-    stat.run(runCPSSend);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), cached});
-    
-    stat = Stats(usize,nRuns).init();
-    print("Thread:  ", .{});
-    stat.run(runThread);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
-    
-    stat = Stats(usize,nRuns).init();
-    print("Dispatch:", .{});
-    stat.run(runDispatch);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), cached});
-    
-    stat = Stats(usize,nRuns).init();
-    print("Byte:    ", .{});
-    stat.run(runByte);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms\n", .{ stat.median(), stat.mean(), stat.stdDev()});
-    
-    stat = Stats(usize,nRuns).init();
-    print("Full:    ", .{});
-    stat.run(runFull);
-    print("{?d:5}ms {d:5}ms {d:6.2}ms {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), cached});
-    
+    for (args) |arg| {
+        if (eql(u8,arg,"Header")) {
+            print("for '{} fibonacci'\n", .{runs});
+            print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
+        } else if (eql(u8,arg,"Native")) {
+            print("Native:  ", .{});
+            stat.run(runNative);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+        } else if (eql(u8,arg,"Object")) {
+            stat = Stats(usize,nRuns).init();
+            print("Object:  ", .{});
+            stat.run(runObject);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+        } else if (eql(u8,arg,"CPS")) {
+            stat = Stats(usize,nRuns).init();
+            print("CPS:     ", .{});
+            stat.run(runCPS);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+            } else if (eql(u8,arg,"CPSSend")) {
+            stat = Stats(usize,nRuns).init();
+            print("CPSSend: ", .{});
+            stat.run(runCPSSend);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
+        } else if (eql(u8,arg,"Thread")) {
+            stat = Stats(usize,nRuns).init();
+            print("Thread:  ", .{});
+            stat.run(runThread);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+        } else if (eql(u8,arg,"Dispatch")) {
+            stat = Stats(usize,nRuns).init();
+            print("Dispatch:", .{});
+            stat.run(runDispatch);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
+        } else if (eql(u8,arg,"Byte")) {
+            stat = Stats(usize,nRuns).init();
+            print("Byte:    ", .{});
+            stat.run(runByte);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+        } else if (eql(u8,arg,"Full")) {
+            stat = Stats(usize,nRuns).init();
+            print("Full:    ", .{});
+            stat.run(runFull);
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
+        } else print("Unknown argument: {s}\n",.{arg});
+    }
 }
 pub fn main() !void {
+    const do_all = [_][]const u8{"Header","Native","Object","CPS","Thread","Byte","CPSSend","Dispatch","Full"};
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
         const deinit_status = gpa.deinit();
         //fail test; can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) expect(false) catch @panic("TEST FAIL");
+        if (deinit_status == .leak) @panic("TEST FAIL");
     }
-    _ = try std.process.argsAlloc(allocator);
-    std.debug.print("@sizeOf(fibThread) = {}, @sizeOf(fibByte) = {}\n",.{@sizeOf(@TypeOf(fibThread)), @sizeOf(@TypeOf(fibByte))});
-    try timing();
+    const args = try std.process.argsAlloc(allocator);
+    try timing(if (args.len>1) args[1..] else @constCast(do_all[0..]));
 }
 const runs: u6 = 40;
