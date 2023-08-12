@@ -11,13 +11,13 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @as(Object, @bitCast(v));
 }
-inline fn oImm(c: ClassIndex, h: u64) u64 {
+pub fn oImm(c: ClassIndex, h: u64) u64 { // INLINED & NON-PUB
     return o(.immediates) | @as(u64, @intFromEnum(c)) << 32 | h;
 }
 inline fn o(g: Group) u64 {
     return g.base();
 }
-pub inline fn indexSymbol(uniqueNumber: u12) Object {
+pub fn indexSymbol(uniqueNumber: u12) Object { // INLINED
     return @as(Object, @bitCast(oImm(.Symbol, 0xff000000 | @as(u32, uniqueNumber))));
 }
 pub const ZERO = of(0);
@@ -46,12 +46,26 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const ClassIndex = enum(u16) {
-    none = 0, Object, SmallInteger, Float,
-    False, True, UndefinedObject, Symbol,
-    Character, BlockClosure, Array, String,
-    SymbolTable, Method, CompiledMethod,
-    Dispatch, ClosureData, Context,
-    max = 0xffff, _,
+    none = 0,
+    Object,
+    SmallInteger,
+    Float,
+    False,
+    True,
+    UndefinedObject,
+    Symbol,
+    Character,
+    BlockClosure,
+    Array,
+    String,
+    SymbolTable,
+    Method,
+    CompiledMethod,
+    Dispatch,
+    ClosureData,
+    Context,
+    max = 0xffff,
+    _,
     const Self = @This();
     inline fn base(ci: Self) u64 {
         return @as(u64, @intFromEnum(ci)) << 32;
@@ -71,7 +85,7 @@ pub const Group = enum(u16) {
     heap,
     _,
     const Self = @This();
-    inline fn base(cg: Self) u64 {
+    fn base(cg: Self) u64 { // INLINED
         return @as(u64, @intFromEnum(cg)) << 48;
     }
     inline fn u(cg: Self) u16 {
@@ -88,10 +102,10 @@ pub const Object = packed struct(u64) {
         return cast(Group.immediates.base() | cls.base() | low32);
     }
     pub inline fn setImmClass(self: Object, cls: ClassIndex) Object {
-        return cast(self.u()&~ClassIndex.max.base() | cls.base());
+        return cast(self.u() & ~ClassIndex.max.base() | cls.base());
     }
     pub inline fn withOffset(self: Object, offset: u32) Object {
-        return cast(@as(u64,offset)<<32 | self.hash32());
+        return cast(@as(u64, offset) << 32 | self.hash32());
     }
     pub inline fn asSymbol(self: Object) Object {
         return makeImmediate(.Symbol, self.hash32());
@@ -108,7 +122,8 @@ pub const Object = packed struct(u64) {
     pub inline fn high16(self: Object) u16 {
         return @intFromEnum(self.classIndex);
     }
-    pub inline fn cast(v: anytype) Object {
+    pub fn cast(v: anytype) Object { // INLINED 
+        // stored using little-endian order
         return @as(Object, @bitCast(v));
     }
     pub inline fn hash(self: Object) Object {
@@ -130,7 +145,7 @@ pub const Object = packed struct(u64) {
         return @as(i64, @bitCast(self));
     }
     pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
-        return cast((Object{.tag=tag,.classIndex=.none,.h1=0,.h0=low}).u()+addr);
+        return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).u() + addr);
     }
     pub inline fn tagbits(self: Object) u16 {
         return @intFromEnum(self.tag);
@@ -150,13 +165,14 @@ pub const Object = packed struct(u64) {
         return self.setImmClass(.none).equals(other.setImmClass(.none));
     }
     pub inline fn indexNumber(self: Object) u12 {
-        return @truncate(self.u()>>12);
+        return @truncate(self.u() >> 12);
     }
     pub inline fn isInt(self: Object) bool {
         return self.atLeastInt() and self.atMostInt();
     }
-    pub inline fn atLeastInt(self: Object) bool {
-        return self.tag.u() >= Group.smallInt.u();
+    pub fn atLeastInt(self: Object) bool { // INLINED
+        var testing = Group.smallInt.u();
+        return self.tag.u() >= testing;
     }
     pub inline fn atMostInt(self: Object) bool {
         return self.tag.u() <= Group.smallIntMax.u();
@@ -287,7 +303,7 @@ pub const Object = packed struct(u64) {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).inHeapSize();
         return 0;
     }
-    pub inline fn from(value: anytype) Object {
+    pub fn from(value: anytype) Object { // INLINED
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(@TypeOf(value))) {
@@ -377,7 +393,7 @@ pub const Object = packed struct(u64) {
             .Symbol => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toInt()}),
-            .Float => writer.print("{}(0x{x})", .{self.to(f64), self.u()}),
+            .Float => writer.print("{}(0x{x})", .{ self.to(f64), self.u() }),
             else => {
                 try writer.print("0x{x:>16}", .{self.u()});
                 @panic("format for unknown class");

@@ -55,3 +55,8 @@ zig/fullfib
 zig/sieve
 *.a
 *-generated.zig
+
+# Additions
+/JanTest.zig
+zig-cache/
+zig-out/ 
