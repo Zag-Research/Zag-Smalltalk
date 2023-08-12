@@ -66,22 +66,14 @@ If you have an arena that is accessible to multiple threads, then moving becomes
 
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
 
-When promoting an object to the global arena if the global collector is currently marking, the age will be set to *marked*, otherwise it will be set to unmarked.
-
-When creating a new object in the global arena if the global collector is currently marking, the age will be set to *marked* and *scanned*, otherwise it will be set to unmarked.
-
-## Zig Allocator
-Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
-
-### Heap object structure
-All objects are allocated with the data followed by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceeded by a slice for the arrray, preceeded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
+When promoting an object to the global arena or creating a new object in the global arena if the global collector is currently marking, the age will be set to marked and scanned, otherwise it will be set to unmarked.
 
 #### Object age fields
 The age field for global objects is as follows:
 7. Static
 8. Global
 9. GlobalMarked
-10. Structs
+10. Structs (Zig Allocator)
 11. GlobalScanned
 12. AoO
 13. AoOMarked
@@ -90,7 +82,13 @@ The age field for global objects is as follows:
 AoO objects are objects within [[MemoryManagement#Array of Objects]].
 Static objects are only scanned once per garbage collection.
 
-### Global Arena Structure
+## Zig Allocator
+Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
+
+### Heap object structure
+All objects are allocated with the data followed by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceded by a slice for the array, preceded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
+
+## Global Arena Structure
 The Global Arena uses a binary heap.
 
 #### Free-space allocation

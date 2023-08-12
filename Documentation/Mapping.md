@@ -97,6 +97,15 @@ There are a few significant changes:
 #### Object addresses
 All object addresses point to a HeapObject word.  Every object has a HeapObject word at the end (except Contexts on the stack as mentioned below). This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move. In a few special cases there is also a shadow HeapObject word at the beginning. This is done when the object is variable size (like a CompiledMethod) and mostly used by Zig code so it is efficient to have a pointer to the start of the object. In one special cases (Context) when the object is on the stack there is only the shadow HeapObject word, and if copied to a heap, the object is fully reified (but the shadow remains as the first word of the resulting object).
 
+##### HeapObject word format:
+| Bits | What          | Characteristics                        |
+| ---- | ------------- | -------------------------------------- |
+| 12   | length        | number of long-words besides the footer |
+| 4    | age           | number of times object has been copied |
+| 8    | format        | see below                              |
+| 24   | identityHash  |                                        |
+| 16   | classIndex    | LSB                                    |
+
 #### Length
 The length field encodes the total size of the heap allocation except for the HeapObject word itself.
 
@@ -105,70 +114,41 @@ There are a number of special length values:
 - 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The real length of the object (for garbage collection purposes) will be found by following the pointer.
 - 0-4093 - normal object 
 Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
+#### Age
+The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap For global objects, the marked ans scanned status are used by the mark and sweep collection (see [[MemoryManagement]]).
 
+| Value | Meaning | Notes |
+| -- | --- | -- |
+|  0 | on Stack | only Context, BlockClosure, or ContextData |
+| 1-6 | nursery heap | incremented on each copy |
+| 7 | static | outside the stack or any heap|
+| 8 | global | |
+| 9 | global, marked as reachable | |
+| 11 | global, already scanned | |
+| 10 | a Zig struct | ignored by GC |
+| 14 | free | part of a free list |
+The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots.
 #### Format
-First we have the object format tag. The bits code the following:
-- bit 0-3: encode indexable fields
-	- 0: no indexable fields
-	- 1: 64-bit indexable - native words (DoubleWordArray,DoubleArray,) or Objects (Array)
-	- 2-3: 32-bit indexable - low bit encodes unused half-words at end (WordArray, IntegerArray, FloatArray, WideString)
-	- 4-7: 16-bit indexable - low 2 bits encode unused quarter-words at end (DoubleByteArray)
-	- 8-15: byte indexable - low 3 bits encode unused bytes at end (ByteArray, String)
-- bit 4: encode indexable have pointers
-	-  0: no indexable pointers
-	- 16: indexable pointers
-- bit 5-6: encode instance variables
-	-  0: no instance variable
-	- 32: instance variables - no pointers
-	- 64: weak (implying instance variables) - pointers - even if there aren't, because weak values are rare, and they only exist to hold pointers
-	- 96: instance variables have pointers
-- bit 7: = 1 says the value is immutable
+Ignoring the high bit, which says the object is immutable, the object format tag is coded as follows:
 
-Therefore, only the following values currently have meaning:
-- 0: unallocated (i.e. free-list - no pointers)
-- 1-15: indexable objects with no inst vars (no pointers)
-- 17: indexable objects with no inst vars (with pointers)
-- 32,96: non-indexable objects with inst vars (Association et al) 
-- 33-49,97-113: indexable objects with inst vars (MethodContext AdditionalMethodState et al)
-- 64: weak non-indexable objects with inst vars  (Ephemeron)
-- 65-81: weak indexable objects with inst vars (WeakArray et al)
-- 16,48,112: Array-of-Structs arrays all of the same type, or at least same size
-
-Format anded with 80 = 0 declares no pointers, so GC doesn't look through them for pointers. Things are initially created as their pointer-free version but change to their pointer-containing version if a pointer is stored in them. i.e. 64 is ored if a pointer is stored into an instance variable, and 16 is ored if a pointer is stored into an indexed field (additionally, the pointee may need to be promoted to the pointer target arena). During garbage collection, if no reference is found during the scan, they revert to the pointer-free version (i.e. bit 4 or 6 is reset).
-
-If there are both instVars and indexable fields, the length field is the number of instVars which are followed by a word containing the size of the indexable portion, which follows. Weak objects are rare enough that we don't bother to handle cases with no instance variables separately. Weak object instance variables are assumed to contain pointers.
-
-If there aren't both instVars and indexable fields, the size is determined by the length field. The only difference between instVars and indexables is whether `at:`, `size`, etc. should work or give an error.
-
-If the array length is >= 2048 (whether in the length field or the additional size word), the values are preceded by a size which is the number of additional words. 
-
-This is the header-word for an object:
-
-| Bits | What          | Characteristics                        |
-| ---- | ------------- | -------------------------------------- |
-| 12   | length        | number of long-words beyond the header |
-| 4    | age           | number of times object has been copied |
-| 1    | isImmutable        | \                                      |
-| 1    |       | !                                      |
-| 1    |    | !                                      |
-| 1    |      | !                                      |
-| 1    |  | + format(see above)                    |
-| 1    |         | !                                      |
-| 1    |    | !                                      |
-| 1    |    | /                                      |
-| 24   | identityHash  |                                        |
-| 16   | classIndex    | LSB                                    |
-
-Unless format=3,7,11, there aren't **both** indexable elements and instance variables. This means unless the number of words of allocation is more than 8189, it can be encoded in the header length field.
-
-For formats >= 17, if the length field=4094, the header word is followed by 3 words with the index allocation, a pointer to the data page, and a link for a list through all the large-allocation objects. In this case the total number of words allocated to the object is 3.
-
-If the format=3,7,11, the instance variables are followed by a word with the index allocation. In this case the total number of words allocated to the object is 2 or 4 plus the value of the length field (for the instance variables which can't be 4K) plus the value of the index allocation word, with the instance variables immediately following the header, followed by the index allocation word, followed by the indexed elements. 3 and 11 are used (with number of instance variables = 0) in place of 2 and 10 if there are more than 4093 indexable elements. If the index allocation is greater than or equal to 4094, then the indexable elements are allocated on a separate data page, and replaced in the object with a pointer to that page and a link for the list of large-allocation objects..
+| Value | Meaning |
+| -- | --- |
+| 0 | contains an empty indexable area |
+| 1-62 | contains a byte-indexable area of this size |
+| 63 | a struct (native Zig object) - ignored by GC |
+| 64 | a non-indexable object |
+| 65-116 | an object-indexable area of size 1-51 - assumed pointers |
+| 117 | a header |
+| 118 | a direct-indexed object - no pointers |
+| 119 | a direct-indexed object with pointers |
+| 120 | an indexed object - no pointers |
+| 121 | an indexed object with pointers |
+| 122 | an external object - no pointers |
+| 123 | an external object with pointers |
+| 125 | an external weak object with pointers |
+| 127 | a weak object with pointers |
 
 The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
-
-#### Age
-The age field encodes the number of times the object has been copied. Stack objects (only Contexts) will always have an age of 0. Nursery heap objects have an age of 1. Every time it is copied to a teen arena, the count is incremented. When it gets to 8, it will be promoted to the global heap, so an age of greater than 7 indicates that the object is global. For global objects, the low 3 bits of the age are available for marks for the mark and sweep collection (see [[MemoryManagement]]).
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
 
@@ -226,6 +206,23 @@ And a format 24 object with 2 instance variables and 3 indexable elements would 
 | 0001 1Bhh hhhc cccc | length=1, format=27 |
 | 6548 6c6c 006f 0000 | Hello               |
 
-
-![Stats from Pharo Image](Pasted%20image%2020210320170341.png)
+### Statistics from a recent Pharo image
+| n | Description |
+| -- | --- |
+| 19325 | classes |
+| 89242 | symbols |
+| 127069 | methods |
+| 443 | methods in Object |
+| 60428 | defined methods |
+| 35490 | unary methods |
+| 16920 | binary or keyword methods with 1 parameter |
+| 5234 | keyword methods with 2 parameters |
+| 12 | classes have 45 or more instance variables |
+| 1093 | classes have no instance variables and aren't indexable |
+| 143 | of those are abstract |
+| 1372 | classes have 1 instance variable and aren't indexable |
+| 48 | classes are just indexable |
+| 3 | indexable classes have 1 iVar |
+| 3 | indexable classes have 2 iVars |
+| 13 | indexable classes have 3-6 iVars |
 
