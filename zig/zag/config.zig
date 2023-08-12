@@ -3,5 +3,7 @@ const debugging = false;
 const show_error_stack = debugging;
 const show_trace = debugging;
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
-pub const trace = if (show_trace) std.debug.print else trace_;
-inline fn trace_(_: anytype, _: anytype) void {}
+pub inline fn trace(format: anytype, values: anytype) void {
+    if (show_trace) std.debug.print(format,values);
+}
+pub const dispatchCache = false;

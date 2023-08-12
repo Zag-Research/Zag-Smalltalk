@@ -40,7 +40,7 @@ pub const embedded = struct {
             sp[1] = Nil;
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
         }
-        return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"mustBeBoolean:", cache });
+        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifTrue:", cache });
     }
     pub fn @"ifFalse:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const v = sp[1];
@@ -48,8 +48,11 @@ pub const embedded = struct {
             sp[1] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, selector, cache });
         }
-        if (True.equals(v)) return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
-        return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"mustBeBoolean:", cache });
+        if (True.equals(v))  {
+            sp[1] = Nil;
+            return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, selector, cache });
+        }
+        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifFalse:", cache });
     }
     pub fn @"ifTrue:ifFalse:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const v = sp[2];
@@ -61,7 +64,7 @@ pub const embedded = struct {
             sp[2] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, selector, cache });
         }
-        return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"mustBeBoolean:with:", cache });
+        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifTrue:ifFalse:", cache });
     }
     pub fn @"ifFalse:ifTrue:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
         const v = sp[2];
@@ -73,7 +76,7 @@ pub const embedded = struct {
             sp[2] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, selector, cache });
         }
-        return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"mustBeBoolean:with:", cache });
+        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifFalse:ifTrue:", cache });
     }
 };
 const dnu = execute.controlPrimitives.dnu;

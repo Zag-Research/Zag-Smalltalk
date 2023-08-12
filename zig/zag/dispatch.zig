@@ -25,13 +25,12 @@ const compileMethod = execute.compileMethod;
 const compiledMethodType = execute.compiledMethodType;
 const Code = execute.Code;
 const CodeContextPtr = execute.CodeContextPtr;
-const u32_phi_inverse = @import("utilities.zig").inversePhi(u32);
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
-pub const lookup = Dispatch.lookup;
+pub const lookup = Dispatch.lookupForClass;
 pub fn init() void {
     _ = Dispatch.new();
 }
@@ -64,15 +63,9 @@ const Dispatch = extern struct {
     const dnuInit: [*]const Code = @ptrCast(&dnuThread[0]);
     var dispatchData: [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
-    pub inline fn lookup(selector: Object, index: ClassIndex) [*]const Code {
-        const hashed = preHash(selector.hash32());
-        const address = dispatches[@intFromEnum(index)].lookupAddress(hashed);
-        trace("\nlookup: {} {} {} {*} {*}", .{ index, selector.asSymbol(), hashed, address, address.* });
-        return dispatches[@intFromEnum(index)].lookupAddress(preHash(selector.hash32())).*;
-    }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
-        trace("\naddMethod: {} {}",.{index,method.selector});
+        trace("\naddMethod: {} {} 0x{x}",.{index, method.selector.asSymbol(), method.selector.u()});
         //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
@@ -113,7 +106,6 @@ const Dispatch = extern struct {
         self.header = HeapObject.staticHeaderWithClassLengthHash(classIndex, words - 1, 0);
         const nMethods: u16 = words - @offsetOf(Self, "methods") / 8;
         const hash = smallestPrimeAtLeast(nMethods * 6 / 10);
-        trace("\nwords: {} nM: {} hash: {}", .{ words, nMethods, hash });
         self.hash = hash;
         for (self.methods[0..nMethods]) |*ptr|
             ptr.* = dnuInit;
@@ -148,14 +140,24 @@ const Dispatch = extern struct {
         //trace("\nlookupAddress: {} {}",.{selector,hash});
         return @constCast(&self.methods[hash]);
     }
-    inline fn preHash(selector: u32) u64 {
-        return @as(u64, selector *% u32_phi_inverse);
+    inline fn preHash(selector: Object) u64 {
+        return selector.hash32() *% @import("utilities.zig").inversePhi(u32);
+        //return (selector.u() *% @import("utilities.zig").inversePhi(u64))>>32;
+    }
+    pub inline fn lookupForClass(selector: Object, index: ClassIndex) [*]const Code {
+        const code = dispatches[@intFromEnum(index)].lookup(selector);
+        trace(" (lookupForClass) {}", .{ index });
+        return code;
+    }
+    inline fn lookup(self: *Self, selector: Object) [*]const Code {
+        const hashed = preHash(selector);
+        const address = self.lookupAddress(hashed);
+        trace("\nlookup: {} {} {*} {*}", .{ selector.asSymbol(), hashed, address, address.* });
+        return address.*;
     }
     pub fn dispatch(self: *Self, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
-        const hash = selector.hash32();
-        const hashed = preHash(hash);
-        const code = self.lookupAddress(hashed).*;
-        trace("\ndispatch: {} {} {} {*} {*}", .{ selector, hash, hashed, self.lookupAddress(hashed), code });
+        const code = self.lookup(selector);
+        trace(" (dispatch)", .{ });
         // all the ugly casting is to make signature match
         return @call(tailCall, @as(*const fn (*Self, [*]Object, *Process, CodeContextPtr, Object, SendCache) [*]Object, @ptrCast(code[0].prim)), .{ @as(*Dispatch, @ptrCast(@constCast(code + 1))), sp, process, context, selector, cache });
     }
@@ -184,7 +186,7 @@ const Dispatch = extern struct {
         defer {
             self.state = .clean;
         }
-        const hashed = preHash(cmp.selector.hash32());
+        const hashed = preHash(cmp.selector);
         const address = self.lookupAddress(hashed);
         //trace("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
         if (@cmpxchgWeak([*]const Code, address, dnuInit, cmp.codePtr(), .SeqCst, .SeqCst) == null) {
@@ -345,11 +347,11 @@ const Dispatch = extern struct {
     }
     const primes = [_]?ThreadedFn{ null, null, null, &prime3, null, &prime5 };
     fn prime3(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
-        const pc = programCounter[(preHash(selector.hash32()) * 3) >> 32].codeRef;
+        const pc = programCounter[(preHash(selector) * 3) >> 32].codeRef;
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
     fn prime5(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {
-        const pc = programCounter[(preHash(selector.hash32()) * 5) >> 32].codeRef;
+        const pc = programCounter[(preHash(selector) * 5) >> 32].codeRef;
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
     fn super(programCounter: [*]const Code, sp: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object {

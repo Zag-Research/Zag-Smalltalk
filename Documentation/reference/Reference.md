@@ -10,7 +10,14 @@
 - [Cog blog - build me a JIT as fast as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
 - [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
 - [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
-- [building Pharo VM](https://github.com/pharo-project/pharo-vm)
+- [building Pharo VM](https://github.com/pharo-project/pharo-vm) 
+```
+$ git clone git@github.com:pharo-project/pharo-vm.git
+$ cmake -S pharo-vm -B build -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE  -DFLAVOUR=StackVM
+$ cd build
+$ make install
+```
+- 
 
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)

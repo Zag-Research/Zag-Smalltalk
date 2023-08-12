@@ -54,13 +54,13 @@ var @"foo:bar:" =
         &e.pushContext,
         "^",
         // define all blocks here
-        &e.closureData, 3 + (1 << 8), // local:3 size:1 (offset 1 is l1)
+        &e.closureData, 3 + (1 << 12), // local:3 size:1 (offset 1 is l1)
         &e.nonlocalClosure_self, 2, // [^ self] local:2
-        &e.blockClosure, "0foo:bar::1", 1 + (1 << 8) + (0 << 16)   + (3 << 24), // local:1, 1 field, no includeContext, closureData at local3
-        &e.blockClosure, "1foo:bar::2", 0 + (1 << 8) + (255 << 16) + (3 << 24), // local:0, 1 field, includeContext, closureData at local3
+        &e.blockClosure, "0foo:bar::1", 1 + (1 << 12) + (0 << 20)   + (3 << 32), // local:1, 1 field, no includeContext, closureData at local3
+        &e.blockClosure, "1foo:bar::2", 0 + (1 << 12) + (255 << 20) + (3 << 32), // local:0, 1 field, includeContext, closureData at local3
         // all blocks defined by now
         &e.pushLocal, 6, // p1
-        &e.popLocalData, 1 + (3 << 8), // p1 (read-only) copy offset 3 in local 1 (field in BC1)
+        &e.popLocalData, 1 + (3 << 12), // p1 (read-only) copy offset 3 in local 1 (field in BC1)
         &e.pushLocal, 6, // p1
         &e.pushLocal, 5, // p2
         &e.send1,      Sym.@"<",
@@ -68,7 +68,7 @@ var @"foo:bar:" =
         &e.send1,      Sym.@"ifTrue:",
         &e.drop, // discard result from ifTrue: (if it returned)
         &e.pushLocal, 5, // p2
-        &e.popLocalData, 3 + (1 << 8), // l1
+        &e.popLocalData, 3 + (1 << 12), // l1
         &e.pushLocal, 6, // p1
         &e.pushLocal, 5, // p2
         &e.send1,      Sym.@"\\",
@@ -76,12 +76,12 @@ var @"foo:bar:" =
         &e.pushLocal, 5, // p2
         &e.pushLocal, 4, // l2
         &e.send1,      Sym.@"-",
-        &e.popLocalData, 0 + (4 << 8), // l3 offset 4 in local 0
+        &e.popLocalData, 0 + (4 << 12), // l3 offset 4 in local 0
         &e.pushLocal, 1, // BC1 [ l1 < p1 ]
         &e.pushLocal, 0, // BC2 [ l1 := ... ]
         &e.send1,      Sym.@"whileTrue:",
         &e.drop,
-        &e.pushLocalData, 3 + (1 << 8), // l1
+        &e.pushLocalData, 3 + (1 << 12), // l1
         &e.returnTop,
 });
 var @"foo:bar::1" =
@@ -90,8 +90,8 @@ var @"foo:bar::1" =
     &e.verifySelector,
     &e.pushContext,
     "^",
-    &e.pushLocalDataData, 0 + (2 << 8) + (1 << 16), // l1 offset 1 in offset 2 in local 0
-    &e.pushLocalData, 0 + (3 << 8), // p1 offset 3 in local 0
+    &e.pushLocalDataData, 0 + (2 << 12) + (1 << 24), // l1 offset 1 in offset 2 in local 0
+    &e.pushLocalData, 0 + (3 << 12), // p1 offset 3 in local 0
     &e.send,          Sym.@"<",
     &e.returnTop,
         //        &e.classCase, "4:falseBranch,5:trueBranch"
@@ -115,13 +115,13 @@ var @"foo:bar::2" =
     &e.verifySelector,
     &e.pushContext,
     "^",
-    &e.nonlocalClosure_one, 0 + (1 << 8) + (2 << 16), // [^ 1] local:0 context at offset 2 in local 1
-    &e.pushLocalDataData, 1 + (3 << 8) + (1 << 16), // l1 offset 1 in offset 3 in local 1
+    &e.nonlocalClosure_one, 0 + (1 << 12) + (2 << 24), // [^ 1] local:0 context at offset 2 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
     &e.pushLiteral,       Object.from(1),
     &e.send,              Sym.@"+",
-    &e.popLocalDataData, 1 + (3 << 8) + (1 << 16), // l1 offset 1 in offset 3 in local 1
-    &e.pushLocalDataData, 1 + (3 << 8) + (1 << 16), // l1 offset 1 in offset 3 in local 1
-    &e.pushLocalData, 1 + (4 << 8), // l3 offset 4 in local 1
+    &e.popLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalData, 1 + (4 << 12), // l3 offset 4 in local 1
     &e.send,          Sym.@"=",
     &e.pushLocal, 0, // [^ 1]
     &e.send,      Sym.@"ifTrue:",

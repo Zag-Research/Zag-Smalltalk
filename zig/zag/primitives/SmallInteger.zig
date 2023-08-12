@@ -147,7 +147,7 @@ pub const embedded = struct {
             sp[0] = inlines.p1L(sp[0], 1) catch {
                 const newSp = sp - 1;
                 newSp[0] = Object.from(1);
-                return @call(tailCall, fallback, .{ pc + 1, newSp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
             };
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         }
@@ -192,9 +192,9 @@ pub const embedded = struct {
     };
 };
 pub const primitives = struct {
-    const SmallInteger = object.ClassIndex.SmallInteger;
     pub fn p1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#+
-        if (!Sym.@"+".setImmClass(SmallInteger).selectorEquals(selector)) {
+        trace("\n+: {any}", .{context.stack(sp, process)});
+        if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
         }
@@ -204,7 +204,8 @@ pub const primitives = struct {
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#-
-        if (!Sym.@"-".setImmClass(SmallInteger).selectorEquals(selector)) {
+        trace("\n-: {any}", .{context.stack(sp, process)});
+        if (!Sym.@"-".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
         }
@@ -214,11 +215,12 @@ pub const primitives = struct {
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // at:
-        if (!Sym.@"at:".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"at:".setImmClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         unreachable;
     }
     pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#<=
-        if (!Sym.@"<=".setImmClass(SmallInteger).selectorEquals(selector)) {
+        trace("\n<=: {any} 0x{x} 0x{x}", .{context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u()});
+        if (!Sym.@"<=".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
         }
@@ -228,7 +230,7 @@ pub const primitives = struct {
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
     pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#*
-        if (!Sym.@"*".setImmClass(SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
+        if (!Sym.@"*".withClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         sp[1] = inlines.p9(sp[1], sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
@@ -242,7 +244,6 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     var te = execute.TestExecution.new();
     te.init();
     var result = te.run(&[_]Object{Nil}, method);
-    std.debug.print("result = {any}\n", .{result});
     return result;
 }
 test "simple add" {

@@ -12,7 +12,7 @@ inline fn symbol_of(index: usize, arity: u8) object.Object {
     return symbol0(index | (@as(usize, arity) << 24));
 }
 pub inline fn symbol0(index: usize) object.Object {
-    return object.Object.makeImmediate(object.ClassIndex.Symbol, @as(u32, @truncate(index)));
+    return object.Object.makeImmediate(.Symbol, @truncate(index));
 }
 pub inline fn symbol1(index: usize) object.Object {
     return symbol_of(index, 1);

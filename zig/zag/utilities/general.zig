@@ -1,6 +1,7 @@
 const std = @import("std");
 const phi = std.math.phi;
 pub fn inversePhi(comptime T: type) T {
+    if (T==u64) return 11400714819323198485; // the calculation gives 11400714819323197441
     switch (@typeInfo(T)) {
         .Int => |int_info| switch (int_info.signedness) {
             .unsigned => return @as(T, @intFromFloat(@as(f64, @floatFromInt(1 << int_info.bits)) / phi)) | 1,
@@ -15,7 +16,7 @@ test "check inversePhi" {
     try expectEqual(inversePhi(u32), 2654435769);
     try expectEqual(inversePhi(u16), 40503);
     try expectEqual(inversePhi(u8), 159);
-    try expectEqual(inversePhi(u64), 11400714819323197441);
+    try expectEqual(inversePhi(u64), 11400714819323198485);
 }
 pub fn undoPhi(comptime T: type) T {
     // there isn't a closed form way to calculate this, but
