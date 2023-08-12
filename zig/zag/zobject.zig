@@ -105,11 +105,25 @@ pub const Object = packed struct(u64) {
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(cls.immediate() | low32);
     }
+<<<<<<< HEAD
     pub inline fn setImmClass(self: Object, cls: ClassIndex) Object {
         return cast(self.u() & ~ClassIndex.max.base() | cls.base());
     }
     pub inline fn withOffset(self: Object, offset: u32) Object {
         return cast(@as(u64, offset) << 32 | self.hash32());
+=======
+    pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
+        return cast(self.hash32() | cls.immediate());
+    }
+    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
+        if (dispatchCache) {
+            return cast(@as(u64,@intFromEnum(cls))<<32 | self.hash32());
+        } else
+            return self;
+    }
+    pub inline fn withOffsetx(self: Object, offset: u32) Object {
+        return cast(@as(u64,offset)<<32 | self.hash32());
+>>>>>>> fdf54ef14b675617872edd04bfbbcebbba084213
     }
     pub inline fn asSymbol(self: Object) Object {
         return makeImmediate(.Symbol, self.hash32());
