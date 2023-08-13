@@ -110,8 +110,8 @@ All object addresses point to a HeapObject word.  Every object has a HeapObject 
 The length field encodes the total size of the heap allocation except for the HeapObject word itself.
 
 There are a number of special length values:
-- 4095 - this isn't a header, it would an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
-- 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The real length of the object (for garbage collection purposes) will be found by following the pointer.
+- 4095 - this isn't a header, it would be an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
+- 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The rest of the original object will be described by a dummy object defined by the previous word (a HeapObject).
 - 0-4093 - normal object 
 Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
 #### Age
@@ -139,8 +139,8 @@ Ignoring the high bit, which says the object is immutable, the object format tag
 | 64 | a non-indexable object |
 | 65-116 | an object-indexable area of size 1-51 - assumed pointers |
 | 117 | a header |
-| 118 | a direct-indexed object - no pointers |
-| 119 | a direct-indexed object with pointers |
+| 118 | a direct-indexed object (no iVars) - no pointers |
+| 119 | a direct-indexed object (no iVars) with pointers |
 | 120 | an indexed object - no pointers |
 | 121 | an indexed object with pointers |
 | 122 | an external object - no pointers |
@@ -152,59 +152,54 @@ The remaining format bit 7 encodes whether  the object is immutable, so any assi
 
 For BlockClosure, the high 8 bits of the identityHash is the number of parameters for the block. The methods for `value`, `value:`, etc. will check this matches and then dispatch to the block code. `cull:`, etc. also use this to pare away the right number of parameters.
 
-#### Examples `need update`
+## Examples:
 
 A simple object like Point with 2 instance variables would look like:
 
 | Value               | Description         |
 | ------------------- | ------------------- |
-| 0002 01hh hhhc cccc | length=2, format=1  |
 | xxxx xxxx xxxx xxxx | instance variable 1 (x) |
 | xxxx xxxx xxxx xxxx | instance variable 2 (y) |
+| 0002 40hh hhhh cccc | length=2, format=64  |
 
-
-
-So an Array of 5 elements would look like:
+An array-like object of 5 elements with 2 instance variables would look like:
 
 | Value               | Description                  | 
 | ------------------- | ---------------------------- |
-| 0005 08hh hhh0 000D | length=5, format=8, class=13 |
+| xxxx xxxx xxxx xxxx | instance variable 1          |
+| xxxx xxxx xxxx xxxx | instance variable 2                      |
 | xxxx xxxx xxxx xxxx | index 1                      |
 | xxxx xxxx xxxx xxxx | index 2                      |
 | xxxx xxxx xxxx xxxx | index 3                      |
 | xxxx xxxx xxxx xxxx | index 4                      |
 | xxxx xxxx xxxx xxxx | index 5                      |
+| 0007 45hh hhhh cccc | length=7, format=69 |
+
+And an Array of 768 elements (direct index) would look like:
+
+| Value               | Description                      |
+| ------------------- | -------------------------------- |
+| xxxx xxxx xxxx xxxx | index 1                          |
+| xxxx xxxx xxxx xxxx | index 2                          |
+| xxxx xxxx xxxx xxxx | index 3                          |
+| ...                 | intermediate values              |
+| xxxx xxxx xxxx xxxx | index 768                       | 
+| 0300 76hh hhhh 000A | length=768, format=118, class=10 (Array) |
 
 And an Array of 2^20 elements would look like:
 
 | Value               | Description                      |
 | ------------------- | -------------------------------- |
-| 7FFF 08hh hhh0 000D | length=32767, format=8, class=13 |
 | 0000 0000 0010 0000 | 2^20                             |
-| xxxx xxxx xxxx xxxx | index 1                          |
-| xxxx xxxx xxxx xxxx | index 2                          |
-| xxxx xxxx xxxx xxxx | index 3                          |
-| ...                 | intermediate values              |
-| xxxx xxxx xxxx xxxx | index 2^20                       | 
-
-And a format 9 object with 2 instance variables and 3 indexable elements would look like:
-
-| Value               | Description         |
-| ------------------- | ------------------- |
-| 0002 09hh hhhc cccc | length=2, format=9  |
-| 0000 0000 0000 0003 | 3                   |
-| xxxx xxxx xxxx xxxx | instance variable 1 |
-| xxxx xxxx xxxx xxxx | instance variable 2 |
-| xxxx xxxx xxxx xxxx | index 1             |
-| xxxx xxxx xxxx xxxx | index 2             |
-| xxxx xxxx xxxx xxxx | index 3             | 
+| 0000 aaaa aaaa aaaa | address of index 1 (in big-object area)              |
+| 0002 78hh hhhh 000A | length=2, format=120, class=10 (Array) |
 
 And a format 24 object with 2 instance variables and 3 indexable elements would look like:
 
 | Value               | Description         |
 | ------------------- | ------------------- |
-| 0001 1Bhh hhhc cccc | length=1, format=27 |
 | 6548 6c6c 006f 0000 | Hello               |
+| 0001 05hh hhhh 000B | length=1, format=5, class=11 (String) |
 
 ### Statistics from a recent Pharo image
 | n | Description |
@@ -213,10 +208,10 @@ And a format 24 object with 2 instance variables and 3 indexable elements would 
 | 89242 | symbols |
 | 127069 | methods |
 | 443 | methods in Object |
-| 60428 | defined methods |
-| 35490 | unary methods |
-| 16920 | binary or keyword methods with 1 parameter |
-| 5234 | keyword methods with 2 parameters |
+| 60428 | defined selectors |
+| 35490 | unary selectors |
+| 16920 | binary or keyword selectors with 1 parameter |
+| 5234 | keyword selectors with 2 parameters |
 | 12 | classes have 45 or more instance variables |
 | 1093 | classes have no instance variables and aren't indexable |
 | 143 | of those are abstract |
