@@ -70,15 +70,20 @@ When promoting an object to the global arena or creating a new object in the glo
 
 #### Object age fields
 The age field for global objects is as follows:
-7. Static
-8. Global
-9. GlobalMarked
-10. Structs (Zig Allocator)
-11. GlobalScanned
-12. AoO
-13. AoOMarked
-14. Free
-15. AoOScanned
+
+| Value | Meaning | Notes |
+| -- | --- | -- |
+| 7 | static | outside the stack or any heap|
+| 8 | global | |
+| 9 | global, marked as reachable | |
+| 10 | a Zig struct | ignored by GC |
+| 11 | global, already scanned | |
+| 12 | AoO | |
+| 13 | AoO, marked as reachable | |
+| 14 | free | part of a free list |
+| 15 | AoO, already scanned | |
+The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots.
+
 AoO objects are objects within [[MemoryManagement#Array of Objects]].
 Static objects are only scanned once per garbage collection.
 
@@ -86,17 +91,20 @@ Static objects are only scanned once per garbage collection.
 Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Static age. When free'd, they are marked with a Free age.
 
 ### Heap object structure
-All objects are allocated with the data followed by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and indexables, then the footer will be immediately preceded by a slice for the array, preceded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area),, preceded by the slots. If there are no indexable values, the slice won't be included.
+All objects are allocated with the data followed by a footer. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and index fields, then the footer will be immediately preceded by a slice for the array, preceded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area), preceded by the slots. If there are no indexable fields, the slice won't be included.
+
+There are special cases for objects with a small number of indexable fields (0-62 bytes or 0-51 objects) (See [[Mapping#Format]])
 
 ## Global Arena Structure
 The Global Arena uses a binary heap.
-
 #### Free-space allocation
 Free-space is split up into power-of-2-sized pieces and put on the appropriate queue:
 - all allocations are on power-of-2 boundaries; hence small objects will never span 2 cache-lines. A flag can be set so no list for values smaller than a cache-line is maintained, in which case no cache line would contain multiple objects. This can reduce cache thrashing between threads/cores. Thanks to [Peter Lount](https://www.linkedin.com/in/peterlount/) for pointing out [the potential bad behaviour on multi-threaded access](https://en.algorithmica.org/hpc/cpu-cache/cache-lines/). 
 - 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word) is stored.
 - Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate queue, and loop to allocate the rest.
 
+#### Allocation
+Allocation simply requires finding the enclosing power of 2, then taking the next block off that queue. This is done without a lock. If the appropriate queue is empty, then a value is requested off the next queue (which may also be empty which will request the next...). Once a value is found from the next queue, it is split in 2, with one of the resulting blocks prepended to its queue, and the other one being returned to the requestor.
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.

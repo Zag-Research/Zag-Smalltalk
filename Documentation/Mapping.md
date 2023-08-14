@@ -51,12 +51,12 @@ Groups C through F have the low 48 bits being the address of an object.
 Groups A through E are all `BlockClosure`s - A through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
 ### Immediates
-All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
+All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
 Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
 
 #### Tag values
-1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required. This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
+1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
 2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
@@ -66,19 +66,27 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Thunks and Closures
-Block closures are relatively expensive because they need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
-1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers, 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
+Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Three of these can be encoded as immediate values and obviate the need for heap allocation.
+1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers and 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
 2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
 3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
 4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
 5. all remaining closures are full block closures and are heap objects (although they may still actually reside on the stack), and contain the following fields in order (omitting any unused fields):
-	1. the values of `self` and any parameters or read-only locals that are referenced.
+	1. the values of `self` and any parameters or read-only locals, that are referenced (this also includes locals that are used solely in the block after being initialized in the method);
 	2. the address of any (usually 0) ClosureData objects that contain mutable fields that are shared between blocks or with the main method execution;
 	3. the address of the Context if there are any non-local returns (if a closure that references a Context is forced to the heap, that will force that Context to be promoted to the heap);
 	4. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be heap allocated (which could be still on the stack));
 	5. a footer
 
 When a `[`some-value`]` closure is required, runtime code returns either a numeric or immediate thunk (if the value is numeric/immediate and fits), a heap thunk when the value is a heap object, with the low 48 bits referencing the object, or, if the value doesn't fit any of these constraints, then it will fall back to a full closure with 2 fields: the CompiledMethod reference and the value. This applies to `self` or any other runtime value.
+
+There are pre-defined CompiledMethods for some common closures:
+1. value:  `[some-value]` - use when value isn't covered by numeric, immediate or heap thunks CompiledMethod reference and the value
+2. id: `[:x|x]` - 
+3. return id: `[:x| ^ x]`
+4. return value: `[^ value]` - when the value is outside the non-local thunk group
+
+Similarly there are non-local returning closures with pre-defined
 
 More information on closures can be found at [[Execution#BlockClosures]].
 
@@ -95,7 +103,7 @@ There are a few significant changes:
 4. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
 
 #### Object addresses
-All object addresses point to a HeapObject word.  Every object has a HeapObject word at the end (except Contexts on the stack as mentioned below). This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move. In a few special cases there is also a shadow HeapObject word at the beginning. This is done when the object is variable size (like a CompiledMethod) and mostly used by Zig code so it is efficient to have a pointer to the start of the object. In one special cases (Context) when the object is on the stack there is only the shadow HeapObject word, and if copied to a heap, the object is fully reified (but the shadow remains as the first word of the resulting object).
+All object addresses point to a HeapObject word.  Every object has a HeapObject word at the end (except Contexts on the stack as mentioned below). This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move. In a few special cases there is also a shadow (header) HeapObject word at the beginning. This is done when the object is variable size (like a CompiledMethod) and mostly used by Zig code so it is efficient to have a pointer to the start of the object. In one special cases (Context) when the object is on the stack there is only the shadow HeapObject word, and if copied to a heap, the object is fully reified (but the shadow remains as the first word of the resulting object).
 
 ##### HeapObject word format:
 | Bits | What          | Characteristics                        |
@@ -115,38 +123,33 @@ There are a number of special length values:
 - 0-4093 - normal object 
 Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
 #### Age
-The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap For global objects, the marked ans scanned status are used by the mark and sweep collection (see [[MemoryManagement]]).
+The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap For global objects, see [MemoryManagement](MemoryManagement.md).
 
 | Value | Meaning | Notes |
 | -- | --- | -- |
 |  0 | on Stack | only Context, BlockClosure, or ContextData |
 | 1-6 | nursery heap | incremented on each copy |
-| 7 | static | outside the stack or any heap|
-| 8 | global | |
-| 9 | global, marked as reachable | |
-| 11 | global, already scanned | |
-| 10 | a Zig struct | ignored by GC |
-| 14 | free | part of a free list |
-The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots.
+
 #### Format
 Ignoring the high bit, which says the object is immutable, the object format tag is coded as follows:
 
 | Value | Meaning |
 | -- | --- |
 | 0 | contains an empty indexable area |
-| 1-62 | contains a byte-indexable area of this size |
-| 63 | a struct (native Zig object) - ignored by GC |
-| 64 | a non-indexable object |
+| 1-61 | contains a byte-indexable area of this size |
+| 62 | a non-indexable object - no pointers |
+| 63 | a non-indexable object - with pointers |
+| 64 | a struct (native Zig object) - ignored by GC |
 | 65-116 | an object-indexable area of size 1-51 - assumed pointers |
 | 117 | a header |
 | 118 | a direct-indexed object (no iVars) - no pointers |
-| 119 | a direct-indexed object (no iVars) with pointers |
+| 119 | a direct-indexed object (no iVars) - with pointers |
 | 120 | an indexed object - no pointers |
-| 121 | an indexed object with pointers |
+| 121 | an indexed object - with pointers |
 | 122 | an external object - no pointers |
-| 123 | an external object with pointers |
-| 125 | an external weak object with pointers |
-| 127 | a weak object with pointers |
+| 123 | an external object - with pointers |
+| 125 | an external weak object - with pointers |
+| 127 | a weak object - with pointers |
 
 The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
 
