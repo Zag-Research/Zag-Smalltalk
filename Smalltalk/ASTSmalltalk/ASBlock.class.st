@@ -55,12 +55,6 @@ ASBlock >> addClosureData [
 	blockData add: #closureData
 ]
 
-{ #category : #accessing }
-ASBlock >> assignments [
-self halt.
-body do: [ :instruction | instruction name ]
-]
-
 { #category : #'as yet unclassified' }
 ASBlock >> blockIndex: aString [
 	^ ((blockData indexOf: aString) - 1) asString
@@ -109,11 +103,6 @@ ASBlock >> closureData: closureData [
 ASBlock >> closureIndex: aVar [
 
 	^ ((clsrData indexOf: aVar name) -1) asString
-]
-
-{ #category : #'as yet unclassified' }
-ASBlock >> filter [
-self halt.
 ]
 
 { #category : #'as yet unclassified' }

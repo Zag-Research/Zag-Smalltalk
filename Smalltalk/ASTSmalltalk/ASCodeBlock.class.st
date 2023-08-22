@@ -59,6 +59,16 @@ ASCodeBlock >> initialize [
 	scope := Dictionary new
 ]
 
+{ #category : #testing }
+ASCodeBlock >> isASRef [
+	^false
+]
+
+{ #category : #testing }
+ASCodeBlock >> isASVariable [
+	^ false
+]
+
 { #category : #accessing }
 ASCodeBlock >> locals [
 
@@ -105,6 +115,12 @@ ASCodeBlock >> scope [
 ]
 
 { #category : #writing }
+ASCodeBlock >> statementVisitor: symbols stackVars: stackVariables [
+
+	^ self subclassResponsibility 
+]
+
+{ #category : #writing }
 ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
 
 	| statementVisitor |
@@ -116,10 +132,12 @@ ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream bloc
 	statementVisitor := self
 		                    statementVisitor: symbols
 		                    stackVars: stackVariables.
+
 	body do: [ :asStatement |
 		asStatement acceptVisitor: statementVisitor.
 		asStatement isASSend ifTrue: [ statementVisitor addDrop ] ].
-
+	
+	self halt.
 	(self filter: statementVisitor instructionStack) do: [ :instruction |
 		aStream tab.
 		aStream << instruction.

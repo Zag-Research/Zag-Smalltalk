@@ -54,6 +54,12 @@ ASVariable >> isASBlock [
 	^ false
 ]
 
+{ #category : #testing }
+ASVariable >> isASVariable [
+
+	^ true
+]
+
 { #category : #accessing }
 ASVariable >> modifiedBy: anASBlock [ 
 	modifiedBy add: anASBlock

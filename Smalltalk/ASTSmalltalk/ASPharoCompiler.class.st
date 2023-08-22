@@ -12,7 +12,12 @@ Class {
 
 { #category : #compiling }
 ASPharoCompiler >> compileMethod: aCompiledMethod [ 
-	^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast
+| visitor result |
+visitor :=  ASPharoVisitor compiler: self.
+result := visitor visit: aCompiledMethod ast.
+self halt.
+^result
+	"^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast"
 ]
 
 { #category : #accessing }

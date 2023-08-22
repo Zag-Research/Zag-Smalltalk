@@ -45,6 +45,11 @@ ASStatement >> isASSend [
 ]
 
 { #category : #testing }
+ASStatement >> isASVariable [
+	^false
+]
+
+{ #category : #testing }
 ASStatement >> isReturn [
 	^false
 ]

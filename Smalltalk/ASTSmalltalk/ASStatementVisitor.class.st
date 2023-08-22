@@ -6,13 +6,20 @@ Class {
 		'stackVars',
 		'aStream',
 		'instructionStack',
-		'closure'
+		'closure',
+		'variableTypeMap'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #instantiating }
 ASStatementVisitor class >> symbols: syms stackVars: stackVars closure: aClosure [
+
+	^ self new symbols: syms stackVars: stackVars closure: aClosure
+]
+
+{ #category : #instantiating }
+ASStatementVisitor class >> symbols: syms stackVars: stackVars closure: aClosure variableTypes: variableTypeMap [
 
 	^ self new symbols: syms stackVars: stackVars closure: aClosure
 ]
@@ -38,7 +45,35 @@ ASStatementVisitor >> symbols: syms stackVars: stackVariables closure: aClosure 
 	symbols := syms.
 	stackVars := stackVariables.
 	closure := aClosure.
-	instructionStack := OrderedCollection new
+	instructionStack := OrderedCollection new.
+	variableTypeMap := Dictionary new.
+]
+
+{ #category : #constructor }
+ASStatementVisitor >> symbols: syms stackVars: stackVariables closure: aClosure instructionStack: instrStack variablesTypes: variableTypes [
+
+	symbols := syms.
+	stackVars := stackVariables.
+	closure := aClosure.
+	instructionStack := OrderedCollection new.
+	variableTypeMap := variableTypes
+]
+
+{ #category : #'as yet unclassified' }
+ASStatementVisitor >> unifySelector: aSelector withTarget: anASRef [
+
+	| varName methodClasses |
+	anASRef isASRef ifFalse: [ ^ self ].
+
+	varName := anASRef variable name.
+	methodClasses :=  aSelector implementors collect: [ :impl | impl methodClass  ].
+	variableTypeMap
+		at: varName
+		ifPresent: [ :implementors |
+			variableTypeMap
+				at: varName
+				put: (implementors intersection: methodClasses)]
+		ifAbsentPut: [ methodClasses ]
 ]
 
 { #category : #visiting }
@@ -97,14 +132,18 @@ ASStatementVisitor >> visitSend: anASSend [
 
 	| send |
 	anASSend target acceptVisitor: self.
+
 	anASSend args ifNotNil: [
 		anASSend args do: [ :arg | arg acceptVisitor: self ] ].
+
 	send := '&e.send' , anASSend selector numArgs asString , ', '.
+
+	"looking at the classes that implement a particular send"
+	self unifySelector: anASSend selector withTarget: anASSend target.
+
+	"looking up the selector from the predefined symbols list or use the selector name itself"
 	symbols
 		at: anASSend selector
-		ifPresent: [ :sym | send := send, sym ]
-		ifAbsent: [
-			self halt.
-			send := send, anASSend selector ].
-	instructionStack add: send , ','
+		ifPresent: [ :sym | instructionStack add: send , sym , ',' ]
+		ifAbsent: [ instructionStack add: send , anASSend selector , ',' ]
 ]

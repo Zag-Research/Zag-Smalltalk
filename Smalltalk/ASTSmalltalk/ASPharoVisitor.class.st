@@ -5,7 +5,8 @@ Class {
 	#name : #ASPharoVisitor,
 	#superclass : #Object,
 	#instVars : [
-		'compiler'
+		'compiler',
+		'variables'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
@@ -15,8 +16,17 @@ ASPharoVisitor class >> compiler: anASPharoCompiler [
 	^ self new compiler: anASPharoCompiler
 ]
 
+{ #category : #adding }
+ASPharoVisitor >> addVariable: variableName [ 
+	variables
+		at: variableName
+		ifPresent: [  ]
+		ifAbsentPut: [ OrderedCollection new ].
+]
+
 { #category : #accessing }
 ASPharoVisitor >> compiler: anASPharoCompiler [
+variables := Dictionary new.
 	compiler := anASPharoCompiler
 ]
 
@@ -27,7 +37,7 @@ ASPharoVisitor >> visit: aRBNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
-
+	self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASArg new name: aRBVariableNode name)
 ]
 
@@ -74,19 +84,19 @@ ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASClassVar name: aRBVariableNode name)
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASGlobal name: aRBVariableNode name)
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASInstance name: aRBVariableNode name)
 ]
 
@@ -106,6 +116,7 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 
 	| target selector |
 	target := self visit: aRBMessageNode receiver.
+	self halt.
 	selector := aRBMessageNode selector.
 	compiler visitMessages ifTrue: [
 		target tell: compiler youAreSent: selector ].
@@ -164,7 +175,7 @@ ASPharoVisitor >> visitSuperNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
-
+	self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASLocal name: aRBVariableNode name)
 ]
 
