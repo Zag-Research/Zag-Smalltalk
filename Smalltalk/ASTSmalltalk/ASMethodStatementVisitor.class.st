@@ -12,7 +12,7 @@ ASMethodStatementVisitor >> popClosureData: anASVar [
 	instructions := OrderedCollection new.
 	instructions add:
 		'&e.popLocalData, ' , (self variableIndex: #closureData) , ' + ('
-		, (closure variableIndex: anASVar) , '<< 8), // ' , anASVar name.
+		, (closure variableIndex: anASVar) , '<< 12), // ' , anASVar name.
 	^ instructions
 ]
 
@@ -32,7 +32,7 @@ ASMethodStatementVisitor >> popValue: anASVar [
 ASMethodStatementVisitor >> pushLocalData: anASVar [
 
 	^ '&e.pushLocalData, ' , (self variableIndex: #closureData) , ' + ('
-	, (closure variableIndex: anASVar) , ' << 8), // l1'
+	  , (closure variableIndex: anASVar) , ' << 12), // l1'
 ]
 
 { #category : #visiting }

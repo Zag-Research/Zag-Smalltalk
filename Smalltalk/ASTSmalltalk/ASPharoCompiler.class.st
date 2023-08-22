@@ -11,12 +11,12 @@ Class {
 }
 
 { #category : #compiling }
-ASPharoCompiler >> compileMethod: aCompiledMethod [ 
-| visitor result |
-visitor :=  ASPharoVisitor compiler: self.
-result := visitor visit: aCompiledMethod ast.
-self halt.
-^result
+ASPharoCompiler >> compileMethod: aCompiledMethod [
+
+	| visitor result |
+	visitor := ASPharoVisitor compiler: self.
+	result := visitor visit: aCompiledMethod ast.
+	^ result
 	"^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast"
 ]
 

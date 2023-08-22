@@ -116,7 +116,6 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 
 	| target selector |
 	target := self visit: aRBMessageNode receiver.
-	self halt.
 	selector := aRBMessageNode selector.
 	compiler visitMessages ifTrue: [
 		target tell: compiler youAreSent: selector ].

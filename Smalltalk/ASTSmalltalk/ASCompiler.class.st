@@ -156,6 +156,7 @@ ASCompiler >> initialize [
 	methodsToProcess := Set new.
 	self addClass: True.
 	self addClass: False.
+	visitMessages := true.
 ]
 
 { #category : #inlining }

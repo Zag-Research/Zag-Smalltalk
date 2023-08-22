@@ -159,6 +159,11 @@ ASBlockVisitor >> visitBlockNode: anASBlock [
 ]
 
 { #category : #visiting }
+ASBlockVisitor >> visitClassVar: anASClassVar [
+	"ingnore class variables for now"
+]
+
+{ #category : #visiting }
 ASBlockVisitor >> visitLiteral: anASLiteral [ 
 	"ignore literals"
 ]

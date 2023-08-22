@@ -259,7 +259,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		blocks: blockVisitor.
 
 	"write out the implicit return"
-	body isEmpty | body last isReturn not ifTrue: [
+	(body isEmpty or: [body last isReturn not]) ifTrue: [
 		aStream tab.
 		aStream << '&e.returnTop,' ].
 	aStream cr. "should this be hardcoded?"

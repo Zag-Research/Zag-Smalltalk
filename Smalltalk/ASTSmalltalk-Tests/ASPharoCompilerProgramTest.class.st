@@ -20,11 +20,13 @@ ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 
 { #category : #testing }
 ASPharoCompilerProgramTest >> buildFromMethods: methods [
-| compiler |
+
+	| compiler |
 	compiler := ASPharoCompiler new.
 	compiler dontVisitMessages.
 	methods do: [ :method | compiler addMethod: method ].
-	^compiler transitiveClosure 
+	self halt.
+	^ compiler transitiveClosure
 ]
 
 { #category : #script }
@@ -35,6 +37,26 @@ ASPharoCompilerProgramTest >> codeStart42 [
 		          buildFromClass: ASCompileTestClass1 class
 		          selector: #start42.
 	^ result zigString
+]
+
+{ #category : #testing }
+ASPharoCompilerProgramTest >> compileMethod: method [
+
+	| compiler |
+	compiler := ASPharoCompiler new.
+	compiler dontVisitMessages.
+	compiler addMethod: method.
+	^ compiler transitiveClosure
+]
+
+{ #category : #testing }
+ASPharoCompilerProgramTest >> compileMethodWithInlining: method [
+
+	| compiler |
+	compiler := ASPharoCompiler new.
+	compiler addMethod: method.
+	compiler transitiveClosure.
+	^ compiler inline
 ]
 
 { #category : #tests }
@@ -114,6 +136,21 @@ ASPharoCompilerProgramTest >> testFooBar [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarInlining [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #foo:bar:.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigFooBarInlining.zig') writeStream.
+	aStream truncate.
+		self halt.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarIsolated [
 
 	| result aStream |	
@@ -130,10 +167,8 @@ ASPharoCompilerProgramTest >> testFooBarIsolated [
 { #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarSubset [
 
-	| result methods aStream |
-	methods := OrderedCollection new.
-	methods add: ASCompileTestClass1 >> #foo:bar:.
-	result := self buildFromMethods: methods.
+	| result aStream |
+	result := self compileMethod: ASCompileTestClass1 >> #foo:bar:.
 
 	aStream := (FileSystem disk workingDirectory / 'zigFooBarSubset.zig')
 		           writeStream.

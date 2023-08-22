@@ -39,6 +39,12 @@ ASStatementVisitor >> instructionStack [
 	^ instructionStack
 ]
 
+{ #category : #visiting }
+ASStatementVisitor >> popValue: anASVar [
+
+	self subclassResponsibility 
+]
+
 { #category : #constructor }
 ASStatementVisitor >> symbols: syms stackVars: stackVariables closure: aClosure [
 
@@ -105,7 +111,9 @@ ASStatementVisitor >> visitBlockNode: anASBlock [
 { #category : #visiting }
 ASStatementVisitor >> visitLiteral: anASLiteral [
 
-	instructionStack add: ' &e.pushLiteral, Object.from(', anASLiteral literal asString, '),'.
+	instructionStack add:
+		'&e.pushLiteral, Object.from(' , anASLiteral literal asString
+		, '),'
 ]
 
 { #category : #visiting }
@@ -140,7 +148,7 @@ ASStatementVisitor >> visitSend: anASSend [
 
 	"looking at the classes that implement a particular send"
 	self unifySelector: anASSend selector withTarget: anASSend target.
-
+	
 	"looking up the selector from the predefined symbols list or use the selector name itself"
 	symbols
 		at: anASSend selector

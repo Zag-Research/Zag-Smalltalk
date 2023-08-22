@@ -137,7 +137,7 @@ ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream bloc
 		asStatement acceptVisitor: statementVisitor.
 		asStatement isASSend ifTrue: [ statementVisitor addDrop ] ].
 	
-	self halt.
+	"check to see what types variables have"
 	(self filter: statementVisitor instructionStack) do: [ :instruction |
 		aStream tab.
 		aStream << instruction.
