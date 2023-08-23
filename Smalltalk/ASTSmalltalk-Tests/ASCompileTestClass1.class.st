@@ -27,6 +27,13 @@ ASCompileTestClass1 >> + n1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> addTwoNumbers [
+|sum|
+	sum := 4 + 5.
+	^sum
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> block [
 
 	^ { 

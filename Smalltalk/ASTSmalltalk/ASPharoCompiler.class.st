@@ -96,6 +96,11 @@ ASPharoCompiler >> initializeSyms [
 ]
 
 { #category : #compiling }
+ASPharoCompiler >> inline [
+	"inline methods"
+]
+
+{ #category : #compiling }
 ASPharoCompiler >> writeInitSmalltalk: aStream [
 
 	aStream << 'fn initSmalltalk() void {'.

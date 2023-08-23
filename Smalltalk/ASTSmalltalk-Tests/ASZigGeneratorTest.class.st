@@ -249,12 +249,13 @@ var @"Integer>>size" =
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 5)).
 	method := ASMethodNode
-		           class: self
-		           selector: selector
-		           arguments: arguments
-		           locals: locals
-		           body: body.
+		          class: self
+		          selector: selector
+		          arguments: arguments
+		          locals: locals
+		          body: body.
 	method nestedScopeOf: (ASClassNode new from: Integer).
+	
 	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes

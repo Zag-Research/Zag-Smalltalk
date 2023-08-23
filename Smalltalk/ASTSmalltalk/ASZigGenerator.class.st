@@ -4,6 +4,10 @@ I generate Zig code equivalent to the built program captured by an ASCompiler
 Class {
 	#name : #ASZigGenerator,
 	#superclass : #Object,
+	#instVars : [
+		'stream',
+		'compiler'
+	],
 	#category : #'ASTSmalltalk-Compiler'
 }
 
@@ -13,12 +17,12 @@ ASZigGenerator class >> initialize [
 ]
 
 { #category : #accessing }
-ASZigGenerator >> compiler: anASPharoCompiler [ 
+ASZigGenerator >> compiler: anASPharoCompiler [
 	compiler := anASPharoCompiler
 ]
 
 { #category : #accessing }
-ASZigGenerator >> stream: aWriteStream [ 
+ASZigGenerator >> stream: aWriteStream [
 	stream := aWriteStream
 ]
 

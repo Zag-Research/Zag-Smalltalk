@@ -60,6 +60,20 @@ ASPharoCompilerProgramTest >> compileMethodWithInlining: method [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testAddingTwoNumbers [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #addTwoNumbers.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAddingTwoNumbers.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testAssignment [
 
 	| result aStream |
@@ -225,6 +239,20 @@ ASPharoCompilerProgramTest >> testIntegerBench [
 		          selector: #benchmark.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigIntBenchString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testNestedBlocks [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #nestedBlock.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAddingTwoNumbers.zig') writeStream.
 	aStream truncate.
 	result writeZig: aStream.
 	aStream close
