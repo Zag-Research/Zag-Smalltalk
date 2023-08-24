@@ -9,9 +9,7 @@ Class {
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
 	#instVars : [
-		'method',
-		'selector',
-		'isNonLocalReturn'
+		'method'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -26,6 +24,7 @@ ASBlock class >> arguments: args body: body [
 
 { #category : #'tests - instance creation' }
 ASBlock class >> arguments: args locals: locals body: body [
+
 	^ self new
 		  arguments: args;
 		  locals: locals;

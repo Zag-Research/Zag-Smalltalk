@@ -29,7 +29,7 @@ ASLiteral >> acceptVisitor: aVisitor [
 
 { #category : #'as yet unclassified' }
 ASLiteral >> baseValue [
-	^ literal
+	^ value
 ]
 
 { #category : #accessing }

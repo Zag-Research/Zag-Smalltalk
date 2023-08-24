@@ -48,15 +48,12 @@ ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitBlockNode: aRBBlockNode [
-	| block |
-	block := ASBlock
+
+	^ ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
-		  body: OrderedCollection new.
-	compiler inScope: block do: [ 
-		aRBBlockNode statements do: [ :statement | 
-			block addStatement: (self visit: statement) ] ].
-	^ block
+		  body: (aRBBlockNode statements collect: [ :statement | 
+				   self visit: statement ] as: Array)
 ]
 
 { #category : #visiting }
@@ -110,8 +107,7 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 	target tell: compiler youAreSent: selector.
 	^ ASSend
 		  target: target
-		  selector: selector 
-		  args: (aRBMessageNode arguments
+		  selector: selector args: (aRBMessageNode arguments
 				   collect: [ :arg | self visit: arg ]
 				   as: Array)
 ]
@@ -121,6 +117,7 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
 	selector := aRBMethodNode selector.
+	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode
 		          class: aRBMethodNode methodClass
 		          selector: selector
@@ -129,8 +126,6 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
 		          body: OrderedCollection new.
-	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
-	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
 		aRBMethodNode statements do: [ :statement | 
@@ -158,6 +153,7 @@ ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
+
 		^ ASSelf method: compiler definingMethod superclass: compiler definingClass superclass 
 ]
 

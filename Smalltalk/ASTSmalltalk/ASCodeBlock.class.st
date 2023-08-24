@@ -71,7 +71,7 @@ ASCodeBlock >> lookup: symbol [
 
 { #category : #scopes }
 ASCodeBlock >> nestedScopeOf: anASClassNode [ 
-  nestedScopeOf := anASClassNode
+	nestedScopeOf := anASClassNode
 ]
 
 { #category : #printing }

@@ -26,9 +26,8 @@ ASSend class >> target: aTarget selector: aSymbol [
 
 { #category : #'instance creation' }
 ASSend class >> target: expression selector: aSymbol args: aCollection [
-	^ self new
-		  target: expression;
-		  selector: aSymbol args: aCollection
+
+	^ self new target: expression; selector: aSymbol args: aCollection
 ]
 
 { #category : #comparing }

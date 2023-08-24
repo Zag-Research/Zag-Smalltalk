@@ -6,10 +6,7 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
-		'class',
-		'isRecursive',
-		'pragmas',
-		'blocks'
+		'class'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -25,15 +22,8 @@ ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
-
-	^ self new
-		  class: aClass;
-		  selector: aSymbol;
-		  arguments: args;
-		  locals: locals;
-		  body: body;
-		  pragmas: OrderedCollection new
+ASMethodNode class >> class: aClass selector: aSymbol  arguments: args locals: locals body: body [
+^ self new class: aClass; selector: aSymbol;  arguments: args; locals: locals; body: body
 ]
 
 { #category : #'tests - instance creation' }

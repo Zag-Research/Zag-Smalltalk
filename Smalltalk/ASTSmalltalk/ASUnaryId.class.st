@@ -7,8 +7,7 @@ Class {
 { #category : #parsing }
 ASUnaryId >> addScope: anASCompiler scope: scope [ 
 	anASCompiler nextToken.
-	"scope add: value."
-	scope at: value put: (ASLocal name: value).
+	scope add: value.
 	anASCompiler peek addScope: anASCompiler scope: scope.
 
 ]

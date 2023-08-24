@@ -5,8 +5,7 @@ Class {
 	#name : #ASMethodOrBlock,
 	#superclass : #ASCodeBlock,
 	#instVars : [
-		'arguments',
-		'instructions'
+		'arguments'
 	],
 	#category : #'ASTSmalltalk-AST'
 }

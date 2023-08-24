@@ -7,6 +7,11 @@ Class {
 	#category : #'ASTSmalltalk-IR'
 }
 
+{ #category : #'reflective operations' }
+ASTJump >> doesNotUnderstand: foo [
+	^ 17
+]
+
 { #category : #initializing }
 ASTJump >> from: anIRJump [ 
 	destination := anIRJump destination

@@ -6,9 +6,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'name',
-		'classVariables',
-		'scope',
-		'nestedScopeOf'
+		'classVariables'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -22,7 +20,8 @@ ASClassNode >> = other [
 ASClassNode >> from: aClass [
 
 	name := aClass name.
-	classVariables := aClass classPool keys.
+	self halt.
+	classVariables := aClass classPool keys
 ]
 
 { #category : #comparing }
