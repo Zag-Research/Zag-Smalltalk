@@ -97,6 +97,8 @@ Java has five opcodes to invoke methods, but the one we're interested in is `inv
 
 The difference is that the Java compiler statically knows the index into the dispatch table, so there is no need for a dictionary lookup. The dispatch table for each class has a prefix of a copy of the dispatch table from its superclass, followed by the methods defined in this class. Any methods that override superclass methods replace the corresponding method in the prefix. Since the names of all of the legal methods are known, finding the method for a particular name requires a simple index (which doesn't even have to be range checked).
 
+This *flat dispatch* is many times faster than the classic Smalltalk dispatch, and is only slower than direct calling by a couple memory accesses and and a complete pipeline stall.
+
 The same thing could be done for Smalltalk, if we knew which class the object was an instance of. Failing that, for every class (there are over 20,000 classes in a recent [Pharo](https://pharo.org) image, we could have to have a dispatch table with an entry for all message names (there are over 62,000 method names in the same image). Consuming over 10GB of memory for dispatch tables is clearly excessive.
 
 Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods. Because this approach to dispatch requires a superclass method prefix, this would lead to over 80MB of dispatch tables - still excessive (and would have horrible cache locality).
@@ -107,25 +109,33 @@ We lazily build a single dispatch table for each class, which includes not just 
 | Dispatch table entry for a class |                        |
 | -------------------------------- | ---------------------- |
 | Hash multiplier                  | a u32                  |
-| superclass index                 | a u16                  |
 | method pointers                  | an array of pointers to threads |
 
 The sequence to look up a method is:
-1. use the selector hash (symbol id and arity)
-2. 32-bit multiply with wrap by a constant hash
-3. multiply by the hash multiplier
-4. shift right (the 2 multiplies and shift replace a modulo)
+1. use the selector hash (symbol id and arity - 32 bits)
+2. 32-bit multiply with wrap by a constant hash (to spread the value over the 32 bits)
+3. convert to a u64 and then multiply by the hash multiplier
+4. shift right 32 bits(the 2nd multiply and shift replace a modulo)
 5. use that as the index into the array
 6. jump to the threaded code
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
-The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup.
+The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup, so there is no check - just the jump.
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive.
 
 Note that because the hierarchy is flattened, and not all super sends can be inlined, there may be multiple methods with the same selector. These are disambiguated with tags in the arity field.
 
+## Does Not Understand
+
+DNU can happen either because the dispatch pointer points to DNU code or because the dispatching selector didn't match the selector for the method. But in either case, a DNU simply means that there is no CompiledMethod for the selector for this class. This may be because of a true DNU, or because an appropriate method exists, but hasn't been compiled yet.
+
+The DNU code will look in the method list for the class and its superclasses for a method with the correct selector. If found, the method will be compiled for the target class, and inserted into the dispatch table. If not found, a Message object will be created and the object will be sent a `doesNotUnderstand:` message. This may also trigger a DNU, but this time we are guaranteed that an appropriate method exists, because there is an implementation of `doesNotUnderstand:` in Object.
+
+## Compilation
+
+Methods understand the message `compileForClass:withCodeGenerator:` which takes a target class and a code generator, and converts the AST of the method to a series of calls to the code generator. 
 ## BlockClosures
 
 BlockClosures are defined within a method or another block. A closure may:
