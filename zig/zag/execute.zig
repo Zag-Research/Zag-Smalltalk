@@ -549,7 +549,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
     }
     return method;
 }
-const stdout = std.io.getStdOut().writer();
+// const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
@@ -938,6 +938,7 @@ pub const TestExecution = struct {
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
+        const stdout = std.io.getStdOut().writer();
         var cache = SendCacheStruct.init();
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);

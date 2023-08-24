@@ -18,8 +18,8 @@ Untar or unzip in a convenient place and add the resulting folder to your path.
 ### Compiling and Running
 Here are some common command lines I use:
 ```
-zig build-exe -OReleaseFast -fomit-frame-pointer -freference-trace --main-pkg-path ~/git/Zag-Smalltalk/zig/zag fibonacci.zig
-zig test -freference-trace --main-pkg-path ~/git/Zag-Smalltalk/zig/zag fibonacci.zig
+zig build-exe -OReleaseFast -fomit-frame-pointer -freference-trace --main-pkg-path ~/git/Zag-Smalltalk/zig fibonacci.zig
+zig test -freference-trace --main-pkg-path ~/git/Zag-Smalltalk/zig fibonacci.zig
 zig test -freference-trace primitives.zig
 ```
 Edit the code in an editor of your choice.

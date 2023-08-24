@@ -24,7 +24,7 @@ const empty = &[0]Object{};
 
 pub fn init() void {}
 pub const inlines = struct {
-    pub inline fn p1(self: Object, other: Object) !Object { // Add
+    pub fn p1(self: Object, other: Object) !Object { // INLINED - Add
         if (other.isInt()) {
             const result = @as(Object, @bitCast(self.i() +% other.toUnchecked(i64)));
             if (result.isInt()) return result;
@@ -48,7 +48,7 @@ pub const inlines = struct {
         }
         return error.primitiveError;
     }
-    pub inline fn p2L(self: Object, other: i32) !Object { // Subtract a positive literal
+    pub fn p2L(self: Object, other: i32) !Object { // INLINED - Subtract a positive literal
         const result = @as(Object, @bitCast(self.i() -% other));
         if (result.atLeastInt()) return result;
         return error.primitiveError;
@@ -65,7 +65,7 @@ pub const inlines = struct {
         if (!other.isInt()) return error.primitiveError;
         return self.u() <= other.u();
     }
-    pub inline fn p5N(self: Object, other: Object) bool { // LessOrEqual when both known SmallIntegers
+    pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
         return self.u() <= other.u();
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
