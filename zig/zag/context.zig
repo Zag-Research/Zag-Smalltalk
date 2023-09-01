@@ -20,19 +20,20 @@ const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
 const TestExecution = execute.TestExecution;
 const Code = execute.Code;
+const PC = execute.PC;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
     header: HeapObject, // if not on stack there is also a footer
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
-    tpc: [*]const Code, // threaded PC
+    tpc: PC, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
     prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
@@ -107,7 +108,7 @@ pub const Context = struct {
         //     self.header = heap.header(4, Format.bothAP, class.Context_C,0,Age.stack);
         //     self.size = self.prevCtxt.calculatedSize(process);
         //     self.addr = @ptrCast(*Object,&self.temps);
-        //     self.prevCtxt.convertToProperHeapObject(sp, process);
+        //     self.prevCtxt.moveToHeap(sp, process);
         // }
     }
     pub inline fn isOnStack(self: *const Self) bool {
@@ -129,15 +130,15 @@ pub const Context = struct {
         @setRuntimeSafety(false);
         return @constCast(self.temps[0..size]);
     }
-    pub inline fn getTPc(self: *const Context) [*]const Code {
+    pub inline fn getTPc(self: *const Context) PC {
         return self.tpc;
     }
-    pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: [*]const Code) void {
+    pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: PC) void {
         self.npc = npc;
         self.tpc = tpc;
     }
-    pub inline fn setReturn(self: ContextPtr, tpc: [*]const Code) void {
-        self.setReturnBoth(tpc[0].prim, tpc + 1);
+    pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
+        self.setReturnBoth(tpc.prim, tpc.next());
     }
     pub inline fn getNPc(self: *const Context) Context.ThreadedFn {
         return self.npc;
@@ -145,7 +146,7 @@ pub const Context = struct {
     pub inline fn setNPc(self: *Context, npc: ThreadedFn) void {
         self.npc = npc;
     }
-    pub inline fn setTPc(self: *Context, tpc: [*]const Code) void {
+    pub inline fn setTPc(self: *Context, tpc: PC) void {
         self.tpc = tpc;
     }
     pub inline fn getSelf(self: *const Context) Object {

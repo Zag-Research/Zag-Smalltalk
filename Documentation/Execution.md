@@ -13,8 +13,8 @@ When sending a message, the current Context will be updated with the return PC, 
 When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
 1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
 2. If there is no native version and the method doesn't start with a primitive, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. The rest of the thread is from the Smalltalk in the method.
-3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native function. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context.
-4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions.
+3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native (CPS) function implementing the method. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context. The remaining functions all will know which threaded-pc corresponds to each function.
+4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions used to implement the method. The functions all will know which threaded-pc corresponds to each function.
 
 ## The stack and Contexts
 
@@ -139,7 +139,7 @@ The DNU code will look in the method list for the class and its superclasses for
 
 ## Compilation
 
-Methods understand the message `compileForClass:withCodeGenerator:` which takes a target class and a code generator, and converts the AST of the method to a series of calls to the code generator. 
+Methods understand the message `compileForClass:withCodeGenerator:` which takes a target class and a code generator, and converts the AST of the method to a series of calls to the code generator. In the simplest case, the AST is directly converted to threaded code. More generally there are lots of [Optimizations](Optimizations.md).
 ## BlockClosures
 
 BlockClosures are defined within a method or another block. A closure may:

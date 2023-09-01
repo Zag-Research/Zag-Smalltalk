@@ -24,6 +24,7 @@ const ContextPtr = *@import("context.zig").Context;
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
 const Code = execute.Code;
+const PC = execute.PC;
 const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 pub const AllocResult = struct {
     sp: [*]Object,
@@ -53,7 +54,7 @@ pub const Process = extern struct {
     trapContextNumber: u64,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf([*]Object) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray);
-    const ThreadedFn = *const fn (programCounter: [*]const Code, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: [*]Object, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object;
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const stack_size = processAvail / 9;
     const nursery_size = (processAvail - stack_size) / 2;
@@ -69,10 +70,10 @@ pub const Process = extern struct {
         const stack_end = h + stack_size;
         const at = allProcesss;
         self.sp = @as([*]Object, @ptrCast(stack_end));
-        self.currHeap = stack_end;
-        self.currHp = stack_end;
-        self.currEnd = h + nursery_size; // leaving enough space for full nursery copy
-        self.otherHeap = stack_end + nursery_size;
+        self.currHeap = stack_end + nursery_size;
+        self.currHp = self.currHeap;
+        self.currEnd = stack_end + stack_size; // leaving enough space for full stack copy
+        self.otherHeap = self.currHeap + nursery_size;
         while (true) {
             self.next = at;
             self.id = if (at) |p| p.id + 1 else 1;
@@ -149,6 +150,9 @@ pub const Process = extern struct {
             unreachable;
         }
         @panic("can't alloc without collect");
+    }
+    pub fn collectNursery(self: *Self, sp: [*]Object, contextMutable: *ContextPtr) void {
+        _ = .{contextMutable, sp, self};@panic("unimplemented");
     }
 };
 test "check flag" {
