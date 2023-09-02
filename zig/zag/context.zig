@@ -21,6 +21,7 @@ const SendCache = execute.SendCache;
 const TestExecution = execute.TestExecution;
 const Code = execute.Code;
 const PC = execute.PC;
+const SP = execute.SP;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
@@ -33,7 +34,7 @@ pub const Context = struct {
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
@@ -63,11 +64,11 @@ pub const Context = struct {
             try writer.print(" temps: {any}", .{self.temps[0..self.size]});
         }
     }
-    pub inline fn pop(self: *Context, process: *Process) struct { sp: [*]Object, ctxt: ContextPtr } {
+    pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         const wordsToDiscard = self.header.hash16();
         trace("\npop: {x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
         if (self.isOnStack())
-            return .{ .sp = self.asObjectPtr() + wordsToDiscard, .ctxt = self.previous() };
+            return .{ .sp = self.asNewSp().unreserve(wordsToDiscard+1), .ctxt = self.previous() };
         _ = process;
         std.debug.print("\npop: {*}", .{self});
         @panic("incomplete");
@@ -78,10 +79,10 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub inline fn push(self: *Context, sp: [*]Object, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
+    pub inline fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
         if (@intFromPtr(self) == 0) @panic("0 self");
         var contextMutable = self;
-        const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable) + maxStackNeeded;
+        const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable).unreserve(maxStackNeeded);
         trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
         trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
         const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
@@ -99,7 +100,7 @@ pub const Context = struct {
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
-    pub fn moveToHeap(self: *const Context, sp: [*]Object, process: *Process) ContextPtr {
+    pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) ContextPtr {
         _ = self;
         _ = sp;
         _ = process;
@@ -114,15 +115,15 @@ pub const Context = struct {
     pub inline fn isOnStack(self: *const Self) bool {
         return self.header.isOnStack();
     }
-    inline fn endOfStack(self: *const Context, process: *const Process) [*]Object {
+    inline fn endOfStack(self: *const Context, process: *const Process) SP {
         return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
         return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object);
     }
-    pub fn stack(self: *const Self, sp: [*]Object, process: *Process) []Object {
+    pub fn stack(self: *const Self, sp: SP, process: *Process) []Object {
         if (self.isOnStack())
-            return sp[0 .. (@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object)];
+            return sp.slice((@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object));
         return process.getStack(sp);
     }
     pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
@@ -172,8 +173,11 @@ pub const Context = struct {
     pub inline fn asHeapObjectPtr(self: *const Context) HeapObjectPtr {
         return &self.header;
     }
-    pub inline fn asObjectPtr(self: *const Context) [*]Object {
-        return @as([*]Object, @ptrCast(@constCast(self)));
+    pub inline fn asObjectPtr(self: *const Context) SP {
+        return @as(SP, @ptrCast(@constCast(self)));
+    }
+    pub inline fn asNewSp(self: *const Context) SP {
+        return @as(SP, @ptrCast(@constCast(self))).reserve(1);
     }
     pub inline fn cleanAddress(self: *const Context) u64 {
         return @intFromPtr(self);
@@ -186,7 +190,7 @@ pub const Context = struct {
         pr("Context: {*} {} {any}\n", .{ self, self.header, self.allLocals(process) });
         //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
     }
-    pub fn call(oldPc: [*]const Code, sp: [*]Object, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+    pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) SP {
         self.tpc = oldPc + 1;
         self.npc = oldPc[0].prim;
         trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });

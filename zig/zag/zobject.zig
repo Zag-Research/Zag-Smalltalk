@@ -63,8 +63,9 @@ pub const ClassIndex = enum(u16) {
     Method,
     CompiledMethod,
     Dispatch,
-    ClosureData,
+    ContextData,
     Context,
+    BlockFailure,
     max = 0xffff,
     _,
     const Self = @This();
