@@ -7,6 +7,8 @@ const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
@@ -137,103 +139,100 @@ test "inline primitives" {
 pub const embedded = struct {
     const fallback = execute.fallback;
     pub const SmallInteger = struct {
-        pub fn @"+"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        pub fn @"+"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             trace("\n+: {any}", .{context.stack(sp, process)});
-            sp[1] = inlines.p1(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc + 1, sp, process, context, selector, cache });
-            trace(" -> {any}", .{context.stack(sp + 1, process)});
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc.next(), sp, process, context, selector, cache }));
+            trace(" -> {any}", .{context.stack(newSp, process)});
+            return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
-        pub fn @"+_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-            sp[0] = inlines.p1L(sp[0], 1) catch {
-                const newSp = sp - 1;
-                newSp[0] = Object.from(1);
+        pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+            sp.top = inlines.p1L(sp.top, 1) catch {
+                const newSp = sp.push(Object.from(1));
                 return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
             };
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
         }
-        pub fn @"-"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        pub fn @"-"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"-" });
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
         }
-        pub fn @"-_L1"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             trace("\n-_L1: {any}", .{context.stack(sp, process)});
-            sp[0] = inlines.p2L(sp[0], 1) catch {
-                const newSp = sp - 1;
-                newSp[0] = Object.from(1);
+            sp.top = inlines.p2L(sp.top, 1) catch {
+                const newSp = sp.push(Object.from(1));
                 return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
         }
-        pub fn @"-_L2"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+        pub fn @"-_L2"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             trace("\n-_L2: {any}", .{context.stack(sp, process)});
-            sp[0] = inlines.p2L(sp[0], 2) catch {
-                const newSp = sp - 1;
-                newSp[0] = Object.from(2);
+            sp.top = inlines.p2L(sp.top, 2) catch {
+                const newSp = sp.push(Object.from(2));
                 return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
         }
-        pub fn @"<="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-            sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch {
+        pub fn @"<="(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+            const newSp = sp.dropPut(Object.from(inlines.p5(sp[1], sp[0]) catch {
                 return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
-            });
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+            }));
+            return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
-        pub fn @"<=_N"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-            sp[1] = Object.from(inlines.p5N(sp[1], sp[0]));
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+        pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+            sp.next = 
+                return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, selector, cache });
         }
-        pub fn @"*"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-            sp[1] = inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+        pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache }));
+            return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
     };
 };
 pub const primitives = struct {
-    pub fn p1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#+
+    pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#+
         trace("\n+: {any}", .{context.stack(sp, process)});
         if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         trace("\np1: {any}", .{context.stack(sp, process)});
-        sp[1] = inlines.p1(sp[1], sp[0]) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
+        const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
+                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
-    pub fn p2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#-
+    pub fn p2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#-
         trace("\n-: {any}", .{context.stack(sp, process)});
         if (!Sym.@"-".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         trace("\np2: {any}", .{context.stack(sp, process)});
-        sp[1] = inlines.p2(sp[1], sp[0]) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
+        const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
+                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
-    pub fn p7(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // at:
+    pub fn p7(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // at:
         if (!Sym.@"at:".setImmClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         unreachable;
     }
-    pub fn p5(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#<=
+    pub fn p5(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#<=
         trace("\n<=: {any} 0x{x} 0x{x}", .{context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u()});
         if (!Sym.@"<=".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         trace("\np5: {any}", .{context.stack(sp, process)});
-        sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch
-                                return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache }));
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
+        const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
+                                                 return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache })));
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
-    pub fn p9(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // SmallInteger>>#*
+    pub fn p9(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#*
         if (!Sym.@"*".withClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
-        sp[1] = inlines.p9(sp[1], sp[0]) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
+        const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
+                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
 };
 const e = struct {

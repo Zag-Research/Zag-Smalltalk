@@ -63,7 +63,7 @@ pub fn sieveNative(self: i64) i64 {
     }
     return count;
 }
-pub fn sieveComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+pub fn sieveComp(pc: PC, sp: SP, hp: Hp, thread: *Thread, context: ContextPtr) void {
     if (il.p5N(sp[0], Object.from(2))) {
         sp[0] = Object.from(1);
         return @call(tailCall, context.npc, .{ context.tpc, sp, hp, thread, context });
@@ -78,7 +78,7 @@ pub fn sieveComp(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, cont
     newContext.npc = sieveComp1;
     return @call(tailCall, sieveComp, .{ sieveCompT + 1, newSp, newHp, thread, newContext });
 }
-fn sieveComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+fn sieveComp1(pc: PC, sp: SP, hp: Hp, thread: *Thread, context: ContextPtr) void {
     const newSp = sp - 1;
     const m2 = il.p2L(context.getTemp(0), 2) catch @panic("int add failed in sieveComp1");
     newSp[0] = m2;
@@ -86,7 +86,7 @@ fn sieveComp1(pc: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context
     context.npc = sieveComp2;
     return @call(tailCall, sieveComp, .{ sieveCompT + 1, newSp, hp, thread, context });
 }
-fn sieveComp2(_: [*]const Code, sp: [*]Object, hp: Hp, thread: *Thread, context: ContextPtr) void {
+fn sieveComp2(_: PC, sp: SP, hp: Hp, thread: *Thread, context: ContextPtr) void {
     const sum = il.p1(sp[1], sp[0]) catch @panic("int add failed in sieveComp2");
     context.setTemp(0, sum);
     const result = context.pop(thread, 0);

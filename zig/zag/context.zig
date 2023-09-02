@@ -119,11 +119,11 @@ pub const Context = struct {
         return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
-        return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object);
+        return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object) - 1;
     }
     pub fn stack(self: *const Self, sp: SP, process: *Process) []Object {
         if (self.isOnStack())
-            return sp.slice((@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object));
+            return sp.slice((@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
         return process.getStack(sp);
     }
     pub inline fn allLocals(self: *const Context, process: *const Process) []Object {

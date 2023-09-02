@@ -35,7 +35,7 @@ pub fn benchObject(self: Object) Object {
     return i.p1(fm1, fm2) catch @panic("int add failed in benchObject");
 }
 const benchSym = sym.value;
-pub fn benchComp(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+pub fn benchComp(pc: [*]const Code, sp: SP, process: *Process, context: ContextPtr, selector: Object) void {
     if (!benchSym.hashEquals(selector)) @panic("wrong selector");
     if (i.p5N(sp[0], Object.from(2))) {
         sp[0] = Object.from(1);
@@ -49,7 +49,7 @@ pub fn benchComp(pc: [*]const Code, sp: [*]Object, process: *Process, context: C
     newContext.npc = benchComp1;
     return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, process, newContext, benchSym });
 }
-fn benchComp1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, _: Object) void {
+fn benchComp1(pc: [*]const Code, sp: SP, process: *Process, context: ContextPtr, _: Object) void {
     const newSp = sp - 1;
     const m2 = i.p2L(context.getTemp(0), 2) catch @panic("int add failed in benchComp1");
     newSp[0] = m2;
@@ -57,7 +57,7 @@ fn benchComp1(pc: [*]const Code, sp: [*]Object, process: *Process, context: Cont
     context.npc = benchComp2;
     return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, process, context, benchSym });
 }
-fn benchComp2(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) void {
+fn benchComp2(_: [*]const Code, sp: SP, process: *Process, context: ContextPtr, selector: Object) void {
     const sum = i.p1(sp[1], sp[0]) catch @panic("int add failed in benchComp2");
     context.setTemp(0, sum);
     const result = context.pop(process);

@@ -7,6 +7,8 @@ const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
@@ -58,74 +60,72 @@ pub const inlines = struct {
 };
 const fallback = execute.fallback;
 pub const embedded = struct {
-    pub fn @"basicAt:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+    pub fn @"basicAt:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         sp[1] = inlines.p60(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"basicAt:put:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+    pub fn @"basicAt:put:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         sp[1] = inlines.p61(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:put:" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn @"=="(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    pub fn @"=="(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p110(sp.next, sp.top))), process, context, selector, cache });
     }
-    pub fn @"~~"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    pub fn @"~~"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p169(sp.next, sp.top))), process, context, selector, cache });
     }
-    pub fn @"atAllPut:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-        sp[1] = inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    pub fn @"atAllPut:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        const newSp = sp.dropPut(inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" }));
+        return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
     }
 };
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicAt:
+    pub fn p60(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicAt:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicAt:put:
+    pub fn p61(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicAt:put:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p70(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicNew
+    pub fn p70(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // basicNew:
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p83(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform: perform:with: perform:with:with: perform:with:with:with:
+    pub fn p83(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform: perform:with: perform:with:with: perform:with:with:with:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p84(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform:withArguments:
+    pub fn p84(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform:withArguments:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p100(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // perform:withArguments:inSuperclass:
+    pub fn p100(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform:withArguments:inSuperclass:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#==
+    pub fn p110(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // ProtoObject>>#==
         if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // atAllPut:
+    pub fn p145(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // atAllPut:
         if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         inlines.p1(sp[0]) catch
             return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
         return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // ProtoObject>>#~~
+    pub fn p169(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // ProtoObject>>#~~
         if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, process: *Process, caller: Context) Object { // ProtoObject>>class
+    // pub inline fn p111(pc: PC, sp: SP, heap: Hp, rpc: PC, process: *Process, caller: Context) Object { // ProtoObject>>class
 };
 const e = struct {
     usingnamespace execute.controlPrimitives;

@@ -7,6 +7,8 @@ const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
@@ -33,13 +35,13 @@ pub const inlines = struct {
 };
 pub const embedded = struct {
     const fallback = execute.fallback;
-    pub fn @"new:"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
 };
 pub const primitives = struct {
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object { // new:
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // new:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }

@@ -27,6 +27,8 @@ const CompiledMethodPtr = *CompiledMethod;
 const CompiledMethod = execute.CompiledMethod;
 const CompileTimeMethod = execute.CompileTimeMethod;
 const Code = execute.Code;
+const PC = execute.PC;
+const SP = execute.SP;
 
 pub const ByteCode = enum(i8) {
     noop,
@@ -68,20 +70,20 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, _: Object, cache: SendCache) [*]Object {
+    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) SP {
         trace("\ninterpretReturn: 0x{x}", .{ @intFromPtr(context.method) });
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))), cache });
     }
-    fn interpretFn(pc: [*]const Code, sp: [*]Object, process: *Process, context: *Context, selector: Object, cache: SendCache) [*]Object {
-        const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
+    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) SP {
+        const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc[0].prim, .{ dPc+1, sp, process, context, selector, cache.next() });
+            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))), cache });
     }
-    fn interpret(_pc: [*]const Code, _sp: [*]Object, process: *Process, _context: *Context, _method: Object, cache: SendCache) [*]Object {
+    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) SP {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
@@ -101,8 +103,8 @@ pub const ByteCode = enum(i8) {
                         break :branch; // to common code
                     },
                     .ifTrue => {
-                        const v = sp[0];
-                        sp += 1;
+                        const v = sp.top;
+                        sp = sp.drop();
                         if (False.equals(v)) {
                             pc += 1;
                             continue :interp;
@@ -111,8 +113,8 @@ pub const ByteCode = enum(i8) {
                         break :branch; // to branch
                     },
                     .ifFalse => {
-                        const v = sp[0];
-                        sp += 1;
+                        const v = sp.top;
+                        sp = sp.drop();
                         if (True.equals(v)) {
                             pc += 1;
                             continue :interp;
@@ -121,43 +123,36 @@ pub const ByteCode = enum(i8) {
                         break :branch; // to branch
                     },
                     .dup => {
-                        sp -= 1;
-                        sp[0] = sp[1];
+                        sp = sp.push(sp.top);
                         continue :interp;
                     },
                     .over => {
-                        sp -= 1;
-                        sp[0] = sp[2];
+                        sp = sp.push(sp.next);
                         continue :interp;
                     },
                     .drop => {
-                        sp += 1;
+                        sp = sp.drop();
                         continue :interp;
                     },
                     .pushLiteral => {
-                        sp -= 1;
-                        sp[0] = references[pc[0].u()];
+                        sp = sp.push(references[pc[0].u()]);
                         pc += 1;
                         continue :interp;
                     },
                     .pushLiteral0 => {
-                        sp -= 1;
-                        sp[0] = Object.from(0);
+                        sp = sp.push(Object.from(0));
                         continue :interp;
                     },
                     .pushLiteral1 => {
-                        sp -= 1;
-                        sp[0] = Object.from(1);
+                        sp = sp.push(Object.from(1));
                         continue :interp;
                     },
                     .pushLiteral2 => {
-                        sp -= 1;
-                        sp[0] = Object.from(2);
+                        sp = sp.push(Object.from(2));
                         continue :interp;
                     },
                     .pushTrue => {
-                        sp -= 1;
-                        sp[0] = True;
+                        sp = sp.push(True);
                         continue :interp;
                     },
                     .pushContext => {
@@ -176,25 +171,23 @@ pub const ByteCode = enum(i8) {
                         continue :interp;
                     },
                     .pushTemp => {
-                        sp -= 1;
-                        sp[0] = context.getLocal(pc[0].u() - 1);
+                        sp = sp.push(context.getLocal(pc[0].u() - 1));
                         pc += 1;
                         continue :interp;
                     },
                     .pushTemp1 => {
-                        sp -= 1;
-                        sp[0] = context.getLocal(0);
+                        sp = sp.push(context.getLocal(0));
                         continue :interp;
                     },
                     .popIntoTemp => {
-                        context.setLocal(pc[0].u(), sp[0]);
-                        sp += 1;
+                        context.setLocal(pc[0].u(), sp.top);
+                        sp = sp.drop();
                         pc += 1;
                         continue :interp;
                     },
                     .popIntoTemp1 => {
-                        context.setLocal(0, sp[0]);
-                        sp += 1;
+                        context.setLocal(0, sp.top);
+                        sp = sp.drop();
                         continue :interp;
                     },
                     .returnWithContext => {
@@ -205,34 +198,31 @@ pub const ByteCode = enum(i8) {
                     },
                     .returnNoContext => return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, Nil, cache }),
                     .returnTop => {
-                        const top = sp[0];
+                        const top = sp.top;
                         const result = context.pop(process);
                         const newSp = result.sp;
-                        newSp[0] = top;
+                        newSp.top = top;
                         const callerContext = result.ctxt;
                         trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack())});
                         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil, cache });
                     },
                     .p1 => { // SmallInteger>>#+
-                        sp[1] = inlines.p1(sp[1], sp[0]) catch @panic("+");
-                        sp += 1;
+                        sp = sp.dropPut(inlines.p1(sp.next, sp.top) catch @panic("+"));
                         continue :interp;
                     },
                     .p2 => { // SmallInteger>>#+
-                        sp[1] = inlines.p2(sp[1], sp[0]) catch @panic("-");
-                        sp += 1;
+                        sp = sp.dropPut(inlines.p2(sp.next, sp.top) catch @panic("-"));
                         continue :interp;
                     },
                     .p5 => { // SmallInteger>>#<=
-                        sp[1] = Object.from(inlines.p5(sp[1], sp[0]) catch @panic("<= error"));
-                        sp += 1;
+                        sp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch @panic("<= error")));
                         continue :interp;
                     },
                     .callRecursive => {
                         context.setTPc(asCodePtr(pc + 1));
                         const offset = pc[0].i();
                         if (offset >= 0) pc += 1 + @as(u64, @intCast(offset)) else pc -= @as(u64, @intCast(@as(i32, -offset) - 1));
-                        return @call(tailCall, interpret, .{ @as([*]const Code, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))), cache });
+                        return @call(tailCall, interpret, .{ @as(PC, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))), cache });
                     },
                     .exit => @panic("fell off the end"),
                     else => {
@@ -261,9 +251,9 @@ pub const ByteCode = enum(i8) {
     inline fn uint(v: u8) ByteCode {
         return int(@as(i8, @bitCast(v)));
     }
-    inline fn asCodePtr(self: [*]const Self) [*]const Code {
+    inline fn asCodePtr(self: [*]const Self) PC {
         @setRuntimeSafety(false);
-        return @as([*]const Code, @ptrFromInt(@intFromPtr(self)));
+        return @as(PC, @ptrFromInt(@intFromPtr(self)));
     }
     var methods: [128]CompiledMethodPtr = undefined;
     var nMethods = 0;

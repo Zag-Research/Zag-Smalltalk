@@ -14,6 +14,8 @@ const Nil = @import("zag/zobject.zig").Nil;
 const execute = @import("zag/execute.zig");
 const SendCache = execute.SendCache;
 const Code = execute.Code;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const ContextPtr = execute.CodeContextPtr;
@@ -80,36 +82,34 @@ fn runObject(run: usize) usize {
 }
 
 var fibCPSM = compileMethod(Sym.i_1, 0, 0, .{&fibCPS});
-const fibCPST = @as([*]Code, @ptrCast(&fibCPSM.code[0]));
-pub fn fibCPS(_: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+const fibCPST = @as(PC, @ptrCast(&fibCPSM.code[0]));
+pub fn fibCPS(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
         const dPc = cache.current();
-        return @call(tailCall, dPc[0].prim, .{ dPc + 1, sp, process, context, selector, cache.next() });
+        return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
     }
-    return @call(tailCall, fibCPS0, .{ fibCPST + 1, sp, process, context, selector, cache });
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector, cache });
 }    
-pub fn fibCPS0(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-    if (i.p5N(sp[0], two)) {
-        sp[0] = one;
+pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+    if (i.p5N(sp.top, two)) {
+        sp.top = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
     }
     const newContext = context.push(sp, process, fibThread.asCompiledMethodPtr(), 0, 2, 0);
-    const newSp = newContext.asObjectPtr() - 1;
-    newSp[0] = i.p2L(sp[0], 1) catch return @call(tailCall, pc[10].prim, .{ pc + 11, newSp + 1, process, context, selector, cache });
-    newContext.setReturnBoth(fibCPS1, pc + 13); // after first callRecursive
-    return @call(tailCall, fibCPS0, .{ fibCPST + 1, newSp, process, newContext, selector, cache });
+    const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim, .{ pc.skip(11), newContext.asNewSp().drop(), process, context, selector, cache }));
+    newContext.setReturnBoth(fibCPS1, pc.skip(13)); // after first callRecursive
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, newContext, selector, cache });
 }
-fn fibCPS1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-    const newSp = sp - 1;
-    newSp[0] = i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector, cache });
-    context.setReturnBoth(fibCPS2, pc + 3); // after 2nd callRecursive
-    return @call(tailCall, fibCPS0, .{ fibCPST + 1, newSp, process, context, selector, cache });
+fn fibCPS1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+    context.setReturnBoth(fibCPS2, pc.skip(3)); // after 2nd callRecursive
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, context, selector, cache });
 }
-fn fibCPS2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
-    const sum = i.p1(sp[1], sp[0]) catch return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+fn fibCPS2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     var result = context.pop(process);
     const newSp = result.sp;
-    newSp[0] = sum;
+    newSp.top = sum;
     var callerContext = result.ctxt;
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector, cache });
 }
@@ -149,7 +149,7 @@ fn runCPS(run: usize) usize {
 var fibCPSSendM = compileMethod(Sym.i_1, 0, 0, .{&fibCPSSend});
 const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
 var fibCPSSendCache = execute.SendCacheStruct.init();
-pub fn fibCPSSend(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     if (!fibCPSSendM.selector.selectorEquals(selector)) {
         const dPc = cache.current();
         return @call(tailCall, dPc[0].prim, .{ dPc + 1, sp, process, context, selector, cache.next() });
@@ -167,7 +167,7 @@ pub fn fibCPSSend(pc: [*]const Code, sp: [*]Object, process: *Process, context: 
     const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
     return @call(tailCall, newPc[0].prim, .{ newPc + 1, newSp, process, newContext, newSelector, if (dispatchCache) newCache.next() else cache });
 }
-fn fibCPSSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+fn fibCPSSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     const newSp = sp - 1;
     newSp[0] = i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc[0].prim, .{ pc + 1, newSp, process, context, selector, cache });
     context.setReturnBoth(fibCPSSend2, pc + 3); // after 2nd callRecursive
@@ -176,7 +176,7 @@ fn fibCPSSend1(pc: [*]const Code, sp: [*]Object, process: *Process, context: Con
     const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
     return @call(tailCall, newPc[0].prim, .{ newPc + 1, newSp, process, context, newSelector, if (dispatchCache) newCache.next() else cache });
 }
-fn fibCPSSend2(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) [*]Object {
+fn fibCPSSend2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     const sum = i.p1(sp[1], sp[0]) catch return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     var result = context.pop(process);
     const newSp = result.sp;
