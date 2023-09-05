@@ -250,6 +250,33 @@ ASBlock >> variableIndex: var [
 ]
 
 { #category : #writing }
+ASBlock >> write: codeGenerator with: syms [
+
+	| stackVariables |
+	stackVariables := self buildStack.
+
+	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
+	codeGenerator pushNamespace: selector asSymbol asZigString.
+	
+	selector := codeGenerator symbolOrVirtual: selector asSymbol asZigString.
+	codeGenerator emitMethod: selector numLocals: locals size stackSize: self maxDepth closureSize: 0.
+
+	codeGenerator emitVerifySelector.
+
+	"create dummy context"
+	codeGenerator emitPushContext.
+
+	self
+		writeBody: syms
+		stackVars: stackVariables
+		codeGenerator: codeGenerator 
+		blocks: (ASBlockVisitor selector: nil).
+
+	codeGenerator pushReturn.
+	codeGenerator pushClose
+]
+
+{ #category : #writing }
 ASBlock >> writeBlock: aStream with: syms [
 
 	| stackVariables |
@@ -299,7 +326,7 @@ ASBlock >> zigClosureString: stackVariables index: index [
 	local := ((stackVariables indexOf: selector asZigString) - 1)
 		         asString.
 
-	^ '&e.blockClosure,"' , index , selector , '", ' , local , ' + ('
+	^ '&e.blockClosure,"' , index asString, selector , '", ' , local , ' + ('
 	  , fields size asString , '<< 8)' , ' + (' , (includeContext
 		   ifTrue: [ '255' ]
 		   ifFalse: [ '0' ]) , '<< 16)' , ' + (' , (clsrData ifEmpty: [ '0' ] ifNotEmpty: [ (blockData indexOf: #closureData) asString  ])

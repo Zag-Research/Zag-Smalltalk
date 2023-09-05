@@ -78,22 +78,14 @@ ASBlockVisitor >> initialize [
 ]
 
 { #category : #initialization }
-ASBlockVisitor >> initializeClosureData: aStream stackVariables: stackVariables [
+ASBlockVisitor >> initializeClosureData: codeGenerator stackVariables: stackVariables [
 
 	variables do: [ :var |
 		var isASArg ifTrue: [
 			var references do: [ :blockRef |
-				aStream tab.
-				aStream << '&e.pushLocal, '
-				<< ((stackVariables indexOf: var name) - 1) asString << ', // '
-				<< var name.
-				aStream cr.
-				aStream tab.
-				aStream << '&e.popLocalData, '
-				<<
-				((stackVariables indexOf: blockRef selector asZigString) - 1)
-					asString << ' + (' << (blockRef location: var name) << ' << 8), // ' << var name
-				<< ' (read-only) copy offset 3 in local 1 (field in BC1)' ] ] ]
+				codeGenerator pushLocal: var name index: ((stackVariables indexOf: var name) - 1).
+				codeGenerator pushPopLocalData: var name stackIndex: ((stackVariables indexOf: blockRef selector asZigString) - 1) blockIndex: (blockRef location: var name)
+				 ] ] ]
 ]
 
 { #category : #accessing }
@@ -161,6 +153,13 @@ ASBlockVisitor >> visitBlockNode: anASBlock [
 { #category : #visiting }
 ASBlockVisitor >> visitClassVar: anASClassVar [
 	"ingnore class variables for now"
+]
+
+{ #category : #writing }
+ASBlockVisitor >> visitClosureData: codeGenerator stackVariables: stackVariables [
+
+	self modifiers ifNotEmpty: [ "write the closure data instruction to the stream"
+		codeGenerator emitClosure: ((stackVariables indexOf: #closureData) - 1) modifier:  self modifiers size]
 ]
 
 { #category : #visiting }

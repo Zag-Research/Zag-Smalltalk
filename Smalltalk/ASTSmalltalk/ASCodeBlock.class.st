@@ -45,6 +45,11 @@ ASCodeBlock >> buildClosureData: variables [
 	clsrData addAll: variables
 ]
 
+{ #category : #'instance creation' }
+ASCodeBlock >> closureData [
+	^clsrData
+]
+
 { #category : #accessing }
 ASCodeBlock >> filter: instructions [
 	self subclassResponsibility 
@@ -121,22 +126,46 @@ ASCodeBlock >> statementVisitor: symbols stackVars: stackVariables [
 ]
 
 { #category : #writing }
-ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
+ASCodeBlock >> writeBody: symbols stackVars: stackVariables codeGenerator: codeGenerator blocks: anASBlockVisitor [
 
 	| statementVisitor |
+	anASBlockVisitor
+		initializeClosureData: codeGenerator
+		stackVariables: stackVariables.
+
+	statementVisitor := self
+		                    statementVisitor: symbols
+		                    stackVars: stackVariables.
+	statementVisitor codeGenerator: codeGenerator.
+
+	body do: [ :asStatement |
+		asStatement acceptVisitor: statementVisitor.
+		asStatement isASSend ifTrue: [ codeGenerator pushDrop ] ].
+
+	"check to see what types variables have"
+	(self filter: statementVisitor instructionStack) do: [ :instruction |
+		codeGenerator emitInstruction: instruction ]
+]
+
+{ #category : #writing }
+ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
+
+	| statementVisitor codeGenerator |
 	anASBlockVisitor
 		initializeClosureData: aStream
 		stackVariables: stackVariables.
 
 	aStream cr.
+	codeGenerator := ASZigFileGenerator stream: aStream.
 	statementVisitor := self
 		                    statementVisitor: symbols
 		                    stackVars: stackVariables.
+	statementVisitor codeGenerator: codeGenerator.
 
 	body do: [ :asStatement |
 		asStatement acceptVisitor: statementVisitor.
-		asStatement isASSend ifTrue: [ statementVisitor addDrop ] ].
-	
+		asStatement isASSend ifTrue: [ codeGenerator pushDrop ] ].
+
 	"check to see what types variables have"
 	(self filter: statementVisitor instructionStack) do: [ :instruction |
 		aStream tab.

@@ -9,6 +9,5 @@ Class {
 
 { #category : #visiting }
 ASLocal >> acceptVisitor: aVisitor [
-
 	^ aVisitor visitNamedAS: self
 ]

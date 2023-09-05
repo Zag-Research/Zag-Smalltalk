@@ -108,6 +108,11 @@ ASMethodNode >> nameSpace [
 	^(nestedScopeOf name, '>>', selector) asSymbol asZigString
 ]
 
+{ #category : #accessing }
+ASMethodNode >> pragmas [
+	^ pragmas 
+]
+
 { #category : #private }
 ASMethodNode >> pragmas: somePragmas [ 
 	pragmas := somePragmas 

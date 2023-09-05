@@ -4,13 +4,18 @@ Class {
 	#instVars : [
 		'symbols',
 		'stackVars',
-		'aStream',
 		'instructionStack',
 		'closure',
-		'variableTypeMap'
+		'variableTypeMap',
+		'codeGenerator'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #adding }
+ASStatementVisitor class >> codeGenerator: anASZigGenerator [ 
+	^ self new codeGenerator: anASZigGenerator 
+]
 
 { #category : #instantiating }
 ASStatementVisitor class >> symbols: syms stackVars: stackVars closure: aClosure [
@@ -25,8 +30,8 @@ ASStatementVisitor class >> symbols: syms stackVars: stackVars closure: aClosure
 ]
 
 { #category : #adding }
-ASStatementVisitor >> addDrop [
-	instructionStack add:  '&e.drop,'
+ASStatementVisitor >> codeGenerator: aCodeGenerator [
+	codeGenerator := aCodeGenerator 
 ]
 
 { #category : #accessing }
@@ -102,56 +107,56 @@ ASStatementVisitor >> visitBlockNode: anASBlock [
 	nonLocalReturnValue
 		ifNotNil: [ instructionStack add: nonLocalReturnValue ]
 		ifNil: [
-			instructionStack add: '&e.pushLocal, '
-				,
-				(self variableIndex: anASBlock selector asZigString)
-				, ', //' , anASBlock selector asZigString ]
+			codeGenerator pushLocal: anASBlock selector index: (self variableIndex: anASBlock selector asZigString)
+			"instructionStack add: '&e.pushLocal, '
+				, (self variableIndex: anASBlock selector asZigString) , ', //'
+				, anASBlock selector asZigString" ]
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitLiteral: anASLiteral [
 
-	instructionStack add:
-		'&e.pushLiteral, Object.from(' , anASLiteral literal asString
-		, '),'
-]
-
-{ #category : #visiting }
-ASStatementVisitor >> visitNamedAS: anASLocal [
-
-	aStream << (self variableIndex: anASLocal name)
+	codeGenerator pushLiteral: anASLiteral literal
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitReturn: anASReturn [
+
 	anASReturn expression acceptVisitor: self.
-	instructionStack add: ' &e.returnTop,'
+	codeGenerator pushReturn
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitSelfNode: anASSelf [
 
-	instructionStack add:
-		'&e.pushLocal, ' , (self variableIndex: #self) , ', //self'
+	codeGenerator pushLocal: #self index: (self variableIndex: #self)
+	"instructionStack add:
+		'&e.pushLocal, ' , (self variableIndex: #self) , ', //self'"
 ]
 
 { #category : #visiting }
 ASStatementVisitor >> visitSend: anASSend [
 
-	| send |
+	| selector |
 	anASSend target acceptVisitor: self.
 
 	anASSend args ifNotNil: [
 		anASSend args do: [ :arg | arg acceptVisitor: self ] ].
 
-	send := '&e.send' , anASSend selector numArgs asString , ', '.
+	selector := codeGenerator symbol: anASSend selector.
 
-	"looking at the classes that implement a particular send"
+	codeGenerator
+		pushSendForSelector: selector
+		numArgs: anASSend selector numArgs.
+
+	"send := '&e.send' , anASSend selector numArgs asString , ', '.
+
+	""looking at the classes that implement a particular send""
 	self unifySelector: anASSend selector withTarget: anASSend target.
-	
-	"looking up the selector from the predefined symbols list or use the selector name itself"
+
+	""looking up the selector from the predefined symbols list or use the selector name itself""
 	symbols
 		at: anASSend selector
 		ifPresent: [ :sym | instructionStack add: send , sym , ',' ]
-		ifAbsent: [ instructionStack add: send , anASSend selector , ',' ]
+		ifAbsent: [ instructionStack add: send , anASSend selector , ',' ]"
 ]
