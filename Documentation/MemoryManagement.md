@@ -104,7 +104,7 @@ Free-space is split up into power-of-2-sized pieces and put on the appropriate q
 - Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate queue, and loop to allocate the rest.
 
 #### Allocation
-Allocation simply requires finding the enclosing power of 2, then taking the next block off that queue. This is done without a lock. If the appropriate queue is empty, then a value is requested off the next queue (which may also be empty which will request the next...). Once a value is found from the next queue, it is split in 2, with one of the resulting blocks prepended to its queue, and the other one being returned to the requestor.
+Allocation simply requires finding the enclosing power of 2, then taking the next block off that queue. This is done without a lock. If the appropriate queue is empty, then a value is requested off the next queue (which may also be empty which will request the next...). Once a value is found from the next queue, it is split in 2, with one of the resulting blocks prepended to its queue, and the other one being returned to the requestor. If the largest queue is empty, another block is allocated from the operating system.
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory leaks. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.

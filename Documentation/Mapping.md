@@ -27,10 +27,10 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0000 | xxxx | xxxx | NaN (unused)                  |
 | FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
 | FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF0      | 0003 | xxxx | xxxx | reserved (tag = Float (double))|
+| FFF0      | 0003 | FFFF | FFFF | UndefinedObject               |
 | FFF0      | 0004 | 0000 | 0000 | False                         |
 | FFF0      | 0005 | 0000 | 0001 | True                          |
-| FFF0      | 0006 | 0000 | 0002 | UndefinedObject               |
+| FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))|
 | FFF0      | 0007 | aaxx | xxxx | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
 | FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
@@ -53,15 +53,15 @@ Groups A through E are all `BlockClosure`s - A through D being immediate blocks 
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-51 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-50 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
 
 #### Tag values
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
-2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
-3. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+3. UndefinedObject: This encodes the singleton value `nil`.
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
 5. True: This encodes the singleton value `true`
-6. UndefinedObject: This encodes the singleton value `nil`.
+6. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
 7. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
@@ -134,12 +134,12 @@ Ignoring the high bit, which says the object is immutable, the object format tag
 | Value | Meaning |
 | -- | --- |
 | 0 | contains an empty indexable area |
-| 1-61 | contains a byte-indexable area of this size |
-| 62 | a non-indexable object - no pointers |
-| 63 | a non-indexable object - with pointers |
-| 64 | a struct (native Zig object) - ignored by GC |
-| 65-116 | an object-indexable area of size 1-51 - assumed pointers |
-| 117 | a header |
+| 1-59 | contains a byte-indexable area of this size |
+| 62 | a struct (native Zig object) - ignored by GC |
+| 63 | a header |
+| 64 | a non-indexable object - no pointers |
+| 65 | a non-indexable object - with pointers |
+| 66-117 | an object-indexable area of size 1-25 - odd with pointers |
 | 118 | a direct-indexed object (no iVars) - no pointers |
 | 119 | a direct-indexed object (no iVars) - with pointers |
 | 120 | an indexed object - no pointers |
@@ -148,6 +148,8 @@ Ignoring the high bit, which says the object is immutable, the object format tag
 | 123 | an external object - with pointers |
 | 125 | an external weak object - with pointers |
 | 127 | a weak object - with pointers |
+
+The choice of values means that if the value anded with 65 is equal to 65, there are pointers, otherwise not.
 
 The remaining format bit 7 encodes whether  the object is immutable, so any assignments will signal an exception.
 
@@ -163,7 +165,7 @@ A simple object like Point with 2 instance variables would look like:
 | xxxx xxxx xxxx xxxx | instance variable 2 (y) |
 | 0002 40hh hhhh cccc | length=2, format=64  |
 
-An array-like object of 5 elements with 2 instance variables would look like:
+An array-like object of 5 elements with 2 instance variables and no pointers would look like:
 
 | Value               | Description                  | 
 | ------------------- | ---------------------------- |
@@ -174,7 +176,7 @@ An array-like object of 5 elements with 2 instance variables would look like:
 | xxxx xxxx xxxx xxxx | index 3                      |
 | xxxx xxxx xxxx xxxx | index 4                      |
 | xxxx xxxx xxxx xxxx | index 5                      |
-| 0007 45hh hhhh cccc | length=7, format=69 |
+| 0007 48hh hhhh cccc | length=7, format=72 |
 
 And an Array of 768 elements (direct index) would look like:
 
@@ -195,7 +197,7 @@ And an Array of 2^20 elements would look like:
 | 0000 aaaa aaaa aaaa | address of index 1 (in big-object area)              |
 | 0002 78hh hhhh 000A | length=2, format=120, class=10 (Array) |
 
-And a format 24 object with 2 instance variables and 3 indexable elements would look like:
+And a string would look like:
 
 | Value               | Description         |
 | ------------------- | ------------------- |

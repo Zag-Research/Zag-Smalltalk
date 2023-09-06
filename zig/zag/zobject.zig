@@ -12,7 +12,7 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @as(Object, @bitCast(v));
 }
-pub fn oImm(c: ClassIndex, h: u64) u64 { // INLINED & NON-PUB
+pub fn oImm(c: ClassIndex, h: u32) u64 { // INLINED & NON-PUB
     return o(.immediates) | @as(u64, @intFromEnum(c)) << 32 | h;
 }
 inline fn o(g: Group) u64 {
@@ -23,13 +23,12 @@ pub fn indexSymbol(uniqueNumber: u12) Object { // INLINED
 }
 pub const ZERO = of(0);
 const Negative_Infinity: u64 = o(.immediates); //0xfff0000000000000;
-// unused NaN fff00-fff4f
-const Start_of_Blocks: u64 = o(.immediateThunk);
-const Start_of_Pointer_Objects: u64 = o(.heapThunk);
+const Start_of_Blocks: u64 = o(.numericThunk);
+const Start_of_Pointer_Objects: u64 = o(.heapThunk); // things that have low 48 bits is an object pointer
 const Start_of_Heap_Objects: u64 = o(.heap);
 pub const False = of(oImm(.False, 0x0));
 pub const True = of(oImm(.True, 0x1));
-pub const Nil = of(oImm(.UndefinedObject, 0x2));
+pub const Nil = of(oImm(.UndefinedObject, 0xffffffff));
 pub const NotAnObject = of(oImm(.UndefinedObject, 0x3)); // never a valid object... should never be visible to managed language
 const Symbol_Base = oImm(.Symbol, 0);
 const Character_Base = oImm(.Character, 0);
@@ -50,10 +49,10 @@ pub const ClassIndex = enum(u16) {
     none = 0,
     Object,
     SmallInteger,
-    Float,
+    UndefinedObject,
     False,
     True,
-    UndefinedObject,
+    Float,
     Symbol,
     Character,
     BlockClosure,
@@ -133,7 +132,7 @@ pub const Object = packed struct(u64) {
     pub inline fn high16(self: Object) u16 {
         return @intFromEnum(self.classIndex);
     }
-    pub fn cast(v: anytype) Object { // INLINED 
+    pub inline fn cast(v: anytype) Object {
         // stored using little-endian order
         return @as(Object, @bitCast(v));
     }
@@ -337,17 +336,6 @@ pub const Object = packed struct(u64) {
         }
         @compileError("Can't convert \"" ++ @typeName(@TypeOf(value)) ++ "\"");
     }
-    pub fn new(classIndex: ClassIndex, comptime tup: anytype) Object {
-        // @setEvalBranchQuota(20000);
-        // const obj = arenas.globalArena.allocObject(classIndex,tup.len);
-        // inline for (tup,obj.instVars()) |field,*iVar| {
-        //     iVar.* = from(field);
-        // }
-        // return obj;
-        _ = classIndex;
-        _ = tup;
-        unreachable;
-    }
     pub fn compare(self: Object, other: Object) std.math.Order {
         if (!self.isHeapObject() or !other.isHeapObject()) {
             const u64s = self.u();
@@ -421,13 +409,25 @@ pub const Object = packed struct(u64) {
     }
 };
 
-test "new" {
-    //    const o1 = Object.new(1,.{3,True,Nil});
-    //    std.debug.print("\nOBJ = {} {}\n",.{o1,o1.full_get_class()});
-}
-test "slicing" {
-    //    const testing = std.testing;
-    //    try testing.expectEqual(Nil.arrayAsSlice(u8).len,0);
+test "testing doubles including NaN" {
+    // test that all things that generate NaN generate positive ones
+    // otherwise we'd need to check in any primitive that could create a NaN
+    // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
+    const e = std.testing.expect;
+    const inf = @as(f64,1.0)/0.0;
+    const zero = @as(f64,0);
+    const one = @as(f64,1);
+    const cast = Object.cast;
+    try e(of(1).isDouble());
+    try e(cast(@sqrt(-one)).isDouble());
+    try e(cast(@log(-one)).isDouble());
+    try e(cast(zero/zero).isDouble());
+    try e(cast((-inf)*0.0).isDouble());
+    try e(cast((-inf)*inf).isDouble());
+    try e(cast((-inf)+inf).isDouble());
+    try e(cast(inf-inf).isDouble());
+    try e(cast(inf*0.0).isDouble());
+    try e(cast(std.math.nan(f64)).isDouble());
 }
 test "from conversion" {
     const ee = std.testing.expectEqual;

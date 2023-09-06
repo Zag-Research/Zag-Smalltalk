@@ -22,6 +22,8 @@ $ make install
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
+- [HydraVM](http://www.hydravm.org/hydra)
+- [GraalVM](https://www.graalvm.org)
 
 ### Memory Management
 #### mimalloc
@@ -34,6 +36,8 @@ $ make install
 - [Deconstructing the garbage-first collector](https://dl.acm.org/doi/10.1145/3381052.3381320)
 - [MMTk](https://github.com/mmtk)
 
+### User interface
+- [_Chromium_ Embedded Framework](https://github.com/chromiumembedded/cef)
 ### Architectures
 #### HPC and architectures (cache et al)
 - [Algorithmica](https://en.algorithmica.org/hpc/)

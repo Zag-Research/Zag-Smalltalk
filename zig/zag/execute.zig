@@ -316,7 +316,7 @@ pub fn countNonLabels(comptime tup: anytype) CountSizes {
                     ) d += 1;
                 c += 1;
             },
-            comptime_int, comptime_float => {
+            comptime_int, comptime_float, ClassIndex => {
                 c += 1;
             },
             else => switch (@typeInfo(@TypeOf(field))) {
@@ -356,8 +356,9 @@ test "countNonLabels" {
         3,
         "1mref",
         null,
+        ClassIndex.True,
     });
-    try expectEqual(r1.codes, 10);
+    try expectEqual(r1.codes, 11);
     try expectEqual(r1.refs, 2);
     try expectEqual(r1.objects, 3);
     try expectEqual(r1.caches, 1);
@@ -633,6 +634,142 @@ test "compiling method" {
     try expectEqual(t[9].object, Nil);
     try expectEqual(t.len, 10);
 }
+
+pub fn CompileTimeObject(comptime counts: CountSizes) type {
+    const codes = counts.codes;
+//    const refs = counts.refs;
+//    const caches = counts.caches;
+    const phi32 = @import("utilities.zig").inversePhi(u32);
+    return extern struct { // structure must exactly match CompiledObject
+        root: Object,
+        last: u16,
+        objects: [codes]Object,
+        const Self = @This();
+        // comptime {
+        //     if (checkEqual(CompiledObject.codeOffset,@offsetOf(Self,"code"))) |s|
+        //         @compileError("CompiledObject prefix not the same as CompileTimeObject == " ++ s);
+        // }
+        pub fn init() Self {
+            return .{
+                .root = Nil,
+                .last = 0,
+                .objects = undefined,
+            };
+        }
+        pub fn makeFooter(self: *Self, offset: usize, class: ClassIndex) void {
+            const footer = HeapObject.calcHeapObject(class, offset-self.last, @truncate(@intFromPtr(&self.objects[offset])*%phi32), Age.static, 0, @sizeOf(Object), false) catch @compileError("too many refs");
+            self.objects[offset] = footer;
+            if (self.root==Nil) self.root = offset;
+            self.last = offset+1;
+        }
+        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
+            _ = refReplacements;
+            for (&self.objects) |*o| {
+                if (o.isIndexSymbol()) {
+                    if (false) {
+                        const newValue = (@intFromPtr(&self.references[o.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(o)) / @sizeOf(Object) - 1;
+                        o.* = Code.uint(newValue);
+                    } else
+                        for (replacements, 1..) |replacement, index| {
+                            const match = indexSymbol(@truncate(index));
+                            if (match.indexEquals(o.*)) {
+                                o.* = replacement;
+                                break;
+                            }
+                    }
+                }
+            }
+        }
+    };
+}
+test "CompileTimeObject" {
+    const expectEqual = std.testing.expectEqual;
+    const c = ClassIndex;
+    const o1 = CompileTimeObject(countNonLabels(.{
+        "def",
+        True,
+        c.Method,
+        comptime Object.from(42),
+        "1mref",
+        ":def",
+        c.BlockFailure,
+    }));
+    var r1 = o1.init();
+    var r1r = [_]Object{ Nil, True };
+    r1.setLiterals(Object.empty, &r1r);
+    _ = .{expectEqual};
+}
+pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
+    @setEvalBranchQuota(20000);
+    const methodType = CompileTimeObject(countNonLabels(tup));
+    var method = methodType.init();
+    const objects = method.objects[0..];
+    comptime var n = 0;
+    inline for (tup) |field| {
+        switch (@TypeOf(field)) {
+            Object => {
+                object[n] = field;
+                n = n + 1;
+            },
+            comptime_int => {
+                object[n] = Object.from(field);
+                n = n + 1;
+            },
+            ClassIndex => {
+                @compileError("class index");
+            },
+            else => {
+                comptime var found = false;
+                switch (@typeInfo(@TypeOf(field))) {
+                    .Pointer => |fPointer| {
+                        switch (@typeInfo(fPointer.child)) {
+                            .Array => {
+                                if (field[0] == ':') {
+                                    found = true;
+                                } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
+                                    objects[n] = Code.ref(intOf(field[0..]) + Code.refFlag);
+                                    n += 1;
+                                    found = true;
+                                } else {
+                                    comptime var lp = 0;
+                                    inline for (tup) |t| {
+                                        switch (@typeInfo(@TypeOf(t))) {
+                                            .Pointer => |tPointer| {
+                                                switch (@typeInfo(tPointer.child)) {
+                                                    .Array => {
+                                                        if (t[0] == ':') {
+                                                            if (comptime std.mem.endsWith(u8, t, field)) {
+                                                                objects[n] = Code.int(lp - n - 1);
+                                                                n = n + 1;
+                                                                found = true;
+                                                                break;
+                                                            }
+                                                        } else lp = lp + 1;
+                                                    },
+                                                    //                                                .Fn => |fun| @compileLog(fun),
+                                                    else => lp += 1,
+                                                }
+                                            },
+                                            else => {
+                                                lp = lp + 1;
+                                            },
+                                        }
+                                    }
+                                    if (!found) @compileError("missing label: \"" ++ field ++ "\"");
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+                if (!found) @compileError("don't know how to handle \"" ++ @typeName(@TypeOf(field)) ++ "\"");
+            },
+        }
+    }
+    return method;
+}
+
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: PC, sp: SP, process: *Process, context: ContextPtr, needed: usize) void {
