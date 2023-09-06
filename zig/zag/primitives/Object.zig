@@ -14,6 +14,7 @@ const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");
 const Object = object.Object;
+const empty = Object.empty;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
@@ -138,10 +139,11 @@ test "simple ==" {
         &e.pushLiteral, Object.from(4),
         &e.@"==",       &e.returnNoContext,
     });
-    const result = testExecute(prog.asCompiledMethodPtr());
+    const result = testExecute(&prog);
     try expect(result[0].to(bool));
 }
-fn testExecute(method: CompiledMethodPtr) []Object {
+fn testExecute(ptr: anytype) []Object {
+    const method: CompiledMethodPtr = @ptrCast(ptr);
     var te = execute.TestExecution.new();
     te.init();
     var objs = [_]Object{};
@@ -155,7 +157,7 @@ test "simple compare" {
         &e.pushLiteral, Object.from(4),
         &e.@"==",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0], False);
+    try expectEqual(testExecute(&prog)[0], False);
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
@@ -169,7 +171,7 @@ test "simple compare and don't branch" {
         &e.pushLiteral,  Object.from(42),
         ":common",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(), 17);
+    try expectEqual(testExecute(&prog)[0].toInt(), 17);
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
@@ -183,7 +185,7 @@ test "simple compare and branch" {
         &e.pushLiteral,  Object.from(42),
         ":common",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(), 42);
+    try expectEqual(testExecute(&prog)[0].toInt(), 42);
 }
 
 test "dispatch3" {}

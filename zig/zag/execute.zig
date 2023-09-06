@@ -415,9 +415,6 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
-        pub fn asFakeObject(self: *const Self) Object {
-            return @as(Object, @bitCast(self));
-        }
         pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object, cache: ?SendCache) void {
             trace("\nsetLiterals: 0x{x:0>16} {any}",.{self.selector.u(), replacements});
             var cachedSend = false;
@@ -426,6 +423,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                                              or c.prim == &controlPrimitives.send1
                                          )) {
                     cachedSend = true;
+                    unreachable;
                 } else {
                     if (c.object.isIndexSymbol()) {
                         for (replacements, 1..) |replacement, index| {
@@ -481,6 +479,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         }
     };
 }
+const empty = Object.empty;
 test "CompileTimeMethod" {
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
@@ -499,7 +498,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil, 2, 3);
     var r1r = [_]Object{ Nil, True };
-    r1.setLiterals(Object.empty, &r1r, null);
+    _ = r1.setLiterals(empty, &r1r, null);
     try expectEqual(r1.getCodeSize(), 10);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -616,8 +615,7 @@ const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.hardDnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null });
-    const mcmp = m.asCompiledMethodPtr();
-    m.setLiterals(Object.empty, &[_]Object{Object.from(mcmp)}, null);
+    _ = m.setLiterals(empty, &[_]Object{Object.from(42)}, null);
     var t = m.code[0..];
     //    for (t,0..) |tv,idx|
     //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -637,32 +635,22 @@ test "compiling method" {
 
 pub fn CompileTimeObject(comptime counts: CountSizes) type {
     const codes = counts.codes;
-//    const refs = counts.refs;
-//    const caches = counts.caches;
     const phi32 = @import("utilities.zig").inversePhi(u32);
-    return extern struct { // structure must exactly match CompiledObject
-        root: Object,
-        last: u16,
+    return extern struct {        last: u16,
         objects: [codes]Object,
         const Self = @This();
-        // comptime {
-        //     if (checkEqual(CompiledObject.codeOffset,@offsetOf(Self,"code"))) |s|
-        //         @compileError("CompiledObject prefix not the same as CompileTimeObject == " ++ s);
-        // }
         pub fn init() Self {
             return .{
-                .root = Nil,
                 .last = 0,
                 .objects = undefined,
             };
         }
         pub fn makeFooter(self: *Self, offset: usize, class: ClassIndex) void {
-            const footer = HeapObject.calcHeapObject(class, offset-self.last, @truncate(@intFromPtr(&self.objects[offset])*%phi32), Age.static, 0, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = HeapObject.calcHeapObject(class, offset-self.last, @truncate(@intFromPtr(&self.objects[offset])*%phi32), Age.static, 0, @sizeOf(Object), false) catch unreachable;
             self.objects[offset] = footer;
-            if (self.root==Nil) self.root = offset;
             self.last = offset+1;
         }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) Object {
             _ = refReplacements;
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol()) {
@@ -679,6 +667,7 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
                     }
                 }
             }
+            return Object.from(&self.objects[self.last-1]);
         }
     };
 }
@@ -691,28 +680,27 @@ test "CompileTimeObject" {
         c.Method,
         comptime Object.from(42),
         "1mref",
+        Sym.i_1,
         ":def",
         c.BlockFailure,
     }));
     var r1 = o1.init();
-    var r1r = [_]Object{ Nil, True };
-    r1.setLiterals(Object.empty, &r1r);
-    _ = .{expectEqual};
+    try expectEqual(r1.last,0);
 }
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
-    const methodType = CompileTimeObject(countNonLabels(tup));
-    var method = methodType.init();
-    const objects = method.objects[0..];
+    const objType = CompileTimeObject(countNonLabels(tup));
+    var obj = objType.init();
+    const objects = obj.objects[0..];
     comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object => {
-                object[n] = field;
+                objects[n] = field;
                 n = n + 1;
             },
             comptime_int => {
-                object[n] = Object.from(field);
+                objects[n] = Object.from(field);
                 n = n + 1;
             },
             ClassIndex => {
@@ -739,7 +727,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                     .Array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                objects[n] = Code.int(lp - n - 1);
+                                                                objects[n] = Object.from(lp - n - 1);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;
@@ -767,7 +755,27 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             },
         }
     }
-    return method;
+    std.debug.assert(n==obj.last);
+    return obj;
+}
+test "compileObject" {
+    const expectEqual = std.testing.expectEqual;
+    const c = ClassIndex;
+    var o1 = compileObject(.{
+        "def",
+        True,
+        c.Method,
+        comptime Object.from(42),
+        "1mref",
+        Sym.i_1,
+        ":def",
+        c.Method,
+    });
+    var o1r = [_]Object{ Nil, True };
+    const obj = o1.setLiterals(&[_]Object{Nil}, &o1r);
+    try expectEqual(o1.last,0);
+    try expectEqual(obj.isHeapObject(),true);
+//    const oref = o1.asObject();
 }
 
 pub const controlPrimitives = struct {
@@ -1120,7 +1128,8 @@ pub const TestExecution = struct {
         trace("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
-    pub fn run(self: *Self, source: []const Object, method: CompiledMethodPtr) []Object {
+    pub fn run(self: *Self, source: []const Object, ptr: anytype) []Object {
+        const method: CompiledMethodPtr = @ptrCast(ptr);
         const stdout = std.io.getStdOut().writer();
         var cache = SendCacheStruct.init();
         self.initStack(source);
@@ -1146,10 +1155,10 @@ test "SendCache direct" {
         });
         const myDnu = Code.prim(&push42);
         var cache = SendCacheStruct.initWith(&myDnu);
-        //    _ = cache;    method.setLiterals(Object.empty, Object.empty, null);
+        //    _ = cache;    method.setLiterals(empty, empty, null);
         trace("\ncache: {}",.{cache});
         trace("\nmethod:< {}",.{method});
-        method.setLiterals(Object.empty, Object.empty, &cache);
+        method.setLiterals(empty, empty, &cache);
         trace("\nmethod:> {}",.{method});
         var te = TestExecution.new();
         te.init();
@@ -1171,14 +1180,12 @@ test "send with dispatch direct" {
         &push42,
         &p.primitiveFailed,
     });
-    method.setLiterals(Object.empty, Object.empty, null);
     dispatch.init();
     methodV.asCompiledMethodPtr().forDispatch(ClassIndex.UndefinedObject);
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method.asCompiledMethodPtr();
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
 }
@@ -1191,8 +1198,7 @@ test "simple return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method.asCompiledMethodPtr();
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
     try expectEqual(result[1], Nil);
@@ -1208,9 +1214,7 @@ test "context return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method.asCompiledMethodPtr();
-    trace("\nmethod: {*}", .{compiledMethod});
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
@@ -1224,8 +1228,7 @@ test "context returnTop via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method.asCompiledMethodPtr();
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
@@ -1242,12 +1245,11 @@ test "context returnTop twice via TestExecution" {
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
     });
-    method1.setLiterals(Object.empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())}, null);
+    method1.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method1.asCompiledMethodPtr();
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method1);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
@@ -1261,12 +1263,11 @@ test "context returnTop with indirect via TestExecution" {
         "0Obj",
         &p.returnTop,
     });
-    method.setLiterals(Object.empty, &[_]Object{Object.from(42)}, null);
+    method.setLiterals(empty, &[_]Object{Object.from(42)}, null);
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    const compiledMethod = method.asCompiledMethodPtr();
-    var result = te.run(objs[0..], compiledMethod);
+    var result = te.run(objs[0..], &method);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
@@ -1289,7 +1290,7 @@ test "simple executable" {
     var objs = [_]Object{Nil};
     var te = TestExecution.new();
     te.init();
-    const result = te.run(objs[0..], method.asCompiledMethodPtr());
+    const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }

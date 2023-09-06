@@ -6,6 +6,7 @@ const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
 const Object = object.Object;
+const empty = Object.empty;
 const Nil = object.Nil;
 const NotAnObject = object.NotAnObject;
 const True = object.True;
@@ -307,13 +308,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             }
             unreachable;
         }
-        pub fn asCompiledMethodPtr(self: *Self) *CompiledMethod {
-            return @as(*CompiledMethod,@ptrCast(self));
-        }
-        pub fn asCompileTimeMethod(self: *Self) *CompileTimeMethod {
-            return @as(*CompileTimeMethod,@ptrCast(self));
-        }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object, _: ?*Self) *CompiledMethod {
             for (replacements, 1..) |replacement, index| {
                 const match = indexSymbol(@truncate(index));
                 if (self.selector.equals(match)) {
@@ -328,6 +323,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             for (refs, 1..) |obj, index|{
                 _ = .{obj,index, @panic("handle refs")};
             }
+            return @as(*CompiledMethod,@ptrCast(self));
         }
     };
 }
@@ -443,7 +439,7 @@ test "simple return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.asCompiledMethodPtr());
+    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
     try expectEqual(result[1], Nil);
@@ -462,7 +458,7 @@ test "context return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.asCompiledMethodPtr());
+    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
@@ -479,7 +475,7 @@ test "context returnTop via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.asCompiledMethodPtr());
+    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(42));
 }
@@ -502,7 +498,7 @@ test "simple executable" {
     var objs = [_]Object{Nil};
     var te = TestExecution.new();
     te.init();
-    const result = te.run(objs[0..], method.asCompiledMethodPtr());
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }

@@ -111,7 +111,7 @@ var @"foo:bar::1" =
 var @"foo:bar::2" =
     // [ l1 := l1 + 1.
     //   l1 = l3 ifTrue: [ ^ 1 ] ]
-    compileMethod(sym.value, 1, 2 + 4, .{ // self-1 BCone-0
+    compileMethod(sym.value, @"foo:bar::2-arity", 2 + 4, .{ // self-1 BCone-0
     &e.verifySelector,
     &e.pushContext,
     "^",
@@ -127,6 +127,7 @@ var @"foo:bar::2" =
     &e.send,      Sym.@"ifTrue:",
     &e.returnTop,
 });
+const @"foo:bar::2-arity" = 1;
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();

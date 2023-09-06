@@ -22,7 +22,6 @@ const ContextPtr = execute.CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = execute.TestExecution;
 const Process = @import("zag/process.zig").Process;
-const uniqueSymbol = @import("zag/symbol.zig").uniqueSymbol;
 const symbol = @import("zag/symbol.zig");
 const heap = @import("zag/heap.zig");
 const dispatch = @import("zag/dispatch.zig");
@@ -95,7 +94,7 @@ pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector:
         sp.top = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
     }
-    const newContext = context.push(sp, process, fibThread.asCompiledMethodPtr(), 0, 2, 0);
+    const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
     const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim, .{ pc.skip(11), newContext.asNewSp().drop(), process, context, selector, cache }));
     newContext.setReturnBoth(fibCPS1, pc.skip(13)); // after first callRecursive
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, newContext, selector, cache });
@@ -114,14 +113,15 @@ fn fibCPS2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Obj
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector, cache });
 }
 test "fibCPS" {
-    const method = fibCPSM.asCompiledMethodPtr();
     fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibThreadMethod = @ptrCast(&fibThread);
+    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te = TestExecution.new();
         te.init();
-        const result = te.run(objs[0..], method);
+        const result = te.run(objs[0..], &fibCPSM);
         std.debug.print("\nfib({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
@@ -135,9 +135,9 @@ fn runCPS(run: usize) usize {
     _ = fibCPSM2;
     // end for debugging
 
+    fibThreadMethod = fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     if (debugPrint) std.debug.print("{},", .{run});
-    const method = fibCPSM.asCompiledMethodPtr();
-    fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    const method = fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
@@ -158,7 +158,7 @@ pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, select
         sp.top = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
     }
-    const newContext = context.push(sp, process, fibThread.asCompiledMethodPtr(), 0, 2, 0);
+    const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
     const newSp = newContext.asNewSp();
     newSp.top = i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim, .{ pc.skip(11), newSp.drop(), process, context, selector, cache });
     newContext.setReturnBoth(fibCPSSend1, pc.skip(13)); // after first callRecursive
@@ -193,11 +193,10 @@ var fibCPSSendStart =
     &e.returnTop,
 });
 fn fibCPSSendSetup() CompiledMethodPtr {
-    const fibonacci = fibCPSSendM.asCompiledMethodPtr();
-    const start = fibCPSSendStart.asCompiledMethodPtr();
     sym = Sym.init();
-    fibCPSSendM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibThreadMethod = fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    const fibonacci = fibCPSSendM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    const start = fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return start;
@@ -252,15 +251,16 @@ var fibThread =
     &e.SmallInteger.@"+", // +
     &e.returnTop,
 });
+var fibThreadMethod: CompiledMethodPtr = undefined;
 test "fibThread" {
-    const method = fibThread.asCompiledMethodPtr();
+    fibThreadMethod = @ptrCast(&fibThread);
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var n: u32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
         var te = TestExecution.new();
         te.init();
-        const result = te.run(objs[0..], method);
+        const result = te.run(objs[0..], fibThreadMethod);
         std.debug.print("\nfib({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
@@ -268,13 +268,12 @@ test "fibThread" {
 }
 fn runThread(run: usize) usize {
     if (debugPrint) std.debug.print("{},", .{run});
-    const method = fibThread.asCompiledMethodPtr();
-    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibThreadMethod = fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
     const start = tstart();
-    _ = te.run(objs[0..], method);
+    _ = te.run(objs[0..], fibThreadMethod);
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
@@ -313,11 +312,9 @@ var fibDispatchStart =
     &e.returnTop,
 });
 fn fibDispatchSetup() CompiledMethodPtr {
-    const fibonacci = fibDispatch.asCompiledMethodPtr();
-    const start = fibDispatchStart.asCompiledMethodPtr();
     sym = Sym.init();
-    fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    const fibonacci = fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    const start = fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return start;
@@ -375,9 +372,8 @@ var fibByte =
     b.returnTop,
 });
 test "fibByte" {
-    const method = fibByte.asCompiledMethodPtr();
     sym = Sym.init();
-    fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
+    const method = fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -391,8 +387,8 @@ test "fibByte" {
 }
 fn runByte(run: usize) usize {
     if (debugPrint) std.debug.print("{},", .{run});
-    fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
-    const method = fibByte.asCompiledMethodPtr();
+    sym = Sym.init();
+    const method = fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
@@ -465,8 +461,6 @@ fn fibFullSetup() CompiledMethodPtr {
     dispatch.init();
     primitives.init();
     sym = Sym.init();
-    const fibonacci = fibFull.asCompiledMethodPtr();
-    const start = fibFullStart.asCompiledMethodPtr();
     fibFull.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     fibFullStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     @"Integer>>+".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
@@ -474,8 +468,8 @@ fn fibFullSetup() CompiledMethodPtr {
     @"Integer>><=".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
     @"True>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.True);
     @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.False);
-    fibonacci.forDispatch(ClassIndex.SmallInteger);
-    return start;
+    fibFull.asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
+    return @ptrCast(&fibFullStart);
 }
 test "fibFull" {
     const method = fibFullSetup();

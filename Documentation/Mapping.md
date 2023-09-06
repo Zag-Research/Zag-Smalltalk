@@ -121,13 +121,15 @@ There are a number of special length values:
 - 0-4093 - normal object 
 Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
 #### Age
-The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap For global objects, see [MemoryManagement](MemoryManagement.md).
+The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap. For global objects, see [MemoryManagement](MemoryManagement.md).
 
 | Value | Meaning | Notes |
 | -- | --- | -- |
 |  0 | on Stack | only Context, BlockClosure, or ContextData |
-| 1-6 | nursery heap | incremented on each copy |
+| 1-5 | nursery heap | incremented on each copy |
+|  6 | nursery heap | will be copied to global heap on next collect |
 
+Not necessarily just age 6 objects will be copied. While a copy is happening, the space occupied by each age is accumulated, so if more space it required, it knows what what ages need to be moved to the global heap.
 #### Format
 Ignoring the high bit, which says the object is immutable, the object format tag is coded as follows:
 

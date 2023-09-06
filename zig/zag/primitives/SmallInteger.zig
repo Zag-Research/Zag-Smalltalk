@@ -239,7 +239,8 @@ const e = struct {
     usingnamespace execute.controlPrimitives;
     usingnamespace embedded;
 };
-fn testExecute(method: CompiledMethodPtr) []Object {
+fn testExecute(ptr: anytype) []Object {
+    const method: CompiledMethodPtr = @ptrCast(ptr);
     var te = execute.TestExecution.new();
     te.init();
     var result = te.run(&[_]Object{Nil}, method);
@@ -260,8 +261,8 @@ test "simple add" {
         &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
-    prog.setLiterals(empty, &[_]Object{Object.from(method2.asCompiledMethodPtr())}, null);
-    const result = testExecute(prog.asCompiledMethodPtr());
+    prog.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
+    const result = testExecute(&prog);
     try expectEqual(result[0].toInt(), 42);
 }
 test "embedded add" {
@@ -275,7 +276,7 @@ test "embedded add" {
         &e.SmallInteger.@"+",
         &e.returnTop,
     });
-    const result = testExecute(prog.asCompiledMethodPtr());
+    const result = testExecute(&prog);
     try expectEqual(result[0].toInt(), 42);
 }
 test "simple add with overflow" {
@@ -291,7 +292,7 @@ test "simple add with overflow" {
         &e.returnNoContext,
     });
     prog2.asCompiledMethodPtr().forDispatch(object.ClassIndex.SmallInteger);
-    const result = testExecute(prog.asCompiledMethodPtr());
+    const result = testExecute(&prog);
     try expectEqual(result[0], Sym.noFallback);
 }
 

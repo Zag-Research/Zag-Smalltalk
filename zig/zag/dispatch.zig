@@ -384,6 +384,7 @@ const Dispatch = extern struct {
 //u}
 test "disambiguate" {
     const ee = std.testing.expectEqual;
+    const empty = Object.empty;
     const fns = struct {
         fn push1(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) SP {
             return sp.push(Object.from(1));
@@ -396,16 +397,19 @@ test "disambiguate" {
         }
     };
     // value=01101 yourself=00001 @"<="=11101
-    const method1 = compileMethod(symbols.value, 0, 0, .{ &fns.push1, &Code.end });
-    const method2 = compileMethod(symbols.yourself, 0, 0, .{ &fns.push2, &Code.end });
-    const method3 = compileMethod(symbols.@"<=", 0, 0, .{ &fns.push3, &Code.end });
+    var method1 = compileMethod(symbols.value, 0, 0, .{ &fns.push1, &Code.end });
+    method1.setLiterals(empty, empty, null);
+    var method2 = compileMethod(symbols.yourself, 0, 0, .{ &fns.push2, &Code.end });
+    method2.setLiterals(empty, empty, null);
+    var method3 = compileMethod(symbols.@"<=", 0, 0, .{ &fns.push3, &Code.end });
+    method3.setLiterals(empty, empty, null);
     var space = [_]Code{ Code.object(Nil), Code.object(Nil), Code.object(Nil) };
-    var dispatcher = Dispatch.disambiguate(&space, method1.asCompiledMethodPtr(), method2.asCompiledMethodPtr());
-    const push1Code: PC = @ptrCast(&method1.asCompiledMethodPtr().code);
-    const push2Code: PC = @ptrCast(&method2.asCompiledMethodPtr().code);
+    var dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method1), @ptrCast(&method2));
+    const push1Code: PC = @ptrCast(&method1.code);
+    const push2Code: PC = @ptrCast(&method2.code);
     try ee(space[2].codeRef, push1Code);
     try ee(space[1].codeRef, push2Code);
-    dispatcher = Dispatch.disambiguate(&space, method2.asCompiledMethodPtr(), method1.asCompiledMethodPtr());
+    dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method2), @ptrCast(&method1));
     try ee(space[2].codeRef, push1Code);
     try ee(space[1].codeRef, push2Code);
     var process = Process.new();
@@ -417,7 +421,7 @@ test "disambiguate" {
    try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value,cache.dontCache()).top.to(i64), 1);
     try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself,cache.dontCache()).top.to(i64), 2);
     try ee(dispatcher.prim, &Dispatch.bitTest2);
-    dispatcher = Dispatch.disambiguate(&space, method3.asCompiledMethodPtr(), method1.asCompiledMethodPtr());
+    dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method3), @ptrCast(&method1));
     try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=",cache.dontCache()).top.to(i64), 3);
     try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value,cache.dontCache()).top.to(i64), 1);
     try ee(dispatcher.prim, &Dispatch.bitTest4);
@@ -444,6 +448,7 @@ fn doDispatch(tE: *TestExecution, dispatch: *Dispatch, selector: Object) []Objec
     return tE.stack(dispatch.dispatch(tE.sp, &tE.process, &tE.ctxt, selector, cache.dontCache()));
 }
 test "add methods" {
+    const empty = Object.empty;
     const ee = std.testing.expectEqual;
     var temp0: usize = 0;
     var temp: usize = 0;
@@ -461,20 +466,23 @@ test "add methods" {
         }
     };
     var code0 = methodType.withCode(symbols.yourself, 0, 0, .{ Code.prim(&fns.testYourself), Code.uint(@intFromPtr(&temp0)) });
+    code0.setLiterals(empty, empty, null);
     var code1 = methodType.withCode(symbols.yourself, 0, 0, .{ Code.prim(&fns.testYourself), Code.uint(@intFromPtr(&temp)) });
+    code1.setLiterals(empty, empty, null);
     var code2 = methodType.withCode(symbols.@"at:", 0, 0, .{ Code.prim(&fns.testAt), Code.uint(@intFromPtr(&temp)) });
+    code2.setLiterals(empty, empty, null);
     var tE = TestExecution.new();
     tE.init();
     var dispatch = Dispatch.new();
     dispatch.init();
-    try dispatch.add(code0.asCompiledMethodPtr());
-    try dispatch.add(code1.asCompiledMethodPtr());
+    try dispatch.add(@ptrCast(&code0));
+    try dispatch.add(@ptrCast(&code1));
     try ee(doDispatch(&tE, &dispatch, symbols.yourself)[0], Object.from(2));
     try ee(doDispatch(&tE, &dispatch, symbols.self)[0], object.NotAnObject);
-    try dispatch.add(code2.asCompiledMethodPtr());
+    try dispatch.add(@ptrCast(&code2));
     try ee(doDispatch(&tE, &dispatch, symbols.yourself)[0], Object.from(2));
     try ee(doDispatch(&tE, &dispatch, symbols.@"at:")[0], Object.from(4));
-    try std.testing.expectEqual(dispatch.add(code2.asCompiledMethodPtr()), error.Conflict);
+    try std.testing.expectEqual(dispatch.add(@ptrCast(&code2)), error.Conflict);
 }
 inline fn bumpSize(size: u16) u16 {
     return size * 2;
