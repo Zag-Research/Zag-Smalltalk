@@ -20,7 +20,7 @@ When we dispatch to a method, we always treat it as threaded code. This may seem
 
 The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be copied to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be copied to the heap.
 
-There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context; and b) switching between interpreter and native implementation is seamless.
+There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
 
 #### Stack example
 

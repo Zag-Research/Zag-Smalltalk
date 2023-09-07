@@ -12,30 +12,38 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @as(Object, @bitCast(v));
 }
-pub fn oImm(c: ClassIndex, h: u32) u64 { // INLINED & NON-PUB
-    return o(.immediates) | @as(u64, @intFromEnum(c)) << 32 | h;
+inline fn oImm(c: ClassIndex, h: u32) u64 {
+    return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
 }
-inline fn o(g: Group) u64 {
-    return g.base();
+inline fn g(grp: Group) u64 {
+    return grp.base();
 }
-pub fn indexSymbol(uniqueNumber: u12) Object { // INLINED
-    return @as(Object, @bitCast(oImm(.Symbol, 0xff000000 | @as(u32, uniqueNumber))));
+pub inline fn indexSymbol(uniqueNumber: u24) Object {
+    return @bitCast(oImm(.Symbol, 0xff000000 | @as(u32,uniqueNumber)));
+}
+test "indexSymbol" {
+    const e = std.testing.expect;
+    const ee = std.testing.expectEqual;
+    try e(indexSymbol(42).isSymbol());
+    try ee(oImm(.Symbol,0xff00002a),0xfff00007ff00002a);
+    try ee(indexSymbol(0x2a).u(),0xfff00007ff00002a);
+    try ee(indexSymbol(0x2a).indexNumber(),42);
 }
 pub const ZERO = of(0);
-const Negative_Infinity: u64 = o(.immediates); //0xfff0000000000000;
-const Start_of_Blocks: u64 = o(.numericThunk);
-const Start_of_Pointer_Objects: u64 = o(.heapThunk); // things that have low 48 bits is an object pointer
-const Start_of_Heap_Objects: u64 = o(.heap);
+const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
+const Start_of_Blocks: u64 = g(.numericThunk);
+const Start_of_Pointer_Objects: u64 = g(.heapThunk); // things that have low 48 bits is an object pointer
+const Start_of_Heap_Objects: u64 = g(.heap);
 pub const False = of(oImm(.False, 0x0));
 pub const True = of(oImm(.True, 0x1));
 pub const Nil = of(oImm(.UndefinedObject, 0xffffffff));
 pub const NotAnObject = of(oImm(.UndefinedObject, 0x3)); // never a valid object... should never be visible to managed language
 const Symbol_Base = oImm(.Symbol, 0);
 const Character_Base = oImm(.Character, 0);
-pub const u64_MINVAL = o(.smallInt);
-const u64_ZERO = o(.smallInt0);
+pub const u64_MINVAL = g(.smallInt);
+const u64_ZERO = g(.smallInt0);
 pub const u64_ZERO2 = u64_ZERO *% 2;
-const u64_MAXVAL = o(.unused1) - 1;
+const u64_MAXVAL = g(.unused1) - 1;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
 pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
 pub const invalidHeapPointer = of(Start_of_Heap_Objects);
@@ -89,7 +97,7 @@ pub const Group = enum(u16) {
     heap,
     _,
     const Self = @This();
-    fn base(cg: Self) u64 { // INLINED
+    inline fn base(cg: Self) u64 {
         return @as(u64, @intFromEnum(cg)) << 48;
     }
     inline fn u(cg: Self) u16 {
@@ -177,13 +185,13 @@ pub const Object = packed struct(u64) {
     pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
         return self.equals(other.withImmClass(.Symbol));
     }
-    pub inline fn indexNumber(self: Object) u12 {
-        return @truncate(self.u() >> 12);
+    pub inline fn indexNumber(self: Object) u24 {
+        return @truncate(self.u());
     }
     pub inline fn isInt(self: Object) bool {
         return self.atLeastInt() and self.atMostInt();
     }
-    pub fn atLeastInt(self: Object) bool { // INLINED
+    pub inline fn atLeastInt(self: Object) bool {
         var testing = Group.smallInt.u();
         return self.tag.u() >= testing;
     }
@@ -316,7 +324,7 @@ pub const Object = packed struct(u64) {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).inHeapSize();
         return 0;
     }
-    pub fn from(value: anytype) Object { // INLINED
+    pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(@TypeOf(value))) {
@@ -387,7 +395,7 @@ pub const Object = packed struct(u64) {
         _ = options;
 
         try switch (self.immediate_class()) {
-            .Object => writer.print("object:0x{x:>16}", .{self.u()}), //,as_pointer(x));
+            .Object => writer.print("object:0x{x:0>16}", .{self.u()}), //,as_pointer(x));
             .BlockClosure => writer.print("block:0x{x:>16}", .{self.u()}), //,as_pointer(x));
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
@@ -395,9 +403,9 @@ pub const Object = packed struct(u64) {
             .Symbol => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toInt()}),
-            .Float => writer.print("{}(0x{x})", .{ self.to(f64), self.u() }),
+            .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.u() }),
             else => {
-                try writer.print("0x{x:>16}", .{self.u()});
+                try writer.print("0x{x:0>16}", .{self.u()});
                 @panic("format for unknown class");
             },
         };

@@ -14,10 +14,11 @@ pub const Format = enum(u8) {
     immediateSizeZero = ImmediateSizeZero,
     immediateByteMax = ImmediateByteMax,
     notObject, // this is an allocated struct, not an Object
-    notIndexable, // this and below have no pointers in array portion
+    header, // this is a header word, which points to the proper HeapObject footer word
+    notIndexable, // this and below have no pointers
+    notIndexableWithPointers, // this and below have no pointers in array portion
     immediateObjectOne,
     immediateObjectMax = ImmediateObjectMax,
-    header, // this is a header word, which points to the proper HeapObject footer word
     directIndexed,
     directIndexedWithPointers, // this and below have no size/pointer
     indexed,
@@ -87,13 +88,20 @@ pub const Format = enum(u8) {
         return self == .indexedWithPointers;
     }
     pub inline fn isIndexable(self: Self) bool {
-        return self != .notIndexable;
+        return self != .notIndexable and self != .notIndexableWithPointers;
     }
     pub inline fn isWeak(self: Self) bool {
         return self == .weakWithPointers;
     }
+    pub inline fn hasInstVars(self: Self) bool {
+        // TODO: 
+        return self == .notIndexable or self == .notIndexableWithPointers;
+    }
     pub inline fn hasIndexPointers(self: Self) bool {
         return @intFromEnum(self) > Indexed;
+    }
+    pub inline fn hasPointers(self: Self) bool {
+        return @intFromEnum(self) & 65 == 65;
     }
     //    pub inline fn hasIndexFields(self: Self) bool {
     //        return @enumToInt(self) >= Indexed;
@@ -105,7 +113,7 @@ pub const Format = enum(u8) {
         };
     }
     pub inline fn immutable(self: Self) Self {
-        return @as(Self, @enumFromInt(@intFromEnum(self) | Immutable));
+        return @enumFromInt(@intFromEnum(self) | Immutable);
     }
     pub inline fn isImmutable(self: Self) bool {
         return @intFromEnum(self) & Immutable != 0;
@@ -499,7 +507,7 @@ pub const HeapObject = packed struct(u64) {
             .length = length,
         };
     }
-    pub inline fn calcHeapObject(classIndex: ClassIndex, iVars: u12, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
+    pub inline fn calcHeapObject(classIndex: ClassIndex, comptime iVars: u12, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
         const aI = comptime Format.allocationInfo(iVars, indexed, elementSize, makeWeak);
         if (aI.requiresIndex()) return error.DoesntFit;
         return HeapObject{
@@ -533,6 +541,9 @@ pub const HeapObject = packed struct(u64) {
     }
     pub inline fn isOnStack(self: HeapObjectConstPtr) bool {
         return self.age.isOnStack();
+    }
+    pub inline fn isStatic(self: HeapObjectConstPtr) bool {
+        return self.age.isStatic();
     }
     pub inline fn isNonHeap(self: HeapObjectConstPtr) bool {
         return self.age.isNonHeap();

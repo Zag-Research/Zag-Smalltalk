@@ -136,7 +136,7 @@ Ignoring the high bit, which says the object is immutable, the object format tag
 | Value | Meaning |
 | -- | --- |
 | 0 | contains an empty indexable area |
-| 1-59 | contains a byte-indexable area of this size |
+| 1-61 | contains a byte-indexable area of this size |
 | 62 | a struct (native Zig object) - ignored by GC |
 | 63 | a header |
 | 64 | a non-indexable object - no pointers |

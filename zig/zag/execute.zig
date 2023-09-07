@@ -280,8 +280,8 @@ pub const Code = extern union {
         } else try writer.print("0x{x}", .{self.uint});
     }
 };
-pub fn intOf(comptime str: []const u8) u16 {
-    var n: u16 = 0;
+pub fn intOf(comptime str: []const u8) u12 {
+    var n: u12 = 0;
     for (str) |c| {
         if (c > '9') return n;
         n = n * 10 + (c - '0');
@@ -635,76 +635,55 @@ test "compiling method" {
 
 pub fn CompileTimeObject(comptime counts: CountSizes) type {
     const codes = counts.codes;
-    const phi32 = @import("utilities.zig").inversePhi(u32);
-    return extern struct {        last: u16,
+    return struct {
         objects: [codes]Object,
         const Self = @This();
+        const mask = 1023;
+        const refFlag = mask+1;
+        const addrFlag = refFlag*2;
         pub fn init() Self {
             return .{
-                .last = 0,
                 .objects = undefined,
             };
         }
-        pub fn makeFooter(self: *Self, offset: usize, class: ClassIndex) void {
-            const footer = HeapObject.calcHeapObject(class, offset-self.last, @truncate(@intFromPtr(&self.objects[offset])*%phi32), Age.static, 0, @sizeOf(Object), false) catch unreachable;
-            self.objects[offset] = footer;
-            self.last = offset+1;
-        }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) Object {
-            _ = refReplacements;
+        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol()) {
-                    if (false) {
-                        const newValue = (@intFromPtr(&self.references[o.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(o)) / @sizeOf(Object) - 1;
-                        o.* = Code.uint(newValue);
-                    } else
-                        for (replacements, 1..) |replacement, index| {
-                            const match = indexSymbol(@truncate(index));
-                            if (match.indexEquals(o.*)) {
-                                o.* = replacement;
-                                break;
-                            }
-                    }
+                    o.* =
+                        if (o.indexNumber() >= addrFlag)
+                        Object.from(&self.objects[o.indexNumber() & mask])
+                        else if (o.indexNumber() >= refFlag)
+                        refReplacements[o.indexNumber() & mask]
+                        else
+                        replacements[o.indexNumber()-1];
                 }
             }
-            return Object.from(&self.objects[self.last-1]);
+        }
+        pub inline fn asObject(self: *Self) Object {
+            return Object.from(@as(HeapObjectPtr,@ptrCast(&self.objects[self.objects.len-1])));
         }
     };
-}
-test "CompileTimeObject" {
-    const expectEqual = std.testing.expectEqual;
-    const c = ClassIndex;
-    const o1 = CompileTimeObject(countNonLabels(.{
-        "def",
-        True,
-        c.Method,
-        comptime Object.from(42),
-        "1mref",
-        Sym.i_1,
-        ":def",
-        c.BlockFailure,
-    }));
-    var r1 = o1.init();
-    try expectEqual(r1.last,0);
 }
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const objType = CompileTimeObject(countNonLabels(tup));
+    const phi32 = @import("utilities.zig").inversePhi(u32);
     var obj = objType.init();
     const objects = obj.objects[0..];
     comptime var n = 0;
+    comptime var last = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Object => {
-                objects[n] = field;
-                n = n + 1;
-            },
+            Object,
             comptime_int => {
                 objects[n] = Object.from(field);
                 n = n + 1;
             },
             ClassIndex => {
-                @compileError("class index");
+                const footer = HeapObject.calcHeapObject(field, n-last, @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, 0, false) catch unreachable;
+                objects[n] = footer.o();
+                n += 1;
+                last = n;
             },
             else => {
                 comptime var found = false;
@@ -715,7 +694,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    objects[n] = Code.ref(intOf(field[0..]) + Code.refFlag);
+                                    objects[n] = object.indexSymbol(intOf(field[0..]) + objType.refFlag);
                                     n += 1;
                                     found = true;
                                 } else {
@@ -727,7 +706,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                     .Array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                objects[n] = Object.from(lp - n - 1);
+                                                                objects[n] =  object.indexSymbol(lp + objType.addrFlag);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;
@@ -755,27 +734,36 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             },
         }
     }
-    std.debug.assert(n==obj.last);
+    std.debug.assert(last==objects.len);
     return obj;
 }
 test "compileObject" {
     const expectEqual = std.testing.expectEqual;
+    const expect = std.testing.expect;
     const c = ClassIndex;
     var o1 = compileObject(.{
         "def",
         True,
+        ":first",
         c.Method,
-        comptime Object.from(42),
+        42,
+        "first",
         "1mref",
         Sym.i_1,
         ":def",
         c.Method,
     });
     var o1r = [_]Object{ Nil, True };
-    const obj = o1.setLiterals(&[_]Object{Nil}, &o1r);
-    try expectEqual(o1.last,0);
-    try expectEqual(obj.isHeapObject(),true);
-//    const oref = o1.asObject();
+    o1.setLiterals(&[_]Object{False}, &o1r);
+    try expect(o1.asObject().isHeapObject());
+    try expectEqual(@as(u48,@truncate(o1.asObject().u())),@as(u48,@truncate(@intFromPtr(&o1.objects[7]))));
+    try expect(o1.objects[5].equals(True));
+    try expect(o1.objects[6].equals(False));
+    const footer: HeapObjectConstPtr = @ptrCast(&o1.objects[7]);
+    try expect(!footer.isIndexable());
+    try expect(footer.hasInstVars());
+    try expect(footer.isStatic());
+    try expect(footer.isUnmoving());
 }
 
 pub const controlPrimitives = struct {
