@@ -317,7 +317,7 @@ ASZigFileGenerator >> pushLabel: aLabel [
 { #category : #instructions }
 ASZigFileGenerator >> pushLiteral: aLiteral [
 
-	instructions add: '&e.pushLiteral, ' , aLiteral asZagLiteral , ','
+	instructions add: '&e.pushLiteral, ' , aLiteral asZigLiteral , ','
 ]
 
 { #category : #'as yet unclassified' }

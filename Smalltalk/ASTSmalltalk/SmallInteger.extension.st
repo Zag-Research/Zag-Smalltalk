@@ -1,6 +1,17 @@
 Extension { #name : #SmallInteger }
 
 { #category : #'*ASTSmalltalk' }
+SmallInteger >> asZagLiteral [
+	^ 'Object.from(', self asString, ')'
+]
+
+{ #category : #'*ASTSmalltalk' }
+SmallInteger >> asZigLiteral [
+
+	^ 'Object.from(' , self asString , ')'
+]
+
+{ #category : #'*ASTSmalltalk' }
 SmallInteger >> astImageObject: anASImage [ 
 	^ anASImage literal: self class: 5
 ]
