@@ -19,22 +19,15 @@ const footer = heap.footer;
 const Age = heap.Age;
 const Format = heap.Format;
 const allocationInfo = Format.allocationInfo;
-const AllocErrors = heap.AllocErrors;
-const ContextPtr = *@import("context.zig").Context;
+const AllocReturn = heap.AllocReturn;
+const Context = @import("context.zig").Context;
+const ContextPtr = *Context;
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const CodeContextPtr = @import("execute.zig").CodeContextPtr;
-pub const AllocResult = struct {
-    sp: SP,
-    hp: HeapObjectArray,
-    context: ContextPtr,
-    age: Age,
-    allocated: HeapObjectPtr,
-};
-pub const AllocReturn = AllocErrors!AllocResult;
 
 //test "force dispatch load" {
 //    dispatch.forTest();
@@ -59,7 +52,7 @@ pub const Process = extern struct {
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const stack_size = processAvail / 9;
     const nursery_size = (processAvail - stack_size) / 2;
-    var allProcesss: ?*Self = null;
+    var allProcesses: ?*Self = null;
     pub fn new() Self {
         return undefined;
     }
@@ -69,8 +62,8 @@ pub const Process = extern struct {
         //        @compileLog("nursery_size",nursery_size);
         const h = @as(HeapObjectArray, @ptrCast(&self.stack[0]));
         const stack_end = h + stack_size;
-        const at = allProcesss;
-        self.sp = @as(SP, @ptrCast(stack_end));
+        const at = allProcesses;
+        self.sp = @ptrCast(stack_end);
         self.currHeap = stack_end + nursery_size;
         self.currHp = self.currHeap;
         self.currEnd = stack_end + stack_size; // leaving enough space for full stack copy
@@ -78,7 +71,7 @@ pub const Process = extern struct {
         while (true) {
             self.next = at;
             self.id = if (at) |p| p.id + 1 else 1;
-            if (@cmpxchgWeak(?*Self, &allProcesss, self.next, self, SeqCst, SeqCst) == null) break;
+            if (@cmpxchgWeak(?*Self, &allProcesses, self.next, self, SeqCst, SeqCst) == null) break;
         }
         self.trapContextNumber = 0;
     }
@@ -129,33 +122,51 @@ pub const Process = extern struct {
         _ = contextMutable;
         @panic("move stack and cp");
     }
+    pub inline fn freeNursery(self: *const Self) usize {
+        return (@intFromPtr(self.currHp)-@intFromPtr(self.currEnd))/8;
+    }
     //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
     //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
-    pub fn alloc(self: *Self, sp: SP, context: ContextPtr, classIndex: u16, iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) heap.AllocReturn {
+    pub fn alloc(self: *Self, sp: SP, context: ContextPtr, classIndex: ClassIndex, iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, elementSize, makeWeak);
-        if (aI.objectSize(nursery_size / 4)) |size| {
-            const result = self.currHp + size;
-            const newHp = result + 1;
-            if (newHp < self.currEnd) {
+        if (aI.wholeSize(@min(HeapObject.maxLength,nursery_size / 4))) |size| {
+            const result = self.currHp - 1;
+            const newHp = result - size;
+            if (@intFromPtr(newHp) >= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
-                aI.fillFooters(result, classIndex, .nursery, indexed orelse 0, elementSize);
+                _ = aI.fillFooters(@ptrCast(result), classIndex, .nursery, indexed orelse 0, elementSize);
                 return .{
                     .sp = sp,
                     .context = context,
                     .age = .nursery,
                     .allocated = @as(heap.HeapObjectPtr, @ptrCast(result)),
+                    .info = aI,
                 };
             }
         } else |_| {
-            //const size = aI.objectSize(HeapObject.maxLength) catch unreachable;
             unreachable;
         }
         @panic("can't alloc without collect");
     }
-    pub fn collectNursery(self: *Self, sp: SP, contextMutable: *ContextPtr) void {
+    pub fn collectNursery(self: *Self, sp: SP, contextMutable: *ContextPtr) SP {
+        _ = .{contextMutable, sp, self};@panic("unimplemented");
+    }
+    pub fn spillStack(self: *Self, sp: SP, contextMutable: *ContextPtr) SP {
         _ = .{contextMutable, sp, self};@panic("unimplemented");
     }
 };
+test "nursery allocation" {
+    const ee = std.testing.expectEqual;
+    var process = Process.new();
+    var pr = &process;
+    pr.init();
+    const emptySize = Process.nursery_size-Process.stack_size;
+    try ee(pr.freeNursery(),emptySize);
+    var sp = pr.endOfStack();
+    var ctxt = Context.init();
+    _ = try pr.alloc(sp,&ctxt,ClassIndex.Class,4,null,0,false);
+    try ee(pr.freeNursery(),emptySize-5);
+}
 test "check flag" {
     const testing = std.testing;
     var process = Process.new();
@@ -180,49 +191,3 @@ test "allocStack" {
     var pr = &process;
     pr.init();
 }
-// pub const ArenaX = extern struct {
-//     const Self = @This();
-
-//     alloc: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr,usize,usize) AllocErrors!AllocResult,
-//     collect: *const fn (*Self,[*]Object,HeapObjectArray,ContextPtr) AllocErrors!void,
-
-//     pub inline fn allocObject(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize) AllocReturn {
-//         var result = try self.alloc(self,sp,hp,context,ivSize+1,0);
-//         initAllocation(result.allocated,classIndex, Format.objectNP, ivSize, result.age, Nil);
-//         return result;
-//     }
-//     pub fn allocArray(self:*Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex:ClassIndex, ivSize:usize, arraySize:usize, comptime T: type) AllocReturn {
-//         if (arraySize==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
-//         const noIVs = ivSize==0;
-//         var form = (if (noIVs) Format.none else Format.objectNP).raw(T,arraySize);
-//         const width = @sizeOf(T);
-//         const aSize = (arraySize*width+@sizeOf(Object)-width)/@sizeOf(Object);
-//         const fill = if (T==Object) Nil else object.ZERO;
-//         if (noIVs) {
-//             if (aSize<HeapObject.maxLength) {
-//                 var result = try self.alloc(self,sp,hp,context,aSize+1,0);
-//                 initAllocation(result.allocated,classIndex, form, aSize, result.age, fill);
-//                 return result;
-//             }
-//         }
-//         var result = try self.alloc(self,sp,hp,context,ivSize+3,aSize);
-//         const offs = @ptrCast([*]u64,result.allocated)+ivSize+1;
-//         mem.set(Object,@ptrFromInt([*]Object,offs[1])[0..aSize],fill);
-//         offs[0] = arraySize;
-//         initAllocation(result.allocated,classIndex, form.setObject(), ivSize, result.age, Nil);
-//         return result;
-//     }
-//     inline fn allocStruct(self: *Self, sp:[*]Object, hp:HeapObjectArray, context:ContextPtr, classIndex: ClassIndex, comptime T: type, extra: usize, comptime T2: type) AllocReturn {
-
-//         // should call allocObject or allocArray
-
-//         const ivSize = (@sizeOf(T)+@sizeOf(Object)-1)/@sizeOf(Object)-1;
-//         if (extra==0) return self.allocObject(sp,hp,context,classIndex,ivSize);
-//         return self.allocArray(sp,hp,context,classIndex,ivSize,extra,T2);
-//     }
-//     inline fn initAllocation(result: HeapObjectPtr, classIndex: ClassIndex, form: Format, size: usize, age: Age, fill: Object) void {
-//         const hash = if (builtin.is_test) 0 else @truncate(u24,@truncate(u32,@intFromPtr(result))*%object.u32_phi_inverse>>8);
-//         mem.set(Object,result.asObjectPtr()[1..size+1],fill);
-//         result.*=footer(@intCast(u12,size),form,classIndex,hash,age);
-//     }
-// };

@@ -81,6 +81,7 @@ pub const symbols = struct {
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
     // define any new symbols here
     pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const i_0 = indexSymbol(0);
     pub const i_1 = indexSymbol(1);
     pub const i_2 = indexSymbol(2);
     pub const i_3 = indexSymbol(3);

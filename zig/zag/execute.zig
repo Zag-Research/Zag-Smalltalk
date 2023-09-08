@@ -426,7 +426,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     unreachable;
                 } else {
                     if (c.object.isIndexSymbol()) {
-                        for (replacements, 1..) |replacement, index| {
+                        for (replacements, 0..) |replacement, index| {
                             const match = indexSymbol(@truncate(index));
                             if (match.indexEquals(c.object)) {
                                 c.* = Code.object(replacement);
@@ -441,7 +441,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     }
                 }
             }
-            for (replacements, 1..) |replacement, index| {
+            for (replacements, 0..) |replacement, index| {
                 const match = indexSymbol(@truncate(index));
                 if (match.indexEquals(self.selector)) {
                     self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
@@ -498,7 +498,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil, 2, 3);
     var r1r = [_]Object{ Nil, True };
-    _ = r1.setLiterals(empty, &r1r, null);
+    r1.setLiterals(empty, &r1r, null);
     try expectEqual(r1.getCodeSize(), 10);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -614,8 +614,8 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.hardDnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", null });
-    _ = m.setLiterals(empty, &[_]Object{Object.from(42)}, null);
+    var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.hardDnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", Sym.i_0, null });
+    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)}, null);
     var t = m.code[0..];
     //    for (t,0..) |tv,idx|
     //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -629,8 +629,9 @@ test "compiling method" {
     try expectEqual(t[6].int, 6);
     try expectEqual(t[7].int, 3);
     //   try expectEqual(t[8].int,1+Code.refFlag);
-    try expectEqual(t[9].object, Nil);
-    try expectEqual(t.len, 10);
+    try expectEqual(t[9].object, Sym.value);
+    try expectEqual(t[10].object, Nil);
+    try expectEqual(t.len, 11);
 }
 
 pub fn CompileTimeObject(comptime counts: CountSizes) type {
@@ -639,23 +640,30 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
         objects: [codes]Object,
         const Self = @This();
         const mask = 1023;
-        const refFlag = mask+1;
-        const addrFlag = refFlag*2;
+        const addrFlag = mask+1;
         pub fn init() Self {
             return .{
                 .objects = undefined,
             };
         }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol()) {
                     o.* =
                         if (o.indexNumber() >= addrFlag)
                         Object.from(&self.objects[o.indexNumber() & mask])
-                        else if (o.indexNumber() >= refFlag)
-                        refReplacements[o.indexNumber() & mask]
                         else
-                        replacements[o.indexNumber()-1];
+                        replacements[o.indexNumber()];
+                } else { // there is a miniscule chance of false-positive for some floating number here
+                    var header: HeapObject = @bitCast(o.*);
+                    if (header.age == .static and
+                            header.hash == 0xffffff and
+                            header.length < 1024 and
+                            @intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max)) {
+                        header.classIndex = classes[65535-@intFromEnum(header.classIndex)];
+                        header.hash ^= @truncate(@intFromPtr(o));
+                        o.* = @bitCast(header);
+                    }
                 }
             }
         }
@@ -680,7 +688,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                 n = n + 1;
             },
             ClassIndex => {
-                const footer = HeapObject.calcHeapObject(field, n-last, @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, 0, false) catch unreachable;
+                const footer = HeapObject.calcHeapObject(field, n-last, if (@intFromEnum(field) > @intFromEnum(ClassIndex.max)) 0xffffff else @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, 0, false) catch unreachable;
                 objects[n] = footer.o();
                 n += 1;
                 last = n;
@@ -694,7 +702,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    objects[n] = object.indexSymbol(intOf(field[0..]) + objType.refFlag);
+                                    objects[n] = object.indexSymbol(intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -741,25 +749,37 @@ test "compileObject" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
-    var o1 = compileObject(.{
+    var o = compileObject(.{
         "def",
         True,
         ":first",
-        c.Method,
-        42,
-        "first",
-        "1mref",
-        Sym.i_1,
+        c.Method, // first HeapObject
+        ":second",
+        c.replace1, // second HeapObject - runtime class number to install
+        "first", // pointer to first object
+        "1mref", // reference to replacement value #1
+        Sym.i_1, // alternate reference to replacement value #1
+        "second", // pointer to second object
         ":def",
-        c.Method,
+        c.Class,
     });
-    var o1r = [_]Object{ Nil, True };
-    o1.setLiterals(&[_]Object{False}, &o1r);
-    try expect(o1.asObject().isHeapObject());
-    try expectEqual(@as(u48,@truncate(o1.asObject().u())),@as(u48,@truncate(@intFromPtr(&o1.objects[7]))));
-    try expect(o1.objects[5].equals(True));
-    try expect(o1.objects[6].equals(False));
-    const footer: HeapObjectConstPtr = @ptrCast(&o1.objects[7]);
+    o.setLiterals(&[_]Object{ Nil, True },&[_]c{@enumFromInt(0xdead)});
+    try expect(o.asObject().isHeapObject());
+    try expect(o.objects[0].equals(o.asObject()));
+    try expectEqual(@as(u48,@truncate(o.asObject().u())),@as(u48,@truncate(@intFromPtr(&o.objects[8]))));
+    try expect(o.objects[5].equals(True));
+    try expect(o.objects[6].equals(True));
+    const h2: HeapObject = @bitCast(o.objects[2]);
+    try expectEqual(h2.classIndex,c.Method);
+    try expectEqual(h2.length,2);
+    try expectEqual(h2.age,.static);
+    try expectEqual(h2.format,.notIndexable);
+    const h3: HeapObject = @bitCast(o.objects[3]);
+    try expectEqual(@intFromEnum(h3.classIndex),0xdead);
+    try expectEqual(h3.length,0);
+    const footer: HeapObjectConstPtr = @ptrCast(&o.objects[8]);
+    const h8 = footer.*;
+    try expectEqual(h8.length,4);
     try expect(!footer.isIndexable());
     try expect(footer.hasInstVars());
     try expect(footer.isStatic());

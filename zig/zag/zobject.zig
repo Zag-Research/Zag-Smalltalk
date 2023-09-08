@@ -73,7 +73,9 @@ pub const ClassIndex = enum(u16) {
     ContextData,
     Context,
     BlockFailure,
-    max = 0xffff,
+    Class,
+    max = 0xffff-8,
+    replace8,replace7,replace6,replace5,replace4,replace3,replace2,replace1,
     _,
     const Self = @This();
     inline fn base(ci: Self) u64 {
@@ -83,6 +85,9 @@ pub const ClassIndex = enum(u16) {
         return ((@as(u64, @intFromEnum(Group.immediates)) << 16) | @as(u64,@intFromEnum(cg))) << 32;
     }
 };
+comptime {
+    std.debug.assert(@intFromEnum(ClassIndex.replace1)==0xffff);
+}
 pub const Group = enum(u16) {
     immediates = 0xfff0,
     smallInt,
