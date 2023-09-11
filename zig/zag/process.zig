@@ -109,18 +109,13 @@ pub const Process = extern struct {
         return (@intFromPtr(sp)-@intFromPtr(self.ptr()))/8;
     }
     pub inline fn getStack(self: *const Self, sp: SP) []Object {
+        trace("\ngetStack: sp={x} eos={x}",.{ @intFromPtr(sp), @intFromPtr(self.endOfStack()) });
         return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     }
-    pub inline fn allocStack(self: *Self, sp: SP, words: u64, contextMutable: *ContextPtr) SP {
+    pub inline fn allocStack(self: *Self, sp: SP, words: u64) !SP {
         const newSp = sp.reserve(words);
         if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
-        return self.allocStack_(sp, words, contextMutable);
-    }
-    fn allocStack_(self: *Self, sp: SP, words: u64, contextMutable: *ContextPtr) SP {
-        const newSp = sp.reserve(words);
-        if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
-        _ = contextMutable;
-        @panic("move stack and cp");
+        return error.NoSpace;
     }
     pub inline fn freeNursery(self: *const Self) usize {
         return (@intFromPtr(self.currHp)-@intFromPtr(self.currEnd))/8;

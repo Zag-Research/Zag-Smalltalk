@@ -52,7 +52,7 @@ pub const inlines = struct {
         _ = other;
         return error.primitiveError;
     }
-    pub fn immutableClosure(sp: SP, process: *Process, contextMutable: *ContextPtr) SP {
+    pub fn immutableClosure(sp: SP, process: *Process) SP {
         const val = sp.top;
         var newSp = sp;
         if (val.isInt() and val.u() <= Object.from(0x3fff_ffff_ffff).u() and val.u() >= Object.from(-0x4000_0000_0000).u()) {
@@ -64,12 +64,12 @@ pub const inlines = struct {
         } else if (val.isHeapObject()) {
             sp.top.tag = .heapThunk;
         } else {
-            newSp = generalClosure(sp.drop(), process, val, contextMutable);
+            newSp = generalClosure(sp.drop(), process, val);
         }
         return newSp;
     }
-    pub inline fn generalClosure(oldSp: SP, process: *Process, value: Object, contextMutable: *ContextPtr) SP {
-        const sp = process.allocStack(oldSp, 4, contextMutable);
+    pub inline fn generalClosure(oldSp: SP, process: *Process, value: Object) SP {
+        const sp = process.allocStack(oldSp, 4) catch unreachable; // can't fail because preallocated
         sp.top = Object.from(sp.unreserve(3));
         sp.top.tag = .heapClosure;
         sp.next = value;
@@ -78,17 +78,17 @@ pub const inlines = struct {
         return sp;
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, e.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, contextMutable: *ContextPtr) SP {
+    pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, context: ContextPtr) SP {
         const flags = block.stackStructure.h0 >> 8;
         const fields = flags & 63;
-        const sp = process.allocStack(oldSp, fields + 2 - (flags >> 7), contextMutable);
+        const sp = process.allocStack(oldSp, fields + 2 - (flags >> 7));
         sp.top = Object.from(&sp[fields + 1]);
         sp.top.tag = .heapClosure;
         sp[fields] = Object.from(block);
         var f = fields;
         if (flags & 64 != 0) {
             f = f - 1;
-            sp[f] = Object.from(contextMutable.*);
+            sp[f] = Object.from(context);
         }
         if (flags & 128 != 0) {
             f = f - 1;
@@ -99,8 +99,8 @@ pub const inlines = struct {
         sp[fields + 1] = heap.HeapObject.simpleStackObject(object.BlockClosure_C, fields, block.selector.hash24()).o();
         return sp;
     }
-    pub inline fn closureData(oldSp: SP, process: *Process, fields: usize, contextMutable: *ContextPtr) SP {
-        const sp = process.allocStack(oldSp, fields + 3, contextMutable);
+    pub inline fn closureData(oldSp: SP, process: *Process, fields: usize) SP {
+        const sp = process.allocStack(oldSp, fields + 3);
         const ptr = Object.from(&sp[fields + 1]);
         sp.top = ptr;
         sp.next = ptr;
@@ -187,9 +187,8 @@ pub const embedded = struct {
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
     }
     pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-        var mutableContext = context;
-        const newSp = inlines.immutableClosure(sp, process, &mutableContext);
-        return @call(tailCall, pc.next().prim, .{ pc.next().next(), newSp, process, mutableContext, selector, cache });
+        const newSp = inlines.immutableClosure(sp, process);
+        return @call(tailCall, pc.next().prim, .{ pc.next().next(), newSp, process, context, selector, cache });
     }
     pub fn generalClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         var mutableContext = context;

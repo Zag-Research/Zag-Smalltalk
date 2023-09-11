@@ -65,11 +65,11 @@ pub const Context = struct {
         }
     }
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
+        _ = process;
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: {x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
+        trace("\npop: 0x{x} {} 0x{x}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard+1)) });
         if (self.isOnStack())
             return .{ .sp = self.asNewSp().unreserve(wordsToDiscard+1), .ctxt = self.previous() };
-        _ = process;
         std.debug.print("\npop: {*}", .{self});
         @panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
@@ -79,14 +79,16 @@ pub const Context = struct {
         // }
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
-    pub inline fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
-        if (@intFromPtr(self) == 0) @panic("0 self");
-        var contextMutable = self;
-        const newSp = process.allocStack(sp, baseSize + locals + maxStackNeeded, &contextMutable).unreserve(maxStackNeeded);
+    pub fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
+        const newSp = (process.allocStack(sp, baseSize + locals + maxStackNeeded) catch {
+            var contextMutable = self;
+            const newerSp = process.spillStack(sp,&contextMutable);
+            return contextMutable.push(newerSp,process,method,locals,maxStackNeeded,selfOffset);
+        }).unreserve(maxStackNeeded);
         trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
         trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
         const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
-        ctxt.prevCtxt = contextMutable;
+        ctxt.prevCtxt = self;
         ctxt.trapContextNumber = process.trapContextNumber;
         ctxt.method = method;
         {

@@ -14,7 +14,8 @@ const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const indexSymbol = object.indexSymbol;
+const indexSymbol0 = object.indexSymbol0;
+const indexSymbol1 = object.indexSymbol1;
 const dispatch = @import("dispatch.zig");
 const lookup = dispatch.lookup;
 pub const Context = @import("context.zig").Context;
@@ -241,8 +242,8 @@ pub const Code = extern union {
     pub inline fn object(o: Object) Code {
         return Code{ .object = o };
     }
-    inline fn ref(comptime u: u12) Code {
-        return Code{ .object = indexSymbol(u) };
+    inline fn ref1(comptime u: u12) Code {
+        return Code{ .object = indexSymbol1(u) };
     }
     inline fn header(h: heap.HeapObject) Code {
         return Code{ .header = h };
@@ -425,35 +426,26 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     cachedSend = true;
                     unreachable;
                 } else {
-                    if (c.object.isIndexSymbol()) {
-                        for (replacements, 0..) |replacement, index| {
-                            const match = indexSymbol(@truncate(index));
-                            if (match.indexEquals(c.object)) {
-                                c.* = Code.object(replacement);
-                                break;
-                            }
-                        }
+                    if (c.object.isIndexSymbol0()) {
+                        const index = c.object.indexNumber();
+                        c.* = Code.object(replacements[index]);
                     }
                     if (dispatchCache and cachedSend) {
-                        c.* = Code.object(c.object);
                         @as(SendCache,@ptrCast(@as([*]Code,@ptrCast(c))+1)).* = if (cache) |aSendCache| aSendCache.* else SendCacheStruct.init();
                         cachedSend = false;
                     }
                 }
             }
-            for (replacements, 0..) |replacement, index| {
-                const match = indexSymbol(@truncate(index));
-                if (match.indexEquals(self.selector)) {
-                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
-                    self.selector = replacement;
-                    break;
-                }
+            if (self.selector.isIndexSymbol0()) {
+                const replacement = replacements[self.selector.indexNumber()];
+                self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(indexSymbol0(0).numArgs()-replacement.numArgs()));
+                self.selector = replacement;
             }
             for (refReplacements, &self.references) |obj, *srefs|
                 srefs.* = obj;
             if (self.references.len > 0) {
                 for (&self.code) |*c| {
-                    if (c.object.isIndexSymbol()) {
+                    if (c.object.isIndexSymbol1()) {
                         const newValue = (@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
                         c.* = Code.uint(newValue);
                     }
@@ -557,7 +549,7 @@ pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxSt
                                     n = n + 1;
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    code[n] = Code.ref(intOf(field[0..]) + Code.refFlag);
+                                    code[n] = Code.ref1(intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -639,8 +631,6 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
     return struct {
         objects: [codes]Object,
         const Self = @This();
-        const mask = 1023;
-        const addrFlag = mask+1;
         pub fn init() Self {
             return .{
                 .objects = undefined,
@@ -648,18 +638,17 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
             for (&self.objects) |*o| {
-                if (o.isIndexSymbol()) {
-                    o.* =
-                        if (o.indexNumber() >= addrFlag)
-                        Object.from(&self.objects[o.indexNumber() & mask])
-                        else
-                        replacements[o.indexNumber()];
+                if (o.isIndexSymbol0()) {
+                    o.* = replacements[o.indexNumber()];
+                } else if (o.isIndexSymbol1()) {
+                    o.* = Object.from(&self.objects[@as(u16,@truncate(o.indexNumber()))]);
                 } else { // there is a miniscule chance of false-positive for some floating number here
                     var header: HeapObject = @bitCast(o.*);
-                    if (header.age == .static and
+                    if (header.length < 1024 and
                             header.hash == 0xffffff and
-                            header.length < 1024 and
-                            @intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max)) {
+                            @intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max) and
+                            header.age == .static
+                        ) {
                         header.classIndex = classes[65535-@intFromEnum(header.classIndex)];
                         header.hash ^= @truncate(@intFromPtr(o));
                         o.* = @bitCast(header);
@@ -702,7 +691,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    objects[n] = object.indexSymbol(intOf(field[0..]));
+                                    objects[n] = object.indexSymbol0(intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -714,7 +703,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                     .Array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                objects[n] =  object.indexSymbol(lp + objType.addrFlag);
+                                                                objects[n] =  object.indexSymbol1(lp);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;
@@ -815,11 +804,10 @@ pub const controlPrimitives = struct {
     }
     pub fn branch(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         const offset = pc.int;
-        trace("\nbranch offset: {}\n", .{offset});
+        trace("\nbranch offset: {}", .{offset});
         if (offset >= 0) {
             const target = pc.skip(@as(u64, @intCast(offset))+1);
             if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, selector, cache });
-            trace("\nbranch target: {}", .{target.uint});
             return @call(tailCall, target.prim, .{ target.next(), sp, process, context, selector, cache });
         }
         const target = pc.next().back(@as(u64, @intCast(-offset)));
@@ -1055,9 +1043,10 @@ pub const controlPrimitives = struct {
         const locals = stackStructure.low16() & 255;
         const maxStackNeeded = stackStructure.mid16();
         const selfOffset = stackStructure.high16();
+        trace("\npushContext: locals={} maxStack={} selfOffset={} selector={}", .{ locals, maxStackNeeded, selfOffset, method.selector });
         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
         const newSp = ctxt.asNewSp();
-        trace("\npushContext: {any} {} {} {} 0x{x}", .{ process.getStack(sp), locals, method.selector, selfOffset, @intFromPtr(ctxt) });
+        trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.selector, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
         return @call(tailCall, pc.next().prim, .{ pc.skip(2), newSp, process, ctxt, selector, cache });
     }
     pub fn returnWithContext(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
@@ -1080,6 +1069,7 @@ pub const controlPrimitives = struct {
         const newSp = result.sp;
         newSp.top = top;
         const callerContext = result.ctxt;
+        trace("-> {x}", .{@intFromPtr(newSp)});
         trace("-> {any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector, cache });
     }

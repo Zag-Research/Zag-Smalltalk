@@ -80,7 +80,7 @@ fn runObject(run: usize) usize {
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
-var fibCPSM = compileMethod(Sym.i_1, 0, 0, .{&fibCPS});
+var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
 const fibCPST = @as(PC, @ptrCast(&fibCPSM.code[0]));
 pub fn fibCPS(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
@@ -131,7 +131,7 @@ fn runCPS(run: usize) usize {
     // For debugging
     var p1 = object.oImm(object.ClassIndex.Symbol, 0xff00_0001);
     _ = p1;
-    var fibCPSM2 = compileMethod(Sym.i_1, 0, 0, .{&fibCPS});
+    var fibCPSM2 = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
     _ = fibCPSM2;
     // end for debugging
 
@@ -146,7 +146,7 @@ fn runCPS(run: usize) usize {
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
-var fibCPSSendM = compileMethod(Sym.i_1, 0, 0, .{&fibCPSSend});
+var fibCPSSendM = compileMethod(Sym.i_0, 0, 0, .{&fibCPSSend});
 const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
 var fibCPSSendCache = execute.SendCacheStruct.init();
 pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
@@ -189,7 +189,7 @@ var fibCPSSendStart =
     "^",
     &e.pushLocal0,
     &e.send0,
-    Sym.i_1,
+    Sym.i_0,
     &e.returnTop,
 });
 fn fibCPSSendSetup() CompiledMethodPtr {
@@ -227,7 +227,7 @@ fn runCPSSend(run:usize) usize {
 }
 
 var fibThread =
-    compileMethod(Sym.i_1, 0, 2, .{
+    compileMethod(Sym.i_0, 0, 2, .{
     &e.verifySelector,
     ":recurse",
     &e.dup, // self
@@ -278,7 +278,7 @@ fn runThread(run: usize) usize {
 }
 
 var fibDispatch =
-    compileMethod(Sym.i_1, 0, 2, .{
+    compileMethod(Sym.i_0, 0, 2, .{
     &e.verifySelector,
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, two,
@@ -294,11 +294,11 @@ var fibDispatch =
     &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
     &e.send0,
 
-        Sym.i_1,
+        Sym.i_0,
     &e.pushLocal0,
     &e.SmallInteger.@"-_L2", // -2
     &e.send0,
-    Sym.i_1,
+    Sym.i_0,
     &e.SmallInteger.@"+", // +
     &e.returnTop,
 });
@@ -308,7 +308,7 @@ var fibDispatchStart =
     "^",
     &e.pushLocal0,
     &e.send0,
-    Sym.i_1,
+    Sym.i_0,
     &e.returnTop,
 });
 fn fibDispatchSetup() CompiledMethodPtr {
@@ -345,7 +345,7 @@ fn runDispatch(run:usize) usize {
 
 const b = @import("zag/byte-interp.zig").ByteCode;
 var fibByte =
-    compileByteCodeMethod(Sym.i_1, 0, 2, .{
+    compileByteCodeMethod(Sym.i_0, 0, 2, .{
     ":recurse",
     b.dup,
     b.pushLiteral2,
@@ -426,7 +426,7 @@ var @"False>>ifTrue:" =
         &e.returnNoContext
 });
 var fibFull =
-    compileMethod(Sym.i_1, 0, 2, .{ // self-0
+    compileMethod(Sym.i_0, 0, 2, .{ // self-0
     &e.verifySelector,
     &e.pushContext,
     "^",
@@ -440,11 +440,11 @@ var fibFull =
     &e.pushLocal,   0, // self
     &e.pushLiteral, Object.from(1),
     &e.send1,       Sym.@"-",
-    &e.send0,       Sym.i_1,
+    &e.send0,       Sym.i_0,
     &e.pushLocal,   0, // self
     &e.pushLiteral, Object.from(2),
     &e.send1,       Sym.@"-",
-    &e.send0,       Sym.i_1,
+    &e.send0,       Sym.i_0,
     &e.send1,       Sym.@"+",
     &e.returnTop,
 });
@@ -454,7 +454,7 @@ var fibFullStart =
     "^",
     &e.pushLocal0,
     &e.send0,
-    Sym.i_1,
+    Sym.i_0,
     &e.returnTop,
 });
 fn fibFullSetup() CompiledMethodPtr {

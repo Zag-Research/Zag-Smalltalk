@@ -18,16 +18,22 @@ inline fn oImm(c: ClassIndex, h: u32) u64 {
 inline fn g(grp: Group) u64 {
     return grp.base();
 }
-pub inline fn indexSymbol(uniqueNumber: u24) Object {
+pub inline fn indexSymbol0(uniqueNumber: u16) Object {
     return @bitCast(oImm(.Symbol, 0xff000000 | @as(u32,uniqueNumber)));
+}
+pub inline fn indexSymbol1(uniqueNumber: u16) Object {
+    return @bitCast(oImm(.Symbol, 0xff010000 | @as(u32,uniqueNumber)));
 }
 test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
-    try e(indexSymbol(42).isSymbol());
+    try e(indexSymbol0(42).isSymbol());
     try ee(oImm(.Symbol,0xff00002a),0xfff00007ff00002a);
-    try ee(indexSymbol(0x2a).u(),0xfff00007ff00002a);
-    try ee(indexSymbol(0x2a).indexNumber(),42);
+    try ee(indexSymbol0(0x2a).u(),0xfff00007ff00002a);
+    try ee(indexSymbol0(0x2a).indexNumber(),42);
+    try e(indexSymbol1(42).isSymbol());
+    try ee(indexSymbol1(0x2a).u(),0xfff00007ff01002a);
+    try ee(indexSymbol1(0x2a).indexNumber(),42+0x10000);
 }
 pub const ZERO = of(0);
 const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
@@ -115,6 +121,15 @@ pub const Object = packed struct(u64) {
     classIndex: ClassIndex,
     tag: Group,
     pub const empty = &[0]Object{};
+    pub inline fn isIndexSymbol0(self: Object) bool {
+        return (self.u() >> 16) == (comptime indexSymbol0(0).u() >> 16);
+    }
+    pub inline fn isIndexSymbol1(self: Object) bool {
+        return (self.u() >> 16) == (comptime indexSymbol1(0).u() >> 16);
+    }
+    pub inline fn indexNumber(self: Object) u24 {
+        return @truncate(self.u());
+    }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(cls.immediate() | low32);
     }
@@ -190,9 +205,6 @@ pub const Object = packed struct(u64) {
     pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
         return self.equals(other.withImmClass(.Symbol));
     }
-    pub inline fn indexNumber(self: Object) u24 {
-        return @truncate(self.u());
-    }
     pub inline fn isInt(self: Object) bool {
         return self.atLeastInt() and self.atMostInt();
     }
@@ -239,11 +251,8 @@ pub const Object = packed struct(u64) {
         const tag = self.tagbits();
         return tag >= Start_of_Blocks >> 48 and !self.isHeapObject();
     }
-    pub inline fn isIndexSymbol(self: Object) bool {
-        return (self.u() >> 24) == (comptime indexSymbol(0).u() >> 24);
-    }
     pub inline fn isSymbol(self: Object) bool {
-        return self.tagbitsL() == comptime indexSymbol(0).tagbitsL();
+        return self.tagbitsL() == comptime indexSymbol0(0).tagbitsL();
     }
     pub inline fn toBool(self: Object) bool {
         if (self.isBool()) return @as(u1, @truncate(self.u())) == 1;
@@ -405,7 +414,11 @@ pub const Object = packed struct(u64) {
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
             .UndefinedObject => writer.print("nil", .{}),
-            .Symbol => writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
+            .Symbol => if (self.isIndexSymbol0()) {
+                try writer.print("#symbols.i_{}", .{self.indexNumber()});
+            } else if (self.isIndexSymbol1()) {
+                try writer.print("#symbols.m_{}", .{@as(u16,@truncate(self.indexNumber()))});
+            } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toInt()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.u() }),

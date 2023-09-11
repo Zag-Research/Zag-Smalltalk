@@ -19,7 +19,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
-const indexSymbol = object.indexSymbol;
+const indexSymbol0 = object.indexSymbol0;
 const print = std.debug.print;
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
@@ -309,8 +309,8 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             unreachable;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object, _: ?*Self) *CompiledMethod {
-            for (replacements, 1..) |replacement, index| {
-                const match = indexSymbol(@truncate(index));
+            for (replacements, 0..) |replacement, index| {
+                const match = indexSymbol0(@truncate(index));
                 if (self.selector.equals(match)) {
                     self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
                     self.selector = replacement;
@@ -320,7 +320,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
                         r.* = replacement;
                 }
             }
-            for (refs, 1..) |obj, index|{
+            for (refs, 0..) |obj, index|{
                 _ = .{obj,index, @panic("handle refs")};
             }
             return @as(*CompiledMethod,@ptrCast(self));
@@ -406,7 +406,7 @@ pub fn compileByteCodeMethod(name: Object, comptime locals: comptime_int, compti
 const b = ByteCode;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    const mref = comptime indexSymbol(42);
+    const mref = comptime indexSymbol0(42);
     var m = compileByteCodeMethod(Sym.value, 0, 0, .{ ":abc", b.return_tos, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, mref, Nil });
     //    const mcmp = m.asCompiledMethodPtr();
     //    m.update(mref,mcmp);
