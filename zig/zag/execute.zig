@@ -784,6 +784,7 @@ test "method object" {
 
     //     <primitive: 1>
     //     ^ super + aNumber
+    const c = ClassIndex;
     var o = compileObject(.{
         
         ":super1",
@@ -791,7 +792,7 @@ test "method object" {
 
         0,
         ":aNumber",
-        c.ASArg
+        c.ASArg,
         
         "super1",
         Sym.@"+",
@@ -814,6 +815,8 @@ test "method object" {
         ":first",
         c.Method, // first HeapObject
     });
+    o.setLiterals(&[_]Object{},&[_]ClassIndex{});
+    const method = o.asObject();
     _ = method;
 }
 
