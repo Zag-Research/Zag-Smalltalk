@@ -743,16 +743,18 @@ test "compileObject" {
         True,
         ":first",
         c.Method, // first HeapObject
+        
         ":second",
-        c.replace1, // second HeapObject - runtime class number to install
+        c.replace0, // second HeapObject - runtime ClassIndex #0
+        
         "first", // pointer to first object
-        "1mref", // reference to replacement value #1
-        Sym.i_1, // alternate reference to replacement value #1
+        "1mref", // reference to replacement Object #1
+        Sym.i_1, // alternate reference to replacement Object #1
         "second", // pointer to second object
         ":def",
-        c.Class,
+        c.Class, // third HeapObject
     });
-    o.setLiterals(&[_]Object{ Nil, True },&[_]c{@enumFromInt(0xdead)});
+    o.setLiterals(&[_]Object{ Nil, True },&[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[0].equals(o.asObject()));
     try expectEqual(@as(u48,@truncate(o.asObject().u())),@as(u48,@truncate(@intFromPtr(&o.objects[8]))));
@@ -773,6 +775,46 @@ test "compileObject" {
     try expect(footer.hasInstVars());
     try expect(footer.isStatic());
     try expect(footer.isUnmoving());
+}
+test "method object" {
+    // + aNumber 
+    //     "Primitive. Add the receiver to the argument and answer with the result
+    //     if it is a SmallInteger. Fail if the argument or the result is not a
+    //     SmallInteger  Essential  No Lookup. See Object documentation whatIsAPrimitive."
+
+    //     <primitive: 1>
+    //     ^ super + aNumber
+    var o = compileObject(.{
+        
+        ":super1",
+        c.ASSuper,
+
+        0,
+        ":aNumber",
+        c.ASArg
+        
+        "super1",
+        Sym.@"+",
+        "aNumber",
+        ":send1",
+        c.ASSend,
+
+        "send1",
+        ":return1",
+        c.ASReturn,
+        
+        "return1",
+        // another statement
+        ":body",
+        c.ASSequence,
+        
+        "body",
+        1,
+        Sym.@"+",
+        ":first",
+        c.Method, // first HeapObject
+    });
+    _ = method;
 }
 
 pub const controlPrimitives = struct {
@@ -970,6 +1012,10 @@ pub const controlPrimitives = struct {
         context.setLocal(pc.uint, sp.top);
         return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp.drop(), process, context, selector, cache });
     }
+    pub fn printStack(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        trace("\nstack: {any}",.{context.stack(sp, process)});
+        return @call(tailCall, pc.prim, .{ pc.next(), sp , process, context, selector, cache });
+    }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         _ = .{ pc, sp, process, context, selector, cache, @panic("primitiveFailed")};
     }
@@ -978,7 +1024,7 @@ pub const controlPrimitives = struct {
         context.setReturn(pc);
         const class = self.get_class();
         const newPc = lookup(selector, class);
-        std.debug.print("\nin fallback {} {} {*} {}\n", .{ selector, class, newPc, newPc.prim });
+        trace("\nfallback: {} {} {*} {*} {}", .{ selector, class, pc, newPc, newPc.prim });
         return @call(tailCall, newPc.prim, .{ newPc.next(), sp, process, context, selector, cache });
     }
     pub fn call(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
@@ -1119,11 +1165,11 @@ pub const TestExecution = struct {
         self.sp = self.process.endOfStack().reserve(source.len);
         for (source, self.sp.slice(source.len)) |src, *dst|
             dst.* = src;
-        trace("\ninitial stack: {x} {x}",.{@intFromPtr(self.sp),@intFromPtr(self.process.endOfStack())});
+        trace("\ninitial-stack: {x} {x}",.{@intFromPtr(self.sp),@intFromPtr(self.process.endOfStack())});
     }
     pub fn stack(self: *Self, sp: SP) []Object {
         self.sp = sp;
-        trace("\nfinal stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
+        trace("\nfinal-stack: {x} {x}",.{@intFromPtr(sp),@intFromPtr(self.process.endOfStack())});
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, ptr: anytype) []Object {

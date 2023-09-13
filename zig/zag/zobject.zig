@@ -80,8 +80,9 @@ pub const ClassIndex = enum(u16) {
     Context,
     BlockFailure,
     Class,
+    
     max = 0xffff-8,
-    replace8,replace7,replace6,replace5,replace4,replace3,replace2,replace1,
+    replace7,replace6,replace5,replace4,replace3,replace2,replace1,replace0,
     _,
     const Self = @This();
     inline fn base(ci: Self) u64 {

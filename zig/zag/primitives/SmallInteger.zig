@@ -23,6 +23,7 @@ const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 const empty = &[0]Object{};
+const symbols = @import("../symbol.zig").symbols;
 
 pub fn init() void {}
 pub const inlines = struct {
@@ -141,26 +142,26 @@ pub const embedded = struct {
     pub const SmallInteger = struct {
         pub fn @"+"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             trace("\n+: {any}", .{context.stack(sp, process)});
-            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc.next(), sp, process, context, selector, cache }));
+            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"+", cache }));
             trace(" -> {any}", .{context.stack(newSp, process)});
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
         pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             sp.top = inlines.p1L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"+", cache });
             };
             return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
         }
         pub fn @"-"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc + 1, sp, process, context, Sym.@"-" });
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"-" });
+            return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, selector, cache });
         }
         pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             trace("\n-_L1: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"-", cache });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
@@ -169,14 +170,14 @@ pub const embedded = struct {
             trace("\n-_L2: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 2) catch {
                 const newSp = sp.push(Object.from(2));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"-", cache });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
         }
         pub fn @"<="(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
             const newSp = sp.dropPut(Object.from(inlines.p5(sp[1], sp[0]) catch {
-                return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
+                return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"<=", cache });
             }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
@@ -185,7 +186,7 @@ pub const embedded = struct {
                 return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, selector, cache });
         }
         pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache }));
+            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"*", cache }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
     };
@@ -281,18 +282,21 @@ test "embedded add" {
 }
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 2, .{
         &e.pushContext,       "^",
         &e.pushLiteral,       Object.from(4),
         &e.pushLiteral,       Object.from(0x3_ffff_ffff_ffff),
+        &e.printStack,
         &e.SmallInteger.@"+", &e.returnTop,
     });
     var prog2 = compileMethod(Sym.@"+", 0, 0, .{
+        &e.printStack,
         &e.pushLiteral,     Sym.noFallback,
         &e.returnNoContext,
     });
     prog2.asCompiledMethodPtr().forDispatch(object.ClassIndex.SmallInteger);
     const result = testExecute(&prog);
+    std.debug.print("\nresult = {any}",.{result});
     try expectEqual(result[0], Sym.noFallback);
 }
 

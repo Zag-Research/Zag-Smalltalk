@@ -36,3 +36,12 @@ pub fn init() void {
     @import("primitives/Boolean.zig").init();
     //    @import("execute.zig").init();
 }
+
+test "primitives" {
+    @import("std").debug.print(" - testing primitives ",.{});
+    _ = @import("primitives/Smallinteger.zig").inlines;
+    _ = @import("primitives/Object.zig").inlines;
+    _ = @import("primitives/Behavior.zig").inlines;
+    _ = @import("primitives/BlockClosure.zig").inlines;
+    _ = @import("primitives/Boolean.zig").inlines;
+}

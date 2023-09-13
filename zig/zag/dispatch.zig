@@ -67,7 +67,7 @@ const Dispatch = extern struct {
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
-        trace("\naddMethod: {} {} 0x{x}",.{index, method.selector.asSymbol(), method.selector.u()});
+        trace("\naddMethod: {} {} 0x{x} {*}",.{index, method.selector.asSymbol(), method.selector.u(),method.codePtr()});
         //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
@@ -190,7 +190,7 @@ const Dispatch = extern struct {
         }
         const hashed = preHash(cmp.selector);
         const address = self.lookupAddress(hashed);
-        //trace("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
+        trace("\nadd: {} {} {*} {*}", .{ cmp.selector, hashed, address, address.* });
         if (@cmpxchgWeak(PC, address, dnuInit, cmp.codePtr(), .SeqCst, .SeqCst) == null) {
             //trace("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
             return; // we replaced DNU with method
