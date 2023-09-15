@@ -126,11 +126,15 @@ pub const Format = enum(u8) {
     }
     const Iterator = *const fn (obj: HeapObjectConstPtr) HeapObjectPtrIterator;
     pub fn iterator(self: Self) Iterator {
-        switch (self) {
-            .immediateSizeZero....indexable => return HeapObjectPtrIterator.ivPointers,
-            .weak => return HeapObjectPtrIterator.weakDefault,
-            else => return HeapObjectPtrIterator.bothPointers,
-        }
+        const i = HeapObjectPtrIterator;
+        return switch (self) {
+            .immediateSizeZero....immediateByteMax, .notIndexableWithPointers => i.ivPointers,
+            .notObject, .notIndexable, .directIndexed => i.noPointers,
+            .immediateObjectOne....immediateObjectMax, .directIndexedWithPointers => i.directPointers,
+            .header => i.header,
+            .externalWeakWithPointers, .weakWithPointers => i.weakDefault,
+            else => i.bothPointers,
+        };
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
@@ -180,6 +184,11 @@ pub const AllocationInfo = struct {
     }
     pub inline fn needsExternalAllocation(self: Self) bool {
         return self.format.isExternal();
+    }
+    pub inline fn nilAll(self: Self, theHeapObject: HeapObjectPtr) void {
+        const start = theHeapObject.asObjectArray()-self.size-1;
+        for (start[0..self.size]) |*obj|
+            obj.* = Nil;
     }
     pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age, nElements: usize, elementSize: usize) bool {
         const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 4)) *% object.u32_phi_inverse >> 8));
@@ -263,6 +272,7 @@ pub const Age = enum(u4) {
     const Static: Age = .static;
     // const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
+    pub const lastNurseryAge = @intFromEnum(Age.nurseryLast);
     pub inline fn isAoO(self: Self) bool {
         return switch (self) {
             .aoo, .aooMarked, .aooScanned => true,
@@ -406,9 +416,8 @@ pub const HeapObjectPtrIterator = struct {
     fn allDone(_: *Self) ?HeapObjectPtr {
         return null;
     }
-    //inline
-    fn next(self: *Self) ?HeapObjectPtr {
-        return self.nextPointer(self);
+    pub inline fn next(self: *const Self) ?HeapObjectPtr {
+        return self.nextPointer(@constCast(self));
     }
 };
 // test "heapPtrIterator" {
@@ -457,13 +466,14 @@ pub const HeapObjectPtrIterator = struct {
 //     try testing.expectEqual(i.next(),null);
 // }
 
-pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge };
+pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge, NeedNurseryCollection };
 pub const AllocResult = struct {
-    sp: SP,
-    context: @import("context.zig").ContextPtr,
     age: Age,
     allocated: HeapObjectPtr,
     info: AllocationInfo,
+    pub fn nilAll(self: *AllocResult) void {
+        self.info.nilAll(self.allocated);
+    }
 };
 pub const AllocReturn = AllocErrors!AllocResult;
 
@@ -583,6 +593,11 @@ pub const HeapObject = packed struct(u64) {
             return self.forwardedTo();
         }
         return self;
+    }
+    pub inline fn skipBack(self: HeapObjectConstPtr) HeapObjectArray {
+        const head = self.*;
+        const size = head.length;
+        return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * size);
     }
     pub inline fn asSlice(self: HeapObjectConstPtr) ![]Object {
         const head = self.*;
@@ -731,6 +746,9 @@ pub const HeapObject = packed struct(u64) {
             const size = self.length;
             return self.asObjectArray()[0..size];
         } else return &[0]Object{};
+    }
+    pub inline fn instVarPut(self: HeapObjectConstPtr, index: usize, obj: Object) void {
+        self.instVars()[index] = obj;
     }
     fn @"format FUBAR"(
         self: HeapObjectConstPtr,

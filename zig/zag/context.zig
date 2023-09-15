@@ -30,7 +30,7 @@ pub const Context = struct {
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     tpc: PC, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
-    prevCtxt: ContextPtr, // note this is not an Object, so access and GC need to handle specially
+    prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to handle specially
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
@@ -58,7 +58,8 @@ pub const Context = struct {
         _ = options;
 
         try writer.print("context: {}", .{self.header});
-        try writer.print(" prev: 0x{x}", .{@intFromPtr(self.previous())});
+        if (self.prevCtxt) |ctxt|
+            try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
         if (false) {
             @setRuntimeSafety(false);
             try writer.print(" temps: {any}", .{self.temps[0..self.size]});
@@ -117,8 +118,10 @@ pub const Context = struct {
     pub inline fn isOnStack(self: *const Self) bool {
         return self.header.isOnStack();
     }
-    inline fn endOfStack(self: *const Context, process: *const Process) SP {
-        return if (self.isOnStack()) self.asObjectPtr() else process.endOfStack();
+    pub inline fn endOfStack(self: *const Context, process: *const Process) SP {
+        if (!self.isOnStack()) return process.endOfStack();
+        // TODO: account for BlockClosures and ContextData objects on stack
+        return @ptrCast(@constCast(self));
     }
     inline fn tempSize(self: *const Context, process: *const Process) usize {
         return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object) - 1;
@@ -169,14 +172,13 @@ pub const Context = struct {
         self.temps[n] = v;
     }
     pub inline fn previous(self: *const Context) ContextPtr {
-        if (@intFromPtr(self.prevCtxt) == 0) @panic("0 prev");
-        return self.prevCtxt;
+        return self.prevCtxt orelse @panic("0 prev");
     }
     pub inline fn asHeapObjectPtr(self: *const Context) HeapObjectPtr {
         return &self.header;
     }
-    pub inline fn asObjectPtr(self: *const Context) SP {
-        return @as(SP, @ptrCast(@constCast(self)));
+    pub inline fn asObjectPtr(self: *const Context) [*]Object {
+        return @ptrCast(@constCast(self));
     }
     pub inline fn asNewSp(self: *const Context) SP {
         return @as(SP, @ptrCast(@constCast(self))).reserve(1);
@@ -190,7 +192,7 @@ pub const Context = struct {
     pub fn print(self: *const Context, process: *const Process) void {
         const pr = std.debug.print;
         pr("Context: {*} {} {any}\n", .{ self, self.header, self.allLocals(process) });
-        //        if (self.prevCtxt) |ctxt| {ctxt.print(sp,process);}
+        if (self.prevCtxt) |ctxt| {ctxt.print(process);}
     }
     pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) SP {
         self.tpc = oldPc + 1;

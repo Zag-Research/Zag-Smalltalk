@@ -85,6 +85,9 @@ const Stack = extern struct {
     next: Object,
     third: Object,
     fourth: Object,
+    pub inline fn lessThan(self: SP, other: SP) bool {
+        return @intFromPtr(self) < @intFromPtr(other);
+    }
     pub inline fn push(self: SP, v: Object) SP {
         const newSp = self.reserve(1);
         newSp.top = v;
@@ -649,7 +652,7 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
                             @intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max) and
                             header.age == .static
                         ) {
-                        header.classIndex = classes[65535-@intFromEnum(header.classIndex)];
+                        header.classIndex = classes[@intFromEnum(ClassIndex.replace0)-@intFromEnum(header.classIndex)];
                         header.hash ^= @truncate(@intFromPtr(o));
                         o.* = @bitCast(header);
                     }
