@@ -32,7 +32,7 @@ result := OrderedCollection new.
 
 result add: 'c.ASSequence,'.
 result add: '":body",'.
-sequence do: [ :statement | result add: statement asZigString ].
+result addAll: (sequence collect: [ :statement | statement asZigString ]).
 
 sequence do: [ :statement | result addAll: statement asZigCompileObject  ].
 	^ result
