@@ -137,15 +137,7 @@ ASBlock >> isASBlock [
 
 { #category : #accessing }
 ASBlock >> isNonLocalReturn [
-	body size == 1 ifTrue: [
-		| returnStmt |
-		returnStmt := body at: 1.
-		returnStmt isReturn ifTrue: [
-			| expression |
-			expression := returnStmt expression.
-			expression isASLiteral ifTrue: [ ^ expression isSimple ].
-			expression isASSelf ifTrue: [ ^ true ] ] ].
-	^ false
+	^ body isNonLocalReturn
 ]
 
 { #category : #accessing }
@@ -170,40 +162,11 @@ ASBlock >> modifies: anASVariable [
 
 { #category : #accessing }
 ASBlock >> nonLocalReturn: stackVars [
-
-	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
-		| return |
-		"tests to see if there is a built in literal function"
-		return := (body at: 1) expression.
-		return isASLiteral ifTrue: [
-			| literal |
-			literal := return literal.
-			literal = true ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_true,' ].
-			literal = false ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_false,' ].
-			literal isNil ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_nil,' ].
-			literal = 1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_one,' ].
-			literal = -1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_minusOne,' ].
-			literal = 0 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_zero,' ].
-			literal = 2 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.BlockClosure.pushNonlocalBlock_two,' ] ].
-		return isASSelf ifTrue: [
-			isNonLocalReturn := true.
-			^ '&e.BlockClosure.pushNonlocalBlock_self,'
-			  , ((stackVars indexOf: 'self') -1) asString , ',' ] ].
-	^ nil
+	| nonLocalReturn |
+	nonLocalReturn := body nonLocalReturn: stackVars.
+	isNonLocalReturn := nonLocalReturn isNotNil.
+	
+	^nonLocalReturn
 ]
 
 { #category : #printing }

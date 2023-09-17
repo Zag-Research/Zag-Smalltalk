@@ -72,7 +72,12 @@ ASMethodNode >> asZigCompileObject [
 	result := OrderedCollection new.
 	
 	result add: 'c.Method'.
-	result add: '":'. selector.'"'.
+	result add: '":', selector,'"'.
+	result add: selector asZigString.
+	result add: selector numArgs asString, ','.
+	result add: '"body",'.
+	
+	result addAll: body asZigCompileObject.
 	
 	^ result reversed
 ]
@@ -275,7 +280,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		blocks: blockVisitor.
 
 	"write out the implicit return"
-	(body isEmpty or: [body last isReturn not]) ifTrue: [
+	body requiresImplicitReturn ifTrue: [
 		aStream tab.
 		aStream << '&e.returnTop,' ].
 	aStream cr. "should this be hardcoded?"

@@ -139,7 +139,7 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          (aRBMethodNode arguments collect: #name as: Array)
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
-		          body: OrderedCollection new.
+		          body: ASSequence new.
 	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
 	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
 	compiler definingMethod: method.

@@ -8,7 +8,8 @@ Class {
 		'name',
 		'classVariables',
 		'scope',
-		'nestedScopeOf'
+		'nestedScopeOf',
+		'methods'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -22,6 +23,7 @@ ASClassNode >> = other [
 ASClassNode >> from: aClass [
 
 	name := aClass name.
+	methods := OrderedCollection new.
 	classVariables := aClass classPool keys.
 ]
 
@@ -38,6 +40,11 @@ ASClassNode >> initialize [
 { #category : #accessing }
 ASClassNode >> lookup: symbol [
 	^ scope at: symbol ifAbsent: [ ASClassVar name: symbol"nestedScopeOf lookup: symbol" ]
+]
+
+{ #category : #accessing }
+ASClassNode >> methods [
+^ methods
 ]
 
 { #category : #accessing }

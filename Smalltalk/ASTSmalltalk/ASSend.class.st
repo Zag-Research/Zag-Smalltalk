@@ -50,6 +50,25 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : #converting }
+ASSend >> asZigCompileObject [
+	| results |
+	results := OrderedCollection new.
+	
+	results add: 'c.ASSend,'.
+	results add: ':send1,'.
+	args doWithIndex: [ :arg :i | results add: '"arg', i asString,'",' ]. 
+	results add: selector asZigString, ','.
+	
+	self halt.
+	^results
+]
+
+{ #category : #converting }
+ASSend >> asZigString [
+	^'"send1",'
+]
+
 { #category : #accessing }
 ASSend >> blocks [
 

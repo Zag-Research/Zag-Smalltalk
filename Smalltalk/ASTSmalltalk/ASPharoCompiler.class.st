@@ -26,12 +26,22 @@ ASPharoCompiler >> asAST: aCollection [
 { #category : #converting }
 ASPharoCompiler >> asCompileObject [
 	| result |
+	"basic template for a compile method"
 	result := OrderedCollection new.
 	
-	result add: 'test \"method object\" {'.
+	result add: 'test "method object" {'.
+
+	result add: '//', currentScope name.
+	result add: 'const c = ClassIndex;'. "porobably need to store c as a prefix, or variable"
+	result add: 'var o = compileObject(.{'.
 	
 	methods do: [ :m | result addAll: m asZigCompileObject].
 	
+	self halt.
+	result add:  '});'.
+	result add: 'o.setLiterals(&[_]Object{},&[_]ClassIndex{});'.
+   result add: ' const method = o.asObject();'.
+   result add: ' _ = method;'.
 	result add: '}'.
 	
 	^result
