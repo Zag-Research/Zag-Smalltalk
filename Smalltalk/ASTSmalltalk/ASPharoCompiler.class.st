@@ -19,6 +19,11 @@ ASPharoCompiler class >> buildMethod: aCompiledMethod  forClass: aClass withCode
 ]
 
 { #category : #converting }
+ASPharoCompiler >> asAST: aCollection [ 
+	
+]
+
+{ #category : #converting }
 ASPharoCompiler >> asCompileObject [
 	| result |
 	result := OrderedCollection new.

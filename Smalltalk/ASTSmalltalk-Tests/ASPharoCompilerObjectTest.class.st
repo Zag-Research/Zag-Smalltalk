@@ -16,7 +16,7 @@ ASPharoCompilerObjectTest >> testCompileMethodToObject [
          ^ super + aNumber
 "
 
-	| compiler result aStream |
+	| compiler result aStream aReader lines astTree |
 	compiler := ASPharoCompiler new
 		            buildFromClassShallow: SmallInteger
 		            selector: SmallInteger >> #+.
@@ -26,5 +26,13 @@ ASPharoCompilerObjectTest >> testCompileMethodToObject [
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigSmallIntegerAddAsCompileObject.zig') writeStream.
 	result do: [ :line | aStream << line. aStream cr.].
-	aStream close
+	aStream close.
+	
+	aReader :=  (FileSystem disk workingDirectory
+	            / 'zigSmallIntegerAddAsCompileObject.zig') readStream.
+	lines := OrderedCollection new.
+	[ aReader atEnd ] whileFalse: [ lines add: aReader nextLine].
+	aReader close.
+	
+	astTree := 	compiler asAST: lines.
 ]
