@@ -18,6 +18,20 @@ ASPharoCompiler class >> buildMethod: aCompiledMethod  forClass: aClass withCode
 	^ self new method: aCompiledMethod contextClass: aClass codeGenerator: anASZigFileGenerator
 ]
 
+{ #category : #converting }
+ASPharoCompiler >> asCompileObject [
+	| result |
+	result := OrderedCollection new.
+	
+	result add: 'test \"method object\" {'.
+	
+	methods do: [ :m | result addAll: m asZigCompileObject].
+	
+	result add: '}'.
+	
+	^result
+]
+
 { #category : #compiling }
 ASPharoCompiler >> compile [
 
