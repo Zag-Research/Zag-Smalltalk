@@ -12,73 +12,96 @@ const inversePhi = utilities.inversePhi;
 const assert = std.debug.assert;
 const SP = @import("execute.zig").SP;
 pub const Format = enum(u8) {
-    immediateSizeZero = ImmediateSizeZero,
-    immediateByteMax = ImmediateByteMax,
+    immutableSizeZero,
+    _i1,_i2,_i3,_i4,_i5,_i6,_i7,_i8,_i9,_i10,_i11,_i12,_i13,_i14,_i15,_i16,_i17,_i18,_i19,_i20,_i21,_i22,_i23,_i24,_i25,_i26,_i27,_i28,_i29,_i30,_i31,
+    _i32,_i33,_i34,_i35,_i36,_i37,_i38,_i39,_i40,_i41,_i42,_i43,_i44,_i45,_i46,_i47,_i48,_i49,_i50,_i51,_i52,_i53,_i54,_i55,_i56,_i57,_i58,_i59,_i60,_i61,_i62,
+    immutableByteMax,
     notObject, // this is an allocated struct, not an Object
-    header, // this is a header word, which points to the proper HeapObject footer word
-    notIndexable, // this and below have no pointers
-    notIndexableWithPointers, // this and below have no pointers in array portion
-    immediateObjectOne,
-    immediateObjectMax = ImmediateObjectMax,
+    mutableSizeOne,
+    _m2,_m3,_m4,_m5,_m6,_m7,_m8,_m9,_m10,_m11,_m12,_m13,_m14,_m15,_m16,_m17,_m18,_m19,_m20,_m21,_m22,_m23,_m24,_m25,_m26,_m27,_m28,_m29,_m30,_m31,
+    _m32,_m33,_m34,_m35,_m36,_m37,_m38,_m39,_m40,_m41,_m42,_m43,_m44,_m45,_m46,_m47,_m48,_m49,_m50,_m51,_m52,_m53,_m54,_m55,_m56,_m57,_m58,_m59,_m60,_m61,_m62,
+    mutableByteMax,
+    notIndexable,
+    notIndexable_mut,
     directIndexed,
-    directIndexedWithPointers, // this and below have no size/pointer
+    directIndexed_mut,
     indexed,
-    indexedWithPointers,
+    indexed_mut,
     external,
-    externalWithPointers, // this and below have no weak queue link
-    _externalWeak_, // never created
+    external_mut,
+    nonObjectIndexed,
+    nonObjectIndexed_mut, // this and below have no pointers
+    _x10, //    header, // this is a header word, which points to the proper HeapObject footer word
+    context, // this is a context object - special format
+    compiledMethod, // this is a compiledMethod - special format
+    _x13,_x14,_x15,
+    notIndexableWithPointers,
+    notIndexableWithPointers_mut, // this and below have no pointers in array portion
+    directIndexedWithPointers,
+    directIndexedWithPointers_mut, // this and below have no size/pointer
+    indexedWithPointers,
+    indexedWithPointers_mut,
+    externalWithPointers,
+    externalWithPointers_mut,
+    nonObjectIndexedWithPointers, // this has no pointers in array portion
+    nonObjectIndexedWithPointers_mut, // this has no pointers in array portion
+    _y10,_y11,
+    weakWithPointers, // only this and following have weak queue link
+    weakWithPointers_mut,
     externalWeakWithPointers,
-    _weak_, // never created
-    weakWithPointers,
+    externalWeakWithPointers_mut,
     _,
     const Self = @This();
-    const ImmediateSizeZero: u8 = 0;
-    const ByteOffset = ImmediateSizeZero;
-    const ImmediateByteMax = NotIndexable - 3;
-    const NumberOfBytes = ImmediateByteMax - ByteOffset;
-    const NotIndexable = 64;
-    const ObjectOffset = NotIndexable + 1;
-    const ImmediateObjectOne = ObjectOffset + 1;
-    const ImmediateObjectMax = DirectIndexed - 1;
-    const NumberOfObjects = (ImmediateObjectMax - ObjectOffset)/2;
-    const DirectIndexed = Indexed - 2;
-    const Indexed = External - 2;
-    const External = ExternalWeakWithPointers - 3;
-    const ExternalWeakWithPointers = WeakWithPointers - 2;
-    const WeakWithPointers = Immutable - 1;
-    const Pointers: u8 = 1;
-    const Immutable: u8 = 128;
+    const MutableFlag: u8 = 1;
+    const ExternalFlag: u8 = 8;
+    const PointerFlag: u8 = 16;
+    const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
+    const ImmutableByteMax = @intFromEnum(Format.immutableByteMax);
+    const NumberOfBytes = ImmutableByteMax - ImmutableSizeZero;
+    const NotObject = @intFromEnum(Format.notObject);
+    const MutableOffset = NotObject;
+    const MutableSizeOne = @intFromEnum(Format.mutableSizeOne);
+    const MutableByteMax = @intFromEnum(Format.mutableByteMax);
+    const NotIndexable = @intFromEnum(Format.notIndexable);
+    const LastPointerFree = @intFromEnum(Format.nonObjectIndexed_mut);
+    const DirectIndexed = @intFromEnum(Format.directIndexed);
+    const Indexed = @intFromEnum(Format.indexed);
+    const External = @intFromEnum(Format.external);
+    const Context = @intFromEnum(Format.context);
+    const CompiledMethod = @intFromEnum(Format.compiledMethod);
+    const FirstWeak = @intFromEnum(Format.weakWithPointers);
+    const LastWeak = @intFromEnum(Format.externalWeakWithPointers_mut);
+    const WithoutPointers = ~PointerFlag;
     comptime {
-        assert(@intFromEnum(Format.notIndexable) == NotIndexable);
-        assert(@intFromEnum(Format.directIndexed) == DirectIndexed);
-        assert(NumberOfObjects*2 == ImmediateObjectMax-ObjectOffset);
+        assert(@intFromEnum(Format.notIndexable) == 128);
     }
     const Size = union(enum) {
         size: u8,
         indexable,
         notIndexable,
+        special,
         const Indexable = Size{ .indexable = {} };
         const NotIndexable = Size{ .notIndexable = {} };
+        const Special = Size{ .special = {} };
     };
     pub inline fn size(self: Self) Size {
-        assert(ImmediateObjectOne == 66);
-        const s = @intFromEnum(self) & ~Immutable;
-        return switch (s) {
-            ImmediateSizeZero...ImmediateByteMax => Size{ .size = s },
-            ImmediateObjectOne...ImmediateObjectMax => Size{ .size = (s & 63) / 2 },
+        const s = @intFromEnum(self);
+        switch (s) {
+            ImmutableSizeZero...ImmutableByteMax => return Size{ .size = s },
+            MutableSizeOne...MutableByteMax => return Size{ .size = s - MutableOffset},
+            NotObject => return Size.NotIndexable,
+            Context,CompiledMethod => return Size.Special,
+            else => {}
+        }
+        return switch (s & ~(MutableFlag+PointerFlag)) {
             NotIndexable => Size.NotIndexable,
             else => Size.Indexable,
         };
     }
-    pub inline fn isObjectSize(s: usize) bool {
-        return s <= NumberOfObjects;
-    }
-    pub inline fn objectSize(s: usize) Self {
-        if (s == 0) return .immediateSizeZero;
-        if (isObjectSize(s))
-            return @as(Self, @enumFromInt(s - 1 + ImmediateObjectOne));
-        return .indexed;
-    }
+    // pub inline fn objectSize(s: usize) Self {
+    //     if (s == 0) return .immutableSizeZero;
+    //     return .indexed;
+    // }
     pub inline fn isByteSize(s: usize) bool {
         return s <= NumberOfBytes;
     }
@@ -87,42 +110,49 @@ pub const Format = enum(u8) {
             return @as(Self, @enumFromInt(s));
         return .indexed;
     }
-    pub inline fn isHeader(self: Self) bool {
-        return self == .header;
-    }
-    pub inline fn isIndexableWithPointers(self: Self) bool {
-        return self == .indexedWithPointers;
+    // pub inline fn isHeader(self: Self) bool {
+    //     return self == .header;
+    // }
+    pub inline fn isIndexableWithPointers(_: Self) bool {
+        return false;
     }
     pub inline fn isIndexable(self: Self) bool {
         return self != .notIndexable and self != .notIndexableWithPointers;
     }
     pub inline fn isWeak(self: Self) bool {
-        return self == .weakWithPointers;
+        return switch (@intFromEnum(self)) {
+            FirstWeak...LastWeak => true,
+            else => false,
+        };
     }
-    pub inline fn hasInstVars(self: Self) bool {
+    pub inline fn hasInstVars(_: Self) bool {
         // TODO: 
-        return self == .notIndexable or self == .notIndexableWithPointers;
+        return false;
     }
-    pub inline fn hasIndexPointers(self: Self) bool {
-        return @intFromEnum(self) > ObjectOffset and @intFromEnum(self)&1 == 1;
+    pub inline fn hasIndexPointers(_: Self) bool {
+        return false; // TODO
     }
-    pub inline fn hasPointers(self: Self) bool {
-        return @intFromEnum(self) & 65 == 65;
+    pub inline fn hasPointers(_: Self) bool {
+        return false; // TODO
     }
     //    pub inline fn hasIndexFields(self: Self) bool {
     //        return @enumToInt(self) >= Indexed;
     //    }
     pub inline fn isExternal(self: Self) bool {
-        return switch (@intFromEnum(self)) {
-            External...ExternalWeakWithPointers => true,
-            else => false,
+        return @intFromEnum(self)&(0xff-PointerFlag-ExternalFlag-MutableFlag) == External;
+    }
+    pub inline fn mutable(self: Self) Self {
+        const s = @intFromEnum(self);
+        return switch (s) {
+            else => @enumFromInt(@intFromEnum(self) | MutableFlag),
         };
     }
-    pub inline fn immutable(self: Self) Self {
-        return @enumFromInt(@intFromEnum(self) | Immutable);
-    }
     pub inline fn isImmutable(self: Self) bool {
-        return @intFromEnum(self) & Immutable != 0;
+        return switch (@intFromEnum(self)) {
+            0...NotObject => true,
+            MutableOffset+1...MutableByteMax => false,
+            else => |i| i & MutableFlag == 0,
+        };
     }
     const Iterator = *const fn (obj: HeapObjectConstPtr) HeapObjectPtrIterator;
     pub fn iterator(self: Self) Iterator {
@@ -149,10 +179,8 @@ pub const Format = enum(u8) {
                 return .{ .format = .weakWithPointers, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 3 };
             }
             if (nElements == 0 or (elementSize == 1 and nElements <= NumberOfBytes))
-                return .{ .format = @as(Self, @enumFromInt(nElements + ByteOffset)), .size = iVars + @as(u12, @intCast(arraySize)) };
+                return .{ .format = @as(Self, @enumFromInt(nElements)), .size = iVars + @as(u12, @intCast(arraySize)) };
             if (elementSize == @sizeOf(Object)) {
-                if (nElements <= NumberOfObjects)
-                    return .{ .format = @as(Self, @enumFromInt((nElements-1)*2 + ImmediateObjectOne)), .size = iVars + @as(u12, @intCast(arraySize)) };
                 if (iVars == 0 and nElements <= maxSize)
                     return .{ .format = .directIndexed, .size = @as(u12, @intCast(arraySize)) };
             }
@@ -163,6 +191,18 @@ pub const Format = enum(u8) {
         if (makeWeak)
             return .{ .format = .weakWithPointers, .size = iVars, .sizeField = 3 };
         return .{ .format = .notIndexable, .size = iVars };
+    }
+    fn expectTrue(self: Self, ok: bool) !void {
+        if (!ok) {
+            std.debug.print("unexpected false for {}\n",.{self});
+            return error.TestUnexpectedFalse;
+        }
+    }
+    fn expectFalse(self: Self, ok: bool) !void {
+        if (ok) {
+            std.debug.print("unexpected true for {}\n",.{self});
+            return error.TestUnexpectedTrue;
+        }
     }
 };
 pub const AllocationInfo = struct {
@@ -210,18 +250,50 @@ pub const AllocationInfo = struct {
         return external;
     }
 };
+test "isWeak formats" {
+    for (0..255) |n| {
+        const e: Format = @enumFromInt(n);
+        switch (e) {
+            .externalWeakWithPointers,
+            .externalWeakWithPointers_mut,
+            .weakWithPointers,
+            .weakWithPointers_mut
+            => try e.expectTrue(e.isWeak()),
+            else => try e.expectFalse(e.isWeak()),
+        }
+    }
+}
+test "isExternal formats" {
+    for (0..255) |n| {
+        const e: Format = @enumFromInt(n);
+        switch (e) {
+            .external,
+            .external_mut,
+            .externalWithPointers,
+            .externalWithPointers_mut,
+            .externalWeakWithPointers,
+            .externalWeakWithPointers_mut,
+            ._x14,._x15, // never created
+            => try e.expectTrue(e.isExternal()),
+            else => try e.expectFalse(e.isExternal()),
+        }
+    }
+}
 test "raw size" {
     const ee = std.testing.expectEqual;
     try ee(@as(Format, @enumFromInt(7)).size(), Format.Size{ .size = 7 });
-    try ee(@as(Format, @enumFromInt(125)).size(), Format.Size.Indexable);
     try ee(@as(Format, @enumFromInt(64)).size(), Format.Size.NotIndexable);
-    try ee(@as(Format, @enumFromInt(70)).size(), Format.Size{ .size = 3 });
-    try ee(@as(Format, @enumFromInt(71)).size(), Format.Size{ .size = 3 });
-    try ee(Format.immediateSizeZero.size(), Format.Size{ .size = 0 });
+    try ee(@as(Format, @enumFromInt(128)).size(), Format.Size.NotIndexable);
+    try ee(@as(Format, @enumFromInt(130)).size(), Format.Size.Indexable);
+    try ee(@as(Format, @enumFromInt(70)).size(), Format.Size{ .size = 6 });
+    try ee(@as(Format, @enumFromInt(71)).size(), Format.Size{ .size = 7 });
+    try ee(Format.immutableSizeZero.size(), Format.Size{ .size = 0 });
+    try ee(Format.context.size(), Format.Size.Special);
+    try ee(Format.compiledMethod.size(), Format.Size.Special);
 }
 test "HeapObject formats" {
     const expect = std.testing.expect;
-    try expect(Format.immediateSizeZero.immutable().isImmutable());
+    try expect(Format.immutableSizeZero.mutable().isImmutable());
     try expect(!Format.notIndexable.isIndexable());
     try expect(Format.indexed.isIndexable());
     try expect(Format.indexedWithPointers.isIndexable());
@@ -233,16 +305,16 @@ test "HeapObject formats" {
     try expect(Format.weakWithPointers.hasIndexPointers());
     try expect(Format.weakWithPointers.isWeak());
     try expect(!Format.indexedWithPointers.isWeak());
-    try expect(!Format.immediateByteMax.isWeak());
+    try expect(!Format.immutableByteMax.isWeak());
 }
 test "allocationInfo" {
     const ee = std.testing.expectEqual;
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
     try ee(Format.allocationInfo(10, null, 0, false), AllocationInfo{ .format = .notIndexable, .size = 10 });
     try ee(Format.allocationInfo(10, null, 0, true), AllocationInfo{ .format = .weakWithPointers, .size = 10, .sizeField = 3 });
-    try ee(Format.allocationInfo(10, 0, 0, false), AllocationInfo{ .format = .immediateSizeZero, .size = 10 });
-    try ee(Format.allocationInfo(10, 9, 8, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateObjectOne + 16), .size = 19 });
-    try ee(Format.allocationInfo(10, 9, 1, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateSizeZero + 9), .size = 12 });
+    try ee(Format.allocationInfo(10, 0, 0, false), AllocationInfo{ .format = .immutableSizeZero, .size = 10 });
+//    try ee(Format.allocationInfo(10, 9, 8, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateObjectOne + 16), .size = 19 });
+    try ee(Format.allocationInfo(10, 9, 1, false), AllocationInfo{ .format = @enumFromInt(Format.ImmutableSizeZero + 9), .size = 12 });
     try ee(Format.allocationInfo(10, 9, 2, false), AllocationInfo{ .format = .indexed, .size = 13, .sizeField = 2 });
     try ee(Format.allocationInfo(10, 90, 8, false), AllocationInfo{ .format = .indexed, .size = 100, .sizeField = 2 });
     try ee(Format.allocationInfo(0, 90, 8, false), AllocationInfo{ .format = .directIndexed, .size = 90 });
@@ -645,6 +717,7 @@ pub const HeapObject = packed struct(u64) {
                 const oa = @as([*]usize, @ptrFromInt(@intFromPtr(self) - @sizeOf(usize) * 2));
                 return @as([*]T, @ptrFromInt(oa[0]))[0..oa[1]];
             },
+            .special => unreachable,
         }
     }
     pub inline fn arraySize(maybeForwarded: HeapObjectConstPtr) !usize {
