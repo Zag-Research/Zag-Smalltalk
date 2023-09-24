@@ -26,6 +26,16 @@ ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
+{ #category : #converting }
+ASRef >> asZagCompileObject [
+	^ variable asZagCompileObject 
+]
+
+{ #category : #comparing }
+ASRef >> asZagLabel [ 
+ ^ variable asZagLabel 
+]
+
 { #category : #comparing }
 ASRef >> isASRef [
 	^true

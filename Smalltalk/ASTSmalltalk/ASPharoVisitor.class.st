@@ -62,7 +62,7 @@ ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 	block := ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
-		  body: OrderedCollection new.
+		  body: ASSequence new.
 	compiler inScope: block do: [ 
 		aRBBlockNode statements do: [ :statement | 
 			block addStatement: (self visit: statement) ] ].
@@ -169,7 +169,7 @@ ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
-		^ ASSelf method: compiler definingMethod superclass: compiler definingClass superclass 
+		^ ASSuper method: compiler definingMethod superclass: compiler definingClass superclass 
 ]
 
 { #category : #visiting }

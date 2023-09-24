@@ -31,13 +31,12 @@ ASPharoCompiler >> asCompileObject [
 	
 	result add: 'test "method object" {'.
 
-	result add: '//', currentScope name.
+	result add: '//', contextClass name.
 	result add: 'const c = ClassIndex;'. "porobably need to store c as a prefix, or variable"
 	result add: 'var o = compileObject(.{'.
 	
-	methods do: [ :m | result addAll: m asZigCompileObject].
+	methods do: [ :m | result addAll: m asZagCompileObject].
 	
-	self halt.
 	result add:  '});'.
 	result add: 'o.setLiterals(&[_]Object{},&[_]ClassIndex{});'.
    result add: ' const method = o.asObject();'.
@@ -45,6 +44,13 @@ ASPharoCompiler >> asCompileObject [
 	result add: '}'.
 	
 	^result
+]
+
+{ #category : #building }
+ASPharoCompiler >> buildFromClass: aClass method: aCompiledMethod [
+	method := aCompiledMethod.
+	contextClass := aClass.
+	methods add: (self compileMethod: method).
 ]
 
 { #category : #compiling }

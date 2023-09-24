@@ -17,7 +17,6 @@ Class {
 
 { #category : #'instance creation' }
 ASSelf class >> method: aMethod [
-
 	^ self new method: aMethod
 ]
 
@@ -42,6 +41,16 @@ ASSelf >> = other [
 { #category : #visiting }
 ASSelf >> acceptVisitor: aVisitor [
 	^ aVisitor visitSelfNode: self
+]
+
+{ #category : #converting }
+ASSelf >> asZagCompileObject [
+	| results |
+	results := OrderedCollection new.
+	
+	results add: 'c.ASSelf,'.
+	
+^ results
 ]
 
 { #category : #accessing }

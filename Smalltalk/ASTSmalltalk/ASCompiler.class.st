@@ -150,7 +150,7 @@ ASCompiler >> initialize [
 	super initialize.
 	classes := Set new.
 	selectors := Set new.
-	freeSelectors := Set with: #initialize.
+	freeSelectors := Set new."why include initialize?? with: #initialize."
 	methods := Set new.
 	methodsAlreadyProcessed := Set new.
 	methodsToProcess := Set new.

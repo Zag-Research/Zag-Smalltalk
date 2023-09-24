@@ -9,7 +9,7 @@ Class {
 
 { #category : #comparing }
 ASSequence >> = other [
- sequence asArray = other sequence
+ ^sequence = other sequence
 ]
 
 { #category : #comparing }
@@ -26,15 +26,15 @@ ASSequence >> addStatement: anASStatement [
 ]
 
 { #category : #comparing }
-ASSequence >> asZigCompileObject [ 
+ASSequence >> asZagCompileObject [ 
  | result |
 result := OrderedCollection new.   
 
 result add: 'c.ASSequence,'.
 result add: '":body",'.
-result addAll: (sequence collect: [ :statement | statement asZigString ]).
+result addAll: (sequence collect: [ :statement | '"',statement asZagLabel,'",' ]).
 
-sequence do: [ :statement | result addAll: statement asZigCompileObject  ].
+sequence do: [ :statement | result addAll: statement asZagCompileObject  ].
 	^ result
 ]
 

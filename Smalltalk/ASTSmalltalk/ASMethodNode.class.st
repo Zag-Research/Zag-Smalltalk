@@ -67,17 +67,17 @@ ASMethodNode >> acceptVisitor: aVisitor [
 ]
 
 { #category : #converting }
-ASMethodNode >> asZigCompileObject [
+ASMethodNode >> asZagCompileObject [
 	| result |
 	result := OrderedCollection new.
 	
 	result add: 'c.Method'.
-	result add: '":', selector,'"'.
-	result add: selector asZigString.
+	result add: '":first"'.
+	result add: 'Sym.', selector asZigString, ','.
 	result add: selector numArgs asString, ','.
 	result add: '"body",'.
 	
-	result addAll: body asZigCompileObject.
+	result addAll: body asZagCompileObject.
 	
 	^ result reversed
 ]
