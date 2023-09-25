@@ -25,7 +25,7 @@ pub const Format = enum(u8) {
     indexedNonObject,
     indexedNonObject_mut, // this and below have no pointers
     context, // this is a context object - special format
-    compiledMethod, // this is a compiledMethod - special format
+    special, // this is a special format
     _x12,_x13,_x14,_x15,
     notIndexableWithPointers,
     notIndexableWithPointers_mut, // this and below have no pointers in array portion
@@ -58,11 +58,14 @@ pub const Format = enum(u8) {
     const Indexed = @intFromEnum(Format.indexed);
     const External = @intFromEnum(Format.external);
     const Context = @intFromEnum(Format.context);
-    const CompiledMethod = @intFromEnum(Format.compiledMethod);
+    const Special = @intFromEnum(Format.special);
     const FirstWeak = @intFromEnum(Format.weakWithPointers);
     const Last = @intFromEnum(Format.externalWeakWithPointers_mut);
     comptime {
         assert(@intFromEnum(Format.notIndexable) == 128);
+    }
+    inline fn base(self: Self, comptime mask: comptime_int) Self {
+        return @enumFromInt(@intFromEnum(self) & (BaseFormatMask-mask));
     }
     const Size = enum(u8) {
         indexable = 251,
@@ -89,7 +92,7 @@ pub const Format = enum(u8) {
         (&s[DirectIndexed]).set(Size.directIndexable);
         (&s[External]).set(Size.external);
         s[Context] = Size.special;
-        s[CompiledMethod] = Size.special;
+        s[Special] = Size.special;
         break :init s;
     };
     pub inline fn size(self: Self) Size {
@@ -107,11 +110,14 @@ pub const Format = enum(u8) {
             return @as(Self, @enumFromInt(s));
         return .indexed;
     }
+    pub fn isHeader(self: Self) bool {
+        return self == .context or self == .special;
+    }
     pub inline fn isSpecial(self: Self) bool {
         return self == .context or self == .compiledMethod;
     }
     pub inline fn isIndexable(self: Self) bool {
-        return  @intFromEnum(self)&BaseFormatMask != NotIndexable;
+        return  self.base(0) != .notIndexable;
     }
     pub inline fn isWeak(self: Self) bool {
         return @intFromEnum(self) >= FirstWeak;
@@ -126,7 +132,7 @@ pub const Format = enum(u8) {
         return  @intFromEnum(self) >= LastPointerFree;
     }
     pub inline fn isExternal(self: Self) bool {
-        return @intFromEnum(self)&(BaseFormatMask-ExternalFlag) == External;
+        return self.base(ExternalFlag) == .external;
     }
     pub inline fn mutable(self: Self) Self {
         if (self == .immutableSizeZero) return self;
@@ -136,42 +142,19 @@ pub const Format = enum(u8) {
         return @intFromEnum(self) & MutableFlag == 0;
     }
     const Iterator = *const fn (obj: HeapObjectConstPtr) HeapObjectPtrIterator;
-    pub fn iterator(self: Self) Iterator {
-        const i = HeapObjectPtrIterator;
-        return switch (self) {
-            .immutableSizeZero....immediateByteMax, .notIndexableWithPointers => i.ivPointers,
-            .notObject, .notIndexable, .directIndexed => i.noPointers,
-            .immediateObjectOne....immediateObjectMax, .directIndexedWithPointers => i.directPointers,
-            .header => i.header,
-            .externalWeakWithPointers, .weakWithPointers => i.weakDefault,
-            else => i.bothPointers,
-        };
+    pub fn iterator(_: Self) Iterator {
+        unreachable;
+        // const i = HeapObjectPtrIterator;
+        // return switch (self) {
+        //     .immutableSizeZero....immediateByteMax, .notIndexableWithPointers => i.ivPointers,
+        //     .notObject, .notIndexable, .directIndexed => i.noPointers,
+        //     .immediateObjectOne....immediateObjectMax, .directIndexedWithPointers => i.directPointers,
+        //     .externalWeakWithPointers, .weakWithPointers => i.weakDefault,
+        //     else => i.bothPointers,
+        // };
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
-    }
-    pub fn allocationInfo(iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) AllocationInfo {
-        if (indexed) |nElements| {
-            const maxSize = HeapObject.maxLength;
-            const arraySize = (nElements * elementSize + @sizeOf(Object) - 1) / @sizeOf(Object);
-            if (makeWeak) {
-                if (iVars + arraySize > maxSize - 3)
-                    return .{ .format = .externalWeakWithPointers, .size = iVars, .sizeField = 3 };
-                return .{ .format = .weakWithPointers, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 3 };
-            }
-            if (nElements == 0 or (elementSize == 1 and nElements <= NumberOfBytes))
-                return .{ .format = @as(Self, @enumFromInt(nElements)), .size = iVars + @as(u12, @intCast(arraySize)) };
-            if (elementSize == @sizeOf(Object)) {
-                if (iVars == 0 and nElements <= maxSize)
-                    return .{ .format = .directIndexed, .size = @as(u12, @intCast(arraySize)) };
-            }
-            if (iVars + arraySize > maxSize - 2)
-                return .{ .format = .external, .size = iVars, .sizeField = 2 };
-            return .{ .format = .indexed, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 2 };
-        }
-        if (makeWeak)
-            return .{ .format = .weakWithPointers, .size = iVars, .sizeField = 3 };
-        return .{ .format = .notIndexable, .size = iVars };
     }
     fn expectTrue(self: Self, ok: bool) !void {
         if (!ok) {
@@ -191,6 +174,30 @@ pub const AllocationInfo = struct {
     size: u12,
     sizeField: u8 = 0,
     const Self = @This();
+    pub fn calc(iVars: u12, indexed: ?usize, element: anytype, makeWeak: bool) Self {
+        if (indexed) |nElements| {
+            const maxSize = HeapObject.maxLength;
+            const arraySize = (nElements * @sizeOf(element) + @sizeOf(Object) - 1) / @sizeOf(Object);
+            if (makeWeak) {
+                if (iVars + arraySize > maxSize - 3)
+                    return .{ .format = .externalWeakWithPointers, .size = iVars, .sizeField = 3 };
+                return .{ .format = .weakWithPointers, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 3 };
+            }
+            if (iVars == 0) {
+                if (nElements == 0 or (element == u8 and nElements <= Format.NumberOfBytes))
+                    return .{ .format = @as(Format, @enumFromInt(nElements*2)), .size = @intCast(arraySize) };
+                if (element == Object and nElements <= maxSize)
+                    return .{ .format = .directIndexed, .size = @intCast(arraySize) };
+            }
+            if (iVars + arraySize > maxSize - 2)
+                return .{ .format = .external, .size = iVars, .sizeField = 2 };
+            return .{ .format = .indexed, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 2 };
+        }
+        if (makeWeak)
+            return .{ .format = .weakWithPointers, .size = iVars, .sizeField = 3 };
+        return .{ .format = .notIndexable, .size = iVars };
+    }
+
     pub inline fn requiresIndex(self: Self) bool {
         return self.sizeField > 0;
     }
@@ -269,7 +276,7 @@ test "raw size" {
     try ee(@as(Format, @enumFromInt(71)).size(), @as(Format.Size,@enumFromInt(35)));
     try ee(Format.immutableSizeZero.size(), @as(Format.Size,@enumFromInt(0)));
     try ee(Format.context.size(), Format.Size.special);
-    try ee(Format.compiledMethod.size(), Format.Size.special);
+    try ee(Format.special.size(), Format.Size.special);
 }
 test "HeapObject formats" {
     const expect = std.testing.expect;
@@ -290,19 +297,19 @@ test "HeapObject formats" {
 test "allocationInfo" {
     const ee = std.testing.expectEqual;
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
-    try ee(Format.allocationInfo(10, null, 0, false), AllocationInfo{ .format = .notIndexable, .size = 10 });
-    try ee(Format.allocationInfo(10, null, 0, true), AllocationInfo{ .format = .weakWithPointers, .size = 10, .sizeField = 3 });
-    try ee(Format.allocationInfo(10, 0, 0, false), AllocationInfo{ .format = .immutableSizeZero, .size = 10 });
-//    try ee(Format.allocationInfo(10, 9, 8, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateObjectOne + 16), .size = 19 });
-    try ee(Format.allocationInfo(10, 9, 1, false), AllocationInfo{ .format = @enumFromInt(Format.ImmutableSizeZero + 9), .size = 12 });
-    try ee(Format.allocationInfo(10, 9, 2, false), AllocationInfo{ .format = .indexed, .size = 13, .sizeField = 2 });
-    try ee(Format.allocationInfo(10, 90, 8, false), AllocationInfo{ .format = .indexed, .size = 100, .sizeField = 2 });
-    try ee(Format.allocationInfo(0, 90, 8, false), AllocationInfo{ .format = .directIndexed, .size = 90 });
-    try ee(Format.allocationInfo(0, 90, 1, false), AllocationInfo{ .format = .indexed, .size = 12, .sizeField = 2 });
-    try ee(Format.allocationInfo(0, 90, 2, false), AllocationInfo{ .format = .indexed, .size = 23, .sizeField = 2 });
-    try ee(Format.allocationInfo(10, 90, 8, true), AllocationInfo{ .format = .weakWithPointers, .size = 100, .sizeField = 3 });
-    try ee(Format.allocationInfo(10, 9000, 8, false), AllocationInfo{ .format = .external, .size = 10, .sizeField = 2 });
-    try ee(Format.allocationInfo(10, 9000, 8, true), AllocationInfo{ .format = .externalWeakWithPointers, .size = 10, .sizeField = 3 });
+    try ee(AllocationInfo.calc(10, null, bool, false), AllocationInfo{ .format = .notIndexable, .size = 10 });
+    try ee(AllocationInfo.calc(10, null, bool, true), AllocationInfo{ .format = .weakWithPointers, .size = 10, .sizeField = 3 });
+    try ee(AllocationInfo.calc(0, 0, bool, false), AllocationInfo{ .format = .immutableSizeZero, .size = 0 });
+//    try ee(AllocationInfo.calc(10, 9, 8, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateObjectOne + 16), .size = 19 });
+    try ee(AllocationInfo.calc(10, 9, u8, false), AllocationInfo{ .format = .indexed, .size = 12, .sizeField = 2 });
+    try ee(AllocationInfo.calc(10, 9, u16, false), AllocationInfo{ .format = .indexed, .size = 13, .sizeField = 2 });
+    try ee(AllocationInfo.calc(10, 90, u64, false), AllocationInfo{ .format = .indexed, .size = 100, .sizeField = 2 });
+    try ee(AllocationInfo.calc(0, 90, Object, false), AllocationInfo{ .format = .directIndexed, .size = 90 });
+    try ee(AllocationInfo.calc(0, 90, u8, false), AllocationInfo{ .format = .indexed, .size = 12, .sizeField = 2 });
+    try ee(AllocationInfo.calc(0, 90, u16, false), AllocationInfo{ .format = .indexed, .size = 23, .sizeField = 2 });
+    try ee(AllocationInfo.calc(10, 90, u64, true), AllocationInfo{ .format = .weakWithPointers, .size = 100, .sizeField = 3 });
+    try ee(AllocationInfo.calc(10, 9000, Object, false), AllocationInfo{ .format = .external, .size = 10, .sizeField = 2 });
+    try ee(AllocationInfo.calc(10, 9000, Object, true), AllocationInfo{ .format = .externalWeakWithPointers, .size = 10, .sizeField = 3 });
 }
 pub const Age = enum(u4) {
     onStack,
@@ -550,12 +557,15 @@ pub const HeapObject = packed struct(u64) {
     pub fn makeIterator(self: HeapObjectConstPtr) HeapObjectPtrIterator {
         return self.format.iterator()(self);
     }
-    const partialHeader = @as(u64, @bitCast(HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .header, .age = .onStack, .length = 0 }));
-    pub inline fn partialHeaderOnStack(selfOffset: u16) HeapObject {
-        return @as(HeapObject, @bitCast(partialHeader | @as(u64, selfOffset) << 16));
+    const contextHeader = @as(u64, @bitCast(HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .context, .age = .onStack, .length = 0 }));
+    pub inline fn contextHeaderOnStack(selfOffset: u16) HeapObject {
+        return @as(HeapObject, @bitCast(contextHeader | @as(u64, selfOffset) << 16));
     }
     pub inline fn staticHeaderWithLength(size: u12) HeapObject {
-        return HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .header, .age = .static, .length = size };
+        return HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .special, .age = .static, .length = size };
+    }
+    pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
+        return HeapObject{ .classIndex = classIndex, .hash = hash, .format = .context, .age = .static, .length = size };
     }
     pub inline fn contextHeaderWithClassLengthHash(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
         return HeapObject{ .classIndex = classIndex, .hash = hash, .format = .context, .age = .static, .length = size };
@@ -570,7 +580,7 @@ pub const HeapObject = packed struct(u64) {
     }
     pub fn asHeader(self: HeapObject) HeapObject {
         var result = self;
-        result.format = .header;
+        result.format = .special;
         result.length -= 1;
         return result;
     }
@@ -591,7 +601,7 @@ pub const HeapObject = packed struct(u64) {
         };
     }
     pub inline fn calcHeapObject(classIndex: ClassIndex, comptime iVars: u12, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
-        const aI = comptime Format.allocationInfo(iVars, indexed, elementSize, makeWeak);
+        const aI = comptime AllocationInfo.calc(iVars, indexed, elementSize, makeWeak);
         if (aI.requiresIndex()) return error.DoesntFit;
         return HeapObject{
             .classIndex = classIndex,
@@ -601,8 +611,8 @@ pub const HeapObject = packed struct(u64) {
             .length = aI.size,
         };
     }
-    pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, elementSize: ?usize, mSize: ?usize, makeWeak: bool) void {
-        return Format.allocationInfo(iVars, indexed, elementSize, mSize, makeWeak).fillFooters(self, classIndex, hash, age, indexed, elementSize);
+    pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, element: anytype, mSize: ?usize, makeWeak: bool) void {
+        return AllocationInfo.calc(iVars, indexed, element, mSize, makeWeak).fillFooters(self, classIndex, hash, age, indexed, element);
     }
     pub inline fn prev(self: HeapObjectPtr) Object {
         const ptr = @as([*]Object, @ptrCast(self)) - 1;

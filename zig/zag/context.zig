@@ -98,7 +98,7 @@ pub const Context = struct {
                 local.* = Nil;
             }
         }
-        ctxt.header = HeapObject.partialHeaderOnStack(baseSize + selfOffset);
+        ctxt.header = HeapObject.contextHeaderOnStack(baseSize + selfOffset);
         trace("\npush: {}",.{ ctxt.header });
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
