@@ -39,7 +39,7 @@ pub const Context = struct {
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self{
-            .header = comptime heap.footer(baseSize + nLocals, Format.header, object.ClassIndex.Context, 0, Age.static),
+            .header = comptime heap.footer(baseSize + nLocals, Format.context, object.ClassIndex.Context, 0, Age.static),
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,

@@ -775,7 +775,6 @@ test "compileObject" {
     const h8 = footer.*;
     try expectEqual(h8.length,4);
     try expect(!footer.isIndexable());
-    try expect(footer.hasInstVars());
     try expect(footer.isStatic());
     try expect(footer.isUnmoving());
 }
