@@ -166,7 +166,7 @@ pub const ByteCode = enum(i8) {
                         const selfOffset = stackStructure.high16();
                         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
                         ctxt.setNPc(interpretReturn);
-                        sp = ctxt.asObjectPtr();
+                        sp = ctxt.asNewSp();
                         context = ctxt;
                         pc += 1;
                         continue :interp;
@@ -281,7 +281,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         footer: heap.HeapObject,
         const Self = @This();
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self,"references")/8, name.hash24(), Age.static, refsSize, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self,"references")/8 + refsSize, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8-2);
             //            @compileLog(codeSize,refsSize);
             //            trace("\nfooter={}",.{footer});

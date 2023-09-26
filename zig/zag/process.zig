@@ -19,7 +19,7 @@ const HeapObject = heap.HeapObject;
 const footer = heap.footer;
 const Age = heap.Age;
 const Format = heap.Format;
-const allocationInfo = heap.AllocationInfo.allocationInfo;
+const allocationInfo = heap.AllocationInfo.calc;
 const AllocReturn = heap.AllocReturn;
 const Context = @import("context.zig").Context;
 const ContextPtr = *Context;
@@ -126,15 +126,15 @@ pub const Process = extern struct {
         // if the Context is on the stack, both the Context and the SP will move
         _ = .{self,@panic("unimplemented")};
     }
-    pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, elementSize: usize, makeWeak: bool) heap.AllocReturn {
-        const aI = allocationInfo(iVars, indexed, elementSize, makeWeak);
+    pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
+        const aI = allocationInfo(iVars, indexed, element, makeWeak);
         if (aI.wholeSize(@min(HeapObject.maxLength,nursery_size / 4))) |size| {
             const result = self.currHp - 1;
             const newHp = result - size;
             if (@intFromPtr(newHp) >= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
                 const obj = @as(heap.HeapObjectPtr, @ptrCast(result));
-                _ = aI.fillFooters(obj, classIndex, .nursery, indexed orelse 0, elementSize);
+                _ = aI.fillFooters(obj, classIndex, .nursery, indexed orelse 0, element);
                 return .{
                     .age = .nursery,
                     .allocated = obj,
@@ -205,13 +205,13 @@ test "nursery allocation" {
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var mutableContext = &initialContext;
-    var ar = try pr.alloc(ClassIndex.Class,4,null,0,false);
+    var ar = try pr.alloc(ClassIndex.Class,4,null,void,false);
     ar.nilAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(),emptySize-5);
-    ar = try pr.alloc(ClassIndex.Class,5,null,0,false);
+    ar = try pr.alloc(ClassIndex.Class,5,null,void,false);
     ar.nilAll();
-    ar = try pr.alloc(ClassIndex.Class,6,null,0,false);
+    ar = try pr.alloc(ClassIndex.Class,6,null,void,false);
     ar.nilAll();
     const o2 = ar.allocated;
     try ee(pr.freeNursery(),emptySize-18);

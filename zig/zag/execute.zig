@@ -151,7 +151,7 @@ pub const CompiledMethod = extern struct {
         return init2(name, methodFn, Code.end);
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
-        const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codeSize, name.hash24(), Age.static, null, 0, false) catch unreachable;
+        const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable;
         return Self{
             .header = footer.asHeader(),
             .selector = name,
@@ -387,7 +387,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         // }
         const cacheSize = @sizeOf(SendCacheStruct)/@sizeOf(Code);
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches*cacheSize, name.hash24(), Age.static, refs, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches*cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
             //  trace("\nfooter={}",.{footer});
             return .{
@@ -403,7 +403,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             trace("\ncheckFooter: {}\n    header={}\n    footer={}\n     allocInfo={}\n   a1={x}\n   a2={x}",.{self.selector,self.header,self.footer,Format.allocationInfo(codeOffsetInUnits + codes, refs, @sizeOf(Object), false),@intFromPtr(self),@intFromPtr(self.header.realHeapObject())});
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codes]Code) Self {
-            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches*cacheSize, name.hash24(), Age.static, refs, @sizeOf(Object), false) catch @compileError("too many refs");
+            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches*cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             return .{
                 .header = footer.asHeader(),
                 .selector = name,
@@ -680,7 +680,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                 n = n + 1;
             },
             ClassIndex => {
-                const footer = HeapObject.calcHeapObject(field, n-last, if (@intFromEnum(field) > @intFromEnum(ClassIndex.max)) 0xffffff else @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, 0, false) catch unreachable;
+                const footer = HeapObject.calcHeapObject(field, n-last, if (@intFromEnum(field) > @intFromEnum(ClassIndex.max)) 0xffffff else @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, Object, false) catch unreachable;
                 objects[n] = footer.o();
                 n += 1;
                 last = n;

@@ -12,7 +12,7 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 inline fn of(comptime v: u64) Object {
     return @as(Object, @bitCast(v));
 }
-inline fn oImm(c: ClassIndex, h: u32) u64 {
+pub inline fn oImm(c: ClassIndex, h: u32) u64 {
     return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
 }
 inline fn g(grp: Group) u64 {

@@ -174,7 +174,7 @@ pub const AllocationInfo = struct {
     size: u12,
     sizeField: u8 = 0,
     const Self = @This();
-    pub fn calc(iVars: u12, indexed: ?usize, element: anytype, makeWeak: bool) Self {
+    pub fn calc(iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) Self {
         if (indexed) |nElements| {
             const maxSize = HeapObject.maxLength;
             const arraySize = (nElements * @sizeOf(element) + @sizeOf(Object) - 1) / @sizeOf(Object);
@@ -218,7 +218,7 @@ pub const AllocationInfo = struct {
         for (start[0..self.size]) |*obj|
             obj.* = Nil;
     }
-    pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age, nElements: usize, elementSize: usize) bool {
+    pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age, nElements: usize, comptime element: type) bool {
         const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 4)) *% object.u32_phi_inverse >> 8));
         theHeapObject.* = HeapObject{
             .classIndex = classIndex,
@@ -233,7 +233,7 @@ pub const AllocationInfo = struct {
             const footers = @as([*]u64, @ptrCast(theHeapObject)) - size;
             if (size>=3) footers[0] = 0;
             footers[size - 1] = nElements;
-            footers[size - 2] = if (external) 0 else @intFromPtr(footers) - elementSize * nElements;
+            footers[size - 2] = if (external) 0 else @intFromPtr(footers) - @sizeOf(element) * nElements;
         }
         return external;
     }
@@ -297,9 +297,9 @@ test "HeapObject formats" {
 test "allocationInfo" {
     const ee = std.testing.expectEqual;
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
-    try ee(AllocationInfo.calc(10, null, bool, false), AllocationInfo{ .format = .notIndexable, .size = 10 });
-    try ee(AllocationInfo.calc(10, null, bool, true), AllocationInfo{ .format = .weakWithPointers, .size = 10, .sizeField = 3 });
-    try ee(AllocationInfo.calc(0, 0, bool, false), AllocationInfo{ .format = .immutableSizeZero, .size = 0 });
+    try ee(AllocationInfo.calc(10, null, void, false), AllocationInfo{ .format = .notIndexable, .size = 10 });
+    try ee(AllocationInfo.calc(10, null, void, true), AllocationInfo{ .format = .weakWithPointers, .size = 10, .sizeField = 3 });
+    try ee(AllocationInfo.calc(0, 0, void, false), AllocationInfo{ .format = .immutableSizeZero, .size = 0 });
 //    try ee(AllocationInfo.calc(10, 9, 8, false), AllocationInfo{ .format = @enumFromInt(Format.ImmediateObjectOne + 16), .size = 19 });
     try ee(AllocationInfo.calc(10, 9, u8, false), AllocationInfo{ .format = .indexed, .size = 12, .sizeField = 2 });
     try ee(AllocationInfo.calc(10, 9, u16, false), AllocationInfo{ .format = .indexed, .size = 13, .sizeField = 2 });
@@ -600,8 +600,8 @@ pub const HeapObject = packed struct(u64) {
             .length = length,
         };
     }
-    pub inline fn calcHeapObject(classIndex: ClassIndex, comptime iVars: u12, hash: u24, age: Age, indexed: ?usize, elementSize: usize, makeWeak: bool) !HeapObject {
-        const aI = comptime AllocationInfo.calc(iVars, indexed, elementSize, makeWeak);
+    pub inline fn calcHeapObject(classIndex: ClassIndex, comptime iVars: u12, hash: u24, age: Age, indexed: ?usize, comptime element: type, makeWeak: bool) !HeapObject {
+        const aI = comptime AllocationInfo.calc(iVars, indexed, element, makeWeak);
         if (aI.requiresIndex()) return error.DoesntFit;
         return HeapObject{
             .classIndex = classIndex,
@@ -611,7 +611,7 @@ pub const HeapObject = packed struct(u64) {
             .length = aI.size,
         };
     }
-    pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, element: anytype, mSize: ?usize, makeWeak: bool) void {
+    pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, element: type, mSize: ?usize, makeWeak: bool) void {
         return AllocationInfo.calc(iVars, indexed, element, mSize, makeWeak).fillFooters(self, classIndex, hash, age, indexed, element);
     }
     pub inline fn prev(self: HeapObjectPtr) Object {
@@ -693,7 +693,7 @@ pub const HeapObject = packed struct(u64) {
             .external => unreachable,
             else => |s| {
                 const size = @intFromEnum(s);
-                const oa = @as([*]u8, @constCast(@ptrCast(self)))-size;
+                const oa = @as([*]T, @constCast(@ptrCast(self)))-size;
                 return oa[0..size];
             },
         }
