@@ -659,8 +659,11 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
                 }
             }
         }
+        pub inline fn asHeapObjectPtr(self: *Self) HeapObjectPtr {
+            return @ptrCast(&self.objects[self.objects.len-1]);
+        }
         pub inline fn asObject(self: *Self) Object {
-            return Object.from(@as(HeapObjectPtr,@ptrCast(&self.objects[self.objects.len-1])));
+            return Object.from(self.asHeapObjectPtr());
         }
     };
 }

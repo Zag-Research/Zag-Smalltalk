@@ -11,6 +11,8 @@ const largerPowerOf2 = utilities.largerPowerOf2;
 const inversePhi = utilities.inversePhi;
 const assert = std.debug.assert;
 const SP = @import("execute.zig").SP;
+const compileObject = @import("execute.zig").compileObject;
+const Sym = @import("symbol.zig").symbols;
 pub const Format = enum(u8) {
     immutableSizeZero,
     notObject, // this is an allocated struct, not an Object
@@ -141,9 +143,6 @@ pub const Format = enum(u8) {
     pub inline fn isImmutable(self: Self) bool {
         return @intFromEnum(self) & MutableFlag == 0;
     }
-    inline fn iterator(self: Self) HeapObjectPtrIterator.Iterator {
-        return HeapObjectPtrIterator.iterator(self);
-    }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
     }
@@ -158,75 +157,6 @@ pub const Format = enum(u8) {
             std.debug.print("unexpected true for {}\n",.{self});
             return error.TestUnexpectedTrue;
         }
-    }
-};
-pub const AllocationInfo = struct {
-    format: Format,
-    size: u12,
-    sizeField: u8 = 0,
-    const Self = @This();
-    pub fn calc(iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) Self {
-        if (indexed) |nElements| {
-            const maxSize = HeapObject.maxLength;
-            const arraySize = (nElements * @sizeOf(element) + @sizeOf(Object) - 1) / @sizeOf(Object);
-            if (makeWeak) {
-                if (iVars + arraySize > maxSize - 3)
-                    return .{ .format = .externalWeakWithPointers, .size = iVars, .sizeField = 3 };
-                return .{ .format = .weakWithPointers, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 3 };
-            }
-            if (iVars == 0) {
-                if (nElements == 0 or (element == u8 and nElements <= Format.NumberOfBytes))
-                    return .{ .format = @as(Format, @enumFromInt(nElements*2)), .size = @intCast(arraySize) };
-                if (element == Object and nElements <= maxSize)
-                    return .{ .format = .directIndexed, .size = @intCast(arraySize) };
-            }
-            if (iVars + arraySize > maxSize - 2)
-                return .{ .format = .external, .size = iVars, .sizeField = 2 };
-            return .{ .format = .indexed, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 2 };
-        }
-        if (makeWeak)
-            return .{ .format = .weakWithPointers, .size = iVars, .sizeField = 3 };
-        return .{ .format = .notIndexable, .size = iVars };
-    }
-
-    pub inline fn requiresIndex(self: Self) bool {
-        return self.sizeField > 0;
-    }
-    pub inline fn wholeSize(self: Self, maxLength: u12) !u12 {
-        if (self.format.isExternal()) return error.ObjectTooLarge;
-        return self.objectSize(maxLength);
-    }
-    pub inline fn objectSize(self: Self, maxLength: u12) !u12 {
-        const size = self.size + self.sizeField;
-        if (size+1 >= maxLength) return error.ObjectTooLarge;
-        return size;
-    }
-    pub inline fn needsExternalAllocation(self: Self) bool {
-        return self.format.isExternal();
-    }
-    pub inline fn nilAll(self: Self, theHeapObject: HeapObjectPtr) void {
-        const start = theHeapObject.asObjectArray()-self.size-1;
-        for (start[0..self.size]) |*obj|
-            obj.* = Nil;
-    }
-    pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age, nElements: usize, comptime element: type) bool {
-        const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 4)) *% object.u32_phi_inverse >> 8));
-        theHeapObject.* = HeapObject{
-            .classIndex = classIndex,
-            .hash = hash,
-            .format = self.format,
-            .age = age,
-            .length = self.size + self.sizeField,
-        };
-        const size = self.sizeField;
-        const external = self.format.isExternal();
-        if (size > 0) {
-            const footers = @as([*]u64, @ptrCast(theHeapObject)) - size;
-            if (size>=3) footers[0] = 0;
-            footers[size - 1] = nElements;
-            footers[size - 2] = if (external) 0 else @intFromPtr(footers) - @sizeOf(element) * nElements;
-        }
-        return external;
     }
 };
 test "isWeak formats" {
@@ -285,6 +215,78 @@ test "HeapObject formats" {
     try expect(!Format.indexedNonObject.isWeak());
     try expect(!Format.notObject.isWeak());
 }
+pub const AllocationInfo = struct {
+    format: Format,
+    size: u12,
+    sizeField: u8 = 0,
+    const Self = @This();
+    pub fn calc(iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) Self {
+        if (indexed) |nElements| {
+            const maxSize = HeapObject.maxLength;
+            const arraySize = (nElements * @sizeOf(element) + @sizeOf(Object) - 1) / @sizeOf(Object);
+            if (makeWeak) {
+                if (iVars + arraySize > maxSize - 3)
+                    return .{ .format = .externalWeakWithPointers, .size = iVars, .sizeField = 3 };
+                return .{ .format = .weakWithPointers, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 3 };
+            }
+            if (iVars == 0) {
+                if (nElements == 0 or (element == u8 and nElements <= Format.NumberOfBytes))
+                    return .{ .format = @as(Format, @enumFromInt(nElements*2)), .size = @intCast(arraySize) };
+                if (element == Object and nElements <= maxSize)
+                    return .{ .format = .directIndexed, .size = @intCast(arraySize) };
+            }
+            if (iVars + arraySize > maxSize - 2)
+                return .{ .format = .external, .size = iVars, .sizeField = 2 };
+            return .{ .format = .indexed, .size = iVars + @as(u12, @intCast(arraySize)), .sizeField = 2 };
+        }
+        if (makeWeak)
+            return .{ .format = .weakWithPointers, .size = iVars, .sizeField = 3 };
+        return .{ .format = .notIndexable, .size = iVars };
+    }
+
+    pub inline fn requiresIndex(self: Self) bool {
+        return self.sizeField > 0;
+    }
+    pub inline fn wholeSize(self: Self, maxLength: u12) !u12 {
+        if (self.format.isExternal()) return error.ObjectTooLarge;
+        return self.objectSize(maxLength);
+    }
+    pub inline fn objectSize(self: Self, maxLength: u12) !u12 {
+        const size = self.size + self.sizeField;
+        if (size+1 >= maxLength) return error.ObjectTooLarge;
+        return size;
+    }
+    pub inline fn needsExternalAllocation(self: Self) bool {
+        return self.format.isExternal();
+    }
+    pub inline fn nilAll(self: Self, theHeapObject: HeapObjectPtr) void {
+        const start = theHeapObject.asObjectArray()-self.size-1;
+        for (start[0..self.size]) |*obj|
+            obj.* = Nil;
+    }
+    inline fn heapObject(self: Self, classIndex: ClassIndex, age: Age, hash: u24) HeapObject {
+        return .{
+            .classIndex = classIndex,
+            .hash = hash,
+            .format = self.format,
+            .age = age,
+            .length = self.size + self.sizeField,
+        };
+    }
+    pub inline fn fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age, nElements: usize, comptime element: type) bool {
+        const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 4)) *% object.u32_phi_inverse >> 8));
+        theHeapObject.* = self.heapObject(classIndex,age,hash);
+        const size = self.sizeField;
+        const external = self.format.isExternal();
+        if (size > 0) {
+            const footers = @as([*]u64, @ptrCast(theHeapObject)) - size;
+            if (size>=3) footers[0] = 0;
+            footers[size - 1] = nElements;
+            footers[size - 2] = if (external) 0 else @intFromPtr(footers) - @sizeOf(element) * nElements;
+        }
+        return external;
+    }
+};
 test "allocationInfo" {
     const ee = std.testing.expectEqual;
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
@@ -448,17 +450,34 @@ pub const HeapObjectPtrIterator = struct {
         return self.nextPointer(@constCast(self));
     }
 };
-// test "heapPtrIterator" {
-//     const testing = std.testing;
-//     var h1 = header(0x17, Format.objectNP, 0x27, 0x129,Age.nursery);
-//     var h2 = header(0x0, Format.objectP, 0x27, 0x129,Age.nursery);
-//     var o1 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
-//     const ho1 = @ptrCast(HeapObjectPtr,&o1);
-//     var i = h1.makeIterator();
-//     try testing.expectEqual(i.next(),null);
-//     i = h2.makeIterator();
-//     try testing.expectEqual(i.next(),null);
-//     o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.objectP, 0x27, 0x129,Age.nursery).o();
+test "heapPtrIterator" {
+    const testing = std.testing;
+    const c = ClassIndex;
+    var o2 = compileObject(.{
+        "def",
+        True,
+        ":first",
+        c.Method, // first HeapObject
+        
+        ":second",
+        c.replace0, // second HeapObject - runtime ClassIndex #0
+        
+        "first", // pointer to first object
+        "1mref", // reference to replacement Object #1
+        Sym.i_1, // alternate reference to replacement Object #1
+        "second", // pointer to second object
+        ":def",
+        c.Class, // third HeapObject
+    });
+    o2.setLiterals(&[_]Object{ Nil, True },&[_]ClassIndex{@enumFromInt(0xdead)});
+    const ho2 = o2.asHeapObjectPtr();
+    const ho1 = AllocationInfo.calc(0, 0, Object, false).heapObject(ClassIndex.Object, .static, 0);
+    // var o3 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
+    // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
+
+    try testing.expectEqual(ho1.makeIterator(),null);
+//     var i = ho2.makeIterator();
+//
 //     i = HeapObjectPtrIterator.noPointers(ho1);
 //     try testing.expectEqual(i.next(),null);
 //     i = HeapObjectPtrIterator.ivPointers(ho1);
@@ -492,7 +511,7 @@ pub const HeapObjectPtrIterator = struct {
 //     try testing.expectEqual(i.next().?,&h1);
 //     try testing.expectEqual(i.next().?,&h2);
 //     try testing.expectEqual(i.next(),null);
-// }
+}
 
 pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge, NeedNurseryCollection };
 pub const AllocResult = struct {
