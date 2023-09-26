@@ -88,6 +88,7 @@ pub const ClassIndex = enum(u16) {
     max = 0xffff-8,
     replace7,replace6,replace5,replace4,replace3,replace2,replace1,replace0,
     _,
+    pub const LastSpecial = @intFromEnum(Self.Context);
     const Self = @This();
     inline fn base(ci: Self) u64 {
         return @as(u64, @intFromEnum(ci)) << 32;

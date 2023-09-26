@@ -181,9 +181,10 @@ pub const Process = extern struct {
         // find self references
         while (@intFromPtr(hp)<@intFromPtr(scan)) {
             const heapObject = @as(HeapObjectPtr,@ptrCast(scan-1));
-            const iter = heapObject.makeIterator();
-            while (iter.next()) |field| {
-                _ = field;
+            if (heapObject.makeIterator()) |iter| {
+                while (iter.next()) |field| {
+                    _ = field;
+                }
             }
             scan = heapObject.skipBack();
         }

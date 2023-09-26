@@ -24,8 +24,8 @@ pub const Format = enum(u8) {
     external_mut,
     indexedNonObject,
     indexedNonObject_mut, // this and below have no pointers
-    context, // this is a context object - special format
     special, // this is a special format
+    specialHeader,
     _x12,_x13,_x14,_x15,
     notIndexableWithPointers,
     notIndexableWithPointers_mut, // this and below have no pointers in array portion
@@ -57,7 +57,7 @@ pub const Format = enum(u8) {
     const DirectIndexed = @intFromEnum(Format.directIndexed);
     const Indexed = @intFromEnum(Format.indexed);
     const External = @intFromEnum(Format.external);
-    const Context = @intFromEnum(Format.context);
+    const SpecialHeader = @intFromEnum(Format.specialHeader);
     const Special = @intFromEnum(Format.special);
     const FirstWeak = @intFromEnum(Format.weakWithPointers);
     const Last = @intFromEnum(Format.externalWeakWithPointers_mut);
@@ -91,7 +91,7 @@ pub const Format = enum(u8) {
         (&s[NotIndexable]).set(Size.notIndexable);
         (&s[DirectIndexed]).set(Size.directIndexable);
         (&s[External]).set(Size.external);
-        s[Context] = Size.special;
+        s[SpecialHeader] = Size.special;
         s[Special] = Size.special;
         break :init s;
     };
@@ -111,7 +111,7 @@ pub const Format = enum(u8) {
         return .indexed;
     }
     pub fn isHeader(self: Self) bool {
-        return self == .context or self == .special;
+        return self == .specialHeader;
     }
     pub inline fn isSpecial(self: Self) bool {
         return self == .context or self == .compiledMethod;
@@ -141,17 +141,8 @@ pub const Format = enum(u8) {
     pub inline fn isImmutable(self: Self) bool {
         return @intFromEnum(self) & MutableFlag == 0;
     }
-    const Iterator = *const fn (obj: HeapObjectConstPtr) HeapObjectPtrIterator;
-    pub fn iterator(_: Self) Iterator {
-        unreachable;
-        // const i = HeapObjectPtrIterator;
-        // return switch (self) {
-        //     .immutableSizeZero....immediateByteMax, .notIndexableWithPointers => i.ivPointers,
-        //     .notObject, .notIndexable, .directIndexed => i.noPointers,
-        //     .immediateObjectOne....immediateObjectMax, .directIndexedWithPointers => i.directPointers,
-        //     .externalWeakWithPointers, .weakWithPointers => i.weakDefault,
-        //     else => i.bothPointers,
-        // };
+    inline fn iterator(self: Self) HeapObjectPtrIterator.Iterator {
+        return HeapObjectPtrIterator.iterator(self);
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
@@ -275,7 +266,7 @@ test "raw size" {
     try ee(@as(Format, @enumFromInt(130)).size(), Format.Size.directIndexable);
     try ee(@as(Format, @enumFromInt(71)).size(), @as(Format.Size,@enumFromInt(35)));
     try ee(Format.immutableSizeZero.size(), @as(Format.Size,@enumFromInt(0)));
-    try ee(Format.context.size(), Format.Size.special);
+    try ee(Format.specialHeader.size(), Format.Size.special);
     try ee(Format.special.size(), Format.Size.special);
 }
 test "HeapObject formats" {
@@ -392,61 +383,39 @@ pub const HeapObjectPtrIterator = struct {
     scanObject: HeapObjectConstPtr,
     current: [*]const Object,
     beyond: [*]const Object,
-    pub fn weakDefault(_: HeapObjectConstPtr) HeapObjectPtrIterator {
-        @panic("weakDefault called");
+    var specials = [_]*const fn(*Self) ?HeapObjectPtr {&notSpecial} ** (ClassIndex.LastSpecial+1);
+    fn notSpecial(_: *Self) ?HeapObjectPtr {
+        @panic("special with no special function");
     }
-    pub fn noPointers(_: HeapObjectConstPtr) HeapObjectPtrIterator {
-        return .{
-            .nextPointer = allDone,
-            .scanObject = undefined,
-            .current = undefined,
-            .beyond = undefined,
-        };
+    pub inline fn iterator(maybeForwarded: HeapObjectConstPtr) ?HeapObjectPtrIterator {
+        var obj = maybeForwarded.forwarded();
+        const format = obj.format;
+        if (!format.hasPointers()) return null;
+        switch (format) {
+            .notObject => return null,
+            .notIndexable, .directIndexed => {
+                const oa = obj.start();
+                return .{
+                    .nextPointer = remainingPointers,
+                    .scanObject = undefined,
+                    .current = oa,
+                    .beyond = oa + 1 + obj.length,
+                };
+            },
+            .special, .specialHeader =>  {
+                if (format == .specialHeader) obj = obj.realHeapObject();
+                return .{
+                    .nextPointer = specials[@intFromEnum(obj.classIndex)],
+                    .scanObject = obj,
+                    .current = undefined,
+                    .beyond = undefined,
+                };
+            },
+            .externalWeakWithPointers, .weakWithPointers => unreachable,
+            else => unreachable,
+        }
     }
-    pub fn ivPointers(obj: HeapObjectConstPtr) HeapObjectPtrIterator { // only ivs, or both with only iv pointers
-        if (!obj.hasInstVarsWithPtrs()) return noPointers(obj);
-        const ivs = @as([*]const Object, @ptrCast(obj));
-        return .{
-            .nextPointer = lastPointerGroup,
-            .scanObject = undefined,
-            .current = ivs + 1,
-            .beyond = ivs + 1 + obj.length,
-        };
-    }
-    pub fn arrayPointers(obj: HeapObjectConstPtr) HeapObjectPtrIterator { // only array
-        if (!obj.isIndexableWithPtrs()) return noPointers(obj);
-        const ivs = @as([*]const Object, @ptrCast(obj));
-        return .{
-            .nextPointer = lastPointerGroup,
-            .scanObject = undefined,
-            .current = ivs + 1,
-            .beyond = ivs + 1 + obj.length,
-        };
-    }
-    pub fn bothPointers(obj: HeapObjectConstPtr) HeapObjectPtrIterator { // both with iv and array pointers
-        if (!obj.hasInstVarsWithPtrs()) return bothOnlyArrayPointers(obj);
-        if (!obj.isIndexableWithPtrs()) return ivPointers(obj);
-        const ivs = @as([*]const Object, @ptrCast(obj));
-        return .{
-            .nextPointer = firstPointerGroup,
-            .scanObject = obj,
-            .current = ivs + 1,
-            .beyond = ivs + 1 + obj.length,
-        };
-    }
-    pub fn bothOnlyArrayPointers(obj: HeapObjectConstPtr) HeapObjectPtrIterator { // both with no iv pointers
-        if (!obj.isIndexableWithPtrs()) return noPointers(obj);
-        const ivs = @as([*]const Object, @ptrCast(obj));
-        const size = ivs[1 + obj.length].u();
-        const array = @as([*]Object, @ptrFromInt(ivs[2 + obj.length].u()));
-        return .{
-            .nextPointer = lastPointerGroup,
-            .scanObject = undefined,
-            .current = array,
-            .beyond = array + size - 1,
-        };
-    }
-    fn lastPointerGroup(self: *Self) ?HeapObjectPtr {
+    fn remainingPointers(self: *Self) ?HeapObjectPtr {
         while (@intFromPtr(self.current) < @intFromPtr(self.beyond)) {
             const obj = self.current[0];
             self.current += 1;
@@ -454,6 +423,9 @@ pub const HeapObjectPtrIterator = struct {
                 return obj.toUnchecked(HeapObjectPtr);
         }
         self.nextPointer = allDone;
+        return null;
+    }
+    fn allDone(_: *Self) ?HeapObjectPtr {
         return null;
     }
     fn firstPointerGroup(self: *Self) ?HeapObjectPtr {
@@ -469,11 +441,8 @@ pub const HeapObjectPtrIterator = struct {
         const array = @as([*]Object, @ptrFromInt(ivs[2 + obj.length].u()));
         self.current = array;
         self.beyond = array + size - 1;
-        self.nextPointer = lastPointerGroup;
-        return self.lastPointerGroup();
-    }
-    fn allDone(_: *Self) ?HeapObjectPtr {
-        return null;
+        self.nextPointer = remainingPointers;
+        return self.remainingPointers();
     }
     pub inline fn next(self: *const Self) ?HeapObjectPtr {
         return self.nextPointer(@constCast(self));
@@ -551,13 +520,10 @@ pub const HeapObject = packed struct(u64) {
     const forwardLength: u16 = 4094;
     pub const maxLength = 4093;
     pub const includesHeader = true;
-    pub fn iterator(self: HeapObjectConstPtr) Format.Iterator {
-        return self.format.iterator();
+    pub inline fn makeIterator(self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
+        return HeapObjectPtrIterator.iterator(self);
     }
-    pub fn makeIterator(self: HeapObjectConstPtr) HeapObjectPtrIterator {
-        return self.format.iterator()(self);
-    }
-    const contextHeader = @as(u64, @bitCast(HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .context, .age = .onStack, .length = 0 }));
+    const contextHeader = @as(u64, @bitCast(HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .specialHeader, .age = .onStack, .length = 0 }));
     pub inline fn contextHeaderOnStack(selfOffset: u16) HeapObject {
         return @as(HeapObject, @bitCast(contextHeader | @as(u64, selfOffset) << 16));
     }
@@ -565,7 +531,7 @@ pub const HeapObject = packed struct(u64) {
         return HeapObject{ .classIndex = @enumFromInt(0), .hash = 0, .format = .special, .age = .static, .length = size };
     }
     pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
-        return HeapObject{ .classIndex = classIndex, .hash = hash, .format = .context, .age = .static, .length = size };
+        return HeapObject{ .classIndex = classIndex, .hash = hash, .format = .specialHeader, .age = .static, .length = size };
     }
     pub inline fn contextHeaderWithClassLengthHash(classIndex: ClassIndex, size: u12, hash: u24) HeapObject {
         return HeapObject{ .classIndex = classIndex, .hash = hash, .format = .context, .age = .static, .length = size };
@@ -580,7 +546,7 @@ pub const HeapObject = packed struct(u64) {
     }
     pub fn asHeader(self: HeapObject) HeapObject {
         var result = self;
-        result.format = .special;
+        result.format = .specialHeader;
         result.length -= 1;
         return result;
     }
@@ -936,3 +902,4 @@ test "compile time" {
     try std.testing.expect(mem.eql(u8, abcde.asObject().arrayAsSlice(u8), "abcdefghijklm"));
 //    try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));
 }
+
