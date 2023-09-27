@@ -31,6 +31,11 @@ ASVariable >> = other [
 	^ self class = other class and: [ self name = other name ]
 ]
 
+{ #category : #converting }
+ASVariable >> asZagLabel [
+^name
+]
+
 { #category : #accessing }
 ASVariable >> hasModifiers [
 

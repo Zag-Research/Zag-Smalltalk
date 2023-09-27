@@ -20,6 +20,11 @@ ASStatement class >> nextIndex [
 	^index asString
 ]
 
+{ #category : #accessing }
+ASStatement class >> resetIndex [
+index:= nil
+]
+
 { #category : #converting }
 ASStatement >> asZagLabel [
 	label ifNil: [ label:= self className, ASStatement nextIndex].

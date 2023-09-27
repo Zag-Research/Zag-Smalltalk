@@ -2,7 +2,8 @@ Class {
 	#name : #ASSequence,
 	#superclass : #Object,
 	#instVars : [
-		'sequence'
+		'sequence',
+		'zagLabel'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -36,6 +37,12 @@ result addAll: (sequence collect: [ :statement | '"',statement asZagLabel,'",' ]
 
 sequence do: [ :statement | result addAll: statement asZagCompileObject  ].
 	^ result
+]
+
+{ #category : #converting }
+ASSequence >> asZagLabel [
+	zagLabel ifNil: [ zagLabel := 'body', ASStatement nextIndex  ].
+	^ zagLabel
 ]
 
 { #category : #comparing }

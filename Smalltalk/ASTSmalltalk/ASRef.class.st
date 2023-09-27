@@ -28,12 +28,17 @@ ASRef >> acceptVisitor: aVisitor [
 
 { #category : #converting }
 ASRef >> asZagCompileObject [
-	^ variable asZagCompileObject 
-]
 
-{ #category : #comparing }
-ASRef >> asZagLabel [ 
- ^ variable asZagLabel 
+	| results |
+	results := OrderedCollection new.
+
+	results add: 'c.ASRef,'.
+	results add: '":' , self asZagLabel , '",'.
+	results add: '"' , variable asZagLabel , '",'.
+
+	results addAll: variable asZagCompileObject.
+
+	^ results
 ]
 
 { #category : #comparing }

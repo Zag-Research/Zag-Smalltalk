@@ -18,14 +18,9 @@ ASArg >> asZagCompileObject [
 	results := OrderedCollection new.
 	
 	results add: 'c.ASArg,'.
-	results add: '":', name,'",'.
+	results add: '":', self asZagLabel ,'",'.
 	
 ^ results
-]
-
-{ #category : #converting }
-ASArg >> asZagLabel [
-	^name
 ]
 
 { #category : #visiting }

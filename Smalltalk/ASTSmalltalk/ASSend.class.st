@@ -52,25 +52,27 @@ ASSend >> args [
 
 { #category : #converting }
 ASSend >> asZagCompileObject [
+
 	| results |
 	results := OrderedCollection new.
-	
-	results add: 'c.ASSend,'.
-	results add: '":', label,'",'.
-	args do: [ :arg  | results add: '"', arg asZagLabel, '",' ]. 
-	results add: 'Sym.', selector asZigString, ','.
-	results add: '"', target asZagLabel, '",'.
 
-	args do: [ :arg  | results addAll: arg asZagCompileObject  ]. 
-	
+	results add: 'c.ASSend,'.
+	results add: '":' , label , '",'.
+	results addAll: (args collect: [:arg | '"' , arg asZagLabel , '",' ]).
+	results add: 'Sym.' , selector asZigString , ','.
+	results add: '"' , target asZagLabel , '",'.
+
+	args do: [ :arg | results addAll: arg asZagCompileObject ].
+
 	results addAll: target asZagCompileObject.
-	
-	^results
+
+	^ results
 ]
 
 { #category : #converting }
 ASSend >> asZigString [
-	^'"send1",'
+
+	^ '"send', self nextIndex, '",'
 ]
 
 { #category : #accessing }

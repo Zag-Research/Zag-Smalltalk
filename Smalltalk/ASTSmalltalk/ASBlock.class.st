@@ -16,7 +16,8 @@ Class {
 		'references',
 		'fields',
 		'includeContext',
-		'blockData'
+		'blockData',
+		'label'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -53,6 +54,29 @@ ASBlock >> acceptVisitor: aVisitor [
 { #category : #adding }
 ASBlock >> addClosureData [
 	blockData add: #closureData
+]
+
+{ #category : #converting }
+ASBlock >> asZagCompileObject [
+
+	| results |
+	results := OrderedCollection new.
+
+	results add: 'c.ASBlock,'.
+	results add: '":' , self asZagLabel , '",'.
+	results add: arguments size asString.
+	results add: '"' , body asZagLabel , '",'.
+
+	results addAll: body asZagCompileObject.
+	
+	^ results
+]
+
+{ #category : #converting }
+ASBlock >> asZagLabel [
+
+	label ifNil: [ label := 'block' , ASStatement nextIndex ].
+	^ label
 ]
 
 { #category : #'as yet unclassified' }
