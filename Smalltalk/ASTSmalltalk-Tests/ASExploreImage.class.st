@@ -13,7 +13,6 @@ Class {
 
 { #category : #'class initialization' }
 ASExploreImage class >> initialize [
-
 	" self initialize inspect "
 
 	| methodDefinitionsPerClass methodDefinitions implementedMethods classCount classesWithNoMethods abstractNoIvarsOrIndex ivarsAndIndex justIndexable nonVariablesSize variablesSize moreThan30 arity formats concreteNoIvarsOrIndex methodCount commonMethods |
@@ -33,22 +32,22 @@ ASExploreImage class >> initialize [
 	ivarsAndIndex := Set new.
 	justIndexable := Set new.
 	formats := Dictionary new.
-	Object withAllSubclasses do: [ :class | 
+	Object withAllSubclasses do: [ :class |
 		methodDefinitionsPerClass add:
 			((class methodDict size + 1) log * 10) asInteger.
 		methodDefinitions addAll: class methodDict keys.
-		(class class methodDict size = 0 and: [ class methodDict size = 0 ]) 
+		(class class methodDict size = 0 and: [ class methodDict size = 0 ])
 			ifTrue: [ classesWithNoMethods add: class ].
 		implementedMethods addAll: class methodDict keys.
 		implementedMethods addAll: class class methodDict keys.
 		class isVariable
-			ifTrue: [ 
+			ifTrue: [
 				class instSize isZero
 					ifTrue: [ justIndexable add: class ]
 					ifFalse: [ ivarsAndIndex add: class ].
 				variablesSize add: class instSize + 1 ]
-			ifFalse: [ 
-				class instSize isZero ifTrue: [ 
+			ifFalse: [
+				class instSize isZero ifTrue: [
 					class hasAbstractMethods
 						ifFalse: [ concreteNoIvarsOrIndex add: class ]
 						ifTrue: [ abstractNoIvarsOrIndex add: class ] ].
@@ -70,18 +69,21 @@ ASExploreImage class >> initialize [
 		at: #methodDefinitions
 		put: methodDefinitions valuesAndCounts associations sorted.
 	commonMethods := Dictionary new.
-	methodDefinitions valuesAndCounts associations do: [ :a | 
+	methodDefinitions valuesAndCounts associations do: [ :a |
 		commonMethods
 			at: a value
 			ifPresent: [ :c | c add: a key ]
 			ifAbsentPut: [ OrderedCollection with: a key ] ].
-	Info at: #commonMethods put: commonMethods associations sorted reversed.
+	Info
+		at: #commonMethods
+		put: commonMethods associations sorted reversed.
 	Info
 		at: #variablesSize
 		put: variablesSize valuesAndCounts associations sorted.
 	Info
 		at: #nonvariablesSize
 		put: nonVariablesSize valuesAndCounts associations sorted.
+	Info at: #ivarsAndIndex put: ivarsAndIndex.
 	Info at: #ObjectMethods put: Object methodDict size.
 	Info
 		at: #classesWithNoMethods
