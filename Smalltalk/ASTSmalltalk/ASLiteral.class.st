@@ -42,7 +42,7 @@ ASLiteral >> asZagCompileObject [
 
 { #category : #'as yet unclassified' }
 ASLiteral >> baseValue [
-	^ literal
+	^ value
 ]
 
 { #category : #accessing }

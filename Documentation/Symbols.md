@@ -7,10 +7,10 @@ The hash code contains 2 sub-fields: the low 24 bits are an index into the symbo
 
 Also an internal data structure (an auto-[treap](https://en.wikipedia.org/wiki/Treap)) must be used for `String>>#asSymbol`. While a hash table could conceivably be faster, an auto-treap allows the actual symbol entries to be at arbitrary and unchanging positions, which is required by the way we handle symbols.
 
-In a method that has a primitive, if the primitive fails, it executes the code that follows in the method. In AST Smalltalk, if a primitive fails it dispatches with an improper symbol - the same symbol as the original primitive, but with 1 added to the arity (to represent the error value).This means that loading a primitive-containing method actually adds 2 entries to the dispatch table: one for the primitive function, and one for the fallback method
+In a method that has a primitive, if the primitive fails, it executes the code that follows in the method.
 
 ## Interning of Symbols
-Part of the normal efficiency of Symbols is that they are unique, so that equality tests are simply an identity equality. This means that `asSymbol` has to guarantee that uniqueness. Creation of symbols is a fairly rare event, so it is Rust code that is behind a write lock. Even checking if a string is a symbol is rare, so that is behind a read lock.
+Part of the normal efficiency of Symbols is that they are unique, so that equality tests are simply an identity equality. This means that `asSymbol` has to guarantee that uniqueness. Creation of symbols is a fairly rare event, so it is Zig code that is behind a write lock. Even checking if a string is a symbol is rare, so that is behind a read lock.
 
 In Pharo, the String `asSymbol` checks for the existence in a Dictionary, but AST Smalltalk goes directly to interning the symbol. The sequence is:
 1. Grab a read lock on the table.

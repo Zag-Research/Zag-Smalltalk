@@ -1,10 +1,14 @@
 const std = @import("std");
+const config = @import("../config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const execute = @import("../execute.zig");
-const trace = execute.trace;
+const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
-const tailCall = execute.tailCall;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
@@ -14,33 +18,32 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
-pub fn init() void {
-}
+pub fn init() void {}
 
 pub const inlines = struct {
     pub inline fn p71(self: Object, other: Object) !Object { // basicNew:
-        _ = self; _ = other;
-//        return error.primitiveError;
+        _ = self;
+        _ = other;
+        //        return error.primitiveError;
         unreachable;
     }
 };
-const noFallback = execute.noFallback.asFaceObject();
 pub const embedded = struct {
-    var @"Behavior>>#new:" = noFallback;
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#new:
-        sp[1] = inlines.p71(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Behavior>>#new:".asFakeObject()});
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    const fallback = execute.fallback;
+    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
 };
 pub const primitives = struct {
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // new:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
     }
 };
 const p = struct {
@@ -51,7 +54,7 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     var te = execute.TestExecution.new();
     te.init();
     var objs = [_]Object{};
-    var result = te.run(objs[0..],method);
-    std.debug.print("result = {any}\n",.{result});
+    var result = te.run(objs[0..], method);
+    std.debug.print("result = {any}\n", .{result});
     return result;
 }

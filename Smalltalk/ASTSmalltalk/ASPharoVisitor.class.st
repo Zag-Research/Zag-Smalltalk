@@ -58,8 +58,8 @@ ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitBlockNode: aRBBlockNode [
-	| block |
-	block := ASBlock
+
+	^ ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
 		  body: ASSequence new.
@@ -132,6 +132,7 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
 	selector := aRBMethodNode selector.
+	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode
 		          class: aRBMethodNode methodClass
 		          selector: selector

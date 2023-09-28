@@ -24,12 +24,10 @@ ASSourceCompiler >> compileMethodInClass: aClass [
 	args := OrderedCollection new.
 	selector := aScanner peek classSelector: self args: args.
 	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
-	"args do: [ : arg | method arguments add: arg ]. //why are we doing this twice? "
+	args do: [ : arg | method add: arg ].
 	savedScope := scope.
 	[
-		"scope := method nestedScopeOf: aClass."
-		method nestedScopeOf: aClass. 
-		scope := method scope.
+		scope := method nestedScopeOf: aClass.
 		method body: self methodBody
 	] ensure: [
 		scope := savedScope
@@ -44,13 +42,13 @@ ASSourceCompiler >> localDefs [
 
 { #category : #parsing }
 ASSourceCompiler >> methodBody [
-
 	| statements |
 	self localDefs.
 	statements := OrderedCollection new.
 	self statements: statements.
-	(statements notEmpty and: [ statements last isReturn ]) ifFalse: [
-		statements add: (ASReturn new unaryExpression: #self asASSelf) ].
+	(statements notEmpty and: [statements last isReturn]) ifFalse: [ 
+		statements add: (ASReturn new unaryExpression: #self asASSelf)
+	].
 	aScanner peek expectEnd.
 	^ statements
 ]

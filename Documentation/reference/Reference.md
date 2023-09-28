@@ -7,13 +7,23 @@
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
 - [point-free Smalltalk](https://smalltalkthoughts.blogspot.com/2011/08/point-free-programming-in-smalltalk.html)
 - [Marcus Denker blog](https://blog.marcusdenker.de/)
-- [Cog blog - build me a JIT as fastt as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
+- [Cog blog - build me a JIT as fast as you can](http://www.mirandabanda.org/cogblog/2011/03/01/build-me-a-jit-as-fast-as-you-can/)
 - [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
 - [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
+- [building Pharo VM](https://github.com/pharo-project/pharo-vm) 
+```
+$ git clone git@github.com:pharo-project/pharo-vm.git
+$ cmake -S pharo-vm -B build -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE  -DFLAVOUR=StackVM
+$ cd build
+$ make install
+```
+- 
 
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
+- [HydraVM](http://www.hydravm.org/hydra)
+- [GraalVM](https://www.graalvm.org)
 
 ### Memory Management
 #### mimalloc
@@ -21,11 +31,13 @@
 - has some interesting ideas similar to those I was thinking about
 - [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
 #### Mist
-- [[MistDesign]] also has some ideas we modify
+- [MistDesign](MistDesign.md) also has some ideas we modify
 #### Garbage Collectors
 - [Deconstructing the garbage-first collector](https://dl.acm.org/doi/10.1145/3381052.3381320)
 - [MMTk](https://github.com/mmtk)
 
+### User interface
+- [_Chromium_ Embedded Framework](https://github.com/chromiumembedded/cef)
 ### Architectures
 #### HPC and architectures (cache et al)
 - [Algorithmica](https://en.algorithmica.org/hpc/)

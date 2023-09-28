@@ -71,7 +71,7 @@ ASZigGenerator >> visitInstance: anASInstance [
 
 { #category : #visiting }
 ASZigGenerator >> visitLiteral: anASLiteral [ 
-	stream << anASLiteral literal asString
+	anASLiteral literal printOn: stream
 ]
 
 { #category : #visiting }

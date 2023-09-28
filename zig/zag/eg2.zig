@@ -26,53 +26,55 @@ const _s = struct {
     const @"false" = _object.False;
     const _s0 = _symbol.symbol0;
     const _n = _symbol.predefinedSymbols;
-    const start = _s0(_n+0);
-    const main = _s0(_n+2);
+    const start = _s0(_n + 0);
+    const main = _s0(_n + 2);
     usingnamespace _symbol.symbols;
 };
 fn _init_symbolTable(process: *_process.Process) void {
-    _symbol.init(process,250,
-\\ start main
-                 ) catch @panic("_init_symbolTable failed");
+    _symbol.init(process, 250,
+        \\ start main
+    ) catch @panic("_init_symbolTable failed");
 }
 const Object_defs = struct {
     fn class_MI(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
-        if (!selector.equals(_s.class)) return _dnu(selector,self,other,_cc,_dp,_do,_s.class);
-        return _MR{.Normal=_prim.prim_111_class(self,other,_cc) catch unreachable};
+        if (!selector.equals(_s.class)) return _dnu(selector, self, other, _cc, _dp, _do, _s.class);
+        return _MR{ .Normal = _prim.prim_111_class(self, other, _cc) catch unreachable };
     }
-    const instance_methods = ([_]_SM{
-    })[0..];
+    const instance_methods = ([_]_SM{})[0..];
     const class_methods = ([_]_SM{
-        .{.selector=_s.class,.method=class_MI},
+        .{ .selector = _s.class, .method = class_MI },
     })[0..];
-    inline fn init(t:*_process.Process) !_O { return _init(t,_s.System,instance_methods,class_methods);}
+    inline fn init(t: *_process.Process) !_O {
+        return _init(t, _s.System, instance_methods, class_methods);
+    }
 };
 const System_defs = struct {
     fn start_MC(selector: _O, self: _O, other: _O, _cc: *_CXT, _dp: _DP, _do: _DO) _MR {
-        if (!selector.equals(_s.start)) return _dnu(selector,self,other,_cc,_dp,_s.start,_do);
-        return _MR{.Normal=self};
+        if (!selector.equals(_s.start)) return _dnu(selector, self, other, _cc, _dp, _s.start, _do);
+        return _MR{ .Normal = self };
     }
-    const instance_methods = ([_]_dispatch.SymbolMethod{
-    })[0..];
+    const instance_methods = ([_]_dispatch.SymbolMethod{})[0..];
     const class_methods = ([_]_dispatch.SymbolMethod{
-        .{.selector=_s.start,.method=start_MC},
+        .{ .selector = _s.start, .method = start_MC },
     })[0..];
-    fn init(t:*_process.Process) !_O { return _init(t,_s.System,instance_methods,class_methods);}
+    fn init(t: *_process.Process) !_O {
+        return _init(t, _s.System, instance_methods, class_methods);
+    }
 };
 test "try a process" {
     var process = try _process.Process.initForTest();
     defer process.deinit();
     _init_symbolTable(&process);
-    var cxt = [_]_O{_nil,_s.main}++[_]_O{_nil}**3;
-    var context = _dispatch.make_init_cxt(cxt[0..],&process);
+    var cxt = [_]_O{ _nil, _s.main } ++ [_]_O{_nil} ** 3;
+    var context = _dispatch.make_init_cxt(cxt[0..], &process);
     const System = try System_defs.init(&process);
-    try _stdout.writer().print("before dispatch\n",.{});
-    switch (System.send(_s.start,_s.nil,context)) {
+    try _stdout.writer().print("before dispatch\n", .{});
+    switch (System.send(_s.start, _s.nil, context)) {
         .Normal => {
             try _expect(process.stack()[0].is_nil());
         },
         else => |result| {
-            try _stdout.writer().print("result={}\n",.{result});
+            try _stdout.writer().print("result={}\n", .{result});
             return error.Fail;
         },
     }

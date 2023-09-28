@@ -1,108 +1,132 @@
 const std = @import("std");
+const config = @import("../config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
 const execute = @import("../execute.zig");
-const trace = execute.trace;
+const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
 const Code = execute.Code;
-const tailCall = execute.tailCall;
+const PC = execute.PC;
+const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");
 const Object = object.Object;
+const empty = Object.empty;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const sym = @import("../symbol.zig").symbols;
+const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
-pub fn init() void {
-}
+pub fn init() void {}
 
 pub const inlines = struct {
-    pub inline fn p60(self: Object, other: Object) !Object { // at:
-        _ = self; _ = other;
+    pub inline fn p60(self: Object, other: Object) !Object { // basicAt:
+        _ = self;
+        _ = other;
         return error.primitiveError;
     }
-    pub inline fn p61(self: Object, other: Object) !Object { // at:put:
-        _ = self; _ = other;
+    pub inline fn p61(self: Object, other: Object) !Object { // basicAt:put:
+        _ = self;
+        _ = other;
+        return error.primitiveError;
+    }
+    pub inline fn p70(self: Object, other: Object) !Object { // basicNew
+        _ = self;
+        _ = other;
         return error.primitiveError;
     }
     pub inline fn p71(self: Object, other: Object) !Object { // basicNew:
-        _ = self; _ = other;
+        _ = self;
+        _ = other;
         return error.primitiveError;
     }
     pub inline fn p110(self: Object, other: Object) bool { // Identical - can't fail
         return self.equals(other);
     }
     pub inline fn p145(self: Object, other: Object) !Object { // atAllPut:
-        _ = self; _ = other;
+        _ = self;
+        _ = other;
         return error.primitiveError;
     }
     pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
         return !self.equals(other);
     }
 };
-const noFallback = execute.noFallback;
+const fallback = execute.fallback;
 pub const embedded = struct {
-    var @"Object>>#at:" = noFallback;
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#at:
-        sp[1] = inlines.p60(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#at:".asFakeObject()});
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn @"basicAt:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        sp[1] = inlines.p60(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:" });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    var @"Object>>#at:put:" = noFallback;
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#at:put:
-        sp[1] = inlines.p61(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#at:put:".asFakeObject()});
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn @"basicAt:put:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        sp[1] = inlines.p61(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:put:" });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn @"=="(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p110(sp.next, sp.top))), process, context, selector, cache });
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn @"~~"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p169(sp.next, sp.top))), process, context, selector, cache });
     }
-    var @"Object>>#atAllPut:" = noFallback;
-    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {// Object>>#atAllPut:
-        sp[1] = inlines.p145(sp[1],sp[0]) catch
-            return @call(tailCall,Context.call,.{pc,sp,process,context,@"Object>>#atAllPut:".asFakeObject()});
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn @"atAllPut:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+        const newSp = sp.dropPut(inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" }));
+        return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
     }
 };
 const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {
-    pub fn p60(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
+    pub fn p60(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicAt:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
     }
-    pub fn p61(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
+    pub fn p61(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicAt:put:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
     }
-    pub fn p71(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // at:
-        _ = pc; _ = sp; _ = process; _ = context; _ = selector; unreachable;
+    pub fn p70(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
     }
-    pub fn p110(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#==
-        if (!sym.@"==".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
-        sp[1] = Object.from(inlines.p110(sp[1],sp[0]));
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
     }
-    pub fn p145(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // atAllPut:
-        if (!sym.@"atAllPut:".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
+    pub fn p83(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform: perform:with: perform:with:with: perform:with:with:with:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
+    }
+    pub fn p84(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform:withArguments:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
+    }
+    pub fn p100(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // perform:withArguments:inSuperclass:
+        _ = .{ pc, sp, process, context, selector, cache };
+        unreachable;
+    }
+    pub fn p110(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // ProtoObject>>#==
+        if (!Sym.@"==".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        sp[1] = Object.from(inlines.p110(sp[1], sp[0]));
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
+    }
+    pub fn p145(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // atAllPut:
+        if (!Sym.@"atAllPut:".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
         inlines.p1(sp[0]) catch
-            return @call(tailCall,pc[0].prim,.{pc+1,sp,process,context,selector});
-        return @call(tailCall,context.npc,.{context.tpc,sp+1,process,context,selector});
+            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, selector, cache });
     }
-    pub fn p169(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ProtoObject>>#~~
-        if (!sym.@"~~".equals(selector)) return @call(tailCall,dnu,.{pc,sp,process,context,selector});
-        sp[1] = Object.from(inlines.p169(sp[1],sp[0]));
-        return @call(tailCall,pc[0].prim,.{pc+1,sp+1,process,context,selector});
+    pub fn p169(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // ProtoObject>>#~~
+        if (!Sym.@"~~".hashEquals(selector)) return @call(tailCall, dnu, .{ pc, sp, process, context, selector, cache });
+        sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
-    // pub inline fn p111(pc: [*]const Code, sp: [*]Object, heap: Hp, rpc: [*]const Code, process: *Process, caller: Context) Object { // ProtoObject>>class
+    // pub inline fn p111(pc: PC, sp: SP, heap: Hp, rpc: PC, process: *Process, caller: Context) Object { // ProtoObject>>class
 };
 const e = struct {
     usingnamespace execute.controlPrimitives;
@@ -110,63 +134,58 @@ const e = struct {
 };
 test "simple ==" {
     const expect = std.testing.expect;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(4),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.returnNoContext,
+    var prog = compileMethod(Sym.value, 0, 0, .{
+        &e.pushLiteral, Object.from(4),
+        &e.pushLiteral, Object.from(4),
+        &e.@"==",       &e.returnNoContext,
     });
-    const result = testExecute(prog.asCompiledMethodPtr());
+    const result = testExecute(&prog);
     try expect(result[0].to(bool));
 }
-fn testExecute(method: CompiledMethodPtr) []Object {
+fn testExecute(ptr: anytype) []Object {
+    const method: CompiledMethodPtr = @ptrCast(ptr);
     var te = execute.TestExecution.new();
     te.init();
     var objs = [_]Object{};
-    var result = te.run(objs[0..],method);
-    std.debug.print("result = {any}\n",.{result});
+    var result = te.run(objs[0..], method);
     return result;
 }
 test "simple compare" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.returnNoContext,
+    var prog = compileMethod(Sym.value, 0, 0, .{
+        &e.pushLiteral, Object.from(3),
+        &e.pushLiteral, Object.from(4),
+        &e.@"==",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0],False);
+    try expectEqual(testExecute(&prog)[0], False);
 }
 test "simple compare and don't branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p110,
-        &e.ifTrue,"true",
-        &e.pushLiteral,Object.from(17),
-        &e.branch,"common",
-        ":true",
-        &e.pushLiteral,Object.from(42),
-        ":common", &e.returnNoContext,
+    var prog = compileMethod(Sym.value, 0, 0, .{
+        &e.pushLiteral,  Object.from(3),
+        &e.pushLiteral,  Object.from(4),
+        &e.@"==",        &e.ifTrue,
+        "true",          &e.pushLiteral,
+        Object.from(17), &e.branch,
+        "common",        ":true",
+        &e.pushLiteral,  Object.from(42),
+        ":common",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),17);
+    try expectEqual(testExecute(&prog)[0].toInt(), 17);
 }
 test "simple compare and branch" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(sym.value,0,0,.{
-        &e.pushLiteral,Object.from(3),
-        &e.pushLiteral,Object.from(4),
-        &e.p169,
-        &e.ifTrue,"true",
-        &e.pushLiteral,Object.from(17),
-        &e.branch,"common",
-        ":true",
-        &e.pushLiteral,Object.from(42),
-        ":common", &e.returnNoContext,
+    var prog = compileMethod(Sym.value, 0, 0, .{
+        &e.pushLiteral,  Object.from(3),
+        &e.pushLiteral,  Object.from(4),
+        &e.@"~~",        &e.ifTrue,
+        "true",          &e.pushLiteral,
+        Object.from(17), &e.branch,
+        "common",        ":true",
+        &e.pushLiteral,  Object.from(42),
+        ":common",       &e.returnNoContext,
     });
-    try expectEqual(testExecute(prog.asCompiledMethodPtr())[0].toInt(),42);
+    try expectEqual(testExecute(&prog)[0].toInt(), 42);
 }
 
-test "dispatch3" {
-}
+test "dispatch3" {}

@@ -10,13 +10,17 @@ The native implementation is a sequence of functions implementing everything bet
 
 When sending a message, the current Context will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
-When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. If we are executing in native mode, the first threaded address will simply point to the address of the first native function. Or, if there is no native version, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. If we are executing in threaded mode (single-stepping, for example) we will skip the first word and thereby execute the first real instruction of the threaded implementation of the method.
+When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
+1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
+2. If there is no native version and the method doesn't start with a primitive, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. The rest of the thread is from the Smalltalk in the method.
+3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native (CPS) function implementing the method. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context. The remaining functions all will know which threaded-pc corresponds to each function.
+4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions used to implement the method. The functions all will know which threaded-pc corresponds to each function.
 
 ## The stack and Contexts
 
 The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be copied to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be copied to the heap.
 
-There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context; and b) switching between interpreter and native implementation is seamless.
+There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
 
 #### Stack example
 
@@ -84,8 +88,8 @@ Logically, Smalltalk message dispatch follows these steps:
  6. the method is not found, so create a Message object, set C to T and go back to 3 with the selector set to `doesNotUnderstand:` - we're guaranteed to find something on this go-round because `Object` implements `doesNotUnderstand:`.
 
 This is not the whole story for 2 reasons:
- 1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences.
- 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from another class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
+ 1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences, as an optimization.
+ 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from a different class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
  
  See:
  - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
@@ -95,9 +99,13 @@ This is not the whole story for 2 reasons:
 #### Java dispatch
 Java has five opcodes to invoke methods, but the one we're interested in is `invokevirtual` which does virtual dispatch the same as Smalltalk^[the other 4 are because of the impoverished nature of Java object structure].
 
-The difference is that the Java compiler statically knows the index into the dispatch table, so there is no need for a dictionary lookup. The same thing could be done for Smalltalk, if we knew which class the object was an instance of. Failing that, for every class (there are over 20,000 classes in a recent [Pharo](https://pharo.org) image, we would have to have a dispatch table with an entry for all message names (there are over 62,000 method names in the same image). Consuming over 10GB of memory for dispatch tables is clearly excessive.
+The difference is that the Java compiler statically knows the index into the dispatch table, so there is no need for a dictionary lookup. The dispatch table for each class has a prefix of a copy of the dispatch table from its superclass, followed by the methods defined in this class. Any methods that override superclass methods replace the corresponding method in the prefix. Since the names of all of the legal methods are known, finding the method for a particular name requires a simple index (which doesn't even have to be range checked).
 
-Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods, leading to 80MB of dispatch tables - still excessive (and would have horrible cache locality).
+This *flat dispatch* is many times faster than the classic Smalltalk dispatch, and is only slower than direct calling by a couple memory accesses and and a complete pipeline stall.
+
+The same thing could be done for Smalltalk, if we knew which class the object was an instance of. Failing that, for every class (there are over 20,000 classes in a recent [Pharo](https://pharo.org) image, we could have to have a dispatch table with an entry for all message names (there are over 62,000 method names in the same image). Consuming over 10GB of memory for dispatch tables is clearly excessive.
+
+Even if we somehow knew the class of the object, the tables would still be excessive because of the size of the Smalltalk Object class compared with the Java Object class. The Java Object class only has 11 methods, whereas the Smalltalk Object class has over 460 methods. Because this approach to dispatch requires a superclass method prefix, this would lead to over 80MB of dispatch tables - still excessive (and would have horrible cache locality).
 
 #### Our approach
 We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
@@ -105,31 +113,41 @@ We lazily build a single dispatch table for each class, which includes not just 
 | Dispatch table entry for a class |                        |
 | -------------------------------- | ---------------------- |
 | Hash multiplier                  | a u32                  |
-| second hash multiplier | a u16                                 |                        |
-| superclass index                 | a u16                  |
 | method pointers                  | an array of pointers to threads |
 
 The sequence to look up a method is:
-1. use the selector hash
-2. multiply with wrap by the hash multiplier
-3. shift right by the low 5 bits of the multiplier
-4. use that as the index into the array
-5. jump to the threaded code
+1. use the selector hash (symbol id and arity - 32 bits)
+2. 32-bit multiply with wrap by a constant hash (to spread the value over the 32 bits)
+3. convert to a u64 and then multiply by the hash multiplier
+4. shift right 32 bits(the 2nd multiply and shift replace a modulo)
+5. use that as the index into the array
+6. jump to the threaded code
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
-The tables are built as a near-perfect for power-of-2 tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to some kind of second-level lookup - could be an and, could be linear scan with symbols - for any, the data will follow the first-level method pointers in the table.
+The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup, so there is no check - just the jump.
 
-The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive
+The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive.
 
+Note that because the hierarchy is flattened, and not all super sends can be inlined, there may be multiple methods with the same selector. These are disambiguated with tags in the arity field.
+
+## Does Not Understand
+
+DNU can happen either because the dispatch pointer points to DNU code or because the dispatching selector didn't match the selector for the method. But in either case, a DNU simply means that there is no CompiledMethod for the selector for this class. This may be because of a true DNU, or because an appropriate method exists, but hasn't been compiled yet.
+
+The DNU code will look in the method list for the class and its superclasses for a method with the correct selector. If found, the method will be compiled for the target class, and inserted into the dispatch table. If not found, a Message object will be created and the object will be sent a `doesNotUnderstand:` message. This may also trigger a DNU, but this time we are guaranteed that an appropriate method exists, because there is an implementation of `doesNotUnderstand:` in Object.
+
+## Compilation
+
+Methods understand the message `compileForClass:withCodeGenerator:` which takes a target class and a code generator, and converts the AST of the method to a series of calls to the code generator. In the simplest case, the AST is directly converted to threaded code. More generally there are lots of [Optimizations](Optimizations.md).
 ## BlockClosures
 
 BlockClosures are defined within a method or another block. A closure may:
 1. contain a non-local return in which case it has to have a reference to the context in which it was created
-2. contain immutable values that are not modified after the block is created
+2. contain values that are not modified in the method after the closure is created and is either not modified in the block either, or is not referenced in the method after the closure is created
 3. reference or modify values that are also referenced or modified by the main method code or another block in which case it has to have a reference to a ClosureData object where the mutable values are stored
 
-Consider the following method, defined in Integer and called with `3 foo: 7 bar: 2` at the start of the first execution of BlockClosure 2
+Consider the following method, defined in Integer
 ```Smalltalk
 foo: p1 bar: p2
 	| l1 l2 l3 |
@@ -142,6 +160,86 @@ foo: p1 bar: p2
 		l1 = l3 ifTrue: [ ^ 1 ] ].
 	^ l1
 ```
+
+The method would compile to:
+```zig
+// self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
+	&e.verifySelector,
+    &e.pushContext, "^",
+	// define all blocks here
+    &e.closureData, 3 + (1 << 12), // local:3 size:1 (offset 1 is l1)
+    &e.nonlocalClosure_self, 2, // [^ self] local:2
+    &e.blockClosure, "0foo:bar::1", 1 + (1 << 12) + (0 << 20)   + (3 << 32),
+	    // local:1, 1 field, no includeContext, closureData at local3
+    &e.blockClosure, "1foo:bar::2", 0 + (1 << 12) + (255 << 20) + (3 << 32),
+		// local:0, 1 field, includeContext, closureData at local3
+    // all blocks defined by now
+    &e.pushLocal, 6, // p1
+    &e.popLocalData, 1 + (3 << 12),
+	    // p1 (read-only) copy offset 3 in local 1 (field in BC1)
+    &e.pushLocal, 6, // p1
+    &e.pushLocal, 5, // p2
+    &e.send1,      Sym.@"<",
+    &e.pushLocal, 2, // [^ self]
+    &e.send1,      Sym.@"ifTrue:",
+    &e.drop, // discard result from ifTrue: (if it returned)
+    &e.pushLocal, 5, // p2
+    &e.popLocalData, 3 + (1 << 12), // l1
+    &e.pushLocal, 6, // p1
+    &e.pushLocal, 5, // p2
+    &e.send1,      Sym.@"\\",
+    &e.popLocal, 4, // l2
+    &e.pushLocal, 5, // p2
+    &e.pushLocal, 4, // l2
+    &e.send1,      Sym.@"-",
+    &e.popLocalData, 0 + (4 << 12), // l3 offset 4 in local 0
+    &e.pushLocal, 1, // BC1 [ l1 < p1 ]
+    &e.pushLocal, 0, // BC2 [ l1 := ... ]
+    &e.send1,      Sym.@"whileTrue:",
+    &e.drop,
+    &e.pushLocalData, 3 + (1 << 12), // l1
+    &e.returnTop,
+```
+
+The first block would be:
+```zig
+// foo:bar::1    [ l1 < p1 ]
+// self-0
+    &e.verifySelector,
+    &e.pushContext, "^",
+    &e.pushLocalDataData, 0 + (2 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 2 in local 0
+    &e.pushLocalData, 0 + (3 << 12),
+	    // p1 offset 3 in local 0
+    &e.send,          Sym.@"<",
+    &e.returnTop,
+```
+
+and the second block would be:
+```zig
+// foo:bar::2"   [ l1 := l1 + 1.  l1 = l3 ifTrue: [ ^ 1 ] ]
+// self-1 BCone-0
+    &e.verifySelector,
+    &e.pushContext, "^",
+    &e.nonlocalClosure_one, 0 + (1 << 12) + (2 << 24),
+	    // [^ 1] local:0 context at offset 2 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLiteral,       Object.from(1),
+    &e.send,              Sym.@"+",
+    &e.popLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24),
+	    // l1 offset 1 in offset 3 in local 1
+    &e.pushLocalData, 1 + (4 << 12),
+	    // l3 offset 4 in local 1
+    &e.send,          Sym.@"=",
+    &e.pushLocal, 0, // [^ 1]
+    &e.send,      Sym.@"ifTrue:",
+    &e.returnTop,
+```
+
+The following stack contents reflect the state after the expression `3 foo: 7 bar: 2` has partially executed and is at the start of the first execution of BlockClosure 2
 
 | | BC1 Context  | Description              | Pointers                                                  |
 |  - | ------ | ------------------------ | --------------------------------------------------------- |
@@ -166,7 +264,7 @@ foo: p1 bar: p2
 |14| clsPtr | aBlock |       BC1                                                    |
 |15| clsPtr | self                  | BC2                                                          |
 
-| | BC2 | Description | Pointers| |
+| | BC2 | Description | Pointers|
 | - | - | - | - |
 |16| object   |     l3        |                                             |
 |17| clsDataPtr |  |   -->  clsDataPtr       (26)                                             |
@@ -186,7 +284,7 @@ foo: p1 bar: p2
 |25| object | l1                  |                                                           |
 |26| footer | ClosureData - 1 word                |     <--- clsDataPtr                                                      |
 
-| | foo:bar: | Description | Pointers| |
+| | foo:bar: Context | Description | Pointers|
 | - | - | - | - |
 |27| header | foo:bar: header                | <--- whileTrue: ctxt                                              |
 |28| tpc    | caller threaded pc to return       |                                                           |
