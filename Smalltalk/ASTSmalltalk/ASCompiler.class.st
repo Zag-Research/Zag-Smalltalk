@@ -15,7 +15,8 @@ Class {
 		'currentScope',
 		'freeSelectors',
 		'methodsAlreadyProcessed',
-		'methodsToProcess'
+		'methodsToProcess',
+		'visitMessages'
 	],
 	#classVars : [
 		'ClassIndices',
@@ -48,14 +49,13 @@ ASCompiler class >> initialize [
 ASCompiler >> addClass: aClass [
 
 	| astClass |
-	astClass := ClassMap at: aClass ifAbsent: [ 
-		            aClass ].
+	astClass := ClassMap at: aClass ifAbsent: [ aClass ].
 	(classes includes: astClass) ifTrue: [ ^ astClass ].
 	classes add: astClass.
 	astClass isClassSide
 		ifTrue: [ classes add: astClass instanceSide ]
 		ifFalse: [ classes add: astClass classSide ].
-	freeSelectors do: [ :selector | 
+	freeSelectors do: [ :selector |
 		self send: selector toClass: astClass ].
 	^ astClass
 ]
@@ -68,16 +68,15 @@ ASCompiler >> addMethod: method [
 { #category : #building }
 ASCompiler >> buildFromClass: aClass selector: selector [
 
+	visitMessages := true.
 	self send: selector toClass: aClass.
 	self transitiveClosure
 ]
 
 { #category : #building }
-ASCompiler >> buildFromClasses: someClasses withSelectors: someSelectors [
-
-	someClasses
-		with: someSelectors
-		do: [ :aClass :aSelector | self send: aSelector toClass: aClass ].
+ASCompiler >> buildFromClassShallow: aClass selector: selector [
+	visitMessages := false.
+	self send: selector toClass: aClass.
 	self transitiveClosure
 ]
 
@@ -144,12 +143,13 @@ ASCompiler >> initialize [
 	super initialize.
 	classes := Set new.
 	selectors := Set new.
-	freeSelectors := Set with: #initialize.
+	freeSelectors := Set new."why include initialize?? with: #initialize."
 	methods := Set new.
 	methodsAlreadyProcessed := Set new.
 	methodsToProcess := Set new.
 	self addClass: True.
 	self addClass: False.
+	visitMessages := true.
 ]
 
 { #category : #inlining }
@@ -192,10 +192,10 @@ ASCompiler >> selectors [
 
 { #category : #building }
 ASCompiler >> send: selector toClass: aClass [
-
-	(self selector: selector fromClass: (self addClass: aClass)) ifNotNil: [ :method | 
-		selectors add: selector.
-		self addMethod: method ]
+	(self selector: selector fromClass: (self addClass: aClass))
+		ifNotNil: [ :method |
+			selectors add: selector.
+			self addMethod: method ]
 ]
 
 { #category : #notifying }
@@ -240,6 +240,12 @@ ASCompiler >> transitiveClosure [
 		toProcess do: [: method |
 			self compileMethod: method ].
 		]
+]
+
+{ #category : #compiling }
+ASCompiler >> visitMessages [
+
+	^ visitMessages
 ]
 
 { #category : #building }

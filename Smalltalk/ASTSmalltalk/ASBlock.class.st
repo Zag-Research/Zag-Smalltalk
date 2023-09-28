@@ -9,7 +9,15 @@ Class {
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
 	#instVars : [
-		'method'
+		'method',
+		'selector',
+		'isNonLocalReturn',
+		'modifies',
+		'references',
+		'fields',
+		'includeContext',
+		'blockData',
+		'label'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -44,13 +52,107 @@ ASBlock >> acceptVisitor: aVisitor [
 	^ aVisitor visitBlockNode: self
 ]
 
+{ #category : #adding }
+ASBlock >> addClosureData [
+	blockData add: #closureData
+]
+
+{ #category : #converting }
+ASBlock >> asZagCompileObject [
+
+	| results |
+	results := OrderedCollection new.
+
+	results add: 'c.ASBlock,'.
+	results add: '":' , self asZagLabel , '",'.
+	results add: arguments size asString.
+	results add: '"' , body asZagLabel , '",'.
+
+	results addAll: body asZagCompileObject.
+	
+	^ results
+]
+
+{ #category : #converting }
+ASBlock >> asZagLabel [
+
+	label ifNil: [ label := 'block' , ASStatement nextIndex ].
+	^ label
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> blockIndex: aString [
+	^ ((blockData indexOf: aString) - 1) asString
+]
+
 { #category : #accessing }
 ASBlock >> blocks [
 
-	| myBlocks |
-	myBlocks := OrderedCollection new.
-	myBlocks add: self.
-	^ myBlocks
+	| blocks |
+	blocks := OrderedCollection new.
+	blocks add: self.
+	^ blocks
+]
+
+{ #category : #'instance creation' }
+ASBlock >> buildClosureData: modifiedVariables [
+
+	references do: [ :var |
+		(modifiedVariables includes: var name) ifFalse: [
+			fields add: var name.
+			blockData add: var name ] ]
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> buildClosureDataWithModifiers: modifiedVariables [
+	blockData add: #closureData.
+	self buildClosureData: modifiedVariables
+]
+
+{ #category : #accessing }
+ASBlock >> buildStack [
+	| stackVariables |
+	stackVariables := OrderedCollection new.
+	stackVariables add: #self.
+	stackVariables addAll: arguments.
+	stackVariables addAll: locals.
+	^ stackVariables reverse.
+]
+
+{ #category : #accessing }
+ASBlock >> closureData: closureData [
+	clsrData := closureData
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> closureIndex: aVar [
+
+	^ ((clsrData indexOf: aVar name) -1) asString
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> filter: zigInstructions [
+zigInstructions last = '&e.drop,' ifTrue: [ zigInstructions removeLast ].
+	^ zigInstructions
+]
+
+{ #category : #accessing }
+ASBlock >> includeContext [
+	includeContext := true
+]
+
+{ #category : #accessing }
+ASBlock >> initialize [
+
+	super initialize.
+	isNonLocalReturn := true.
+	modifies := OrderedCollection new.
+	references := OrderedCollection new.
+	fields := OrderedCollection new.
+	includeContext := false.
+	blockData := OrderedCollection new.
+	blockData add: #footer.
+	blockData add: #method
 ]
 
 { #category : #testing }
@@ -60,7 +162,12 @@ ASBlock >> isASBlock [
 
 { #category : #accessing }
 ASBlock >> isNonLocalReturn [
-	^ isNonLocalReturn
+	^ body isNonLocalReturn
+]
+
+{ #category : #accessing }
+ASBlock >> location: closureName [ 
+	^((blockData indexOf: closureName) - 1) asString
 ]
 
 { #category : #accessing }
@@ -68,11 +175,35 @@ ASBlock >> maxDepth [
 	^locals size
 ]
 
+{ #category : #accessing }
+ASBlock >> modifiers [
+	^ modifies 
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> modifies: anASVariable [
+	modifies add: anASVariable
+]
+
+{ #category : #accessing }
+ASBlock >> nonLocalReturn: stackVars [
+	| nonLocalReturn |
+	nonLocalReturn := body nonLocalReturn: stackVars.
+	isNonLocalReturn := nonLocalReturn isNotNil.
+	
+	^nonLocalReturn
+]
+
 { #category : #printing }
 ASBlock >> printOn: s [
 
 	s << self className.
 	super printOn: s
+]
+
+{ #category : #accessing }
+ASBlock >> references: anASLocal [ 
+	references add: anASLocal
 ]
 
 { #category : #accessing }
@@ -85,15 +216,60 @@ ASBlock >> selector: aString [
 	selector := aString
 ]
 
+{ #category : #'as yet unclassified' }
+ASBlock >> statementVisitor: symbols stackVars: stackVariables [
+	^ ASBlockStatementVisitor new
+		  symbols: symbols
+		  stackVars: stackVariables
+		  closure: self
+]
+
 { #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
 ]
 
-{ #category : #writing }
-ASBlock >> writeBlock: aStream with: syms and: stackVariables [
+{ #category : #visiting }
+ASBlock >> variableIndex: var [
+	(blockData indexOf: var) = 0 ifFalse: [
+		^ ((blockData indexOf: var) - 1) asString ].
+	^ ((clsrData indexOf: var name) - 1) asString
+]
 
+{ #category : #writing }
+ASBlock >> write: codeGenerator with: syms [
+
+	| stackVariables |
+	stackVariables := self buildStack.
+
+	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
+	codeGenerator pushNamespace: selector asSymbol asZigString.
+	
+	selector := codeGenerator symbolOrVirtual: selector asSymbol asZigString.
+	codeGenerator emitMethod: selector numLocals: locals size stackSize: self maxDepth closureSize: 0.
+
+	codeGenerator emitVerifySelector.
+
+	"create dummy context"
+	codeGenerator emitPushContext.
+
+	self
+		writeBody: syms
+		stackVars: stackVariables
+		codeGenerator: codeGenerator 
+		blocks: (ASBlockVisitor selector: nil).
+
+	codeGenerator pushReturn.
+	codeGenerator pushClose
+]
+
+{ #category : #writing }
+ASBlock >> writeBlock: aStream with: syms [
+
+	| stackVariables |
+	stackVariables := self buildStack.
+	
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	aStream << 'var ' << selector asZigString << ' ='.
@@ -102,7 +278,7 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream << 'compileMethod(' << (syms
 		 at: selector asZigString
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector ]) << ',' << locals size asString
+		 ifAbsentPut: [ syms virutalName ]) << ',' << locals size asString
 	<< ',' << self maxDepth asString << ',.{'.
 	aStream cr.
 
@@ -115,16 +291,11 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	"ouput any blocks"
-	"self blocks ifNotEmpty: [
-		blocks do: [ :block |
-			aStream << (block zigString: syms and: stackVariables) ] ]."
-
-	body do: [ :asStatement |
-		aStream tab.
-		aStream << (asStatement zigString: syms and: stackVariables).
-		aStream cr ].
-
+	self
+		writeBody: syms
+		stackVars: stackVariables
+		writer: aStream
+		blocks: (ASBlockVisitor selector: nil).
 
 	aStream tab.
 	aStream << '&e.returnTop,'.
@@ -133,14 +304,31 @@ ASBlock >> writeBlock: aStream with: syms and: stackVariables [
 	aStream cr
 ]
 
+{ #category : #printing }
+ASBlock >> zigClosureString: stackVariables index: index [
+
+	| local |
+	"        &e.blockClosure, ""0foo:bar::1"", 1 + (1 << 8) + (0 << 16)   + (3 << 24), // local:1, 1 field, no includeContext, closureData at local3
+        &e.blockClosure, ""1foo:bar::2"", 0 + (1 << 8) + (255 << 16) + (3 << 24), // local:0, 1 field, includeContext, closureData at local3
+"
+	local := ((stackVariables indexOf: selector asZigString) - 1)
+		         asString.
+
+	^ '&e.blockClosure,"' , index asString, selector , '", ' , local , ' + ('
+	  , fields size asString , '<< 8)' , ' + (' , (includeContext
+		   ifTrue: [ '255' ]
+		   ifFalse: [ '0' ]) , '<< 16)' , ' + (' , (clsrData ifEmpty: [ '0' ] ifNotEmpty: [ (blockData indexOf: #closureData) asString  ])
+	  , '<< 24)'
+]
+
 { #category : #building }
-ASBlock >> zigString: syms and: stackVariables [
+ASBlock >> zigNonLocalBlockString: stackVariables [
 
 	isNonLocalReturn := false.
-	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is not a simple local return so need to execute some block"
+	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
 		| return |
-		"return a non local return clousure""tests to see what non local return to return"
-				return := (body at: 1) expression.
+		"tests to see if there is a built in literal function"
+		return := (body at: 1) expression.
 		return isASLiteral ifTrue: [
 			| literal |
 			literal := return literal.
@@ -169,10 +357,21 @@ ASBlock >> zigString: syms and: stackVariables [
 			isNonLocalReturn := true.
 			^ '&e.pushNonlocalBlock_self,'
 			  , (stackVariables indexOf: 'self') asString , ',' ] ].
-	"or return a block closure"
-	selector
-		ifNil: [
-			isNonLocalReturn := false.
-			^ '&e.blockClosure,"' , nestedScopeOf selector , '",1+(3<<16),' ]
-		ifNotNil: [ ^ '&e.blockClosure,"' , selector , '",1+(3<<16),' ]
+
+]
+
+{ #category : #building }
+ASBlock >> zigPushBlockString: syms and: stackVariables [
+
+	isNonLocalReturn ifTrue: [ ^ self zigNonLocalBlockString: stackVariables ].
+
+	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
+]
+
+{ #category : #building }
+ASBlock >> zigString: syms and: stackVariables [
+
+	isNonLocalReturn ifTrue: [ ^self zigNonLocalBlockString: stackVariables  ].
+
+	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
 ]

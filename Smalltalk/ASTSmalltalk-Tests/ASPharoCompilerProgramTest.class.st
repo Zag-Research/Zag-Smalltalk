@@ -10,10 +10,23 @@ ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 	^ ASPharoCompiler new buildFromClass: class selector: method
 ]
 
-{ #category : #compiling }
-ASPharoCompilerProgramTest >> buildFromClasses: class withSelctors: selectors [
+{ #category : #testing }
+ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 
-	^ ASPharoCompiler new buildFromClasses: class withSelectors: selectors
+	^ ASPharoCompiler new
+		  buildFromClassShallow: class
+		  selector: method
+]
+
+{ #category : #testing }
+ASPharoCompilerProgramTest >> buildFromMethods: methods [
+
+	| compiler |
+	compiler := ASPharoCompiler new.
+	compiler dontVisitMessages.
+	methods do: [ :method | compiler addMethod: method ].
+	self halt.
+	^ compiler transitiveClosure
 ]
 
 { #category : #script }
@@ -26,13 +39,46 @@ ASPharoCompilerProgramTest >> codeStart42 [
 	^ result zigString
 ]
 
+{ #category : #testing }
+ASPharoCompilerProgramTest >> compileMethod: method [
+
+	| compiler |
+	compiler := ASPharoCompiler new.
+	compiler dontVisitMessages.
+	compiler addMethod: method.
+	^ compiler transitiveClosure
+]
+
+{ #category : #testing }
+ASPharoCompilerProgramTest >> compileMethodWithInlining: method [
+
+	| compiler |
+	compiler := ASPharoCompiler new.
+	compiler addMethod: method.
+	compiler transitiveClosure.
+	^ compiler inline
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testAddingTwoNumbers [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #addTwoNumbers.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAddingTwoNumbers.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
 { #category : #tests }
 ASPharoCompilerProgramTest >> testAssignment [
 
 	| result aStream |
-	result := self
-		          buildFromClass: ASCompileTestClass1
-		          selector: #testAssignment.
+	result := self buildFromClassShallow: ASCompileTestClass1 selector: #testAssignment.
+	
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigAssignmentString.zig') writeStream.
 	aStream truncate.
@@ -71,6 +117,26 @@ ASPharoCompilerProgramTest >> testFib [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFibSubset [
+
+	| result methods aStream |
+	methods := OrderedCollection new.
+	methods add: ASCompileTestClass1 >> #fib:.
+	methods add: SmallInteger >> #+.
+	methods add: SmallInteger >> #-.
+	methods add: SmallInteger >> #<=.
+	methods add: True >> #ifTrue:.
+	methods add: False >> #ifTrue:.
+	result := self buildFromMethods: methods.
+
+	aStream := (FileSystem disk workingDirectory / 'zigFibSubset.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBar [
 
 	| result aStream |
@@ -84,18 +150,82 @@ ASPharoCompilerProgramTest >> testFooBar [
 ]
 
 { #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarInlining [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #foo:bar:.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigFooBarInlining.zig') writeStream.
+	aStream truncate.
+		self halt.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarIsolated [
+
+	| result aStream |	
+		result := self buildFromClassShallow: ASCompileTestClass1 selector: #foo:bar:.
+
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarIsolatedNew [
+
+	| compiler codeGenerator |
+	compiler := ASPharoCompiler
+		            buildMethod: ASCompileTestClass1 >> #foo:bar:
+		            forClass: ASCompileTestClass1
+		            withCodeGenerator: (ASZigFileGenerator stream:
+				             (FileSystem disk workingDirectory
+				              / 'zigFooBarStringNew.zig') writeStream).
+	compiler compile.
+	self halt
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testFooBarSubset [
+
+	| result aStream |
+	result := self compileMethod: ASCompileTestClass1 >> #foo:bar:.
+
+	aStream := (FileSystem disk workingDirectory / 'zigFooBarSubset.zig')
+		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntFib [
 
-	| result aStream classes selectors |
-	"result := self buildFromClass: Integer selector: #fibonacci."
-	classes := OrderedCollection new.
-	classes add: Integer.
-	selectors := OrderedCollection new.
-	selectors add: #fibonacci.
-	result := self buildFromClasses: classes withSelctors: selectors.
+	| result aStream |
+	result := self buildFromClass: Integer selector: #fibonacci.
 
 	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
 		           writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testIntFibIsolated [
+
+	| result aStream |
+	result := self buildFromClassShallow: Integer selector: #fibonacci.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigIntFibIsolatedString.zig') writeStream.
 	aStream truncate.
 	result writeZig: aStream.
 	aStream close
@@ -123,6 +253,20 @@ ASPharoCompilerProgramTest >> testIntegerBench [
 		          selector: #benchmark.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigIntBenchString.zig') writeStream.
+	aStream truncate.
+	result writeZig: aStream.
+	aStream close
+]
+
+{ #category : #tests }
+ASPharoCompilerProgramTest >> testNestedBlocks [
+
+	| result aStream |
+	result := self compileMethodWithInlining:
+		          ASCompileTestClass1 >> #nestedBlock.
+
+	aStream := (FileSystem disk workingDirectory
+	            / 'zigAddingTwoNumbers.zig') writeStream.
 	aStream truncate.
 	result writeZig: aStream.
 	aStream close

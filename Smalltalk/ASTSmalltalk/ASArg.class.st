@@ -12,10 +12,18 @@ ASArg >> acceptVisitor: aVisitor [
 	^ aVisitor visitArg: self
 ]
 
-{ #category : #building }
-ASArg >> zigString: syms and: stackVariables [
-	"The argument is on the stack already so should not need to push it"
+{ #category : #converting }
+ASArg >> asZagCompileObject [
+	| results |
+	results := OrderedCollection new.
+	
+	results add: 'c.ASArg,'.
+	results add: '":', self asZagLabel ,'",'.
+	
+^ results
+]
 
-	^ '&e.pushLocal, ' , ((stackVariables indexOf: name) - 1) asString
-	  , ', '
+{ #category : #visiting }
+ASArg >> isASArg [
+	^true
 ]

@@ -2,8 +2,11 @@ Extension { #name : #ByteSymbol }
 
 { #category : #'*ASTSmalltalk' }
 ByteSymbol >> asZigString [
-	(self anySatisfy: [ :each | each = $: | (each isDigit | each isLetter) not])  ifTrue: [ ^'@"', self, '"' ].
-	^self
+
+	(self anySatisfy: [ :each |
+		 each = $: | (each isDigit | each isLetter) not ]) ifTrue: [
+		^ '@"' , self , '"' ].
+	^ self
 ]
 
 { #category : #'*ASTSmalltalk' }

@@ -5,7 +5,8 @@ Class {
 	#name : #ASPharoVisitor,
 	#superclass : #Object,
 	#instVars : [
-		'compiler'
+		'compiler',
+		'variables'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
@@ -15,8 +16,17 @@ ASPharoVisitor class >> compiler: anASPharoCompiler [
 	^ self new compiler: anASPharoCompiler
 ]
 
+{ #category : #adding }
+ASPharoVisitor >> addVariable: variableName [ 
+	variables
+		at: variableName
+		ifPresent: [  ]
+		ifAbsentPut: [ OrderedCollection new ].
+]
+
 { #category : #accessing }
 ASPharoVisitor >> compiler: anASPharoCompiler [
+variables := Dictionary new.
 	compiler := anASPharoCompiler
 ]
 
@@ -27,7 +37,7 @@ ASPharoVisitor >> visit: aRBNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
-
+	self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASArg new name: aRBVariableNode name)
 ]
 
@@ -52,8 +62,11 @@ ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 	^ ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
-		  body: (aRBBlockNode statements collect: [ :statement | 
-				   self visit: statement ] as: Array)
+		  body: ASSequence new.
+	compiler inScope: block do: [ 
+		aRBBlockNode statements do: [ :statement | 
+			block addStatement: (self visit: statement) ] ].
+	^ block
 ]
 
 { #category : #visiting }
@@ -71,19 +84,19 @@ ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASClassVar name: aRBVariableNode name)
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASGlobal name: aRBVariableNode name)
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
-
+self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASInstance name: aRBVariableNode name)
 ]
 
@@ -104,10 +117,12 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 	| target selector |
 	target := self visit: aRBMessageNode receiver.
 	selector := aRBMessageNode selector.
-	target tell: compiler youAreSent: selector.
+	compiler visitMessages ifTrue: [
+		target tell: compiler youAreSent: selector ].
 	^ ASSend
 		  target: target
-		  selector: selector args: (aRBMessageNode arguments
+		  selector: selector
+		  args: (aRBMessageNode arguments
 				   collect: [ :arg | self visit: arg ]
 				   as: Array)
 ]
@@ -125,7 +140,9 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          (aRBMethodNode arguments collect: #name as: Array)
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
-		          body: OrderedCollection new.
+		          body: ASSequence new.
+	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
+	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
 		aRBMethodNode statements do: [ :statement | 
@@ -153,13 +170,12 @@ ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
-
-		^ ASSelf method: compiler definingMethod superclass: compiler definingClass superclass 
+		^ ASSuper method: compiler definingMethod superclass: compiler definingClass superclass 
 ]
 
 { #category : #visiting }
 ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
-
+	self addVariable: aRBVariableNode name.
 	^ ASRef variable: (ASLocal name: aRBVariableNode name)
 ]
 

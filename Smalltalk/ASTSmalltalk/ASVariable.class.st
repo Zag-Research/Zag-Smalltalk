@@ -5,7 +5,9 @@ Class {
 	#name : #ASVariable,
 	#superclass : #Object,
 	#instVars : [
-		'name'
+		'name',
+		'referencedBy',
+		'modifiedBy'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -29,10 +31,43 @@ ASVariable >> = other [
 	^ self class = other class and: [ self name = other name ]
 ]
 
+{ #category : #converting }
+ASVariable >> asZagLabel [
+^name
+]
+
+{ #category : #accessing }
+ASVariable >> hasModifiers [
+
+	^modifiedBy isNotEmpty
+]
+
+{ #category : #testing }
+ASVariable >> initialize [ 
+	referencedBy := Set new.
+	modifiedBy := Set new
+]
+
+{ #category : #testing }
+ASVariable >> isASArg [
+	^false
+]
+
 { #category : #comparing }
 ASVariable >> isASBlock [
 
 	^ false
+]
+
+{ #category : #testing }
+ASVariable >> isASVariable [
+
+	^ true
+]
+
+{ #category : #accessing }
+ASVariable >> modifiedBy: anASBlock [ 
+	modifiedBy add: anASBlock
 ]
 
 { #category : #comparing }
@@ -54,8 +89,26 @@ ASVariable >> printOn: s [
 	name 
 ]
 
+{ #category : #visiting }
+ASVariable >> referencedBy: anASBlock [ 
+	referencedBy add: anASBlock 
+]
+
+{ #category : #accessing }
+ASVariable >> references [
+	^referencedBy 
+]
+
 { #category : #compiling }
 ASVariable >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
+]
+
+{ #category : #building }
+ASVariable >> zigString: syms and: stackVariables [
+	"The argument is on the stack already so should not need to push it"
+
+	^ '&e.pushLocal, ' , ((stackVariables indexOf: name) - 1) asString
+	  , ', '
 ]

@@ -4,8 +4,32 @@ I have subclasses for all the statments that can exist in the body of a method o
 Class {
 	#name : #ASStatement,
 	#superclass : #Object,
+	#instVars : [
+		'label'
+	],
+	#classInstVars : [
+		'index'
+	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #accessing }
+ASStatement class >> nextIndex [
+	index ifNil: [ index:=0 ].
+	index := index+1.
+	^index asString
+]
+
+{ #category : #accessing }
+ASStatement class >> resetIndex [
+index:= nil
+]
+
+{ #category : #converting }
+ASStatement >> asZagLabel [
+	label ifNil: [ label:= self className, ASStatement nextIndex].
+	^ label
+]
 
 { #category : #accessing }
 ASStatement >> blocks [
@@ -41,6 +65,11 @@ ASStatement >> isASSelf [
 
 { #category : #testing }
 ASStatement >> isASSend [
+	^false
+]
+
+{ #category : #testing }
+ASStatement >> isASVariable [
 	^false
 ]
 

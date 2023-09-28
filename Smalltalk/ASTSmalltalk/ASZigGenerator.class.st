@@ -5,11 +5,7 @@ Class {
 	#name : #ASZigGenerator,
 	#superclass : #Object,
 	#instVars : [
-		'compiler',
-		'stream'
-	],
-	#classVars : [
-		'Symbols'
+		'compiler'
 	],
 	#category : #'ASTSmalltalk-Compiler'
 }
@@ -20,13 +16,8 @@ ASZigGenerator class >> initialize [
 ]
 
 { #category : #accessing }
-ASZigGenerator >> compiler: anASPharoCompiler [ 
+ASZigGenerator >> compiler: anASPharoCompiler [
 	compiler := anASPharoCompiler
-]
-
-{ #category : #accessing }
-ASZigGenerator >> stream: aWriteStream [ 
-	stream := aWriteStream
 ]
 
 { #category : #visiting }

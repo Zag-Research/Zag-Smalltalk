@@ -17,7 +17,6 @@ Class {
 
 { #category : #'instance creation' }
 ASSelf class >> method: aMethod [
-
 	^ self new method: aMethod
 ]
 
@@ -43,6 +42,16 @@ ASSelf >> = other [
 ASSelf >> acceptVisitor: aVisitor [
 
 	^ aVisitor visitSelfNode: self
+]
+
+{ #category : #converting }
+ASSelf >> asZagCompileObject [
+	| results |
+	results := OrderedCollection new.
+	
+	results add: 'c.ASSelf,'.
+	
+^ results
 ]
 
 { #category : #accessing }
@@ -92,6 +101,6 @@ ASSelf >> tell: aCompiler youAreSent: aSymbol [
 ASSelf >> zigString: syms and: stackVariables [
 	"^'&e.pushTemp, 1,', '&e.send, ', method selector, ','"
 
-	^ '&e.pushSelf,'
+	^ '&e.pushLocal, ' , ((stackVariables indexOf: 'self') - 1) asString , ','
 	"I'm sending self a message?"
 ]

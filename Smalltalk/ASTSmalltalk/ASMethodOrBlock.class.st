@@ -26,12 +26,12 @@ ASMethodOrBlock >> arguments [
 ASMethodOrBlock >> arguments: aCollection [
 
 	arguments := aCollection
-		collect: [ :symbol | 
-			| arg |
-			arg := ASArg name: symbol.
-			scope at: symbol put: arg.
-			arg ]
-		as: Array
+		             collect: [ :symbol |
+			             | arg |
+			             arg := ASArg name: symbol.
+			             scope at: symbol put: arg.
+			             arg ]
+		             as: Array.
 ]
 
 { #category : #printing }
@@ -47,11 +47,6 @@ ASMethodOrBlock >> initialize [
 
 	super initialize.
 	arguments := #(  )
-]
-
-{ #category : #printing }
-ASMethodOrBlock >> instructions: someInstructions [ 
-	instructions := someInstructions
 ]
 
 { #category : #printing }

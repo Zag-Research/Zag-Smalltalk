@@ -6,14 +6,15 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
-		'class'
+		'class',
+		'pragmas'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
-
+self halt.
 	^ self new
 		  class: aClass;
 		  selector: aSymbol;
@@ -22,8 +23,14 @@ ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol  arguments: args locals: locals body: body [
-^ self new class: aClass; selector: aSymbol;  arguments: args; locals: locals; body: body
+ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
+	^ self new
+		  class: aClass;
+		  selector: aSymbol;
+		  arguments: args;
+		  locals: locals;
+		  body: body;
+		  pragmas: OrderedCollection new
 ]
 
 { #category : #'tests - instance creation' }
@@ -59,23 +66,20 @@ ASMethodNode >> acceptVisitor: aVisitor [
 	^ aVisitor visitMethodNode: self
 ]
 
-{ #category : #accessing }
-ASMethodNode >> blocks [
-	blocks ifNil: [
-		blocks := OrderedCollection new.
-		body ifNotEmpty: [
-			body do: [ :statement | blocks addAll: statement blocks ] ] ].
-	"	statement isASSend and: [
-					statement args notEmpty and: [
-						blocks addAll: (statement args select: [ :arg | arg isASBlock ]) ] ].
-				statement isASAssign and: [
-					statement expression isASSend and: [
-						statement expression args notEmpty and: [
-							blocks addAll:
-								(statement expression args do: [ :arg | arg isASBlock ]) ] ] ] 
-				statement isReturn
-				] ] ]."
-	^ blocks
+{ #category : #converting }
+ASMethodNode >> asZagCompileObject [
+	| result |
+	result := OrderedCollection new.
+	
+	result add: 'c.Method'.
+	result add: '":first"'.
+	result add: 'Sym.', selector asZigString, ','.
+	result add: selector numArgs asString, ','.
+	result add: '"body",'.
+	
+	result addAll: body asZagCompileObject.
+	
+	^ result reversed
 ]
 
 { #category : #accessing }
@@ -93,9 +97,21 @@ ASMethodNode >> clousreSize [
 	^0
 ]
 
+{ #category : #accessing }
+ASMethodNode >> filter: zigInstructions [
+	"nothing to do here"
+
+	^ zigInstructions
+]
+
 { #category : #comparing }
 ASMethodNode >> hash [
 	^ class hash bitXor: selector hash
+]
+
+{ #category : #testing }
+ASMethodNode >> isASBlock [
+	^false
 ]
 
 { #category : #accessing }
@@ -104,20 +120,13 @@ ASMethodNode >> maxBlockLocals [
 ]
 
 { #category : #accessing }
-ASMethodNode >> maxDepth [
-
-	| argMaxDepth blockLocalMaxDepth |
-	argMaxDepth := body
-		               ifEmpty: [ 0 ]
-		               ifNotEmpty: [
-		               body max: [ :statement | statement maxDepth ] ].
-	blockLocalMaxDepth := self blocks ifEmpty: [0] ifNotEmpty: [ blocks max: [ :block | block arguments size ] ].
-	^ argMaxDepth + blockLocalMaxDepth
+ASMethodNode >> nameSpace [
+	^(nestedScopeOf name, '>>', selector) asSymbol asZigString
 ]
 
 { #category : #accessing }
-ASMethodNode >> numLocals [
-	^ (arguments size + locals size) asString
+ASMethodNode >> pragmas [
+	^ pragmas 
 ]
 
 { #category : #private }
@@ -144,44 +153,93 @@ ASMethodNode >> selector: aString [
 	selector := aString
 ]
 
-{ #category : #initialization }
-ASMethodNode >> setLiterals: aZnCharacterWriteStream [ 
-	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
-]
-
 { #category : #utilities }
 ASMethodNode >> stackSize [
 	^0
 ]
 
+{ #category : #comparing }
+ASMethodNode >> statementVisitor: symbols stackVars: stackVariables [ 
+	^ ASMethodStatementVisitor new
+		  symbols: symbols
+		  stackVars: stackVariables
+		  closure: self
+]
+
+{ #category : #visiting }
+ASMethodNode >> variableIndex: anASVar [
+	^ (clsrData indexOf: anASVar name) asString.
+]
+
+{ #category : #writing }
+ASMethodNode >> writeDispatch: aStream with: smys [ 
+	aStream tab.
+	aStream << 'try dispatch.addMethod(ClassIndex.' << class name << ', ' << self nameSpace << '.asCompiledMethodPtr());'.
+	aStream cr
+]
+
+{ #category : #initialization }
+ASMethodNode >> writeLiterals: aStream with: syms [
+	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
+
+	| complexBlocks |
+	aStream tab.
+	aStream << self nameSpace.
+	aStream << '.setLiterals('.
+	syms
+		associationAt: selector
+		ifPresent: [ :sym |
+		aStream << ('&[_]Object{sym.' , sym key , '}, ') ]
+		ifAbsent: [ aStream << 'empty,' ].
+
+	complexBlocks := OrderedCollection new.
+	complexBlocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
+		aStream << '&[_]Object{'.
+		complexBlocks
+			do: [ :block | aStream << block selector asZigString ]
+			separatedBy: [ aStream << ', ' ].
+		aStream << '}' ].
+
+	aStream << ');'.
+	aStream cr
+]
+
 { #category : #accessing }
 ASMethodNode >> writeMethod: aStream with: syms [
 
-	| stackVariables stackSize |
+	| stackVariables stackSize blockVisitor |
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
 
-	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index |
-			block selector: selector , ':' , index asString.
-			stackVariables add: block selector asZigString ] ].
-	stackVariables addAll: (locals collect: [ :local | local name ]).
+	"set the selector for each block that needs a closure and add it to the stack variables"
+	blockVisitor := ASBlockVisitor selector: selector.
+	blockVisitor visit: body.
+
+	self buildClosureData: blockVisitor modifiers.
+	blockVisitor blocks do: [ :b | b closureData: clsrData ].
+
+	stackVariables addAll: blockVisitor closures.
+	stackVariables addAll:
+		((blockVisitor filterVars: locals) collect: [ :local | local name ]).
+
 	"capture the size of the stack before arguments are added"
 	stackSize := stackVariables size.
+
 	"add the locals, arguments and self"
-	stackVariables addAll: (arguments collect: [ :arg | arg name ]).
+	stackVariables addAll:
+		(arguments collect: [ :arg | arg name ]) reverse.
 	stackVariables addLast: #self.
 
 	aStream cr.
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << nestedScopeOf name, '>>', selector asZigString << ' ='.
+	aStream << 'var ' << self nameSpace << ' ='.
 	aStream cr.
 	aStream tab.
+
 	aStream << 'compileMethod(' << (syms
 		 at: selector
 		 ifPresent: [ :value | value ]
-		 ifAbsent: [ 'sym.' , selector asZigString ]) << ','
-	<< stackSize asString << ','
+		 ifAbsentPut: [ syms virutalName ]) << ',' << stackSize asString
+	<< ','
 	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
 	<< ',.{'.
 	aStream cr.
@@ -204,28 +262,33 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	aStream << '&e.pushContext,"^",'.
 	aStream cr.
 
-	"ouput any blocks"
-	self blocks ifNotEmpty: [
-		blocks doWithIndex: [ :block :index |
-			aStream << (block zigString: syms and: stackVariables) ] ].
+	blockVisitor writeClosureData: aStream stackVariables: stackVariables.
 
-
-	body do: [ :asStatement |
+	"ouput any block closure"
+	blockVisitor blocks doWithIndex: [ :block :index |
 		aStream tab.
-		aStream << (asStatement zigString: syms and: stackVariables).
+		aStream
+		<<
+		(block zigClosureString: stackVariables index: (index - 1) asString).
 		aStream cr ].
 
+	"write the instructions"
+	self
+		writeBody: syms
+		stackVars: stackVariables
+		writer: aStream
+		blocks: blockVisitor.
 
-	aStream tab.
-	aStream << '&e.returnTop,'.
+	"write out the implicit return"
+	body requiresImplicitReturn ifTrue: [
+		aStream tab.
+		aStream << '&e.returnTop,' ].
 	aStream cr. "should this be hardcoded?"
 	aStream << '});'.
 	aStream cr.
-	"isRecursive ifTrue: [ aStream << selector << '.setLiteral(' << selector << '_, sym.' << selector << ');'. aStream cr ]."
 
 	"ouput compile methods for the blocks"
-	self blocks ifNotEmpty: [
-		blocks do: [ :block |
-			block isNonLocalReturn ifFalse: [
-				block writeBlock: aStream with: syms and: stackVariables ] ] ]
+	blockVisitor blocks do: [ :block |
+		block isNonLocalReturn ifFalse: [
+			block writeBlock: aStream with: syms] ]
 ]

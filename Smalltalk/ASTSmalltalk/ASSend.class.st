@@ -49,6 +49,31 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : #converting }
+ASSend >> asZagCompileObject [
+
+	| results |
+	results := OrderedCollection new.
+
+	results add: 'c.ASSend,'.
+	results add: '":' , label , '",'.
+	results addAll: (args collect: [:arg | '"' , arg asZagLabel , '",' ]).
+	results add: 'Sym.' , selector asZigString , ','.
+	results add: '"' , target asZagLabel , '",'.
+
+	args do: [ :arg | results addAll: arg asZagCompileObject ].
+
+	results addAll: target asZagCompileObject.
+
+	^ results
+]
+
+{ #category : #converting }
+ASSend >> asZigString [
+
+	^ '"send', self nextIndex, '",'
+]
+
 { #category : #accessing }
 ASSend >> blocks [
 
@@ -121,9 +146,12 @@ ASSend >> zigString: syms and: stackVariables [
 		args do: [ :arg |
 			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
 	zigString := zigString , (syms
-		             at: selector
-		             ifPresent: [ :sym | '&e.send, ' , sym , ',' ]
-		             ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
-			             '&e.send, ' , selector , ',' ]).
-		^zigString
+		              at: selector
+		              ifPresent: [ :sym |
+		              '&e.send' , selector numArgs asString , ', ' , sym
+		              , ',' ]
+		              ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
+			              self halt.
+			              '&e.send, ' , selector , ',' ]).
+	^ zigString
 ]

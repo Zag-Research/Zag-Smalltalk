@@ -27,6 +27,19 @@ ASLiteral >> acceptVisitor: aVisitor [
 	^ aVisitor visitLiteral: self
 ]
 
+{ #category : #converting }
+ASLiteral >> asZagCompileObject [
+
+	| results |
+	results := OrderedCollection new.
+
+	results add: 'c.ASLiteral,'.
+	results add: '":' , self asZagLabel , '",'.
+	results add: literal asString, ','.
+
+	^ results
+]
+
 { #category : #'as yet unclassified' }
 ASLiteral >> baseValue [
 	^ value
@@ -35,6 +48,12 @@ ASLiteral >> baseValue [
 { #category : #accessing }
 ASLiteral >> isASLiteral [
 	^true
+]
+
+{ #category : #testing }
+ASLiteral >> isSimple [
+	^ literal = true or: (literal = false or: (literal = 1 or: (literal = -1
+	  or: (literal = 0 or: (literal = 2)))))
 ]
 
 { #category : #accessing }
