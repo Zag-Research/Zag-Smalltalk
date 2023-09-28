@@ -133,6 +133,9 @@ pub const Format = enum(u8) {
     pub inline fn hasPointers(self: Self) bool {
         return  @intFromEnum(self) >= LastPointerFree;
     }
+    inline fn addPointers(self: Self) Self {
+        return @enumFromInt(@intFromEnum(self) | PointerFlag);
+    }
     pub inline fn isExternal(self: Self) bool {
         return self.base(ExternalFlag) == .external;
     }
@@ -337,6 +340,17 @@ pub const Age = enum(u4) {
             else => false,
         };
     }
+    pub inline fn isNursery(self: Self) bool {
+        return switch (self) {
+            .nursery,
+            .nursery2,
+            .nursery3,
+            .nursery4,
+            .nursery5,
+            .nurseryLast => true,
+            else => false,
+        };
+    }
     pub inline fn isGlobal(self: Self) bool {
         return switch (self) {
             .global, .globalMarked, .aStruct, .globalScanned, .aoo, .aooMarked, .free, .aooScanned => true,
@@ -381,78 +395,84 @@ pub const Age = enum(u4) {
 };
 pub const HeapObjectPtrIterator = struct {
     const Self = @This();
-    nextPointer: *const fn (*Self) ?HeapObjectPtr,
+    nextPointer: *const fn (*Self) ?*Object,
     scanObject: HeapObjectConstPtr,
-    current: [*]const Object,
-    beyond: [*]const Object,
-    var specials = [_]*const fn(*Self) ?HeapObjectPtr {&notSpecial} ** (ClassIndex.LastSpecial+1);
-    fn notSpecial(_: *Self) ?HeapObjectPtr {
+    current: [*]Object,
+    beyond: [*]Object,
+    pub inline fn next(self: *const Self) ?*Object {
+        return self.nextPointer(@constCast(self));
+    }
+    var specials = [_]*const fn(*Self) ?*Object {&notSpecial} ** (ClassIndex.LastSpecial+1);
+    var specialHeaders = [_]*const fn(*Self) ?*Object {&realFromHeader} ** (ClassIndex.LastSpecial+1);
+    fn notSpecial(_: *Self) ?*Object {
         @panic("special with no special function");
+    }
+    fn realFromHeader(self: *Self) ?*Object {
+        const obj = self.scanObject;
+        self.nextPointer = specials[@intFromEnum(obj.classIndex)];
+        self.scanObject = obj.realHeapObject();
+        return self.next();
     }
     pub inline fn iterator(maybeForwarded: HeapObjectConstPtr) ?HeapObjectPtrIterator {
         var obj = maybeForwarded.forwarded();
         const format = obj.format;
         if (!format.hasPointers()) return null;
-        switch (format) {
+        switch (format.base(0)) {
             .notObject => return null,
             .notIndexable, .directIndexed => {
                 const oa = obj.start();
                 return .{
                     .nextPointer = remainingPointers,
-                    .scanObject = undefined,
+                    .scanObject = obj,
                     .current = oa,
-                    .beyond = oa + 1 + obj.length,
+                    .beyond = @constCast(@ptrCast(obj)),
                 };
             },
-            .special, .specialHeader =>  {
-                if (format == .specialHeader) obj = obj.realHeapObject();
+            .specialHeader =>  {
+                return .{
+                    .nextPointer = specialHeaders[@intFromEnum(obj.classIndex)],
+                    .scanObject = obj,
+                    .current = @constCast(@ptrCast(obj)),
+                    .beyond = @constCast(@ptrCast(obj)),
+                };
+            },
+            .special =>  {
                 return .{
                     .nextPointer = specials[@intFromEnum(obj.classIndex)],
                     .scanObject = obj,
-                    .current = undefined,
-                    .beyond = undefined,
+                    .current = @constCast(@ptrCast(obj)),
+                    .beyond = @constCast(@ptrCast(obj)),
                 };
             },
             .externalWeakWithPointers, .weakWithPointers => unreachable,
             else => unreachable,
         }
     }
-    fn remainingPointers(self: *Self) ?HeapObjectPtr {
+    fn remainingPointers(self: *Self) ?*Object {
         while (@intFromPtr(self.current) < @intFromPtr(self.beyond)) {
-            const obj = self.current[0];
+            const addr = &self.current[0];
             self.current += 1;
-            if (obj.isHeapAllocated())
-                return obj.toUnchecked(HeapObjectPtr);
+            if (addr.isMemoryAllocated())
+                return addr;
         }
-        self.nextPointer = allDone;
         return null;
-    }
-    fn allDone(_: *Self) ?HeapObjectPtr {
-        return null;
-    }
-    fn firstPointerGroup(self: *Self) ?HeapObjectPtr {
-        while (@intFromPtr(self.current) < @intFromPtr(self.beyond)) {
-            const obj = self.current[0];
-            self.current += 1;
-            if (obj.isHeapAllocated())
-                return obj.toUnchecked(HeapObjectPtr);
-        }
-        const obj = self.scanObject;
-        const ivs = @as([*]const Object, @ptrCast(obj));
-        const size = ivs[1 + obj.length].u();
-        const array = @as([*]Object, @ptrFromInt(ivs[2 + obj.length].u()));
-        self.current = array;
-        self.beyond = array + size - 1;
-        self.nextPointer = remainingPointers;
-        return self.remainingPointers();
-    }
-    pub inline fn next(self: *const Self) ?HeapObjectPtr {
-        return self.nextPointer(@constCast(self));
     }
 };
 test "heapPtrIterator" {
     const testing = std.testing;
+    const ho1 = AllocationInfo.calc(0, 0, Object, false).heapObject(ClassIndex.Object, .static, 0);
+    try testing.expectEqual(ho1.makeIterator(),null);
     const c = ClassIndex;
+    var o1b = compileObject(.{
+        True,
+        Sym.i_0, // alternate reference to replacement Object #1
+        42,
+        c.Class, // third HeapObject
+    });
+    o1b.setLiterals(&[_]Object{ Nil },&[_]ClassIndex{});
+    const ho1b = o1b.asHeapObjectPtr();
+    try testing.expectEqual(ho1b.format,.notIndexable);
+    try testing.expectEqual(ho1b.makeIterator(),null);
     var o2 = compileObject(.{
         "def",
         True,
@@ -471,46 +491,14 @@ test "heapPtrIterator" {
     });
     o2.setLiterals(&[_]Object{ Nil, True },&[_]ClassIndex{@enumFromInt(0xdead)});
     const ho2 = o2.asHeapObjectPtr();
-    const ho1 = AllocationInfo.calc(0, 0, Object, false).heapObject(ClassIndex.Object, .static, 0);
+    try testing.expectEqual(ho2.classIndex,.Class);
+    try testing.expectEqual(ho2.format,.notIndexableWithPointers);
+    var i = ho2.makeIterator() orelse return error.NoIterator;
+    try testing.expectEqual(i.next(),&o2.asObjectArray()[4]);
+    try testing.expectEqual(i.next(),&o2.asObjectArray()[7]);
+    try testing.expectEqual(i.next(),null);
     // var o3 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
-
-    try testing.expectEqual(ho1.makeIterator(),null);
-//     var i = ho2.makeIterator();
-//
-//     i = HeapObjectPtrIterator.noPointers(ho1);
-//     try testing.expectEqual(i.next(),null);
-//     i = HeapObjectPtrIterator.ivPointers(ho1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next().?,&h2);
-//     try testing.expectEqual(i.next(),null);
-//     o1[0] = header(@sizeOf(@TypeOf(o1))/8-1,Format.arrayP, 0x27, 0x129,Age.nursery).o();
-//     i = HeapObjectPtrIterator.noPointers(ho1);
-//     try testing.expectEqual(i.next(),null);
-//     i = HeapObjectPtrIterator.ivPointers(ho1);
-//     try testing.expectEqual(i.next(),null);
-//     i = HeapObjectPtrIterator.arrayPointers(ho1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next().?,&h2);
-//     try testing.expectEqual(i.next(),null);
-//     o1[3] = @bitCast(Object,@as(u64,2));
-//     o1[4] = @bitCast(Object,@intFromPtr(&o1[5]));
-//     o1[0] = header(2,Format.bothOP, 0x27, 0x129,Age.nursery).o();
-//     i = HeapObjectPtrIterator.ivPointers(ho1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next(),null);
-//     i = HeapObjectPtrIterator.bothPointers(ho1);
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next(),null);
-//     i = HeapObjectPtrIterator.arrayPointers(ho1);
-//     try testing.expectEqual(i.next(),null);
-//     o1[0] = header(2,Format.bothPP, 0x27, 0x129,Age.nursery).o();
-//     i = ho1.makeIterator();
-//     try testing.expectEqual(i.next().?,&h1);
-//     try testing.expectEqual(i.next().?,&h2);
-//     try testing.expectEqual(i.next(),null);
 }
 
 pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge, NeedNurseryCollection };
@@ -598,6 +586,18 @@ pub const HeapObject = packed struct(u64) {
     }
     pub inline fn setFooters(self: HeapObjectPtr, iVars: u12, classIndex: u16, hash: u24, age: Age, indexed: ?usize, element: type, mSize: ?usize, makeWeak: bool) void {
         return AllocationInfo.calc(iVars, indexed, element, mSize, makeWeak).fillFooters(self, classIndex, hash, age, indexed, element);
+    }
+    pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
+        const size = self.length+1;
+        if (size == forwardLength+1) { // already forwarded
+            reference.* = @bitCast((reference.u() & 0xffff000000000000) + @as(u48,@truncate(@as(u64,@bitCast(self.*)))));
+            return hp;
+        }
+        const target = hp - size;
+        @memcpy(target[0..size],@as([*]HeapObject,@ptrCast(self.start())));
+        self.* = @bitCast((@as(u64,forwardLength)<<48) + @intFromPtr(hp-1));
+        reference.* = @bitCast((reference.u() & 0xffff000000000000) + @intFromPtr(hp-1));
+        return target;
     }
     pub inline fn prev(self: HeapObjectPtr) Object {
         const ptr = @as([*]Object, @ptrCast(self)) - 1;
@@ -777,7 +777,7 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn isIndexableWithPtrs(self: HeapObjectConstPtr) bool {
         return self.format.isIndexableWithPtrs();
     }
-    inline fn start(self: HeapObjectConstPtr) [*]Object {
+    pub inline fn start(self: HeapObjectConstPtr) [*]Object {
         return @as([*]Object, @constCast(@ptrCast(self))) - self.length;
     }
     pub inline fn instVars(self: HeapObjectConstPtr) []Object {
@@ -794,7 +794,8 @@ pub const HeapObject = packed struct(u64) {
             else => return &[0]Object{},
         }
     }
-    pub inline fn instVarPut(self: HeapObjectConstPtr, index: usize, obj: Object) void {
+    pub inline fn instVarPut(self: HeapObjectPtr, index: usize, obj: Object) void {
+        self.format=self.format.addPointers();
         self.instVars()[index] = obj;
     }
     fn @"format FUBAR"(

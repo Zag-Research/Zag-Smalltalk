@@ -151,15 +151,15 @@ pub const Process = extern struct {
         var ageSizes = [_]usize{0}**lastNurseryAge;
         self.collectNurseryPass(sp, contextMutable, ageSizes, lastNurseryAge+1);
         if (self.freeNursery() >= need) return;
-        var total: usize = 0;
-        var age = lastNurseryAge;
-        while (age>=0) : ( age -= 1) {
-            total += ageSizes[age];
-            if (total >= need) {
-                self.collectNurseryPass(sp, contextMutable, ageSizes, age);
-                return;
-            }
-        }
+        // var total: usize = 0;
+        // var age = lastNurseryAge;
+        // while (age>=0) : ( age -= 1) {
+        //     total += ageSizes[age];
+        //     if (total >= need) {
+        //         self.collectNurseryPass(sp, contextMutable, ageSizes, age);
+        //         return;
+        //     }
+        // }
         unreachable;
     }
     fn collectNurseryPass(self: *Self, originalSp: SP, contextMutable: *ContextPtr, sizes: [lastNurseryAge]usize, promoteAge: usize) void {
@@ -172,27 +172,42 @@ pub const Process = extern struct {
         // find references from the stack
         while (sp.lessThan(endStack)) {
             const endSP = context.endOfStack(self);
-
+            while (sp.lessThan(endSP)) {
+                std.debug.print("sp: before{} {*}\n",.{sp.top,hp});
+                if (sp.top.pointer()) |pointer| {
+                    hp = pointer.copyTo(hp,&sp.top);
+                }
+                std.debug.print("sp: after {} {*}\n",.{sp.top,hp});
+                sp = sp.drop();
+            }
             if (!context.isOnStack()) break;
             // scan specials
-            sp = endSP;
             context = context.previous();
+            unreachable;
         }
         // find self references
         while (@intFromPtr(hp)<@intFromPtr(scan)) {
-            const heapObject = @as(HeapObjectPtr,@ptrCast(scan-1));
-            if (heapObject.makeIterator()) |iter| {
-                while (iter.next()) |field| {
-                    _ = field;
+            std.debug.print("hp: {*} scan: {*}\n",.{hp,scan});
+            const heapObject = scan-1;
+            std.debug.print("obj: {} {any}\n",.{heapObject[0],heapObject[0].instVars()});
+            if (heapObject[0].makeIterator()) |iter| {
+                std.debug.print("iter: {}\n",.{iter});
+                while (iter.next()) |objPtr| {
+                    if (objPtr.pointer()) |pointer| {
+                        if (pointer.isForwarded()) {
+                            unreachable;
+                        } else if (pointer.age.isNursery())
+                            hp = pointer.copyTo(hp,objPtr);
+                    }
                 }
             }
-            scan = heapObject.skipBack();
+            scan = heapObject[0].skipBack();
         }
         // swap heaps
         const tempHeap = self.otherHeap;
         self.otherHeap = self.currHeap;
         self.currHeap = tempHeap;
-        self.currHp = tempHeap;
+        self.currHp = hp;
         self.currEnd = tempHeap - nursery_size;
     }
 };
@@ -202,6 +217,7 @@ test "nursery allocation" {
     var pr = &process;
     pr.init();
     const emptySize = Process.nursery_size;
+    std.debug.print("\nemptySize = {}\n",.{emptySize});
     try ee(pr.freeNursery(),emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
@@ -222,6 +238,10 @@ test "nursery allocation" {
     try ee(@intFromPtr(&initialContext),@intFromPtr(mutableContext));
     pr.collectNursery(sp,&mutableContext,0);
     try ee(pr.freeNursery(),emptySize-12);
+    // age test
+    // o1 still contains corrected address of o2
+    // add second reference to o2 and circulare ref to o1
+    // sp.top should be updated
 }
 test "check flag" {
     const testing = std.testing;

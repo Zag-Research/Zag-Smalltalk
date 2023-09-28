@@ -238,20 +238,19 @@ pub const Object = packed struct(u64) {
         return self.tagbitsL() == Nil.tagbitsL();
     }
     pub inline fn isImmediate(self: Object) bool {
-        return self.tag == Group.immediates;
+        return self.tag == .immediates;
     }
     pub inline fn isHeapObject(self: Object) bool {
-        return self.tag == Group.heap;
+        return self.tag == .heap;
     }
-    pub inline fn isHeapAllocated(self: Object) bool {
-        const tag = self.tagbits();
-        return tag >= Start_of_Pointer_Objects >> 48;
+    pub inline fn isMemoryAllocated(self: Object) bool {
+        return self.tagbits() >= Start_of_Pointer_Objects >> 48;
     }
     pub inline fn isUnmoving(self: Object) bool {
-        return !self.isHeapAllocated() or self.to(HeapObjectPtr).isUnmoving();
+        return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
     pub inline fn isLiteral(self: Object) bool {
-        return !self.isHeapAllocated();
+        return !self.isMemoryAllocated();
     }
     pub inline fn isBlock(self: Object) bool {
         const tag = self.tagbits();
@@ -293,7 +292,7 @@ pub const Object = packed struct(u64) {
             else => {
                 switch (@typeInfo(T)) {
                     .Pointer => |ptrInfo| {
-                        if (!check or (self.isHeapAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                        if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                             if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                 return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));
                             } else {
@@ -315,6 +314,10 @@ pub const Object = packed struct(u64) {
         if (T == i64) return @as(i64, @bitCast(self.u() -% u64_ZERO));
         if (T == u64) return self.u() - u64_ZERO;
         return self.toWithCheck(T, false);
+    }
+    pub inline fn pointer(self: Object) ?HeapObjectPtr {
+        if (self.isMemoryAllocated()) return @ptrFromInt(@as(u48,@truncate(self.u())));
+        return null;
     }
     pub fn header(self: Object) HeapObject {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).*;

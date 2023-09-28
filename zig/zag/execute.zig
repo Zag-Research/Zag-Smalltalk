@@ -28,6 +28,7 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
+const phi32 = @import("utilities.zig").inversePhi(u32);
 
 pub const SendCache = *SendCacheStruct;
 pub const sendCacheSize = if (dispatchCache) @sizeOf(SendCacheStruct)/@sizeOf(Code) else 0;
@@ -640,27 +641,38 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
             };
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
+            var includesPointer = false;
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol0()) {
-                    o.* = replacements[o.indexNumber()];
+                    const obj = replacements[o.indexNumber()];
+                    if (obj.isMemoryAllocated()) includesPointer = true;
+                    o.* = obj;
                 } else if (o.isIndexSymbol1()) {
                     o.* = Object.from(&self.objects[@as(u16,@truncate(o.indexNumber()))]);
+                    includesPointer = true;
                 } else { // there is a miniscule chance of false-positive for some floating number here
                     var header: HeapObject = @bitCast(o.*);
                     if (header.length < 1024 and
                             header.hash == 0xffffff and
-                            @intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max) and
+                            header.format == .notIndexable and
                             header.age == .static
                         ) {
-                        header.classIndex = classes[@intFromEnum(ClassIndex.replace0)-@intFromEnum(header.classIndex)];
-                        header.hash ^= @truncate(@intFromPtr(o));
+                        if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
+                            header.classIndex = classes[@intFromEnum(ClassIndex.replace0)-@intFromEnum(header.classIndex)];
+                        if (includesPointer)
+                            header.format = .notIndexableWithPointers;
+                        header.hash ^= @truncate(@intFromPtr(o)*%phi32);
                         o.* = @bitCast(header);
+                        includesPointer = false;
                     }
                 }
             }
         }
         pub inline fn asHeapObjectPtr(self: *Self) HeapObjectPtr {
             return @ptrCast(&self.objects[self.objects.len-1]);
+        }
+        pub inline fn asObjectArray(self: *Self) [*]Object {
+            return @ptrCast(self);
         }
         pub inline fn asObject(self: *Self) Object {
             return Object.from(self.asHeapObjectPtr());
@@ -670,7 +682,6 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const objType = CompileTimeObject(countNonLabels(tup));
-    const phi32 = @import("utilities.zig").inversePhi(u32);
     var obj = objType.init();
     const objects = obj.objects[0..];
     comptime var n = 0;
@@ -683,7 +694,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                 n = n + 1;
             },
             ClassIndex => {
-                const footer = HeapObject.calcHeapObject(field, n-last, if (@intFromEnum(field) > @intFromEnum(ClassIndex.max)) 0xffffff else @truncate(@intFromPtr(&objects[n])*%phi32), Age.static, null, Object, false) catch unreachable;
+                const footer = HeapObject.calcHeapObject(field, n-last, 0xffffff, Age.static, null, Object, false) catch unreachable;
                 objects[n] = footer.o();
                 n += 1;
                 last = n;
@@ -770,7 +781,7 @@ test "compileObject" {
     try expectEqual(h2.classIndex,c.Method);
     try expectEqual(h2.length,2);
     try expectEqual(h2.age,.static);
-    try expectEqual(h2.format,.notIndexable);
+    try expectEqual(h2.format,.notIndexableWithPointers);
     const h3: HeapObject = @bitCast(o.objects[3]);
     try expectEqual(@intFromEnum(h3.classIndex),0xdead);
     try expectEqual(h3.length,0);

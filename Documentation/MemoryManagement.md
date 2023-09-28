@@ -109,20 +109,21 @@ The objects with large allocations are linked together so that at the start of t
 ## `become:` `becomeForward:` `elementsForwardIdentityTo:` and `elementsExchangeIdentityWith:`
 The become instruction swaps the two heap-objects, so that all existing references to object A reference object B and all existing references to object B reference object A. In the original Smalltalk an object table was used to allow objects to be moved around (a compacting collector) and so `become` was simply a swap of the two pointers. It's hard to do this cheaply if you don't have an object table. See [Gilad Bracha's comments](https://gbracha.blogspot.com/2009/07/miracle-of-become.html)
 
+We have a compile-time (of the runtime) flag to support or not support forwarding pointers in the global heap (because it slows down many operations) which, by implication, also controls the `become:` cases in the global arena other than number 1. In the nursery they are OK, because nurseries are small, the `become:` only affects one process, and we immediately do a nursery collect.
+
 There is a complex approach that we considered, but full  `become:` is rare enough, and the size of in-heap portion of objects is bounded, so we instead take a simpler approach, which has 4 cases (after promoting a thread-local object if the other one is global):
-1.  if it's a forwarding become, the source header is replaced with with a simple forwarding pointer.
-2. if both are forwarding pointers, we just swap those (after swapping the hashes)
-3. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
+1. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
+2. if it's a forwarding become, the source header is replaced with with a simple forwarding pointer.
+3. if both are forwarding pointers, we just swap those (after swapping the hashes)
 4. otherwise, the larger is copied to a fresh location, the smaller is copied to the old location of the larger (with the rest becoming free space), and a forward to the fresh location replaces the header of the smaller, with the rest becoming free space
-5. We may have to do something to prevent forwarding pointers pointing to forwarding pointers. (Probably if a forward points to a forward, replace the original forward.)
+5. if a forward points to a forward, replace the original forward - which means that there is never more than one forward that needs to be followed.
 
-This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from thread-local heaps to the global heap.
+This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from process-local heaps to the global heap.
 
-The previous proposed way to do it had 4 cases:
-1. if it's a one-way become, the source header is replaced with with a simple forwarding pointer 
-2. if both objects are thread-local and of the same size, then the contents are swapped (thread local guarantees "small")
-3. If at least one of the objects is in the global arena, if the other isn't it is promoted to the global arena (leaving a forwarding pointer behind). Now both objects are in the global arena, and the global collector is asked to do the `become`.
-4. the default handling is to create a become structure which is a table of header+address pairs for the objects from the `become`. Then each header is replaced with a 'become' forwarding pointer. The 'become' forwarding pointer is a length of 4080+offset, where offset is the position in the become structure that should now be used for this object, and the address portion is the address of the become structure. Become structures disappear when the arena in which they reside is collected.
+Because a `become:` can move the contents of an object, a `become:` must happen between blocks of native code. This means that `become:` must be a full send (and by implication, so must `perform:`). Therefore a global `become:` waits for all other threads to become quiescent before doing the operations. This make `become:` a relatively expensive operation.
+
+The following operations are affected (slowed down) by supporting `become:` 
+1. accessing any instance variable or indexing
 
 ### Array of Objects
 Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situation, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.
