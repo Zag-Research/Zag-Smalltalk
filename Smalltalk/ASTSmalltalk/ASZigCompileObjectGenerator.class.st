@@ -65,6 +65,15 @@ ASZigCompileObjectGenerator >> initialize [
 ]
 
 { #category : #accessing }
+ASZigCompileObjectGenerator >> labelRef: aString [
+
+	self
+		nextPut: $";
+		nextPutAll: aString;
+		nextPut: $"
+]
+
+{ #category : #accessing }
 ASZigCompileObjectGenerator >> literals: anASLiterals [ 
 	literals := anASLiterals 
 ]

@@ -4,3 +4,9 @@ Extension { #name : #Symbol }
 Symbol >> asZig: anASZigCompileObjectGenerator [ 
 	anASZigCompileObjectGenerator putSymbol: self
 ]
+
+{ #category : #'*ASTSmalltalk' }
+Symbol >> asZigReference: anASZigCompileObjectGenerator [
+
+	^ nil
+]

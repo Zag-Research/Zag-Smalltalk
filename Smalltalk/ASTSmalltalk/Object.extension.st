@@ -57,6 +57,12 @@ Object >> asZig: aGenerator [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> asZigReference: anASZigCompileObjectGenerator [
+
+	^ self asZig: anASZigCompileObjectGenerator 
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> astFields [
 	| nVars fields |
 	nVars := self class instSize.

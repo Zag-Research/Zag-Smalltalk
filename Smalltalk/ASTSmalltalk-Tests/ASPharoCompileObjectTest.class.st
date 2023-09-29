@@ -207,7 +207,12 @@ ASPharoCompileObjectTest >> testSimpleObjects [
 ASPharoCompileObjectTest >> testVarObjects [
 
 	self assert: 3 @ 4 equalsZig: '3,4,":L1",c.Point,'.
-	self assert: false -> true equalsZig: 'False,True,":L1",c.Association,'
+	self
+		assert: false -> true
+		equalsZig: 'False,True,":L1",c.Association,'.
+	self
+		assert: 3 @ true -> (false -> (#abc -> nil))
+		equalsZig: '3,True,":L1",c.Point,Sym.i_1,Nil,":L2",c.Association,False,"L2",":L3",c.Association,"L1","L3",":L4",c.Association,'
 ]
 
 { #category : #tests }
