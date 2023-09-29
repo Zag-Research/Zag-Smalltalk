@@ -51,8 +51,8 @@ ASZigCompileObjectGenerator >> context: anASFileContext [
 
 { #category : #generation }
 ASZigCompileObjectGenerator >> generateCodeFor: anASMethodNode [
-
-	anASMethodNode generateWith: self
+self halt.
+	anASMethodNode asZig: self
 ]
 
 { #category : #initialization }

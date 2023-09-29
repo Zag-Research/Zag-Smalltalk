@@ -5,6 +5,19 @@ Class {
 }
 
 { #category : #tests }
+ASPharoCompileObjectTest class >> writeCompileMethod_fib [
+
+	<script>
+	| ast codeGen file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	file := ASZigFileContext new.
+	ASZigCompileObjectGenerator new context: file;
+	generateCodeFor: ast.
+	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
+]
+
+{ #category : #tests }
 ASPharoCompileObjectTest >> assert: anObject equalsZig: match [
 
 	| file codeGen |
@@ -213,17 +226,4 @@ ASPharoCompileObjectTest >> testVarObjects [
 	self
 		assert: 3 @ true -> (false -> (#abc -> nil))
 		equalsZig: '3,True,":L1",c.Point,Sym.i_1,Nil,":L2",c.Association,False,"L2",":L3",c.Association,"L1","L3",":L4",c.Association,'
-]
-
-{ #category : #tests }
-ASPharoCompileObjectTest >> writeCompileMethod_fib [
-
-	|  ast codeGen file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
-		writeStreamDo: [ :stream |
-			file := ASZigFileContext new on: stream.
-			codeGen := ASZigCompileObjectGenerator new context: file.
-			codeGen generateCodeFor: ast.
-			file done ]
 ]

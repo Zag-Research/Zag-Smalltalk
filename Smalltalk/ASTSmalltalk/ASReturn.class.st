@@ -27,20 +27,6 @@ ASReturn >> acceptVisitor: aVisitor [
 	^ aVisitor visitReturn: self
 ]
 
-{ #category : #converting }
-ASReturn >> asZagCompileObject [
-	| results |
-	results := OrderedCollection new.
-	
-	results add: 'c.ASReturn,'.
-	results add: '":', label,'",'.
-	results add: '"',expression asZagLabel,'",'.
-	
-	results addAll: expression asZagCompileObject.
-
-	^results
-]
-
 { #category : #accessing }
 ASReturn >> blocks [
 	^expression blocks

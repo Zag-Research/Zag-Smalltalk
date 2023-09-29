@@ -27,24 +27,6 @@ ASLiteral >> acceptVisitor: aVisitor [
 	^ aVisitor visitLiteral: self
 ]
 
-{ #category : #converting }
-ASLiteral >> asZagCompileObject [
-
-	| results |
-	results := OrderedCollection new.
-
-	results add: 'c.ASLiteral,'.
-	results add: '":' , self asZagLabel , '",'.
-	results add: literal asString, ','.
-
-	^ results
-]
-
-{ #category : #'as yet unclassified' }
-ASLiteral >> baseValue [
-	^ value
-]
-
 { #category : #accessing }
 ASLiteral >> isASLiteral [
 	^true

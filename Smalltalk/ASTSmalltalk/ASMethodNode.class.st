@@ -66,22 +66,6 @@ ASMethodNode >> acceptVisitor: aVisitor [
 	^ aVisitor visitMethodNode: self
 ]
 
-{ #category : #converting }
-ASMethodNode >> asZagCompileObject [
-	| result |
-	result := OrderedCollection new.
-	
-	result add: 'c.Method'.
-	result add: '":first"'.
-	result add: 'Sym.', selector asZigString, ','.
-	result add: selector numArgs asString, ','.
-	result add: '"body",'.
-	
-	result addAll: body asZagCompileObject.
-	
-	^ result reversed
-]
-
 { #category : #accessing }
 ASMethodNode >> class: anASClassNode [ 
 	class := anASClassNode

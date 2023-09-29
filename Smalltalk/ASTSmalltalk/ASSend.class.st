@@ -49,31 +49,6 @@ ASSend >> args [
 	^ args
 ]
 
-{ #category : #converting }
-ASSend >> asZagCompileObject [
-
-	| results |
-	results := OrderedCollection new.
-
-	results add: 'c.ASSend,'.
-	results add: '":' , label , '",'.
-	results addAll: (args collect: [:arg | '"' , arg asZagLabel , '",' ]).
-	results add: 'Sym.' , selector asZigString , ','.
-	results add: '"' , target asZagLabel , '",'.
-
-	args do: [ :arg | results addAll: arg asZagCompileObject ].
-
-	results addAll: target asZagCompileObject.
-
-	^ results
-]
-
-{ #category : #converting }
-ASSend >> asZigString [
-
-	^ '"send', self nextIndex, '",'
-]
-
 { #category : #accessing }
 ASSend >> blocks [
 

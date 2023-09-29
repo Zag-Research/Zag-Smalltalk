@@ -12,17 +12,6 @@ ASArg >> acceptVisitor: aVisitor [
 	^ aVisitor visitArg: self
 ]
 
-{ #category : #converting }
-ASArg >> asZagCompileObject [
-	| results |
-	results := OrderedCollection new.
-	
-	results add: 'c.ASArg,'.
-	results add: '":', self asZagLabel ,'",'.
-	
-^ results
-]
-
 { #category : #visiting }
 ASArg >> isASArg [
 	^true

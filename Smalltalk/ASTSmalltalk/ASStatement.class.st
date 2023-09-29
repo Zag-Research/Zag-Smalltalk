@@ -4,9 +4,6 @@ I have subclasses for all the statments that can exist in the body of a method o
 Class {
 	#name : #ASStatement,
 	#superclass : #Object,
-	#instVars : [
-		'label'
-	],
 	#classInstVars : [
 		'index'
 	],
@@ -28,12 +25,6 @@ index:= nil
 { #category : #visiting }
 ASStatement >> acceptVisitor: aVisitor [
 	self subclassResponsibility 
-]
-
-{ #category : #converting }
-ASStatement >> asZagLabel [
-	label ifNil: [ label:= self className, ASStatement nextIndex].
-	^ label
 ]
 
 { #category : #accessing }

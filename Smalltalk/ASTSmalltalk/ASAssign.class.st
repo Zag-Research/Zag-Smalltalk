@@ -28,22 +28,6 @@ ASAssign >> acceptVisitor: aVisitor [
 	^ aVisitor visitAssign: self
 ]
 
-{ #category : #converting }
-ASAssign >> asZagCompileObject [
-	| results |
-	results := OrderedCollection new.
-
-	results add: 'c.ASAssign,'.
-	results add: '":' , self asZagLabel , '",'.
-	results add: '"' , expression asZagLabel , '",'.
-	results add: '"' , variable asZagLabel , '",'.
-
-	results addAll: expression asZagCompileObject.
-	results addAll: variable asZagCompileObject.
-	
-	^ results
-]
-
 { #category : #accessing }
 ASAssign >> blocks [
 	^expression blocks

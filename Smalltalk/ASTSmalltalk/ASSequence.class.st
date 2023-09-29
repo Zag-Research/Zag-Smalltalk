@@ -28,25 +28,6 @@ ASSequence >> addStatement: anASStatement [
 ]
 
 { #category : #comparing }
-ASSequence >> asZagCompileObject [ 
- | result |
-result := OrderedCollection new.   
-
-result add: 'c.ASSequence,'.
-result add: '":body",'.
-result addAll: (sequence collect: [ :statement | '"',statement asZagLabel,'",' ]).
-
-sequence do: [ :statement | result addAll: statement asZagCompileObject  ].
-	^ result
-]
-
-{ #category : #converting }
-ASSequence >> asZagLabel [
-	zagLabel ifNil: [ zagLabel := 'body', ASStatement nextIndex  ].
-	^ zagLabel
-]
-
-{ #category : #comparing }
 ASSequence >> initialize [ 
 sequence := OrderedCollection new.
 ]

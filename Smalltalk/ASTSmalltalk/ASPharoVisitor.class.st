@@ -165,8 +165,7 @@ ASPharoVisitor >> visitReturnNode: aRBReturnNode [
 { #category : #visiting }
 ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
-	^ ASSelf method: compiler definingMethod.
-
+	^ ASSelf method: compiler definingMethod selector
 ]
 
 { #category : #visiting }

@@ -44,16 +44,6 @@ ASSelf >> acceptVisitor: aVisitor [
 	^ aVisitor visitSelfNode: self
 ]
 
-{ #category : #converting }
-ASSelf >> asZagCompileObject [
-	| results |
-	results := OrderedCollection new.
-	
-	results add: 'c.ASSelf,'.
-	
-^ results
-]
-
 { #category : #accessing }
 ASSelf >> isASSelf [
 	^true
@@ -88,7 +78,8 @@ ASSelf >> superclass [
 { #category : #accessing }
 ASSelf >> superclass: aClass [
 
-	superclass := aClass
+	self flag: #TODO. " should be an ASTClass, Dave thinks "
+	superclass := aClass name
 ]
 
 { #category : #compiling }
