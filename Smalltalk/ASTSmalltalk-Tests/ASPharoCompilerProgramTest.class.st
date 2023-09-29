@@ -185,7 +185,7 @@ ASPharoCompilerProgramTest >> testFooBarIsolatedNew [
 	compiler := ASPharoCompiler
 		            buildMethod: ASCompileTestClass1 >> #foo:bar:
 		            forClass: ASCompileTestClass1
-		            withCodeGenerator: (ASZigFileGenerator stream:
+		            withCodeGenerator: (ASZigGenerator stream:
 				             (FileSystem disk workingDirectory
 				              / 'zigFooBarStringNew.zig') writeStream).
 	compiler compile.

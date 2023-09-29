@@ -9,7 +9,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_addComment [
 
 	| generator comment |
 	comment := 'this is a comment!'.
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator comment: comment.
 
 	self assert: (generator instructions at: 1) equals: '// ', comment
@@ -19,7 +19,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_addComment [
 ASZigFileGeneratorTest >> testZigFileGenerator_goTo [
 
 	| generator |
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator goTo: #hello.
 
 	self assert: (generator instructions at: 1) equals: '":hello"'
@@ -29,7 +29,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_goTo [
 ASZigFileGeneratorTest >> testZigFileGenerator_pushDrop [
 
 	| generator |
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushDrop.
 
 	self
@@ -41,7 +41,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushDrop [
 ASZigFileGeneratorTest >> testZigFileGenerator_pushLabel [
 
 	| generator |
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushLabel: #hello.
 
 	self assert: (generator instructions at: 1) equals: '":hello"'
@@ -51,7 +51,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushLabel [
 ASZigFileGeneratorTest >> testZigFileGenerator_pushLiteral [
 
 	| generator |
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushLiteral: 10.
 
 	self assert: (generator instructions at: 1) equals: '&e.pushLiteral, Object.from(10),'
@@ -62,7 +62,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushLocal [
 
 	| generator selfIndex |
 	selfIndex := 5.
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushLocal: #self index: selfIndex.
 
 	self assert: generator instructions size equals: 2.
@@ -76,7 +76,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushLocal [
 ASZigFileGeneratorTest >> testZigFileGenerator_pushReturn [
 
 	| generator |
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushReturn.
 
 	self
@@ -90,7 +90,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushSend [
 	| generator aSelector numArgs |
 	aSelector := #mySelector.
 	numArgs := 5.
-	generator := ASZigFileGenerator new.
+	generator := ASZigGenerator new.
 	generator pushSendForSelector: aSelector numArgs: numArgs.
 
 	self

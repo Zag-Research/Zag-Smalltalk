@@ -1,5 +1,5 @@
 Class {
-	#name : #ASParama,
+	#name : #ASPragma,
 	#superclass : #ASStatement,
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
@@ -10,11 +10,11 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-ASParama class >> args: pramaArgs [
-	^ASParama new args: pramaArgs 
+ASPragma class >> args: pramaArgs [
+	^ASPragma new args: pramaArgs 
 ]
 
 { #category : #accessing }
-ASParama >> args: paramaArgs [
+ASPragma >> args: paramaArgs [
 	args := paramaArgs 
 ]

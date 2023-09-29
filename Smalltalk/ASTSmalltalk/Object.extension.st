@@ -39,6 +39,24 @@ Object >> asASSyntax [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> asZig: aGenerator [
+
+	| slots i label |
+	slots := self class slots size.
+	((1 to: slots) collect: [ :n |
+		 | x |
+		 x := self instVarAt: n.
+		 x -> (x asZigReference: aGenerator) ]) do: [ :each |
+		each value
+			ifNil: [ each key asZig: aGenerator ]
+			ifNotNil: [ aGenerator labelRef: each value ].
+		aGenerator comma ].
+	label := aGenerator nextLabel.
+	aGenerator putClass: self class name.
+	^ label
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> astFields [
 	| nVars fields |
 	nVars := self class instSize.

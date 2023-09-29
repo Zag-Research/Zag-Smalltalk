@@ -11,6 +11,11 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #visiting }
+ASExpression >> acceptVisitor: aVisitor [
+	self subclassResponsibility 
+]
+
 { #category : #compiling }
 ASExpression >> tell: aCompiler youAreSent: aSymbol [
 

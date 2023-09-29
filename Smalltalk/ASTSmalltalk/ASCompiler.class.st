@@ -253,7 +253,7 @@ ASCompiler >> zigString [
 
 	| visitor |
 	visitor := ASZigGenerator new compiler: self.
-	^ String streamContents: [ :s | 
+	^ String streamContents: [ :s |
 		  visitor stream: s.
 		  methods do: [ :method | visitor visit: method ] ]
 ]

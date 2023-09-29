@@ -1,7 +1,7 @@
 Class {
 	#name : #ASMethodStatementVisitor,
 	#superclass : #ASStatementVisitor,
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Visitors'
 }
 
 { #category : #'as yet unclassified' }

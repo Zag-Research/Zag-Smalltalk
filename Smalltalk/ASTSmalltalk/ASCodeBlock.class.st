@@ -6,11 +6,8 @@ Class {
 	#name : #ASCodeBlock,
 	#superclass : #Object,
 	#instVars : [
-		'nestedScopeOf',
 		'body',
-		'locals',
-		'scope',
-		'clsrData'
+		'locals'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -20,6 +17,11 @@ ASCodeBlock >> = other [
 
 	^ self class = other class and: [ 
 		locals = other locals and: [ body = other body ] ]
+]
+
+{ #category : #visiting }
+ASCodeBlock >> acceptVisitor: aVisitor [
+	self subclassResponsibility 
 ]
 
 { #category : #accessing }
@@ -60,8 +62,7 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	body := ASSequence new.
-	scope := Dictionary new
+	body := ASSequence new
 ]
 
 { #category : #testing }
@@ -138,7 +139,7 @@ ASCodeBlock >> writeBody: symbols stackVars: stackVariables codeGenerator: codeG
 		                    stackVars: stackVariables.
 	statementVisitor codeGenerator: codeGenerator.
 
-	body acceptVisitor: statementVisitor codeGenerator: codeGenerator.
+	body acceptVisitor: statementVisitor.
 
 	"check to see what types variables have"
 	(self filter: statementVisitor instructionStack) do: [ :instruction |
@@ -154,13 +155,13 @@ ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream bloc
 		stackVariables: stackVariables.
 
 	aStream cr.
-	codeGenerator := ASZigFileGenerator stream: aStream.
+	codeGenerator := ASZigGenerator stream: aStream.
 	statementVisitor := self
 		                    statementVisitor: symbols
 		                    stackVars: stackVariables.
 	statementVisitor codeGenerator: codeGenerator.
 
-	body acceptVisitor: statementVisitor codeGenerator: codeGenerator.
+	body acceptVisitor: statementVisitor.
 
 	"check to see what types variables have"
 	(self filter: statementVisitor instructionStack) do: [ :instruction |

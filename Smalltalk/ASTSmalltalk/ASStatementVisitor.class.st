@@ -9,7 +9,7 @@ Class {
 		'variableTypeMap',
 		'codeGenerator'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Visitors'
 }
 
 { #category : #adding }

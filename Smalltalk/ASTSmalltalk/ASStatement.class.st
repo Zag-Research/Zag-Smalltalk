@@ -25,6 +25,11 @@ ASStatement class >> resetIndex [
 index:= nil
 ]
 
+{ #category : #visiting }
+ASStatement >> acceptVisitor: aVisitor [
+	self subclassResponsibility 
+]
+
 { #category : #converting }
 ASStatement >> asZagLabel [
 	label ifNil: [ label:= self className, ASStatement nextIndex].

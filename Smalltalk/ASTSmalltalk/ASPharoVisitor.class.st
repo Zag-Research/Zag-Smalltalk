@@ -63,10 +63,10 @@ ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
 		  body: ASSequence new.
-	compiler inScope: block do: [ 
-		aRBBlockNode statements do: [ :statement | 
+"	compiler inScope: block do: [
+		aRBBlockNode statements do: [ :statement |
 			block addStatement: (self visit: statement) ] ].
-	^ block
+	^ block"
 ]
 
 { #category : #visiting }
@@ -141,7 +141,6 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
 		          body: ASSequence new.
-	method nestedScopeOf: (compiler definingClass: aRBMethodNode methodClass).
 	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
 	compiler definingMethod: method.
 	compiler inScope: method do: [ 
@@ -151,8 +150,10 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 ]
 
 { #category : #visiting }
-ASPharoVisitor >> visitPragmaNode: aRBPragmaNode [ 
-	^ASParama args: (aRBPragmaNode arguments collect: [ :arg | self visit: arg])
+ASPharoVisitor >> visitPragmaNode: aRBPragmaNode [
+
+	^ ASPragma args:
+		  (aRBPragmaNode arguments collect: [ :arg | self visit: arg ]) 
 ]
 
 { #category : #visiting }

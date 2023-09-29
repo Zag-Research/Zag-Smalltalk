@@ -8,7 +8,7 @@ Class {
 		'inline',
 		'replacements'
 	],
-	#category : #'ASTSmalltalk-Compiler'
+	#category : #'ASTSmalltalk-Visitors'
 }
 
 { #category : #initialization }

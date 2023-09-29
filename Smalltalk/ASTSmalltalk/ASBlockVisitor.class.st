@@ -10,7 +10,7 @@ Class {
 		'selector',
 		'index'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Visitors'
 }
 
 { #category : #constructor }

@@ -14,10 +14,11 @@ ASSequence >> = other [
 ]
 
 { #category : #comparing }
-ASSequence >> acceptVisitor: aStatementVisitor codeGenerator: aCodeGenerator [
-sequence do: [ :asStatement |
+ASSequence >> acceptVisitor: aStatementVisitor [
+
+	sequence do: [ :asStatement |
 		asStatement acceptVisitor: aStatementVisitor.
-		asStatement isASSend ifTrue: [ aCodeGenerator pushDrop ] ]
+		asStatement isASSend ifTrue: [ aStatementVisitor pushDrop ] ]
 ]
 
 { #category : #comparing }

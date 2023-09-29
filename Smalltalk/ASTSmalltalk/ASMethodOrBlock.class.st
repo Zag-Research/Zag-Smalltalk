@@ -17,6 +17,11 @@ ASMethodOrBlock >> = other [
 		  self arguments = other arguments  ]
 ]
 
+{ #category : #visiting }
+ASMethodOrBlock >> acceptVisitor: aVisitor [
+	self subclassResponsibility 
+]
+
 { #category : #accessing }
 ASMethodOrBlock >> arguments [
 	^ arguments
@@ -29,7 +34,7 @@ ASMethodOrBlock >> arguments: aCollection [
 		             collect: [ :symbol |
 			             | arg |
 			             arg := ASArg name: symbol.
-			             scope at: symbol put: arg.
+			            
 			             arg ]
 		             as: Array.
 ]

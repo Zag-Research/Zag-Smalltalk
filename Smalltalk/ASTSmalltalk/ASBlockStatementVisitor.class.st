@@ -1,7 +1,7 @@
 Class {
 	#name : #ASBlockStatementVisitor,
 	#superclass : #ASStatementVisitor,
-	#category : #'ASTSmalltalk-AST'
+	#category : #'ASTSmalltalk-Visitors'
 }
 
 { #category : #adding }
