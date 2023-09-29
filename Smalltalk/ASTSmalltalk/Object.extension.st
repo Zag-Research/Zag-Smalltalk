@@ -41,8 +41,8 @@ Object >> asASSyntax [
 { #category : #'*ASTSmalltalk' }
 Object >> asZig: aGenerator [
 
-	| slots i label |
-	slots := self class slots size.
+	| slots label |
+	slots := self class allSlots size.
 	((1 to: slots) collect: [ :n |
 		 | x |
 		 x := self instVarAt: n.
