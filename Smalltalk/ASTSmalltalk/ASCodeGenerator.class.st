@@ -1,32 +1,15 @@
 "
-I am an abstract code generator.
+I am an abstract code generator. My subclasses are used for several purposes.
 
-An instance of one of my subclasses is passed to an AST `emit:` method to generate the actual code for a method.
-I know nothing about the structure of an AST, I just generate some form of code from the calls that are made to me.
+There are text generators that are used to create text files (currently only in Zig) that can be compiled with the Zag runtime to generate standalone code.
 
-Known subclasses:
-ASEmbeddedThread - generates a CompiledMethod in a running Zag image.
-ASEmbeddedJIT - future
-ASZigThread - generates Zig threaded code to write to a .zig file.
-ASZigCPS - generates Zig CPS code to write to a .zig file
-
-Public API and Key Messages
-
-- message one   
-- message two 
-- (for bonus points) how to create instances.
-
-   One simple example is simply gorgeous.
- 
-Internal Representation and Key Implementation Points.
-
-
-    Implementation Points
+There will be a runtime code generator written in Zig that will generate threaded or JIT code at runtime.
 "
 Class {
 	#name : #ASCodeGenerator,
 	#superclass : #Object,
 	#instVars : [
+		'context',
 		'depth',
 		'maxDepth'
 	],
@@ -34,7 +17,10 @@ Class {
 }
 
 { #category : #accessing }
-ASCodeGenerator >> comment: aString [
+ASCodeGenerator >> context: anASFileContext [
+
+	context := anASFileContext.
+	anASFileContext add: self
 ]
 
 { #category : #stackAccessHelpers }
@@ -57,31 +43,13 @@ ASCodeGenerator >> doPush [
 	
 ]
 
-{ #category : #completion }
-ASCodeGenerator >> finished [
-]
-
-{ #category : #completion }
+{ #category : #initialization }
 ASCodeGenerator >> initialize [ 
-	super initialize.
+super initialize.
 	depth := maxDepth := 0
-
-	
 ]
 
 { #category : #accessing }
-ASCodeGenerator >> label: aSymbol [
-
-	self subclassResponsibility
-]
-
-{ #category : #accessing }
-ASCodeGenerator >> labelRef: aSymbol [
-
-	self subclassResponsibility
-]
-
-{ #category : #accessing }
-ASCodeGenerator >> object: anObject [
-	self subclassResponsibility
+ASCodeGenerator >> lookupObject: anObject [
+	^ context lookupObject: anObject 
 ]

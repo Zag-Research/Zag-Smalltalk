@@ -147,8 +147,6 @@ ASStatementVisitor >> visitSend: anASSend [
 
 	codeGenerator
 		pushSendForSelector: selector
-		numArgs: anASSend selector numArgs.
-
 	"send := '&e.send' , anASSend selector numArgs asString , ', '.
 
 	""looking at the classes that implement a particular send""

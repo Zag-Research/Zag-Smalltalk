@@ -115,14 +115,20 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 { #category : #writing }
 ASBlock >> write: codeGenerator with: syms [
 
-	| stackVariables |
+	| stackVariables selector | "no idea where selector comes from "
 	stackVariables := self buildStack.
+
 
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
 	codeGenerator pushNamespace: selector asSymbol asZigString.
-	
-	selector := codeGenerator symbolOrVirtual: selector asSymbol asZigString.
-	codeGenerator emitMethod: selector numLocals: locals size stackSize: self maxDepth closureSize: 0.
+
+	selector := codeGenerator symbolOrVirtual:
+		            selector asSymbol asZigString.
+	codeGenerator
+		emitMethod: selector
+		numLocals: locals size
+		stackSize: self maxDepth
+		closureSize: 0.
 
 	codeGenerator emitVerifySelector.
 
@@ -132,10 +138,10 @@ ASBlock >> write: codeGenerator with: syms [
 	self
 		writeBody: syms
 		stackVars: stackVariables
-		codeGenerator: codeGenerator 
+		codeGenerator: codeGenerator
 		blocks: (ASBlockVisitor selector: nil).
 
-	codeGenerator pushReturn.
+	codeGenerator returnTop.
 	codeGenerator pushClose
 ]
 

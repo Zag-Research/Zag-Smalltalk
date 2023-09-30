@@ -1,8 +1,11 @@
+"
+I manage the values to go into a zag symbols table. I have predefined symbols and runtime symbols.
+"
 Class {
 	#name : #ASZigSymbols,
 	#superclass : #Object,
 	#instVars : [
-		'newlyDefined'
+		'runtimeDefined'
 	],
 	#classVars : [
 		'Predefined'
@@ -28,111 +31,13 @@ ASZigSymbols class >> initialize [
 { #category : #adding }
 ASZigSymbols >> add: aSymbol [
 
-aSymbol = #footer ifTrue: [ self halt].
-	newlyDefined add: aSymbol
-]
-
-{ #category : #'as yet unclassified' }
-ASZigSymbols >> emitOn: stream [
-	stream << 'const Sym = struct {'.
-	stream cr.
-	selectors do: [ :selector |
-		stream tab.
-		stream << selector asZigString << ': Object,'.
-		stream cr ].
-	stream tab.
-	stream << 'const ss = heap.compileStrings(.{'.
-	stream cr.
-	selectors do: [ :aSelector |
-		stream tab.
-		stream tab.
-		stream << '"' << aSelector << '",'.
-		stream cr ].
-	stream tab.
-	stream << '});'.
-	stream cr.
-	stream tab.
-	stream << 'usingnamespace symbol.symbols;'.
-	stream cr.
-	stream tab.
-	stream << 'fn init() Sym {'.
-	stream cr.
-	stream tab.
-	stream tab.
-	stream << 'return .{'.
-	stream cr.
-	selectors withIndexDo: [ :aSelector :index |
-		stream tab.
-		stream tab.
-		stream tab.
-		stream << '.' << aSelector asZigString << ' = symbol.intern(ss['
-		<< (index - 1) asString << '].asObject()),'.
-		stream cr ].
-	stream tab.
-	stream tab.
-	stream << '};'.
-	stream cr.
-	stream tab.
-	stream << '}'.
-	stream cr.
-	stream << '};'.
-	stream cr.
-	stream cr
-]
-
-{ #category : #'as yet unclassified' }
-ASZigSymbols >> emitZigSymbols: syms selectors: selectors [ 
-	selectors removeAllFoundIn: syms keys.
-	stream << 'const Sym = struct {'.
-	stream cr.
-	selectors do: [ :selector |
-		stream tab.
-		stream << selector asZigString << ': Object,'.
-		stream cr ].
-	stream tab.
-	stream << 'const ss = heap.compileStrings(.{'.
-	stream cr.
-	selectors do: [ :aSelector |
-		stream tab.
-		stream tab.
-		stream << '"' << aSelector << '",'.
-		stream cr ].
-	stream tab.
-	stream << '});'.
-	stream cr.
-	stream tab.
-	stream << 'usingnamespace symbol.symbols;'.
-	stream cr.
-	stream tab.
-	stream << 'fn init() Sym {'.
-	stream cr.
-	stream tab.
-	stream tab.
-	stream << 'return .{'.
-	stream cr.
-	selectors withIndexDo: [ :aSelector :index |
-		stream tab.
-		stream tab.
-		stream tab.
-		stream << '.' << aSelector asZigString << ' = symbol.intern(ss['
-		<< (index - 1) asString << '].asObject()),'.
-		stream cr ].
-	stream tab.
-	stream tab.
-	stream << '};'.
-	stream cr.
-	stream tab.
-	stream << '}'.
-	stream cr.
-	stream << '};'.
-	stream cr.
-	stream cr
+	runtimeDefined add: aSymbol
 ]
 
 { #category : #initialization }
 ASZigSymbols >> initialize [ 
 	super initialize .
-	newlyDefined := Set new
+	runtimeDefined := Set new
 ]
 
 { #category : #testing }
@@ -153,7 +58,7 @@ ASZigSymbols >> printable: aSymbol [
 ASZigSymbols >> writeDefinitionOn: stream [
 
 	| syms n |
-	syms := newlyDefined asSortedCollection.
+	syms := runtimeDefined asSortedCollection.
 	stream nextPutAll: 'const Sym = struct {
 '.
 	syms do: [ :sym |

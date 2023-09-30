@@ -5,43 +5,7 @@ Class {
 }
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> writeCompileMethod_fib [
-
-	<script>
-	| ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
-		generateCodeFor: ast.
-	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ]
-]
-
-{ #category : #tests }
-ASPharoCompileObjectTest >> assert: anObject equalsZig: match [
-
-	| file codeGen |
-	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
-	anObject asZig: codeGen.
-	self
-		assert: codeGen asString
-		equals: match
-]
-
-{ #category : #tests }
-ASPharoCompileObjectTest >> assert: anObject equalsZigAlt: match [
-
-	| file codeGen |
-	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
-	anObject asZig: codeGen.
-	self assert: codeGen setLiteralString equals: match
-]
-
-{ #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethodSmallIntegerMinus [
+ASPharoCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -52,14 +16,14 @@ ASPharoCompileObjectTest >> testCompileMethodSmallIntegerMinus [
          ^ super + aNumber
 "
 
-	| compiler result aStream aReader lines astTree |
+	| compiler result aStream aReader lines astTree anASPharoCompileObjectTest |
+	anASPharoCompileObjectTest := self new.
 	ASStatement resetIndex.
 	compiler := ASPharoCompiler new
 		            buildFromClass: SmallInteger
 		            method: SmallInteger >> #-.
 	result := compiler asCompileObject.
-
-	self assert: nil equals: nil.
+	anASPharoCompileObjectTest assert: nil equals: nil.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigSmallIntegerMinusAsCompileObject.zig') writeStream.
 	aStream truncate.
@@ -78,7 +42,7 @@ ASPharoCompileObjectTest >> testCompileMethodSmallIntegerMinus [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethodToObject [
+ASPharoCompileObjectTest class >> testCompileMethodToObject [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -89,14 +53,14 @@ ASPharoCompileObjectTest >> testCompileMethodToObject [
          ^ super + aNumber
 "
 
-	| compiler result aStream aReader lines astTree |
+	| compiler result aStream aReader lines astTree anASPharoCompileObjectTest |
+	anASPharoCompileObjectTest := self new.
 	ASStatement resetIndex.
 	compiler := ASPharoCompiler new
 		            buildFromClass: SmallInteger
 		            method: SmallInteger >> #-.
 	result := compiler asCompileObject.
-
-	self assert: nil equals: nil.
+	anASPharoCompileObjectTest assert: nil equals: nil.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigSmallIntegerMinusAsCompileObject.zig') writeStream.
 	aStream truncate.
@@ -115,7 +79,7 @@ ASPharoCompileObjectTest >> testCompileMethodToObject [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
+ASPharoCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -126,14 +90,14 @@ ASPharoCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
          ^ super + aNumber
 "
 
-	| compiler result aStream aReader lines astTree |
+	| compiler result aStream aReader lines astTree anASPharoCompileObjectTest |
+	anASPharoCompileObjectTest := self new.
 	ASStatement resetIndex.
 	compiler := ASPharoCompiler new
 		            buildFromClass: SmallInteger
 		            method: SmallInteger >> #+.
 	result := compiler asCompileObject.
-
-	self assert: nil equals: nil.
+	anASPharoCompileObjectTest assert: nil equals: nil.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigSmallIntegerAddAsCompileObject.zig') writeStream.
 	aStream truncate.
@@ -152,20 +116,7 @@ ASPharoCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethod_fib [
-
-	| ast codeGen file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
-	codeGen generateCodeFor: ast.
-	self assert: codeGen size equals: 10.
-	self assert: file symbolNumber equals: 2.
-	self assert: file classNumber equals: 0
-]
-
-{ #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethod_foobar [
+ASPharoCompileObjectTest class >> testCompileMethod_foobar [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -176,14 +127,14 @@ ASPharoCompileObjectTest >> testCompileMethod_foobar [
          ^ super + aNumber
 "
 
-	| compiler result aStream aReader lines astTree |
+	| compiler result aStream aReader lines astTree anASPharoCompileObjectTest |
+	anASPharoCompileObjectTest := self new.
 	ASStatement resetIndex.
 	compiler := ASPharoCompiler new
 		            buildFromClass: ASCompileTestClass1
 		            method: ASCompileTestClass1 >> #foo:bar:.
 	result := compiler asCompileObject.
-
-	self assert: nil equals: nil.
+	anASPharoCompileObjectTest assert: nil equals: nil.
 	aStream := (FileSystem disk workingDirectory
 	            / 'zigFooBarAsCompileObject.zig') writeStream.
 	aStream truncate.
@@ -202,29 +153,54 @@ ASPharoCompileObjectTest >> testCompileMethod_foobar [
 ]
 
 { #category : #tests }
+ASPharoCompileObjectTest class >> writeCompileMethod_fib [
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	file := ASZigFileContext new.
+	ASZigCompileObjectGenerator new
+		context: file;
+		generateCodeFor: ast.
+	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
+]
+
+{ #category : #tests }
+ASPharoCompileObjectTest >> testCompileMethod_fib [
+
+	| ast codeGen file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	file := ASZigFileContext new.
+	codeGen := ASZigCompileObjectGenerator new context: file.
+	codeGen generateCodeFor: ast.
+	self assert: codeGen asString equals: 'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,'.
+]
+
+{ #category : #tests }
 ASPharoCompileObjectTest >> testSimpleObjects [
 
-	self assert: 42 equalsZig: '42'.
-	self assert: true equalsZig: 'True'.
-	self assert: false equalsZig: 'False'.
-	self assert: nil equalsZig: 'Nil'.
-	self assert: #value equalsZig: 'Sym.value'.
-	self assert: #value: equalsZig: 'Sym.@"value:"'.
-	self assert: #foo equalsZig: 'Sym.i_1'.
-	self assert: #foo equalsZigAlt: 'sym.foo'.
-	self assert: #foo:bar: equalsZig: 'Sym.i_1'.
-	self assert: #foo:bar: equalsZigAlt: 'sym.@"foo:bar:"'.
-
+	self assert: 42 zigCGString equals: '42'.
+	self assert: true zigCGString equals: 'True'.
+	self assert: false zigCGString equals: 'False'.
+	self assert: nil zigCGString equals: 'Nil'.
+	self assert: #value zigCGString equals: 'Sym.value'.
+	self assert: #value: zigCGString equals: 'Sym.@"value:"'.
+	self assert: #foo zigCGString equals: 'Sym.i_1'.
+	self assert: #foo zigSLString equals: 'sym.foo'.
+	self assert: #foo:bar: zigCGString equals: 'Sym.i_1'.
+	self assert: #foo:bar: zigSLString equals: 'sym.@"foo:bar:"'
 ]
 
 { #category : #tests }
 ASPharoCompileObjectTest >> testVarObjects [
 
-	self assert: 3 @ 4 equalsZig: '3,4,":L1",c.Point,'.
+	self assert: (3 @ 4) zigCGString equals: '3,4,":L1",c.Point,'.
 	self
-		assert: false -> true
-		equalsZig: 'False,True,":L1",c.Association,'.
+		assert: (false -> true) zigCGString
+		equals: 'False,True,":L1",c.Association,'.
 	self
-		assert: 3 @ true -> (false -> (#abc -> nil))
-		equalsZig: '3,True,":L1",c.Point,Sym.i_1,Nil,":L2",c.Association,False,"L2",":L3",c.Association,"L1","L3",":L4",c.Association,'
+		assert: (3 @ true -> (false -> (#abc -> nil))) zigCGString
+		equals:
+		'3,True,":L1",c.Point,Sym.i_1,Nil,":L2",c.Association,False,"L2",":L3",c.Association,"L1","L3",":L4",c.Association,'
 ]

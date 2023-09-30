@@ -53,7 +53,7 @@ ASMethodStatementVisitor >> pushLocalData: anASVar [
 { #category : #visiting }
 ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 
-	| stackVariables stackSize blockVisitor numArgs selector |
+	| stackVariables stackSize blockVisitor selector |
 	"what are the stack variables?"
 	stackVariables := OrderedCollection new.
 
@@ -126,8 +126,7 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 	"write out the implicit return"
 	(anASMethodNode body isEmpty or: [
 		 anASMethodNode body last isReturn not ]) ifTrue: [
-		codeGenerator pushReturn ].
-	codeGenerator pushClose.
+		codeGenerator returnSelf ].
 
 	"ouput compile methods for the blocks"
 	blockVisitor blocks do: [ :block |

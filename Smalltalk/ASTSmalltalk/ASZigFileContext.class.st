@@ -1,3 +1,10 @@
+"
+I am a writer of .zig files.
+
+I provide a context for CodeGenerators. I maintain a collection of them as well as a symbol table. The code generators will tell me about any symbols that need to be added.
+
+When asked to output, I output a header of all the external zag references, then I ask each of the generators for their definition and output that. Then I output the symbol table, and an initSmalltalk method. In there I initialize primitives and the symbol table, then I ask each of the generators for their initialization code. Finally I output a main function.
+"
 Class {
 	#name : #ASZigFileContext,
 	#superclass : #Object,
@@ -6,7 +13,8 @@ Class {
 		'classNumber',
 		'components',
 		'stream',
-		'labelNumber'
+		'labelNumber',
+		'objects'
 	],
 	#classVars : [
 		'Predefined'
@@ -32,12 +40,18 @@ ASZigFileContext >> initialize [
 	symbols := ASZigSymbols new.
 	classNumber := 0.
 	components := OrderedCollection new.
-	labelNumber := 0
+	labelNumber := 0.
+	objects := Dictionary new
 ]
 
 { #category : #accessing }
 ASZigFileContext >> lf [
 	^ stream lf
+]
+
+{ #category : #accessing }
+ASZigFileContext >> lookupObject: anObject [
+	^ objects at: anObject ifAbsent: [ ^ nil ]
 ]
 
 { #category : #accessing }

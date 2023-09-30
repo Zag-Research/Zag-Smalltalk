@@ -40,8 +40,8 @@ ASScannerTest >> testIDs [
 	self assert: (ASScanner new scanCode: ' * ') token equals:  $* asASIdentifier.
 	self assert: (ASScanner new scanCode: ' abc:= ') token equals:  'abc' asASIdentifier.
 	self assert: (ASScanner new scanCode: ' abc: ') token equals:  'abc:' asASIdentifier.
-	self should: [(ASScanner new scanCode: ' abc:def: ') token] raise: Error.
-	self should: [(ASScanner new scanCode: ' abc:def ') token] raise: Error.
+	self assert: (ASScanner new scanCode: ' abc:def: ') token class equals: ASImproperId.
+	self assert: (ASScanner new scanCode: ' abc:def ') token class equals: ASImproperId.
 	self assert: (ASScanner new scanCode: ' abc ') token arity equals:  1.
 	self assert: (ASScanner new scanCode: ' * ') token arity equals:  2.
 	self assert: (ASScanner new scanCode: ' abc: ') token arity equals:  2.

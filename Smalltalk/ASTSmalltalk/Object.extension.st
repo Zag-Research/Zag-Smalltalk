@@ -59,9 +59,10 @@ Object >> asZig: aGenerator [
 ]
 
 { #category : #'*ASTSmalltalk' }
-Object >> asZigReference: anASZigCompileObjectGenerator [
+Object >> asZigReference: aGenerator [
 
-	^ self asZig: anASZigCompileObjectGenerator 
+	(aGenerator lookupObject: self) ifNotNil: [ : v | ^ v ].
+	^ self asZig: aGenerator
 ]
 
 { #category : #'*ASTSmalltalk' }
