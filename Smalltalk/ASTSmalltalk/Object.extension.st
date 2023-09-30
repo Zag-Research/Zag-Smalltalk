@@ -42,11 +42,13 @@ Object >> asASSyntax [
 Object >> asZig: aGenerator [
 
 	| slots label |
-	slots := self class allSlots size.
+	slots := (self isArray
+		          ifTrue: [ self ]
+		          ifFalse: [ self class allSlots ]) size.
 	((1 to: slots) collect: [ :n |
 		 | x |
 		 x := self instVarAt: n.
-		 x -> (x asZigReference: aGenerator) ]) do: [ :each |
+		 x := x -> (x asZigReference: aGenerator) ]) do: [ :each |
 		each value
 			ifNil: [ each key asZig: aGenerator ]
 			ifNotNil: [ aGenerator labelRef: each value ].

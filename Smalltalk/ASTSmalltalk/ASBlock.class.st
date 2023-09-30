@@ -8,17 +8,6 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
-	#instVars : [
-		'method',
-		'selector',
-		'isNonLocalReturn',
-		'modifies',
-		'references',
-		'fields',
-		'includeContext',
-		'blockData',
-		'label'
-	],
 	#category : #'ASTSmalltalk-AST'
 }
 
@@ -52,16 +41,6 @@ ASBlock >> acceptVisitor: aVisitor [
 	^ aVisitor visitBlockNode: self
 ]
 
-{ #category : #adding }
-ASBlock >> addClosureData [
-	blockData add: #closureData
-]
-
-{ #category : #'as yet unclassified' }
-ASBlock >> blockIndex: aString [
-	^ ((blockData indexOf: aString) - 1) asString
-]
-
 { #category : #accessing }
 ASBlock >> blocks [
 
@@ -69,21 +48,6 @@ ASBlock >> blocks [
 	blocks := OrderedCollection new.
 	blocks add: self.
 	^ blocks
-]
-
-{ #category : #'instance creation' }
-ASBlock >> buildClosureData: modifiedVariables [
-
-	references do: [ :var |
-		(modifiedVariables includes: var name) ifFalse: [
-			fields add: var name.
-			blockData add: var name ] ]
-]
-
-{ #category : #'as yet unclassified' }
-ASBlock >> buildClosureDataWithModifiers: modifiedVariables [
-	blockData add: #closureData.
-	self buildClosureData: modifiedVariables
 ]
 
 { #category : #accessing }
@@ -96,40 +60,10 @@ ASBlock >> buildStack [
 	^ stackVariables reverse.
 ]
 
-{ #category : #accessing }
-ASBlock >> closureData: closureData [
-	clsrData := closureData
-]
-
-{ #category : #'as yet unclassified' }
-ASBlock >> closureIndex: aVar [
-
-	^ ((clsrData indexOf: aVar name) -1) asString
-]
-
 { #category : #'as yet unclassified' }
 ASBlock >> filter: zigInstructions [
 zigInstructions last = '&e.drop,' ifTrue: [ zigInstructions removeLast ].
 	^ zigInstructions
-]
-
-{ #category : #accessing }
-ASBlock >> includeContext [
-	includeContext := true
-]
-
-{ #category : #accessing }
-ASBlock >> initialize [
-
-	super initialize.
-	isNonLocalReturn := true.
-	modifies := OrderedCollection new.
-	references := OrderedCollection new.
-	fields := OrderedCollection new.
-	includeContext := false.
-	blockData := OrderedCollection new.
-	blockData add: #footer.
-	blockData add: #method
 ]
 
 { #category : #testing }
@@ -143,32 +77,8 @@ ASBlock >> isNonLocalReturn [
 ]
 
 { #category : #accessing }
-ASBlock >> location: closureName [ 
-	^((blockData indexOf: closureName) - 1) asString
-]
-
-{ #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size
-]
-
-{ #category : #accessing }
-ASBlock >> modifiers [
-	^ modifies 
-]
-
-{ #category : #'as yet unclassified' }
-ASBlock >> modifies: anASVariable [
-	modifies add: anASVariable
-]
-
-{ #category : #accessing }
-ASBlock >> nonLocalReturn: stackVars [
-	| nonLocalReturn |
-	nonLocalReturn := body nonLocalReturn: stackVars.
-	isNonLocalReturn := nonLocalReturn isNotNil.
-	
-	^nonLocalReturn
 ]
 
 { #category : #printing }
@@ -179,18 +89,13 @@ ASBlock >> printOn: s [
 ]
 
 { #category : #accessing }
-ASBlock >> references: anASLocal [ 
-	references add: anASLocal
-]
-
-{ #category : #accessing }
 ASBlock >> selector [
-	^ selector
-]
 
-{ #category : #accessing }
-ASBlock >> selector: aString [ 
-	selector := aString
+	| size |
+	size := arguments size.
+	size = 0 ifTrue: [ ^ #value ].
+	^ (String streamContents: [ :s |
+		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
 { #category : #'as yet unclassified' }
@@ -205,13 +110,6 @@ ASBlock >> statementVisitor: symbols stackVars: stackVariables [
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
-]
-
-{ #category : #visiting }
-ASBlock >> variableIndex: var [
-	(blockData indexOf: var) = 0 ifFalse: [
-		^ ((blockData indexOf: var) - 1) asString ].
-	^ ((clsrData indexOf: var name) - 1) asString
 ]
 
 { #category : #writing }
@@ -246,14 +144,14 @@ ASBlock >> writeBlock: aStream with: syms [
 
 	| stackVariables |
 	stackVariables := self buildStack.
-	
+
 	aStream cr.
 	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << selector asZigString << ' ='.
+	aStream << 'var ' << self selector asZigString << ' ='.
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
-		 at: selector asZigString
+		 at: self selector asZigName
 		 ifPresent: [ :value | value ]
 		 ifAbsentPut: [ syms virutalName ]) << ',' << locals size asString
 	<< ',' << self maxDepth asString << ',.{'.
@@ -301,7 +199,7 @@ ASBlock >> zigClosureString: stackVariables index: index [
 { #category : #building }
 ASBlock >> zigNonLocalBlockString: stackVariables [
 
-	isNonLocalReturn := false.
+	self flag: #daniel. " use a Dictionary "
 	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
 		| return |
 		"tests to see if there is a built in literal function"
@@ -309,46 +207,32 @@ ASBlock >> zigNonLocalBlockString: stackVariables [
 		return isASLiteral ifTrue: [
 			| literal |
 			literal := return literal.
-			literal = true ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_true,' ].
-			literal = false ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_false,' ].
-			literal isNil ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_nil,' ].
-			literal = 1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_one,' ].
-			literal = -1 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_minusOne,' ].
-			literal = 0 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_zero,' ].
-			literal = 2 ifTrue: [
-				isNonLocalReturn := true.
-				^ '&e.pushNonlocalBlock_two,' ] ].
+			literal = true ifTrue: [ ^ '&e.pushNonlocalBlock_true,' ].
+			literal = false ifTrue: [ ^ '&e.pushNonlocalBlock_false,' ].
+			literal isNil ifTrue: [ ^ '&e.pushNonlocalBlock_nil,' ].
+			literal = 1 ifTrue: [ ^ '&e.pushNonlocalBlock_one,' ].
+			literal = -1 ifTrue: [ ^ '&e.pushNonlocalBlock_minusOne,' ].
+			literal = 0 ifTrue: [ ^ '&e.pushNonlocalBlock_zero,' ].
+			literal = 2 ifTrue: [ ^ '&e.pushNonlocalBlock_two,' ] ].
 		return isASSelf ifTrue: [
-			isNonLocalReturn := true.
 			^ '&e.pushNonlocalBlock_self,'
-			  , (stackVariables indexOf: 'self') asString , ',' ] ].
-
+			  , (stackVariables indexOf: 'self') asString , ',' ] ]
 ]
 
 { #category : #building }
 ASBlock >> zigPushBlockString: syms and: stackVariables [
 
-	isNonLocalReturn ifTrue: [ ^ self zigNonLocalBlockString: stackVariables ].
+	self isNonLocalReturn ifTrue: [
+		^ self zigNonLocalBlockString: stackVariables ].
 
-	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
+	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
 ]
 
 { #category : #building }
 ASBlock >> zigString: syms and: stackVariables [
 
-	isNonLocalReturn ifTrue: [ ^self zigNonLocalBlockString: stackVariables  ].
+	self isNonLocalReturn ifTrue: [
+		^ self zigNonLocalBlockString: stackVariables ].
 
-	^ '&e.pushLocal,' , (stackVariables indexOf: selector) asString , ','
+	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
 ]

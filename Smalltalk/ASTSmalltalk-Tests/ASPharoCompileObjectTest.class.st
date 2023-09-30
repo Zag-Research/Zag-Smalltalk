@@ -8,11 +8,12 @@ Class {
 ASPharoCompileObjectTest class >> writeCompileMethod_fib [
 
 	<script>
-	| ast codeGen file |
+	| ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new context: file;
-	generateCodeFor: ast.
+	ASZigCompileObjectGenerator new
+		context: file;
+		generateCodeFor: ast.
 	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
 		writeStreamDo: [ :stream | file outputTo: stream ]
 ]

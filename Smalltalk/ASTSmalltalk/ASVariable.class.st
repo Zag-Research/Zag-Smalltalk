@@ -5,9 +5,7 @@ Class {
 	#name : #ASVariable,
 	#superclass : #Object,
 	#instVars : [
-		'name',
-		'referencedBy',
-		'modifiedBy'
+		'name'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -36,18 +34,6 @@ ASVariable >> asZagLabel [
 ^name
 ]
 
-{ #category : #accessing }
-ASVariable >> hasModifiers [
-
-	^modifiedBy isNotEmpty
-]
-
-{ #category : #testing }
-ASVariable >> initialize [ 
-	referencedBy := Set new.
-	modifiedBy := Set new
-]
-
 { #category : #testing }
 ASVariable >> isASArg [
 	^false
@@ -63,11 +49,6 @@ ASVariable >> isASBlock [
 ASVariable >> isASVariable [
 
 	^ true
-]
-
-{ #category : #accessing }
-ASVariable >> modifiedBy: anASBlock [ 
-	modifiedBy add: anASBlock
 ]
 
 { #category : #comparing }
@@ -87,16 +68,6 @@ ASVariable >> printOn: s [
 
 	s << self className << ' ' <<
 	name 
-]
-
-{ #category : #visiting }
-ASVariable >> referencedBy: anASBlock [ 
-	referencedBy add: anASBlock 
-]
-
-{ #category : #accessing }
-ASVariable >> references [
-	^referencedBy 
 ]
 
 { #category : #compiling }

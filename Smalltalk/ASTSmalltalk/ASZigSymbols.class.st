@@ -25,6 +25,13 @@ ASZigSymbols class >> initialize [
 	   #'\\' whileTrue: Object ) asSet
 ]
 
+{ #category : #adding }
+ASZigSymbols >> add: aSymbol [
+
+aSymbol = #footer ifTrue: [ self halt].
+	newlyDefined add: aSymbol
+]
+
 { #category : #'as yet unclassified' }
 ASZigSymbols >> emitOn: stream [
 	stream << 'const Sym = struct {'.
@@ -137,9 +144,61 @@ ASZigSymbols >> predefinedSymbol: aSymbol [
 { #category : #testing }
 ASZigSymbols >> printable: aSymbol [
 
-	^ (self predefinedSymbol: aSymbol)
-		  ifNotNil: [ :s| s ]
-		  ifNil: [
-			  newlyDefined add: aSymbol.
-			  'sym.' , aSymbol zigName ]
+	^ (self predefinedSymbol: aSymbol) ifNotNil: [ :s | s ] ifNil: [
+		  self add: aSymbol.
+		  'sym.' , aSymbol zigName ]
+]
+
+{ #category : #writing }
+ASZigSymbols >> writeDefinitionOn: stream [
+
+	| syms n |
+	syms := newlyDefined asSortedCollection.
+	stream nextPutAll: 'const Sym = struct {
+'.
+	syms do: [ :sym |
+		stream
+			tab;
+			nextPutAll: sym zigName;
+			nextPutAll: ': Object,
+' ].
+	"    @""foo:bar:"": Object,"
+	stream nextPutAll: '    const ss = heap.compileStrings(.{
+'.
+	syms do: [ :sym |
+		stream
+			tab;
+			nextPut: $";
+			nextPutAll: sym;
+			nextPutAll: '",
+' ].
+	"     ""foo:bar:"","
+	stream nextPutAll: '    });
+    usingnamespace symbol.symbols;
+    fn init() Sym {
+        return .{
+'.
+	n := 0.
+	syms do: [ :sym |
+		stream
+			tab;
+			nextPut: $.;
+			nextPutAll: sym zigName;
+			nextPutAll: ' = symbol.intern(ss[';
+			nextPutAll: n asString;
+			nextPutAll: '].asObject()),
+'.
+		n := n + 1 ].
+	"            .@""foo:bar:"" = symbol.intern(ss[0].asObject()),"
+	stream nextPutAll: '        };
+    }
+};
+'
+]
+
+{ #category : #writing }
+ASZigSymbols >> writeInitializationOn: stream [
+
+	stream nextPutAll: '    sym = Sym.init();
+'
 ]

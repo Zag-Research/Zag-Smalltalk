@@ -67,8 +67,9 @@ ASMethodNode >> acceptVisitor: aVisitor [
 ]
 
 { #category : #accessing }
-ASMethodNode >> class: anASClassNode [ 
-	class := anASClassNode
+ASMethodNode >> class: anASClassNode [
+
+	"class := anASClassNode"
 ]
 
 { #category : #accessing }

@@ -6,7 +6,8 @@ Class {
 		'context',
 		'mainStream',
 		'symbols',
-		'label'
+		'label',
+		'name'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -39,19 +40,25 @@ ASZigCompileObjectGenerator >> asString [
 	^ mainStream contents
 ]
 
+{ #category : #writing }
+ASZigCompileObjectGenerator >> classListString [
+		^ ''
+]
+
 { #category : #'accessing - keys - symbols' }
 ASZigCompileObjectGenerator >> comma [
 	self nextPut: $,
 ]
 
 { #category : #accessing }
-ASZigCompileObjectGenerator >> context: anASFileContext [ 
-	context:= anASFileContext 
+ASZigCompileObjectGenerator >> context: anASFileContext [
+
+	context := anASFileContext.
+	anASFileContext add: self
 ]
 
 { #category : #generation }
 ASZigCompileObjectGenerator >> generateCodeFor: anASMethodNode [
-self halt.
 	anASMethodNode asZig: self
 ]
 
@@ -78,7 +85,7 @@ ASZigCompileObjectGenerator >> literals: anASLiterals [
 	literals := anASLiterals 
 ]
 
-{ #category : #writing }
+{ #category : #output }
 ASZigCompileObjectGenerator >> nextLabel [
 
 	| result |
@@ -104,7 +111,7 @@ ASZigCompileObjectGenerator >> nextPutAll: aString [
 	mainStream nextPutAll: aString
 ]
 
-{ #category : #writing }
+{ #category : #output }
 ASZigCompileObjectGenerator >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
@@ -117,6 +124,7 @@ ASZigCompileObjectGenerator >> putSymbol: aSymbol [
 		ifNil: [
 			(symbols indexOf: aSymbol ifAbsent: [
 				 symbols add: aSymbol.
+				 context addSymbol: aSymbol.
 				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
 ]
 
@@ -124,4 +132,27 @@ ASZigCompileObjectGenerator >> putSymbol: aSymbol [
 ASZigCompileObjectGenerator >> setLiteralString [
 
 	^ String streamContents: [ :s | symbols do: [:each| s << (context printable: each) ] separatedBy: [s << ',']]
+]
+
+{ #category : #writing }
+ASZigCompileObjectGenerator >> writeDefinition [
+
+	name := context writeNewDeclaration.
+	context nextPutAll: 'compileObject(.{';
+	nextPutAll: mainStream contents;
+	nextPutAll: ' });';
+	lf
+]
+
+{ #category : #writing }
+ASZigCompileObjectGenerator >> writeInitialization [
+
+	context
+		nextPutAll: name;
+		nextPutAll: '.setLiterals(&[_]Object{';
+		nextPutAll: self setLiteralString;
+		nextPutAll: '},&[_]ClassIndex{';
+		nextPutAll: self classListString;
+		nextPutAll: '});';
+		lf
 ]

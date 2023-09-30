@@ -3,13 +3,21 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'symbols',
-		'classNumber'
+		'classNumber',
+		'components',
+		'stream',
+		'labelNumber'
 	],
 	#classVars : [
 		'Predefined'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #adding }
+ASZigFileContext >> add: aGenerator [ 
+	components add: aGenerator
+]
 
 { #category : #testing }
 ASZigFileContext >> addSymbol: aSymbol [
@@ -22,7 +30,36 @@ ASZigFileContext >> initialize [
 
 	super initialize.
 	symbols := ASZigSymbols new.
-	classNumber := 0
+	classNumber := 0.
+	components := OrderedCollection new.
+	labelNumber := 0
+]
+
+{ #category : #accessing }
+ASZigFileContext >> lf [
+	^ stream lf
+]
+
+{ #category : #accessing }
+ASZigFileContext >> nextPutAll: aString [ 
+	^ stream nextPutAll: aString
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> outputTo: aWriteStream [
+
+	aWriteStream truncate.
+	stream := aWriteStream.
+	self writeHeader.
+	symbols writeDefinitionOn: stream.
+	components do: [ :each | each writeDefinition ].
+	self writeInitSmalltalkPrefix.
+	symbols writeInitializationOn: stream.
+	components do: [ :each | each writeInitialization ].
+	self writeInitSmalltalkSuffix.
+	self writeMainSuffix.
+	stream flush.
+	stream := nil
 ]
 
 { #category : #testing }
@@ -35,4 +72,67 @@ ASZigFileContext >> predefinedSymbol: aSymbol [
 ASZigFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> writeHeader [
+
+	stream nextPutAll: 'const std = @import("std");
+const debug = std.debug;
+const math = std.math;
+const stdout = std.io.getStdOut().writer();
+const Object = @import("zag/zobject.zig").Object;
+const ClassIndex = @import("zag/zobject.zig").ClassIndex;
+const Nil = @import("zag/zobject.zig").Nil;
+const True = @import("zag/zobject.zig").True;
+const False = @import("zag/zobject.zig").False;
+const indexSymbol = @import("zag/zobject.zig").indexSymbol;
+const execute = @import("zag/execute.zig");
+const tailCall = config.tailCall;
+const Code = execute.Code;
+const compileMethod = execute.compileMethod;
+const compileObject = execute.compileObject;
+const ContextPtr = execute.CodeContextPtr;
+const TestExecution = execute.TestExecution;
+const primitives = @import("zag/primitives.zig");
+const Process = @import("zag/process.zig").Process;
+const symbol = @import("zag/symbol.zig");
+const heap = @import("zag/heap.zig");
+
+const empty = &[0]Object{};
+'
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> writeInitSmalltalkPrefix [
+	stream nextPutAll: 'fn initSmalltalk() void {
+    primitives.init();
+'
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> writeInitSmalltalkSuffix [
+
+	stream nextPutAll: '}
+pub fn main() !void {
+    initSmalltalk();
+'
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> writeMainSuffix [
+
+	stream nextPutAll: '}
+'
+]
+
+{ #category : #writing }
+ASZigFileContext >> writeNewDeclaration [
+	| label |
+	labelNumber := labelNumber + 1.
+	label := 'C', labelNumber asString.
+	stream nextPutAll: 'const ';
+	nextPutAll: label;
+	nextPutAll: ' = '.
+	^ label
 ]
