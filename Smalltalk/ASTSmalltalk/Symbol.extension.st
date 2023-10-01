@@ -1,12 +1,12 @@
 Extension { #name : #Symbol }
 
 { #category : #'*ASTSmalltalk' }
-Symbol >> asZig: anASZigCompileObjectGenerator [ 
+Symbol >> zigCompileObject: anASZigCompileObjectGenerator [ 
 	anASZigCompileObjectGenerator putSymbol: self
 ]
 
 { #category : #'*ASTSmalltalk' }
-Symbol >> asZigReference: anASZigCompileObjectGenerator [
+Symbol >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 
 	^ nil
 ]

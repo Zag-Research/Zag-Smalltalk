@@ -63,6 +63,12 @@ ASTextCodeGenerator >> initialize [
 ]
 
 { #category : #accessing }
+ASTextCodeGenerator >> lf [
+
+	mainStream lf
+]
+
+{ #category : #accessing }
 ASTextCodeGenerator >> nextPut: aCharacter [ 
 	mainStream nextPut: aCharacter
 ]
@@ -70,6 +76,12 @@ ASTextCodeGenerator >> nextPut: aCharacter [
 { #category : #accessing }
 ASTextCodeGenerator >> nextPutAll: aString [ 
 	mainStream nextPutAll: aString
+]
+
+{ #category : #accessing }
+ASTextCodeGenerator >> print: anObject [
+
+	mainStream print: anObject
 ]
 
 { #category : #accessing }
@@ -88,4 +100,10 @@ ASTextCodeGenerator >> symbolOrVirtual: name [
 		  at: name
 		  ifPresent: [ :value | value ]
 		  ifAbsentPut: [ symbols virutalName ]
+]
+
+{ #category : #accessing }
+ASTextCodeGenerator >> tab [
+
+	mainStream tab
 ]

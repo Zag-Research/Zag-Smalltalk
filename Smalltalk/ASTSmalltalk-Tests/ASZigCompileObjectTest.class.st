@@ -1,11 +1,11 @@
 Class {
-	#name : #ASPharoCompileObjectTest,
+	#name : #ASZigCompileObjectTest,
 	#superclass : #TestCase,
 	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
+ASZigCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -42,7 +42,7 @@ ASPharoCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> testCompileMethodToObject [
+ASZigCompileObjectTest class >> testCompileMethodToObject [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -79,7 +79,7 @@ ASPharoCompileObjectTest class >> testCompileMethodToObject [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
+ASZigCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -116,7 +116,7 @@ ASPharoCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> testCompileMethod_foobar [
+ASZigCompileObjectTest class >> testCompileMethod_foobar [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -153,7 +153,7 @@ ASPharoCompileObjectTest class >> testCompileMethod_foobar [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest class >> writeCompileMethod_fib [
+ASZigCompileObjectTest class >> writeCompileMethod_fib [
 
 	<script>
 	| ast file |
@@ -167,7 +167,7 @@ ASPharoCompileObjectTest class >> writeCompileMethod_fib [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testCompileMethod_fib [
+ASZigCompileObjectTest >> testCompileMethod_fib [
 
 	| ast codeGen file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
@@ -178,7 +178,7 @@ ASPharoCompileObjectTest >> testCompileMethod_fib [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testSimpleObjects [
+ASZigCompileObjectTest >> testSimpleObjects [
 
 	self assert: 42 zigCGString equals: '42'.
 	self assert: true zigCGString equals: 'True'.
@@ -193,7 +193,7 @@ ASPharoCompileObjectTest >> testSimpleObjects [
 ]
 
 { #category : #tests }
-ASPharoCompileObjectTest >> testVarObjects [
+ASZigCompileObjectTest >> testVarObjects [
 
 	self assert: (3 @ 4) zigCGString equals: '3,4,":L1",c.Point,'.
 	self

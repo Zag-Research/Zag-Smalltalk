@@ -1,12 +1,12 @@
 Extension { #name : #Number }
 
 { #category : #'*ASTSmalltalk' }
-Number >> asZig: aWriteStream [
+Number >> zigCompileObject: aWriteStream [
 
 	^ self printOn: aWriteStream
 ]
 
 { #category : #'*ASTSmalltalk' }
-Number >> asZigReference: anASZigCompileObjectGenerator [ 
+Number >> zigCompileObjectReference: anASZigCompileObjectGenerator [ 
 	^ nil
 ]

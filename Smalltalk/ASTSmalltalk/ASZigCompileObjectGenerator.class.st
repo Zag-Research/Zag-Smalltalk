@@ -10,7 +10,7 @@ Class {
 
 { #category : #generation }
 ASZigCompileObjectGenerator >> generateCodeFor: anASMethodNode [
-	anASMethodNode asZig: self
+	anASMethodNode zigCompileObject: self
 ]
 
 { #category : #writing }

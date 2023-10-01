@@ -123,7 +123,7 @@ ASStatementVisitor >> visitLiteral: anASLiteral [
 ASStatementVisitor >> visitReturn: anASReturn [
 
 	anASReturn expression acceptVisitor: self.
-	codeGenerator pushReturn
+	codeGenerator returnTop
 ]
 
 { #category : #visiting }
@@ -146,7 +146,7 @@ ASStatementVisitor >> visitSend: anASSend [
 	selector := codeGenerator symbol: anASSend selector.
 
 	codeGenerator
-		pushSendForSelector: selector
+		send: selector
 	"send := '&e.send' , anASSend selector numArgs asString , ', '.
 
 	""looking at the classes that implement a particular send""

@@ -133,7 +133,7 @@ ASBlock >> write: codeGenerator with: syms [
 	codeGenerator emitVerifySelector.
 
 	"create dummy context"
-	codeGenerator emitPushContext.
+	codeGenerator pushContext.
 
 	self
 		writeBody: syms

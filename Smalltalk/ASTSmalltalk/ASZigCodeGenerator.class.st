@@ -61,6 +61,25 @@ self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
 
 { #category : #output }
+ASZigCodeGenerator >> putEmbedded: aString [
+
+	self
+		nextPutAll: '&e.';
+		nextPutAll: aString;
+		comma;lf
+]
+
+{ #category : #output }
+ASZigCodeGenerator >> putPrimitive: primitiveNumber [
+
+	self
+		nextPutAll: '&p.p';
+					print: primitiveNumber;
+		comma;
+		lf
+]
+
+{ #category : #output }
 ASZigCodeGenerator >> putSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
@@ -70,6 +89,10 @@ ASZigCodeGenerator >> putSymbol: aSymbol [
 				 symbols add: aSymbol.
 				 context addSymbol: aSymbol.
 				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
+]
+
+{ #category : #initialization }
+ASZigCodeGenerator >> refListString [
 ]
 
 { #category : #initialization }

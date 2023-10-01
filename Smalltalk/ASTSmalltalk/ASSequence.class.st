@@ -18,7 +18,7 @@ ASSequence >> acceptVisitor: aStatementVisitor [
 
 	sequence do: [ :asStatement |
 		asStatement acceptVisitor: aStatementVisitor.
-		asStatement isASSend ifTrue: [ aStatementVisitor pushDrop ] ]
+		asStatement isASSend ifTrue: [ aStatementVisitor drop ] ]
 ]
 
 { #category : #comparing }

@@ -102,9 +102,9 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 		ifEmpty: [ codeGenerator emitVerifySelector ]
 		ifNotEmpty: [
 			anASMethodNode pragmas do: [ :pragma |
-				codeGenerator emitPragma: (pragma arguments at: 1) value ] ].
+				codeGenerator primitiveOrVerify: (pragma arguments at: 1) value ] ].
 
-	codeGenerator emitPushContext.
+	codeGenerator pushContext.
 	"create dummy context"
 
 	blockVisitor
@@ -113,7 +113,7 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 
 	"ouput any block closure"
 	blockVisitor blocks doWithIndex: [ :block :index |
-		codeGenerator emitPushBlock:
+		codeGenerator pushBlock:
 			(block zigClosureString: stackVariables index: index - 1) ].
 
 	"write the instructions"

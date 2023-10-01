@@ -1,11 +1,11 @@
 Class {
-	#name : #ASZigFileGeneratorTest,
+	#name : #ASZigCompileMethodGeneratorTest,
 	#superclass : #TestCase,
 	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_addComment [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_addComment [
 
 	| generator comment |
 	comment := 'this is a comment!'.
@@ -16,7 +16,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_addComment [
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_goTo [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_goTo [
 
 	| generator |
 	generator := ASZigCompileMethodGenerator new.
@@ -26,17 +26,17 @@ ASZigFileGeneratorTest >> testZigFileGenerator_goTo [
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushDrop [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushDrop [
 
 	| generator |
 	generator := ASZigCompileMethodGenerator new.
-	generator pushDrop.
+	generator drop.
 
 	self assert: (generator asString) equals: '&e.drop,'
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushLabel [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLabel [
 
 	| generator |
 	generator := ASZigCompileMethodGenerator new.
@@ -46,7 +46,7 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushLabel [
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushLiteral [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLiteral [
 
 	| generator |
 	generator := ASZigCompileMethodGenerator new.
@@ -58,38 +58,36 @@ ASZigFileGeneratorTest >> testZigFileGenerator_pushLiteral [
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushLocal [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLocal [
 
 	| generator selfIndex |
 	selfIndex := 5.
 	generator := ASZigCompileMethodGenerator new.
 	generator pushLocal: #self index: selfIndex.
 
-	self assert: generator instructions size equals: 2.
 	self
-		assert: (generator instructions at: 1)
-		equals: '&e.pushLocal, ' , selfIndex asString , ','.
-	self assert: (generator instructions at: 2) equals: '// self'
+		assert: (generator asString)
+		equals: '&e.pushLocal, ' , selfIndex asString , ', // #self'
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushReturn [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushReturn [
 
 	| generator |
 	generator := ASZigCompileMethodGenerator new.
-	generator pushReturn.
+	generator returnTop.
 
 	self assert: (generator asString ) equals: '&e.returnTop,'
 ]
 
 { #category : #tests }
-ASZigFileGeneratorTest >> testZigFileGenerator_pushSend [
+ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushSend [
 
 	| generator aSelector numArgs |
 	aSelector := #mySelector:other:.
 	numArgs := aSelector numArgs.
 	generator := ASZigCompileMethodGenerator new.
-	generator pushSendForSelector: aSelector.
+	generator send: aSelector.
 
 	self
 		assert: generator asString

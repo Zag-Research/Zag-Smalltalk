@@ -277,3 +277,11 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		block isNonLocalReturn ifFalse: [
 			block writeBlock: aStream with: syms] ]
 ]
+
+{ #category : #'as yet unclassified' }
+ASMethodNode >> zigCompileMethod: aGenerator [
+
+	aGenerator selector: selector.
+	aGenerator locals: locals arguments: arguments.
+	self halt " most code here can come from writeMethod:with: "
+]

@@ -39,33 +39,6 @@ Object >> asASSyntax [
 ]
 
 { #category : #'*ASTSmalltalk' }
-Object >> asZig: aGenerator [
-
-	| slots label |
-	slots := (self isArray
-		          ifTrue: [ self ]
-		          ifFalse: [ self class allSlots ]) size.
-	((1 to: slots) collect: [ :n |
-		 | x |
-		 x := self instVarAt: n.
-		 x := x -> (x asZigReference: aGenerator) ]) do: [ :each |
-		each value
-			ifNil: [ each key asZig: aGenerator ]
-			ifNotNil: [ aGenerator labelRef: each value ].
-		aGenerator comma ].
-	label := aGenerator nextLabel.
-	aGenerator putClass: self class name.
-	^ label
-]
-
-{ #category : #'*ASTSmalltalk' }
-Object >> asZigReference: aGenerator [
-
-	(aGenerator lookupObject: self) ifNotNil: [ : v | ^ v ].
-	^ self asZig: aGenerator
-]
-
-{ #category : #'*ASTSmalltalk' }
 Object >> astFields [
 	| nVars fields |
 	nVars := self class instSize.
@@ -87,4 +60,31 @@ Object >> astImageObject: anASImage [
 { #category : #'*ASTSmalltalk' }
 Object >> astObject: anASImage [ 
 	^ anASImage generalObject: self
+]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> zigCompileObject: aGenerator [
+
+	| slots label |
+	slots := (self isArray
+		          ifTrue: [ self ]
+		          ifFalse: [ self class allSlots ]) size.
+	((1 to: slots) collect: [ :n |
+		 | x |
+		 x := self instVarAt: n.
+		 x := x -> (x zigCompileObjectReference: aGenerator) ]) do: [ :each |
+		each value
+			ifNil: [ each key zigCompileObject: aGenerator ]
+			ifNotNil: [ aGenerator labelRef: each value ].
+		aGenerator comma ].
+	label := aGenerator nextLabel.
+	aGenerator putClass: self class name.
+	^ label
+]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> zigCompileObjectReference: aGenerator [
+
+	(aGenerator lookupObject: self) ifNotNil: [ : v | ^ v ].
+	^ self zigCompileObject: aGenerator
 ]

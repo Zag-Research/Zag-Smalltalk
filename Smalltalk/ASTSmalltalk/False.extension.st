@@ -1,6 +1,6 @@
 Extension { #name : #False }
 
 { #category : #'*ASTSmalltalk' }
-False >> asZig: aWriteStream [ 
+False >> zigCompileObject: aWriteStream [ 
 	aWriteStream nextPutAll: 'False'
 ]

@@ -1,6 +1,12 @@
 Class {
 	#name : #ASZigCompileMethodGenerator,
 	#superclass : #ASZigCodeGenerator,
+	#instVars : [
+		'numLocals',
+		'closureSize',
+		'offsets',
+		'selector'
+	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
@@ -10,153 +16,152 @@ ASZigCompileMethodGenerator class >> stream: aStream [
 ]
 
 { #category : #accessing }
-ASZigCompileMethodGenerator >> emitClosure: stackIndex modifier: size [
-stream tab.
-		stream << '&e.closureData, '
-		<< stackIndex asString << ' + ('
-		<< size asString
-		<< ' << 8), // local:3 size:1 (offset 1 is l1)'.
-		stream cr
+ASZigCompileMethodGenerator >> closure: stackIndex modifier: size [
+
+	self nextPutAll: '	&e.closureData, ';
+		print: stackIndex;
+		nextPutAll: ' + (';
+	print: size;
+	nextPutAll: ' << 8), // local:3 size:1 (offset 1 is l1)';
+	lf
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitFooter: methods [
+{ #category : #pops }
+ASZigCompileMethodGenerator >> drop [
 
-	stream << 'fn initSmalltalk() void {'.
-	stream cr.
-	stream tab.
-	stream << 'const empty = &[0]Object{};'.
-	stream cr.
-	stream tab.
-	stream << 'dispatch.init();'.
-	stream cr.
-	stream tab.
-	stream << 'primitives.init();'.
-	stream cr.
-	stream tab.
-	stream << 'sym = Sym.init();'.
-	stream cr.
-	"write all the classes"
-"	methods do: [ :aMethod | aMethod writeLiterals: stream with: symbols ].
-	methods do: [ :aMethod | aMethod writeDispatch: stream with: symbols ].
-"
-	stream << '}'.
-	stream cr.
-	stream << 'const i = @import("zag/primitives.zig").inlines;'.
-	stream cr.
-	stream << 'const e = @import("zag/primitives.zig").embedded;'.
-	stream cr.
-	stream << 'const p = @import("zag/primitives.zig").primitives;'.
-
-	stream close
+	self putEmbedded: 'drop'
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitInstruction: instruction [
-stream tab.
-		stream << instruction.
-		stream cr
+{ #category : #generation }
+ASZigCompileMethodGenerator >> generateCodeFor: anASMethodNode [
+
+	anASMethodNode zigCompileMethod: self
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitMethod: aSelector numLocals: numLocals stackSize: stackSize closureSize: closureSize [
-
-	stream << 'compileMethod(' << aSelector << ',' << numLocals asString
-	<< ',' << (stackSize asString , '+' , closureSize asString)
-	<< ',.{'.
-	stream cr
-]
-
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitPragma: pragmaNum [
-
-	stream tab.
-				stream << '&p.p' << pragmaNum asString
-				<< ','.
-				stream cr
-]
-
-{ #category : #accessing }
-ASZigCompileMethodGenerator >> emitPushBlock: stackIndex [
-
-	stream tab.
-	stream << stackIndex asString.
-	stream cr
-]
-
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitPushContext [
-stream tab.
-	stream << '&e.pushContext,"^",'.
-	stream cr.
-]
-
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> emitVerifySelector [
-	stream tab.
-			stream << '&e.verifySelector,'.
-			stream cr 
-]
-
-{ #category : #emmiting }
+{ #category : #miscellaneous }
 ASZigCompileMethodGenerator >> goTo: aLabel [
 	"what does a go to look like?"
 
 	self labelRef: aLabel
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> pushDrop [
-	instructions add: '&e.drop,'
+{ #category : #accessing }
+ASZigCompileMethodGenerator >> locals: locals arguments: arguments [
+
+	closureSize := 0.
+	numLocals := locals size.
+	offsets := Dictionary new.
+	locals reversed , arguments reversed , #( self ) doWithIndex: [
+		:each
+		:index | offsets at: each put: index ].
+
+]
+
+{ #category : #pops }
+ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+
+	self
+		putEmbedded: 'popLocalData';
+		print: stackIndex;
+		nextPutAll: ' + (';
+		print: blockIndex;
+		nextPutAll: ' << 8), // ';
+		nextPutAll: name;
+		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
+]
+
+{ #category : #miscellaneous }
+ASZigCompileMethodGenerator >> primitiveOrVerify: primitiveNumber [
+
+	primitiveNumber = 0
+		ifTrue: [
+			self putEmbedded: 'verifySelector' ]
+		ifFalse: [
+			self
+				putPrimitive: primitiveNumber]
 ]
 
 { #category : #accessing }
-ASZigCompileMethodGenerator >> pushLabel: aLabel [
+ASZigCompileMethodGenerator >> pushBlock: stackIndex [
 
-	instructions add: aLabel asLabel
+	self tab;
+	print: stackIndex;lf
 ]
 
-{ #category : #instructions }
+{ #category : #miscellaneous }
+ASZigCompileMethodGenerator >> pushContext [
+
+	self
+		putEmbedded: 'pushContext,"^"'
+]
+
+{ #category : #pushs }
 ASZigCompileMethodGenerator >> pushLiteral: aLiteral [
 
-	instructions add: '&e.pushLiteral, ' , aLiteral asZigLiteral , ','
+	self
+		doPush;
+		putEmbedded: 'pushLiteral';
+		nextPutAll: aLiteral asZigLiteral;
+		comma
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #pushs }
 ASZigCompileMethodGenerator >> pushLocal: aSelector index: anIndex [
 
-	instructions add: '&e.pushLocal, ' , anIndex asString , ','.
-	self comment: aSelector asZigString
+	self
+		doPush;
+		putEmbedded: 'pushLocal';
+		nextPutAll: anIndex asString;
+		comma;
+		comment: aSelector
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> pushNamespace: namespace [
+{ #category : #pops }
+ASZigCompileMethodGenerator >> returnTop [
 
-	stream cr.
-	stream << 'var ' << namespace << ' ='.
-	stream cr
+	self putEmbedded: 'returnTop'
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> pushPopLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
-
-	stream tab.
-				stream << '&e.popLocalData, '
-				<<
-				stackIndex
-					asString << ' + (' << blockIndex
-				<< ' << 8), // ' << name
-				<< ' (read-only) copy offset 3 in local 1 (field in BC1)'
+{ #category : #accessing }
+ASZigCompileMethodGenerator >> selector: aSymbol [
+	selector := aSymbol 
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> pushReturn [
-	instructions add: '&e.returnTop,'
+{ #category : #pops }
+ASZigCompileMethodGenerator >> send: aSelector [
+
+	self putEmbedded:
+		'send' , aSelector numArgs asString;comma;nextPutAll: aSelector;comma 
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigCompileMethodGenerator >> pushSendForSelector: aSelector [
+{ #category : #writing }
+ASZigCompileMethodGenerator >> writeDefinition [
 
-	self nextPutAll: 
-		'&e.send' , aSelector numArgs asString , ', ' , aSelector , ','
+	name := context writeNewDeclaration.
+	context
+		nextPutAll: 'compileMethod(';
+		nextPutAll: name;
+				nextPut: $,;
+						nextPutAll: numLocals asString;
+		nextPut: $,;
+				nextPutAll: maxDepth asString;
+						nextPutAll: '+' ;
+								nextPutAll: closureSize asString;
+										nextPutAll: ',.{';
+		nextPutAll: mainStream contents;
+		nextPutAll: ' });';
+		lf
+]
+
+{ #category : #writing }
+ASZigCompileMethodGenerator >> writeInitialization [
+
+	context
+		nextPutAll: name;
+		nextPutAll: '.setLiterals(&[_]Object{';
+		nextPutAll: self setLiteralString;
+		nextPutAll: '},&[_]Object{';
+		nextPutAll: self refListString;
+		nextPutAll: '},null);';
+		lf
 ]

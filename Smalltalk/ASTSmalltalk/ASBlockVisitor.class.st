@@ -84,7 +84,7 @@ ASBlockVisitor >> initializeClosureData: codeGenerator stackVariables: stackVari
 		var isASArg ifTrue: [
 			var references do: [ :blockRef |
 				codeGenerator pushLocal: var name index: ((stackVariables indexOf: var name) - 1).
-				codeGenerator pushPopLocalData: var name stackIndex: ((stackVariables indexOf: blockRef selector asZigString) - 1) blockIndex: (blockRef location: var name)
+				codeGenerator popLocalData: var name stackIndex: ((stackVariables indexOf: blockRef selector asZigString) - 1) blockIndex: (blockRef location: var name)
 				 ] ] ]
 ]
 
@@ -159,7 +159,7 @@ ASBlockVisitor >> visitClassVar: anASClassVar [
 ASBlockVisitor >> visitClosureData: codeGenerator stackVariables: stackVariables [
 
 	self modifiers ifNotEmpty: [ "write the closure data instruction to the stream"
-		codeGenerator emitClosure: ((stackVariables indexOf: #closureData) - 1) modifier:  self modifiers size]
+		codeGenerator closure: ((stackVariables indexOf: #closureData) - 1) modifier:  self modifiers size]
 ]
 
 { #category : #visiting }

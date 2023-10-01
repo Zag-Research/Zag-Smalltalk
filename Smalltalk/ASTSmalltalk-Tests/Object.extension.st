@@ -5,7 +5,7 @@ Object >> zigCGString [
 		| file codeGen |
 	file := ASZigFileContext new.
 	codeGen := ASZigCompileObjectGenerator new context: file.
-	self asZig: codeGen.
+	self zigCompileObject: codeGen.
 	^ codeGen asString
 ]
 
@@ -15,6 +15,6 @@ Object >> zigSLString [
 	| file codeGen |
 	file := ASZigFileContext new.
 	codeGen := ASZigCompileObjectGenerator new context: file.
-	self asZig: codeGen.
+	self zigCompileObject: codeGen.
 	^ codeGen setLiteralString
 ]

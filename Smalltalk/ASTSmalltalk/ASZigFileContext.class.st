@@ -142,11 +142,17 @@ ASZigFileContext >> writeMainSuffix [
 
 { #category : #writing }
 ASZigFileContext >> writeNewDeclaration [
-	| label |
+
 	labelNumber := labelNumber + 1.
-	label := 'C', labelNumber asString.
-	stream nextPutAll: 'const ';
-	nextPutAll: label;
-	nextPutAll: ' = '.
+	^ self writeNewDeclaration: 'C' , labelNumber asString
+]
+
+{ #category : #writing }
+ASZigFileContext >> writeNewDeclaration: label [
+
+	stream
+		nextPutAll: 'var ';
+		nextPutAll: label;
+		nextPutAll: ' = '.
 	^ label
 ]
