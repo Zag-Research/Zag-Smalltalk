@@ -70,7 +70,9 @@ ASTextCodeGenerator >> lf [
 
 { #category : #accessing }
 ASTextCodeGenerator >> name [
-	^ name ifNil: [ name := context nameFrom: self prefix main: self selector ]
+
+	^ name ifNil: [
+		  name := context name: nil prefix: self prefix main: self selector ]
 ]
 
 { #category : #accessing }

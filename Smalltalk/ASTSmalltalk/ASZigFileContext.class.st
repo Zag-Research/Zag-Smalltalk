@@ -14,10 +14,8 @@ Class {
 		'components',
 		'stream',
 		'labelNumber',
-		'objects'
-	],
-	#classVars : [
-		'Predefined'
+		'objects',
+		'names'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -33,6 +31,11 @@ ASZigFileContext >> addSymbol: aSymbol [
 	symbols add: aSymbol
 ]
 
+{ #category : #register }
+ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
+	objects at: anASNode put: anASGenerator 
+]
+
 { #category : #initialization }
 ASZigFileContext >> initialize [
 
@@ -41,7 +44,8 @@ ASZigFileContext >> initialize [
 	classNumber := 0.
 	components := OrderedCollection new.
 	labelNumber := 0.
-	objects := Dictionary new
+	objects := Dictionary new.
+	names := Dictionary new
 ]
 
 { #category : #accessing }
@@ -55,22 +59,28 @@ ASZigFileContext >> lookupObject: anObject [
 ]
 
 { #category : #creation }
-ASZigFileContext >> nameFrom: aString main: aString2 [
+ASZigFileContext >> name: anObject prefix: aString main: aString2 [
 
-	^ self nameFrom: aString main: aString2 seq: 0
+	^ self name: anObject prefix: aString main: aString2 seq: 0
 ]
 
 { #category : #creation }
-ASZigFileContext >> nameFrom: prefix main: main seq: seq [
+ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 
 	| string |
-	string :=  prefix , (seq = 0
-		           ifTrue: [ main isEmptyOrNil ifTrue: ['1'] ifFalse: [ '' ] ]
+	string := prefix , (seq = 0
+		           ifTrue: [
+			           main isEmptyOrNil
+				           ifTrue: [ '1' ]
+				           ifFalse: [ '' ] ]
 		           ifFalse: [ seq asString ]) , main.
-	objects
-		at: string
-		ifPresent: [ ^ self nameFrom: prefix main: main seq: seq + 1 ].
-	objects at: string put: nil.
+	names at: string ifPresent: [
+		^ self
+			  name: generator
+			  prefix: prefix
+			  main: main
+			  seq: seq + 1 ].
+	names at: string put: generator.
 	^ string
 ]
 

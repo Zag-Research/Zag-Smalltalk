@@ -34,9 +34,10 @@ ASZigCompileMethodGenerator >> drop [
 ]
 
 { #category : #generation }
-ASZigCompileMethodGenerator >> generateCodeFor: anASMethodNode [
+ASZigCompileMethodGenerator >> generateCodeFor: anASNode [
 
-	anASMethodNode zigCompileMethod: self
+	context for: anASNode generatorIs: self.
+	anASNode zigCompileMethod: self
 ]
 
 { #category : #miscellaneous }
