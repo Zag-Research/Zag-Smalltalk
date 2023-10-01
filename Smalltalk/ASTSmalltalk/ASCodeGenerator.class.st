@@ -43,6 +43,12 @@ ASCodeGenerator >> doPush [
 	
 ]
 
+{ #category : #API }
+ASCodeGenerator >> drop [
+
+	self subclassResponsibility
+]
+
 { #category : #initialization }
 ASCodeGenerator >> initialize [ 
 super initialize.
@@ -52,4 +58,46 @@ super initialize.
 { #category : #accessing }
 ASCodeGenerator >> lookupObject: anObject [
 	^ context lookupObject: anObject 
+]
+
+{ #category : #API }
+ASCodeGenerator >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> primitiveOrVerify: primitiveNumber [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> pushContext [
+	self subclassResponsibility 
+]
+
+{ #category : #API }
+ASCodeGenerator >> pushLiteral: aLiteral [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> pushLocal: aSelector [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> returnTop [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> send: aSelector [
+
+
+	self subclassResponsibility
 ]

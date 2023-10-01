@@ -18,12 +18,13 @@ ASZigCompileMethodGenerator class >> stream: aStream [
 { #category : #accessing }
 ASZigCompileMethodGenerator >> closure: stackIndex modifier: size [
 
-	self nextPutAll: '	&e.closureData, ';
+	self
+		putEmbedded: #closureData;
 		print: stackIndex;
 		nextPutAll: ' + (';
-	print: size;
-	nextPutAll: ' << 8), // local:3 size:1 (offset 1 is l1)';
-	lf
+		print: size;
+		nextPutAll: ' << 8), // local:3 size:1 (offset 1 is l1)';
+		lf
 ]
 
 { #category : #pops }
@@ -57,11 +58,11 @@ ASZigCompileMethodGenerator >> locals: locals arguments: arguments [
 
 ]
 
-{ #category : #pops }
+{ #category : #API }
 ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
-		putEmbedded: 'popLocalData';
+		putEmbedded: #popLocalData;
 		print: stackIndex;
 		nextPutAll: ' + (';
 		print: blockIndex;
@@ -70,15 +71,12 @@ ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIn
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
-{ #category : #miscellaneous }
+{ #category : #API }
 ASZigCompileMethodGenerator >> primitiveOrVerify: primitiveNumber [
 
 	primitiveNumber = 0
-		ifTrue: [
-			self putEmbedded: 'verifySelector' ]
-		ifFalse: [
-			self
-				putPrimitive: primitiveNumber]
+		ifTrue: [ self putEmbedded: #verifySelector ]
+		ifFalse: [ self putPrimitive: primitiveNumber ]
 ]
 
 { #category : #accessing }
@@ -88,38 +86,38 @@ ASZigCompileMethodGenerator >> pushBlock: stackIndex [
 	print: stackIndex;lf
 ]
 
-{ #category : #miscellaneous }
+{ #category : #API }
 ASZigCompileMethodGenerator >> pushContext [
 
-	self
-		putEmbedded: 'pushContext,"^"'
+	self putEmbedded: #pushContext;
+	nextPutAll: '"^"';comma
 ]
 
-{ #category : #pushs }
+{ #category : #API }
 ASZigCompileMethodGenerator >> pushLiteral: aLiteral [
 
 	self
 		doPush;
-		putEmbedded: 'pushLiteral';
+		putEmbedded: #pushLiteral;
 		nextPutAll: aLiteral asZigLiteral;
 		comma
 ]
 
-{ #category : #pushs }
-ASZigCompileMethodGenerator >> pushLocal: aSelector index: anIndex [
+{ #category : #API }
+ASZigCompileMethodGenerator >> pushLocal: aSelector [
 
 	self
 		doPush;
-		putEmbedded: 'pushLocal';
-		nextPutAll: anIndex asString;
+		putEmbedded: #pushLocal;
+		print: (offsets at: aSelector);
 		comma;
 		comment: aSelector
 ]
 
-{ #category : #pops }
+{ #category : #API }
 ASZigCompileMethodGenerator >> returnTop [
 
-	self putEmbedded: 'returnTop'
+	self putEmbedded: #returnTop
 ]
 
 { #category : #accessing }
@@ -127,7 +125,7 @@ ASZigCompileMethodGenerator >> selector: aSymbol [
 	selector := aSymbol 
 ]
 
-{ #category : #pops }
+{ #category : #API }
 ASZigCompileMethodGenerator >> send: aSelector [
 
 	self putEmbedded:

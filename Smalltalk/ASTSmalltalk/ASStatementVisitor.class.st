@@ -107,7 +107,7 @@ ASStatementVisitor >> visitBlockNode: anASBlock [
 	nonLocalReturnValue
 		ifNotNil: [ instructionStack add: nonLocalReturnValue ]
 		ifNil: [
-			codeGenerator pushLocal: anASBlock selector index: (self variableIndex: anASBlock selector asZigString)
+			codeGenerator pushLocal: anASBlock selector
 			"instructionStack add: '&e.pushLocal, '
 				, (self variableIndex: anASBlock selector asZigString) , ', //'
 				, anASBlock selector asZigString" ]
@@ -129,7 +129,7 @@ ASStatementVisitor >> visitReturn: anASReturn [
 { #category : #visiting }
 ASStatementVisitor >> visitSelfNode: anASSelf [
 
-	codeGenerator pushLocal: #self index: (self variableIndex: #self)
+	codeGenerator pushLocal: #self
 	"instructionStack add:
 		'&e.pushLocal, ' , (self variableIndex: #self) , ', //self'"
 ]

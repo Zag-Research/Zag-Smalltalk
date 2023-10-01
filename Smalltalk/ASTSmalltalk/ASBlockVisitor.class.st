@@ -83,9 +83,12 @@ ASBlockVisitor >> initializeClosureData: codeGenerator stackVariables: stackVari
 	variables do: [ :var |
 		var isASArg ifTrue: [
 			var references do: [ :blockRef |
-				codeGenerator pushLocal: var name index: ((stackVariables indexOf: var name) - 1).
-				codeGenerator popLocalData: var name stackIndex: ((stackVariables indexOf: blockRef selector asZigString) - 1) blockIndex: (blockRef location: var name)
-				 ] ] ]
+				codeGenerator pushLocal: var name.
+				codeGenerator
+					popLocalData: var name
+					stackIndex:
+					(stackVariables indexOf: blockRef selector asZigString) - 1
+					blockIndex: (blockRef location: var name) ] ] ]
 ]
 
 { #category : #accessing }
