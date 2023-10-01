@@ -63,11 +63,12 @@ ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLocal [
 	| generator selfIndex |
 	selfIndex := 5.
 	generator := ASZigCompileMethodGenerator new.
+	generator locals: #(foo bar) arguments: #(blat fubar).
 	generator pushLocal: #self.
 
 	self
 		assert: generator asString
-		equals: '&e.pushLocal, ' , selfIndex asString , ', // #self'
+		equals: '&e.pushLocal,', Character lf asString , selfIndex asString , ', // #self'
 ]
 
 { #category : #tests }
