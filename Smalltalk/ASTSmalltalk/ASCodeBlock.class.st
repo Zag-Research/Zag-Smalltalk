@@ -7,7 +7,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'body',
-		'locals'
+		'locals',
+		'scope'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -62,6 +63,7 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
+	scope := Dictionary new.
 	body := ASSequence new
 ]
 
