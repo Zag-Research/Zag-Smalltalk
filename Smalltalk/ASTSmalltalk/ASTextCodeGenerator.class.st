@@ -69,6 +69,11 @@ ASTextCodeGenerator >> lf [
 ]
 
 { #category : #accessing }
+ASTextCodeGenerator >> name [
+	^ name ifNil: [ name := context nameFrom: self prefix main: self selector ]
+]
+
+{ #category : #accessing }
 ASTextCodeGenerator >> nextPut: aCharacter [ 
 	mainStream nextPut: aCharacter
 ]
@@ -79,9 +84,19 @@ ASTextCodeGenerator >> nextPutAll: aString [
 ]
 
 { #category : #accessing }
+ASTextCodeGenerator >> prefix [
+	^ ''
+]
+
+{ #category : #accessing }
 ASTextCodeGenerator >> print: anObject [
 
 	mainStream print: anObject
+]
+
+{ #category : #accessing }
+ASTextCodeGenerator >> selector [
+^ ''
 ]
 
 { #category : #accessing }

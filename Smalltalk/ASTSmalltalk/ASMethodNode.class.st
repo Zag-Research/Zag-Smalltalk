@@ -278,10 +278,10 @@ ASMethodNode >> writeMethod: aStream with: syms [
 			block writeBlock: aStream with: syms] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #codegen }
 ASMethodNode >> zigCompileMethod: aGenerator [
 
 	aGenerator selector: selector.
 	aGenerator locals: locals arguments: arguments.
-	self halt " most code here can come from writeMethod:with: "
+	self flag: #daniel " most code here can come from writeMethod:with: "
 ]

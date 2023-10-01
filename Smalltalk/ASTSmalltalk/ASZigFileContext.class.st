@@ -54,6 +54,26 @@ ASZigFileContext >> lookupObject: anObject [
 	^ objects at: anObject ifAbsent: [ ^ nil ]
 ]
 
+{ #category : #creation }
+ASZigFileContext >> nameFrom: aString main: aString2 [
+
+	^ self nameFrom: aString main: aString2 seq: 0
+]
+
+{ #category : #creation }
+ASZigFileContext >> nameFrom: prefix main: main seq: seq [
+
+	| string |
+	string :=  prefix , (seq = 0
+		           ifTrue: [ main isEmptyOrNil ifTrue: ['1'] ifFalse: [ '' ] ]
+		           ifFalse: [ seq asString ]) , main.
+	objects
+		at: string
+		ifPresent: [ ^ self nameFrom: prefix main: main seq: seq + 1 ].
+	objects at: string put: nil.
+	^ string
+]
+
 { #category : #accessing }
 ASZigFileContext >> nextPutAll: aString [ 
 	^ stream nextPutAll: aString
@@ -141,15 +161,9 @@ ASZigFileContext >> writeMainSuffix [
 ]
 
 { #category : #writing }
-ASZigFileContext >> writeNewDeclaration [
-
-	labelNumber := labelNumber + 1.
-	^ self writeNewDeclaration: 'C' , labelNumber asString
-]
-
-{ #category : #writing }
-ASZigFileContext >> writeNewDeclaration: label [
-
+ASZigFileContext >> writeNewDeclarationFor: aGenerator [
+| label |
+label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
 		nextPutAll: label;

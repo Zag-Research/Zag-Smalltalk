@@ -13,14 +13,18 @@ ASZigCompileObjectGenerator >> generateCodeFor: anASMethodNode [
 	anASMethodNode zigCompileObject: self
 ]
 
+{ #category : #accessing }
+ASZigCompileObjectGenerator >> prefix [ ^ 'Obj'
+]
+
 { #category : #writing }
 ASZigCompileObjectGenerator >> writeDefinition [
 
-	name := context writeNewDeclaration.
-	context nextPutAll: 'compileObject(.{';
-	nextPutAll: mainStream contents;
-	nextPutAll: ' });';
-	lf
+	context writeNewDeclarationFor: self;
+		nextPutAll: 'compileObject(.{';
+		nextPutAll: mainStream contents;
+		nextPutAll: ' });';
+		lf
 ]
 
 { #category : #writing }

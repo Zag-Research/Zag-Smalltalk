@@ -71,6 +71,10 @@ ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIn
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
+{ #category : #accessing }
+ASZigCompileMethodGenerator >> prefix [ ^ 'M'
+]
+
 { #category : #API }
 ASZigCompileMethodGenerator >> primitiveOrVerify: primitiveNumber [
 
@@ -121,6 +125,12 @@ ASZigCompileMethodGenerator >> returnTop [
 ]
 
 { #category : #accessing }
+ASZigCompileMethodGenerator >> selector [
+
+	^	selector
+]
+
+{ #category : #accessing }
 ASZigCompileMethodGenerator >> selector: aSymbol [
 	selector := aSymbol 
 ]
@@ -135,17 +145,17 @@ ASZigCompileMethodGenerator >> send: aSelector [
 { #category : #writing }
 ASZigCompileMethodGenerator >> writeDefinition [
 
-	name := context writeNewDeclaration.
 	context
+		writeNewDeclarationFor: self;
 		nextPutAll: 'compileMethod(';
-		nextPutAll: name;
-				nextPut: $,;
-						nextPutAll: numLocals asString;
+		nextPutAll: self name;
 		nextPut: $,;
-				nextPutAll: maxDepth asString;
-						nextPutAll: '+' ;
-								nextPutAll: closureSize asString;
-										nextPutAll: ',.{';
+		nextPutAll: numLocals asString;
+		nextPut: $,;
+		nextPutAll: maxDepth asString;
+		nextPutAll: '+';
+		nextPutAll: closureSize asString;
+		nextPutAll: ',.{';
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
 		lf

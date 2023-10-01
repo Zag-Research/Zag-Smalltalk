@@ -5,6 +5,17 @@ Class {
 }
 
 { #category : #tests }
+ASZigCompileMethodGeneratorTest >> testZigFileContext [
+
+	| generator ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	file := ASZigFileContext new.
+	generator := ASZigCompileMethodGenerator new context: file;generateCodeFor: ast.
+
+	self assert: generator name equals: 'Mfib:'
+]
+
+{ #category : #tests }
 ASZigCompileMethodGeneratorTest >> testZigFileGenerator_addComment [
 
 	| generator comment |
