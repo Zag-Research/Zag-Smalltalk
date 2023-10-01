@@ -12,6 +12,11 @@ CompiledMethod >> astFields [
 ]
 
 { #category : #'*ASTSmalltalk' }
+CompiledMethod >> astWith: anASPharoCompiler [ 
+	^ anASPharoCompiler compileMethod: self
+]
+
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionThread [
 
 	<inspectorPresentationOrder: 50 title: 'Thread'>
