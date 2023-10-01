@@ -27,10 +27,10 @@ ASZigCompileMethodGenerator >> closure: stackIndex modifier: size [
 		lf
 ]
 
-{ #category : #pops }
+{ #category : #API }
 ASZigCompileMethodGenerator >> drop [
 
-	self putEmbedded: 'drop'
+	self putEmbedded: #drop
 ]
 
 { #category : #generation }
