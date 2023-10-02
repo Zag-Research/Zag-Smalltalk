@@ -157,7 +157,7 @@ ASBlock >> writeBlock: aStream with: syms [
 	aStream cr.
 	aStream tab.
 	aStream << 'compileMethod(' << (syms
-		 at: self selector asZigName
+		 at: self selector zigName
 		 ifPresent: [ :value | value ]
 		 ifAbsentPut: [ syms virutalName ]) << ',' << locals size asString
 	<< ',' << self maxDepth asString << ',.{'.

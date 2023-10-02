@@ -8,9 +8,12 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #generation }
-ASZigCompileObjectGenerator >> generateCodeFor: anASMethodNode [
-	anASMethodNode zigCompileObject: self
+{ #category : #'code generation' }
+ASZigCompileObjectGenerator >> generateCode [
+
+	alreadyGenerated ifTrue: [ ^ self ].
+	alreadyGenerated := true.
+	ourObject zigCompileObject: self
 ]
 
 { #category : #accessing }
@@ -31,7 +34,7 @@ ASZigCompileObjectGenerator >> writeDefinition [
 ASZigCompileObjectGenerator >> writeInitialization [
 
 	context
-		nextPutAll: name;
+		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
 		nextPutAll: '},&[_]ClassIndex{';

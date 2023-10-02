@@ -30,7 +30,8 @@ Class {
 		'mainStream',
 		'symbols',
 		'label',
-		'name'
+		'testing',
+		'componentName'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -40,7 +41,7 @@ ASTextCodeGenerator >> asString [
 	^ mainStream contents
 ]
 
-{ #category : #'accessing - keys - symbols' }
+{ #category : #printing }
 ASTextCodeGenerator >> comma [
 	self nextPut: $,
 ]
@@ -53,52 +54,49 @@ ASTextCodeGenerator >> comment: aString [
 ASTextCodeGenerator >> finished [
 ]
 
-{ #category : #completion }
+{ #category : #initialization }
 ASTextCodeGenerator >> initialize [
 
 	super initialize.
 	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
-	label := 0
+	label := 0.
+	testing := false
 ]
 
-{ #category : #accessing }
+{ #category : #printing }
 ASTextCodeGenerator >> lf [
 
-	mainStream lf
+	testing ifFalse: [	mainStream lf]
 ]
 
 { #category : #accessing }
 ASTextCodeGenerator >> name [
 
-	^ name ifNil: [
-		  name := context name: nil prefix: self prefix main: self selector ]
+	^ componentName ifNil: [
+		  componentName := context name: self prefix: self prefix main: self selector ]
 ]
 
-{ #category : #accessing }
+{ #category : #printing }
 ASTextCodeGenerator >> nextPut: aCharacter [ 
 	mainStream nextPut: aCharacter
 ]
 
-{ #category : #accessing }
+{ #category : #printing }
 ASTextCodeGenerator >> nextPutAll: aString [ 
 	mainStream nextPutAll: aString
 ]
 
 { #category : #accessing }
 ASTextCodeGenerator >> prefix [
-	^ ''
+
+	^ 'Z'
 ]
 
 { #category : #accessing }
 ASTextCodeGenerator >> print: anObject [
 
 	mainStream print: anObject
-]
-
-{ #category : #accessing }
-ASTextCodeGenerator >> selector [
-^ ''
 ]
 
 { #category : #accessing }
@@ -116,11 +114,16 @@ ASTextCodeGenerator >> symbolOrVirtual: name [
 	^ symbols
 		  at: name
 		  ifPresent: [ :value | value ]
-		  ifAbsentPut: [ symbols virutalName ]
+		  ifAbsentPut: [ symbols virtualName ]
 ]
 
-{ #category : #accessing }
+{ #category : #printing }
 ASTextCodeGenerator >> tab [
 
-	mainStream tab
+	testing ifFalse: [ mainStream tab ]
+]
+
+{ #category : #printing }
+ASTextCodeGenerator >> testing [
+	testing := true
 ]

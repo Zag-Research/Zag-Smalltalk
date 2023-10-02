@@ -1,18 +1,18 @@
+"
+I generate text-based code compiled by the `compileMethod` compile-time Zig function
+"
 Class {
 	#name : #ASZigCompileMethodGenerator,
 	#superclass : #ASZigCodeGenerator,
 	#instVars : [
-		'numLocals',
-		'closureSize',
-		'offsets',
-		'selector'
+		'closureSize'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #accessing }
-ASZigCompileMethodGenerator class >> stream: aStream [
- ^ self new stream: aStream
+{ #category : #printing }
+ASZigCompileMethodGenerator class >> testing [
+	^ self new testing
 ]
 
 { #category : #accessing }
@@ -33,11 +33,12 @@ ASZigCompileMethodGenerator >> drop [
 	self putEmbedded: #drop
 ]
 
-{ #category : #generation }
-ASZigCompileMethodGenerator >> generateCodeFor: anASNode [
+{ #category : #'code generation' }
+ASZigCompileMethodGenerator >> generateCode [
 
-	context for: anASNode generatorIs: self.
-	anASNode zigCompileMethod: self
+	alreadyGenerated ifTrue: [ ^ self ].
+	alreadyGenerated := true.
+	ourObject zigCompileMethod: self
 ]
 
 { #category : #miscellaneous }
@@ -47,16 +48,11 @@ ASZigCompileMethodGenerator >> goTo: aLabel [
 	self labelRef: aLabel
 ]
 
-{ #category : #accessing }
-ASZigCompileMethodGenerator >> locals: locals arguments: arguments [
+{ #category : #initialization }
+ASZigCompileMethodGenerator >> initialize [
 
-	closureSize := 0.
-	numLocals := locals size.
-	offsets := Dictionary new.
-	locals reversed , arguments reversed , #( self ) doWithIndex: [
-		:each
-		:index | offsets at: each put: index ].
-
+	super initialize.
+	closureSize := 0
 ]
 
 { #category : #API }
@@ -102,21 +98,21 @@ ASZigCompileMethodGenerator >> pushContext [
 ASZigCompileMethodGenerator >> pushLiteral: aLiteral [
 
 	self
-		doPush;
+		doPush: aLiteral;
 		putEmbedded: #pushLiteral;
 		nextPutAll: aLiteral asZigLiteral;
 		comma
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> pushLocal: aSelector [
+ASZigCompileMethodGenerator >> pushLocal: aSymbol [
 
 	self
-		doPush;
+		doPush: (self local: aSymbol);
 		putEmbedded: #pushLocal;
-		print: (offsets at: aSelector);
+		print: (offsets at: aSymbol);
 		comma;
-		comment: aSelector
+		comment: aSymbol
 ]
 
 { #category : #API }
@@ -125,22 +121,13 @@ ASZigCompileMethodGenerator >> returnTop [
 	self putEmbedded: #returnTop
 ]
 
-{ #category : #accessing }
-ASZigCompileMethodGenerator >> selector [
-
-	^	selector
-]
-
-{ #category : #accessing }
-ASZigCompileMethodGenerator >> selector: aSymbol [
-	selector := aSymbol 
-]
-
 { #category : #API }
 ASZigCompileMethodGenerator >> send: aSelector [
 
-	self putEmbedded:
-		'send' , aSelector numArgs asString;comma;nextPutAll: aSelector;comma 
+	self
+		putEmbedded: 'send' , aSelector numArgs asString;
+		nextPutAll: aSelector;
+		comma 
 ]
 
 { #category : #writing }
@@ -149,13 +136,13 @@ ASZigCompileMethodGenerator >> writeDefinition [
 	context
 		writeNewDeclarationFor: self;
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name;
-		nextPut: $,;
-		nextPutAll: numLocals asString;
-		nextPut: $,;
-		nextPutAll: maxDepth asString;
+		nextPutAll: self name zigName;
+		comma;
+		print: numLocals;
+		comma;
+		print: maxDepth;
 		nextPutAll: '+';
-		nextPutAll: closureSize asString;
+		print: closureSize;
 		nextPutAll: ',.{';
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
@@ -166,7 +153,7 @@ ASZigCompileMethodGenerator >> writeDefinition [
 ASZigCompileMethodGenerator >> writeInitialization [
 
 	context
-		nextPutAll: name;
+		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
 		nextPutAll: '},&[_]Object{';

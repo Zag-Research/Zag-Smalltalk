@@ -6,7 +6,7 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
-		'class',
+		'className',
 		'pragmas'
 	],
 	#category : #'ASTSmalltalk-AST'
@@ -72,13 +72,14 @@ ASMethodNode >> class: anASClassNode [
 	"class := anASClassNode"
 ]
 
-{ #category : #accessing }
+{ #category : #introspection }
 ASMethodNode >> className [
-	^ class name
+
+	^ className
 ]
 
 { #category : #accessing }
-ASMethodNode >> clousreSize [
+ASMethodNode >> closureSize [
 	^0
 ]
 
@@ -91,7 +92,7 @@ ASMethodNode >> filter: zigInstructions [
 
 { #category : #comparing }
 ASMethodNode >> hash [
-	^ class hash bitXor: selector hash
+	^ className hash bitXor: selector hash
 ]
 
 { #category : #testing }
@@ -122,10 +123,13 @@ ASMethodNode >> pragmas: somePragmas [
 { #category : #printing }
 ASMethodNode >> printOn: s [
 
-	s << self class name << ' class: ' << class name
-	<< ' selector: '.
-	selector printOn: s.
-	super printOn: s
+	s
+		nextPutAll: self class name;
+		nextPutAll: ' class: ';
+		nextPutAll: (className ifNil: [ '?' ]);
+		nextPutAll: ' selector: ';
+		print: selector.
+	super printOn: s 
 ]
 
 { #category : #accessing }
@@ -225,7 +229,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 		 ifPresent: [ :value | value ]
 		 ifAbsentPut: [ syms virutalName ]) << ',' << stackSize asString
 	<< ','
-	<< (self maxBlockLocals asString , '+' , self clousreSize asString)
+	<< (self maxBlockLocals asString , '+' , self closureSize asString)
 	<< ',.{'.
 	aStream cr.
 
@@ -281,7 +285,13 @@ ASMethodNode >> writeMethod: aStream with: syms [
 { #category : #codegen }
 ASMethodNode >> zigCompileMethod: aGenerator [
 
+	| primitive |
 	aGenerator selector: selector.
 	aGenerator locals: locals arguments: arguments.
+	primitive := 0.
+	pragmas do: [ :pragma | 
+		pragma isPrimitive ifTrue: [
+			primitive := (pragma arguments at: 1) value ] ].
+	aGenerator primitiveOrVerify: primitive.
 	self flag: #daniel " most code here can come from writeMethod:with: "
 ]
