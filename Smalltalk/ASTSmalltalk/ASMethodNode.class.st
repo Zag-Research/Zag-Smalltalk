@@ -72,9 +72,10 @@ ASMethodNode >> class: anASClassNode [
 	"class := anASClassNode"
 ]
 
-{ #category : #accessing }
+{ #category : #introspection }
 ASMethodNode >> className [
-	^ class name
+
+	^ className
 ]
 
 { #category : #accessing }
