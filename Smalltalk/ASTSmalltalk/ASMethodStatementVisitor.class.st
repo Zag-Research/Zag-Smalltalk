@@ -87,7 +87,7 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 		emitMethod: selector
 		numLocals: stackSize
 		stackSize: anASMethodNode maxBlockLocals
-		closureSize: anASMethodNode clousreSize.
+		closureSize: anASMethodNode closureSize.
 	"aStream << 'compileMethod(' << (syms
 		 at: anASMethodNode selector
 		 ifPresent: [ :value | value ]

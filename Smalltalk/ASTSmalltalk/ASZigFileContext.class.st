@@ -15,14 +15,17 @@ Class {
 		'stream',
 		'labelNumber',
 		'objects',
-		'names'
+		'names',
+		'pendingComponents'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #adding }
-ASZigFileContext >> add: aGenerator [ 
-	components add: aGenerator
+{ #category : #components }
+ASZigFileContext >> add: aGenerator [
+
+	pendingComponents add: aGenerator.
+	components add: aGenerator 
 ]
 
 { #category : #testing }
@@ -45,7 +48,8 @@ ASZigFileContext >> initialize [
 	components := OrderedCollection new.
 	labelNumber := 0.
 	objects := Dictionary new.
-	names := Dictionary new
+	names := Dictionary new.
+	pendingComponents := OrderedCollection new
 ]
 
 { #category : #accessing }
@@ -73,7 +77,7 @@ ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 			           main isEmptyOrNil
 				           ifTrue: [ '1' ]
 				           ifFalse: [ '' ] ]
-		           ifFalse: [ seq asString ]) , main.
+		           ifFalse: [ seq asString ]) , (main ifNil: ['']).
 	names at: string ifPresent: [
 		^ self
 			  name: generator
@@ -92,6 +96,7 @@ ASZigFileContext >> nextPutAll: aString [
 { #category : #wriiting }
 ASZigFileContext >> outputTo: aWriteStream [
 
+	self processComponents.
 	aWriteStream truncate.
 	stream := aWriteStream.
 	self writeHeader.
@@ -116,6 +121,16 @@ ASZigFileContext >> predefinedSymbol: aSymbol [
 ASZigFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
+]
+
+{ #category : #components }
+ASZigFileContext >> processComponents [
+
+	| temp |
+	[ pendingComponents isEmpty ] whileFalse: [
+		temp := pendingComponents.
+		pendingComponents := OrderedCollection new.
+		temp do: [ :each | each generateCode ] ]
 ]
 
 { #category : #wriiting }
@@ -170,7 +185,7 @@ ASZigFileContext >> writeMainSuffix [
 '
 ]
 
-{ #category : #writing }
+{ #category : #wriiting }
 ASZigFileContext >> writeNewDeclarationFor: aGenerator [
 | label |
 label := aGenerator name.

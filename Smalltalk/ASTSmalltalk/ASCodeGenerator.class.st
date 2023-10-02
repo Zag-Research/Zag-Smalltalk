@@ -90,6 +90,18 @@ ASCodeGenerator >> pushLocal: aSelector [
 ]
 
 { #category : #API }
+ASCodeGenerator >> putEmbedded: aSelector [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
+ASCodeGenerator >> putPrimitive: aSelector [
+
+	self subclassResponsibility
+]
+
+{ #category : #API }
 ASCodeGenerator >> returnTop [
 
 	self subclassResponsibility

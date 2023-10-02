@@ -10,9 +10,9 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #accessing }
-ASZigCompileMethodGenerator class >> stream: aStream [
- ^ self new stream: aStream
+{ #category : #printing }
+ASZigCompileMethodGenerator class >> testing [
+	^ self new testing
 ]
 
 { #category : #accessing }
@@ -33,11 +33,12 @@ ASZigCompileMethodGenerator >> drop [
 	self putEmbedded: #drop
 ]
 
-{ #category : #generation }
-ASZigCompileMethodGenerator >> generateCodeFor: anASNode [
+{ #category : #'code generation' }
+ASZigCompileMethodGenerator >> generateCode [
 
-	context for: anASNode generatorIs: self.
-	anASNode zigCompileMethod: self
+	alreadyGenerated ifTrue: [ ^ self ].
+	alreadyGenerated := true.
+	ourObject zigCompileMethod: self
 ]
 
 { #category : #miscellaneous }
@@ -139,8 +140,10 @@ ASZigCompileMethodGenerator >> selector: aSymbol [
 { #category : #API }
 ASZigCompileMethodGenerator >> send: aSelector [
 
-	self putEmbedded:
-		'send' , aSelector numArgs asString;comma;nextPutAll: aSelector;comma 
+	self
+		putEmbedded: 'send' , aSelector numArgs asString;
+		nextPutAll: aSelector;
+		comma 
 ]
 
 { #category : #writing }
@@ -149,13 +152,13 @@ ASZigCompileMethodGenerator >> writeDefinition [
 	context
 		writeNewDeclarationFor: self;
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name;
-		nextPut: $,;
-		nextPutAll: numLocals asString;
-		nextPut: $,;
-		nextPutAll: maxDepth asString;
+		nextPutAll: self name zigName;
+		comma;
+		print: numLocals;
+		comma;
+		print: maxDepth;
 		nextPutAll: '+';
-		nextPutAll: closureSize asString;
+		print: closureSize;
 		nextPutAll: ',.{';
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
@@ -166,7 +169,7 @@ ASZigCompileMethodGenerator >> writeDefinition [
 ASZigCompileMethodGenerator >> writeInitialization [
 
 	context
-		nextPutAll: name;
+		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
 		nextPutAll: '},&[_]Object{';
