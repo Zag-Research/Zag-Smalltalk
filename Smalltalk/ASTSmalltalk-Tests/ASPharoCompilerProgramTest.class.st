@@ -4,6 +4,21 @@ Class {
 	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
+{ #category : #tests }
+ASPharoCompilerProgramTest class >> testFooBarIsolated [
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo:bar:.
+	file := ASZigFileContext new.
+	
+	ASZigCompileMethodGenerator new
+		context: file;
+		generateCodeFor: ast.
+	
+	FileSystem disk workingDirectory / 'zigFooBarCompileMethod.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
+]
+
 { #category : #compiling }
 ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 
@@ -25,7 +40,6 @@ ASPharoCompilerProgramTest >> buildFromMethods: methods [
 	compiler := ASPharoCompiler new.
 	compiler dontVisitMessages.
 	methods do: [ :method | compiler addMethod: method ].
-	self halt.
 	^ compiler transitiveClosure
 ]
 
@@ -166,16 +180,7 @@ ASPharoCompilerProgramTest >> testFooBarInlining [
 
 { #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarIsolated [
-
-	| result aStream |	
-		result := self buildFromClassShallow: ASCompileTestClass1 selector: #foo:bar:.
-
-
-	aStream := (FileSystem disk workingDirectory / 'zigFooBarString.zig')
-		           writeStream.
-	aStream truncate.
-	result writeZig: aStream.
-	aStream close
+	^ self class testFooBarIsolated
 ]
 
 { #category : #tests }
