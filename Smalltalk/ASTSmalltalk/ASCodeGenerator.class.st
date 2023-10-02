@@ -10,8 +10,11 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'context',
-		'depth',
-		'maxDepth'
+		'maxDepth',
+		'stack',
+		'numLocals',
+		'offsets',
+		'selector'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -24,23 +27,24 @@ ASCodeGenerator >> context: anASFileContext [
 ]
 
 { #category : #stackAccessHelpers }
-ASCodeGenerator >> doCall: numArgs [
+ASCodeGenerator >> doCall: aSymbol [
 
-	depth := depth - numArgs
+	stack := stack drop: aSymbol numArgs
 ]
 
 { #category : #stackAccessHelpers }
 ASCodeGenerator >> doPop [
-
-	depth := depth - 1
+|result|
+	result := stack value.
+	stack := stack pop.
+	^ result
 ]
 
 { #category : #stackAccessHelpers }
-ASCodeGenerator >> doPush [ 
-	depth := depth + 1.
-	maxDepth := maxDepth max: depth
+ASCodeGenerator >> doPush: anObject [
 
-	
+	stack := stack push: anObject.
+	maxDepth := maxDepth max: stack depth
 ]
 
 { #category : #API }
@@ -50,9 +54,27 @@ ASCodeGenerator >> drop [
 ]
 
 { #category : #initialization }
-ASCodeGenerator >> initialize [ 
-super initialize.
-	depth := maxDepth := 0
+ASCodeGenerator >> initialize [
+
+	super initialize.
+	maxDepth := 0.
+	stack := ASStack new 
+]
+
+{ #category : #'local field support' }
+ASCodeGenerator >> local: aString [
+
+	^ Object new
+]
+
+{ #category : #accessing }
+ASCodeGenerator >> locals: locals arguments: arguments [
+
+	numLocals := locals size.
+	offsets := Dictionary new.
+	locals reversed , arguments reversed , #( self ) doWithIndex: [
+		:each
+		:index | offsets at: each put: index ]
 ]
 
 { #category : #accessing }
@@ -105,6 +127,17 @@ ASCodeGenerator >> putPrimitive: aSelector [
 ASCodeGenerator >> returnTop [
 
 	self subclassResponsibility
+]
+
+{ #category : #accessing }
+ASCodeGenerator >> selector [
+
+	^	selector
+]
+
+{ #category : #accessing }
+ASCodeGenerator >> selector: aSymbol [
+	selector := aSymbol 
 ]
 
 { #category : #API }

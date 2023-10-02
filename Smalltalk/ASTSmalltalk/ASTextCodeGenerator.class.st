@@ -100,11 +100,6 @@ ASTextCodeGenerator >> print: anObject [
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> selector [
-^ ''
-]
-
-{ #category : #accessing }
 ASTextCodeGenerator >> symbol: name [
 
 	^ symbols

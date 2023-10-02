@@ -78,7 +78,7 @@ ASZigCodeGenerator >> putClass: aString [
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
 
-{ #category : #output }
+{ #category : #API }
 ASZigCodeGenerator >> putEmbedded: aString [
 
 	self
@@ -87,7 +87,7 @@ ASZigCodeGenerator >> putEmbedded: aString [
 		comma;lf
 ]
 
-{ #category : #output }
+{ #category : #API }
 ASZigCodeGenerator >> putPrimitive: primitiveNumber [
 
 	self
