@@ -123,12 +123,12 @@ ASZigCodeGenerator >> setLiteralString [
 ]
 
 { #category : #writing }
-ASZigCodeGenerator >> writeDefinition [
+ASZigCodeGenerator >> writeDefinitionOn: anObject [
 self subclassResponsibility 
 ]
 
 { #category : #writing }
-ASZigCodeGenerator >> writeInitialization [
+ASZigCodeGenerator >> writeInitializationOn: anObject [
 
 	self subclassResponsibility
 ]

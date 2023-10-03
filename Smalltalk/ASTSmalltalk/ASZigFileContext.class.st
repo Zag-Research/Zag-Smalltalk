@@ -10,10 +10,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'symbols',
-		'classNumber',
 		'components',
-		'stream',
-		'labelNumber',
 		'objects',
 		'names',
 		'pendingComponents'
@@ -44,17 +41,10 @@ ASZigFileContext >> initialize [
 
 	super initialize.
 	symbols := ASZigSymbols new.
-	classNumber := 0.
 	components := OrderedCollection new.
-	labelNumber := 0.
 	objects := Dictionary new.
 	names := Dictionary new.
 	pendingComponents := OrderedCollection new
-]
-
-{ #category : #accessing }
-ASZigFileContext >> lf [
-	^ stream lf
 ]
 
 { #category : #accessing }
@@ -88,27 +78,20 @@ ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 	^ string
 ]
 
-{ #category : #accessing }
-ASZigFileContext >> nextPutAll: aString [ 
-	^ stream nextPutAll: aString
-]
-
 { #category : #wriiting }
-ASZigFileContext >> outputTo: aWriteStream [
+ASZigFileContext >> outputTo: stream [
 
 	self processComponents.
-	aWriteStream truncate.
-	stream := aWriteStream.
-	self writeHeader.
+	self writeHeaderOn: stream.
 	symbols writeDefinitionOn: stream.
-	components do: [ :each | each writeDefinition ].
-	self writeInitSmalltalkPrefix.
+	components do: [ :each | each writeDefinitionOn: stream ].
+	self writeInitSmalltalkPrefixOn: stream.
 	symbols writeInitializationOn: stream.
-	components do: [ :each | each writeInitialization ].
-	self writeInitSmalltalkSuffix.
-	self writeMainSuffix.
-	stream flush.
-	stream := nil
+	components do: [ :each | each writeInitializationOn: stream ].
+	self writeInitSmalltalkSuffixOn: stream.
+	self writeMainPrefixOn: stream.
+	self writeMainSuffixOn: stream.
+	stream flush
 ]
 
 { #category : #testing }
@@ -134,7 +117,7 @@ ASZigFileContext >> processComponents [
 ]
 
 { #category : #wriiting }
-ASZigFileContext >> writeHeader [
+ASZigFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll: 'const std = @import("std");
 const debug = std.debug;
@@ -163,14 +146,15 @@ const empty = &[0]Object{};
 ]
 
 { #category : #wriiting }
-ASZigFileContext >> writeInitSmalltalkPrefix [
+ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
+
 	stream nextPutAll: 'fn initSmalltalk() void {
     primitives.init();
 '
 ]
 
 { #category : #wriiting }
-ASZigFileContext >> writeInitSmalltalkSuffix [
+ASZigFileContext >> writeInitSmalltalkSuffixOn: stream [
 
 	stream nextPutAll: '}
 pub fn main() !void {
@@ -179,16 +163,25 @@ pub fn main() !void {
 ]
 
 { #category : #wriiting }
-ASZigFileContext >> writeMainSuffix [
+ASZigFileContext >> writeMainPrefixOn: stream [
+
+	stream nextPutAll: 'pub fn main() !void {
+    initSmalltalk();
+'
+]
+
+{ #category : #wriiting }
+ASZigFileContext >> writeMainSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
 { #category : #wriiting }
-ASZigFileContext >> writeNewDeclarationFor: aGenerator [
-| label |
-label := aGenerator name.
+ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
+
+	| label |
+	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
 		nextPutAll: label;

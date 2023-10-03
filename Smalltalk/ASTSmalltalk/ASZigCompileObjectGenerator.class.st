@@ -21,19 +21,20 @@ ASZigCompileObjectGenerator >> prefix [ ^ 'Obj'
 ]
 
 { #category : #writing }
-ASZigCompileObjectGenerator >> writeDefinition [
+ASZigCompileObjectGenerator >> writeDefinitionOn: stream [
 
-	context writeNewDeclarationFor: self;
+	context writeNewDeclarationFor: self on: stream.
+	stream
 		nextPutAll: 'compileObject(.{';
 		nextPutAll: mainStream contents;
-		nextPutAll: ' });';
+		nextPutAll: '});';
 		lf
 ]
 
 { #category : #writing }
-ASZigCompileObjectGenerator >> writeInitialization [
+ASZigCompileObjectGenerator >> writeInitializationOn: stream [
 
-	context
+	stream
 		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;

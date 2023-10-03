@@ -131,10 +131,11 @@ ASZigCompileMethodGenerator >> send: aSelector [
 ]
 
 { #category : #writing }
-ASZigCompileMethodGenerator >> writeDefinition [
+ASZigCompileMethodGenerator >> writeDefinitionOn: stream [
 
 	context
-		writeNewDeclarationFor: self;
+		writeNewDeclarationFor: self on: stream.
+		stream
 		nextPutAll: 'compileMethod(';
 		nextPutAll: self name zigName;
 		comma;
@@ -150,9 +151,9 @@ ASZigCompileMethodGenerator >> writeDefinition [
 ]
 
 { #category : #writing }
-ASZigCompileMethodGenerator >> writeInitialization [
+ASZigCompileMethodGenerator >> writeInitializationOn: stream [
 
-	context
+	stream
 		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
