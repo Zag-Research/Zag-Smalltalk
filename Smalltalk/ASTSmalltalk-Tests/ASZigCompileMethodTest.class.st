@@ -16,5 +16,5 @@ ASZigCompileMethodTest >> testCompileMethod_simple1 [
 	self
 		assert: codeGen asString
 		equals:
-		'&e.verifySelector,'
+		'&e.verifySelector,&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]

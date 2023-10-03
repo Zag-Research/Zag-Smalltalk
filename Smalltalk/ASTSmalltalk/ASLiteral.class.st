@@ -63,6 +63,11 @@ ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 	^ aCompiler sent: aSymbol toLiteral: literal
 ]
 
+{ #category : #codegen }
+ASLiteral >> zigCompileMethod: aGenerator [ 
+	aGenerator pushLiteral: literal 
+]
+
 { #category : #accessing }
 ASLiteral >> zigString: syms and: stackVariables [
 ^ '&e.pushLiteral, Object.from(' , literal asString , '),'

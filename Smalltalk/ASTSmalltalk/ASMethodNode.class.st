@@ -293,5 +293,8 @@ ASMethodNode >> zigCompileMethod: aGenerator [
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].
 	aGenerator primitiveOrVerify: primitive.
-	self flag: #daniel " most code here can come from writeMethod:with: "
+	
+	self flag: #daniel " most code here can come from writeMethod:with: ".
+	
+	body zigCompileMethod: aGenerator.
 ]

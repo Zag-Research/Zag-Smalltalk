@@ -38,7 +38,6 @@ ASZigCompileMethodGenerator >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	self halt.
 	ourObject zigCompileMethod: self
 ]
 
