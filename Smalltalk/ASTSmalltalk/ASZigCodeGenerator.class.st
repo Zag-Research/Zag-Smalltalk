@@ -111,6 +111,8 @@ ASZigCodeGenerator >> putSymbol: aSymbol [
 
 { #category : #initialization }
 ASZigCodeGenerator >> refListString [
+self flag: #daniel " what should this returnTop  ".
+^''
 ]
 
 { #category : #initialization }

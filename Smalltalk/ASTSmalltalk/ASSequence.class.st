@@ -89,3 +89,8 @@ ASSequence >> requiresImplicitReturn [
 ASSequence >> sequence [
 ^ sequence
 ]
+
+{ #category : #codegen }
+ASSequence >> zigCompileMethod: aGenerator [ 
+	sequence do: [ :statement | statement zigCompileMethod: aGenerator ]
+]

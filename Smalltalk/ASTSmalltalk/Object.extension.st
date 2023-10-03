@@ -66,12 +66,15 @@ Object >> astObject: anASImage [
 Object >> zigCompileObject: aGenerator [
 
 	| slots label |
+	self halt.
 	slots := (self isArray
 		          ifTrue: [ self ]
 		          ifFalse: [ self class allSlots ]) size.
+	
 	((1 to: slots) collect: [ :n |
 		 | x |
 		 x := self instVarAt: n.
+		self halt.
 		 x := x -> (x zigCompileObjectReference: aGenerator) ]) do: [ :each |
 		each value
 			ifNil: [ each key zigCompileObject: aGenerator ]
@@ -86,5 +89,6 @@ Object >> zigCompileObject: aGenerator [
 Object >> zigCompileObjectReference: aGenerator [
 
 	(aGenerator lookupObject: self) ifNotNil: [ : v | ^ v ].
+	self halt.
 	^ self zigCompileObject: aGenerator
 ]

@@ -61,6 +61,12 @@ ASReturn >> printOn: s [
 	s << ')'
 ]
 
+{ #category : #codegen }
+ASReturn >> zigCompileMethod: aGenerator [ 
+	expression zigCompileMethod: aGenerator.
+	aGenerator returnTop 
+]
+
 { #category : #building }
 ASReturn >> zigString: syms and: stackVariables [
 ^ expression zigString: syms and: stackVariables , ' &e.returnTop,'
