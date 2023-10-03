@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #tests }
-ASZigCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
+ASZigCompileObjectTest class >> writeCompileMethodSmallIntegerMinus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -15,19 +15,22 @@ ASZigCompileObjectTest class >> testCompileMethodSmallIntegerMinus [
          <primitive: 1>
          ^ super + aNumber
 "
-<script>
+
+	<script>
 	| ast file |
 	ast := ASPharoCompiler new astFor: SmallInteger >> #-.
 	file := ASZigFileContext new.
 	ASZigCompileObjectGenerator new
 		context: file;
 		generateCodeFor: ast.
-	FileSystem disk workingDirectory / 'zigSmallIntegerMinusAsCompileObject.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ]
+	FileSystem disk workingDirectory
+	/ 'zigSmallIntegerMinusAsCompileObject.zig' writeStreamDo: [ :stream |
+			stream truncate.
+		file outputTo: stream ]
 ]
 
 { #category : #tests }
-ASZigCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
+ASZigCompileObjectTest class >> writeCompileMethod_SmallIntegerPlus [
 	"
 	 + aNumber 
          ""Primitive. Add the receiver to the argument and answer with the result
@@ -37,6 +40,7 @@ ASZigCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
          <primitive: 1>
          ^ super + aNumber
 "
+
 	<script>
 	| ast file |
 	ast := ASPharoCompiler new astFor: SmallInteger >> #+.
@@ -44,30 +48,10 @@ ASZigCompileObjectTest class >> testCompileMethod_SmallIntegerPlus [
 	ASZigCompileObjectGenerator new
 		context: file;
 		generateCodeFor: ast.
-	FileSystem disk workingDirectory / 'zigSmallIntegerAddAsCompileObject.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ]
-]
-
-{ #category : #tests }
-ASZigCompileObjectTest class >> testCompileMethod_foobar [
-	"
-	 + aNumber 
-         ""Primitive. Add the receiver to the argument and answer with the result
-         if it is a SmallInteger. Fail if the argument or the result is not a
-         SmallInteger  Essential  No Lookup. See Object documentation whatIsAPrimitive.""
-
-         <primitive: 1>
-         ^ super + aNumber
-"
-<script>
-	| ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo:bar:.
-	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
-		generateCodeFor: ast.
-	FileSystem disk workingDirectory / 'zigSmallIntegerAddAsCompileObject.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ]
+	FileSystem disk workingDirectory
+	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
+			stream truncate.
+		file outputTo: stream ]
 ]
 
 { #category : #tests }
@@ -82,6 +66,30 @@ ASZigCompileObjectTest class >> writeCompileMethod_fib [
 		generateCodeFor: ast.
 	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
 		writeStreamDo: [ :stream | stream truncate. file outputTo: stream ]
+]
+
+{ #category : #tests }
+ASZigCompileObjectTest class >> writeCompileMethod_foobar [
+	"
+	 + aNumber 
+         ""Primitive. Add the receiver to the argument and answer with the result
+         if it is a SmallInteger. Fail if the argument or the result is not a
+         SmallInteger  Essential  No Lookup. See Object documentation whatIsAPrimitive.""
+
+         <primitive: 1>
+         ^ super + aNumber
+"
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo:bar:.
+	file := ASZigFileContext new.
+	ASZigCompileObjectGenerator new
+		context: file;
+		generateCodeFor: ast.
+	FileSystem disk workingDirectory
+	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
+	stream truncate.		file outputTo: stream ]
 ]
 
 { #category : #tests }
