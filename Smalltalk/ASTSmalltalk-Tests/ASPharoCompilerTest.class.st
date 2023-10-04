@@ -71,7 +71,7 @@ ASPharoCompilerTest >> testBlock [
 			 class: ASCompileTestClass1
 			 selector: #block
 			 body: { (ASReturn expression: (ASSend
-						   target: (ASArray statements: { 
+						   target: (ASArray statements: {
 									    (ASSend
 										     target: (ASLiteral literal: 3)
 										     selector: #+
@@ -81,18 +81,18 @@ ASPharoCompilerTest >> testBlock [
 										     selector: #factorial
 										     args: {  }) })
 						   selector: #collect:
-						   args: { (ASBlock
-								    arguments: #( #each )
-								    locals: #( #temp )
-								    body: { 
-										    (ASAssign variable: (ASLocal name: #temp) expression: (ASSend
-												      target:  (ASRef variable: (ASArg name: #each))
+						   args:
+							   { (ASBlock arguments: #( #each ) locals: #( #temp ) body: {
+									    (ASAssign
+										     variable: (ASLocal name: #temp)
+										     expression: (ASSend
+												      target: (ASRef variable: (ASArg name: #each))
 												      selector: #+
 												      args: { (ASLiteral literal: 5) })).
-										    (ASSend
-											     target: (ASRef variable: (ASLocal name: #temp))
-											     selector: #+
-											     args: { (ASLiteral literal: 3) }) }) })) })
+									    (ASSend
+										     target: (ASRef variable: (ASLocal name: #temp))
+										     selector: #+
+										     args: { (ASLiteral literal: 3) }) }) })) } )
 ]
 
 { #category : #tests }

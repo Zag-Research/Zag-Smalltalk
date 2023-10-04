@@ -185,21 +185,10 @@ ASBlock >> writeBlock: aStream with: syms [
 	aStream cr
 ]
 
-{ #category : #printing }
-ASBlock >> zigClosureString: stackVariables index: index [
+{ #category : #codegen }
+ASBlock >> zigCompileMethod: aGenerator [
 
-	| local |
-	"        &e.blockClosure, ""0foo:bar::1"", 1 + (1 << 8) + (0 << 16)   + (3 << 24), // local:1, 1 field, no includeContext, closureData at local3
-        &e.blockClosure, ""1foo:bar::2"", 0 + (1 << 8) + (255 << 16) + (3 << 24), // local:0, 1 field, includeContext, closureData at local3
-"
-	local := ((stackVariables indexOf: selector asZigString) - 1)
-		         asString.
-
-	^ '&e.blockClosure,"' , index asString, selector , '", ' , local , ' + ('
-	  , fields size asString , '<< 8)' , ' + (' , (includeContext
-		   ifTrue: [ '255' ]
-		   ifFalse: [ '0' ]) , '<< 16)' , ' + (' , (clsrData ifEmpty: [ '0' ] ifNotEmpty: [ (blockData indexOf: #closureData) asString  ])
-	  , '<< 24)'
+	aGenerator pushBlock: self
 ]
 
 { #category : #building }

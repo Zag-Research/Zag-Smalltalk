@@ -90,6 +90,12 @@ ASSequence >> sequence [
 ^ sequence
 ]
 
+{ #category : #comparing }
+ASSequence >> sequence: anArray [
+
+	 sequence :=  anArray 
+]
+
 { #category : #codegen }
 ASSequence >> zigCompileMethod: aGenerator [ 
 	sequence do: [ :statement | statement zigCompileMethod: aGenerator ]

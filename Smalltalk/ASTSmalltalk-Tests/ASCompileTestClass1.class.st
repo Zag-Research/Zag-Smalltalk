@@ -132,6 +132,15 @@ ASCompileTestClass1 >> simple1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> simpleBlock [
+
+	^ [ :each |
+	  | temp |
+	  temp := each + 5.
+	  temp + 3 ] value: 42
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> testAssignment [
 
 	| a1 a2 a3 a4 |

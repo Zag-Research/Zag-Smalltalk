@@ -4,3 +4,8 @@ Extension { #name : #Array }
 Array >> astFormat [
 	^ 8
 ]
+
+{ #category : #'*ASTSmalltalk' }
+Array >> sequence [
+
+]

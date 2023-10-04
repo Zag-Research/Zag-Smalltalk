@@ -3,9 +3,9 @@ I represent a Basic Block for ASCodeGenerator.
 
 Every Method or block is made up of a graph of these.
 
-I have an ifGoTo field which is the block I will go to if the named test is true.
+I have a `then` field which is the block I will go to if the named test is true.
 
-If there is no test, or if the test is false, then I will continue with the else block.
+If there is no test, or if the test is false, then I will continue with the `else` block.
 "
 Class {
 	#name : #ASCBasicBlock,
@@ -105,8 +105,9 @@ ASCBasicBlock >> initialize [
 ]
 
 { #category : #initialization }
-ASCBasicBlock >> label: anInteger [
-	label := anInteger.
+ASCBasicBlock >> label: anObject [
+
+	label := anObject
 ]
 
 { #category : #wriiting }

@@ -53,10 +53,10 @@ ASStack >> isEmpty [
 { #category : #adding }
 ASStack >> push: anObject [
 
-	| result |
-	result := self class from: self.
-	result top: anObject.
-	^ result
+	| newStack |
+	newStack := self class from: self.
+	newStack top: anObject.
+	^ newStack
 ]
 
 { #category : #accessing }

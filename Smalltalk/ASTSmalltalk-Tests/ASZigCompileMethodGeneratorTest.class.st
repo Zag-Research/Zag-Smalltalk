@@ -7,18 +7,33 @@ Class {
 { #category : #tests }
 ASZigCompileMethodGeneratorTest >> testZigFileContext_addTwoNumbers [
 
-	| generator ast file |
+	| output ast file |
 	ast := ASPharoCompiler new astFor:
 		       ASCompileTestClass1 >> #addTwoNumbers.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		             context: file;
+		             generateCodeFor: ast.
+	self assert: output name equals: 'MaddTwoNumbers'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",&e.popLocal,1,&e.pushLocal,1,&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigCompileMethodGeneratorTest >> testZigFileContext_fib [
+
+	| generator ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 	file := ASZigFileContext new.
 	generator := ASZigThreadedOutput testing
 		             context: file;
 		             generateCodeFor: ast.
-	self assert: generator name equals: 'MaddTwoNumbers'.
+	self assert: generator name equals: 'Mfib'.
 	self
 		assert: generator asString
-		equals:
-		'&e.verifySelector,&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",&e.popLocal,1,&e.pushLocal,1,&e.returnTop,' 
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -50,6 +65,21 @@ ASZigCompileMethodGeneratorTest >> testZigFileContext_simple1 [
 		assert: generator asString
 		equals:
 		'&e.verifySelector,&e.pushLiteral,Object.from(42),&e.returnTop,' 
+]
+
+{ #category : #tests }
+ASZigCompileMethodGeneratorTest >> testZigFileContext_simpleBlock [
+
+	| generator ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simpleBlock.
+	file := ASZigFileContext new.
+	generator := ASZigThreadedOutput testing
+		             context: file;
+		             generateCodeFor: ast.
+	self assert: generator name equals: 'MsimpleBlock'.
+	self
+		assert: generator asString
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -108,16 +138,16 @@ ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLiteral [
 { #category : #tests }
 ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushLocal [
 
-	| generator selfIndex |
+	| output selfIndex |
 	selfIndex := 5.
-	generator := ASZigThreadedOutput new testing.
-	generator codeGenerator
+	output := ASZigThreadedOutput new testing.
+	output codeGenerator
 		locals: #( foo bar )
 		arguments: #( blat fubar ).
-	generator pushLocal: #self.
+	output pushLocal: #self.
 
 	self
-		assert: generator asString
+		assert: output asString
 		equals: '&e.pushLocal,' , selfIndex asString , ', // #self' 
 ]
 

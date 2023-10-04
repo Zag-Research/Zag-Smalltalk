@@ -18,12 +18,18 @@ Class {
 		'offsets',
 		'selector',
 		'code',
-		'blocks',
 		'firstBlock',
-		'primitive'
+		'primitive',
+		'basicBlocks'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #API }
+ASCodeGenerator >> compileBlock: anASCBlock [
+
+
+]
 
 { #category : #accessing }
 ASCodeGenerator >> context: anASFileContext [
@@ -38,20 +44,30 @@ ASCodeGenerator >> drop [
 	code drop; put: #drop
 ]
 
+{ #category : #linearize }
+ASCodeGenerator >> finalAnalysis [
+
+
+]
+
 { #category : #initialization }
 ASCodeGenerator >> initialize [
 
 	super initialize.
 	firstBlock := code := ASCBasicBlock new.
 	code stack: ASStack new.
-	blocks := OrderedCollection new.
-	blocks add: code
+	basicBlocks := OrderedCollection new.
+	basicBlocks add: code
 ]
 
 { #category : #linearize }
 ASCodeGenerator >> linearizeTo: anOutput [
-primitive =  0 ifTrue: [ anOutput putEmbedded: #verifySelector ] ifFalse: [ anOutput putPrimitive: primitive ].
-	blocks do: [ : block | block outputTo: anOutput ]
+
+	self finalAnalysis.
+	primitive = 0
+		ifTrue: [ anOutput putEmbedded: #verifySelector ]
+		ifFalse: [ anOutput putPrimitive: primitive ].
+	basicBlocks do: [ :block | block outputTo: anOutput ]
 ]
 
 { #category : #'local field support' }
@@ -86,6 +102,17 @@ ASCodeGenerator >> popAssign: variable [
 ASCodeGenerator >> popLocal: aSymbol [
 
 	code doDrop; put: (ASCPopLocal with: (offsets at: aSymbol name))
+]
+
+{ #category : #API }
+ASCodeGenerator >> pushBlock: anASBlock [
+
+| block |
+block := (ASCBlock with: anASBlock).
+	self compileBlock: block.
+	code
+		doPush: anASBlock;
+		put: block
 ]
 
 { #category : #API }
