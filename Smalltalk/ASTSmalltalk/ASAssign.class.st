@@ -82,10 +82,3 @@ ASAssign >> zigCompileMethod: aGenerator [
 	expression zigCompileMethod: aGenerator.
 	aGenerator popAssign: variable
 ]
-
-{ #category : #accessing }
-ASAssign >> zigString: syms and: stackVariables [
-	"load value of expression into the variable?"
-	^ (expression zigString: syms and: stackVariables) , ' &e.popLocal, '
-	  , (stackVariables indexOf: variable name) asString
-]

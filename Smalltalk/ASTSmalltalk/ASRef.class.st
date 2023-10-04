@@ -56,9 +56,3 @@ ASRef >> zigCompileMethod: aGenerator [
 
 	aGenerator pushVariable: variable
 ]
-
-{ #category : #comparing }
-ASRef >> zigString: syms and: stackVariables [
-	"load value of reference to the stack? where do I get the value from? local, global arg, instance "
-^ '&e.pushLocal, ', (stackVariables indexOf: variable name) asString,','.
-]

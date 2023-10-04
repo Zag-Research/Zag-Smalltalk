@@ -233,12 +233,3 @@ ASBlock >> zigPushBlockString: syms and: stackVariables [
 
 	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
 ]
-
-{ #category : #building }
-ASBlock >> zigString: syms and: stackVariables [
-
-	self isNonLocalReturn ifTrue: [
-		^ self zigNonLocalBlockString: stackVariables ].
-
-	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
-]

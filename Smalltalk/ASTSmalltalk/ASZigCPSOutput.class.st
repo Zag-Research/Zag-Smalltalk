@@ -1,38 +1,43 @@
 "
-I generate text-based code compiled by the `compileMethod` compile-time Zig function
+I generate text-based as a sequence of Continuation-Passing-Style Zig function
 "
 Class {
-	#name : #ASZigThreadedOutput,
+	#name : #ASZigCPSOutput,
 	#superclass : #ASZigMethodOutput,
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #printing }
-ASZigThreadedOutput class >> testing [
+ASZigCPSOutput class >> testing [
 	^ self new testing
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> drop [
+ASZigCPSOutput >> drop [
 
 	self putEmbedded: #drop
 ]
 
-{ #category : #miscellaneous }
-ASZigThreadedOutput >> goTo: aLabel [
+{ #category : #API }
+ASZigCPSOutput >> goTo: aLabel [
 	"what does a go to look like?"
 
 	self labelRef: aLabel
 ]
 
-{ #category : #'code generation' }
-ASZigThreadedOutput >> outputToStream [
+{ #category : #initialization }
+ASZigCPSOutput >> initialize [
 
-	codeGenerator linearizeTo: self
+	super initialize.
+]
+
+{ #category : #'code generation' }
+ASZigCPSOutput >> outputToStream [
+	^ self shouldBeImplemented
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> popLocal: localNumber [
+ASZigCPSOutput >> popLocal: localNumber [
 
 	self
 		putEmbedded: #popLocal;
@@ -41,7 +46,7 @@ ASZigThreadedOutput >> popLocal: localNumber [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+ASZigCPSOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
 		putEmbedded: #popLocalData;
@@ -53,22 +58,22 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
-{ #category : #accessing }
-ASZigThreadedOutput >> pushBlock: stackIndex [
+{ #category : #API }
+ASZigCPSOutput >> pushBlock: stackIndex [
 
 	self tab;
 	print: stackIndex;lf
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> pushContext [
+ASZigCPSOutput >> pushContext [
 
 	self putEmbedded: #pushContext;
 	nextPutAll: '"^"';comma
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> pushLiteral: aLiteral [
+ASZigCPSOutput >> pushLiteral: aLiteral [
 
 	self
 		putEmbedded: #pushLiteral;
@@ -77,7 +82,7 @@ ASZigThreadedOutput >> pushLiteral: aLiteral [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> pushLocal: localNumber [
+ASZigCPSOutput >> pushLocal: localNumber [
 
 	self
 		putEmbedded: #pushLocal;
@@ -86,24 +91,25 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> returnTop [
+ASZigCPSOutput >> returnTop [
 
 	self
 		putEmbedded: #returnTop
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> send: aSelector useCall: useCall [
+ASZigCPSOutput >> send: aSelector useCall: useCall [
 
+	self putEmbedded: (useCall
+			 ifTrue: [ 'call' ]
+			 ifFalse: [ 'send' ]) , aSelector numArgs asString.
 	self
-		putEmbedded: (useCall ifTrue: [ 'call' ] ifFalse: [ 'send' ]) , aSelector numArgs asString.
-		self
 		nextPutAll: aSelector;
 		comma
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> startMethod: primitiveNumber [
+ASZigCPSOutput >> startMethod: primitiveNumber [
 
 	primitiveNumber = 0
 		ifTrue: [ self putEmbedded: #verifySelector ]
@@ -111,7 +117,7 @@ ASZigThreadedOutput >> startMethod: primitiveNumber [
 ]
 
 { #category : #writing }
-ASZigThreadedOutput >> writeDefinitionOn: stream [
+ASZigCPSOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
 	stream
@@ -130,7 +136,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 ]
 
 { #category : #writing }
-ASZigThreadedOutput >> writeInitializationOn: stream [
+ASZigCPSOutput >> writeInitializationOn: stream [
 
 	stream
 		nextPutAll: componentName;

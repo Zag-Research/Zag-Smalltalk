@@ -100,6 +100,11 @@ ASTextOutput >> print: anObject [
 ]
 
 { #category : #accessing }
+ASTextOutput >> selector [
+	self subclassResponsibility 
+]
+
+{ #category : #accessing }
 ASTextOutput >> symbol: name [
 
 	^ symbols

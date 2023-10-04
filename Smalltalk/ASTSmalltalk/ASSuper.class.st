@@ -1,3 +1,7 @@
+"
+I represent a reference to super.
+
+"
 Class {
 	#name : #ASSuper,
 	#superclass : #ASSelf,

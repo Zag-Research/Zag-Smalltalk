@@ -138,7 +138,7 @@ ASZigCompileMethodGeneratorTest >> testZigFileGenerator_pushSend [
 	aSelector := #mySelector:other:.
 	numArgs := aSelector numArgs.
 	generator := ASZigThreadedOutput testing.
-	generator send: aSelector.
+	generator send: aSelector useCall: false.
 
 	self
 		assert: generator asString

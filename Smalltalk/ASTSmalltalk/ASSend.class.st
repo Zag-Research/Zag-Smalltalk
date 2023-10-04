@@ -119,22 +119,3 @@ ASSend >> zigCompileMethod: aGenerator [
 	args do: [:arg| arg zigCompileMethod: aGenerator].
 	aGenerator send: selector 
 ]
-
-{ #category : #building }
-ASSend >> zigString: syms and: stackVariables [
-
-	| zigString |
-	zigString := target zigString: syms and: stackVariables.
-	args ifNotNil: [
-		args do: [ :arg |
-			zigString := zigString , (arg zigString: syms and: stackVariables) ] ].
-	zigString := zigString , (syms
-		              at: selector
-		              ifPresent: [ :sym |
-		              '&e.send' , selector numArgs asString , ', ' , sym
-		              , ',' ]
-		              ifAbsent: [ "what about the argumets? Do I assume they are on the stack? Do I need to create a stack frame for the send?"
-			              self halt.
-			              '&e.send, ' , selector , ',' ]).
-	^ zigString
-]
