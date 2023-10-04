@@ -20,7 +20,8 @@ Class {
 		'code',
 		'firstBlock',
 		'primitive',
-		'basicBlocks'
+		'basicBlocks',
+		'blocks'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -28,7 +29,8 @@ Class {
 { #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
-
+	blocks add: anASCBlock .
+	" also schedule as componet"
 ]
 
 { #category : #accessing }
@@ -57,7 +59,8 @@ ASCodeGenerator >> initialize [
 	firstBlock := code := ASCBasicBlock new.
 	code stack: ASStack new.
 	basicBlocks := OrderedCollection new.
-	basicBlocks add: code
+	basicBlocks add: code.
+	blocks := OrderedCollection  new
 ]
 
 { #category : #linearize }
@@ -107,11 +110,11 @@ ASCodeGenerator >> popLocal: aSymbol [
 { #category : #API }
 ASCodeGenerator >> pushBlock: anASBlock [
 
-| block |
-block := (ASCBlock with: anASBlock).
+	| block |
+	block := ASCBlock with: anASBlock.
 	self compileBlock: block.
 	code
-		doPush: anASBlock;
+		doPush: block;
 		put: block
 ]
 
