@@ -2,21 +2,22 @@
 I generate text-based code compiled by the `compileMethod` compile-time Zig function
 "
 Class {
-	#name : #ASZigCompileMethodGenerator,
-	#superclass : #ASZigCodeGenerator,
+	#name : #ASZigThreadedOutput,
+	#superclass : #ASZigOutput,
 	#instVars : [
-		'closureSize'
+		'closureSize',
+		'codeGenerator'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #printing }
-ASZigCompileMethodGenerator class >> testing [
+ASZigThreadedOutput class >> testing [
 	^ self new testing
 ]
 
 { #category : #accessing }
-ASZigCompileMethodGenerator >> closure: stackIndex modifier: size [
+ASZigThreadedOutput >> closure: stackIndex modifier: size [
 
 	self
 		putEmbedded: #closureData;
@@ -27,36 +28,57 @@ ASZigCompileMethodGenerator >> closure: stackIndex modifier: size [
 		lf
 ]
 
+{ #category : #'code generation' }
+ASZigThreadedOutput >> codeGenerator [
+	^ codeGenerator ifNil: [	codeGenerator := ASCodeGenerator new]
+]
+
 { #category : #API }
-ASZigCompileMethodGenerator >> drop [
+ASZigThreadedOutput >> drop [
 
 	self putEmbedded: #drop
 ]
 
 { #category : #'code generation' }
-ASZigCompileMethodGenerator >> generateCode [
+ASZigThreadedOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	ourObject zigCompileMethod: self
+	ourObject zigCompileMethod: self codeGenerator.
+	self outputToStream
 ]
 
 { #category : #miscellaneous }
-ASZigCompileMethodGenerator >> goTo: aLabel [
+ASZigThreadedOutput >> goTo: aLabel [
 	"what does a go to look like?"
 
 	self labelRef: aLabel
 ]
 
 { #category : #initialization }
-ASZigCompileMethodGenerator >> initialize [
+ASZigThreadedOutput >> initialize [
 
 	super initialize.
 	closureSize := 0
 ]
 
+{ #category : #'code generation' }
+ASZigThreadedOutput >> outputToStream [
+
+	codeGenerator linearizeTo: self
+]
+
 { #category : #API }
-ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+ASZigThreadedOutput >> popLocal: localNumber [
+
+	self
+		putEmbedded: #popLocal;
+		print: localNumber;
+		comma
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
 		putEmbedded: #popLocalData;
@@ -69,60 +91,56 @@ ASZigCompileMethodGenerator >> popLocalData: name stackIndex: stackIndex blockIn
 ]
 
 { #category : #accessing }
-ASZigCompileMethodGenerator >> prefix [ ^ 'M'
-]
-
-{ #category : #API }
-ASZigCompileMethodGenerator >> primitiveOrVerify: primitiveNumber [
-
-	primitiveNumber = 0
-		ifTrue: [ self putEmbedded: #verifySelector ]
-		ifFalse: [ self putPrimitive: primitiveNumber ]
+ASZigThreadedOutput >> prefix [ ^ 'M'
 ]
 
 { #category : #accessing }
-ASZigCompileMethodGenerator >> pushBlock: stackIndex [
+ASZigThreadedOutput >> pushBlock: stackIndex [
 
 	self tab;
 	print: stackIndex;lf
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> pushContext [
+ASZigThreadedOutput >> pushContext [
 
 	self putEmbedded: #pushContext;
 	nextPutAll: '"^"';comma
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> pushLiteral: aLiteral [
+ASZigThreadedOutput >> pushLiteral: aLiteral [
 
 	self
-		doPush: aLiteral;
 		putEmbedded: #pushLiteral;
 		nextPutAll: aLiteral asZigLiteral;
 		comma
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> pushLocal: aSymbol [
+ASZigThreadedOutput >> pushLocal: localNumber [
 
 	self
-		doPush: (self local: aSymbol);
 		putEmbedded: #pushLocal;
-		print: (offsets at: aSymbol);
-		comma;
-		comment: aSymbol
+		print: localNumber;
+		comma
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> returnTop [
+ASZigThreadedOutput >> returnTop [
 
-	self putEmbedded: #returnTop
+	self
+		putEmbedded: #returnTop
+]
+
+{ #category : #accessing }
+ASZigThreadedOutput >> selector [
+
+	^ codeGenerator selector
 ]
 
 { #category : #API }
-ASZigCompileMethodGenerator >> send: aSelector [
+ASZigThreadedOutput >> send: aSelector [
 
 	self
 		putEmbedded: 'send' , aSelector numArgs asString;
@@ -130,18 +148,25 @@ ASZigCompileMethodGenerator >> send: aSelector [
 		comma 
 ]
 
-{ #category : #writing }
-ASZigCompileMethodGenerator >> writeDefinitionOn: stream [
+{ #category : #API }
+ASZigThreadedOutput >> startMethod: primitiveNumber [
 
-	context
-		writeNewDeclarationFor: self on: stream.
-		stream
+	primitiveNumber = 0
+		ifTrue: [ self putEmbedded: #verifySelector ]
+		ifFalse: [ self putPrimitive: primitiveNumber ]
+]
+
+{ #category : #writing }
+ASZigThreadedOutput >> writeDefinitionOn: stream [
+
+	context writeNewDeclarationFor: self on: stream.
+	stream
 		nextPutAll: 'compileMethod(';
 		nextPutAll: self name zigName;
 		comma;
-		print: numLocals;
+		print: context numLocals;
 		comma;
-		print: maxDepth;
+		print: context maxDepth;
 		nextPutAll: '+';
 		print: closureSize;
 		nextPutAll: ',.{';
@@ -151,7 +176,7 @@ ASZigCompileMethodGenerator >> writeDefinitionOn: stream [
 ]
 
 { #category : #writing }
-ASZigCompileMethodGenerator >> writeInitializationOn: stream [
+ASZigThreadedOutput >> writeInitializationOn: stream [
 
 	stream
 		nextPutAll: componentName;

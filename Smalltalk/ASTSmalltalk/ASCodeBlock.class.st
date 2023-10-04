@@ -157,7 +157,7 @@ ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream bloc
 		stackVariables: stackVariables.
 
 	aStream cr.
-	codeGenerator := ASZigCompileMethodGenerator stream: aStream.
+	codeGenerator := ASZigCompileMethodOutput stream: aStream.
 	statementVisitor := self
 		                    statementVisitor: symbols
 		                    stackVars: stackVariables.

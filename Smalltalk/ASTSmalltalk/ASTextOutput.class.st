@@ -1,8 +1,5 @@
 "
-I am an abstract code generator.
-
-An instance of one of my subclasses is passed to an AST `emit:` method to generate the actual code for a method.
-I know nothing about the structure of an AST, I just generate some form of code from the calls that are made to me.
+I am an abstract code outputter.
 
 Known subclasses:
 ASEmbeddedThread - generates a CompiledMethod in a running Zag image.
@@ -10,52 +7,55 @@ ASEmbeddedJIT - future
 ASZigThread - generates Zig threaded code to write to a .zig file.
 ASZigCPS - generates Zig CPS code to write to a .zig file
 
-Public API and Key Messages
 
-- message one   
-- message two 
-- (for bonus points) how to create instances.
+ My subclasses are used for several purposes.
 
-   One simple example is simply gorgeous.
- 
-Internal Representation and Key Implementation Points.
+There are text generators that are used to create text files (currently only in Zig) that can be compiled with the Zag runtime to generate standalone code.
 
-
-    Implementation Points
+There will be a runtime code generator written in Zig that will generate threaded or JIT code at runtime.
 "
 Class {
-	#name : #ASTextCodeGenerator,
-	#superclass : #ASCodeGenerator,
+	#name : #ASTextOutput,
+	#superclass : #Object,
 	#instVars : [
 		'mainStream',
 		'symbols',
 		'label',
 		'testing',
-		'componentName'
+		'componentName',
+		'context'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #initialization }
-ASTextCodeGenerator >> asString [
+{ #category : #converting }
+ASTextOutput >> asString [
 	^ mainStream contents
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> comma [
-	self nextPut: $,
+ASTextOutput >> comma [
+
+	mainStream nextPut: $,
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> comment: aString [
+ASTextOutput >> comment: aString [
+]
+
+{ #category : #accessing }
+ASTextOutput >> context: anASFileContext [
+
+	context := anASFileContext.
+	anASFileContext add: self
 ]
 
 { #category : #completion }
-ASTextCodeGenerator >> finished [
+ASTextOutput >> finished [
 ]
 
 { #category : #initialization }
-ASTextCodeGenerator >> initialize [
+ASTextOutput >> initialize [
 
 	super initialize.
 	mainStream := '' writeStream.
@@ -65,42 +65,42 @@ ASTextCodeGenerator >> initialize [
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> lf [
+ASTextOutput >> lf [
 
 	testing ifFalse: [	mainStream lf]
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> name [
+ASTextOutput >> name [
 
 	^ componentName ifNil: [
 		  componentName := context name: self prefix: self prefix main: self selector ]
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> nextPut: aCharacter [ 
+ASTextOutput >> nextPut: aCharacter [ 
 	mainStream nextPut: aCharacter
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> nextPutAll: aString [ 
+ASTextOutput >> nextPutAll: aString [ 
 	mainStream nextPutAll: aString
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> prefix [
+ASTextOutput >> prefix [
 
 	^ 'Z'
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> print: anObject [
+ASTextOutput >> print: anObject [
 
 	mainStream print: anObject
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> symbol: name [
+ASTextOutput >> symbol: name [
 
 	^ symbols
 		  at: name
@@ -109,7 +109,7 @@ ASTextCodeGenerator >> symbol: name [
 ]
 
 { #category : #accessing }
-ASTextCodeGenerator >> symbolOrVirtual: name [
+ASTextOutput >> symbolOrVirtual: name [
 
 	^ symbols
 		  at: name
@@ -118,12 +118,12 @@ ASTextCodeGenerator >> symbolOrVirtual: name [
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> tab [
+ASTextOutput >> tab [
 
 	testing ifFalse: [ mainStream tab ]
 ]
 
 { #category : #printing }
-ASTextCodeGenerator >> testing [
+ASTextOutput >> testing [
 	testing := true
 ]

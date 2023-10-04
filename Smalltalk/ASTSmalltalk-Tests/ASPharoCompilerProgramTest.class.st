@@ -6,17 +6,18 @@ Class {
 
 { #category : #tests }
 ASPharoCompilerProgramTest class >> testFooBarIsolated [
+
 	<script>
 	| ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo:bar:.
 	file := ASZigFileContext new.
-	
-	ASZigCompileMethodGenerator new
+
+	ASZigThreadedOutput new
 		context: file;
 		generateCodeFor: ast.
-	
+
 	FileSystem disk workingDirectory / 'zigFooBarCompileMethod.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ]
+		writeStreamDo: [ :stream | file outputTo: stream ] 
 ]
 
 { #category : #compiling }

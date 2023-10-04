@@ -76,6 +76,13 @@ ASAssign >> variable: v expression: e [
 	expression := e
 ]
 
+{ #category : #codegen }
+ASAssign >> zigCompileMethod: aGenerator [
+
+	expression zigCompileMethod: aGenerator.
+	aGenerator popAssign: variable
+]
+
 { #category : #accessing }
 ASAssign >> zigString: syms and: stackVariables [
 	"load value of expression into the variable?"

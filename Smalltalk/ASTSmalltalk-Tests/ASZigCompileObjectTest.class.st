@@ -20,12 +20,12 @@ ASZigCompileObjectTest class >> writeCompileMethodSmallIntegerMinus [
 	| ast file |
 	ast := ASPharoCompiler new astFor: SmallInteger >> #-.
 	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
+	ASZigCompileObjectOutput new
+		context: file; 
 		generateCodeFor: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerMinusAsCompileObject.zig' writeStreamDo: [ :stream |
-			stream truncate.
+		stream truncate.
 		file outputTo: stream ]
 ]
 
@@ -45,12 +45,12 @@ ASZigCompileObjectTest class >> writeCompileMethod_SmallIntegerPlus [
 	| ast file |
 	ast := ASPharoCompiler new astFor: SmallInteger >> #+.
 	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
+	ASZigCompileObjectOutput new
+		context: file; 
 		generateCodeFor: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
-			stream truncate.
+		stream truncate.
 		file outputTo: stream ]
 ]
 
@@ -61,11 +61,13 @@ ASZigCompileObjectTest class >> writeCompileMethod_fib [
 	| ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
+	ASZigCompileObjectOutput new
+		context: file; 
 		generateCodeFor: ast.
 	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
-		writeStreamDo: [ :stream | stream truncate. file outputTo: stream ]
+		writeStreamDo: [ :stream |
+			stream truncate.
+			file outputTo: stream ]
 ]
 
 { #category : #tests }
@@ -84,12 +86,13 @@ ASZigCompileObjectTest class >> writeCompileMethod_foobar [
 	| ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo:bar:.
 	file := ASZigFileContext new.
-	ASZigCompileObjectGenerator new
-		context: file;
+	ASZigCompileObjectOutput new
+		context: file; 
 		generateCodeFor: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
-	stream truncate.		file outputTo: stream ]
+		stream truncate.
+		file outputTo: stream ]
 ]
 
 { #category : #tests }
@@ -103,17 +106,18 @@ ASZigCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
          <primitive: 1>
          ^ super + aNumber
 "
+
 	| ast codeGen file |
 	self halt.
 	ast := ASPharoCompiler new astFor: SmallInteger >> #+.
 	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
+	codeGen := ASZigCompileObjectOutput new context: file.
 	codeGen generateCodeFor: ast.
 	self assert: codeGen name equals: 'Obj1'.
 	self
 		assert: codeGen asString
 		equals:
-		'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,'
+		'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,' 
 ]
 
 { #category : #tests }
@@ -122,7 +126,7 @@ ASZigCompileObjectTest >> testCompileMethod_fib [
 	| ast codeGen file fileString |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
+	codeGen := ASZigCompileObjectOutput new context: file.
 	codeGen generateCodeFor: ast.
 	self assert: codeGen name equals: 'Obj1'.
 	self
@@ -130,10 +134,10 @@ ASZigCompileObjectTest >> testCompileMethod_fib [
 		equals: 'Sym.i_1,":L1",c.ASArg,"L1",":L2"'.
 	self
 		assert: (codeGen asString last: 32)
-		equals: 'Nil,"L24",":L25",c.ASMethodNode,'.
+		equals: 'Nil,"L24",":L25",c.ASMethodNode,'. " right now fails because ASBlock has a dictionary... which it shouldn't "
 	fileString := String streamContents: [ :s | file outputTo: s ].
 	self assert: (fileString findString: '.{Sym.i_1') > 0.
-		self assert: (fileString findString: 'ASMethodNode,});') > 0
+	self assert: (fileString findString: 'ASMethodNode,});') > 0
 ]
 
 { #category : #tests }

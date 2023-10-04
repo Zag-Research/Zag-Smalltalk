@@ -2,11 +2,12 @@ Extension { #name : #Object }
 
 { #category : #'*ASTSmalltalk-Tests' }
 Object >> zigCGString [
-		| file codeGen |
+
+	| file codeGen |
 	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
+	codeGen := ASZigCompileObjectOutput new context: file.
 	self zigCompileObject: codeGen.
-	^ codeGen asString
+	^ codeGen asString 
 ]
 
 { #category : #'*ASTSmalltalk-Tests' }
@@ -14,7 +15,7 @@ Object >> zigSLString [
 
 	| file codeGen |
 	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectGenerator new context: file.
+	codeGen := ASZigCompileObjectOutput new context: file.
 	self zigCompileObject: codeGen.
-	^ codeGen setLiteralString
+	^ codeGen setLiteralString 
 ]

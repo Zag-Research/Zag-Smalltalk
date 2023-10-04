@@ -78,8 +78,8 @@ ASSelf >> superclass [
 { #category : #accessing }
 ASSelf >> superclass: aClass [
 
-	self flag: #TODO. " should be an ASTClass, Dave thinks "
-	superclass := aClass name
+	self flag: #TODO. " should be an ASClassNode, Dave thinks "
+	superclass := ASClassNode new"aClass name"
 ]
 
 { #category : #compiling }

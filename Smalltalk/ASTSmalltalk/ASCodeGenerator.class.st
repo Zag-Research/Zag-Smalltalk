@@ -1,20 +1,26 @@
 "
-I am an abstract code generator. My subclasses are used for several purposes.
+I am a code generator.
 
-There are text generators that are used to create text files (currently only in Zig) that can be compiled with the Zag runtime to generate standalone code.
+I take an AST representing a method or a block and turn it into a graph of basic blocks.
 
-There will be a runtime code generator written in Zig that will generate threaded or JIT code at runtime.
+Subclasses may do this in sophisticated ways, like agressive inlining and some level of type inference.
+
+When I am done, a caller can access those basic blocks directly, starting from the root, which would be useful for generating CPS style native code.
+
+Alternatively, I can provide a topological sorted list that is usefulfor a strictly linear form such as threaded code.
 "
 Class {
 	#name : #ASCodeGenerator,
 	#superclass : #Object,
 	#instVars : [
 		'context',
-		'maxDepth',
-		'stack',
 		'numLocals',
 		'offsets',
-		'selector'
+		'selector',
+		'code',
+		'blocks',
+		'firstBlock',
+		'primitive'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -26,39 +32,26 @@ ASCodeGenerator >> context: anASFileContext [
 	anASFileContext add: self
 ]
 
-{ #category : #stackAccessHelpers }
-ASCodeGenerator >> doCall: aSymbol [
-
-	stack := stack drop: aSymbol numArgs
-]
-
-{ #category : #stackAccessHelpers }
-ASCodeGenerator >> doPop [
-|result|
-	result := stack value.
-	stack := stack pop.
-	^ result
-]
-
-{ #category : #stackAccessHelpers }
-ASCodeGenerator >> doPush: anObject [
-
-	stack := stack push: anObject.
-	maxDepth := maxDepth max: stack depth
-]
-
 { #category : #API }
 ASCodeGenerator >> drop [
 
-	self subclassResponsibility
+	code drop; put: #drop
 ]
 
 { #category : #initialization }
 ASCodeGenerator >> initialize [
 
 	super initialize.
-	maxDepth := 0.
-	stack := ASStack new 
+	firstBlock := code := ASCBasicBlock new.
+	code stack: ASStack new.
+	blocks := OrderedCollection new.
+	blocks add: code
+]
+
+{ #category : #linearize }
+ASCodeGenerator >> linearizeTo: anOutput [
+primitive =  0 ifTrue: [ anOutput putEmbedded: #verifySelector ] ifFalse: [ anOutput putPrimitive: primitive ].
+	blocks do: [ : block | block outputTo: anOutput ]
 ]
 
 { #category : #'local field support' }
@@ -79,54 +72,61 @@ ASCodeGenerator >> locals: locals arguments: arguments [
 
 { #category : #accessing }
 ASCodeGenerator >> lookupObject: anObject [
-	^ context lookupObject: anObject 
+
+	^ context lookupObject: anObject
 ]
 
 { #category : #API }
-ASCodeGenerator >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+ASCodeGenerator >> popAssign: variable [
 
-	self subclassResponsibility
+	self popLocal: variable 
 ]
 
 { #category : #API }
-ASCodeGenerator >> primitiveOrVerify: primitiveNumber [
+ASCodeGenerator >> popLocal: aSymbol [
 
-	self subclassResponsibility
+	code doDrop; put: (ASCPopLocal with: (offsets at: aSymbol name))
 ]
 
 { #category : #API }
 ASCodeGenerator >> pushContext [
-	self subclassResponsibility 
+
+	self shouldBeImplemented 
 ]
 
 { #category : #API }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
-	self subclassResponsibility
+	code
+		doPush: aLiteral;		put: (ASCLiteral with: aLiteral)
 ]
 
 { #category : #API }
-ASCodeGenerator >> pushLocal: aSelector [
+ASCodeGenerator >> pushLocal: aSymbol [
 
-	self subclassResponsibility
+	code
+		doPush: (self local: aSymbol);
+		put: (ASCPushLocal with: (offsets at: aSymbol name))
 ]
 
 { #category : #API }
-ASCodeGenerator >> putEmbedded: aSelector [
+ASCodeGenerator >> pushVariable: variable [
 
-	self subclassResponsibility
+	self pushLocal: variable 
 ]
 
 { #category : #API }
-ASCodeGenerator >> putPrimitive: aSelector [
+ASCodeGenerator >> putEmbedded: aSymbol [
 
-	self subclassResponsibility
+	code put: aSymbol
 ]
 
 { #category : #API }
 ASCodeGenerator >> returnTop [
 
-	self subclassResponsibility
+	code
+		doDrop;
+		returnTop
 ]
 
 { #category : #accessing }
@@ -141,8 +141,14 @@ ASCodeGenerator >> selector: aSymbol [
 ]
 
 { #category : #API }
-ASCodeGenerator >> send: aSelector [
+ASCodeGenerator >> send: aSymbol [
 
+	code
+		doDrop: aSymbol numArgs;
+		put: (ASCSend with: aSymbol)
+]
 
-	self subclassResponsibility
+{ #category : #API }
+ASCodeGenerator >> startMethod: primitiveNumber [
+	primitive := primitiveNumber 
 ]

@@ -2,8 +2,8 @@
 I create a CompiledMethod in threaded form in Zig syntax.
 "
 Class {
-	#name : #ASZigCodeGenerator,
-	#superclass : #ASTextCodeGenerator,
+	#name : #ASZigOutput,
+	#superclass : #ASTextOutput,
 	#instVars : [
 		'ourObject',
 		'alreadyGenerated'
@@ -12,24 +12,24 @@ Class {
 }
 
 { #category : #writing }
-ASZigCodeGenerator >> classListString [
+ASZigOutput >> classListString [
 		^ ''
 ]
 
 { #category : #accessing }
-ASZigCodeGenerator >> comment: aString [
+ASZigOutput >> comment: aString [
 
 	self nextPutAll: ' // '.
 	aString printOn: self
 ]
 
 { #category : #'code generation' }
-ASZigCodeGenerator >> generateCode [
+ASZigOutput >> generateCode [
 	self subclassResponsibility 
 ]
 
 { #category : #generation }
-ASZigCodeGenerator >> generateCodeFor: anASNode [
+ASZigOutput >> generateCodeFor: anASNode [
 
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
@@ -38,7 +38,7 @@ ASZigCodeGenerator >> generateCodeFor: anASNode [
 ]
 
 { #category : #output }
-ASZigCodeGenerator >> label: result [
+ASZigOutput >> label: result [
 	self
 		nextPutAll: '":';
 		nextPutAll: result;
@@ -48,7 +48,7 @@ ASZigCodeGenerator >> label: result [
 ]
 
 { #category : #accessing }
-ASZigCodeGenerator >> labelRef: aString [
+ASZigOutput >> labelRef: aString [
 
 	self
 		nextPut: $";
@@ -57,7 +57,7 @@ ASZigCodeGenerator >> labelRef: aString [
 ]
 
 { #category : #output }
-ASZigCodeGenerator >> makeNextLabel [
+ASZigOutput >> makeNextLabel [
 
 	label := label + 1.
 	^ String streamContents: [ :s |
@@ -67,19 +67,19 @@ ASZigCodeGenerator >> makeNextLabel [
 ]
 
 { #category : #output }
-ASZigCodeGenerator >> nextLabel [
+ASZigOutput >> nextLabel [
 
 	^ self label: self makeNextLabel.
 
 ]
 
 { #category : #output }
-ASZigCodeGenerator >> putClass: aString [ 
+ASZigOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
 
 { #category : #API }
-ASZigCodeGenerator >> putEmbedded: aString [
+ASZigOutput >> putEmbedded: aString [
 
 	self
 		nextPutAll: '&e.';
@@ -88,7 +88,12 @@ ASZigCodeGenerator >> putEmbedded: aString [
 ]
 
 { #category : #API }
-ASZigCodeGenerator >> putPrimitive: primitiveNumber [
+ASZigOutput >> putInteger: anInteger [ 
+	mainStream print: anInteger 
+]
+
+{ #category : #API }
+ASZigOutput >> putPrimitive: primitiveNumber [
 
 	self
 		nextPutAll: '&p.p';
@@ -98,7 +103,7 @@ ASZigCodeGenerator >> putPrimitive: primitiveNumber [
 ]
 
 { #category : #output }
-ASZigCodeGenerator >> putSymbol: aSymbol [
+ASZigOutput >> putSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
 		ifNotNil: [ :aString | mainStream << aString ]
@@ -110,13 +115,18 @@ ASZigCodeGenerator >> putSymbol: aSymbol [
 ]
 
 { #category : #initialization }
-ASZigCodeGenerator >> refListString [
+ASZigOutput >> refListString [
 self flag: #daniel " what should this returnTop  ".
 ^''
 ]
 
+{ #category : #accessing }
+ASZigOutput >> selector [
+self subclassResponsibility 
+]
+
 { #category : #initialization }
-ASZigCodeGenerator >> setLiteralString [
+ASZigOutput >> setLiteralString [
 
 	^ String streamContents: [ :s |
 		  symbols
@@ -125,12 +135,12 @@ ASZigCodeGenerator >> setLiteralString [
 ]
 
 { #category : #writing }
-ASZigCodeGenerator >> writeDefinitionOn: anObject [
+ASZigOutput >> writeDefinitionOn: anObject [
 self subclassResponsibility 
 ]
 
 { #category : #writing }
-ASZigCodeGenerator >> writeInitializationOn: anObject [
+ASZigOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility
 ]

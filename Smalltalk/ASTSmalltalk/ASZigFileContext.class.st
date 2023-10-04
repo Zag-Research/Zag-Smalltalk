@@ -31,11 +31,6 @@ ASZigFileContext >> addSymbol: aSymbol [
 	symbols add: aSymbol
 ]
 
-{ #category : #printing }
-ASZigFileContext >> comma [
-	stream nextPut: $,
-]
-
 { #category : #register }
 ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
 	objects at: anASNode put: anASGenerator 
@@ -54,6 +49,7 @@ ASZigFileContext >> initialize [
 
 { #category : #accessing }
 ASZigFileContext >> lookupObject: anObject [
+
 	^ objects at: anObject ifAbsent: [ ^ nil ]
 ]
 
@@ -103,12 +99,6 @@ ASZigFileContext >> outputTo: stream [
 ASZigFileContext >> predefinedSymbol: aSymbol [
 
 	^ (symbols predefinedSymbol: aSymbol)
-]
-
-{ #category : #printing }
-ASZigFileContext >> print: anObject [
-
-	stream print: anObject
 ]
 
 { #category : #testing }

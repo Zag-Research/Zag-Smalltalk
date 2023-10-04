@@ -112,6 +112,14 @@ ASSend >> target: expression [
 	target := expression
 ]
 
+{ #category : #codegen }
+ASSend >> zigCompileMethod: aGenerator [
+
+	target zigCompileMethod: aGenerator.
+	args do: [:arg| arg zigCompileMethod: aGenerator].
+	aGenerator send: selector 
+]
+
 { #category : #building }
 ASSend >> zigString: syms and: stackVariables [
 
