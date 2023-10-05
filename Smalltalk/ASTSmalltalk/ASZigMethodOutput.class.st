@@ -18,7 +18,11 @@ ASZigMethodOutput class >> testing [
 
 { #category : #'code generation' }
 ASZigMethodOutput >> codeGenerator [
-	^ codeGenerator ifNil: [	codeGenerator := ASCodeGenerator new]
+
+	^ codeGenerator ifNil: [
+		  codeGenerator := ASCodeGenerator new context: self.
+		  breakAtCall ifTrue: [ codeGenerator breakAtCall ].
+		  codeGenerator ]
 ]
 
 { #category : #API }

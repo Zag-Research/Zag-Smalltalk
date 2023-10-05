@@ -289,12 +289,9 @@ ASMethodNode >> zigCompileMethod: aGenerator [
 	aGenerator selector: selector.
 	aGenerator locals: (locals collect: #name) arguments: arguments.
 	primitive := 0.
-	pragmas do: [ :pragma | 
+	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].
 	aGenerator startMethod: primitive.
-	
-	self flag: #daniel " most code here can come from writeMethod:with: ".
-	
-	body zigCompileMethod: aGenerator.
+	body zigCompileMethod: aGenerator
 ]

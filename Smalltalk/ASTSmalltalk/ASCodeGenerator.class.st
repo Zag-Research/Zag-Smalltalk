@@ -21,10 +21,24 @@ Class {
 		'firstBlock',
 		'primitive',
 		'basicBlocks',
-		'blocks'
+		'blocks',
+		'breakAtCall',
+		'name'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #API }
+ASCodeGenerator >> break [
+
+	code := code break.
+	basicBlocks add: code.
+]
+
+{ #category : #accessing }
+ASCodeGenerator >> breakAtCall [
+	breakAtCall := true
+]
 
 { #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
@@ -37,7 +51,7 @@ ASCodeGenerator >> compileBlock: anASCBlock [
 ASCodeGenerator >> context: anASFileContext [
 
 	context := anASFileContext.
-	anASFileContext add: self
+
 ]
 
 { #category : #API }
@@ -49,7 +63,9 @@ ASCodeGenerator >> drop [
 { #category : #linearize }
 ASCodeGenerator >> finalAnalysis [
 
-
+	basicBlocks doWithIndex: [ :bb : idx |
+		bb label: (String streamContents: [:s| s nextPutAll: name;nextPut: $:;print: idx]).
+		bb isUnfinished ifTrue: [ bb put: #returnSelf ] ]
 ]
 
 { #category : #initialization }
@@ -60,17 +76,29 @@ ASCodeGenerator >> initialize [
 	code stack: ASStack new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
-	blocks := OrderedCollection  new
+	blocks := OrderedCollection new.
+	breakAtCall := false
 ]
 
 { #category : #linearize }
 ASCodeGenerator >> linearizeTo: anOutput [
 
+	| rest current |
 	self finalAnalysis.
 	primitive = 0
 		ifTrue: [ anOutput putEmbedded: #verifySelector ]
 		ifFalse: [ anOutput putPrimitive: primitive ].
-	basicBlocks do: [ :block | block outputTo: anOutput ]
+	current := basicBlocks first.
+	rest := basicBlocks allButFirst asSet.
+	[ true ] whileNotNil: [
+		current outputTo: anOutput.
+		current else
+			ifNil: [
+				rest isEmpty ifTrue: [ ^ context endMethod ].
+				current := rest atRandom ifNil: [ ^ context endMethod ] ]
+			ifNotNil: [ :next | current := next ].
+		rest remove: current ].
+	context endMethod 
 ]
 
 { #category : #'local field support' }
@@ -167,7 +195,8 @@ ASCodeGenerator >> selector [
 
 { #category : #accessing }
 ASCodeGenerator >> selector: aSymbol [
-	selector := aSymbol 
+
+	selector := aSymbol. 	name := context name
 ]
 
 { #category : #API }
@@ -175,7 +204,8 @@ ASCodeGenerator >> send: aSymbol [
 
 	code
 		doDrop: aSymbol numArgs;
-		put: (ASCSend with: aSymbol)
+		put: (ASCSend with: aSymbol).
+	breakAtCall ifTrue: [ self break ]
 ]
 
 { #category : #API }

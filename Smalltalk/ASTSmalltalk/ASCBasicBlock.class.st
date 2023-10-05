@@ -27,6 +27,13 @@ ASCBasicBlock >> addTo: aCollection [
 	self shouldBeImplemented.
 ]
 
+{ #category : #break }
+ASCBasicBlock >> break [
+
+	else := self class new stack: stack .
+	^ else
+]
+
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -61,6 +68,11 @@ ASCBasicBlock >> doPush: anObject [
 
 	stack := stack push: anObject.
 	maxDepth := maxDepth max: stack depth
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> else [
+	^ else
 ]
 
 { #category : #initialization }
@@ -104,6 +116,16 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new
 ]
 
+{ #category : #wriiting }
+ASCBasicBlock >> isUnfinished [
+	^ test ifNil: [ else isNil ] ifNotNil: [ false ]
+]
+
+{ #category : #initialization }
+ASCBasicBlock >> label [
+	^ label
+]
+
 { #category : #initialization }
 ASCBasicBlock >> label: anObject [
 
@@ -111,8 +133,12 @@ ASCBasicBlock >> label: anObject [
 ]
 
 { #category : #wriiting }
-ASCBasicBlock >> outputTo: output [ 
-	operations do: [ : operation | operation outputTo: output ]
+ASCBasicBlock >> outputTo: output [
+
+	output label: label.
+	operations do: [ :operation | operation outputTo: output ].
+	test ifNotNil: [ : t | output branch: t to: then ].
+	else ifNotNil: [ output branch: #br to: else ]
 ]
 
 { #category : #initialization }
@@ -122,8 +148,8 @@ ASCBasicBlock >> put: anObject [
 
 { #category : #initialization }
 ASCBasicBlock >> returnTop [
-test := #return.
-	self put: (#returnTop)
+
+	test := #returnTop
 ]
 
 { #category : #accessing }

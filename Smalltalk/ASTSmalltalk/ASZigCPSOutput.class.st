@@ -18,13 +18,6 @@ ASZigCPSOutput >> drop [
 	self putEmbedded: #drop
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> goTo: aLabel [
-	"what does a go to look like?"
-
-	self labelRef: aLabel
-]
-
 { #category : #initialization }
 ASZigCPSOutput >> initialize [
 

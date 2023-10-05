@@ -6,7 +6,8 @@ Class {
 	#superclass : #ASTextOutput,
 	#instVars : [
 		'ourObject',
-		'alreadyGenerated'
+		'alreadyGenerated',
+		'delayedLabel'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -39,11 +40,19 @@ ASZigOutput >> generateCodeFor: anASNode [
 
 { #category : #output }
 ASZigOutput >> label: result [
-	self
-		nextPutAll: '":';
-		nextPutAll: result;
-		nextPut: $";
-		comma.
+
+	delayedLabel = result ifFalse: [
+		delayedLabel ifNotNil: [
+			self
+				putEmbedded: #br;
+				labelRef: delayedLabel] ].
+			delayedLabel := nil .
+	result ifNotNil: [
+		self
+			nextPutAll: '":';
+			nextPutAll: result;
+			nextPut: $";
+			comma ].
 	^ result
 ]
 
@@ -111,7 +120,8 @@ ASZigOutput >> putSymbol: aSymbol [
 			(symbols indexOf: aSymbol ifAbsent: [
 				 symbols add: aSymbol.
 				 context addSymbol: aSymbol.
-				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
+				 symbols size ]) printOn: mainStream << 'Sym.i_' ].
+		self comma 
 ]
 
 { #category : #initialization }

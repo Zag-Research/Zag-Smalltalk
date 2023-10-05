@@ -13,16 +13,21 @@ ASZigThreadedOutput class >> testing [
 ]
 
 { #category : #API }
+ASZigThreadedOutput >> branch: command to: target [
+	command = #br ifTrue: [ 
+	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
+]
+
+{ #category : #API }
 ASZigThreadedOutput >> drop [
 
 	self putEmbedded: #drop
 ]
 
-{ #category : #miscellaneous }
-ASZigThreadedOutput >> goTo: aLabel [
-	"what does a go to look like?"
+{ #category : #API }
+ASZigThreadedOutput >> endMethod [
 
-	self labelRef: aLabel
+	self label: nil
 ]
 
 { #category : #'code generation' }
@@ -95,11 +100,11 @@ ASZigThreadedOutput >> returnTop [
 { #category : #API }
 ASZigThreadedOutput >> send: aSelector useCall: useCall [
 
+	self putEmbedded: (useCall
+			 ifTrue: [ 'call' ]
+			 ifFalse: [ 'send' ]) , aSelector numArgs asString.
 	self
-		putEmbedded: (useCall ifTrue: [ 'call' ] ifFalse: [ 'send' ]) , aSelector numArgs asString.
-		self
-		nextPutAll: aSelector;
-		comma
+		putSymbol: aSelector
 ]
 
 { #category : #API }
