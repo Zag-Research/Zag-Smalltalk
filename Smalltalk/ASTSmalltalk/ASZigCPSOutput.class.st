@@ -4,6 +4,12 @@ I generate text-based as a sequence of Continuation-Passing-Style Zig function
 Class {
 	#name : #ASZigCPSOutput,
 	#superclass : #ASZigMethodOutput,
+	#instVars : [
+		'auxStream',
+		'skipRest',
+		'currentLVal',
+		'lVals'
+	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
@@ -12,21 +18,80 @@ ASZigCPSOutput class >> testing [
 	^ self new testing
 ]
 
+{ #category : #accessing }
+ASZigCPSOutput >> checkBreakAtCall: aSymbol [
+	^ true
+]
+
 { #category : #API }
 ASZigCPSOutput >> drop [
 
 	self putEmbedded: #drop
 ]
 
-{ #category : #initialization }
-ASZigCPSOutput >> initialize [
+{ #category : #'local variable handling' }
+ASZigCPSOutput >> endStatement [
 
-	super initialize.
+	mainStream nextPutAll: ';
+'.
+	currentLVal ifNotNil: [
+		lVals at: currentLVal put: currentLVal , '_'.
+		currentLVal := nil ]
+]
+
+{ #category : #flagging }
+ASZigCPSOutput >> flush [
+	skipRest := true
+]
+
+{ #category : #'local variable handling' }
+ASZigCPSOutput >> lVal: aString [
+
+	| s |
+	s := lVals at: aString ifAbsent: [
+		     self nextPutAll: 'var '.
+		     currentLVal := aString.
+		aString,'_' ].
+	self
+		nextPutAll: s;
+		nextPut: $=
+]
+
+{ #category : #'code generation' }
+ASZigCPSOutput >> outputEnd: bb [
+	skipRest ifTrue: [ ^ self ].
+		bb else ifNotNil: [ :else |
+			self
+				nextPutAll: '    return @call(tailCall,';
+				id: else label;
+				nextPutAll: ',.{';
+				id: self name;
+				nextPutAll: '.at(';
+				print: else number + 1;
+				nextPutAll: '), sp, process, context, selector, cache });
+' ].
+
 ]
 
 { #category : #'code generation' }
 ASZigCPSOutput >> outputToStream [
-	^ self shouldBeImplemented
+
+	codeGenerator cleanupAndGetPrimitive ifNotNil: [ :primitive |
+		self error ].
+	codeGenerator unorderedBasicBlocksDo: [ :bb |
+		self
+			nextPutAll: 'fn ';
+			id: bb label;
+			nextPutAll:
+				'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+'.
+		skipRest := false.
+		currentLVal := nil.
+		lVals := Dictionary new.
+		bb visitAll: self.
+		self outputEnd: bb.
+		mainStream nextPutAll: '}    
+' ]
 ]
 
 { #category : #API }
@@ -83,6 +148,12 @@ ASZigCPSOutput >> pushLocal: localNumber [
 		comma
 ]
 
+{ #category : #'local variable handling' }
+ASZigCPSOutput >> rVal: aString [
+
+	self nextPutAll: (lVals at: aString ifAbsent: [ aString ])
+]
+
 { #category : #API }
 ASZigCPSOutput >> returnTop [
 
@@ -109,6 +180,49 @@ ASZigCPSOutput >> startMethod: primitiveNumber [
 		ifFalse: [ self putPrimitive: primitiveNumber ]
 ]
 
+{ #category : #visiting }
+ASZigCPSOutput >> visitLiteral: literal [
+
+	self
+		lVal: #sp;
+		rVal: #sp;
+		nextPutAll: '.push(';
+		nextPutAll: literal asZigLiteral;
+		nextPut: $);
+		endStatement 
+]
+
+{ #category : #visiting }
+ASZigCPSOutput >> visitPopLocal: anInteger [ 
+	self nextPutAll: 'context.setLocal(';
+	print: anInteger;
+	nextPutAll: ',';
+	rVal: #sp;
+	nextPutAll: '.top)';
+	endStatement;
+	lVal: #sp;
+	rVal: #sp;
+	nextPutAll: '.drop()';
+	endStatement 
+]
+
+{ #category : #visiting }
+ASZigCPSOutput >> visitPushLocal: anInteger [ 
+	self lVal: #sp;
+	rVal: #sp;
+	nextPutAll: '.push(context.getLocal(';
+	print: anInteger;
+	nextPutAll: '))';
+	endStatement 
+]
+
+{ #category : #visiting }
+ASZigCPSOutput >> visitSend: aSymbol useCall: aBoolean [ 
+	self nextPutAll: 'send:';
+	putDirectSymbol: aSymbol;
+	flush
+]
+
 { #category : #writing }
 ASZigCPSOutput >> writeDefinitionOn: stream [
 
@@ -123,9 +237,10 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 		nextPutAll: '+';
 		print: closureSize;
 		nextPutAll: ',.{';
-		nextPutAll: mainStream contents;
+		nextPutAll: auxStream contents;
 		nextPutAll: ' });';
-		lf
+		lf;
+		nextPutAll: mainStream contents 
 ]
 
 { #category : #writing }

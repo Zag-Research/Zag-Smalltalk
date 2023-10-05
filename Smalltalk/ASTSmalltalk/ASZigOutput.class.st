@@ -38,6 +38,11 @@ ASZigOutput >> generateCodeFor: anASNode [
 	context processComponents
 ]
 
+{ #category : #accessing }
+ASZigOutput >> id: aString [ 
+	mainStream nextPutAll: aString zigName 
+]
+
 { #category : #output }
 ASZigOutput >> label: result [
 
@@ -85,6 +90,18 @@ ASZigOutput >> nextLabel [
 { #category : #output }
 ASZigOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
+]
+
+{ #category : #output }
+ASZigOutput >> putDirectSymbol: aSymbol [
+
+	(context predefinedSymbol: aSymbol)
+		ifNotNil: [ :aString | mainStream << aString ]
+		ifNil: [
+mainStream << 'sym.' <<			(symbols indexOf: aSymbol ifAbsent: [
+				 symbols add: aSymbol.
+				 context addSymbol: aSymbol.
+				 aSymbol]) zigName ]
 ]
 
 { #category : #API }

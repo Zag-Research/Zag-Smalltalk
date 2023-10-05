@@ -39,11 +39,6 @@ ASZigMethodOutput >> generateCode [
 	self outputToStream
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> goTo: aLabel [ 
-	^ self subclassResponsibility
-]
-
 { #category : #initialization }
 ASZigMethodOutput >> initialize [
 

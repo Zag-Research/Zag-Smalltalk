@@ -135,9 +135,8 @@ ASCBasicBlock >> label: anObject [
 { #category : #wriiting }
 ASCBasicBlock >> outputTo: output [
 
-	output label: label.
 	operations do: [ :operation | operation outputTo: output ].
-	test ifNotNil: [ : t | output branch: t to: then ].
+	test ifNotNil: [ :t | output branch: t to: then ].
 	else ifNotNil: [ output branch: #br to: else ]
 ]
 
@@ -164,4 +163,9 @@ ASCBasicBlock >> then: anInteger [
 
 	else := anInteger.
 
+]
+
+{ #category : #visiting }
+ASCBasicBlock >> visitAll: aVisitor [
+	operations do: [ : operation | operation zigAccept: aVisitor ]
 ]

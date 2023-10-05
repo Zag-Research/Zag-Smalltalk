@@ -32,3 +32,8 @@ ASCSend >> useCall [
 ASCSend >> with: aSymbol [ 
 	selector := aSymbol
 ]
+
+{ #category : #visitor }
+ASCSend >> zigAccept: aVisitor [ 
+	^ aVisitor visitSend: selector useCall: useCall 
+]

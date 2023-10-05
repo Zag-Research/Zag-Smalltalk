@@ -39,6 +39,12 @@ ASTextOutput >> breakAtCall [
 breakAtCall := true
 ]
 
+{ #category : #accessing }
+ASTextOutput >> checkBreakAtCall: aSymbol [
+
+	^ breakAtCall
+]
+
 { #category : #printing }
 ASTextOutput >> comma [
 

@@ -40,6 +40,15 @@ ASCodeGenerator >> breakAtCall [
 	breakAtCall := true
 ]
 
+{ #category : #linearize }
+ASCodeGenerator >> cleanupAndGetPrimitive [
+
+	self finalAnalysis.
+	^ primitive = 0
+		  ifTrue: [ nil ]
+		  ifFalse: [ primitive ]
+]
+
 { #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
@@ -81,24 +90,19 @@ ASCodeGenerator >> initialize [
 ]
 
 { #category : #linearize }
-ASCodeGenerator >> linearizeTo: anOutput [
+ASCodeGenerator >> linearizeBasicBlocksDo: aBlock [
 
 	| rest current |
-	self finalAnalysis.
-	primitive = 0
-		ifTrue: [ anOutput putEmbedded: #verifySelector ]
-		ifFalse: [ anOutput putPrimitive: primitive ].
 	current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
-		current outputTo: anOutput.
+		aBlock value: current.
 		current else
 			ifNil: [
-				rest isEmpty ifTrue: [ ^ context endMethod ].
-				current := rest atRandom ifNil: [ ^ context endMethod ] ]
+				rest isEmpty ifTrue: [ ^ self ].
+				current := rest atRandom ifNil: [ ^ self ] ]
 			ifNotNil: [ :next | current := next ].
 		rest remove: current ].
-	context endMethod 
 ]
 
 { #category : #'local field support' }
@@ -205,10 +209,15 @@ ASCodeGenerator >> send: aSymbol [
 	code
 		doDrop: aSymbol numArgs;
 		put: (ASCSend with: aSymbol).
-	breakAtCall ifTrue: [ self break ]
+	(context checkBreakAtCall: aSymbol ) ifTrue: [ self break ]
 ]
 
 { #category : #API }
 ASCodeGenerator >> startMethod: primitiveNumber [
 	primitive := primitiveNumber 
+]
+
+{ #category : #enumerating }
+ASCodeGenerator >> unorderedBasicBlocksDo: aBlock [ 
+	basicBlocks do: aBlock
 ]

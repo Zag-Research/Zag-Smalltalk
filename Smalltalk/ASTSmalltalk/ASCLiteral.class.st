@@ -20,3 +20,9 @@ ASCLiteral >> with: anObject [
 
 	literal := anObject 
 ]
+
+{ #category : #visitor }
+ASCLiteral >> zigAccept: aVisitor [
+
+	^ aVisitor visitLiteral: literal
+]

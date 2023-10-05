@@ -33,7 +33,13 @@ ASZigThreadedOutput >> endMethod [
 { #category : #'code generation' }
 ASZigThreadedOutput >> outputToStream [
 
-	codeGenerator linearizeTo: self
+	codeGenerator cleanupAndGetPrimitive
+		ifNil: [ self putEmbedded: #verifySelector ]
+		ifNotNil: [ :primitive | self putPrimitive: primitive ].
+	codeGenerator linearizeBasicBlocksDo: [ :bb |
+		self label: bb label.
+		bb outputTo: self ].
+	self endMethod
 ]
 
 { #category : #API }
