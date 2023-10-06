@@ -107,11 +107,17 @@ const Stack = extern struct {
     pub inline fn unreserve(self: SP, n: usize) SP {
         return @ptrFromInt(@intFromPtr(self)+@sizeOf(Object)*n);
     }
+    pub inline fn array(self: SP) [*]Object {
+        return @ptrCast(self);
+    }
     pub inline fn slice(self: SP, n: usize) []Object {
-        return @as([*]Object,@ptrCast(self))[0..n];
+        return self.array()[0..n];
     }
     pub inline fn at(self: SP, n: usize) Object {
-        return @as([*]Object,@ptrCast(self))[n];
+        return self.array()[n];
+    }
+    pub inline fn atPut(self: SP, n: usize, o: Object) void {
+        self.array()[n]=o;
     }
 };
 test "Stack" {
