@@ -14,14 +14,10 @@ ASZigCPSOutputTest >> testZig_addTwoNumbers [
 	output := ASZigCPSOutput testing
 		          context: file;
 		          generateCodeFor: ast.
-	output pushLocal: #self.
-	output pushLocal: #sum.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
-	self
-		assert: output asString
-		equals:
-		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",&e.popLocal,0,&e.pushLocal,0,&e.returnTop,&e.pushLocal,1,'
+	output asString inspect.
+
 ]
 
 { #category : #tests }

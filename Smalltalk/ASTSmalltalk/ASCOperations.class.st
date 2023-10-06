@@ -12,6 +12,12 @@ ASCOperations class >> with: anObject [
 	^ self new with: anObject
 ]
 
+{ #category : #'instance creation' }
+ASCOperations class >> with: anObject and: another [
+
+	^ self new with: anObject and: another
+]
+
 { #category : #'code generation' }
 ASCOperations >> outputTo: aCodeEmitter [
 

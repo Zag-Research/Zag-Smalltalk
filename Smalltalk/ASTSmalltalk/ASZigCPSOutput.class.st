@@ -23,12 +23,6 @@ ASZigCPSOutput >> checkBreakAtCall: aSymbol [
 	^ true
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> drop [
-
-	self putEmbedded: #drop
-]
-
 { #category : #'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
@@ -42,6 +36,19 @@ ASZigCPSOutput >> endStatement [
 { #category : #flagging }
 ASZigCPSOutput >> flush [
 	skipRest := true
+]
+
+{ #category : #'local variable handling' }
+ASZigCPSOutput >> lConst: aString [
+
+	| s |
+	s := lVals at: aString ifAbsent: [
+		     self nextPutAll: 'const '.
+		     currentLVal := aString.
+		     aString , '_' ].
+	self
+		nextPutAll: s;
+		nextPut: $=
 ]
 
 { #category : #'local variable handling' }
@@ -59,18 +66,29 @@ ASZigCPSOutput >> lVal: aString [
 
 { #category : #'code generation' }
 ASZigCPSOutput >> outputEnd: bb [
-	skipRest ifTrue: [ ^ self ].
-		bb else ifNotNil: [ :else |
-			self
-				nextPutAll: '    return @call(tailCall,';
-				id: else label;
-				nextPutAll: ',.{';
-				id: self name;
-				nextPutAll: '.at(';
-				print: else number + 1;
-				nextPutAll: '), sp, process, context, selector, cache });
-' ].
 
+	skipRest ifTrue: [ ^ self ].
+	bb test = #returnTop ifTrue: [  ].
+	bb test ifNotNil: [ :else |
+		self
+			nextPutAll: '    return @call(tailCall,';
+			id: else label;
+			nextPutAll: ',.{';
+			id: self name;
+			nextPutAll: '.at(';
+			print: else number + 1;
+			nextPutAll: '), sp, process, context, selector, cache });
+' ]	.
+bb else ifNotNil: [ :else |
+		self
+			nextPutAll: '    return @call(tailCall,';
+			id: else label;
+			nextPutAll: ',.{';
+			id: self name;
+			nextPutAll: '.at(';
+			print: else number + 1;
+			nextPutAll: '), sp, process, context, selector, cache });
+' ]
 ]
 
 { #category : #'code generation' }
@@ -94,82 +112,10 @@ ASZigCPSOutput >> outputToStream [
 ' ]
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> popLocal: localNumber [
-
-	self
-		putEmbedded: #popLocal;
-		print: localNumber;
-		comma
-]
-
-{ #category : #API }
-ASZigCPSOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
-
-	self
-		putEmbedded: #popLocalData;
-		print: stackIndex;
-		nextPutAll: ' + (';
-		print: blockIndex;
-		nextPutAll: ' << 8), // ';
-		nextPutAll: name;
-		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
-]
-
-{ #category : #API }
-ASZigCPSOutput >> pushBlock: stackIndex [
-
-	self tab;
-	print: stackIndex;lf
-]
-
-{ #category : #API }
-ASZigCPSOutput >> pushContext [
-
-	self putEmbedded: #pushContext;
-	nextPutAll: '"^"';comma
-]
-
-{ #category : #API }
-ASZigCPSOutput >> pushLiteral: aLiteral [
-
-	self
-		putEmbedded: #pushLiteral;
-		nextPutAll: aLiteral asZigLiteral;
-		comma
-]
-
-{ #category : #API }
-ASZigCPSOutput >> pushLocal: localNumber [
-
-	self
-		putEmbedded: #pushLocal;
-		print: localNumber;
-		comma
-]
-
 { #category : #'local variable handling' }
 ASZigCPSOutput >> rVal: aString [
 
 	self nextPutAll: (lVals at: aString ifAbsent: [ aString ])
-]
-
-{ #category : #API }
-ASZigCPSOutput >> returnTop [
-
-	self
-		putEmbedded: #returnTop
-]
-
-{ #category : #API }
-ASZigCPSOutput >> send: aSelector useCall: useCall [
-
-	self putEmbedded: (useCall
-			 ifTrue: [ 'call' ]
-			 ifFalse: [ 'send' ]) , aSelector numArgs asString.
-	self
-		nextPutAll: aSelector;
-		comma
 ]
 
 { #category : #API }
@@ -178,6 +124,12 @@ ASZigCPSOutput >> startMethod: primitiveNumber [
 	primitiveNumber = 0
 		ifTrue: [ self putEmbedded: #verifySelector ]
 		ifFalse: [ self putPrimitive: primitiveNumber ]
+]
+
+{ #category : #API }
+ASZigCPSOutput >> visitCall: aSelector doBreak: doBreak [
+
+	self halt
 ]
 
 { #category : #visiting }
@@ -216,11 +168,55 @@ ASZigCPSOutput >> visitPushLocal: anInteger [
 	endStatement 
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitSend: aSymbol useCall: aBoolean [ 
-	self nextPutAll: 'send:';
-	putDirectSymbol: aSymbol;
-	flush
+{ #category : #API }
+ASZigCPSOutput >> visitReturn [
+
+	self
+		lConst: #top;
+		rVal: #sp;
+		nextPutAll: '.top';
+		endStatement;
+		lConst: #result;
+		nextPutAll: 'context.pop(process)';
+		endStatement;
+		lVal: #sp;
+		rVal: #result;
+		nextPutAll: '.sp';
+		rVal: #sp;
+		nextPutAll: '.top=';
+		rVal: #top;
+		endStatement;
+		lConst: #cContext;
+		rVal: #result;
+		nextPutAll: '.ctxt';
+		endStatement;
+		nextPutAll:
+			'return @call(tailCall, cContext.npc, .{ cContext.tpc, newSp, process, callerContext, selector, cache })';
+		endStatement;
+		flush
+]
+
+{ #category : #API }
+ASZigCPSOutput >> visitSend: aSelector doBreak: doBreak [
+
+	self
+		nextPutAll: 'context.setReturn(';
+		nextPut: $);
+		endStatement ;
+		lConst: #pc;
+		nextPutAll: 'dispatch.lookup(newSelector, .SmallInteger)';
+		endStatement ;
+		nextPutAll:     'return @call(tailCall,';
+		rVal: #pc;
+		nextPutAll: '.prim,.{';
+		rVal: #pc;
+		nextPutAll: '.next(),';
+		rVal: #sp;
+		nextPutAll: ', process, context, ';
+		putDirectSymbol: aSelector;
+		nextPutAll: ', cache });
+';
+		flush
 ]
 
 { #category : #writing }

@@ -206,10 +206,12 @@ ASCodeGenerator >> selector: aSymbol [
 { #category : #API }
 ASCodeGenerator >> send: aSymbol [
 
+	| doBreak |
+	doBreak := context checkBreakAtCall: aSymbol.
 	code
 		doDrop: aSymbol numArgs;
-		put: (ASCSend with: aSymbol).
-	(context checkBreakAtCall: aSymbol ) ifTrue: [ self break ]
+		put: (ASCSend with: aSymbol and: doBreak).
+	doBreak ifTrue: [ self break ]
 ]
 
 { #category : #API }

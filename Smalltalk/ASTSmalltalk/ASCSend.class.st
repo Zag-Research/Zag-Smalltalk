@@ -6,7 +6,8 @@ Class {
 	#superclass : #ASCOperations,
 	#instVars : [
 		'selector',
-		'useCall'
+		'useCall',
+		'doBreak'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -29,11 +30,20 @@ ASCSend >> useCall [
 ]
 
 { #category : #'instance creation' }
-ASCSend >> with: aSymbol [ 
-	selector := aSymbol
+ASCSend >> with: aSymbol [
+
+	self shouldNotImplement 
+]
+
+{ #category : #'instance creation' }
+ASCSend >> with: aSymbol and: flag [
+
+	selector := aSymbol.
+	doBreak := flag
 ]
 
 { #category : #visitor }
-ASCSend >> zigAccept: aVisitor [ 
-	^ aVisitor visitSend: selector useCall: useCall 
+ASCSend >> zigAccept: aVisitor [
+
+useCall ifTrue: [ 	^ aVisitor visitCall: selector doBreak: doBreak ] ifFalse: [	^ aVisitor visitSend: selector doBreak: doBreak]
 ]
