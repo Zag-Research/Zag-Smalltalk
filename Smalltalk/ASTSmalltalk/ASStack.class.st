@@ -61,12 +61,11 @@ ASStack >> push: anObject [
 
 { #category : #accessing }
 ASStack >> top [
-
-	^ top
+^ top
 ]
 
-{ #category : #private }
-ASStack >> top: anObject [
+{ #category : #accessing }
+ASStack >> top: value [
 
-	top := anObject
+	 top := value
 ]

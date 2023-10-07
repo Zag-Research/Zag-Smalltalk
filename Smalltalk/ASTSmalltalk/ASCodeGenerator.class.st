@@ -14,16 +14,15 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'context',
-		'numLocals',
-		'offsets',
 		'selector',
 		'code',
 		'firstBlock',
 		'primitive',
 		'basicBlocks',
 		'blocks',
-		'breakAtCall',
-		'name'
+		'name',
+		'localVariables',
+		'depth'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -33,11 +32,6 @@ ASCodeGenerator >> break [
 
 	code := code break.
 	basicBlocks add: code.
-]
-
-{ #category : #accessing }
-ASCodeGenerator >> breakAtCall [
-	breakAtCall := true
 ]
 
 { #category : #linearize }
@@ -86,7 +80,7 @@ ASCodeGenerator >> initialize [
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blocks := OrderedCollection new.
-	breakAtCall := false
+	depth := 0
 ]
 
 { #category : #linearize }
@@ -114,11 +108,13 @@ ASCodeGenerator >> local: aString [
 { #category : #accessing }
 ASCodeGenerator >> locals: locals arguments: arguments [
 
-	numLocals := locals size.
-	offsets := Dictionary new.
-	locals reversed , arguments reversed , #( self ) doWithIndex: [
-		:each
-		:index | offsets at: each put: index ]
+	localVariables := OrderedCollection new.
+	localVariables add: ASCSelf new.
+	arguments doWithIndex: [ :each :index |
+		localVariables add: (ASCParameter name: each offset: index) ].
+	locals doWithIndex: [ :each :index |
+		localVariables add:
+			(ASCLocal name: each offset: index + arguments size) ]
 ]
 
 { #category : #accessing }
@@ -136,7 +132,11 @@ ASCodeGenerator >> popAssign: variable [
 { #category : #API }
 ASCodeGenerator >> popLocal: aSymbol [
 
-	code doDrop; put: (ASCPopLocal with: (offsets at: aSymbol name))
+	code
+		put:
+			(ASCPopLocal with:
+					 ((localVariables at: aSymbol name) store: code top at: depth));
+		doDrop
 ]
 
 { #category : #API }
@@ -168,7 +168,7 @@ ASCodeGenerator >> pushLocal: aSymbol [
 
 	code
 		doPush: (self local: aSymbol);
-		put: (ASCPushLocal with: (offsets at: aSymbol name))
+		put: (ASCPushLocal with: ((localVariables at: aSymbol name) ref))
 ]
 
 { #category : #API }

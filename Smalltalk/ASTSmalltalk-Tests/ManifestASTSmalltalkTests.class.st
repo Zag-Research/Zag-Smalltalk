@@ -96,3 +96,10 @@ ManifestASTSmalltalkTests class >> ruleToDoCollectRuleV1FalsePositive [
 ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-07-06T19:53:44.153899-04:00') )
 ]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalkTests class >> ruleUsesTrueRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') )
+]

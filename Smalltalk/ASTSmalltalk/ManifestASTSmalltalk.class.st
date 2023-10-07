@@ -29,12 +29,16 @@ ManifestASTSmalltalk class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T13:19:24.088808-04:00') #(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') )
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T13:19:24.088808-04:00') #(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') )
 ]
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleMinMaxRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') )
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:14.213283-04:00') #(#(#RGMethodDefinition #(#ASCValue #store: #false)) #'2023-10-06T21:44:23.963698-04:00') )
 ]
 
 { #category : #'code-critics' }
