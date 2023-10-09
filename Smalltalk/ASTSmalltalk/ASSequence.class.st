@@ -1,6 +1,7 @@
 "
-I contain a sequence of statements that make up, among other things, the body of a method
-"
+
+I am a sequence of statements which represents the body of a method or block.
+
 Class {
 	#name : #ASSequence,
 	#superclass : #Object,

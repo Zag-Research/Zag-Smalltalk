@@ -9,8 +9,7 @@ Class {
 	#name : #ASSelf,
 	#superclass : #ASExpression,
 	#instVars : [
-		'method',
-		'superclass'
+		'method'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -65,21 +64,10 @@ ASSelf >> method: aMethod [
 ASSelf >> printOn: s [
 
 	s << self className << ' method: '.
-	(method isSymbol ifTrue: [method] ifFalse: [method selector]) printOn: s.
-	superclass ifNotNil: [ s << ' superclass: ' << superclass name ]
-]
-
-{ #category : #accessing }
-ASSelf >> superclass [
-
-	^ superclass
-]
-
-{ #category : #accessing }
-ASSelf >> superclass: aClass [
-
-	self flag: #TODO. " should be an ASClassNode, Dave thinks "
-	superclass := ASClassNode new"aClass name"
+	(method isSymbol
+		 ifTrue: [ method ]
+		 ifFalse: [ method selector ]) printOn: s.
+	"superclass ifNotNil: [ s << ' superclass: ' << superclass name ]"
 ]
 
 { #category : #compiling }

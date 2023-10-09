@@ -170,7 +170,9 @@ ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
-		^ ASSuper method: compiler definingMethod superclass: compiler definingClass superclass 
+	^ ASSuper
+		  method: compiler definingMethod
+		  superclass: compiler definingClass superclass
 ]
 
 { #category : #visiting }

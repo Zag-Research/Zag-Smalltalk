@@ -16,5 +16,5 @@ ASSuper class >> method: aMethod [
 { #category : #'instance creation' }
 ASSuper class >> method: aMethod superclass: aClass [
 
-	^ self new method: aMethod; superclass: aClass
+	^ self new method: aMethod"; superclass: aClass"
 ]

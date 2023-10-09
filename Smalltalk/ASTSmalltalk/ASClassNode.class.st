@@ -7,8 +7,6 @@ Class {
 	#instVars : [
 		'name',
 		'classVariables',
-		'scope',
-		'nestedScopeOf',
 		'methods'
 	],
 	#category : #'ASTSmalltalk-AST'
@@ -30,16 +28,6 @@ ASClassNode >> from: aClass [
 { #category : #comparing }
 ASClassNode >> hash [
 	^ name hash
-]
-
-{ #category : #initialization }
-ASClassNode >> initialize [ 
-	scope := Dictionary new
-]
-
-{ #category : #accessing }
-ASClassNode >> lookup: symbol [
-	^ scope at: symbol ifAbsent: [ ASClassVar name: symbol"nestedScopeOf lookup: symbol" ]
 ]
 
 { #category : #accessing }
