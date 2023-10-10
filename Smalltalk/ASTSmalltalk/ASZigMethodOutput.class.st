@@ -100,7 +100,7 @@ ASZigMethodOutput >> selector [
 ]
 
 { #category : #'code generation' }
-ASZigMethodOutput >> verifySelector [
+ASZigMethodOutput >> verifySelector: anObject [
 
 	self subclassResponsibility 
 ]

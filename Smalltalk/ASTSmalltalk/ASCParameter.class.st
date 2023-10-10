@@ -20,6 +20,12 @@ ASCParameter class >> name: localName offset: offset [
 	^ self new name: localName offset: offset
 ]
 
+{ #category : #initialization }
+ASCParameter >> initialize [ 
+super initialize .
+refMax := refMin := 0
+]
+
 { #category : #accessing }
 ASCParameter >> name [ 
 ^ name

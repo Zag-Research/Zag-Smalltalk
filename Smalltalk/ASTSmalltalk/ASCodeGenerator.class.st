@@ -222,9 +222,10 @@ ASCodeGenerator >> send: aSymbol [
 ]
 
 { #category : #API }
-ASCodeGenerator >> startMethod: primitiveNumber [
+ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
 
-	code primitive: primitiveNumber
+	self selector: aSymbol.
+	code primitive: primitiveNumber selector: aSymbol 
 ]
 
 { #category : #enumerating }

@@ -84,7 +84,7 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 ]
 
 { #category : #'code generation' }
-ASZigThreadedOutput >> verifySelector [
+ASZigThreadedOutput >> verifySelector: anObject [
 
 	self putEmbedded: #verifySelector
 ]

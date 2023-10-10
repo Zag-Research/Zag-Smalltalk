@@ -101,7 +101,14 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 { #category : #codegen }
 ASBlock >> zigCompileBlock: aGenerator [
 
-	aGenerator selector: aGenerator name.
+	| selector |
+	selector := (String streamContents: [ :s |
+		             arguments isEmpty
+			             ifTrue: [ s nextPutAll: 'value' ]
+			             ifFalse: [
+			             arguments size timesRepeat: [ s nextPutAll: 'value:' ] ] ])
+		            asSymbol.
+	aGenerator startMethod: nil selector: selector.
 	aGenerator locals: (locals collect: #name) arguments: arguments.
 	body zigCompileMethod: aGenerator
 ]

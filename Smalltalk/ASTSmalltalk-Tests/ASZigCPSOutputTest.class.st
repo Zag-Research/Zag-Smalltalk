@@ -29,7 +29,8 @@ ASZigCPSOutputTest >> testZig_fib [
 	output := ASZigCPSOutput testing
 		             context: file;
 		             generateCodeFor: ast.
-	self assert: output name equals: 'Mfib'.
+	self assert: output name equals: 'Mfib:'.
+	file asString inspect.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'

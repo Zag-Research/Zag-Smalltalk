@@ -120,8 +120,7 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : #wriiting }
 ASCBasicBlock >> outputTo: output [
 
-	output outputMethodLabel: label.
-	self outputRestTo: output
+	self subclassResponsibility 
 ]
 
 { #category : #API }

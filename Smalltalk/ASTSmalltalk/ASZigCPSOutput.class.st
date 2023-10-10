@@ -150,8 +150,13 @@ ASZigCPSOutput >> sp: anInteger [
 ]
 
 { #category : #'code generation' }
-ASZigCPSOutput >> verifySelector [
-	self nextPutAll: 'VERIFY();'
+ASZigCPSOutput >> verifySelector: aSymbol [
+
+	self
+		nextPutAll: 'VERIFY(';
+		putDirectSymbol: aSymbol ;
+		nextPutAll: ')';
+		endStatement
 ]
 
 { #category : #API }
@@ -294,7 +299,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 ASZigCPSOutput >> writeInitializationOn: stream [
 
 	stream
-		nextPutAll: componentName;
+		nextPutAll: componentName zigName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
 		nextPutAll: '},&[_]Object{';

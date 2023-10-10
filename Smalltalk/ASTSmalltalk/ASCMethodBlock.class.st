@@ -7,7 +7,8 @@ Class {
 	#name : #ASCMethodBlock,
 	#superclass : #ASCBasicBlock,
 	#instVars : [
-		'primitive'
+		'primitive',
+		'selector'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -24,13 +25,15 @@ ASCMethodBlock >> outputTo: output [
 
 	output outputMethodStart: label.
 	primitive
-		ifNil: [ output verifySelector ]
+		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
 	output outputMethodLabel: label.
 	self outputRestTo: output
 ]
 
 { #category : #accessing }
-ASCMethodBlock >> primitive: anInteger [ 
-	primitive := anInteger 
+ASCMethodBlock >> primitive: anInteger selector: aSymbol [
+
+	primitive := anInteger.
+	selector := aSymbol
 ]

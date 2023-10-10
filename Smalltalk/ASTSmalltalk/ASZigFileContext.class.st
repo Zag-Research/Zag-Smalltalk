@@ -188,7 +188,7 @@ ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
-		nextPutAll: label;
+		nextPutAll: label zigName;
 		nextPutAll: ' = '.
 	^ label
 ]

@@ -271,11 +271,10 @@ ASMethodNode >> writeMethod: aStream with: syms [
 ASMethodNode >> zigCompileMethod: aGenerator [
 
 	| primitive |
-	aGenerator selector: selector.
 	aGenerator locals: (locals collect: #name) arguments: arguments.
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].
-	aGenerator startMethod: primitive.
+	aGenerator startMethod: primitive selector: selector.
 	body zigCompileMethod: aGenerator
 ]

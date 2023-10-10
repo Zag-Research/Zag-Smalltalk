@@ -6,3 +6,11 @@ Class {
 	#superclass : #ASCBasicBlock,
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #wriiting }
+ASCReturnBlock >> outputTo: output [
+
+	output outputMethodStart: label.
+	output outputMethodLabel: label.
+	self outputRestTo: output
+]

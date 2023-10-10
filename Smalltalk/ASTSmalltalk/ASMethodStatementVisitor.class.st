@@ -102,7 +102,9 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 		ifEmpty: [ codeGenerator emitVerifySelector ]
 		ifNotEmpty: [
 			anASMethodNode pragmas do: [ :pragma |
-				codeGenerator startMethod: (pragma arguments at: 1) value ] ].
+				codeGenerator
+					startMethod: (pragma arguments at: 1) value
+					selector: nil ] ].
 
 	codeGenerator pushContext.
 	"create dummy context"
