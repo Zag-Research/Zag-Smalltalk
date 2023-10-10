@@ -12,11 +12,17 @@ Class {
 
 { #category : #'code generation' }
 ASCLiteral >> outputTo: output [ 
-	output visitPushLiteral: literal
+	output pushLiteral: literal
 ]
 
 { #category : #'instance creation' }
 ASCLiteral >> with: anObject [
 
 	literal := anObject 
+]
+
+{ #category : #visitor }
+ASCLiteral >> zigAccept: aVisitor [
+
+	^ aVisitor visitLiteral: literal
 ]

@@ -60,6 +60,12 @@ ASBlock >> buildStack [
 	^ stackVariables reverse.
 ]
 
+{ #category : #'as yet unclassified' }
+ASBlock >> filter: zigInstructions [
+zigInstructions last = '&e.drop,' ifTrue: [ zigInstructions removeLast ].
+	^ zigInstructions
+]
+
 { #category : #testing }
 ASBlock >> isASBlock [
 	^true
@@ -90,6 +96,14 @@ ASBlock >> selector [
 	size = 0 ifTrue: [ ^ #value ].
 	^ (String streamContents: [ :s |
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
+]
+
+{ #category : #'as yet unclassified' }
+ASBlock >> statementVisitor: symbols stackVars: stackVariables [
+	^ ASBlockStatementVisitor new
+		  symbols: symbols
+		  stackVars: stackVariables
+		  closure: self
 ]
 
 { #category : #compiling }

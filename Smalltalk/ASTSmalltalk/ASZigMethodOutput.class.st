@@ -6,9 +6,7 @@ Class {
 	#superclass : #ASZigOutput,
 	#instVars : [
 		'codeGenerator',
-		'maxDepth',
-		'numLocals',
-		'depth'
+		'closureSize'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -23,8 +21,13 @@ ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
 		  codeGenerator := ASCodeGenerator new context: self.
-			codeGenerator depth: depth.
+		  breakAtCall ifTrue: [ codeGenerator breakAtCall ].
 		  codeGenerator ]
+]
+
+{ #category : #API }
+ASZigMethodOutput >> drop [
+	^ self subclassResponsibility
 ]
 
 { #category : #'code generation' }
@@ -40,25 +43,7 @@ ASZigMethodOutput >> generateCode [
 ASZigMethodOutput >> initialize [
 
 	super initialize.
-	maxDepth := 0.
-	depth := 0
-]
-
-{ #category : #'code generation' }
-ASZigMethodOutput >> outputMethodEnd [
-
-	self subclassResponsibility
-]
-
-{ #category : #'code generation' }
-ASZigMethodOutput >> outputMethodLabel: bbLabel [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #'code generation' }
-ASZigMethodOutput >> outputMethodStart: bbLabel [
-
-self subclassResponsibility 
+	closureSize := 0
 ]
 
 { #category : #'code generation' }
@@ -67,8 +52,43 @@ ASZigMethodOutput >> outputToStream [
 self subclassResponsibility 
 ]
 
+{ #category : #API }
+ASZigMethodOutput >> popLocal: localNumber [ 
+	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [ 
+	^ self subclassResponsibility
+]
+
 { #category : #accessing }
 ASZigMethodOutput >> prefix [ ^ 'M'
+]
+
+{ #category : #API }
+ASZigMethodOutput >> pushBlock: stackIndex [ 
+	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> pushContext [
+	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> pushLiteral: aLiteral [ 
+	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> pushLocal: localNumber [ 
+	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> returnTop [
+	^ self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -77,51 +97,13 @@ ASZigMethodOutput >> selector [
 	^ codeGenerator selector
 ]
 
-{ #category : #'code generation' }
-ASZigMethodOutput >> verifySelector [
-
-	self subclassResponsibility 
-]
-
 { #category : #API }
-ASZigMethodOutput >> visitDrop [
-
-	self putEmbedded: #drop
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitPopLocal: localNumber [ 
+ASZigMethodOutput >> send: aSelector useCall: useCall [ 
 	^ self subclassResponsibility
 ]
 
 { #category : #API }
-ASZigMethodOutput >> visitPushBlock: stackIndex [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitPushContext [
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitPushLiteral: aLiteral [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitPushLocal: localNumber [
-
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitReturnTop [
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitSend: aSelector returnIndex: index [ 
+ASZigMethodOutput >> startMethod: primitiveNumber [ 
 	^ self subclassResponsibility
 ]
 

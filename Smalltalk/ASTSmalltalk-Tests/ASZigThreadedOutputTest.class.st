@@ -21,18 +21,18 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	| output ast file |
 	ast := ASPharoCompiler new astFor:
 		       ASCompileTestClass1 >> #addTwoNumbers.
-	file := ASZigTestContext new.
+	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
 		          generateCodeFor: ast.
-	output visitPushLocal: #self.
-	output visitPushLocal: #sum.
+	output pushLocal: #self.
+	output pushLocal: #sum.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.popLocal....'
+		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",&e.popLocal,0,&e.pushLocal,0,&e.returnTop,&e.pushLocal,1,'
 ]
 
 { #category : #tests }
@@ -44,7 +44,7 @@ ASZigThreadedOutputTest >> testZig_fib [
 	output := ASZigThreadedOutput testing
 		          context: file;
 		          generateCodeFor: ast.
-	self assert: output name equals: 'Mfib:'.
+	self assert: output name equals: 'Mfib'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
@@ -80,7 +80,7 @@ ASZigThreadedOutputTest >> testZig_pushDrop [
 
 	| output |
 	output := ASZigThreadedOutput new testing.
-	output visitDrop.
+	output drop.
 
 	self assert: output asString equals: '&e.drop,'
 ]
@@ -100,7 +100,7 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 
 	| output |
 	output := ASZigThreadedOutput new testing.
-	output visitPushLiteral: 10.
+	output pushLiteral: 10.
 
 	self
 		assert: output asString
@@ -113,12 +113,14 @@ ASZigThreadedOutputTest >> testZig_pushLocal [
 	| output selfIndex |
 	selfIndex := 5.
 	output := ASZigThreadedOutput new testing.
-	output codeGenerator locals: #( foo bar ) arguments: #( blat fubar ).
-	output visitPushLocal: #self.
+	output codeGenerator
+		locals: #( foo bar )
+		arguments: #( blat fubar ).
+	output pushLocal: #self.
 
 	self
 		assert: output asString
-		equals: '&e.pushLocal,' , selfIndex asString , ', // #self'
+		equals: '&e.pushLocal,' , selfIndex asString , ', // #self' 
 ]
 
 { #category : #tests }
@@ -126,7 +128,7 @@ ASZigThreadedOutputTest >> testZig_pushReturn [
 
 	| output |
 	output := ASZigThreadedOutput new testing.
-	output visitReturnTop.
+	output returnTop.
 
 	self assert: output asString equals: '&e.returnTop,'
 ]
@@ -171,8 +173,24 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCodeFor: ast.
+		             context: file;
+		             generateCodeFor: ast.
+	self assert: output name equals: 'Munaries'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,&e.send0,Sym.i_1,&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_unaries_break [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing breakAtCall
+		             context: file;
+		             generateCodeFor: ast.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString

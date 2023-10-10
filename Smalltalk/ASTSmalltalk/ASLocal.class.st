@@ -11,8 +11,3 @@ Class {
 ASLocal >> acceptVisitor: aVisitor [
 	^ aVisitor visitNamedAS: self
 ]
-
-{ #category : #compiling }
-ASLocal >> lookup: aScope [
-	^ aScope lookupLocal: name
-]

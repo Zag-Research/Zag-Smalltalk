@@ -83,6 +83,13 @@ ASMethodNode >> closureSize [
 	^0
 ]
 
+{ #category : #accessing }
+ASMethodNode >> filter: zigInstructions [
+	"nothing to do here"
+
+	^ zigInstructions
+]
+
 { #category : #comparing }
 ASMethodNode >> hash [
 	^ className hash bitXor: selector hash
@@ -138,6 +145,14 @@ ASMethodNode >> selector: aString [
 { #category : #utilities }
 ASMethodNode >> stackSize [
 	^0
+]
+
+{ #category : #comparing }
+ASMethodNode >> statementVisitor: symbols stackVars: stackVariables [ 
+	^ ASMethodStatementVisitor new
+		  symbols: symbols
+		  stackVars: stackVariables
+		  closure: self
 ]
 
 { #category : #visiting }
@@ -273,6 +288,7 @@ ASMethodNode >> zigCompileMethod: aGenerator [
 	| primitive |
 	aGenerator selector: selector.
 	aGenerator locals: (locals collect: #name) arguments: arguments.
+	primitive := 0.
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].

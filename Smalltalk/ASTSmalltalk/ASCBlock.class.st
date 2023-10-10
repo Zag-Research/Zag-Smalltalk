@@ -14,7 +14,7 @@ Class {
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 
-	output visitPushBlock: compiledBlock
+	output pushBlock: compiledBlock
 ]
 
 { #category : #'instance creation' }

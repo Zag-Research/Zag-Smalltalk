@@ -17,6 +17,14 @@ ASSequence >> = other [
 ]
 
 { #category : #comparing }
+ASSequence >> acceptVisitor: aStatementVisitor [
+
+	sequence do: [ :asStatement |
+		asStatement acceptVisitor: aStatementVisitor.
+		asStatement isASSend ifTrue: [ aStatementVisitor drop ] ]
+]
+
+{ #category : #comparing }
 ASSequence >> addStatement: anASStatement [
 
 	sequence add: anASStatement

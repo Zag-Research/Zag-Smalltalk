@@ -7,9 +7,7 @@ Class {
 	#superclass : #ASCValue,
 	#instVars : [
 		'refMax',
-		'refMin',
-		'offset',
-		'name'
+		'refMin'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -17,23 +15,7 @@ Class {
 { #category : #'instance creation' }
 ASCParameter class >> name: localName offset: offset [
 
-	^ self new name: localName offset: offset
-]
-
-{ #category : #accessing }
-ASCParameter >> name [ 
-^ name
-]
-
-{ #category : #'instance creation' }
-ASCParameter >> name: aString offset: anInteger [ 
-	name := aString .
-	offset := anInteger 
-]
-
-{ #category : #accessing }
-ASCParameter >> offset [ 
-^ offset
+	^ self new name: name offset: offset
 ]
 
 { #category : #'state tracking' }

@@ -11,3 +11,8 @@ Class {
 ASCPushLocal >> outputTo: anOutput [ 
 	anOutput putEmbedded: #pushLocal;putInteger: localNumber 
 ]
+
+{ #category : #visitor }
+ASCPushLocal >> zigAccept: aVisitor [ 
+	aVisitor visitPushLocal: localNumber 
+]

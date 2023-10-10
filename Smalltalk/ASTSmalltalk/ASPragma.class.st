@@ -1,6 +1,3 @@
-"
-I contain pragmas for a method - the only one we currently care about is <primitive: 1>
-"
 Class {
 	#name : #ASPragma,
 	#superclass : #ASStatement,

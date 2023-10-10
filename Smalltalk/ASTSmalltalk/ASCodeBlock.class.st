@@ -52,6 +52,11 @@ ASCodeBlock >> closureData [
 	^clsrData
 ]
 
+{ #category : #accessing }
+ASCodeBlock >> filter: instructions [
+	self subclassResponsibility 
+]
+
 { #category : #initialization }
 ASCodeBlock >> initialize [
 
@@ -102,6 +107,12 @@ ASCodeBlock >> printOn: s [
 	s << ' body: {'.
 	body printOn: s.
 	s << '}'
+]
+
+{ #category : #writing }
+ASCodeBlock >> statementVisitor: symbols stackVars: stackVariables [
+
+	^ self subclassResponsibility 
 ]
 
 { #category : #writing }
