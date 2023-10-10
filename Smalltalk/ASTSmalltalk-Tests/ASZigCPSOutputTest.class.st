@@ -73,29 +73,25 @@ ASZigCPSOutputTest >> testZig_unaries [
 
 	| output ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
-	file := ASZigFileContext new.
+	file := ASZigTestContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
 		          generateCodeFor: ast.
 	self assert: output name equals: 'Munaries'.
-	self
-		assert: output asString
-		equals:
-		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,&e.send0,Sym.i_1,&e.returnTop,'
+	file asString inspect
+
 ]
 
 { #category : #tests }
-ASZigCPSOutputTest >> testZig_unaries_break [
+ASZigCPSOutputTest >> testZig_unariesPlus [
 
 	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing breakAtCall
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #unariesPlus.
+	file := ASZigTestContext new.
+	output := ASZigCPSOutput testing
 		          context: file;
 		          generateCodeFor: ast.
-	self assert: output name equals: 'Munaries'.
-	self
-		assert: output asString
-		equals:
-		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,":Munaries:3",&e.returnTop,'
+	self assert: output name equals: 'MunariesPlus'.
+	file asString inspect
 ]

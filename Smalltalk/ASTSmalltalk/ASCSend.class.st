@@ -7,10 +7,15 @@ Class {
 	#instVars : [
 		'selector',
 		'useCall',
-		'doBreak'
+		'bb'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #accessing }
+ASCSend >> bb: anASCReturnBlock [ 
+	bb := anASCReturnBlock
+]
 
 { #category : #initialization }
 ASCSend >> initialize [ 
@@ -21,7 +26,13 @@ super initialize .	useCall := false
 { #category : #'code generation' }
 ASCSend >> outputTo: anOutput [
 
-	anOutput send: selector useCall: useCall
+	anOutput visitSend: selector returnIndex: bb index
+
+]
+
+{ #category : #accessing }
+ASCSend >> selector: aString [ 
+	selector := aString
 ]
 
 { #category : #accessing }
@@ -32,18 +43,5 @@ ASCSend >> useCall [
 { #category : #'instance creation' }
 ASCSend >> with: aSymbol [
 
-	self shouldNotImplement 
-]
-
-{ #category : #'instance creation' }
-ASCSend >> with: aSymbol and: flag [
-
-	selector := aSymbol.
-	doBreak := flag
-]
-
-{ #category : #visitor }
-ASCSend >> zigAccept: aVisitor [
-
-useCall ifTrue: [ 	^ aVisitor visitCall: selector doBreak: doBreak ] ifFalse: [	^ aVisitor visitSend: selector doBreak: doBreak]
+	selector := aSymbol
 ]

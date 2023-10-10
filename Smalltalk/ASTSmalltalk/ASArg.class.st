@@ -16,3 +16,8 @@ ASArg >> acceptVisitor: aVisitor [
 ASArg >> isASArg [
 	^true
 ]
+
+{ #category : #compiling }
+ASArg >> lookup: aGenerator [ 
+	^ aGenerator lookupLocal: self
+]

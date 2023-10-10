@@ -98,10 +98,8 @@ ASZigOutput >> putDirectSymbol: aSymbol [
 	(context predefinedSymbol: aSymbol)
 		ifNotNil: [ :aString | mainStream << aString ]
 		ifNil: [
-mainStream << 'sym.' <<			(symbols indexOf: aSymbol ifAbsent: [
-				 symbols add: aSymbol.
-				 context addSymbol: aSymbol.
-				 aSymbol]) zigName ]
+				context addSymbol: aSymbol.
+			mainStream << 'sym.' << aSymbol zigName ]
 ]
 
 { #category : #API }
@@ -137,8 +135,7 @@ ASZigOutput >> putSymbol: aSymbol [
 			(symbols indexOf: aSymbol ifAbsent: [
 				 symbols add: aSymbol.
 				 context addSymbol: aSymbol.
-				 symbols size ]) printOn: mainStream << 'Sym.i_' ].
-		self comma 
+				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
 ]
 
 { #category : #initialization }

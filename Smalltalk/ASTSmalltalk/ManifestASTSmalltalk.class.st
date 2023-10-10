@@ -28,6 +28,13 @@ ManifestASTSmalltalk class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleExcessiveVariablesRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASCodeGenerator)) #'2023-10-08T10:43:40.424497-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
@@ -42,13 +49,22 @@ ManifestASTSmalltalk class >> ruleMinMaxRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleRefersToClassRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(  )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-03-28T13:56:56.834147-04:00') )
 ]
 
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T12:35:33.094018-04:00') )
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T12:35:33.094018-04:00') #(#(#RGMethodDefinition #(#ASMethodNode #zigCompileMethod: #false)) #'2023-10-09T20:35:17.831877-04:00') )
 ]
 
 { #category : #'code-critics' }
@@ -64,4 +80,14 @@ ManifestASTSmalltalk class >> ruleUsesTrueRuleV1FalsePositive [
 { #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleUtilityMethodsRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASImage #writeSizeOf:on: #false)) #'2021-03-26T17:15:42.158959-04:00') #(#(#RGMethodDefinition #(#ASImage #literal:class: #false)) #'2021-03-26T17:35:53.311307-04:00') #(#(#RGMethodDefinition #(#ASImage #object: #false)) #'2021-03-27T10:43:41.041614-04:00') #(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-04-23T13:11:04.477962-04:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleWhileTrueRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #( 
+	     #( #( #RGMethodDefinition #( #ASCBasicBlock #send:with:
+	              #false ) )
+	        #'2023-10-08T21:11:13.372871-04:00' ) )
 ]

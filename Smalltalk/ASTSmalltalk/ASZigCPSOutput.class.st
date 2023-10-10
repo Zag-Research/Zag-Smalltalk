@@ -23,6 +23,22 @@ ASZigCPSOutput >> checkBreakAtCall: aSymbol [
 	^ true
 ]
 
+{ #category : #'code generation' }
+ASZigCPSOutput >> doBasicBlock: bb [
+
+	self
+		nextPutAll: '    return @call(tailCall,';
+		id: bb label;
+		nextPutAll: ',.{';
+		id: self name;
+		nextPutAll: '.at(';
+		print: bb number + 1;
+		nextPutAll: '), ';
+		rVal: #sp;
+		nextPutAll: ', process, context, selector, cache })';
+		endStatement 
+]
+
 { #category : #'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
@@ -36,6 +52,13 @@ ASZigCPSOutput >> endStatement [
 { #category : #flagging }
 ASZigCPSOutput >> flush [
 	skipRest := true
+]
+
+{ #category : #initialization }
+ASZigCPSOutput >> initialize [
+
+	super initialize.
+	auxStream := '' writeStream
 ]
 
 { #category : #'local variable handling' }
@@ -65,51 +88,55 @@ ASZigCPSOutput >> lVal: aString [
 ]
 
 { #category : #'code generation' }
-ASZigCPSOutput >> outputEnd: bb [
+ASZigCPSOutput >> outputMethodEnd [
 
-	skipRest ifTrue: [ ^ self ].
-	bb test = #returnTop ifTrue: [  ].
-	bb test ifNotNil: [ :else |
-		self
-			nextPutAll: '    return @call(tailCall,';
-			id: else label;
-			nextPutAll: ',.{';
-			id: self name;
-			nextPutAll: '.at(';
-			print: else number + 1;
-			nextPutAll: '), sp, process, context, selector, cache });
-' ]	.
-bb else ifNotNil: [ :else |
-		self
-			nextPutAll: '    return @call(tailCall,';
-			id: else label;
-			nextPutAll: ',.{';
-			id: self name;
-			nextPutAll: '.at(';
-			print: else number + 1;
-			nextPutAll: '), sp, process, context, selector, cache });
-' ]
+	mainStream nextPutAll: '}
+'
+]
+
+{ #category : #'code generation' }
+ASZigCPSOutput >> outputMethodLabel: bbLabel [
+
+	auxStream
+		nextPut: $&;
+		nextPutAll: bbLabel zigName;
+		nextPut: $,.
+
+]
+
+{ #category : #'code generation' }
+ASZigCPSOutput >> outputMethodStart: bbLabel [
+
+
+	self
+		nextPutAll: 'fn ';
+		id: bbLabel;
+		nextPutAll:
+			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+'.
+	currentLVal := nil.
+	lVals := Dictionary new
 ]
 
 { #category : #'code generation' }
 ASZigCPSOutput >> outputToStream [
 
-	codeGenerator cleanupAndGetPrimitive ifNotNil: [ :primitive |
-		self error ].
+	codeGenerator finalAnalysis.
 	codeGenerator unorderedBasicBlocksDo: [ :bb |
-		self
-			nextPutAll: 'fn ';
-			id: bb label;
-			nextPutAll:
-				'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-'.
-		skipRest := false.
-		currentLVal := nil.
-		lVals := Dictionary new.
-		bb visitAll: self.
-		self outputEnd: bb.
-		mainStream nextPutAll: '}    
-' ]
+		maxDepth := maxDepth max: bb maxDepth.
+		bb outputTo: self.
+ ]
+]
+
+{ #category : #'code generation' }
+ASZigCPSOutput >> putTestOpposite: test [
+
+	test = #ifTrue ifTrue: [
+		^ self
+			nextPutAll: 'if(!';
+			  rVal: #sp;
+			  nextPutAll: '.top().isFalse())@panic("non-boolean");' ].
+	self error
 ]
 
 { #category : #'local variable handling' }
@@ -118,12 +145,14 @@ ASZigCPSOutput >> rVal: aString [
 	self nextPutAll: (lVals at: aString ifAbsent: [ aString ])
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> startMethod: primitiveNumber [
+{ #category : #'local variable handling' }
+ASZigCPSOutput >> sp: anInteger [ 
+	self rVal: #sp;nextPutAll: '.at(';print: anInteger ;nextPut: $)
+]
 
-	primitiveNumber = 0
-		ifTrue: [ self putEmbedded: #verifySelector ]
-		ifFalse: [ self putPrimitive: primitiveNumber ]
+{ #category : #'code generation' }
+ASZigCPSOutput >> verifySelector [
+	self nextPutAll: 'VERIFY();'
 ]
 
 { #category : #API }
@@ -158,6 +187,18 @@ ASZigCPSOutput >> visitPopLocal: anInteger [
 	endStatement 
 ]
 
+{ #category : #API }
+ASZigCPSOutput >> visitPushLiteral: aLiteral [
+
+	self
+		lVal: #sp;
+		rVal: #sp;
+		nextPutAll: '.push(';
+		nextPutAll: aLiteral asZigLiteral;
+		nextPut: $);
+		endStatement 
+]
+
 { #category : #visiting }
 ASZigCPSOutput >> visitPushLocal: anInteger [ 
 	self lVal: #sp;
@@ -169,7 +210,7 @@ ASZigCPSOutput >> visitPushLocal: anInteger [
 ]
 
 { #category : #API }
-ASZigCPSOutput >> visitReturn [
+ASZigCPSOutput >> visitReturnTop [
 
 	self
 		lConst: #top;
@@ -182,6 +223,7 @@ ASZigCPSOutput >> visitReturn [
 		lVal: #sp;
 		rVal: #result;
 		nextPutAll: '.sp';
+		endStatement;
 		rVal: #sp;
 		nextPutAll: '.top=';
 		rVal: #top;
@@ -191,22 +233,29 @@ ASZigCPSOutput >> visitReturn [
 		nextPutAll: '.ctxt';
 		endStatement;
 		nextPutAll:
-			'return @call(tailCall, cContext.npc, .{ cContext.tpc, newSp, process, callerContext, selector, cache })';
+			'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';rVal: #sp;nextPutAll:', process, callerContext, selector, cache })';
 		endStatement;
 		flush
 ]
 
 { #category : #API }
-ASZigCPSOutput >> visitSend: aSelector doBreak: doBreak [
+ASZigCPSOutput >> visitSend: aSelector returnIndex: index [
 
 	self
-		nextPutAll: 'context.setReturn(';
-		nextPut: $);
-		endStatement ;
+		nextPutAll: 'context.setReturn(&';
+		nextPutAll: componentName;
+		nextPutAll: '.code[';
+		print: index - 1;
+		nextPutAll: '])';
+		endStatement;
 		lConst: #pc;
-		nextPutAll: 'dispatch.lookup(newSelector, .SmallInteger)';
-		endStatement ;
-		nextPutAll:     'return @call(tailCall,';
+		nextPutAll: 'dispatch.lookup(';
+		putDirectSymbol: aSelector;
+		nextPutAll: ', ';
+		sp: aSelector numArgs;
+		nextPutAll: '.classIndex)';
+		endStatement;
+		nextPutAll: 'return @call(tailCall,';
 		rVal: #pc;
 		nextPutAll: '.prim,.{';
 		rVal: #pc;
@@ -222,21 +271,19 @@ ASZigCPSOutput >> visitSend: aSelector doBreak: doBreak [
 { #category : #writing }
 ASZigCPSOutput >> writeDefinitionOn: stream [
 
-	context writeNewDeclarationFor: self on: stream.
-	stream
+	context writeNewDeclarationFor: self on: self.
+	self
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name zigName;
-		comma;
-		print: context numLocals;
-		comma;
-		print: context maxDepth;
-		nextPutAll: '+';
-		print: closureSize;
+		putSymbol: codeGenerator selector;
+		nextPut: $,;
+		print: numLocals;
+		nextPut: $,;
+		print: maxDepth;
 		nextPutAll: ',.{';
 		nextPutAll: auxStream contents;
 		nextPutAll: ' });';
-		lf;
-		nextPutAll: mainStream contents 
+		lf.
+	stream nextPutAll: mainStream contents
 ]
 
 { #category : #writing }

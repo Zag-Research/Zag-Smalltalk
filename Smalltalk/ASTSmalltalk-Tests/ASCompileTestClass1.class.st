@@ -157,6 +157,12 @@ ASCompileTestClass1 >> unaries [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> unariesPlus [
+
+	^ 23 negated abs max: 42
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> | n1 [
 	| temp |
 	temp := self | n1.

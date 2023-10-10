@@ -1,9 +1,11 @@
+"
+I contain a sequence of statements that make up, among other things, the body of a method
+"
 Class {
 	#name : #ASSequence,
 	#superclass : #Object,
 	#instVars : [
-		'sequence',
-		'zagLabel'
+		'sequence'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -11,14 +13,6 @@ Class {
 { #category : #comparing }
 ASSequence >> = other [
  ^sequence = other sequence
-]
-
-{ #category : #comparing }
-ASSequence >> acceptVisitor: aStatementVisitor [
-
-	sequence do: [ :asStatement |
-		asStatement acceptVisitor: aStatementVisitor.
-		asStatement isASSend ifTrue: [ aStatementVisitor drop ] ]
 ]
 
 { #category : #comparing }

@@ -23,8 +23,7 @@ Class {
 		'label',
 		'testing',
 		'componentName',
-		'context',
-		'breakAtCall'
+		'context'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -32,17 +31,6 @@ Class {
 { #category : #converting }
 ASTextOutput >> asString [
 	^ mainStream contents
-]
-
-{ #category : #accessing }
-ASTextOutput >> breakAtCall [
-breakAtCall := true
-]
-
-{ #category : #accessing }
-ASTextOutput >> checkBreakAtCall: aSymbol [
-
-	^ breakAtCall
 ]
 
 { #category : #printing }
@@ -73,8 +61,7 @@ ASTextOutput >> initialize [
 	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
 	label := 0.
-	testing := false.
-	breakAtCall := false
+	testing := false
 ]
 
 { #category : #printing }

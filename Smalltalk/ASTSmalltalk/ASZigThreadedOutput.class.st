@@ -31,24 +31,30 @@ ASZigThreadedOutput >> endMethod [
 ]
 
 { #category : #'code generation' }
-ASZigThreadedOutput >> outputToStream [
-
-	codeGenerator cleanupAndGetPrimitive
-		ifNil: [ self putEmbedded: #verifySelector ]
-		ifNotNil: [ :primitive | self putPrimitive: primitive ].
-	codeGenerator linearizeBasicBlocksDo: [ :bb |
-		self label: bb label.
-		bb outputTo: self ].
-	self endMethod
+ASZigThreadedOutput >> outputMethodEnd [
+	
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> popLocal: localNumber [
+{ #category : #'code generation' }
+ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 
-	self
-		putEmbedded: #popLocal;
-		print: localNumber;
-		comma
+	self label: bbLabel
+]
+
+{ #category : #'code generation' }
+ASZigThreadedOutput >> outputMethodStart: bbLabel [
+
+
+]
+
+{ #category : #'code generation' }
+ASZigThreadedOutput >> outputToStream [
+
+	codeGenerator finalAnalysis.
+	codeGenerator linearizeBasicBlocksDo: [ :bb |
+		maxDepth := maxDepth max: bb maxDepth.
+		bb outputTo: self ].
+	self endMethod
 ]
 
 { #category : #API }
@@ -64,27 +70,13 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
-{ #category : #accessing }
-ASZigThreadedOutput >> pushBlock: stackIndex [
-
-	self tab;
-	print: stackIndex;lf
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> pushContext [
-
-	self putEmbedded: #pushContext;
-	nextPutAll: '"^"';comma
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> pushLiteral: aLiteral [
+{ #category : #writing }
+ASZigThreadedOutput >> primitive: anInteger [
 
 	self
-		putEmbedded: #pushLiteral;
-		nextPutAll: aLiteral asZigLiteral;
-		comma
+		nextPutAll: '&p.p';
+		print: anInteger;
+		comma 
 ]
 
 { #category : #API }
@@ -96,29 +88,65 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 		comma
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> returnTop [
+{ #category : #'code generation' }
+ASZigThreadedOutput >> verifySelector [
 
-	self
-		putEmbedded: #returnTop
+	self putEmbedded: #verifySelector
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> send: aSelector useCall: useCall [
+ASZigThreadedOutput >> visitPopLocal: localNumber [
 
-	self putEmbedded: (useCall
-			 ifTrue: [ 'call' ]
-			 ifFalse: [ 'send' ]) , aSelector numArgs asString.
 	self
-		putSymbol: aSelector
+		putEmbedded: #popLocal;
+		print: localNumber;
+		comma
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> startMethod: primitiveNumber [
+ASZigThreadedOutput >> visitPushBlock: stackIndex [
 
-	primitiveNumber = 0
-		ifTrue: [ self putEmbedded: #verifySelector ]
-		ifFalse: [ self putPrimitive: primitiveNumber ]
+	self tab;
+	print: stackIndex;lf
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushContext [
+
+	self putEmbedded: #pushContext;
+	nextPutAll: '"^"';comma
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushLiteral: aLiteral [
+
+	self
+		putEmbedded: #pushLiteral;
+		nextPutAll: aLiteral asZigLiteral;
+		comma
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushLocal: localNumber [
+
+	self
+		putEmbedded: #pushLocal;
+		print: localNumber;
+		comma
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitReturnTop [
+
+	self putEmbedded: #returnTop
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitSend: aSelector returnIndex: index [
+
+
+	self putEmbedded: ('send' , aSelector numArgs asString) asSymbol.
+	self putSymbol: aSelector
 ]
 
 { #category : #writing }
@@ -128,12 +156,10 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 	stream
 		nextPutAll: 'compileMethod(';
 		nextPutAll: self name zigName;
-		comma;
-		print: context numLocals;
-		comma;
-		print: context maxDepth;
-		nextPutAll: '+';
-		print: closureSize;
+		nextPut: $,;
+		print: numLocals;
+		nextPut: $,;
+		print: maxDepth;
 		nextPutAll: ',.{';
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
