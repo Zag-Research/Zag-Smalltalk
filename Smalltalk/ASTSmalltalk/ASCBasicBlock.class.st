@@ -64,6 +64,17 @@ ASCBasicBlock >> doPush: anObject [
 ]
 
 { #category : #accessing }
+ASCBasicBlock >> end: anASCOperation [ 
+	end := anASCOperation
+]
+
+{ #category : #initialization }
+ASCBasicBlock >> endWithReturnTop [
+
+		end := ASCReturnTop new
+]
+
+{ #category : #accessing }
 ASCBasicBlock >> index [
 	^ index
 ]
@@ -141,9 +152,10 @@ ASCBasicBlock >> send: aSymbol with: aGenerator [
 		self doDrop.
 		numArgs := numArgs - 1 ].
 	stack top: (aGenerator eval: aSymbol params: params).
-	next := ASCReturnBlock new stack: stack.
-	end := ASCSend new selector: aSymbol;
-	       bb: next.
+	next := ASCReturnBlock new stack: stack;end: end.
+	end := ASCSend new
+		       selector: aSymbol;
+		       bb: next.
 	^ next
 ]
 

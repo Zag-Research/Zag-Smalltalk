@@ -26,3 +26,8 @@ UndefinedObject >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 
 	^ nil
 ]
+
+{ #category : #'*ASTSmalltalk' }
+UndefinedObject >> zigName [
+	^ 'Nil'
+]

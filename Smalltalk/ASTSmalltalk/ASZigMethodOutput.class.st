@@ -8,14 +8,21 @@ Class {
 		'codeGenerator',
 		'maxDepth',
 		'numLocals',
-		'depth'
+		'depth',
+		'blockNumber'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #'as yet unclassified' }
-ASZigMethodOutput class >> testing [
-	^ self subclassResponsibility
+{ #category : #compiling }
+ASZigMethodOutput >> blockClass [
+	^ self class blockClass
+]
+
+{ #category : #accessing }
+ASZigMethodOutput >> blockNumber [
+	^ blockNumber := blockNumber + 1.
+
 ]
 
 { #category : #'code generation' }
@@ -25,6 +32,16 @@ ASZigMethodOutput >> codeGenerator [
 		  codeGenerator := ASCodeGenerator new context: self.
 			codeGenerator depth: depth.
 		  codeGenerator ]
+]
+
+{ #category : #compiling }
+ASZigMethodOutput >> compileBlock: anASCBlock [
+
+	anASCBlock block = ourObject ifTrue: [ ^ self ].
+	(self blockClass new testing: testing)
+		context: context;
+		methodGenerator: self methodGenerator block: self blockNumber;
+		generateCodeFor: anASCBlock block
 ]
 
 { #category : #'code generation' }
@@ -41,7 +58,12 @@ ASZigMethodOutput >> initialize [
 
 	super initialize.
 	maxDepth := 0.
-	depth := 0
+	depth := 0.
+	blockNumber := 0
+]
+
+{ #category : #compiling }
+ASZigMethodOutput >> methodGenerator [ ^ self
 ]
 
 { #category : #'code generation' }

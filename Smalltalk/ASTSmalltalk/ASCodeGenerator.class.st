@@ -28,8 +28,9 @@ Class {
 { #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
-	blocks add: anASCBlock .
-	" also schedule as componet"
+
+	blocks add: anASCBlock.
+	context compileBlock: anASCBlock
 ]
 
 { #category : #accessing }
@@ -122,6 +123,11 @@ ASCodeGenerator >> lookupObject: anObject [
 	^ context lookupObject: anObject
 ]
 
+{ #category : #accessing }
+ASCodeGenerator >> name [
+	^ name
+]
+
 { #category : #API }
 ASCodeGenerator >> popAssign: variable [
 
@@ -142,6 +148,9 @@ ASCodeGenerator >> popLocal: aSymbol [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
+	anASBlock = context ourObject ifTrue: [
+		code endWithReturnTop.
+		^ anASBlock zigCompileBlock: self ].
 	block := ASCBlock with: anASBlock.
 	self compileBlock: block.
 	code

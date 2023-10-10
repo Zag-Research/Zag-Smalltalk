@@ -28,6 +28,12 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #printing }
+ASTextOutput class >> testing [
+
+	^ self new testing: true
+]
+
 { #category : #converting }
 ASTextOutput >> asString [
 	^ mainStream contents
@@ -47,7 +53,7 @@ ASTextOutput >> comment: aString [
 ASTextOutput >> context: anASFileContext [
 
 	context := anASFileContext.
-	anASFileContext add: self
+	anASFileContext addComponent: self
 ]
 
 { #category : #completion }
@@ -129,6 +135,7 @@ ASTextOutput >> tab [
 ]
 
 { #category : #printing }
-ASTextOutput >> testing [
-	testing := true
+ASTextOutput >> testing: aBoolean [
+
+	testing := aBoolean
 ]

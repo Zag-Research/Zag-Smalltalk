@@ -13,9 +13,8 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #printing }
-ASZigCPSOutput class >> testing [
-	^ self new testing
+{ #category : #compiling }
+ASZigCPSOutput class >> blockClass [ ^ ASZigCPSBlockOutput 
 ]
 
 { #category : #accessing }
@@ -185,6 +184,11 @@ ASZigCPSOutput >> visitPopLocal: anInteger [
 	rVal: #sp;
 	nextPutAll: '.drop()';
 	endStatement 
+]
+
+{ #category : #API }
+ASZigCPSOutput >> visitPushBlock: anUndefinedObject [ 
+	self nextPutAll: 'ABLOCK'
 ]
 
 { #category : #API }

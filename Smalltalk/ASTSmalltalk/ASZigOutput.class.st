@@ -87,6 +87,12 @@ ASZigOutput >> nextLabel [
 
 ]
 
+{ #category : #accessing }
+ASZigOutput >> ourObject [
+
+	^ ourObject 
+]
+
 { #category : #output }
 ASZigOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma

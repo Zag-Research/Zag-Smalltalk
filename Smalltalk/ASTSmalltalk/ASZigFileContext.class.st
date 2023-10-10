@@ -19,10 +19,10 @@ Class {
 }
 
 { #category : #components }
-ASZigFileContext >> add: aGenerator [
+ASZigFileContext >> addComponent: aGenerator [
 
 	pendingComponents add: aGenerator.
-	components add: aGenerator 
+	components add: aGenerator
 ]
 
 { #category : #testing }

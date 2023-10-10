@@ -7,11 +7,6 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #printing }
-ASZigThreadedOutput class >> testing [
-	^ self new testing
-]
-
 { #category : #API }
 ASZigThreadedOutput >> branch: command to: target [
 	command = #br ifTrue: [ 

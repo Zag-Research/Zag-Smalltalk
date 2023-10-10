@@ -62,6 +62,7 @@ ASZigCPSOutputTest >> testZig_simpleBlock [
 		          context: file;
 		          generateCodeFor: ast.
 	self assert: output name equals: 'MsimpleBlock'.
+	file asString inspect.
 	self
 		assert: output asString
 		equals:

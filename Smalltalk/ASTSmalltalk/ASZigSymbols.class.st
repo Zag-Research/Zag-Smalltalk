@@ -58,7 +58,7 @@ ASZigSymbols >> printable: aSymbol [
 ASZigSymbols >> writeDefinitionOn: stream [
 
 	| syms n |
-	syms := runtimeDefined asSortedCollection.
+	syms := runtimeDefined "asSortedCollection".
 	stream nextPutAll: 'const Sym = struct {
 '.
 	syms do: [ :sym |
@@ -74,7 +74,7 @@ ASZigSymbols >> writeDefinitionOn: stream [
 		stream
 			tab;
 			nextPut: $";
-			nextPutAll: sym;
+			nextPutAll: (sym ifNil: ['*Nil*']);
 			nextPutAll: '",
 ' ].
 	"     ""foo:bar:"","

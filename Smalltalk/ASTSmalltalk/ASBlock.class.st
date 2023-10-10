@@ -98,77 +98,12 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 	^ aCompiler sent: aSymbol toBlock: self
 ]
 
-{ #category : #writing }
-ASBlock >> write: codeGenerator with: syms [
+{ #category : #codegen }
+ASBlock >> zigCompileBlock: aGenerator [
 
-	| stackVariables selector | "no idea where selector comes from "
-	stackVariables := self buildStack.
-
-
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	codeGenerator pushNamespace: selector asSymbol asZigString.
-
-	selector := codeGenerator symbolOrVirtual:
-		            selector asSymbol asZigString.
-	codeGenerator
-		emitMethod: selector
-		numLocals: locals size
-		stackSize: self maxDepth
-		closureSize: 0.
-
-	codeGenerator emitVerifySelector.
-
-	"create dummy context"
-	codeGenerator pushContext.
-
-	self
-		writeBody: syms
-		stackVars: stackVariables
-		codeGenerator: codeGenerator
-		blocks: (ASBlockVisitor selector: nil).
-
-	codeGenerator returnTop.
-	codeGenerator pushClose
-]
-
-{ #category : #writing }
-ASBlock >> writeBlock: aStream with: syms [
-
-	| stackVariables |
-	stackVariables := self buildStack.
-
-	aStream cr.
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << self selector asZigString << ' ='.
-	aStream cr.
-	aStream tab.
-	aStream << 'compileMethod(' << (syms
-		 at: self selector zigName
-		 ifPresent: [ :value | value ]
-		 ifAbsentPut: [ syms virutalName ]) << ',' << locals size asString
-	<< ',' << self maxDepth asString << ',.{'.
-	aStream cr.
-
-	aStream tab.
-	aStream << '&e.verifySelector,'.
-	aStream cr.
-
-	"create dummy context"
-	aStream tab.
-	aStream << '&e.pushContext,"^",'.
-	aStream cr.
-
-	self
-		writeBody: syms
-		stackVars: stackVariables
-		writer: aStream
-		blocks: (ASBlockVisitor selector: nil).
-
-	aStream tab.
-	aStream << '&e.returnTop,'.
-	aStream cr. "should this be hardcoded?"
-	aStream << '});'.
-	aStream cr
+	aGenerator selector: aGenerator name.
+	aGenerator locals: (locals collect: #name) arguments: arguments.
+	body zigCompileMethod: aGenerator
 ]
 
 { #category : #codegen }
