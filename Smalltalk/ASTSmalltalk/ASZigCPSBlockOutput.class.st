@@ -23,9 +23,10 @@ ASZigCPSBlockOutput >> methodGenerator [
 ]
 
 { #category : #accessing }
-ASZigCPSBlockOutput >> methodGenerator: anASZigCPSOutput block: anInteger [ 
-	methodGenerator := anASZigCPSOutput. block := anInteger 
+ASZigCPSBlockOutput >> methodGenerator: anOutput block: anInteger [
 
+	methodGenerator := anOutput.
+	block := anInteger
 ]
 
 { #category : #accessing }

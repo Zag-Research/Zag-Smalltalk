@@ -49,7 +49,7 @@ ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	ourObject zigCompileMethod: self codeGenerator.
+	ourObject zigWalk: self codeGenerator.
 	self outputToStream
 ]
 
@@ -135,6 +135,12 @@ ASZigMethodOutput >> visitPushLiteral: aLiteral [
 ASZigMethodOutput >> visitPushLocal: localNumber [
 
 	^ self subclassResponsibility
+]
+
+{ #category : #API }
+ASZigMethodOutput >> visitPushSelf: anASCSelf [
+
+	self subclassResponsibility 
 ]
 
 { #category : #API }

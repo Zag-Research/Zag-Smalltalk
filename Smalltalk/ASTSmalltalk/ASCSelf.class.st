@@ -11,3 +11,8 @@ Class {
 ASCSelf >> name [ 
 	^ #self
 ]
+
+{ #category : #'code generation' }
+ASCSelf >> outputTo: anOutput [ 
+	anOutput visitPushSelf: self
+]

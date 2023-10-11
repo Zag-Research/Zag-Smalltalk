@@ -18,3 +18,16 @@ ASSuper class >> method: aMethod superclass: aClass [
 
 	^ self new method: aMethod; superclass: aClass
 ]
+
+{ #category : #compiling }
+ASSuper >> zigWalk: aGenerator [
+
+	self error
+]
+
+{ #category : #compiling }
+ASSuper >> zigWalkTarget: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ #super
+]

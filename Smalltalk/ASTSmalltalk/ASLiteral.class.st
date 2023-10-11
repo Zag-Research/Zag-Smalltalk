@@ -74,7 +74,8 @@ ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 	^ aCompiler sent: aSymbol toLiteral: literal
 ]
 
-{ #category : #codegen }
-ASLiteral >> zigCompileMethod: aGenerator [ 
-	aGenerator pushLiteral: literal 
+{ #category : #compiling }
+ASLiteral >> zigWalk: aGenerator [
+
+	^ aGenerator pushLiteral: literal
 ]

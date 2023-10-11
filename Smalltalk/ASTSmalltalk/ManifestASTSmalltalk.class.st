@@ -64,7 +64,7 @@ ManifestASTSmalltalk class >> ruleStringConcatenationRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T12:35:33.094018-04:00') #(#(#RGMethodDefinition #(#ASMethodNode #zigCompileMethod: #false)) #'2023-10-09T20:35:17.831877-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImage #include:object: #false)) #'2021-03-28T12:35:33.094018-04:00') #(#(#RGMethodDefinition #(#ASMethodNode #zigWalk: #false)) #'2023-10-09T20:35:17.831877-04:00') )
 ]
 
 { #category : #'code-critics' }
@@ -86,8 +86,5 @@ ManifestASTSmalltalk class >> ruleUtilityMethodsRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleWhileTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( 
-	     #( #( #RGMethodDefinition #( #ASCBasicBlock #send:with:
-	              #false ) )
-	        #'2023-10-08T21:11:13.372871-04:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#ASCBasicBlock #send:with: #false)) #'2023-10-08T21:11:13.372871-04:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #send:with:target:tail: #false)) #'2023-10-11T16:50:50.787269-04:00') )
 ]

@@ -153,9 +153,10 @@ ASZigCPSOutput >> sp: anInteger [
 ASZigCPSOutput >> verifySelector: aSymbol [
 
 	self
-		nextPutAll: 'VERIFY(';
-		putDirectSymbol: aSymbol ;
-		nextPutAll: ')';
+		nextPutAll: 'if(!';
+		putDirectSymbol: aSymbol;
+		nextPutAll:
+			'.hashEquals(selector))return @call(tailCall,dnu,.{pc,sp,process,context,selector,cache})';
 		endStatement
 ]
 
@@ -216,6 +217,18 @@ ASZigCPSOutput >> visitPushLocal: anInteger [
 	print: anInteger;
 	nextPutAll: '))';
 	endStatement 
+]
+
+{ #category : #API }
+ASZigCPSOutput >> visitPushSelf: anASCSelf [
+
+	self
+		lVal: #sp;
+		rVal: #sp;
+		nextPutAll: '.push(';
+		rVal: #context;
+		nextPutAll: '.self())';
+		endStatement
 ]
 
 { #category : #API }

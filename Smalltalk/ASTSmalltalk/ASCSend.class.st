@@ -7,7 +7,9 @@ Class {
 	#instVars : [
 		'selector',
 		'useCall',
-		'bb'
+		'bb',
+		'target',
+		'tailCall'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -30,9 +32,24 @@ ASCSend >> outputTo: anOutput [
 
 ]
 
+{ #category : #handling }
+ASCSend >> return: aBasicBlock [ 
+	bb := aBasicBlock 
+]
+
 { #category : #accessing }
 ASCSend >> selector: aString [ 
 	selector := aString
+]
+
+{ #category : #'accessing - structure variables' }
+ASCSend >> tail: aBoolean [ 
+	tailCall := aBoolean 
+]
+
+{ #category : #accessing }
+ASCSend >> target: possiblyASymbol [
+	target := possiblyASymbol 
 ]
 
 { #category : #accessing }

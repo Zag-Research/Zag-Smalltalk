@@ -56,8 +56,8 @@ ASRef >> variable: aSymbol [
 	variable := aSymbol
 ]
 
-{ #category : #codegen }
-ASRef >> zigCompileMethod: aGenerator [
+{ #category : #compiling }
+ASRef >> zigWalk: aGenerator [
 
-	aGenerator pushVariable: variable
+	^ aGenerator pushVariable: variable
 ]

@@ -7,6 +7,11 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #compiling }
+ASZigThreadedOutput class >> blockClass [
+	^ ASZigThreadedBlockOutput
+]
+
 { #category : #API }
 ASZigThreadedOutput >> branch: command to: target [
 	command = #br ifTrue: [ 

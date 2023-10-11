@@ -76,9 +76,9 @@ ASAssign >> variable: v expression: e [
 	expression := e
 ]
 
-{ #category : #codegen }
-ASAssign >> zigCompileMethod: aGenerator [
+{ #category : #compiling }
+ASAssign >> zigWalk: aGenerator [
 
-	expression zigCompileMethod: aGenerator.
-	aGenerator popAssign: variable
+	expression zigWalk: aGenerator.
+	^ aGenerator popAssign: variable
 ]

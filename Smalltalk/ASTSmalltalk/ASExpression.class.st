@@ -21,3 +21,20 @@ ASExpression >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
 ]
+
+{ #category : #compiling }
+ASExpression >> zigWalk: aGenerator [
+
+	self subclassResponsibility 
+]
+
+{ #category : #compiling }
+ASExpression >> zigWalkForReturn: aGenerator [
+	^ self zigWalk: aGenerator
+]
+
+{ #category : #compiling }
+ASExpression >> zigWalkTarget: aGenerator [ 
+	self zigWalk: aGenerator.
+	^ nil
+]

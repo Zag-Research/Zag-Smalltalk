@@ -98,3 +98,16 @@ ASSelf >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toSelf: self
 ]
+
+{ #category : #compiling }
+ASSelf >> zigWalk: anASCodeGenerator [
+
+	^ anASCodeGenerator pushSelf
+]
+
+{ #category : #compiling }
+ASSelf >> zigWalkTarget: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ #self
+]

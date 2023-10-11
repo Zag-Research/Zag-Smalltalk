@@ -141,20 +141,24 @@ ASCBasicBlock >> returnTop [
 ]
 
 { #category : #'abstract interpretation' }
-ASCBasicBlock >> send: aSymbol with: aGenerator [
+ASCBasicBlock >> send: aSymbol with: aGenerator target: aTarget tail: tailCall [
 
-	| numArgs params |
+	| numArgs params target |
 	numArgs := aSymbol numArgs.
 	params := Array new: numArgs.
+	target := aTarget isSymbol ifTrue: [ aTarget ] ifFalse: [ nil ].
 	[ numArgs > 0 ] whileTrue: [
 		params at: numArgs put: stack top.
 		self doDrop.
 		numArgs := numArgs - 1 ].
 	stack top: (aGenerator eval: aSymbol params: params).
-	next := ASCReturnBlock new stack: stack;end: end.
+	next := ASCReturnBlock new
+		        stack: stack;
+		        end: end.
 	end := ASCSend new
 		       selector: aSymbol;
-		       bb: next.
+		       return: next;
+		target: target; tail: tailCall.
 	^ next
 ]
 

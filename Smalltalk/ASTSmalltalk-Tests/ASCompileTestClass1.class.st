@@ -64,6 +64,13 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> fib2: anInt [
+
+	anInt < 2 ifTrue: [ ^ 1 ].
+	^ (self fib2: anInt - 1) + self fib2: anInt - 2
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> fib: anInt [
 	^ anInt < 2
 		ifTrue: [1] 

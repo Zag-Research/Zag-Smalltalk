@@ -112,10 +112,20 @@ ASSend >> target: expression [
 	target := expression
 ]
 
-{ #category : #codegen }
-ASSend >> zigCompileMethod: aGenerator [
+{ #category : #compiling }
+ASSend >> zigWalk: aGenerator [
 
-	target zigCompileMethod: aGenerator.
-	args do: [:arg| arg zigCompileMethod: aGenerator].
-	aGenerator send: selector 
+	| myTarget |
+	myTarget := target zigWalkTarget: aGenerator.
+	args do: [ :arg | arg zigWalk: aGenerator ].
+	^ aGenerator send: selector target: myTarget
+]
+
+{ #category : #compiling }
+ASSend >> zigWalkForReturn: aGenerator [
+
+	| myTarget |
+	myTarget := target zigWalkTarget: aGenerator.
+	args do: [ :arg | arg zigWalk: aGenerator ].
+	^ aGenerator sendTail: selector target: myTarget
 ]

@@ -184,6 +184,16 @@ ASCodeGenerator >> pushLocal: aSymbol [
 ]
 
 { #category : #API }
+ASCodeGenerator >> pushSelf [
+
+		| value |
+	value := ASCSelf new.
+	code
+		doPush: value;
+		put: value
+]
+
+{ #category : #API }
 ASCodeGenerator >> pushVariable: variable [
 
 	self pushLocal: variable 
@@ -217,9 +227,20 @@ ASCodeGenerator >> selector: aSymbol [
 ]
 
 { #category : #API }
-ASCodeGenerator >> send: aSymbol [
+ASCodeGenerator >> send: aSymbol target: aTarget [
 
-	code := (code send: aSymbol with: self).
+	code := code send: aSymbol with: self target: aTarget tail: false.
+	basicBlocks add: code
+]
+
+{ #category : #API }
+ASCodeGenerator >> sendTail: aSymbol target: aTarget [
+
+	code := code
+		        send: aSymbol
+		        with: self
+		        target: aTarget
+		        tail: true.
 	basicBlocks add: code
 ]
 

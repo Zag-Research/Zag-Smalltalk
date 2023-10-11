@@ -268,7 +268,7 @@ ASMethodNode >> writeMethod: aStream with: syms [
 ]
 
 { #category : #codegen }
-ASMethodNode >> zigCompileMethod: aGenerator [
+ASMethodNode >> zigWalk: aGenerator [
 
 	| primitive |
 	aGenerator locals: (locals collect: #name) arguments: arguments.
@@ -276,5 +276,5 @@ ASMethodNode >> zigCompileMethod: aGenerator [
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].
 	aGenerator startMethod: primitive selector: selector.
-	body zigCompileMethod: aGenerator
+	^ body zigWalk: aGenerator
 ]

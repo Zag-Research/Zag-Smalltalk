@@ -116,13 +116,7 @@ ASBlock >> zigCompileBlock: aGenerator [
 		            asSymbol.
 	aGenerator startMethod: nil selector: selector.
 	aGenerator locals: (locals collect: #name) arguments: arguments.
-	body zigCompileMethod: aGenerator
-]
-
-{ #category : #codegen }
-ASBlock >> zigCompileMethod: aGenerator [
-
-	aGenerator pushBlock: self
+	body zigWalk: aGenerator
 ]
 
 { #category : #building }
@@ -155,4 +149,10 @@ ASBlock >> zigPushBlockString: syms and: stackVariables [
 		^ self zigNonLocalBlockString: stackVariables ].
 
 	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
+]
+
+{ #category : #codegen }
+ASBlock >> zigWalk: aGenerator [
+
+	^ aGenerator pushBlock: self
 ]

@@ -67,7 +67,8 @@ ASReturn >> printOn: s [
 ]
 
 { #category : #codegen }
-ASReturn >> zigCompileMethod: aGenerator [ 
-	expression zigCompileMethod: aGenerator.
-	aGenerator returnTop 
+ASReturn >> zigWalk: aGenerator [
+
+	expression zigWalkForReturn: aGenerator.
+	^ aGenerator returnTop
 ]
