@@ -37,3 +37,8 @@ ASCMethodBlock >> primitive: anInteger selector: aSymbol [
 	primitive := anInteger.
 	selector := aSymbol
 ]
+
+{ #category : #accessing }
+ASCMethodBlock >> selector: aString [ 
+	selector := aString
+]

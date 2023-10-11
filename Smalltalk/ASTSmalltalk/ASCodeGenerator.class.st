@@ -213,7 +213,7 @@ ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
 	name := context name.
-	code selector
+	code selector: aSymbol 
 ]
 
 { #category : #API }
