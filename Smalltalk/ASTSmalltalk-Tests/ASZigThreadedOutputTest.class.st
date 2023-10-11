@@ -79,7 +79,7 @@ ASZigThreadedOutputTest >> testZig_prim [
 ASZigThreadedOutputTest >> testZig_pushDrop [
 
 	| output |
-	output := ASZigThreadedOutput new testing.
+	output := ASZigThreadedOutput  testing.
 	output visitDrop.
 
 	self assert: output asString equals: '&e.drop,'
@@ -99,7 +99,7 @@ ASZigThreadedOutputTest >> testZig_pushLabel [
 ASZigThreadedOutputTest >> testZig_pushLiteral [
 
 	| output |
-	output := ASZigThreadedOutput new testing.
+	output := ASZigThreadedOutput  testing.
 	output visitPushLiteral: 10.
 
 	self
@@ -112,7 +112,7 @@ ASZigThreadedOutputTest >> testZig_pushLocal [
 
 	| output selfIndex |
 	selfIndex := 5.
-	output := ASZigThreadedOutput new testing.
+	output := ASZigThreadedOutput  testing.
 	output codeGenerator locals: #( foo bar ) arguments: #( blat fubar ).
 	output visitPushLocal: #self.
 
@@ -125,7 +125,7 @@ ASZigThreadedOutputTest >> testZig_pushLocal [
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
 	| output |
-	output := ASZigThreadedOutput new testing.
+	output := ASZigThreadedOutput testing.
 	output visitReturnTop.
 
 	self assert: output asString equals: '&e.returnTop,'

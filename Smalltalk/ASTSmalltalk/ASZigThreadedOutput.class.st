@@ -139,9 +139,9 @@ ASZigThreadedOutput >> visitReturnTop [
 { #category : #API }
 ASZigThreadedOutput >> visitSend: aSelector returnIndex: index [
 
-
-	self putEmbedded: ('send' , aSelector numArgs asString) asSymbol.
-	self putSymbol: aSelector
+	self putEmbedded: ('send' , aSelector numArgs asString) asSymbol;
+ putSymbol: aSelector;
+comma
 ]
 
 { #category : #writing }
