@@ -70,6 +70,12 @@ ASBlock >> isNonLocalReturn [
 	^ body isNonLocalReturn
 ]
 
+{ #category : #testing }
+ASBlock >> isNonLocalThunk [
+
+	^ body isNonLocalThunk 
+]
+
 { #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size

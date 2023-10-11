@@ -211,7 +211,9 @@ ASCodeGenerator >> selector [
 { #category : #accessing }
 ASCodeGenerator >> selector: aSymbol [
 
-	selector := aSymbol. 	name := context name
+	selector := aSymbol.
+	name := context name.
+	code selector
 ]
 
 { #category : #API }

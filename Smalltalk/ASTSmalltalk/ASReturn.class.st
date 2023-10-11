@@ -44,6 +44,11 @@ ASReturn >> expression: anASNode [
 ]
 
 { #category : #testing }
+ASReturn >> isNonLocalThunk [
+	^ expression isNonLocalThunkable
+]
+
+{ #category : #testing }
 ASReturn >> isReturn [
 	^ true
 ]

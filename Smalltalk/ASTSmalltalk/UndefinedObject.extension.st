@@ -11,6 +11,10 @@ UndefinedObject >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+UndefinedObject >> isNonLocalThunkable [ ^ true
+]
+
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> threadFormatOn: threadPrinter [
 
 	

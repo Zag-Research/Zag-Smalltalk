@@ -27,16 +27,22 @@ sequence := OrderedCollection new.
 ]
 
 { #category : #comparing }
+ASSequence >> isImmediateThunk [
+
+	^ sequence size == 1 and: [ sequence first isImmediateThunk ]
+]
+
+{ #category : #comparing }
 ASSequence >> isNonLocalReturn [
-	sequence size == 1 ifTrue: [
-		| returnStmt |
-		returnStmt := sequence at: 1.
-		returnStmt isReturn ifTrue: [
-			| expression |
-			expression := returnStmt expression.
-			expression isASLiteral ifTrue: [ ^ expression isSimple ].
-			expression isASSelf ifTrue: [ ^ true ] ] ].
-	^ false
+
+	^ sequence size == 1 and: [
+sequence first isNonLocalReturn ]
+]
+
+{ #category : #testing }
+ASSequence >> isNonLocalThunk [
+
+	^ sequence size == 1 and: [ sequence first isNonLocalThunk ]
 ]
 
 { #category : #comparing }

@@ -17,6 +17,11 @@ ASArg >> isASArg [
 	^true
 ]
 
+{ #category : #testing }
+ASArg >> isImmediateThunk [
+^ true
+]
+
 { #category : #compiling }
 ASArg >> lookup: aGenerator [ 
 	^ aGenerator lookupLocal: self
