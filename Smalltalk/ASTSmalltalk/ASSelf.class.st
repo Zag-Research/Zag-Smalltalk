@@ -49,6 +49,17 @@ ASSelf >> isASSelf [
 	^true
 ]
 
+{ #category : #testing }
+ASSelf >> isImmediateThunk [
+^ true
+]
+
+{ #category : #testing }
+ASSelf >> isNonLocalThunkable [
+
+	^ true
+]
+
 { #category : #accessing }
 ASSelf >> method [
 

@@ -15,9 +15,9 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'test',
-		'else',
-		'then'
+		'index',
+		'end',
+		'next'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -25,13 +25,6 @@ Class {
 { #category : #adding }
 ASCBasicBlock >> addTo: aCollection [ 
 	self shouldBeImplemented.
-]
-
-{ #category : #break }
-ASCBasicBlock >> break [
-
-	else := self class new stack: stack .
-	^ else
 ]
 
 { #category : #stackAccessHelpers }
@@ -71,54 +64,27 @@ ASCBasicBlock >> doPush: anObject [
 ]
 
 { #category : #accessing }
-ASCBasicBlock >> else [
-	^ else
+ASCBasicBlock >> end: anASCOperation [ 
+	end := anASCOperation
 ]
 
 { #category : #initialization }
-ASCBasicBlock >> else: anInteger [
+ASCBasicBlock >> endWithReturnTop [
 
-	else := anInteger
+		end := ASCReturnTop new
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> ifFalseGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifFalse:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifNilGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifNil:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifNotNilGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifNotNil:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifTrueGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifTrue:
+{ #category : #accessing }
+ASCBasicBlock >> index [
+	^ index
 ]
 
 { #category : #initialization }
 ASCBasicBlock >> initialize [
 
 	super initialize.
-	operations := OrderedCollection new
-]
-
-{ #category : #wriiting }
-ASCBasicBlock >> isUnfinished [
-	^ test ifNil: [ else isNil ] ifNotNil: [ false ]
+	operations := OrderedCollection new.
+	end := ASCReturnSelf new 
 ]
 
 { #category : #initialization }
@@ -127,17 +93,39 @@ ASCBasicBlock >> label [
 ]
 
 { #category : #initialization }
-ASCBasicBlock >> label: anObject [
+ASCBasicBlock >> label: aString index: anInteger [
 
-	label := anObject
+	label := aString .
+	index := anInteger 
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> maxDepth [
+	^ maxDepth
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> next [
+	^ next
+]
+
+{ #category : #wriiting }
+ASCBasicBlock >> outputRestTo: output [
+
+	operations do: [ :operation | operation outputTo: output ].
+	end outputTo: output.
+	output outputMethodEnd
 ]
 
 { #category : #wriiting }
 ASCBasicBlock >> outputTo: output [
 
-	operations do: [ :operation | operation outputTo: output ].
-	test ifNotNil: [ :t | output branch: t to: then ].
-	else ifNotNil: [ output branch: #br to: else ]
+	self subclassResponsibility 
+]
+
+{ #category : #API }
+ASCBasicBlock >> popLocal: anASCLocal [ 
+	self shouldBeImplemented.
 ]
 
 { #category : #initialization }
@@ -147,8 +135,27 @@ ASCBasicBlock >> put: anObject [
 
 { #category : #initialization }
 ASCBasicBlock >> returnTop [
+		self doDrop.
+		end := ASCReturnTop new
 
-	test := #returnTop
+]
+
+{ #category : #'abstract interpretation' }
+ASCBasicBlock >> send: aSymbol with: aGenerator [
+
+	| numArgs params |
+	numArgs := aSymbol numArgs.
+	params := Array new: numArgs.
+	[ numArgs > 0 ] whileTrue: [
+		params at: numArgs put: stack top.
+		self doDrop.
+		numArgs := numArgs - 1 ].
+	stack top: (aGenerator eval: aSymbol params: params).
+	next := ASCReturnBlock new stack: stack;end: end.
+	end := ASCSend new
+		       selector: aSymbol;
+		       bb: next.
+	^ next
 ]
 
 { #category : #accessing }
@@ -158,14 +165,7 @@ ASCBasicBlock >> stack: anASStack [
 	maxDepth := stack depth
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> then: anInteger [
-
-	else := anInteger.
-
-]
-
-{ #category : #visiting }
-ASCBasicBlock >> visitAll: aVisitor [
-	operations do: [ : operation | operation zigAccept: aVisitor ]
+{ #category : #accessing }
+ASCBasicBlock >> top [
+	^ stack top
 ]

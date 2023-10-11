@@ -20,7 +20,7 @@ ASCLocal >> isMutable [
 { #category : #'state tracking' }
 ASCLocal >> store: anObject at: depth [
 
-	modMin := depth min: modMin.
-	modMax := depth max: modMax.
+	modMin := modMin ifNil: [ depth ] ifNotNil: [depth min: modMin].
+	modMax := modMax ifNil: [ depth ] ifNotNil: [depth min: modMax].
 	^ self store: anObject
 ]

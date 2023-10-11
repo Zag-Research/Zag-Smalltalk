@@ -70,6 +70,11 @@ ASStatement >> isASVariable [
 ]
 
 { #category : #testing }
+ASStatement >> isImmediateThunk [
+^ false
+]
+
+{ #category : #testing }
 ASStatement >> isReturn [
 	^false
 ]

@@ -19,16 +19,21 @@ Class {
 }
 
 { #category : #components }
-ASZigFileContext >> add: aGenerator [
+ASZigFileContext >> addComponent: aGenerator [
 
 	pendingComponents add: aGenerator.
-	components add: aGenerator 
+	components add: aGenerator
 ]
 
 { #category : #testing }
 ASZigFileContext >> addSymbol: aSymbol [
 
 	symbols add: aSymbol
+]
+
+{ #category : #converting }
+ASZigFileContext >> asString [
+^ String streamContents: [ :s | self outputTo: s ]
 ]
 
 { #category : #register }
@@ -84,8 +89,8 @@ ASZigFileContext >> outputTo: stream [
 
 	self processComponents.
 	self writeHeaderOn: stream.
-	symbols writeDefinitionOn: stream.
 	components do: [ :each | each writeDefinitionOn: stream ].
+	symbols writeDefinitionOn: stream.
 	self writeInitSmalltalkPrefixOn: stream.
 	symbols writeInitializationOn: stream.
 	components do: [ :each | each writeInitializationOn: stream ].
@@ -158,8 +163,6 @@ ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 ASZigFileContext >> writeInitSmalltalkSuffixOn: stream [
 
 	stream nextPutAll: '}
-pub fn main() !void {
-    initSmalltalk();
 '
 ]
 
@@ -185,7 +188,7 @@ ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
-		nextPutAll: label;
+		nextPutAll: label zigName;
 		nextPutAll: ' = '.
 	^ label
 ]

@@ -1,9 +1,11 @@
+"
+I contain a sequence of statements that make up, among other things, the body of a method
+"
 Class {
 	#name : #ASSequence,
 	#superclass : #Object,
 	#instVars : [
-		'sequence',
-		'zagLabel'
+		'sequence'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -11,14 +13,6 @@ Class {
 { #category : #comparing }
 ASSequence >> = other [
  ^sequence = other sequence
-]
-
-{ #category : #comparing }
-ASSequence >> acceptVisitor: aStatementVisitor [
-
-	sequence do: [ :asStatement |
-		asStatement acceptVisitor: aStatementVisitor.
-		asStatement isASSend ifTrue: [ aStatementVisitor drop ] ]
 ]
 
 { #category : #comparing }
@@ -33,16 +27,22 @@ sequence := OrderedCollection new.
 ]
 
 { #category : #comparing }
+ASSequence >> isImmediateThunk [
+
+	^ sequence size == 1 and: [ sequence first isImmediateThunk ]
+]
+
+{ #category : #comparing }
 ASSequence >> isNonLocalReturn [
-	sequence size == 1 ifTrue: [
-		| returnStmt |
-		returnStmt := sequence at: 1.
-		returnStmt isReturn ifTrue: [
-			| expression |
-			expression := returnStmt expression.
-			expression isASLiteral ifTrue: [ ^ expression isSimple ].
-			expression isASSelf ifTrue: [ ^ true ] ] ].
-	^ false
+
+	^ sequence size == 1 and: [
+sequence first isNonLocalReturn ]
+]
+
+{ #category : #testing }
+ASSequence >> isNonLocalThunk [
+
+	^ sequence size == 1 and: [ sequence first isNonLocalThunk ]
 ]
 
 { #category : #comparing }

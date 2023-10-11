@@ -16,8 +16,6 @@ Class {
 		'context',
 		'selector',
 		'code',
-		'firstBlock',
-		'primitive',
 		'basicBlocks',
 		'blocks',
 		'name',
@@ -28,26 +26,11 @@ Class {
 }
 
 { #category : #API }
-ASCodeGenerator >> break [
-
-	code := code break.
-	basicBlocks add: code.
-]
-
-{ #category : #linearize }
-ASCodeGenerator >> cleanupAndGetPrimitive [
-
-	self finalAnalysis.
-	^ primitive = 0
-		  ifTrue: [ nil ]
-		  ifFalse: [ primitive ]
-]
-
-{ #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
-	blocks add: anASCBlock .
-	" also schedule as componet"
+
+	blocks add: anASCBlock.
+	context compileBlock: anASCBlock
 ]
 
 { #category : #accessing }
@@ -57,26 +40,42 @@ ASCodeGenerator >> context: anASFileContext [
 
 ]
 
+{ #category : #accessing }
+ASCodeGenerator >> depth: anInteger [ 
+	depth := anInteger
+]
+
 { #category : #API }
 ASCodeGenerator >> drop [
 
 	code drop; put: #drop
 ]
 
+{ #category : #evaluating }
+ASCodeGenerator >> eval: aString params: aCollection [
+
+	^ ASCLiteralValue new init: Object new
+]
+
 { #category : #linearize }
 ASCodeGenerator >> finalAnalysis [
 
-	basicBlocks doWithIndex: [ :bb : idx |
-		bb label: (String streamContents: [:s| s nextPutAll: name;nextPut: $:;print: idx]).
-		bb isUnfinished ifTrue: [ bb put: #returnSelf ] ]
+	basicBlocks doWithIndex: [ :bb :idx |
+		bb
+			label: (String streamContents: [ :s |
+					 s
+						 nextPutAll: name;
+						 nextPut: $:;
+						 print: idx ])
+			index: idx.
+		]
 ]
 
 { #category : #initialization }
 ASCodeGenerator >> initialize [
 
 	super initialize.
-	firstBlock := code := ASCBasicBlock new.
-	code stack: ASStack new.
+	code := ASCMethodBlock new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blocks := OrderedCollection new.
@@ -91,18 +90,12 @@ ASCodeGenerator >> linearizeBasicBlocksDo: aBlock [
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
 		aBlock value: current.
-		current else
+		current next
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
 				current := rest atRandom ifNil: [ ^ self ] ]
 			ifNotNil: [ :next | current := next ].
 		rest remove: current ].
-]
-
-{ #category : #'local field support' }
-ASCodeGenerator >> local: aString [
-
-	^ Object new
 ]
 
 { #category : #accessing }
@@ -117,16 +110,28 @@ ASCodeGenerator >> locals: locals arguments: arguments [
 			(ASCLocal name: each offset: index + arguments size) ]
 ]
 
+{ #category : #compiling }
+ASCodeGenerator >> lookupLocal: aSymbol [
+
+	^	localVariables detect: [ :variable |
+		aSymbol = variable name ]
+]
+
 { #category : #accessing }
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ context lookupObject: anObject
 ]
 
+{ #category : #accessing }
+ASCodeGenerator >> name [
+	^ name
+]
+
 { #category : #API }
 ASCodeGenerator >> popAssign: variable [
 
-	self popLocal: variable 
+	self popLocal: (variable lookup: self)
 ]
 
 { #category : #API }
@@ -135,7 +140,7 @@ ASCodeGenerator >> popLocal: aSymbol [
 	code
 		put:
 			(ASCPopLocal with:
-					 ((localVariables at: aSymbol name) store: code top at: depth));
+					 ((localVariables at: aSymbol offset+1) store: code top at: depth));
 		doDrop
 ]
 
@@ -143,6 +148,9 @@ ASCodeGenerator >> popLocal: aSymbol [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
+	anASBlock = context ourObject ifTrue: [
+		code endWithReturnTop.
+		^ anASBlock zigCompileBlock: self ].
 	block := ASCBlock with: anASBlock.
 	self compileBlock: block.
 	code
@@ -159,16 +167,20 @@ ASCodeGenerator >> pushContext [
 { #category : #API }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
+| value |
+value:= ASCLiteral with: aLiteral.
 	code
-		doPush: aLiteral;		put: (ASCLiteral with: aLiteral)
+		doPush: value;		put: value
 ]
 
 { #category : #API }
 ASCodeGenerator >> pushLocal: aSymbol [
 
+	| local |
+	local := aSymbol lookup: self.
 	code
-		doPush: (self local: aSymbol);
-		put: (ASCPushLocal with: ((localVariables at: aSymbol name) ref))
+		doPush: local;
+		put: (ASCPushLocal with: (local referencedAt:  depth))
 ]
 
 { #category : #API }
@@ -187,7 +199,6 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 ASCodeGenerator >> returnTop [
 
 	code
-		doDrop;
 		returnTop
 ]
 
@@ -200,23 +211,23 @@ ASCodeGenerator >> selector [
 { #category : #accessing }
 ASCodeGenerator >> selector: aSymbol [
 
-	selector := aSymbol. 	name := context name
+	selector := aSymbol.
+	name := context name.
+	code selector: aSymbol 
 ]
 
 { #category : #API }
 ASCodeGenerator >> send: aSymbol [
 
-	| doBreak |
-	doBreak := context checkBreakAtCall: aSymbol.
-	code
-		doDrop: aSymbol numArgs;
-		put: (ASCSend with: aSymbol and: doBreak).
-	doBreak ifTrue: [ self break ]
+	code := (code send: aSymbol with: self).
+	basicBlocks add: code
 ]
 
 { #category : #API }
-ASCodeGenerator >> startMethod: primitiveNumber [
-	primitive := primitiveNumber 
+ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
+
+	self selector: aSymbol.
+	code primitive: primitiveNumber selector: aSymbol 
 ]
 
 { #category : #enumerating }

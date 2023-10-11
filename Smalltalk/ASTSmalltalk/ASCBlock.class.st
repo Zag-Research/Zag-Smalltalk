@@ -11,10 +11,15 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #accessing }
+ASCBlock >> block [
+	^ block
+]
+
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 
-	output pushBlock: compiledBlock
+	output visitPushBlock: compiledBlock
 ]
 
 { #category : #'instance creation' }

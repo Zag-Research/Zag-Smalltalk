@@ -20,3 +20,9 @@ SmallInteger >> astImageObject: anASImage [
 SmallInteger >> astObject: anASImage [ 
 	^ self
 ]
+
+{ #category : #'*ASTSmalltalk' }
+SmallInteger >> isNonLocalThunkable [
+
+	^ self between: -1 and: 2
+]

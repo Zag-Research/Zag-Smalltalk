@@ -31,6 +31,11 @@ ASRef >> isASRef [
 	^true
 ]
 
+{ #category : #testing }
+ASRef >> isImmediateThunk [
+^ variable isImmediateThunk
+]
+
 { #category : #printing }
 ASRef >> printOn: s [
 

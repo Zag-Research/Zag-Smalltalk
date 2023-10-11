@@ -6,3 +6,8 @@ Class {
 	#superclass : #ASCParameter,
 	#category : #'ASTSmalltalk-CodeGen'
 }
+
+{ #category : #accessing }
+ASCSelf >> name [ 
+	^ #self
+]

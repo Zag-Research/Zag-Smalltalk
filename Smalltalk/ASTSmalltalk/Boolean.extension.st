@@ -11,6 +11,11 @@ Boolean >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Boolean >> isNonLocalThunkable [ 
+^ true
+]
+
+{ #category : #'*ASTSmalltalk' }
 Boolean >> zigCompileObjectReference: anASZigCompileObjectGenerator [ 
 	^ nil
 ]

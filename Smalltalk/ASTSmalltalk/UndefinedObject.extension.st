@@ -11,6 +11,10 @@ UndefinedObject >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+UndefinedObject >> isNonLocalThunkable [ ^ true
+]
+
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> threadFormatOn: threadPrinter [
 
 	
@@ -25,4 +29,9 @@ UndefinedObject >> zigCompileObject: aWriteStream [
 UndefinedObject >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 
 	^ nil
+]
+
+{ #category : #'*ASTSmalltalk' }
+UndefinedObject >> zigName [
+	^ 'Nil'
 ]
