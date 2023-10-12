@@ -7,3 +7,4 @@ pub inline fn trace(format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format,values);
 }
 pub const dispatchCache = false;
+pub const indirectDispatch = true;

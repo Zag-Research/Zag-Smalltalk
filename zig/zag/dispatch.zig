@@ -37,14 +37,33 @@ pub fn init() void {
     _ = Dispatch.new();
 }
 pub const addMethod = Dispatch.addMethod;
+const DispatchElement = if (config.indirectDispatch) PC else extern struct {
+    prim: ThreadedFn,
+    nextPointer: PC,
+    const Self = @This();
+    pub inline fn next(self: * const Self) PC {
+        return self.nextPointer;
+    }
+    pub inline fn set(self: *Self, pc: PC) void {
+        self.prim = pc.prim;
+        self.nextPointer = pc.next();
+    }
+};
 const Dispatch = extern struct {
     header: HeapObject,
     hash: u64,
     free: u16,
     length: u16,
     state: DispatchState,
-    methods: [12]PC, // this is just the default... normally a larger array
+    fixed: [numberOfFixed]DispatchElement,
+    methods: [hashedMethods]DispatchElement, // this is just the default... normally a larger array
     const Self = @This();
+    const Fixed = enum {
+        equal,value,valueColon,
+        // insert new names here
+        maxIndex};
+    const numberOfFixed: usize = @intFromEnum(Fixed.maxIndex);
+    const hashedMethods = (if (config.indirectDispatch) 12 else 6)-numberOfFixed;
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 6);
@@ -54,6 +73,7 @@ const Dispatch = extern struct {
         .free = 0,
         .length = 1,
         .state = .clean,
+        .fixed = undefined,
         .methods = undefined, // should make this a footer
     };
     comptime {
@@ -219,132 +239,150 @@ const Dispatch = extern struct {
         &bitTest24, &bitTest25, &bitTest26, &bitTest27, &bitTest28, &bitTest29,
         &bitTest30, &bitTest31,
     };
+    const pcBits = @ctz(@as(u32,@sizeOf(PC)));
+    inline fn offset(hash: u32, pc: PC, comptime bit: comptime_int) PC {
+        const offs = (if (bit<=pcBits) hash<<(pcBits-bit) else hash>>(bit-pcBits)) & @sizeOf(PC);
+        return @ptrFromInt(@intFromPtr(pc) + offs);
+    }
+    test "offset for bitTests" {
+        const ee = std.testing.expectEqual;
+        const pc = [_]Code{undefined}**5;
+        try ee(offset(0xffffff55,&pc[0],0),&pc[1]);
+        try ee(offset(0xffffff55,&pc[0],1),&pc[0]);
+        try ee(offset(0xffffff55,&pc[0],2),&pc[1]);
+        try ee(offset(0xffffff55,&pc[0],3),&pc[0]);
+        try ee(offset(0xffffff55,&pc[0],4),&pc[1]);
+        try ee(offset(0xffffff55,&pc[0],5),&pc[0]);
+        try ee(offset(0xffffff55,&pc[0],6),&pc[1]);
+        try ee(offset(0xffffff55,&pc[0],7),&pc[0]);
+        try ee(offset(0xffffff55,&pc[0],8),&pc[1]);
+    }
     fn bitTest0(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 0);
+        const pc = offset(selector.hash32(), programCounter,  0);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest1(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 1);
+        const pc = offset(selector.hash32(), programCounter,  1);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest2(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 2);
+        const pc = offset(selector.hash32(), programCounter,  2);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 3);
+        const pc = offset(selector.hash32(), programCounter,  3);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest4(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 4);
+        const pc = offset(selector.hash32(), programCounter,  4);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 5);
+        const pc = offset(selector.hash32(), programCounter,  5);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest6(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 6);
+        const pc = offset(selector.hash32(), programCounter,  6);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest7(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 7);
+        const pc = offset(selector.hash32(), programCounter,  7);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest8(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 8);
+        const pc = offset(selector.hash32(), programCounter,  8);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest9(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 9);
+        const pc = offset(selector.hash32(), programCounter,  9);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest10(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 10);
+        const pc = offset(selector.hash32(), programCounter,  10);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest11(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 11);
+        const pc = offset(selector.hash32(), programCounter,  11);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest12(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 12);
+        const pc = offset(selector.hash32(), programCounter,  12);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest13(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 13);
+        const pc = offset(selector.hash32(), programCounter,  13);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest14(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 14);
+        const pc = offset(selector.hash32(), programCounter,  14);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest15(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 15);
+        const pc = offset(selector.hash32(), programCounter,  15);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest16(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 16);
+        const pc = offset(selector.hash32(), programCounter,  16);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest17(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 17);
+        const pc = offset(selector.hash32(), programCounter,  17);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest18(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 18);
+        const pc = offset(selector.hash32(), programCounter,  18);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest19(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 19);
+        const pc = offset(selector.hash32(), programCounter,  19);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest20(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 20);
+        const pc = offset(selector.hash32(), programCounter,  20);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest21(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 21);
+        const pc = offset(selector.hash32(), programCounter,  21);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest22(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 22);
+        const pc = offset(selector.hash32(), programCounter,  22);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest23(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 23);
+        const pc = offset(selector.hash32(), programCounter,  23);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest24(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 24);
+        const pc = offset(selector.hash32(), programCounter,  24);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest25(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 25);
+        const pc = offset(selector.hash32(), programCounter,  25);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest26(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 26);
+        const pc = offset(selector.hash32(), programCounter,  26);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest27(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 27);
+        const pc = offset(selector.hash32(), programCounter,  27);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest28(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 28);
+        const pc = offset(selector.hash32(), programCounter,  28);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest29(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 29);
+        const pc = offset(selector.hash32(), programCounter,  29);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest30(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 30);
+        const pc = offset(selector.hash32(), programCounter,  30);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest31(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP {
-        const pc = programCounter.choose(selector.hash32() & 1 << 31);
+        const pc = offset(selector.hash32(), programCounter,  31);
         return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
     }
     const primes = [_]?ThreadedFn{ null, null, null, &prime3, null, &prime5 };

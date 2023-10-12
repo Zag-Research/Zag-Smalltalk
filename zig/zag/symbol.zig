@@ -27,25 +27,25 @@ pub inline fn symbol4(index: usize) object.Object {
     return symbol_of(index, 4);
 }
 pub const symbols = struct {
-    pub const yourself = symbol0(1);
-    pub const @"doesNotUnderstand:" = symbol1(2);
-    pub const @"=" = symbol1(3);
-    pub const @"+" = symbol1(4);
-    pub const @"-" = symbol1(5);
-    pub const @"*" = symbol1(6);
-    pub const size = symbol0(7);
-    pub const @"at:" = symbol1(8);
-    pub const @"at:put:" = symbol2(9);
-    pub const @"~=" = symbol1(10);
-    pub const @"==" = symbol1(11);
-    pub const @"~~" = symbol1(12);
-    pub const value = symbol0(13);
-    pub const @"value:" = symbol1(14);
-    pub const @"value:value:" = symbol2(15);
-    pub const negated = symbol0(16);
-    pub const new = symbol0(17);
-    pub const @"new:" = symbol0(18);
-    pub const @"cull:" = symbol1(19);
+    pub const @"=" = symbol1(1);
+    pub const value = symbol0(2);
+    pub const @"value:" = symbol1(3);
+    pub const @"cull:" = symbol1(4);
+    pub const yourself = symbol0(5);
+    pub const @"doesNotUnderstand:" = symbol1(6);
+    pub const @"+" = symbol1(7);
+    pub const @"-" = symbol1(8);
+    pub const @"*" = symbol1(9);
+    pub const size = symbol0(10);
+    pub const @"at:" = symbol1(11);
+    pub const @"at:put:" = symbol2(12);
+    pub const @"~=" = symbol1(13);
+    pub const @"==" = symbol1(14);
+    pub const @"~~" = symbol1(15);
+    pub const @"value:value:" = symbol2(16);
+    pub const negated = symbol0(17);
+    pub const new = symbol0(18);
+    pub const @"new:" = symbol0(19);
     pub const @"value:value:value:" = symbol3(20);
     pub const @"value:value:value:value:" = symbol4(21);
     pub const @"valueWithArguments:" = symbol1(22);
@@ -94,9 +94,9 @@ pub const symbols = struct {
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "yourself",                "doesNotUnderstand:",     "=",                                   "+",                    "-",              "*",                  "size",
-    "at:",                     "at:put:",                "~=",                                  "==",                   "~~",             "value",              "value:",
-    "value:value:",            "negated",                "new",                                 "new:",                 "cull:",          "value:value:value:", "value:value:value:value:",
+    "=",    "value",              "value:",    "cull:",   "yourself",                "doesNotUnderstand:",                                        "+",                    "-",              "*",                  "size",
+    "at:",                     "at:put:",                "~=",                                  "==",                   "~~",
+    "value:value:",            "negated",                "new",                                 "new:",                      "value:value:value:", "value:value:value:value:",
     "valueWithArguments:",     "cull:cull:",             "cull:cull:cull:",                     "cull:cull:cull:cull:", "self",           "name",               "<",
     "<=",                      ">=",                     ">",                                   "class",                "Class",          "Behavior",           "ClassDescription",
     "Metaclass",               "SmallInteger",           "noFallback",                          "ifTrue:",              "ifTrue:ifFalse", "ifFalse:",           "ifFalse:ifTrue:",
