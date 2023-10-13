@@ -9,5 +9,5 @@ Class {
 
 { #category : #'code generation' }
 ASCPushLocal >> outputTo: anOutput [ 
-	anOutput putEmbedded: #pushLocal;putInteger: localNumber 
+	anOutput putEmbedded: #pushLocal;putInteger: local 
 ]

@@ -28,9 +28,10 @@ ASCompileTestClass1 >> + n1 [
 
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> addTwoNumbers [
-|sum|
-	sum := 4 + 5.
-	^sum
+
+	| sum foo |
+	foo := sum := 4 + 5.
+	^ sum + foo
 ]
 
 { #category : #'testing - examples' }

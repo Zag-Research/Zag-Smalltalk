@@ -83,3 +83,16 @@ ASStatement >> isReturn [
 ASStatement >> maxDepth [
 	^0
 ]
+
+{ #category : #compiling }
+ASStatement >> zigWalk: aGenerator [
+
+	self subclassResponsibility 
+]
+
+{ #category : #compiling }
+ASStatement >> zigWalkDiscard: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ aGenerator drop
+]

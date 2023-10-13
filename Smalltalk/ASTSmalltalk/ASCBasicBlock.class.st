@@ -27,6 +27,14 @@ ASCBasicBlock >> addTo: aCollection [
 	self shouldBeImplemented.
 ]
 
+{ #category : #API }
+ASCBasicBlock >> assignLocal: anASLocal [
+
+	| target |
+	target := stack find: anASLocal name.
+	self put: (ASCStoreLocal with: target)
+]
+
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -124,8 +132,30 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : #API }
-ASCBasicBlock >> popLocal: anASCLocal [ 
-	self shouldBeImplemented.
+ASCBasicBlock >> popLocal: anASCLocal [
+
+	| target |
+	target := stack find: anASCLocal name.
+	self put: (ASCPopLocal with: target).
+	self doDrop
+]
+
+{ #category : #API }
+ASCBasicBlock >> pushLocal: anASCLocal [
+
+	| target |
+	target := stack find: anASCLocal name.
+	self put: (ASCPushLocal with: target).
+	self doPush: target top
+]
+
+{ #category : #API }
+ASCBasicBlock >> pushUnknownNamed: aSymbol [
+
+	stack := ASStackNamed new
+		         from: stack;
+		         name: aSymbol.
+	stack top: (ASCClassValue new init: Object)
 ]
 
 { #category : #initialization }

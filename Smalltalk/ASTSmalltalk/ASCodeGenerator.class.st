@@ -26,6 +26,12 @@ Class {
 }
 
 { #category : #API }
+ASCodeGenerator >> assignLocal: anASLocal [
+
+	code assignLocal: anASLocal
+]
+
+{ #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
 
@@ -48,7 +54,7 @@ ASCodeGenerator >> depth: anInteger [
 { #category : #API }
 ASCodeGenerator >> drop [
 
-	code drop; put: #drop
+	code doDrop; put: #drop
 ]
 
 { #category : #evaluating }
@@ -100,14 +106,8 @@ ASCodeGenerator >> linearizeBasicBlocksDo: aBlock [
 
 { #category : #accessing }
 ASCodeGenerator >> locals: locals arguments: arguments [
+code locals: locals arguments: arguments
 
-	localVariables := OrderedCollection new.
-	localVariables add: ASCSelf new.
-	arguments doWithIndex: [ :each :index |
-		localVariables add: (ASCParameter name: each offset: index) ].
-	locals doWithIndex: [ :each :index |
-		localVariables add:
-			(ASCLocal name: each offset: index + arguments size) ]
 ]
 
 { #category : #compiling }
@@ -131,17 +131,13 @@ ASCodeGenerator >> name [
 { #category : #API }
 ASCodeGenerator >> popAssign: variable [
 
-	self popLocal: (variable lookup: self)
+	self popLocal: variable
 ]
 
 { #category : #API }
 ASCodeGenerator >> popLocal: aSymbol [
 
-	code
-		put:
-			(ASCPopLocal with:
-					 ((localVariables at: aSymbol offset+1) store: code top at: depth));
-		doDrop
+	code popLocal: aSymbol
 ]
 
 { #category : #API }
@@ -176,11 +172,7 @@ value:= ASCLiteral with: aLiteral.
 { #category : #API }
 ASCodeGenerator >> pushLocal: aSymbol [
 
-	| local |
-	local := aSymbol lookup: self.
-	code
-		doPush: local;
-		put: (ASCPushLocal with: (local referencedAt:  depth))
+	code pushLocal: aSymbol
 ]
 
 { #category : #API }

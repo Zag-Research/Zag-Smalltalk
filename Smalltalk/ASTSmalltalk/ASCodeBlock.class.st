@@ -28,7 +28,7 @@ ASCodeBlock >> acceptVisitor: aVisitor [
 { #category : #accessing }
 ASCodeBlock >> addStatement: anASStatement [
 
-	body addStatement: anASStatement
+	body add: anASStatement
 ]
 
 { #category : #accessing }

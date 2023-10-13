@@ -1,10 +1,8 @@
 "
-I am the first block in a method.
-
-All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
+for inlining
 "
 Class {
-	#name : #ASCMethodBlock,
+	#name : #ASCInlineBlock,
 	#superclass : #ASCBasicBlock,
 	#instVars : [
 		'primitive',
@@ -13,26 +11,18 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #initialization }
-ASCMethodBlock >> initialize [
-
-	super initialize.
-	self stack: ASStack new
-]
-
 { #category : #accessing }
-ASCMethodBlock >> locals: locals arguments: arguments [
-self halt.
+ASCInlineBlock >> locals: locals arguments: arguments [
+
 	stack isEmpty
 		ifTrue: [ self pushUnknownNamed: #self ]
 		ifFalse: [ stack := stack names: #( self ) ].
-	arguments reversed do: [ :each | self pushUnknownNamed: each ].
-	locals do: [ :each | self pushUnknownNamed: each ].
-	stack := stack pushContext
+			arguments reversed do: [ :each | self pushUnknownNamed: each ].
+	locals do: [ :each | self pushUnknownNamed: each ]
 ]
 
 { #category : #wriiting }
-ASCMethodBlock >> outputTo: output [
+ASCInlineBlock >> outputTo: output [
 
 	output outputMethodStart: label.
 	primitive
@@ -43,13 +33,13 @@ ASCMethodBlock >> outputTo: output [
 ]
 
 { #category : #accessing }
-ASCMethodBlock >> primitive: anInteger selector: aSymbol [
+ASCInlineBlock >> primitive: anInteger selector: aSymbol [
 
 	primitive := anInteger.
 	selector := aSymbol
 ]
 
 { #category : #accessing }
-ASCMethodBlock >> selector: aString [ 
+ASCInlineBlock >> selector: aString [ 
 	selector := aString
 ]
