@@ -27,12 +27,6 @@ ASSequence >> isNonLocalThunk [
 ]
 
 { #category : #comparing }
-ASSequence >> printOn: s [
-
-	sequence do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
-]
-
-{ #category : #comparing }
 ASSequence >> requiresImplicitReturn [
 
 	^ self isEmpty or: [ self last isReturn not ]
