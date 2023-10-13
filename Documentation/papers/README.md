@@ -4,3 +4,4 @@ Here are papers and talks about Zag-Smalltalk
 - [IWST 2022: Design Principles for a High-Performance Smalltalk](IWST-2022.pdf)
 - [IWST 2023: Threaded-Execution and CPS Provide Smooth Switching Among Execution Modes](IWST-2023.pdf)
 - [Slides from a recent talk at UK Smalltalk](https://sarg.torontomu.ca/dmason/UKSt2022-11-30.pdf)
+- [VMIL-2023 paper: Revisiting Dynamic Dispatch for Modern Architectures](VMIL-2023.pdf)
