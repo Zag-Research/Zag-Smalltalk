@@ -35,5 +35,5 @@ ASSequence >> requiresImplicitReturn [
 { #category : #codegen }
 ASSequence >> zigWalk: aGenerator [
 
-	^ self do: [ :statement | statement zigWalk: aGenerator ]
+	^ self do: [ :statement | statement zigWalkDiscard: aGenerator ]
 ]
