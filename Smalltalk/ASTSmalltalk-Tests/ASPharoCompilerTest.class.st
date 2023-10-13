@@ -41,25 +41,26 @@ ASPharoCompilerTest >> testASTNodesEqual [
 		printsAs: 'ASLocal a'.
 	self
 		assert: ASAssign
-		instancesEqualAfter: [ :obj | obj variable: ASLocal a expression: 42 ]
+		instancesEqualAfter: [ :obj |
+		obj variable: ASLocal a expression: 42 ]
 		printsAs: 'ASAssign variable: ASLocal a expression: (42)'.
 	self
 		assert: ASMethodNode
-		instancesEqualAfter: [ :obj | 
+		instancesEqualAfter: [ :obj |
 			obj
 				class: Object;
 				selector: #a ]
 		printsAs: 'ASMethodNode class: Object selector: #a body: {}'.
 	self
 		assert: ASMethodNode
-		instancesEqualAfter: [ :obj | 
+		instancesEqualAfter: [ :obj |
 			obj
 				class: Object;
 				selector: #a;
 				arguments: #( a1 a2 a3 );
 				locals: #( l1 l2 );
-				addStatement: 17;
-				addStatement: 42 ]
+				add: 17;
+				add: 42 ]
 		printsAs:
 		'ASMethodNode class: Object selector: #a arguments: #(a1 a2 a3) locals: #(l1 l2) body: {17 . 42}'
 ]

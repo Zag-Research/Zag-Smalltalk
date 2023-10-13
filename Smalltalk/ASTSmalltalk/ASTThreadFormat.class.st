@@ -22,19 +22,19 @@ ASTThreadFormat >> ir: anIrMethod [
 	| prevBranchLabel |
 	stream := WriteStream with: ''.
 	method := anIrMethod asAST.
-	method primitive ifNotNil: [ :primitive | 
+	method primitive ifNotNil: [ :primitive |
 		stream
 			nextPutAll: '&p.p';
 			nextPutAll: primitive asString;
 			nextPutAll: ',Code.int(-1),';
 			cr ].
-	method needsContext ifTrue: [ 
+	method needsContext ifTrue: [
 		stream
 			nextPutAll: '&p.pushContext,"^",';
 			cr ].
 	prevBranchLabel := nil.
-	method allSequencesDo: [ :irSequence | 
-		prevBranchLabel == irSequence ifFalse: [ 
+	method allSequencesDo: [ :irSequence |
+		prevBranchLabel == irSequence ifFalse: [
 			prevBranchLabel threadFormatOn: stream.
 			stream cr ].
 		stream
@@ -42,11 +42,11 @@ ASTThreadFormat >> ir: anIrMethod [
 			nextPutAll: irSequence orderNumber asString;
 			nextPutAll: ':",';
 			cr.
-		irSequence sequence do: [ :irInstruction | 
+		irSequence do: [ :irInstruction |
 			prevBranchLabel := irInstruction threadFormatOn: self.
 			stream cr ] ].
 	prevBranchLabel threadFormatOn: stream.
-	^ String streamContents: [ :s | 
+	^ String streamContents: [ :s |
 		  s
 			  nextPutAll: 'const prog = compileTuple(sym.';
 			  nextPutAll: method selector;
