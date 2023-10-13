@@ -80,5 +80,12 @@ ASAssign >> variable: v expression: e [
 ASAssign >> zigWalk: aGenerator [
 
 	expression zigWalk: aGenerator.
+	^ aGenerator assignLocal: variable
+]
+
+{ #category : #compiling }
+ASAssign >> zigWalkDiscard: aGenerator [
+
+	expression zigWalk: aGenerator.
 	^ aGenerator popAssign: variable
 ]

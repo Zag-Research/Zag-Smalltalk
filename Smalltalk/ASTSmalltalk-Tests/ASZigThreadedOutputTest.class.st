@@ -32,7 +32,7 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.popLocal....'
+		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.popLocal....' 
 ]
 
 { #category : #tests }

@@ -5,7 +5,7 @@ Class {
 	#name : #ASCLocalOperations,
 	#superclass : #ASCOperations,
 	#instVars : [
-		'localNumber'
+		'local'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -17,5 +17,5 @@ self subclassResponsibility
 
 { #category : #'instance creation' }
 ASCLocalOperations >> with: anInteger [ 
-	localNumber := anInteger
+	local := anInteger
 ]

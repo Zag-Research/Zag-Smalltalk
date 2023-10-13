@@ -1,71 +1,68 @@
 "
-I reperesent a stack of values within a method.
-
-Initially this will simply retain the values.
-
-Eventually it will implement Phi nodes for SSA evaluation, supporting some level of type inference
-
-Code generators can inquire as to values and types
+I reperesent an empty stack of values within a method.
 "
 Class {
 	#name : #ASStack,
 	#superclass : #Object,
-	#instVars : [
-		'top',
-		'rest'
-	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #'instance creation' }
-ASStack class >> from: anASStack [
-	^ self basicNew from: anASStack 
+{ #category : #accessing }
+ASStack >> at: aSymbol [
+
+	^ (self find: aSymbol) top
 ]
 
 { #category : #accessing }
-ASStack >> depth [
-	^ rest ifNil: [ 0 ] ifNotNil: [ 1 + rest depth ]
+ASStack >> depth [ 
+^ 0
 ]
 
 { #category : #accessing }
-ASStack >> drop [
-	^ rest
+ASStack >> find: aSymbol [
+self subclassResponsibility 
 ]
 
-{ #category : #removing }
-ASStack >> drop: count [ 
-	count = 0 ifTrue: [ ^self ].
-	^ rest drop: count-1
-]
-
-{ #category : #'instance creation' }
-ASStack >> from: anASStack [
-
-	rest := anASStack 
+{ #category : #API }
+ASStack >> findContext [
+	^ self subclassResponsibility
 ]
 
 { #category : #testing }
 ASStack >> isEmpty [
 
-	^ rest isNil 
+	^ true
+]
+
+{ #category : #API }
+ASStack >> offset: ignored to: unused [
+self subclassResponsibility 
+]
+
+{ #category : #API }
+ASStack >> offsetTo: aSymbol [
+^ self offset: 0 to: aSymbol
 ]
 
 { #category : #adding }
 ASStack >> push: anObject [
 
 	| newStack |
-	newStack := self class from: self.
+	newStack := ASStackElement from: self.
 	newStack top: anObject.
-	^ newStack
+	^ newStack 
 ]
 
-{ #category : #accessing }
-ASStack >> top [
-^ top
+{ #category : #API }
+ASStack >> pushContext [ 
+	^ ASStackContext new from: self
 ]
 
-{ #category : #accessing }
-ASStack >> top: value [
+{ #category : #API }
+ASStack >> stackNames: aCollection [
 
-	 top := value
+	aCollection ifEmpty: [ ^ self ].
+	^ ASStackNamed new
+		  from: (self stackNames: aCollection allButFirst);
+		  name: aCollection first
 ]

@@ -99,5 +99,5 @@ ASSequence >> sequence: anArray [
 { #category : #codegen }
 ASSequence >> zigWalk: aGenerator [
 
-	^ sequence do: [ :statement | statement zigWalk: aGenerator ]
+	^ sequence do: [ :statement | statement zigWalkDiscard: aGenerator ]
 ]

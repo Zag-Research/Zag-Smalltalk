@@ -8,6 +8,7 @@ Class {
 }
 
 { #category : #'code generation' }
-ASCPopLocal >> outputTo: anOutput [ 
-	anOutput putEmbedded: #popLocal
+ASCPopLocal >> outputTo: anOutput [
+
+	anOutput visitPopLocal: local 
 ]

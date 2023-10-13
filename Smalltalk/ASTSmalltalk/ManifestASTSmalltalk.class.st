@@ -35,6 +35,13 @@ ManifestASTSmalltalk class >> ruleExcessiveVariablesRuleV1FalsePositive [
 ]
 
 { #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASStack)) #'2023-10-13T15:05:01.498226-04:00') )
+]
+
+{ #category : #'code-critics' }
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
@@ -46,6 +53,13 @@ ManifestASTSmalltalk class >> ruleMinMaxRuleV1FalsePositive [
 
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:14.213283-04:00') #(#(#RGMethodDefinition #(#ASCValue #store: #false)) #'2023-10-06T21:44:23.963698-04:00') )
+]
+
+{ #category : #'code-critics' }
+ManifestASTSmalltalk class >> ruleMissingSubclassResponsibilityRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASStack)) #'2023-10-13T15:04:56.29713-04:00') )
 ]
 
 { #category : #'code-critics' }
