@@ -140,12 +140,13 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 		          (aRBMethodNode arguments collect: #name as: Array)
 		          locals:
 		          (aRBMethodNode temporaries collect: #name as: Array)
-		          body: ASSequence new.
-	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
+		          body: (ASSequence new: aRBMethodNode statements size).
+	method pragmas:
+		(aRBMethodNode pragmas do: [ :pram | self visit: pram ]).
 	compiler definingMethod: method.
-	compiler inScope: method do: [ 
-		aRBMethodNode statements do: [ :statement | 
-			method addStatement: (self visit: statement) ] ].
+	compiler inScope: method do: [
+		aRBMethodNode statements doWithIndex: [ :statement :index |
+			method body at: index put: (self visit: statement) ] ].
 	^ method
 ]
 

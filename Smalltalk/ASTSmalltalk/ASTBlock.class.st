@@ -9,7 +9,8 @@ Class {
 }
 
 { #category : #initializing }
-ASTBlock >> from: anIRSequence [ 
+ASTBlock >> from: anIRSequence [
+
 	blockNumber := anIRSequence orderNumber.
-	sequence := anIRSequence sequence collect: [: node| node asAST ]
+	sequence := anIRSequence collect: [ :node | node asAST ]
 ]
