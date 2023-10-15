@@ -19,7 +19,7 @@ ASCBlock >> block [
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 
-	output visitPushBlock: compiledBlock
+	output visitPushBlock: block
 ]
 
 { #category : #'instance creation' }

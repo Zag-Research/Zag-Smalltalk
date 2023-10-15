@@ -24,7 +24,7 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	file := ASZigTestContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	output visitPushLocal: #self.
 	output visitPushLocal: #sum.
 
@@ -43,7 +43,7 @@ ASZigThreadedOutputTest >> testZig_fib [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'Mfib:'.
 	self
 		assert: output asString
@@ -68,7 +68,7 @@ ASZigThreadedOutputTest >> testZig_prim [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'Mprim'.
 	self
 		assert: output asString
@@ -139,7 +139,7 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
 	self
 		assert: output asString
@@ -156,7 +156,7 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'MsimpleBlock'.
 	self
 		assert: output asString
@@ -172,7 +172,7 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString

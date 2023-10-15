@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'ourObject',
 		'alreadyGenerated',
-		'delayedLabel'
+		'delayedLabel',
+		'forClass'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -24,16 +25,32 @@ ASZigOutput >> comment: aString [
 	aString printOn: self
 ]
 
+{ #category : #accessing }
+ASZigOutput >> forClass [
+
+	^ forClass 
+]
+
 { #category : #'code generation' }
 ASZigOutput >> generateCode [
 	self subclassResponsibility 
 ]
 
 { #category : #generation }
-ASZigOutput >> generateCodeFor: anASNode [
+ASZigOutput >> generateCode: anASNode [
 
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
+	alreadyGenerated := false.
+	context processComponents
+]
+
+{ #category : #generation }
+ASZigOutput >> generateCode: anASNode for: aClass [
+
+	context for: anASNode generatorIs: self.
+	ourObject := anASNode.
+	forClass := aClass.
 	alreadyGenerated := false.
 	context processComponents
 ]

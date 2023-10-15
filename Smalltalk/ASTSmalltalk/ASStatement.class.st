@@ -33,6 +33,18 @@ ASStatement >> blocks [
 	^ OrderedCollection new:0
 ]
 
+{ #category : #compiling }
+ASStatement >> invalidAST [
+
+	^ ASTInvalid signal
+]
+
+{ #category : #compiling }
+ASStatement >> invalidAST: aString [
+
+	^ ASTInvalid signal: aString
+]
+
 { #category : #testing }
 ASStatement >> isASAssign [
 

@@ -13,7 +13,7 @@ ASZigCPSOutputTest >> testZig_addTwoNumbers [
 	file := ASZigFileContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
 	output asString inspect.
@@ -28,7 +28,7 @@ ASZigCPSOutputTest >> testZig_fib [
 	file := ASZigFileContext new.
 	output := ASZigCPSOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'Mfib:'.
 	file asString inspect.
 	self
@@ -44,7 +44,7 @@ ASZigCPSOutputTest >> testZig_fib2 [
 	file := ASZigFileContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'Mfib2:'.
 	file asString inspect.
 	self
@@ -60,7 +60,7 @@ ASZigCPSOutputTest >> testZig_simple1 [
 	file := ASZigFileContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
 	self
 		assert: output asString
@@ -77,7 +77,7 @@ ASZigCPSOutputTest >> testZig_simpleBlock [
 	file := ASZigFileContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'MsimpleBlock'.
 	file asString inspect.
 	self
@@ -109,7 +109,7 @@ ASZigCPSOutputTest >> testZig_unaries [
 	file := ASZigTestContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'Munaries'.
 	file asString inspect
 
@@ -124,7 +124,7 @@ ASZigCPSOutputTest >> testZig_unariesPlus [
 	file := ASZigTestContext new.
 	output := ASZigCPSOutput testing
 		          context: file;
-		          generateCodeFor: ast.
+		          generateCode: ast.
 	self assert: output name equals: 'MunariesPlus'.
 	file asString inspect
 ]

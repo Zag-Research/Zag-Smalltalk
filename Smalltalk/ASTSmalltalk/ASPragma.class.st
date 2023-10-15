@@ -4,8 +4,6 @@ I contain pragmas for a method - the only one we currently care about is <primit
 Class {
 	#name : #ASPragma,
 	#superclass : #ASStatement,
-	#traits : 'ASValue',
-	#classTraits : 'ASValue classTrait',
 	#instVars : [
 		'args'
 	],

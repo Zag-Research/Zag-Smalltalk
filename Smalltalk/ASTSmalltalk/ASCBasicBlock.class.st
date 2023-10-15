@@ -43,9 +43,7 @@ ASCBasicBlock >> doCall: aSymbol [
 
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doDrop [
-
-	stack := stack drop.
-
+	stack := stack drop
 ]
 
 { #category : #stackAccessHelpers }
@@ -80,6 +78,11 @@ ASCBasicBlock >> end: anASCOperation [
 ASCBasicBlock >> endWithReturnTop [
 
 		end := ASCReturnTop new
+]
+
+{ #category : #API }
+ASCBasicBlock >> findContext [
+	^ stack findContext 
 ]
 
 { #category : #accessing }
@@ -171,25 +174,17 @@ ASCBasicBlock >> returnTop [
 ]
 
 { #category : #'abstract interpretation' }
-ASCBasicBlock >> send: aSymbol with: aGenerator target: aTarget tail: tailCall [
+ASCBasicBlock >> send: aSymbol target: aTarget tail: tailCall [
 
-	| numArgs params target |
-	numArgs := aSymbol numArgs.
-	params := Array new: numArgs.
-	target := aTarget isSymbol ifTrue: [ aTarget ] ifFalse: [ nil ].
-	[ numArgs > 0 ] whileTrue: [
-		params at: numArgs put: stack top.
-		self doDrop.
-		numArgs := numArgs - 1 ].
-	stack top: (aGenerator eval: aSymbol params: params).
 	next := ASCReturnBlock new
 		        stack: stack;
 		        end: end.
 	end := ASCSend new
 		       selector: aSymbol;
 		       return: next;
-		target: target; tail: tailCall.
-	^ next
+		       target: aTarget;
+		       tail: tailCall.
+	^ next 
 ]
 
 { #category : #accessing }

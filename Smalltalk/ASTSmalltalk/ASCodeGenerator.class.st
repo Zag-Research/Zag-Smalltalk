@@ -65,7 +65,7 @@ ASCodeGenerator >> eval: aString params: aCollection [
 
 { #category : #linearize }
 ASCodeGenerator >> finalAnalysis [
-
+"self halt."
 	basicBlocks doWithIndex: [ :bb :idx |
 		bb
 			label: (String streamContents: [ :s |
@@ -73,8 +73,16 @@ ASCodeGenerator >> finalAnalysis [
 						 nextPutAll: name;
 						 nextPut: $:;
 						 print: idx ])
-			index: idx.
-		]
+			index: idx ]
+]
+
+{ #category : #translating }
+ASCodeGenerator >> generate: aMethodOrBlockNode [
+
+	| methodContext |
+	aMethodOrBlockNode zigWalk: self.
+	methodContext := basicBlocks first findContext.
+	methodContext blockClosures do: [ :block | self compileBlock: block ] 
 ]
 
 { #category : #initialization }
@@ -106,8 +114,10 @@ ASCodeGenerator >> linearizeBasicBlocksDo: aBlock [
 
 { #category : #accessing }
 ASCodeGenerator >> locals: locals arguments: arguments [
-code locals: locals arguments: arguments
 
+	context forClass ifNotNil: [ :theClass |
+		code doPush: (ASCClassValue new init: theClass) ].
+	code locals: locals arguments: arguments
 ]
 
 { #category : #compiling }
@@ -144,14 +154,8 @@ ASCodeGenerator >> popLocal: aSymbol [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	anASBlock = context ourObject ifTrue: [
-		code endWithReturnTop.
-		^ anASBlock zigCompileBlock: self ].
 	block := ASCBlock with: anASBlock.
-	self compileBlock: block.
-	code
-		doPush: block;
-		put: block
+	code doPush: block;put: block
 ]
 
 { #category : #API }
@@ -221,18 +225,36 @@ ASCodeGenerator >> selector: aSymbol [
 { #category : #API }
 ASCodeGenerator >> send: aSymbol target: aTarget [
 
-	code := code send: aSymbol with: self target: aTarget tail: false.
+	| numArgs params target |
+	numArgs := aSymbol numArgs.
+	params := Array new: numArgs.
+	target := aTarget isSymbol
+		          ifTrue: [ aTarget ]
+		          ifFalse: [ nil ].
+	"	[ numArgs > 0 ] whileTrue: [
+		params at: numArgs put: stack top.
+		self doDrop.
+		numArgs := numArgs - 1 ].
+	stack top: (aGenerator eval: aSymbol params: params)."
+	code := code send: aSymbol target: target tail: false.
 	basicBlocks add: code
 ]
 
 { #category : #API }
-ASCodeGenerator >> sendTail: aSymbol target: aTarget [
+ASCodeGenerator >> send: aSymbol target: aTarget tail: tail [
 
-	code := code
-		        send: aSymbol
-		        with: self
-		        target: aTarget
-		        tail: true.
+	| numArgs params target |
+	numArgs := aSymbol numArgs.
+	params := Array new: numArgs.
+	target := aTarget isSymbol
+		          ifTrue: [ aTarget ]
+		          ifFalse: [ nil ].
+	"	[ numArgs > 0 ] whileTrue: [
+		params at: numArgs put: stack top.
+		self doDrop.
+		numArgs := numArgs - 1 ].
+	stack top: (aGenerator eval: aSymbol params: params)."
+	code := code send: aSymbol target: target tail: tail.
 	basicBlocks add: code
 ]
 

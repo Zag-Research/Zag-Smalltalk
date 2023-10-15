@@ -156,3 +156,8 @@ ASBlock >> zigWalk: aGenerator [
 
 	^ aGenerator pushBlock: self
 ]
+
+{ #category : #compiling }
+ASBlock >> zigWalkTarget: aGenerator [ 
+	self zigWalk: aGenerator
+]

@@ -41,7 +41,7 @@ ASZigMethodOutput >> compileBlock: anASCBlock [
 	(self blockClass new testing: testing)
 		context: context;
 		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCodeFor: anASCBlock block
+		generateCode: anASCBlock block
 ]
 
 { #category : #'code generation' }
@@ -49,7 +49,7 @@ ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	ourObject zigWalk: self codeGenerator.
+	self codeGenerator generate: ourObject.
 	self outputToStream
 ]
 

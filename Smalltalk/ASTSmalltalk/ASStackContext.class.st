@@ -8,7 +8,8 @@ Class {
 	#superclass : #ASStack,
 	#instVars : [
 		'rest',
-		'size'
+		'size',
+		'blockClosures'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -16,6 +17,17 @@ Class {
 { #category : #'instance creation' }
 ASStackContext class >> from: anASStack [
 	^ self basicNew from: anASStack 
+]
+
+{ #category : #initialization }
+ASStackContext >> addBlockClosure: block [
+
+	blockClosures add: block
+]
+
+{ #category : #accessing }
+ASStackContext >> blockClosures [
+	^ blockClosures
 ]
 
 { #category : #accessing }
@@ -35,10 +47,11 @@ ASStackContext >> from: anASStack [
 ]
 
 { #category : #initialization }
-ASStackContext >> initialize [ 
+ASStackContext >> initialize [
 
-super initialize.
-size := 0
+	super initialize.
+	size := 0.
+	blockClosures := OrderedCollection new
 ]
 
 { #category : #API }

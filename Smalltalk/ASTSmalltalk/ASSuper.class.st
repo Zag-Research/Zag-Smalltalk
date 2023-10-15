@@ -22,7 +22,7 @@ ASSuper class >> method: aMethod superclass: aClass [
 { #category : #compiling }
 ASSuper >> zigWalk: aGenerator [
 
-	self error
+	self invalidAST:  '"super" in a non-target position'
 ]
 
 { #category : #compiling }

@@ -22,7 +22,6 @@ ASCMethodBlock >> initialize [
 
 { #category : #accessing }
 ASCMethodBlock >> locals: locals arguments: arguments [
-self halt.
 	stack isEmpty
 		ifTrue: [ self pushUnknownNamed: #self ]
 		ifFalse: [ stack := stack names: #( self ) ].

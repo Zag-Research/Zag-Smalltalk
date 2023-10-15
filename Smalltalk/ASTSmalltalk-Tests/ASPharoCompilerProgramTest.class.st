@@ -14,7 +14,7 @@ ASPharoCompilerProgramTest class >> testFooBarIsolated [
 
 	ASZigThreadedOutput new
 		context: file;
-		generateCodeFor: ast.
+		generateCode: ast.
 
 	FileSystem disk workingDirectory / 'zigFooBarCompileMethod.zig'
 		writeStreamDo: [ :stream | file outputTo: stream ] 

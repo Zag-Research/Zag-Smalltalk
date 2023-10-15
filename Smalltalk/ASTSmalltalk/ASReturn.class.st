@@ -66,8 +66,8 @@ ASReturn >> printOn: s [
 	s << ')'
 ]
 
-{ #category : #codegen }
-ASReturn >> zigWalk: aGenerator [
+{ #category : #compiling }
+ASReturn >> zigWalkDiscard: aGenerator [
 
 	expression zigWalkForReturn: aGenerator.
 	^ aGenerator returnTop
