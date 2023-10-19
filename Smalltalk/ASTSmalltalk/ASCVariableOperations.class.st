@@ -2,20 +2,20 @@
 I am an abstract class for local operations
 "
 Class {
-	#name : #ASCLocalOperations,
+	#name : #ASCVariableOperations,
 	#superclass : #ASCOperations,
 	#instVars : [
-		'local'
+		'variable'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #'code generation' }
-ASCLocalOperations >> outputTo: unknown [
+ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
 ]
 
 { #category : #'instance creation' }
-ASCLocalOperations >> with: anInteger [ 
-	local := anInteger
+ASCVariableOperations >> with: anInteger [ 
+	variable := anInteger
 ]

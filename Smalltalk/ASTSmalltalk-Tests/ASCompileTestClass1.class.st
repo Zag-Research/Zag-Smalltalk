@@ -79,6 +79,14 @@ ASCompileTestClass1 >> fib: anInt [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> fibonacci [
+
+	^ self < 2
+		  ifTrue: [ 1 ]
+		  ifFalse: [ ( self - 1) fibonacci + (self - 2) fibonacci ]
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> foo: p1 bar: p2 [
     | l1 l2 l3 |
     p1 < p2 ifTrue: [ ^ self ].

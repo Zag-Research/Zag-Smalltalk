@@ -29,11 +29,6 @@ ASVariable >> = other [
 	^ self class = other class and: [ self name = other name ]
 ]
 
-{ #category : #converting }
-ASVariable >> asZagLabel [
-^name
-]
-
 { #category : #testing }
 ASVariable >> isASArg [
 	^false
@@ -43,12 +38,6 @@ ASVariable >> isASArg [
 ASVariable >> isASBlock [
 
 	^ false
-]
-
-{ #category : #testing }
-ASVariable >> isASVariable [
-
-	^ true
 ]
 
 { #category : #comparing }
@@ -63,6 +52,11 @@ ASVariable >> name: aSymbol [
 	name := aSymbol
 ]
 
+{ #category : #affecting }
+ASVariable >> pop: output [
+^ self subclassResponsibility 
+]
+
 { #category : #printing }
 ASVariable >> printOn: s [
 
@@ -70,8 +64,26 @@ ASVariable >> printOn: s [
 	name 
 ]
 
+{ #category : #affecting }
+ASVariable >> push: output [
+
+	^ self subclassResponsibility
+]
+
+{ #category : #affecting }
+ASVariable >> store: output [
+
+	^ self subclassResponsibility
+]
+
 { #category : #compiling }
 ASVariable >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
+]
+
+{ #category : #accessing }
+ASVariable >> variable [
+
+	^ self shouldBeImplemented
 ]

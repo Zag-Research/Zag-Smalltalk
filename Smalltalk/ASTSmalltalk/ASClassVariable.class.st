@@ -2,12 +2,12 @@
 I represent a class variable
 "
 Class {
-	#name : #ASClassVar,
+	#name : #ASClassVariable,
 	#superclass : #ASVariable,
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #visiting }
-ASClassVar >> acceptVisitor: aVisitor [ 
+ASClassVariable >> acceptVisitor: aVisitor [ 
 	^aVisitor visitClassVar: self
 ]

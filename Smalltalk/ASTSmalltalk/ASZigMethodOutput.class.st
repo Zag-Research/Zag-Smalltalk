@@ -8,8 +8,7 @@ Class {
 		'codeGenerator',
 		'maxDepth',
 		'numLocals',
-		'depth',
-		'blockNumber'
+		'currentBasicBlock'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -21,7 +20,7 @@ ASZigMethodOutput >> blockClass [
 
 { #category : #accessing }
 ASZigMethodOutput >> blockNumber [
-	^ blockNumber := blockNumber + 1.
+	^ currentBasicBlock := currentBasicBlock + 1.
 
 ]
 
@@ -29,9 +28,9 @@ ASZigMethodOutput >> blockNumber [
 ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
-		  codeGenerator := ASCodeGenerator new context: self.
-			codeGenerator depth: depth.
-		  codeGenerator ]
+		  codeGenerator := ASCodeGenerator new
+			                   context: self;
+			                   targetClass: forClass ]
 ]
 
 { #category : #compiling }
@@ -58,8 +57,7 @@ ASZigMethodOutput >> initialize [
 
 	super initialize.
 	maxDepth := 0.
-	depth := 0.
-	blockNumber := 0
+	currentBasicBlock := 0
 ]
 
 { #category : #compiling }
@@ -122,7 +120,8 @@ ASZigMethodOutput >> visitPushBlock: stackIndex [
 ]
 
 { #category : #API }
-ASZigMethodOutput >> visitPushContext [
+ASZigMethodOutput >> visitPushContext: unused [
+
 	^ self subclassResponsibility
 ]
 
@@ -137,10 +136,9 @@ ASZigMethodOutput >> visitPushLocal: localNumber [
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> visitPushSelf: anASCSelf [
-
-	self subclassResponsibility 
+{ #category : #'as yet unclassified' }
+ASZigMethodOutput >> visitPushLocalOrBlock: anObject [ 
+	^ self subclassResponsibility
 ]
 
 { #category : #API }
@@ -149,7 +147,12 @@ ASZigMethodOutput >> visitReturnTop [
 ]
 
 { #category : #API }
-ASZigMethodOutput >> visitSend: aSelector returnIndex: index [ 
+ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [ 
+	^ self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
+ASZigMethodOutput >> visitStoreLocal: anASLocal [ 
 	^ self subclassResponsibility
 ]
 

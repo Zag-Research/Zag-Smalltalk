@@ -29,5 +29,5 @@ ASSuper >> zigWalk: aGenerator [
 ASSuper >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.
-	^ #super
+	^ aGenerator targetClass superclass
 ]

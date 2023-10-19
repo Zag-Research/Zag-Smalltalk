@@ -31,7 +31,7 @@ ASZigGeneratorTest >> testASBlock [
 			 args: Array new).
 	body := OrderedCollection new.
 	body add: (ASSend
-			 target: (ASRef variable: (ASArg name: #index))
+			 target: (ASRef variable: (ASParameter name: #index))
 			 selector: #'<='
 			 args: args).
 	stackVars := OrderedCollection new.
@@ -325,7 +325,7 @@ var @"Integer>>size:" =
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASSend
 				  target:
-				  (ASSend target: (ASArg name: #aCollection) selector: #size)
+				  (ASSend target: (ASParameter name: #aCollection) selector: #size)
 				  selector: #+
 				  args: sendArguments)).
 	method := ASMethodNode
@@ -348,13 +348,13 @@ ASZigGeneratorTest >> testASRef [
 	stackVars := OrderedCollection new.
 	stackVars add: 'p'.
 
-	result := (ASRef variable: (ASArg name: 'p'))
+	result := (ASRef variable: (ASParameter name: 'p'))
 		          zigString: Dictionary new
 		          and: stackVars.
 	self assert: result equals: '&e.pushLocal, 1,'.
 
 "what happens when the stackVars doesn't have the name? exception?"
-	result := (ASRef variable: (ASArg name: 'x'))
+	result := (ASRef variable: (ASParameter name: 'x'))
 		          zigString: Dictionary new
 		          and: stackVars.
 	self assert: result equals: '&e.pushLocal, 0,'

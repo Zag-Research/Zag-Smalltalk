@@ -6,7 +6,7 @@ Class {
 	#superclass : #ASCOperations,
 	#instVars : [
 		'block',
-		'compiledBlock'
+		'manifest'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -16,10 +16,30 @@ ASCBlock >> block [
 	^ block
 ]
 
+{ #category : #initialization }
+ASCBlock >> initialize [ 
+super initialize .
+manifest := false
+]
+
+{ #category : #accessing }
+ASCBlock >> manifest [
+
+^	manifest
+]
+
+{ #category : #serializing }
+ASCBlock >> manifest: aGenerator [
+
+	^ manifest ifFalse: [
+		manifest := true.
+		aGenerator manifest: self ]
+]
+
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 
-	output visitPushBlock: block
+	^ output visitPushBlock: self
 ]
 
 { #category : #'instance creation' }

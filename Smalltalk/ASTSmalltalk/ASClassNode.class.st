@@ -39,7 +39,7 @@ ASClassNode >> initialize [
 
 { #category : #accessing }
 ASClassNode >> lookup: symbol [
-	^ scope at: symbol ifAbsent: [ ASClassVar name: symbol"nestedScopeOf lookup: symbol" ]
+	^ scope at: symbol ifAbsent: [ ASClassVariable name: symbol"nestedScopeOf lookup: symbol" ]
 ]
 
 { #category : #accessing }

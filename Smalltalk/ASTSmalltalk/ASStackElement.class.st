@@ -22,6 +22,11 @@ ASStackElement class >> from: anASStack [
 	^ self basicNew from: anASStack 
 ]
 
+{ #category : #API }
+ASStackElement >> addBlockClosure: aCollection [ 
+	self shouldBeImplemented.
+]
+
 { #category : #accessing }
 ASStackElement >> at: aSymbol put: anObject [
 	rest at: aSymbol put: anObject 
@@ -49,11 +54,6 @@ ASStackElement >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : #API }
-ASStackElement >> findContext [ 
-^ rest findContext 
-]
-
 { #category : #'instance creation' }
 ASStackElement >> from: anASStack [
 
@@ -67,15 +67,34 @@ ASStackElement >> isEmpty [
 ]
 
 { #category : #API }
-ASStackElement >> offset: anInteger to: aString [
-
-	^ rest offset: anInteger + 1 to: aString
+ASStackElement >> makeContextRequired [
+	rest := rest makeContextRequired.
+	^ self
 ]
 
 { #category : #API }
-ASStackElement >> stackNames: aCollection [ 
+ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+
+	^ rest
+		  offset: anInteger + 1
+		  to: anObject
+		  local: blockLocal
+		  stack: blockStack
+]
+
+{ #category : #enumerating }
+ASStackElement >> requiredContextDo: aBlock [ 
+	^ rest requiredContextDo: aBlock
+]
+
+{ #category : #API }
+ASStackElement >> stackNames: aCollection [
+
 	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new from: (rest stackNames: aCollection allButFirst );name: aCollection first;top: top
+	^ ASStackNamed new
+		  from: (rest stackNames: aCollection allButFirst);
+		  name: aCollection first;
+		  top: top
 ]
 
 { #category : #accessing }

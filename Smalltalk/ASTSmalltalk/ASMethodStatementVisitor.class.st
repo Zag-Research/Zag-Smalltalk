@@ -106,7 +106,7 @@ ASMethodStatementVisitor >> visitMethod: anASMethodNode [
 					startMethod: (pragma arguments at: 1) value
 					selector: nil ] ].
 
-	codeGenerator pushContext.
+	codeGenerator pushPlaceholderContext.
 	"create dummy context"
 
 	blockVisitor

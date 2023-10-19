@@ -118,7 +118,7 @@ ASSend >> zigWalk: aGenerator [
 	| myTarget |
 	myTarget := target zigWalkTarget: aGenerator.
 	args do: [ :arg | arg zigWalk: aGenerator ].
-	^ aGenerator send: selector target: myTarget tail: false
+	^ aGenerator send: selector targetClass: myTarget tail: false
 ]
 
 { #category : #compiling }
@@ -127,5 +127,5 @@ ASSend >> zigWalkForReturn: aGenerator [
 	| myTarget |
 	myTarget := target zigWalkTarget: aGenerator.
 	args do: [ :arg | arg zigWalk: aGenerator ].
-	^ aGenerator send: selector target: myTarget tail: true
+	^ aGenerator send: selector targetClass: myTarget tail: true
 ]

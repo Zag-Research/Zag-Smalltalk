@@ -24,6 +24,12 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
+{ #category : #visiting }
+ASCascade >> acceptVisitor: aVisitor [
+
+	^aVisitor visitCascade: self
+]
+
 { #category : #parsing }
 ASCascade >> maxDepth [
 	^sends ifEmpty: [ 0 ] ifNotEmpty:  [sends max: [ :send |  send maxDepth ]]
@@ -61,4 +67,15 @@ ASCascade >> target [
 ASCascade >> target: expression [
 
 	target := expression 
+]
+
+{ #category : #compiling }
+ASCascade >> zigWalk: aGenerator [
+
+	target zigWalkTarget: aGenerator.
+	sends doWithIndex: [ :each :idx |
+		idx = 1
+			ifTrue: [ aGenerator putDup ]
+			ifFalse: [ aGenerator putCopyOver ].
+		each zigWalk: aGenerator ]
 ]

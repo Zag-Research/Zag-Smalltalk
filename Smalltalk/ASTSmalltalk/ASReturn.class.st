@@ -66,6 +66,18 @@ ASReturn >> printOn: s [
 	s << ')'
 ]
 
+{ #category : #accessing }
+ASReturn >> tell: aCompiler youAreSent: aSymbol [
+
+	^ expression tell: aCompiler youAreSent: aSymbol
+]
+
+{ #category : #compiling }
+ASReturn >> zigWalk: aGenerator [
+
+	^ ASTInvalid signal: 'return can only be at statement level'
+]
+
 { #category : #compiling }
 ASReturn >> zigWalkDiscard: aGenerator [
 

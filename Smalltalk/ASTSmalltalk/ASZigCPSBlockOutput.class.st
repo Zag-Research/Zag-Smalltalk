@@ -34,3 +34,8 @@ ASZigCPSBlockOutput >> prefix [
 
 	^ 'B'
 ]
+
+{ #category : #visiting }
+ASZigCPSBlockOutput >> visitReturnSelf [
+	self nextPutAll: 'RETURNSELF';endStatement 
+]

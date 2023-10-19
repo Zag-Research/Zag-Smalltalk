@@ -3,7 +3,7 @@ I contain pragmas for a method - the only one we currently care about is <primit
 "
 Class {
 	#name : #ASPragma,
-	#superclass : #ASStatement,
+	#superclass : #Object,
 	#instVars : [
 		'args'
 	],

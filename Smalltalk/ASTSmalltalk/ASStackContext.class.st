@@ -1,68 +1,46 @@
 "
-I rempresent a stack context.
-
-I may,  or may not be reified in a particular method
+I am an actual context... I only exist if a context is required for this method
 "
 Class {
 	#name : #ASStackContext,
-	#superclass : #ASStack,
+	#superclass : #ASStackContextPlaceholder,
 	#instVars : [
-		'rest',
-		'size',
-		'blockClosures'
+		'blocks'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #'instance creation' }
-ASStackContext class >> from: anASStack [
-	^ self basicNew from: anASStack 
+{ #category : #accessing }
+ASStackContext >> blocks: aCollection [ 
+	blocks := aCollection
 ]
 
 { #category : #initialization }
-ASStackContext >> addBlockClosure: block [
-
-	blockClosures add: block
-]
-
-{ #category : #accessing }
-ASStackContext >> blockClosures [
-	^ blockClosures
-]
-
-{ #category : #accessing }
-ASStackContext >> find: aSymbol [
-	^ rest find: aSymbol
+ASStackContext >> initialize [ 
+super initialize .
+blocks := #()
 ]
 
 { #category : #API }
-ASStackContext >> findContext [ 
+ASStackContext >> makeContextRequired [
 ^ self
 ]
 
-{ #category : #'instance creation' }
-ASStackContext >> from: anASStack [
-
-	rest := anASStack
-]
-
-{ #category : #initialization }
-ASStackContext >> initialize [
-
-	super initialize.
-	size := 0.
-	blockClosures := OrderedCollection new
-]
-
 { #category : #API }
-ASStackContext >> offset: anInteger to: aSymbol [
+ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
 
-	^ size = 0
-		  ifTrue: [ rest offset: anInteger to: aSymbol ]
-		  ifFalse: [ rest find: aSymbol ]
+	| index |
+	index := blocks indexOf: anObject.
+	index > 0 ifTrue: [ ^ blockLocal value: index - 1 ].
+	^ rest
+		  offset: blocks size
+		  to: anObject
+		  local: nil
+		  stack: blockLocal 
 ]
 
-{ #category : #API }
-ASStackContext >> pushContext [ 
-self shouldNotImplement 
+{ #category : #enumerating }
+ASStackContext >> requiredContextDo: aBlock [
+ 
+	^ aBlock value: self	
 ]

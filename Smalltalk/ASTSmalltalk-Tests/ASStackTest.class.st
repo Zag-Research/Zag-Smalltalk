@@ -14,7 +14,7 @@ ASStackTest >> testNames [
 	stack := stack push: 99.
 	self assert: stack drop drop drop top equals: 17.
 	self assert: (stack offsetTo: #p1) equals: 3.
-	stack := stack pushContext.
+	stack := stack pushPlaceholderContext.
 	stack := stack push: 12.
 	stack := stack push: 27.
 	stack := stack stackNames: #( b1 ).

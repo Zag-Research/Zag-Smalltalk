@@ -6,24 +6,21 @@ Class {
 	#name : #ASCParameter,
 	#superclass : #ASCValue,
 	#instVars : [
-		'refMax',
-		'refMin',
 		'offset',
-		'name'
+		'name',
+		'stack'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #'instance creation' }
-ASCParameter class >> name: localName offset: offset [
-
-	^ self new name: localName offset: offset
+ASCParameter class >> inBasicBlock: anASCBasicBlock [ 
+	^ self new inBasicBlock: anASCBasicBlock 
 ]
 
-{ #category : #initialization }
-ASCParameter >> initialize [ 
-super initialize .
-refMax := refMin := 0
+{ #category : #'instance initialization' }
+ASCParameter >> inBasicBlock: anASCBasicBlock [ 
+	stack := anASCBasicBlock stack
 ]
 
 { #category : #accessing }
@@ -31,20 +28,14 @@ ASCParameter >> name [
 ^ name
 ]
 
-{ #category : #'instance creation' }
-ASCParameter >> name: aString offset: anInteger [ 
-	name := aString .
-	offset := anInteger 
+{ #category : #accessing }
+ASCParameter >> name: aSymbol [
+
+	name := aSymbol 
 ]
 
 { #category : #accessing }
-ASCParameter >> offset [ 
-^ offset
-]
+ASCParameter >> offset [
 
-{ #category : #'state tracking' }
-ASCParameter >> referencedAt: depth [
-
-	refMin := depth min: refMin.
-	refMax := depth max: refMax
+	^ stack offsetTo: self name
 ]

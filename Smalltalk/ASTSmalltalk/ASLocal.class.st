@@ -16,3 +16,21 @@ ASLocal >> acceptVisitor: aVisitor [
 ASLocal >> lookup: aScope [
 	^ aScope lookupLocal: name
 ]
+
+{ #category : #affecting }
+ASLocal >> pop: output [
+
+	^ output visitPopLocal: self
+]
+
+{ #category : #affecting }
+ASLocal >> push: output [
+
+	^ output visitPushLocal: self
+]
+
+{ #category : #affecting }
+ASLocal >> store: output [
+
+	^ output visitStoreLocal: self
+]

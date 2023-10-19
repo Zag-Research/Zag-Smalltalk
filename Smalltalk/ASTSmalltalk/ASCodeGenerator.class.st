@@ -20,7 +20,7 @@ Class {
 		'blocks',
 		'name',
 		'localVariables',
-		'depth'
+		'targetClass'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -28,15 +28,40 @@ Class {
 { #category : #API }
 ASCodeGenerator >> assignLocal: anASLocal [
 
-	code assignLocal: anASLocal
+	code assignLocal: anASLocal  with: self
+]
+
+{ #category : #linearize }
+ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
+
+	| rest current |
+	current := basicBlocks first.
+	rest := basicBlocks allButFirst asSet.
+	[ true ] whileNotNil: [
+		aBlock value: current.
+		current next
+			ifNil: [
+				rest isEmpty ifTrue: [ ^ self ].
+				current := rest atRandom ifNil: [ ^ self ] ]
+			ifNotNil: [ :next | current := next ].
+		rest remove: current ].
+]
+
+{ #category : #enumerating }
+ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [ 
+	basicBlocks do: aBlock
+]
+
+{ #category : #'class relationship' }
+ASCodeGenerator >> classOf: aString [ 
+	self shouldBeImplemented.
 ]
 
 { #category : #API }
 ASCodeGenerator >> compileBlock: anASCBlock [
 
-
-	blocks add: anASCBlock.
-	context compileBlock: anASCBlock
+"compiling of blocks doesn't work right now"
+	"anASCBlock manifest ifTrue: [ context compileBlock: anASCBlock ]"
 ]
 
 { #category : #accessing }
@@ -44,11 +69,6 @@ ASCodeGenerator >> context: anASFileContext [
 
 	context := anASFileContext.
 
-]
-
-{ #category : #accessing }
-ASCodeGenerator >> depth: anInteger [ 
-	depth := anInteger
 ]
 
 { #category : #API }
@@ -76,13 +96,25 @@ ASCodeGenerator >> finalAnalysis [
 			index: idx ]
 ]
 
+{ #category : #API }
+ASCodeGenerator >> findTargetClass: aTarget [
+
+^	aTarget = #self
+		ifTrue: [ targetClass ]
+		ifFalse: [
+			aTarget = #super
+				ifTrue: [ targetClass superclass ]
+				ifFalse: [ nil ] ]
+]
+
 { #category : #translating }
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
-	| methodContext |
-	aMethodOrBlockNode zigWalk: self.
-	methodContext := basicBlocks first findContext.
-	methodContext blockClosures do: [ :block | self compileBlock: block ] 
+	aMethodOrBlockNode zigWalkMethod: self.
+	blocks := blocks select: #manifest.
+	basicBlocks do: [ :bb |
+		bb requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
+	blocks do: [ :block | self compileBlock: block ]
 ]
 
 { #category : #initialization }
@@ -92,24 +124,12 @@ ASCodeGenerator >> initialize [
 	code := ASCMethodBlock new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
-	blocks := OrderedCollection new.
-	depth := 0
+	blocks := OrderedCollection new
 ]
 
-{ #category : #linearize }
-ASCodeGenerator >> linearizeBasicBlocksDo: aBlock [
-
-	| rest current |
-	current := basicBlocks first.
-	rest := basicBlocks allButFirst asSet.
-	[ true ] whileNotNil: [
-		aBlock value: current.
-		current next
-			ifNil: [
-				rest isEmpty ifTrue: [ ^ self ].
-				current := rest atRandom ifNil: [ ^ self ] ]
-			ifNotNil: [ :next | current := next ].
-		rest remove: current ].
+{ #category : #inlining }
+ASCodeGenerator >> inline: aString targetClass: aClass tail: aBoolean [ 
+	^ false
 ]
 
 { #category : #accessing }
@@ -131,6 +151,12 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ context lookupObject: anObject
+]
+
+{ #category : #serializing }
+ASCodeGenerator >> manifest: anASCBlock [
+
+	code makeContextRequired
 ]
 
 { #category : #accessing }
@@ -155,22 +181,18 @@ ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
 	block := ASCBlock with: anASBlock.
-	code doPush: block;put: block
-]
-
-{ #category : #API }
-ASCodeGenerator >> pushContext [
-
-	self shouldBeImplemented 
+	blocks add: block.
+	code
+		doPush: block;
+		put: block
 ]
 
 { #category : #API }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
-| value |
-value:= ASCLiteral with: aLiteral.
 	code
-		doPush: value;		put: value
+		doPush: (ASCLiteralValue new init: aLiteral);
+		put: (ASCLiteral with: aLiteral)
 ]
 
 { #category : #API }
@@ -182,17 +204,17 @@ ASCodeGenerator >> pushLocal: aSymbol [
 { #category : #API }
 ASCodeGenerator >> pushSelf [
 
-		| value |
-	value := ASCSelf new.
+	| value |
+	value := ASCClassValue new init: targetClass.
 	code
 		doPush: value;
-		put: value
+		put: (ASCPushVariable with: (ASLocal new name: #self))
 ]
 
 { #category : #API }
 ASCodeGenerator >> pushVariable: variable [
 
-	self pushLocal: variable 
+	self pushLocal: variable
 ]
 
 { #category : #API }
@@ -223,38 +245,22 @@ ASCodeGenerator >> selector: aSymbol [
 ]
 
 { #category : #API }
-ASCodeGenerator >> send: aSymbol target: aTarget [
+ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
-	| numArgs params target |
-	numArgs := aSymbol numArgs.
+	| numArgs params  |
+	(self inline: aSymbol targetClass: aTargetClass tail: tail) ifTrue: [
+		^ self ].
+	numArgs := aSymbol numArgs + 1.
 	params := Array new: numArgs.
-	target := aTarget isSymbol
-		          ifTrue: [ aTarget ]
-		          ifFalse: [ nil ].
-	"	[ numArgs > 0 ] whileTrue: [
-		params at: numArgs put: stack top.
-		self doDrop.
+	[ numArgs > 0 ] whileTrue: [
+		| top |
+		top := code stackTop.
+		params at: numArgs put: top.
+		top manifest: self.
+		code doDrop.
 		numArgs := numArgs - 1 ].
-	stack top: (aGenerator eval: aSymbol params: params)."
-	code := code send: aSymbol target: target tail: false.
-	basicBlocks add: code
-]
-
-{ #category : #API }
-ASCodeGenerator >> send: aSymbol target: aTarget tail: tail [
-
-	| numArgs params target |
-	numArgs := aSymbol numArgs.
-	params := Array new: numArgs.
-	target := aTarget isSymbol
-		          ifTrue: [ aTarget ]
-		          ifFalse: [ nil ].
-	"	[ numArgs > 0 ] whileTrue: [
-		params at: numArgs put: stack top.
-		self doDrop.
-		numArgs := numArgs - 1 ].
-	stack top: (aGenerator eval: aSymbol params: params)."
-	code := code send: aSymbol target: target tail: tail.
+	code doPush: (self eval: aSymbol params: params).
+	code := code send: aSymbol targetClass: aTargetClass tail: tail.
 	basicBlocks add: code
 ]
 
@@ -265,7 +271,13 @@ ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
 	code primitive: primitiveNumber selector: aSymbol 
 ]
 
-{ #category : #enumerating }
-ASCodeGenerator >> unorderedBasicBlocksDo: aBlock [ 
-	basicBlocks do: aBlock
+{ #category : #accessing }
+ASCodeGenerator >> targetClass [
+
+^	targetClass
+]
+
+{ #category : #accessing }
+ASCodeGenerator >> targetClass: anObject [ 
+targetClass:= anObject 
 ]

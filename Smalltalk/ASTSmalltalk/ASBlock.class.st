@@ -98,6 +98,10 @@ ASBlock >> selector [
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
+{ #category : #codegen }
+ASBlock >> startMethod: aGenerator [
+]
+
 { #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
@@ -158,6 +162,8 @@ ASBlock >> zigWalk: aGenerator [
 ]
 
 { #category : #compiling }
-ASBlock >> zigWalkTarget: aGenerator [ 
-	self zigWalk: aGenerator
+ASBlock >> zigWalkTarget: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ BlockClosure 
 ]

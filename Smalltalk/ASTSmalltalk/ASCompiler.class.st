@@ -62,7 +62,8 @@ ASCompiler >> addClass: aClass [
 
 { #category : #building }
 ASCompiler >> addMethod: method [
-	(methodsAlreadyProcessed includes: method) ifFalse: [ methodsToProcess add: method ]
+
+		methodsToProcess add: method 
 ]
 
 { #category : #building }
@@ -190,7 +191,7 @@ ASCompiler >> selectors [
 	^ selectors
 ]
 
-{ #category : #building }
+{ #category : #notifying }
 ASCompiler >> send: selector toClass: aClass [
 	(self selector: selector fromClass: (self addClass: aClass))
 		ifNotNil: [ :method |

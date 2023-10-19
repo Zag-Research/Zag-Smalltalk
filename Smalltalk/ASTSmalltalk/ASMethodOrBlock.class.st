@@ -33,10 +33,10 @@ ASMethodOrBlock >> arguments: aCollection [
 	arguments := aCollection
 		             collect: [ :symbol |
 			             | arg |
-			             arg := ASArg name: symbol.
-			            
+			             arg := ASParameter name: symbol.
+
 			             arg ]
-		             as: Array.
+		             as: Array 
 ]
 
 { #category : #printing }
@@ -62,4 +62,20 @@ ASMethodOrBlock >> printOn: s [
 		arguments do: [ :arg| s<< arg name] separatedBy: [ s<<' ' ].
 		s<< ')' ].
 	super printOn: s
+]
+
+{ #category : #codegen }
+ASMethodOrBlock >> startMethod: aGenerator [
+
+	^ self subclassResponsibility 
+]
+
+{ #category : #codegen }
+ASMethodOrBlock >> zigWalkMethod: aGenerator [
+
+	aGenerator
+		locals: (locals collect: #name)
+		arguments: (arguments collect: #name).
+	self startMethod: aGenerator .
+	^ body zigWalk: aGenerator
 ]

@@ -13,6 +13,7 @@ ASCSelf >> name [
 ]
 
 { #category : #'code generation' }
-ASCSelf >> outputTo: anOutput [ 
-	anOutput visitPushSelf: self
+ASCSelf >> outputTo: anOutput [
+
+	anOutput visitPushLocal: offset
 ]

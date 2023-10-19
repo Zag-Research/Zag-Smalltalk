@@ -23,11 +23,6 @@ ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
 
-{ #category : #API }
-ASStack >> findContext [
-	^ self subclassResponsibility
-]
-
 { #category : #testing }
 ASStack >> isEmpty [
 
@@ -35,13 +30,15 @@ ASStack >> isEmpty [
 ]
 
 { #category : #API }
-ASStack >> offset: ignored to: unused [
-self subclassResponsibility 
+ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+
+	self subclassResponsibility
 ]
 
 { #category : #API }
-ASStack >> offsetTo: aSymbol [
-^ self offset: 0 to: aSymbol
+ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack [
+
+	^ self offset: 0 to: aSymbol local: blockLocal stack: blockStack
 ]
 
 { #category : #adding }
@@ -54,8 +51,8 @@ ASStack >> push: anObject [
 ]
 
 { #category : #API }
-ASStack >> pushContext [ 
-	^ ASStackContext new from: self
+ASStack >> pushPlaceholderContext [ 
+	^ ASStackContextPlaceholder new from: self
 ]
 
 { #category : #API }

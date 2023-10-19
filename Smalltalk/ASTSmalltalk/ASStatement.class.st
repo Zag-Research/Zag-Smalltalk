@@ -105,6 +105,5 @@ ASStatement >> zigWalk: aGenerator [
 { #category : #compiling }
 ASStatement >> zigWalkDiscard: aGenerator [
 
-	self zigWalk: aGenerator.
-	^ aGenerator drop
+	self subclassResponsibility
 ]

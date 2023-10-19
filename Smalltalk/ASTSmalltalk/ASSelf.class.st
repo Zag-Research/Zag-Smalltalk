@@ -109,5 +109,5 @@ ASSelf >> zigWalk: anASCodeGenerator [
 ASSelf >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.
-	^ #self
+	^ aGenerator targetClass 
 ]

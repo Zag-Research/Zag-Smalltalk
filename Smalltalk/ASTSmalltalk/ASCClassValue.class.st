@@ -37,6 +37,10 @@ ASCClassValue >> kind [
 	^ valueClass
 ]
 
+{ #category : #serializing }
+ASCClassValue >> manifest: aGenerator [
+]
+
 { #category : #accessing }
 ASCClassValue >> max [
 

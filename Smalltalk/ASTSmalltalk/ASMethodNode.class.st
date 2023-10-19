@@ -140,6 +140,15 @@ ASMethodNode >> stackSize [
 	^0
 ]
 
+{ #category : #codegen }
+ASMethodNode >> startMethod: aGenerator [
+	| primitive |
+	pragmas do: [ :pragma |
+		pragma isPrimitive ifTrue: [
+			primitive := (pragma arguments at: 1) value ] ].
+	aGenerator startMethod: primitive selector: selector.
+]
+
 { #category : #visiting }
 ASMethodNode >> variableIndex: anASVar [
 	^ (clsrData indexOf: anASVar name) asString.
@@ -265,16 +274,4 @@ ASMethodNode >> writeMethod: aStream with: syms [
 	blockVisitor blocks do: [ :block |
 		block isNonLocalReturn ifFalse: [
 			block writeBlock: aStream with: syms] ]
-]
-
-{ #category : #codegen }
-ASMethodNode >> zigWalk: aGenerator [
-
-	| primitive |
-	aGenerator locals: (locals collect: #name) arguments: arguments.
-	pragmas do: [ :pragma |
-		pragma isPrimitive ifTrue: [
-			primitive := (pragma arguments at: 1) value ] ].
-	aGenerator startMethod: primitive selector: selector.
-	^ body zigWalk: aGenerator
 ]

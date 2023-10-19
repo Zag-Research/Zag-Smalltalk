@@ -18,6 +18,12 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : #serializing }
+ASCOperations >> manifest: aGenerator [
+
+
+]
+
 { #category : #'code generation' }
 ASCOperations >> outputTo: aCodeEmitter [
 

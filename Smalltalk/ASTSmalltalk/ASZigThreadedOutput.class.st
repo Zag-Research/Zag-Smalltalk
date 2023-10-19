@@ -51,9 +51,10 @@ ASZigThreadedOutput >> outputMethodStart: bbLabel [
 ASZigThreadedOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
-	codeGenerator linearizeBasicBlocksDo: [ :bb |
-		maxDepth := maxDepth max: bb maxDepth.
-		bb outputTo: self ].
+	codeGenerator basicBlocksLinearizeDo: [ :bb |
+		currentBasicBlock := bb.
+		maxDepth := maxDepth max: currentBasicBlock maxDepth.
+		currentBasicBlock outputTo: self ].
 	self endMethod
 ]
 
@@ -95,26 +96,33 @@ ASZigThreadedOutput >> verifySelector: anObject [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> visitPopLocal: localNumber [
+ASZigThreadedOutput >> visitPopLocal: anASLocal [
+
+	currentBasicBlock offsetOf: anASLocal name local: [:local| self
+		putEmbedded: #popLocal;
+		print: local;
+		comma] stack: [:offset| self
+		putEmbedded: #popStack;
+		print: offset;
+		comma]
+	
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushBlock: anASCBlock [
+
+	anASCBlock manifest
+		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
+		ifFalse: [ self visitPushLiteral: nil ]
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 
 	self
-		putEmbedded: #popLocal;
-		print: localNumber;
+		putEmbedded: #pushContext;
+		nextPutAll: '"^"';
 		comma
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> visitPushBlock: stackIndex [
-
-	self tab;
-	print: stackIndex;lf
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> visitPushContext [
-
-	self putEmbedded: #pushContext;
-	nextPutAll: '"^"';comma
 ]
 
 { #category : #API }
@@ -127,12 +135,26 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> visitPushLocal: localNumber [
+ASZigThreadedOutput >> visitPushLocal: anASLocal [
 
-	self
-		putEmbedded: #pushLocal;
-		print: localNumber;
-		comma
+^	self visitPushLocalOrBlock: anASLocal name
+]
+
+{ #category : #API }
+ASZigThreadedOutput >> visitPushLocalOrBlock: anObject [
+
+	currentBasicBlock
+		offsetOf: anObject
+		local: [ :local |
+			self
+				putEmbedded: #pushLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #pushStack;
+				print: offset;
+				comma ]
 ]
 
 { #category : #API }
@@ -142,11 +164,29 @@ ASZigThreadedOutput >> visitReturnTop [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> visitSend: aSelector returnIndex: index [
+ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
-	self putEmbedded: ('send' , aSelector numArgs asString) asSymbol;
- putSymbol: aSelector;
-comma
+	self
+		putEmbedded: ('send' , aSelector numArgs asString) asSymbol;
+		putSymbol: aSelector;
+		comma
+]
+
+{ #category : #visiting }
+ASZigThreadedOutput >> visitStoreLocal: anASLocal [
+
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				putEmbedded: #storeLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #storeStack;
+				print: offset;
+				comma ]
 ]
 
 { #category : #writing }

@@ -22,17 +22,10 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #adding }
-ASCBasicBlock >> addTo: aCollection [ 
-	self shouldBeImplemented.
-]
-
 { #category : #API }
-ASCBasicBlock >> assignLocal: anASLocal [
-
-	| target |
-	target := stack find: anASLocal name.
-	self put: (ASCStoreLocal with: target)
+ASCBasicBlock >> assignLocal: anASLocal with: aGenerator [
+stack top manifest: aGenerator .
+	self put: (ASCStoreVariable with: anASLocal)
 ]
 
 { #category : #stackAccessHelpers }
@@ -80,11 +73,6 @@ ASCBasicBlock >> endWithReturnTop [
 		end := ASCReturnTop new
 ]
 
-{ #category : #API }
-ASCBasicBlock >> findContext [
-	^ stack findContext 
-]
-
 { #category : #accessing }
 ASCBasicBlock >> index [
 	^ index
@@ -110,6 +98,11 @@ ASCBasicBlock >> label: aString index: anInteger [
 	index := anInteger 
 ]
 
+{ #category : #API }
+ASCBasicBlock >> makeContextRequired [
+	stack := stack makeContextRequired 
+]
+
 { #category : #accessing }
 ASCBasicBlock >> maxDepth [
 	^ maxDepth
@@ -118,6 +111,15 @@ ASCBasicBlock >> maxDepth [
 { #category : #accessing }
 ASCBasicBlock >> next [
 	^ next
+]
+
+{ #category : #API }
+ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock [
+
+	^ stack offset: 0
+		  to: anObject
+		  local: localBlock
+		  stack: localBlock
 ]
 
 { #category : #wriiting }
@@ -135,11 +137,9 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : #API }
-ASCBasicBlock >> popLocal: anASCLocal [
+ASCBasicBlock >> popLocal: anASLocal [
 
-	| target |
-	target := stack find: anASCLocal name.
-	self put: (ASCPopLocal with: target).
+	self put: (ASCPopVariable with: anASLocal).
 	self doDrop
 ]
 
@@ -148,7 +148,7 @@ ASCBasicBlock >> pushLocal: anASCLocal [
 
 	| target |
 	target := stack find: anASCLocal name.
-	self put: (ASCPushLocal with: target).
+	self put: (ASCPushVariable with: anASCLocal ).
 	self doPush: target top
 ]
 
@@ -166,6 +166,11 @@ ASCBasicBlock >> put: anObject [
 	operations add: anObject 
 ]
 
+{ #category : #enumerating }
+ASCBasicBlock >> requiredContextDo: aBlock [
+stack requiredContextDo: aBlock 
+]
+
 { #category : #initialization }
 ASCBasicBlock >> returnTop [
 		self doDrop.
@@ -174,17 +179,24 @@ ASCBasicBlock >> returnTop [
 ]
 
 { #category : #'abstract interpretation' }
-ASCBasicBlock >> send: aSymbol target: aTarget tail: tailCall [
+ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	next := ASCReturnBlock new
-		        stack: stack;
 		        end: end.
 	end := ASCSend new
 		       selector: aSymbol;
 		       return: next;
-		       target: aTarget;
+		       target: target;
 		       tail: tailCall.
-	^ next 
+	stack := stack makeContextRequired.
+	next 
+		        stack: stack.
+	^ next
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> stack [
+	^ stack
 ]
 
 { #category : #accessing }
@@ -192,6 +204,11 @@ ASCBasicBlock >> stack: anASStack [
 
 	stack := anASStack.
 	maxDepth := stack depth
+]
+
+{ #category : #stackAccessHelpers }
+ASCBasicBlock >> stackTop [
+	^ stack top
 ]
 
 { #category : #accessing }

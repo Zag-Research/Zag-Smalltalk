@@ -121,10 +121,11 @@ ASZigCPSOutput >> outputMethodStart: bbLabel [
 ASZigCPSOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
-	codeGenerator unorderedBasicBlocksDo: [ :bb |
-		maxDepth := maxDepth max: bb maxDepth.
-		bb outputTo: self.
- ]
+	codeGenerator basicBlocksUnorderedDo: [ :bb |
+				currentBasicBlock := bb.
+		maxDepth := maxDepth max: currentBasicBlock maxDepth.
+		currentBasicBlock outputTo: self ].
+
 ]
 
 { #category : #'code generation' }
@@ -166,35 +167,41 @@ ASZigCPSOutput >> visitCall: aSelector doBreak: doBreak [
 	self halt
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitLiteral: literal [
+{ #category : #API }
+ASZigCPSOutput >> visitPopLocal: anASLocal [
 
 	self
+	visitStoreLocal: anASLocal;
 		lVal: #sp;
 		rVal: #sp;
-		nextPutAll: '.push(';
-		nextPutAll: literal asZigLiteral;
-		nextPut: $);
-		endStatement 
-]
-
-{ #category : #visiting }
-ASZigCPSOutput >> visitPopLocal: anInteger [ 
-	self nextPutAll: 'context.setLocal(';
-	print: anInteger;
-	nextPutAll: ',';
-	rVal: #sp;
-	nextPutAll: '.top)';
-	endStatement;
-	lVal: #sp;
-	rVal: #sp;
-	nextPutAll: '.drop()';
-	endStatement 
+		nextPutAll: '.drop()';
+		endStatement
 ]
 
 { #category : #API }
-ASZigCPSOutput >> visitPushBlock: anUndefinedObject [ 
-	self nextPutAll: 'ABLOCK'
+ASZigCPSOutput >> visitPushBlock: anASCBlock [
+
+	anASCBlock manifest
+		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
+		ifFalse: [ self visitPushLiteral: nil ] 
+]
+
+{ #category : #API }
+ASZigCPSOutput >> visitPushContext: aMethodBlock [
+
+	self
+		lVal: #context;
+		rVal: #context;
+		nextPutAll: '.push(';
+		rVal: #sp;
+		nextPutAll: ', process, &';
+		nextPutAll: componentName;
+		nextPutAll: ', 0, 2, 0)';
+		endStatement;
+		lVal: #sp;
+		rVal: #context;
+		nextPutAll: '.asNewSp()';
+		endStatement
 ]
 
 { #category : #API }
@@ -209,25 +216,35 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 		endStatement 
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitPushLocal: anInteger [ 
-	self lVal: #sp;
-	rVal: #sp;
-	nextPutAll: '.push(context.getLocal(';
-	print: anInteger;
-	nextPutAll: '))';
-	endStatement 
+{ #category : #API }
+ASZigCPSOutput >> visitPushLocal: anASLocal [
+^
+	self
+		visitPushLocalOrBlock: anASLocal name
 ]
 
 { #category : #API }
-ASZigCPSOutput >> visitPushSelf: anASCSelf [
+ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 
 	self
 		lVal: #sp;
 		rVal: #sp;
-		nextPutAll: '.push(';
-		rVal: #context;
-		nextPutAll: '.self())';
+		nextPutAll: '.push('.
+	currentBasicBlock
+		offsetOf: anObject
+		local: [ :local |
+			self
+				nextPutAll: 'context.getLocal(';
+				print: local;
+				nextPut: $) ]
+		stack: [ :offset |
+			self
+				rVal: #sp;
+				nextPutAll: '.at(';
+				print: offset;
+				nextPut: $) ].
+	self
+		nextPut: $);
 		endStatement
 ]
 
@@ -254,14 +271,15 @@ ASZigCPSOutput >> visitReturnTop [
 		rVal: #result;
 		nextPutAll: '.ctxt';
 		endStatement;
-		nextPutAll:
-			'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';rVal: #sp;nextPutAll:', process, callerContext, selector, cache })';
+		nextPutAll: 'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';
+		rVal: #sp;
+		nextPutAll: ', process, cContext, selector, cache })';
 		endStatement;
 		flush
 ]
 
 { #category : #API }
-ASZigCPSOutput >> visitSend: aSelector returnIndex: index [
+ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 
 	self
 		nextPutAll: 'context.setReturn(&';
@@ -273,9 +291,18 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index [
 		lConst: #pc;
 		nextPutAll: 'dispatch.lookup(';
 		putDirectSymbol: aSelector;
-		nextPutAll: ', ';
-		sp: aSelector numArgs;
-		nextPutAll: '.classIndex)';
+		nextPutAll: ', '.
+	target
+		ifNotNil: [
+			self
+				nextPut: $.;
+				nextPutAll: target name;
+				nextPut: $) ]
+		ifNil: [
+			self
+				sp: aSelector numArgs;
+				nextPutAll: '.classIndex)' ].
+	self
 		endStatement;
 		nextPutAll: 'return @call(tailCall,';
 		rVal: #pc;
@@ -288,6 +315,27 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index [
 		nextPutAll: ', cache });
 ';
 		flush
+]
+
+{ #category : #visiting }
+ASZigCPSOutput >> visitStoreLocal: anASLocal [
+			currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				nextPutAll: 'context.setLocal(';
+				print: local ]
+		stack: [ :offset |
+			self
+				rVal: #sp;
+				nextPutAll: '.atPut(';
+				print: offset ].
+	self
+		nextPutAll: ',';
+		rVal: #sp;
+		nextPutAll: '.top)';
+		endStatement.
+
 ]
 
 { #category : #writing }

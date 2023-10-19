@@ -8,8 +8,8 @@ Class {
 		'selector',
 		'useCall',
 		'bb',
-		'target',
-		'tailCall'
+		'tailCall',
+		'target'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -28,8 +28,7 @@ super initialize .	useCall := false
 { #category : #'code generation' }
 ASCSend >> outputTo: anOutput [
 
-	anOutput visitSend: selector returnIndex: bb index
-
+	anOutput visitSend: selector returnIndex: bb index target: target
 ]
 
 { #category : #handling }
@@ -48,8 +47,8 @@ ASCSend >> tail: aBoolean [
 ]
 
 { #category : #accessing }
-ASCSend >> target: possiblyASymbol [
-	target := possiblyASymbol 
+ASCSend >> target: aSymbol [
+	target := aSymbol 
 ]
 
 { #category : #accessing }

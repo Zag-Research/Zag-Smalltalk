@@ -24,10 +24,10 @@ ASCMethodBlock >> initialize [
 ASCMethodBlock >> locals: locals arguments: arguments [
 	stack isEmpty
 		ifTrue: [ self pushUnknownNamed: #self ]
-		ifFalse: [ stack := stack names: #( self ) ].
+		ifFalse: [ stack := stack stackNames: #( self ) ].
 	arguments reversed do: [ :each | self pushUnknownNamed: each ].
 	locals do: [ :each | self pushUnknownNamed: each ].
-	stack := stack pushContext
+	stack := stack pushPlaceholderContext
 ]
 
 { #category : #wriiting }
@@ -37,6 +37,8 @@ ASCMethodBlock >> outputTo: output [
 	primitive
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
+stack requiredContextDo: [ : context |
+		                 output visitPushContext: context ].
 	output outputMethodLabel: label.
 	self outputRestTo: output
 ]

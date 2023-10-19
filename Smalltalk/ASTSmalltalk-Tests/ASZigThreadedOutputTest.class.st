@@ -25,14 +25,12 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	output := ASZigThreadedOutput testing
 		          context: file;
 		          generateCode: ast.
-	output visitPushLocal: #self.
-	output visitPushLocal: #sum.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.popLocal....' 
+		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1,Sym.@"+",":MaddTwoNumbers:3",&e.returnTop,' 
 ]
 
 { #category : #tests }
@@ -45,6 +43,21 @@ ASZigThreadedOutputTest >> testZig_fib [
 		          context: file;
 		          generateCode: ast.
 	self assert: output name equals: 'Mfib:'.
+	self
+		assert: output asString
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_fibonacci [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast for: SmallInteger.
+	self assert: output name equals: 'Mfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
@@ -108,20 +121,6 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 ]
 
 { #category : #tests }
-ASZigThreadedOutputTest >> testZig_pushLocal [
-
-	| output selfIndex |
-	selfIndex := 5.
-	output := ASZigThreadedOutput  testing.
-	output codeGenerator locals: #( foo bar ) arguments: #( blat fubar ).
-	output visitPushLocal: #self.
-
-	self
-		assert: output asString
-		equals: '&e.pushLocal,' , selfIndex asString , ', // #self'
-]
-
-{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
 	| output |
@@ -155,13 +154,13 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 		       ASCompileTestClass1 >> #simpleBlock.
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
-		             context: file;
-		             generateCode: ast.
+		          context: file;
+		          generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'MsimpleBlock'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MsimpleBlock:1",doSomething,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -172,10 +171,27 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCode: ast.
+		          generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,":Munaries:3",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,":Munaries:3",&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_unariesPlus [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #unariesPlus.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast for: ASCompileTestClass1.
+	self assert: output name equals: 'MunariesPlus'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,&e.pushContext,"^",":MunariesPlus:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":MunariesPlus:2",&e.send0,Sym.i_1,":MunariesPlus:3",&e.pushLiteral,Object.from(42),&e.send1,Sym.i_2,":MunariesPlus:4",&e.returnTop,'
 ]
