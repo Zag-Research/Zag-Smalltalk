@@ -107,6 +107,11 @@ ASCodeGenerator >> findTargetClass: aTarget [
 				ifFalse: [ nil ] ]
 ]
 
+{ #category : #accessing }
+ASCodeGenerator >> firstBlock [
+	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
+]
+
 { #category : #translating }
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 

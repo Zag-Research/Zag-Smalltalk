@@ -28,6 +28,11 @@ stack top manifest: aGenerator .
 	self put: (ASCStoreVariable with: anASLocal)
 ]
 
+{ #category : #initialization }
+ASCBasicBlock >> childeren [
+ ^ OrderedCollection new addAll: operations; yourself
+]
+
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -84,6 +89,30 @@ ASCBasicBlock >> initialize [
 	super initialize.
 	operations := OrderedCollection new.
 	end := ASCReturnSelf new 
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> inspectBlock [
+
+	<inspectorPresentationOrder: 0 title: 'BLOCKS'>
+	^ SpTreePresenter new
+		  roots: { self };
+		  children: [ :aNode | aNode childeren ];
+		  display: [ :each |
+			  String streamContents: [ :stream |
+					  each inspectString: stream ] ];
+		  yourself
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> inspectString: aStream [
+	aStream
+		nextPutAll: self class name;
+		nextPut: $(;
+		nextPutAll: #label;
+		nextPut: $=;
+		nextPutAll: label;
+		nextPut: $)
 ]
 
 { #category : #initialization }

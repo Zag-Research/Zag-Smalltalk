@@ -18,6 +18,16 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : #initialization }
+ASCOperations >> childeren [
+^ OrderedCollection new
+]
+
+{ #category : #printing }
+ASCOperations >> inspectString: aStream [
+	aStream nextPutAll: self class name
+]
+
 { #category : #serializing }
 ASCOperations >> manifest: aGenerator [
 
