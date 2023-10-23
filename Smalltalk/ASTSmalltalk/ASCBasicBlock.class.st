@@ -30,7 +30,11 @@ stack top manifest: aGenerator .
 
 { #category : #initialization }
 ASCBasicBlock >> childeren [
- ^ OrderedCollection new addAll: operations; yourself
+	| childeren |
+	childeren := OrderedCollection new addAll: operations.
+ 	next ifNotNil: [ childeren add: next].
+	
+	^childeren
 ]
 
 { #category : #stackAccessHelpers }
@@ -100,19 +104,8 @@ ASCBasicBlock >> inspectBlock [
 		  children: [ :aNode | aNode childeren ];
 		  display: [ :each |
 			  String streamContents: [ :stream |
-					  each inspectString: stream ] ];
+					  each printOn: stream ] ];
 		  yourself
-]
-
-{ #category : #accessing }
-ASCBasicBlock >> inspectString: aStream [
-	aStream
-		nextPutAll: self class name;
-		nextPut: $(;
-		nextPutAll: #label;
-		nextPut: $=;
-		nextPutAll: label;
-		nextPut: $)
 ]
 
 { #category : #initialization }
@@ -170,6 +163,19 @@ ASCBasicBlock >> popLocal: anASLocal [
 
 	self put: (ASCPopVariable with: anASLocal).
 	self doDrop
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> printOn: aStream [
+	aStream
+		nextPutAll: self class name;
+		nextPut: $(.
+		self class slots do: [ :aSlot | 
+			aStream nextPutAll: aSlot name;
+			nextPutAll: ' => '.
+			(self instVarNamed: aSlot name) printOn: aStream
+		] separatedBy: [ aStream space ].
+		aStream nextPut: $)
 ]
 
 { #category : #API }
