@@ -1,14 +1,47 @@
-## The JIT
+## JIT Documentation 
 
-Just In Time compilation means that the code is generated during program execution. Sometimes this is before a given method is run the first time; sometimes the method runs a few times to gather information about the execution.
+#### Overview 
+Just In Time (JIT) compilation means that the code is generated during program execution. Sometimes this is before a given method is run the first time; sometimes the method runs a few times to gather information about the execution.
 
 We choose for the default to be machine code. So if a method is to be interpreted, it will have a tiny machine code header that will verify the appropriate method is called, and then jump to the interpreter to interpret the AST.
 
-The JIT uses [Execution](Execution.md#Method%20dispatch)
+#### Details
+We want to be able to use the methods that are sitting in the Pharo image to run for Zag instead of rewriting each and every one from scratch. 
 
-### LLVM
- - 
-### Eclipse-OMR
- - [Eclipse-OMR](https://eclipse-omr.org)
-### OpenJIT
-- [openjit.org](https://www.openjit.org/)
+Pharo has an AST for each of its methods which we want to extract, walk (to convert to a string representation?), and then pass over to the Zag runtime in order for it to be stored in the Zag image. ASTs in Pharo are transformed into a string representation that can then be used to pass over to Zag. We have 15 methods that are implementations for `compileObject` in Pharo that simply output the string representation of the AST. The process of converting methods to strings has been universalized to not only work for Zag methods, but also for any Pharo methods.  
+
+Zag then takes the string-ified version of the tree and converts it to a tree that maps to the original Pharo AST. This is what would be called the Zag AST (ASC)  
+
+The Zag AST later gets converted into a compiler method (linearized version?). These compiler methods later get stored into the Zag image (runtime). 
+
+When an object in Zag gets sent a message that does not exist in any of the Zag class hierarchies, we extract the Pharo implementation of the method. This extracted Pharo AST gets transformed into a Zag AST (and then a compiler method) for the particular class and then added to the Zag dispatch table. If the desired AST does not have an implementation in Pharo, we generate a DNU message. 
+
+Each time a specific compiled method is called, its verify selector instruction is updated (increased). The verify selector instruction acts as a counter to determine if the compile method is eligible to be JIT ’ed if the value of it's verify selector exceeds a certain threshold (threshold is yet to be determined). 
+
+ LLVM will be used to compile the method into machine code. 
+
+If we do reach that threshold, we update the verify selector (resetting it?) and then transform the compiler method into LLVM IR so that it can result in machine code. This machine code gets stored somewhere (confirm where) and will be called when a reference to the original method is invoked by the runtime.  
+
+My Task: I am not generating the CPS code - rather, I am simply taking the compiled method code and converting that into LLVM IR. The resulting machine code is later stored somewhere (confirm where). 
+
+#### Questions  
+
+> Will remove these later once answered
+
+- You mentioned during our last meeting that the `compileMethods` linearize the AST and then send it if over to the Zag code. I thought that the Pharo AST was converted to a string-representation and then sent  over to the Zag code?  
+
+	Also, you mention that the `compileMethods` take the Zag AST as input later on.  
+	
+	Do the `compileMethods` exist in both the Smalltalk & Zag environment then? A bit confused on the actual role of the `compiledMethods`. 
+
+- What is the difference between the following:
+	- `compiledMethods` 
+	- `compilerMethods`
+	- `compiledObjects` 
+
+#### Links 
+
+- The JIT uses [Execution](Execution.md#Method%20dispatch)
+- Eclipse-OMR, [Eclipse-OMR](https://eclipse-omr.org)
+- OpenJIT, [openjit.org](https://www.openjit.org/)
+
