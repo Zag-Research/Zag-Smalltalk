@@ -22,6 +22,13 @@ super initialize .
 manifest := false
 ]
 
+{ #category : #printing }
+ASCBlock >> inspectStringOn: aStream [
+
+	super inspectStringOn: aStream.
+	block printOn: aStream
+]
+
 { #category : #accessing }
 ASCBlock >> manifest [
 
