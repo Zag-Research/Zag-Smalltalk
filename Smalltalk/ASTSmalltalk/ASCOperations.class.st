@@ -23,6 +23,12 @@ ASCOperations >> childeren [
 ^ OrderedCollection new
 ]
 
+{ #category : #printing }
+ASCOperations >> inspectStringOn: aStream [
+
+	aStream nextPutAll: self class name
+]
+
 { #category : #serializing }
 ASCOperations >> manifest: aGenerator [
 
@@ -33,11 +39,6 @@ ASCOperations >> manifest: aGenerator [
 ASCOperations >> outputTo: aCodeEmitter [
 
 	self subclassResponsibility
-]
-
-{ #category : #printing }
-ASCOperations >> printOn: aStream [
-	aStream nextPutAll: self class name
 ]
 
 { #category : #'instance creation' }

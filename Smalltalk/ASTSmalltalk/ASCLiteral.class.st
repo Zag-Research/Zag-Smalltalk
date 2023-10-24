@@ -10,19 +10,19 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #'code generation' }
-ASCLiteral >> outputTo: output [ 
-	output visitPushLiteral: literal
-]
-
 { #category : #printing }
-ASCLiteral >> printOn: aStream [
+ASCLiteral >> inspectStringOn: aStream [
 
-	super printOn: aStream.
+	super inspectStringOn: aStream.
 	aStream
 		nextPut: $(;
 		nextPutAll: literal asString;
 		nextPut: $)
+]
+
+{ #category : #'code generation' }
+ASCLiteral >> outputTo: output [ 
+	output visitPushLiteral: literal
 ]
 
 { #category : #'instance creation' }

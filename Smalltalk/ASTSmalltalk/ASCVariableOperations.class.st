@@ -10,18 +10,18 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #printing }
+ASCVariableOperations >> inspectStringOn: aStream [
+
+	super inspectStringOn: aStream.
+	aStream nextPut: $(.
+	aStream nextPutAll: variable name.
+	aStream nextPut: $)
+]
+
 { #category : #'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
-]
-
-{ #category : #printing }
-ASCVariableOperations >> printOn: aStream [
-
-	super printOn: aStream.
-	aStream nextPut: $(.
-	variable printOn: aStream.
-	aStream nextPut: $)
 ]
 
 { #category : #'instance creation' }

@@ -43,12 +43,6 @@ ASCBlock >> outputTo: output [
 ]
 
 { #category : #'instance creation' }
-ASCBlock >> printOn: aStream [
-	super printOn: aStream.
-	block printOn: aStream
-]
-
-{ #category : #'instance creation' }
 ASCBlock >> with: anASBlock [
 
 	block := anASBlock

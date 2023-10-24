@@ -103,9 +103,25 @@ ASCBasicBlock >> inspectBlock [
 		  roots: { self };
 		  children: [ :aNode | aNode childeren ];
 		  display: [ :each |
-			  String streamContents: [ :stream |
-					  each printOn: stream ] ];
+			  String streamContents: [ :stream | each inspectStringOn: stream ] ];
 		  yourself
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> inspectStringOn: aStream [
+
+	aStream
+		nextPutAll: self class name;
+		nextPut: $(.
+	self class slots
+		do: [ :aSlot |
+			aStream
+				nextPutAll: aSlot name;
+				nextPutAll: ' => '.
+			(self instVarNamed: aSlot name) ifNotNil: [ :item | aStream nextPutAll: item ] ifNil: [ aStream nextPutAll: #nil ]
+		]
+		separatedBy: [ aStream space ].
+	aStream nextPut: $)
 ]
 
 { #category : #initialization }
@@ -163,19 +179,6 @@ ASCBasicBlock >> popLocal: anASLocal [
 
 	self put: (ASCPopVariable with: anASLocal).
 	self doDrop
-]
-
-{ #category : #accessing }
-ASCBasicBlock >> printOn: aStream [
-	aStream
-		nextPutAll: self class name;
-		nextPut: $(.
-		self class slots do: [ :aSlot | 
-			aStream nextPutAll: aSlot name;
-			nextPutAll: ' => '.
-			(self instVarNamed: aSlot name) printOn: aStream
-		] separatedBy: [ aStream space ].
-		aStream nextPut: $)
 ]
 
 { #category : #API }
