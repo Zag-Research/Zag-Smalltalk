@@ -98,7 +98,7 @@ ASCBasicBlock >> initialize [
 { #category : #accessing }
 ASCBasicBlock >> inspectBlock [
 
-	<inspectorPresentationOrder: 0 title: 'BLOCKS'>
+	<inspectorPresentationOrder: 0 title: 'ZigBlocks'>
 	^ SpTreePresenter new
 		  roots: { self };
 		  children: [ :aNode | aNode childeren ];
