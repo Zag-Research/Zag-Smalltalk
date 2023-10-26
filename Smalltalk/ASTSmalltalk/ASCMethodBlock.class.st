@@ -13,6 +13,15 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #accessing }
+ASCMethodBlock >> children [
+
+	| children |
+	children :=  super children.
+	children addAll: self blocks.
+	^ children
+]
+
 { #category : #initialization }
 ASCMethodBlock >> initialize [
 

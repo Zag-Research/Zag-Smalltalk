@@ -41,6 +41,11 @@ ASCBasicBlock >> blocks [
 ]
 
 { #category : #accessing }
+ASCBasicBlock >> children [
+	^ operations
+]
+
+{ #category : #accessing }
 ASCBasicBlock >> contents [
 
 	| stream |

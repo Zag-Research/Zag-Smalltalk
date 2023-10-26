@@ -16,17 +16,15 @@ ASCBlock >> block [
 	^ block
 ]
 
+{ #category : #accessing }
+ASCBlock >> children [
+	^ block body
+]
+
 { #category : #initialization }
 ASCBlock >> initialize [ 
 super initialize .
 manifest := false
-]
-
-{ #category : #printing }
-ASCBlock >> inspectStringOn: aStream [
-
-	super inspectStringOn: aStream.
-	block printOn: aStream
 ]
 
 { #category : #accessing }
