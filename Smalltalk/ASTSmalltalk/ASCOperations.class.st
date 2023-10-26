@@ -18,9 +18,14 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
-{ #category : #initialization }
-ASCOperations >> childeren [
-^ OrderedCollection new
+{ #category : #printing }
+ASCOperations >> contents [
+
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectStringOn: stream.
+
+	^ stream contents
 ]
 
 { #category : #printing }

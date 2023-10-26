@@ -23,6 +23,6 @@ ASZigInspectionTest >> testInspectionOfFib [
 	output := ASZigCPSOutput testing
 		          context: file;
 		          generateCode: ast.
-
+		
 	output codeGenerator firstBlock inspect
 ]

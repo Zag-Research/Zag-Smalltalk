@@ -28,13 +28,26 @@ stack top manifest: aGenerator .
 	self put: (ASCStoreVariable with: anASLocal)
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> childeren [
-	| childeren |
-	childeren := OrderedCollection new addAll: operations.
- 	next ifNotNil: [ childeren add: next].
+{ #category : #accessing }
+ASCBasicBlock >> blocks [
+	| blocks block |
+	blocks := OrderedCollection new.
+	block := next.
+	[ block notNil ] whileTrue: [
+		blocks add: block.
+		block := block next ].
 	
-	^childeren
+^ blocks
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> contents [
+
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectStringOn: stream.
+
+	^ stream contents
 ]
 
 { #category : #stackAccessHelpers }
@@ -97,13 +110,12 @@ ASCBasicBlock >> initialize [
 
 { #category : #accessing }
 ASCBasicBlock >> inspectBlock [
-
 	<inspectorPresentationOrder: 0 title: 'ZigBlocks'>
-	^ SpTreePresenter new
-		  roots: { self };
-		  children: [ :aNode | aNode childeren ];
-		  display: [ :each |
-			  String streamContents: [ :stream | each inspectStringOn: stream ] ];
+	^ SpTreeTablePresenter new
+		  roots: self roots;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
 ]
 
@@ -118,9 +130,15 @@ ASCBasicBlock >> inspectStringOn: aStream [
 			aStream
 				nextPutAll: aSlot name;
 				nextPutAll: ' => '.
-			(self instVarNamed: aSlot name) ifNotNil: [ :item | aStream nextPutAll: item ] ifNil: [ aStream nextPutAll: #nil ]
-		]
+			(self instVarNamed: aSlot name)
+				ifNotNil: [ :item | aStream nextPutAll: item ]
+				ifNil: [ aStream nextPutAll: #nil ] ]
 		separatedBy: [ aStream space ].
+	
+	aStream nextPutAll: #label;
+	nextPutAll: ' => ';
+	nextPutAll: label.
+	
 	aStream nextPut: $)
 ]
 
@@ -214,6 +232,17 @@ ASCBasicBlock >> returnTop [
 		self doDrop.
 		end := ASCReturnTop new
 
+]
+
+{ #category : #initialization }
+ASCBasicBlock >> roots [
+
+	| roots |
+	roots := OrderedCollection new.
+	roots add: self.
+	roots addAll: self blocks.
+
+	^ roots
 ]
 
 { #category : #'abstract interpretation' }
