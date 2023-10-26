@@ -139,11 +139,13 @@ ASCBasicBlock >> inspectStringOn: aStream [
 				ifNotNil: [ :item | aStream nextPutAll: item ]
 				ifNil: [ aStream nextPutAll: #nil ] ]
 		separatedBy: [ aStream space ].
-	
-	aStream nextPutAll: #label;
-	nextPutAll: ' => ';
-	nextPutAll: label.
-	
+
+	aStream
+		space;
+		nextPutAll: #label;
+		nextPutAll: ' => ';
+		nextPutAll: label.
+
 	aStream nextPut: $)
 ]
 
