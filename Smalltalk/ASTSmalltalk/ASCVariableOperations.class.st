@@ -10,15 +10,6 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #printing }
-ASCVariableOperations >> inspectStringOn: aStream [
-
-	super inspectStringOn: aStream.
-	aStream nextPut: $(.
-	aStream nextPutAll: variable name.
-	aStream nextPut: $)
-]
-
 { #category : #'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 

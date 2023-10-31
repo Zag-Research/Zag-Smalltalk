@@ -20,23 +20,7 @@ ASCOperations class >> with: anObject and: another [
 
 { #category : #accessing }
 ASCOperations >> children [
-^ OrderedCollection new
-]
-
-{ #category : #printing }
-ASCOperations >> contents [
-
-	| stream |
-	stream := WriteStream on: String new.
-	self inspectStringOn: stream.
-
-	^ stream contents
-]
-
-{ #category : #printing }
-ASCOperations >> inspectStringOn: aStream [
-
-	aStream nextPutAll: self class name
+^ OrderedCollection new:0
 ]
 
 { #category : #serializing }

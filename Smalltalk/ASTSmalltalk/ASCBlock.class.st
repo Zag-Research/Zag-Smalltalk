@@ -18,7 +18,7 @@ ASCBlock >> block [
 
 { #category : #accessing }
 ASCBlock >> children [
-	^ block body
+	^ block body asOrderedCollection 
 ]
 
 { #category : #initialization }

@@ -14,7 +14,12 @@ ASZigInspectionTest >> testInspectionMadeUpAST [
 ]
 
 { #category : #tests }
-ASZigInspectionTest >> testInspectionOfFib [
+ASZigInspectionTest >> testInspectionOfZagASTForFib [
+	(ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:) inspect
+]
+
+{ #category : #tests }
+ASZigInspectionTest >> testInspectionOfZagBlocksForFib [
 
 	| ast file output |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.

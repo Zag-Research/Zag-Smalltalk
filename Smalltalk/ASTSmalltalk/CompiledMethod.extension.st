@@ -24,6 +24,12 @@ CompiledMethod >> inspectionThread [
 ]
 
 { #category : #'*ASTSmalltalk' }
+CompiledMethod >> inspectionZigAST [
+	<inspectorPresentationOrder: 61 title: 'ZigAST'>
+	^ (ASPharoCompiler new astFor: self) inspectAST
+]
+
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZigBlocks [
 	<inspectorPresentationOrder: 60 title: 'ZigBlocks'>
 	| ast file output |

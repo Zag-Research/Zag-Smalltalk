@@ -9,6 +9,11 @@ Class {
 }
 
 { #category : #comparing }
+ASSequence >> children [
+	^ self
+]
+
+{ #category : #comparing }
 ASSequence >> isImmediateThunk [
 
 	^ self size == 1 and: [ self first isImmediateThunk ]

@@ -35,7 +35,6 @@ ASStatement >> blocks [
 
 { #category : #accessing }
 ASStatement >> children [
-
 	^ OrderedCollection new: 0
 ]
 

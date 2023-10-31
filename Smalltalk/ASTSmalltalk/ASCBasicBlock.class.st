@@ -124,31 +124,6 @@ ASCBasicBlock >> inspectBlock [
 		  yourself
 ]
 
-{ #category : #accessing }
-ASCBasicBlock >> inspectStringOn: aStream [
-
-	aStream
-		nextPutAll: self class name;
-		nextPut: $(.
-	self class slots
-		do: [ :aSlot |
-			aStream
-				nextPutAll: aSlot name;
-				nextPutAll: ' => '.
-			(self instVarNamed: aSlot name)
-				ifNotNil: [ :item | aStream nextPutAll: item ]
-				ifNil: [ aStream nextPutAll: #nil ] ]
-		separatedBy: [ aStream space ].
-
-	aStream
-		space;
-		nextPutAll: #label;
-		nextPutAll: ' => ';
-		nextPutAll: label.
-
-	aStream nextPut: $)
-]
-
 { #category : #initialization }
 ASCBasicBlock >> label [
 	^ label
