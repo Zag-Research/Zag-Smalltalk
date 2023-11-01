@@ -22,6 +22,29 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #API }
+ASCBasicBlock >> assignLocal: anASLocal with: aGenerator [
+stack top manifest: aGenerator .
+	self put: (ASCStoreVariable with: anASLocal)
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> blocks [
+	| blocks block |
+	blocks := OrderedCollection new.
+	block := next.
+	[ block notNil ] whileTrue: [
+		blocks add: block.
+		block := block next ].
+	
+^ blocks
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> children [
+	^ operations
+]
+
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -79,6 +102,17 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new.
 	end := ASCReturnSelf new.
 	maxDepth := 0
+]
+
+{ #category : #accessing }
+ASCBasicBlock >> inspectBlock [
+	<inspectorPresentationOrder: 0 title: 'ZigBlocks'>
+	^ SpTreeTablePresenter new
+		  roots: self roots;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
+		  yourself
 ]
 
 { #category : #initialization }
@@ -173,6 +207,17 @@ ASCBasicBlock >> returnTop [
 		self doDrop.
 		end := ASCReturnTop new
 
+]
+
+{ #category : #initialization }
+ASCBasicBlock >> roots [
+
+	| roots |
+	roots := OrderedCollection new.
+	roots add: self.
+	roots addAll: self blocks.
+
+	^ roots
 ]
 
 { #category : #'abstract interpretation' }

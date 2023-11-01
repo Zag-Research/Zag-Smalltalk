@@ -18,6 +18,11 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : #accessing }
+ASCOperations >> children [
+^ OrderedCollection new:0
+]
+
 { #category : #serializing }
 ASCOperations >> manifest: aGenerator [
 

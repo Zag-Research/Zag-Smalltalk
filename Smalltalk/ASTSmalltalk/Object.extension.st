@@ -63,6 +63,48 @@ Object >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> contents [
+
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectStringOn: stream.
+
+	^ stream contents
+]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> inspectSlotsOn: aStream [
+
+			
+	self class allSlots
+	do:
+		[ :aSlot |
+			(aSlot name = #label) ifTrue: [
+			aStream
+				nextPutAll: (self instVarNamed: #label) asString ]]
+	"self class allSlots
+	do:
+		[ :aSlot |
+			aStream
+				nextPutAll: aSlot name;
+				nextPutAll: ' => '.
+			(self instVarNamed: aSlot name)
+				ifNotNil: [ :item | aStream nextPutAll: item asString]
+				ifNil: [ aStream nextPutAll: #nil ] ]
+		separatedBy: [ aStream space ]"	
+]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> inspectStringOn: aStream [
+	aStream
+		nextPutAll: self class name;
+		nextPut: $(.
+	self inspectSlotsOn: aStream.
+
+	aStream nextPut: $)
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> zigCompileObject: aGenerator [
 
 	| slots label |

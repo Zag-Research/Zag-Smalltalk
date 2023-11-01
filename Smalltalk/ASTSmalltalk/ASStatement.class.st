@@ -33,6 +33,21 @@ ASStatement >> blocks [
 	^ OrderedCollection new:0
 ]
 
+{ #category : #accessing }
+ASStatement >> children [
+	^ OrderedCollection new: 0
+]
+
+{ #category : #accessing }
+ASStatement >> contents [
+
+	| stream |
+	stream := WriteStream on: String new.
+	self printOn: stream.
+
+	^ stream contents
+]
+
 { #category : #compiling }
 ASStatement >> invalidAST [
 

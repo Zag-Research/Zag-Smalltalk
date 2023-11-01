@@ -59,6 +59,15 @@ ASSend >> blocks [
 	^ blocks
 ]
 
+{ #category : #accessing }
+ASSend >> children [
+	| childeren |
+	childeren := OrderedCollection new.
+	childeren add: target.
+	childeren addAll: args.
+	^ childeren
+]
+
 { #category : #parsing }
 ASSend >> isASSend [
 	^true

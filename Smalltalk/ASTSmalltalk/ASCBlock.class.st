@@ -16,6 +16,11 @@ ASCBlock >> block [
 	^ block
 ]
 
+{ #category : #accessing }
+ASCBlock >> children [
+	^ block body asOrderedCollection 
+]
+
 { #category : #initialization }
 ASCBlock >> initialize [ 
 super initialize .

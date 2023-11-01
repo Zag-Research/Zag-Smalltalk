@@ -13,6 +13,20 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #accessing }
+ASCMethodBlock >> children [
+
+	| children |
+	children :=  super children.
+	children addAll: self blocks.
+	^ children
+]
+
+{ #category : #initialization }
+ASCMethodBlock >> initialize [
+
+	super initialize.
+	self stack: ASStack new
 { #category : #'instance creation' }
 ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 	^ self new nonlocalNameLookupObject: aGenerator 
