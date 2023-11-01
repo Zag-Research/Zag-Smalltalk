@@ -27,6 +27,8 @@ ASCMethodBlock >> initialize [
 
 	super initialize.
 	self stack: ASStack new
+]
+
 { #category : #'instance creation' }
 ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 	^ self new nonlocalNameLookupObject: aGenerator 
