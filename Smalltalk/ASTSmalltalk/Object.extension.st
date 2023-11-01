@@ -63,8 +63,17 @@ Object >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> contents [
+
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectStringOn: stream.
+
+	^ stream contents
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> inspectSlotsOn: aStream [
-	super inspectSlotsOn: aStream.
 	self class allSlots
 	do:
 		[ :aSlot |

@@ -45,16 +45,6 @@ ASCBasicBlock >> children [
 	^ operations
 ]
 
-{ #category : #accessing }
-ASCBasicBlock >> contents [
-
-	| stream |
-	stream := WriteStream on: String new.
-	self inspectStringOn: stream.
-
-	^ stream contents
-]
-
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> doCall: aSymbol [
 
