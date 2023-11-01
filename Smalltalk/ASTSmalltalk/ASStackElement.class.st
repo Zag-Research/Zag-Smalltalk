@@ -73,13 +73,14 @@ ASStackElement >> makeContextRequired [
 ]
 
 { #category : #API }
-ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
 		  offset: anInteger + 1
 		  to: anObject
 		  local: blockLocal
 		  stack: blockStack
+		  other: blockOther
 ]
 
 { #category : #enumerating }
