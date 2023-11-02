@@ -93,7 +93,7 @@ ASPharoCompilerTest >> testBlock [
 									    (ASSend
 										     target: (ASRef variable: (ASLocal name: #temp))
 										     selector: #+
-										     args: { (ASLiteral literal: 3) }) }) })) } )
+										     args: { (ASLiteral literal: 3) }) }) })) }) 
 ]
 
 { #category : #tests }
@@ -144,7 +144,7 @@ ASPharoCompilerTest >> testCascade [
 											    target: (ASLiteral literal: 3)
 											    selector: #negated
 											    args: {  }) }).
-									  (ASSend selector: #abs args: {  }) }) })
+									  (ASSend selector: #abs args: {  }) }) } asASSequence)
 ]
 
 { #category : #tests }
@@ -155,7 +155,8 @@ ASPharoCompilerTest >> testClassVar [
 		compilesTo: (ASMethodNode
 				 class: ASCompileTestClass1
 				 selector: #classVar
-				 body: { (ASReturn expression: (ASRef variable: ASClassVariable Foo)) })
+				 body:
+				 { (ASReturn expression: (ASRef variable: ASClassVariable Foo)) }  asASSequence)
 ]
 
 { #category : #tests }
@@ -192,7 +193,8 @@ ASPharoCompilerTest >> testInstVar [
 		compilesTo: (ASMethodNode
 				 class: ASCompileTestClass1
 				 selector: #instVar
-				 body: { (ASReturn expression: (ASRef variable: (ASInstanceVariable name: #bar))) })
+				 body: { (ASReturn expression:
+						  (ASRef variable: (ASInstanceVariable name: #bar))) } asASSequence) 
 ]
 
 { #category : #tests }
@@ -204,7 +206,7 @@ ASPharoCompilerTest >> testObject [
 				 class: ASCompileTestClass1
 				 selector: #object
 				 body: { (ASReturn expression: (ASSend
-							   target: (ASRef variable: (ASGlobalVariable name: #Object))
+							   target: (ASRef variable: (ASGlobalVariable name: #Object)) 
 							   selector: #new
 							   args: {  })) })
 ]
@@ -236,7 +238,8 @@ ASPharoCompilerTest >> testOrOr [
 			 body: { 
 					 (ASAssign
 						  variable: ASLocal temp
-						  expression: (ASAssign variable: (ASLocal temp2) expression: (ASSend
+						  expression:
+							  (ASAssign variable: ASLocal temp2 expression: (ASSend
 									    target: (ASSelf method: #'||')
 									    selector: #'||'
 									    args: { (ASRef variable: ASParameter n1) }))).
@@ -251,11 +254,11 @@ ASPharoCompilerTest >> testPlus [
 			 selector: #+
 			 arguments: #( n1 )
 			 locals: #( temp )
-			 body: { 
+			 body: {
 					 (ASAssign variable: ASLocal temp expression: (ASSend
-							   target: (ASSelf method: #+)
+							   target: (ASSelf method: #+) 
 							   selector: #+
-							   args: { (ASRef variable: ASParameter n1) })). 
+							   args: { (ASRef variable: ASParameter n1) })).
 					 (ASReturn expression: (ASRef variable: ASLocal temp)) })
 ]
 
@@ -268,7 +271,7 @@ ASPharoCompilerTest >> testPlus1 [
 				 class: ASCompileTestClass1;
 				 selector: #plus1:;
 				 arguments: #( aNumber );
-				 body: { (ASReturn new expression: (ASSend new
+				 body: { (ASReturn new expression: (ASSend new 
 								   target: (ASRef new variable: (ASParameter name: #aNumber));
 								   selector: #+ args: { (ASLiteral new literal: 1) })) })
 ]
@@ -283,21 +286,24 @@ ASPharoCompilerTest >> testPlusAndAnd [
 				 selector: #plus:and:and:;
 				 arguments: #( n1 n2 n3 );
 				 body: { (ASReturn new expression: (ASSend new
-								   target: (ASSend new
+								   target: (ASSend new 
 										    target: (ASRef new variable: (ASParameter name: #n1));
-										    selector: #+ args: { (ASRef new variable: (ASParameter name: #n2) )});
-								   selector: #+ args: { (ASRef new variable: (ASParameter name: #n3) )})) })
+										    selector: #+
+										    args: { (ASRef new variable: (ASParameter name: #n2)) });
+								   selector: #+
+								   args: { (ASRef new variable: (ASParameter name: #n3)) })) })
 ]
 
 { #category : #tests }
 ASPharoCompilerTest >> testPool [
-
 	" pool variable counts as a class variable "
 
 	self assert: ASCompileTestClass3 >> #pool compilesTo: (ASMethodNode
 			 class: ASCompileTestClass3
 			 selector: #pool
-			 body: { (ASReturn expression: (ASRef variable: (ASClassVariable name: #Foo))) })
+			 body:
+			 { (ASReturn expression:
+				  (ASRef variable: (ASClassVariable name: #Foo))) }) 
 ]
 
 { #category : #tests }

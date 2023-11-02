@@ -7,7 +7,9 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'body',
-		'locals'
+		'locals',
+		'scope',
+		'nestedScopeOf'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -60,6 +62,7 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
+	scope := Dictionary new.
 	body := ASSequence new
 ]
 
@@ -83,11 +86,22 @@ ASCodeBlock >> locals [
 ASCodeBlock >> locals: aCollection [
 
 	locals := aCollection
-		          collect: [ :symbol | 
+		          collect: [ :symbol |
 			          | local |
 			          local := ASLocal name: symbol.
-			local ]
+						          scope at: symbol put: local.
+			          local ]
 		          as: Array
+]
+
+{ #category : #compiling }
+ASCodeBlock >> lookup: symbol [
+	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
+]
+
+{ #category : #accessing }
+ASCodeBlock >> nestedScopeOf: anASClassNode [ 
+	nestedScopeOf := anASClassNode
 ]
 
 { #category : #printing }
