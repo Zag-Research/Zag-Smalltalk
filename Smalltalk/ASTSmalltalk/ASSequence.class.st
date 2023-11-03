@@ -31,6 +31,12 @@ ASSequence >> isNonLocalThunk [
 	^ self size == 1 and: [ self first isNonLocalThunk ]
 ]
 
+{ #category : #printing }
+ASSequence >> printOn: aStream [
+
+	^ self printAsSelfEvaluatingFormOn: aStream
+]
+
 { #category : #comparing }
 ASSequence >> requiresImplicitReturn [
 

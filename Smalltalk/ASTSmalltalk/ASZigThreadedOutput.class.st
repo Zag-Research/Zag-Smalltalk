@@ -98,14 +98,19 @@ ASZigThreadedOutput >> verifySelector: anObject [
 { #category : #API }
 ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
-	currentBasicBlock offsetOf: anASLocal name local: [:local| self
-		putEmbedded: #popLocal;
-		print: local;
-		comma] stack: [:offset| self
-		putEmbedded: #popStack;
-		print: offset;
-		comma]
-	
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				putEmbedded: #popLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #popStack;
+				print: offset;
+				comma ]
+		other: nil
 ]
 
 { #category : #API }
@@ -141,10 +146,10 @@ ASZigThreadedOutput >> visitPushLocal: anASLocal [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> visitPushLocalOrBlock: anObject [
+ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
-		offsetOf: anObject
+		offsetOf: anASLocal name
 		local: [ :local |
 			self
 				putEmbedded: #pushLocal;
@@ -155,6 +160,7 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anObject [
 				putEmbedded: #pushStack;
 				print: offset;
 				comma ]
+		other: nil
 ]
 
 { #category : #API }
@@ -187,6 +193,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 				putEmbedded: #storeStack;
 				print: offset;
 				comma ]
+		other: nil
 ]
 
 { #category : #writing }

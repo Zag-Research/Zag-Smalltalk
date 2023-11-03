@@ -32,12 +32,13 @@ ASStackNamed >> name: aSymbol [
 ]
 
 { #category : #API }
-ASStackNamed >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+ASStackNamed >> offset: anInteger to: aName local: blockLocal stack: blockStack other: blockOther [
 
-	anObject = name ifTrue: [ ^ blockStack value: anInteger ].
+	aName = name ifTrue: [ ^ blockStack value: anInteger ].
 	^ rest
 		  offset: anInteger + 1
-		  to: anObject
+		  to: aName
 		  local: blockLocal
 		  stack: blockStack
+		  other: blockOther
 ]

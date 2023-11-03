@@ -13,6 +13,11 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #'instance creation' }
+ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
+	^ self new nonlocalNameLookupObject: aGenerator 
+]
+
 { #category : #accessing }
 ASCMethodBlock >> children [
 
@@ -31,12 +36,19 @@ ASCMethodBlock >> initialize [
 
 { #category : #accessing }
 ASCMethodBlock >> locals: locals arguments: arguments [
+
 	stack isEmpty
 		ifTrue: [ self pushUnknownNamed: #self ]
 		ifFalse: [ stack := stack stackNames: #( self ) ].
 	arguments reversed do: [ :each | self pushUnknownNamed: each ].
 	locals do: [ :each | self pushUnknownNamed: each ].
-	stack := stack pushPlaceholderContext
+	stack := stack pushPlaceholderContext.
+	maxDepth := 0
+]
+
+{ #category : #'instance initialization' }
+ASCMethodBlock >> nonlocalNameLookupObject: aGenerator [
+	stack := ASStack new nonlocalNameLookupObject: aGenerator
 ]
 
 { #category : #wriiting }

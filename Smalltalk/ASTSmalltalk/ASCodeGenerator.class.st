@@ -20,16 +20,11 @@ Class {
 		'blocks',
 		'name',
 		'localVariables',
-		'targetClass'
+		'targetClass',
+		'maxDepth'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
-
-{ #category : #API }
-ASCodeGenerator >> assignLocal: anASLocal [
-
-	code assignLocal: anASLocal  with: self
-]
 
 { #category : #linearize }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
@@ -118,6 +113,7 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	aMethodOrBlockNode zigWalkMethod: self.
 	blocks := blocks select: #manifest.
 	basicBlocks do: [ :bb |
+				maxDepth := maxDepth max: bb maxDepth.
 		bb requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
 	blocks do: [ :block | self compileBlock: block ]
 ]
@@ -126,10 +122,11 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 ASCodeGenerator >> initialize [
 
 	super initialize.
-	code := ASCMethodBlock new.
+	code := ASCMethodBlock nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
-	blocks := OrderedCollection new
+	blocks := OrderedCollection new.
+	maxDepth := 0
 ]
 
 { #category : #inlining }
@@ -170,15 +167,9 @@ ASCodeGenerator >> name [
 ]
 
 { #category : #API }
-ASCodeGenerator >> popAssign: variable [
-
-	self popLocal: variable
-]
-
-{ #category : #API }
 ASCodeGenerator >> popLocal: aSymbol [
 
-	code popLocal: aSymbol
+	^ code pop: aSymbol with: self
 ]
 
 { #category : #API }
@@ -201,12 +192,6 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 ]
 
 { #category : #API }
-ASCodeGenerator >> pushLocal: aSymbol [
-
-	code pushLocal: aSymbol
-]
-
-{ #category : #API }
 ASCodeGenerator >> pushSelf [
 
 	| value |
@@ -219,7 +204,7 @@ ASCodeGenerator >> pushSelf [
 { #category : #API }
 ASCodeGenerator >> pushVariable: variable [
 
-	self pushLocal: variable
+		^ code push: variable with: self
 ]
 
 { #category : #API }
@@ -274,6 +259,12 @@ ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
 
 	self selector: aSymbol.
 	code primitive: primitiveNumber selector: aSymbol 
+]
+
+{ #category : #API }
+ASCodeGenerator >> storeVariable: anASLocal [
+
+	^ code store: anASLocal with: self
 ]
 
 { #category : #accessing }

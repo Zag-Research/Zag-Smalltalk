@@ -100,7 +100,8 @@ ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
-	end := ASCReturnSelf new 
+	end := ASCReturnSelf new.
+	maxDepth := 0
 ]
 
 { #category : #accessing }
@@ -142,12 +143,14 @@ ASCBasicBlock >> next [
 ]
 
 { #category : #API }
-ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock [
+ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
 
-	^ stack offset: 0
+	^ stack
+		  offset: 0
 		  to: anObject
 		  local: localBlock
 		  stack: localBlock
+		  other: nil
 ]
 
 { #category : #wriiting }
@@ -165,18 +168,18 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : #API }
-ASCBasicBlock >> popLocal: anASLocal [
+ASCBasicBlock >> pop: anASVariable with: aGenerator [
 
-	self put: (ASCPopVariable with: anASLocal).
+	self put: (ASCPopVariable with: anASVariable).
 	self doDrop
 ]
 
 { #category : #API }
-ASCBasicBlock >> pushLocal: anASCLocal [
+ASCBasicBlock >> push: anASVariable with: aGenerator [
 
 	| target |
-	target := stack find: anASCLocal name.
-	self put: (ASCPushVariable with: anASCLocal ).
+	target := stack find: anASVariable name.
+	self put: (ASCPushVariable with: anASVariable).
 	self doPush: target top
 ]
 
@@ -248,6 +251,13 @@ ASCBasicBlock >> stack: anASStack [
 { #category : #stackAccessHelpers }
 ASCBasicBlock >> stackTop [
 	^ stack top
+]
+
+{ #category : #API }
+ASCBasicBlock >> store: anASVariable with: aGenerator [
+
+	stack top manifest: aGenerator.
+	self put: (ASCStoreVariable with: anASVariable)
 ]
 
 { #category : #accessing }
