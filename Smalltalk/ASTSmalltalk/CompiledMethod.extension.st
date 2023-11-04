@@ -25,7 +25,7 @@ CompiledMethod >> inspectionThread [
 
 { #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZigAST [
-	<inspectorPresentationOrder: 61 title: 'ZigAST'>
+	<inspectorPresentationOrder: 61 title: 'ZagAST'>
 	^ (ASPharoCompiler new astFor: self) inspectAST
 ]
 
@@ -40,5 +40,5 @@ CompiledMethod >> inspectionZigBlocks [
 		          context: file;
 		          generateCode: ast.
 
-	^ output codeGenerator firstBlock inspectBlock
+	^ output codeGenerator inspectBasicBlocks
 ]

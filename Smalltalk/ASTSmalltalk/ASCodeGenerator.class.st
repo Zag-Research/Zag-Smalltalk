@@ -135,6 +135,18 @@ ASCodeGenerator >> inline: aString targetClass: aClass tail: aBoolean [
 ]
 
 { #category : #accessing }
+ASCodeGenerator >> inspectBasicBlocks [
+	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
+	
+	^ SpTreeTablePresenter new
+		  roots: basicBlocks;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
+		  yourself
+]
+
+{ #category : #accessing }
 ASCodeGenerator >> locals: locals arguments: arguments [
 
 	context forClass ifNotNil: [ :theClass |

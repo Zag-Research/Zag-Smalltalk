@@ -99,6 +99,12 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
+{ #category : #accessing }
+ASMethodNode >> inspectSlotsOn: aStream [
+	aStream print: selector
+	
+]
+
 { #category : #testing }
 ASMethodNode >> isASBlock [
 	^false
