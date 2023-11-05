@@ -33,6 +33,14 @@ ASAssign >> blocks [
 	^expression blocks
 ]
 
+{ #category : #accessing }
+ASAssign >> children [
+	| c |
+	c := OrderedCollection new.
+	c add: expression.
+	^ c
+]
+
 { #category : #comparing }
 ASAssign >> expression [
 	^ expression

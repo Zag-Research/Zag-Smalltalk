@@ -13,6 +13,16 @@ ASSequence >> children [
 	^ self
 ]
 
+{ #category : #'filter streaming' }
+ASSequence >> contents [
+"create a stream to write the AST on and return it as a String"
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectZagASTOn: stream.
+
+	^ stream contents
+]
+
 { #category : #comparing }
 ASSequence >> isImmediateThunk [
 
