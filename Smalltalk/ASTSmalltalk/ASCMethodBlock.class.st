@@ -22,7 +22,7 @@ ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 ASCMethodBlock >> children [
 
 	| children |
-	children :=  super children.
+	children := super children.
 	children addAll: self blocks.
 	^ children
 ]

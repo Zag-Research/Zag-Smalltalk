@@ -100,8 +100,11 @@ ASMethodNode >> inspectAST [
 ]
 
 { #category : #accessing }
-ASMethodNode >> inspectSlotsOn: aStream [
-	aStream print: selector
+ASMethodNode >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream nextPut: $(.
+	aStream print: selector.
+	aStream nextPut: $)
 	
 ]
 

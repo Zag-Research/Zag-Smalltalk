@@ -33,7 +33,6 @@ ASSequence >> isNonLocalThunk [
 
 { #category : #printing }
 ASSequence >> printOn: aStream [
-
 	^ self printAsSelfEvaluatingFormOn: aStream
 ]
 

@@ -29,6 +29,25 @@ ASVariable >> = other [
 	^ self class = other class and: [ self name = other name ]
 ]
 
+{ #category : #accessing }
+ASVariable >> children [
+ ^ OrderedCollection new:0
+]
+
+{ #category : #printing }
+ASVariable >> inspectStringOn: s [
+
+	s << self className << ' ' <<
+	name 
+]
+
+{ #category : #printing }
+ASVariable >> inspectZagASTOn: s [
+
+	s << self className << ' ' <<
+	name 
+]
+
 { #category : #testing }
 ASVariable >> isASArg [
 	^false

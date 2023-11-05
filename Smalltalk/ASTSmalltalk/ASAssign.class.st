@@ -38,6 +38,14 @@ ASAssign >> expression [
 	^ expression
 ]
 
+{ #category : #printing }
+ASAssign >> inspectZagASTOn: s [
+	super inspectZagASTOn: s.
+	s << $(; << 'variable:'; space.
+	variable printOn: s.
+	s << $)
+]
+
 { #category : #testing }
 ASAssign >> isASAssign [
 	^ true
