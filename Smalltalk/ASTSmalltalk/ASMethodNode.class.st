@@ -99,6 +99,15 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
+{ #category : #accessing }
+ASMethodNode >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream nextPut: $(.
+	aStream print: selector.
+	aStream nextPut: $)
+	
+]
+
 { #category : #testing }
 ASMethodNode >> isASBlock [
 	^false

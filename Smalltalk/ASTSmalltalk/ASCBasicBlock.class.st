@@ -95,17 +95,6 @@ ASCBasicBlock >> initialize [
 	maxDepth := 0
 ]
 
-{ #category : #accessing }
-ASCBasicBlock >> inspectBlock [
-	<inspectorPresentationOrder: 0 title: 'ZigBlocks'>
-	^ SpTreeTablePresenter new
-		  roots: self roots;
-		  children: [ :aNode | aNode children ];
-		  addColumn:
-			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
-		  yourself
-]
-
 { #category : #initialization }
 ASCBasicBlock >> label [
 	^ label

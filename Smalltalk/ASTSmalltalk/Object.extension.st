@@ -64,44 +64,18 @@ Object >> astObject: anASImage [
 
 { #category : #'*ASTSmalltalk' }
 Object >> contents [
-
+"create a stream to write the AST on and return it as a String"
 	| stream |
 	stream := WriteStream on: String new.
-	self inspectStringOn: stream.
+	self inspectZagASTOn: stream.
 
 	^ stream contents
 ]
 
 { #category : #'*ASTSmalltalk' }
-Object >> inspectSlotsOn: aStream [
-
-			
-	self class allSlots
-	do:
-		[ :aSlot |
-			(aSlot name = #label) ifTrue: [
-			aStream
-				nextPutAll: (self instVarNamed: #label) asString ]]
-	"self class allSlots
-	do:
-		[ :aSlot |
-			aStream
-				nextPutAll: aSlot name;
-				nextPutAll: ' => '.
-			(self instVarNamed: aSlot name)
-				ifNotNil: [ :item | aStream nextPutAll: item asString]
-				ifNil: [ aStream nextPutAll: #nil ] ]
-		separatedBy: [ aStream space ]"	
-]
-
-{ #category : #'*ASTSmalltalk' }
-Object >> inspectStringOn: aStream [
+Object >> inspectZagASTOn: aStream [
 	aStream
-		nextPutAll: self class name;
-		nextPut: $(.
-	self inspectSlotsOn: aStream.
-
-	aStream nextPut: $)
+		nextPutAll: self class name.
 ]
 
 { #category : #'*ASTSmalltalk' }

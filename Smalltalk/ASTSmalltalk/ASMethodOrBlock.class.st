@@ -39,6 +39,14 @@ ASMethodOrBlock >> arguments: aCollection [
 		             as: Array 
 ]
 
+{ #category : #accessing }
+ASMethodOrBlock >> children [
+	| c |
+	c := super children.
+	c addAll: arguments.
+	^ c
+]
+
 { #category : #printing }
 ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
 | method |

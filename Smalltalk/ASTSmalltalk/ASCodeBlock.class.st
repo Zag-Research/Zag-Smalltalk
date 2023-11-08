@@ -44,17 +44,11 @@ ASCodeBlock >> body: anASSequence [
 
 { #category : #accessing }
 ASCodeBlock >> children [
-	^ body
-]
-
-{ #category : #accessing }
-ASCodeBlock >> contents [
-"create a stream to write the AST on and return it as a String"
-	| stream |
-	stream := WriteStream on: String new.
-	self inspectStringOn: stream.
-
-	^ stream contents
+	| c |
+	c := OrderedCollection new.
+	c addAll: locals.
+	c add: body.
+	^ c
 ]
 
 { #category : #initialization }
@@ -86,22 +80,23 @@ ASCodeBlock >> locals [
 ASCodeBlock >> locals: aCollection [
 
 	locals := aCollection
-		          collect: [ :symbol |
+		          collect: [ :symbol | 
 			          | local |
 			          local := ASLocal name: symbol.
-						          scope at: symbol put: local.
-			          local ]
+			scope at: symbol put: local.
+			local ]
 		          as: Array
 ]
 
-{ #category : #compiling }
+{ #category : #initialization }
 ASCodeBlock >> lookup: symbol [
 	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
 ]
 
-{ #category : #accessing }
-ASCodeBlock >> nestedScopeOf: anASClassNode [ 
+{ #category : #initialization }
+ASCodeBlock >> nestedScopeOf: anASClassNode [
 	nestedScopeOf := anASClassNode
+	
 ]
 
 { #category : #printing }
@@ -122,4 +117,9 @@ ASCodeBlock >> roots [
 	roots := OrderedCollection new.
 	roots add: self.
 	^ roots
+]
+
+{ #category : #initialization }
+ASCodeBlock >> scope [
+ ^ scope
 ]
