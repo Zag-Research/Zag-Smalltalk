@@ -87,5 +87,5 @@ ASAssign >> zigWalk: aGenerator [
 ASAssign >> zigWalkDiscard: aGenerator [
 
 	expression zigWalk: aGenerator.
-	^ aGenerator popLocal: variable
+	^ aGenerator popVariable: variable
 ]

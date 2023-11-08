@@ -35,6 +35,11 @@ ASCOperations >> outputTo: aCodeEmitter [
 	self subclassResponsibility
 ]
 
+{ #category : #testing }
+ASCOperations >> requiresContext [
+	^ false
+]
+
 { #category : #'instance creation' }
 ASCOperations >> with: anObject [ 
 	^ self subclassResponsibility

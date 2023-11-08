@@ -15,18 +15,10 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'index',
-		'end',
-		'next'
+		'index'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
-
-{ #category : #API }
-ASCBasicBlock >> assignLocal: anASLocal with: aGenerator [
-stack top manifest: aGenerator .
-	self put: (ASCStoreVariable with: anASLocal)
-]
 
 { #category : #accessing }
 ASCBasicBlock >> blocks [
@@ -38,6 +30,11 @@ ASCBasicBlock >> blocks [
 		block := block next ].
 	
 ^ blocks
+]
+
+{ #category : #inlining }
+ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
+	^ false
 ]
 
 { #category : #accessing }
@@ -79,15 +76,10 @@ ASCBasicBlock >> doPush: anObject [
 	maxDepth := maxDepth max: stack depth
 ]
 
-{ #category : #accessing }
-ASCBasicBlock >> end: anASCOperation [ 
-	end := anASCOperation
-]
-
 { #category : #initialization }
 ASCBasicBlock >> endWithReturnTop [
 
-		end := ASCReturnTop new
+	^ self put: ASCReturnTop new
 ]
 
 { #category : #accessing }
@@ -100,7 +92,6 @@ ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
-	end := ASCReturnSelf new.
 	maxDepth := 0
 ]
 
@@ -132,6 +123,16 @@ ASCBasicBlock >> makeContextRequired [
 	stack := stack makeContextRequired 
 ]
 
+{ #category : #inlining }
+ASCBasicBlock >> markBlockClosuresToManifest [
+
+	| last |
+	last := operations last.
+	last requiresContext ifTrue: [ stack := stack makeContextRequired.
+ ].
+	last manifestParameters: stack
+]
+
 { #category : #accessing }
 ASCBasicBlock >> maxDepth [
 	^ maxDepth
@@ -139,7 +140,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : #accessing }
 ASCBasicBlock >> next [
-	^ next
+	^ operations last next
 ]
 
 { #category : #API }
@@ -157,8 +158,7 @@ ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: b
 ASCBasicBlock >> outputRestTo: output [
 
 	operations do: [ :operation | operation outputTo: output ].
-	end outputTo: output.
-	output outputMethodEnd
+	output outputBasicBlockEnd
 ]
 
 { #category : #wriiting }
@@ -168,19 +168,11 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : #API }
-ASCBasicBlock >> pop: anASVariable with: aGenerator [
+ASCBasicBlock >> popVariable: anASVariable [
 
+	stack top makeManifest.
 	self put: (ASCPopVariable with: anASVariable).
 	self doDrop
-]
-
-{ #category : #API }
-ASCBasicBlock >> push: anASVariable with: aGenerator [
-
-	| target |
-	target := stack find: anASVariable name.
-	self put: (ASCPushVariable with: anASVariable).
-	self doPush: target top
 ]
 
 { #category : #API }
@@ -190,6 +182,15 @@ ASCBasicBlock >> pushUnknownNamed: aSymbol [
 		         from: stack;
 		         name: aSymbol.
 	stack top: (ASCClassValue new init: Object)
+]
+
+{ #category : #API }
+ASCBasicBlock >> pushVariable: anASVariable [
+
+	| target |
+	target := stack find: anASVariable name.
+	self put: (ASCPushVariable with: anASVariable).
+	self doPush: target top
 ]
 
 { #category : #initialization }
@@ -204,8 +205,7 @@ stack requiredContextDo: aBlock
 
 { #category : #initialization }
 ASCBasicBlock >> returnTop [
-		self doDrop.
-		end := ASCReturnTop new
+		self put: ASCReturnTop new
 
 ]
 
@@ -223,15 +223,15 @@ ASCBasicBlock >> roots [
 { #category : #'abstract interpretation' }
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
-	next := ASCReturnBlock new
-		        end: end.
-	end := ASCSend new
+	| next send |
+	next := ASCReturnBlock new.
+	send := ASCSend new
 		       selector: aSymbol;
 		       return: next;
 		       target: target;
 		       tail: tailCall.
-	stack := stack makeContextRequired.
-	next 
+	self put: send.
+next 
 		        stack: stack.
 	^ next
 ]
@@ -254,9 +254,9 @@ ASCBasicBlock >> stackTop [
 ]
 
 { #category : #API }
-ASCBasicBlock >> store: anASVariable with: aGenerator [
+ASCBasicBlock >> storeVariable: anASVariable [
 
-	stack top manifest: aGenerator.
+	stack top makeManifest.
 	self put: (ASCStoreVariable with: anASVariable)
 ]
 

@@ -87,7 +87,7 @@ ASZigCPSOutput >> lVal: aString [
 ]
 
 { #category : #'code generation' }
-ASZigCPSOutput >> outputMethodEnd [
+ASZigCPSOutput >> outputBasicBlockEnd [
 
 	mainStream nextPutAll: '}
 '

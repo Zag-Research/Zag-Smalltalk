@@ -18,6 +18,11 @@ ASStackContextPlaceholder class >> from: anASStack [
 ]
 
 { #category : #accessing }
+ASStackContextPlaceholder >> depth [
+	^ rest depth
+]
+
+{ #category : #accessing }
 ASStackContextPlaceholder >> find: aSymbol [
 	^ rest find: aSymbol
 ]
