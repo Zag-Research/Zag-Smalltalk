@@ -44,8 +44,9 @@ ASVariable >> inspectStringOn: s [
 { #category : #printing }
 ASVariable >> inspectZagASTOn: s [
 
-	s << self className << ' ' <<
-	name 
+	s << self className << $(.
+	s print: name.
+	s << $)
 ]
 
 { #category : #testing }
