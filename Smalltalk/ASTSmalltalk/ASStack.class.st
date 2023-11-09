@@ -4,9 +4,6 @@ I reperesent an empty stack of values within a method.
 Class {
 	#name : #ASStack,
 	#superclass : #Object,
-	#instVars : [
-		'nonlocalNameLookupObject'
-	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
@@ -14,11 +11,6 @@ Class {
 ASStack >> at: aSymbol [
 
 	^ (self find: aSymbol) top
-]
-
-{ #category : #accessing }
-ASStack >> depth [ 
-^ 0
 ]
 
 { #category : #accessing }
@@ -32,15 +24,10 @@ ASStack >> isEmpty [
 	^ true
 ]
 
-{ #category : #'instance initialization' }
-ASStack >> nonlocalNameLookupObject: anASCodeGenerator [ 
-	nonlocalNameLookupObject := anASCodeGenerator 
-]
-
 { #category : #API }
 ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
-	^ nonlocalNameLookupObject lookupName: anObject block: blockOther 
+self subclassResponsibility 
 ]
 
 { #category : #API }

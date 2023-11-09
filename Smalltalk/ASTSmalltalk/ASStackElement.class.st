@@ -106,5 +106,6 @@ ASStackElement >> top [
 { #category : #accessing }
 ASStackElement >> top: value [
 
-	 top := value
+value assertIsValue .
+	top := value
 ]

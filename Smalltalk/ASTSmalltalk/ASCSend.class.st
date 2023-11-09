@@ -14,21 +14,37 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #accessing }
-ASCSend >> bb: anASCReturnBlock [ 
-	bb := anASCReturnBlock
-]
-
 { #category : #initialization }
 ASCSend >> initialize [ 
 
 super initialize .	useCall := false
 ]
 
+{ #category : #'block handling' }
+ASCSend >> manifestParameters: aStack [
+
+	| tStack |
+	tStack := aStack.
+	selector numArgs + 1 timesRepeat: [ 
+		tStack top makeManifest.
+		tStack := tStack drop ]
+]
+
+{ #category : #accessing }
+ASCSend >> next [
+
+	^ bb
+]
+
 { #category : #'code generation' }
 ASCSend >> outputTo: anOutput [
 
 	anOutput visitSend: selector returnIndex: bb index target: target
+]
+
+{ #category : #testing }
+ASCSend >> requiresContext [
+	^ true
 ]
 
 { #category : #handling }

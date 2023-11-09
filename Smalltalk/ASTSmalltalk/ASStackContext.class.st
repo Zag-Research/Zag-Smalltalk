@@ -11,8 +11,16 @@ Class {
 }
 
 { #category : #accessing }
-ASStackContext >> blocks: aCollection [ 
+ASStackContext >> blocks: aCollection [
+aCollection isCollection ifFalse: [ self halt ].
 	blocks := aCollection
+]
+
+{ #category : #'instance creation' }
+ASStackContext >> from: anASStack [
+
+	rest := anASStack.
+	blocks := #()
 ]
 
 { #category : #initialization }

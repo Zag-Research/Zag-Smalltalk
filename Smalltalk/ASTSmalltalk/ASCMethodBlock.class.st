@@ -31,7 +31,7 @@ ASCMethodBlock >> children [
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	self stack: ASStack new
+	self stack: ASEmptyStack new 
 ]
 
 { #category : #accessing }
@@ -48,7 +48,8 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 
 { #category : #'instance initialization' }
 ASCMethodBlock >> nonlocalNameLookupObject: aGenerator [
-	stack := ASStack new nonlocalNameLookupObject: aGenerator
+
+	stack := ASEmptyStack new nonlocalNameLookupObject: aGenerator 
 ]
 
 { #category : #wriiting }

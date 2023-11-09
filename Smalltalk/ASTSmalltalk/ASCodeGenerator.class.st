@@ -21,12 +21,13 @@ Class {
 		'name',
 		'localVariables',
 		'targetClass',
-		'maxDepth'
+		'maxDepth',
+		'inline'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #linearize }
+{ #category : #enumerating }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
@@ -53,10 +54,12 @@ ASCodeGenerator >> classOf: aString [
 ]
 
 { #category : #API }
-ASCodeGenerator >> compileBlock: anASCBlock [
+ASCodeGenerator >> compileBlock: aBlockClosure [
+	"compiling of blocks doesn't work right now"
 
-"compiling of blocks doesn't work right now"
-	"anASCBlock manifest ifTrue: [ context compileBlock: anASCBlock ]"
+	aBlockClosure manifest ifTrue: [ context compileBlock: aBlockClosure ]
+
+
 ]
 
 { #category : #accessing }
@@ -72,23 +75,22 @@ ASCodeGenerator >> drop [
 	code doDrop; put: #drop
 ]
 
+{ #category : #initialization }
+ASCodeGenerator >> enableInlining [
+
+	inline := true
+]
+
 { #category : #evaluating }
 ASCodeGenerator >> eval: aString params: aCollection [
 
 	^ ASCLiteralValue new init: Object new
 ]
 
-{ #category : #linearize }
+{ #category : #'post processing' }
 ASCodeGenerator >> finalAnalysis [
-"self halt."
-	basicBlocks doWithIndex: [ :bb :idx |
-		bb
-			label: (String streamContents: [ :s |
-					 s
-						 nextPutAll: name;
-						 nextPut: $:;
-						 print: idx ])
-			index: idx ]
+
+
 ]
 
 { #category : #API }
@@ -111,11 +113,15 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
+	self nameBasicBlocks.
+	self tryInlining.
+	basicBlocks do: [ :aBasicBlock |
+		aBasicBlock markBlockClosuresToManifest.
+		maxDepth := maxDepth max: aBasicBlock maxDepth.
+		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
+	self halt.
 	blocks := blocks select: #manifest.
-	basicBlocks do: [ :bb |
-				maxDepth := maxDepth max: bb maxDepth.
-		bb requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
-	blocks do: [ :block | self compileBlock: block ]
+	blocks do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
 ]
 
 { #category : #initialization }
@@ -126,12 +132,20 @@ ASCodeGenerator >> initialize [
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blocks := OrderedCollection new.
-	maxDepth := 0
+	maxDepth := 0.
+	inline := false
 ]
 
-{ #category : #inlining }
-ASCodeGenerator >> inline: aString targetClass: aClass tail: aBoolean [ 
-	^ false
+{ #category : #accessing }
+ASCodeGenerator >> inspectBasicBlocks [
+	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
+	
+	^ SpTreeTablePresenter new
+		  roots: basicBlocks;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
+		  yourself
 ]
 
 { #category : #accessing }
@@ -178,10 +192,22 @@ ASCodeGenerator >> name [
 	^ name
 ]
 
-{ #category : #API }
-ASCodeGenerator >> popLocal: aSymbol [
+{ #category : #'post processing' }
+ASCodeGenerator >> nameBasicBlocks [
+	basicBlocks doWithIndex: [ :bb :idx |
+		bb
+			label: (String streamContents: [ :s |
+					 s
+						 nextPutAll: name;
+						 nextPut: $:;
+						 print: idx ])
+			index: idx ]
+]
 
-	^ code pop: aSymbol with: self
+{ #category : #API }
+ASCodeGenerator >> popVariable: aSymbol [
+
+	^ code popVariable: aSymbol
 ]
 
 { #category : #API }
@@ -216,7 +242,7 @@ ASCodeGenerator >> pushSelf [
 { #category : #API }
 ASCodeGenerator >> pushVariable: variable [
 
-		^ code push: variable with: self
+	^ code pushVariable: variable
 ]
 
 { #category : #API }
@@ -249,21 +275,13 @@ ASCodeGenerator >> selector: aSymbol [
 { #category : #API }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
-	| numArgs params  |
-	(self inline: aSymbol targetClass: aTargetClass tail: tail) ifTrue: [
-		^ self ].
-	numArgs := aSymbol numArgs + 1.
-	params := Array new: numArgs.
-	[ numArgs > 0 ] whileTrue: [
-		| top |
-		top := code stackTop.
-		params at: numArgs put: top.
-		top manifest: self.
-		code doDrop.
-		numArgs := numArgs - 1 ].
-	code doPush: (self eval: aSymbol params: params).
 	code := code send: aSymbol targetClass: aTargetClass tail: tail.
-	basicBlocks add: code
+	basicBlocks add: code.
+	aSymbol numArgs + 1 timesRepeat: [
+		code doDrop.
+].
+	code doPush: ASUnknownValue new.
+
 ]
 
 { #category : #API }
@@ -276,7 +294,7 @@ ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
 { #category : #API }
 ASCodeGenerator >> storeVariable: anASLocal [
 
-	^ code store: anASLocal with: self
+	^ code storeVariable: anASLocal
 ]
 
 { #category : #accessing }
@@ -288,4 +306,13 @@ ASCodeGenerator >> targetClass [
 { #category : #accessing }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
+]
+
+{ #category : #'post processing' }
+ASCodeGenerator >> tryInlining [
+
+inline ifFalse: [ ^ self].
+	[
+	basicBlocks anySatisfy: [ :aBasicBlock |
+		aBasicBlock canBeInlinedBy: self ] ] whileTrue
 ]

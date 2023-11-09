@@ -110,24 +110,6 @@ ASTextOutput >> selector [
 	self subclassResponsibility 
 ]
 
-{ #category : #accessing }
-ASTextOutput >> symbol: name [
-
-	^ symbols
-		  at: name
-		  ifPresent: [ :value | value ]
-		  ifAbsent: [ name ]
-]
-
-{ #category : #accessing }
-ASTextOutput >> symbolOrVirtual: name [
-
-	^ symbols
-		  at: name
-		  ifPresent: [ :value | value ]
-		  ifAbsentPut: [ symbols virtualName ]
-]
-
 { #category : #printing }
 ASTextOutput >> tab [
 

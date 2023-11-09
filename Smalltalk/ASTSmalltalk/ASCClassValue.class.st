@@ -11,6 +11,10 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #asserting }
+ASCClassValue >> assertIsValue [
+]
+
 { #category : #common }
 ASCClassValue >> init: aClass [
 
@@ -35,6 +39,10 @@ ASCClassValue >> isRanged [
 ASCClassValue >> kind [
 
 	^ valueClass
+]
+
+{ #category : #serializing }
+ASCClassValue >> makeManifest [
 ]
 
 { #category : #serializing }

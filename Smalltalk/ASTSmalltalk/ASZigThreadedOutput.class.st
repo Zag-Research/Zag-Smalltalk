@@ -31,7 +31,7 @@ ASZigThreadedOutput >> endMethod [
 ]
 
 { #category : #'code generation' }
-ASZigThreadedOutput >> outputMethodEnd [
+ASZigThreadedOutput >> outputBasicBlockEnd [
 	
 ]
 
@@ -142,7 +142,7 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 { #category : #API }
 ASZigThreadedOutput >> visitPushLocal: anASLocal [
 
-^	self visitPushLocalOrBlock: anASLocal name
+^	self visitPushLocalOrBlock: anASLocal
 ]
 
 { #category : #API }
