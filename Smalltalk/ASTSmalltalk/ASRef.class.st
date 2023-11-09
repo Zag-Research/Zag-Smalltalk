@@ -26,6 +26,11 @@ ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
+{ #category : #accessing }
+ASRef >> children [ 
+	^ { variable }
+]
+
 { #category : #comparing }
 ASRef >> isASRef [
 	^true
