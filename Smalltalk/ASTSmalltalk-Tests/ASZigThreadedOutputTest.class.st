@@ -30,7 +30,7 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1,Sym.@"+",":MaddTwoNumbers:3",&e.returnTop,' 
+		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1tail,Sym.@"+",'
 ]
 
 { #category : #tests }
@@ -89,16 +89,6 @@ ASZigThreadedOutputTest >> testZig_prim [
 ]
 
 { #category : #tests }
-ASZigThreadedOutputTest >> testZig_pushDrop [
-
-	| output |
-	output := ASZigThreadedOutput  testing.
-	output visitDrop.
-
-	self assert: output asString equals: '&e.drop,'
-]
-
-{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushLabel [
 
 	| output |
@@ -147,6 +137,55 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 ]
 
 { #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple1_noreturn [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1_noreturn.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple1_noreturn'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple2 [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple2.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple2'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple2_noreturn [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #simple2_noreturn.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple2_noreturn'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simpleBlock [
 
 	| output ast file |
@@ -160,7 +199,7 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLocal,0,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",":MsimpleBlock:2",&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -176,7 +215,7 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,":Munaries:3",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]
 
 { #category : #tests }
@@ -193,5 +232,22 @@ ASZigThreadedOutputTest >> testZig_unariesPlus [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":MunariesPlus:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":MunariesPlus:2",&e.send0,Sym.i_1,":MunariesPlus:3",&e.pushLiteral,Object.from(42),&e.send1,Sym.i_2,":MunariesPlus:4",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":MunariesPlus:1",&e.pushLiteral,Object.from(42),&e.send0,Sym.negated,":MunariesPlus:2",&e.drop,&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":MunariesPlus:3",&e.send0,Sym.i_1,":MunariesPlus:4",&e.pushLiteral,Object.from(42),&e.send1tail,Sym.i_2,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_unaries_notail [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          tailCallOptimize: false;
+		          generateCode: ast for: ASCompileTestClass1.
+	self assert: output name equals: 'Munaries'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]

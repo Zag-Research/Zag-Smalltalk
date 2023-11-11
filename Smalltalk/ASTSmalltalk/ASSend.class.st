@@ -137,17 +137,21 @@ ASSend >> target: expression [
 { #category : #compiling }
 ASSend >> zigWalk: aGenerator [
 
+	^ self zigWalk: aGenerator tail: false
+]
+
+{ #category : #compiling }
+ASSend >> zigWalk: aGenerator tail: tail [
+
 	| myTarget |
 	myTarget := target zigWalkTarget: aGenerator.
 	args do: [ :arg | arg zigWalk: aGenerator ].
-	^ aGenerator send: selector targetClass: myTarget tail: false
+	aGenerator send: selector targetClass: myTarget tail: tail.
+	^ tail
 ]
 
 { #category : #compiling }
 ASSend >> zigWalkForReturn: aGenerator [
 
-	| myTarget |
-	myTarget := target zigWalkTarget: aGenerator.
-	args do: [ :arg | arg zigWalk: aGenerator ].
-	^ aGenerator send: selector targetClass: myTarget tail: true
+	^ self zigWalk: aGenerator  tail: true
 ]

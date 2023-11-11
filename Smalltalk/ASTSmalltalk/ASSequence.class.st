@@ -29,31 +29,16 @@ ASSequence >> isImmediateThunk [
 	^ self size == 1 and: [ self first isImmediateThunk ]
 ]
 
-{ #category : #comparing }
-ASSequence >> isNonLocalReturn [
-
-	^ self size == 1 and: [ self first isNonLocalReturn ]
-]
-
-{ #category : #testing }
-ASSequence >> isNonLocalThunk [
-
-	^ self size == 1 and: [ self first isNonLocalThunk ]
-]
-
 { #category : #printing }
 ASSequence >> printOn: aStream [
 	^ self printAsSelfEvaluatingFormOn: aStream
 ]
 
-{ #category : #comparing }
-ASSequence >> requiresImplicitReturn [
-
-	^ self isEmpty or: [ self last isReturn not ]
-]
-
 { #category : #codegen }
-ASSequence >> zigWalk: aGenerator [
+ASSequence >> zigWalkEmpty: emptyBlock rest: restBlock last: lastBlock [
 
-	^ self do: [ :statement | statement zigWalkDiscard: aGenerator ]
+|size|
+size := self size.
+self withIndexDo: [ : elem : idx | idx = size ifTrue: [ ^ lastBlock value: elem ] ifFalse: [ restBlock value: elem ] ].
+ ^ emptyBlock value
 ]

@@ -185,20 +185,6 @@ ASPharoCompilerProgramTest >> testFooBarIsolated [
 ]
 
 { #category : #tests }
-ASPharoCompilerProgramTest >> testFooBarIsolatedNew [
-
-	| compiler codeGenerator |
-	compiler := ASPharoCompiler
-		            buildMethod: ASCompileTestClass1 >> #foo:bar:
-		            forClass: ASCompileTestClass1
-		            withCodeGenerator: (ASZigGenerator stream:
-				             (FileSystem disk workingDirectory
-				              / 'zigFooBarStringNew.zig') writeStream).
-	compiler compile.
-	self halt
-]
-
-{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarSubset [
 
 	| result aStream |

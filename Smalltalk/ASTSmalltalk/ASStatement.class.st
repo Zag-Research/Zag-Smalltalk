@@ -108,6 +108,12 @@ ASStatement >> zigWalk: aGenerator [
 ]
 
 { #category : #compiling }
+ASStatement >> zigWalkBlockReturn: aGenerator [
+
+	self subclassResponsibility
+]
+
+{ #category : #compiling }
 ASStatement >> zigWalkDiscard: aGenerator [
 
 	self subclassResponsibility

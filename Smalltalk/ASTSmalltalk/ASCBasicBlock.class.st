@@ -22,14 +22,15 @@ Class {
 
 { #category : #accessing }
 ASCBasicBlock >> blocks [
+
 	| blocks block |
 	blocks := OrderedCollection new.
-	block := next.
+	block := self next.
 	[ block notNil ] whileTrue: [
 		blocks add: block.
 		block := block next ].
-	
-^ blocks
+
+	^ blocks
 ]
 
 { #category : #inlining }
@@ -143,14 +144,14 @@ ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: b
 		  other: nil
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASCBasicBlock >> outputRestTo: output [
 
 	operations do: [ :operation | operation outputTo: output ].
-	output outputBasicBlockEnd
+	^ output outputBasicBlockEnd
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASCBasicBlock >> outputTo: output [
 
 	self subclassResponsibility 
@@ -184,7 +185,13 @@ ASCBasicBlock >> pushVariable: anASVariable [
 
 { #category : #initialization }
 ASCBasicBlock >> put: anObject [
-	operations add: anObject 
+
+	^ operations add: anObject
+]
+
+{ #category : #API }
+ASCBasicBlock >> putSimple: aSymbol [ 
+	^ self put: (ASCSimple with: aSymbol)
 ]
 
 { #category : #enumerating }
@@ -193,9 +200,15 @@ stack requiredContextDo: aBlock
 ]
 
 { #category : #initialization }
-ASCBasicBlock >> returnTop [
-		self put: ASCReturnTop new
+ASCBasicBlock >> returnSelf [
 
+	^ self put: ASCReturnTop new
+]
+
+{ #category : #initialization }
+ASCBasicBlock >> returnTop [
+
+	^ self put: ASCReturnTop new
 ]
 
 { #category : #initialization }
@@ -213,15 +226,14 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := ASCReturnBlock new.
+	next := tailCall ifFalse: [ ASCReturnBlock new ].
 	send := ASCSend new
-		       selector: aSymbol;
-		       return: next;
-		       target: target;
-		       tail: tailCall.
+		        selector: aSymbol;
+		        return: next;
+		        target: target.
 	self put: send.
-next 
-		        stack: stack.
+	next ifNotNil: [
+		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
 	^ next
 ]
 

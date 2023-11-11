@@ -56,6 +56,11 @@ ASStack >> pushPlaceholderContext [
 ]
 
 { #category : #API }
+ASStack >> pushUnknown [
+	^ self push: ASCUnknownValue new
+]
+
+{ #category : #API }
 ASStack >> stackNames: aCollection [
 
 	aCollection ifEmpty: [ ^ self ].

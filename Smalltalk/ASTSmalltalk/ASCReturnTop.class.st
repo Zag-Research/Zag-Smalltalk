@@ -21,7 +21,7 @@ ASCReturnTop >> next [
 { #category : #'code generation' }
 ASCReturnTop >> outputTo: output [
 
-	output visitReturnTop
+	^ output visitReturnTop
 ]
 
 { #category : #'instance creation' }

@@ -8,7 +8,6 @@ Class {
 		'selector',
 		'useCall',
 		'bb',
-		'tailCall',
 		'target'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
@@ -39,7 +38,10 @@ ASCSend >> next [
 { #category : #'code generation' }
 ASCSend >> outputTo: anOutput [
 
-	anOutput visitSend: selector returnIndex: bb index target: target
+	^ anOutput
+		  visitSend: selector
+		  returnIndex: (bb ifNotNil: [ bb index ])
+		  target: target
 ]
 
 { #category : #testing }
@@ -48,7 +50,8 @@ ASCSend >> requiresContext [
 ]
 
 { #category : #handling }
-ASCSend >> return: aBasicBlock [ 
+ASCSend >> return: aBasicBlock [
+
 	bb := aBasicBlock 
 ]
 
@@ -57,14 +60,10 @@ ASCSend >> selector: aString [
 	selector := aString
 ]
 
-{ #category : #'accessing - structure variables' }
-ASCSend >> tail: aBoolean [ 
-	tailCall := aBoolean 
-]
-
 { #category : #accessing }
 ASCSend >> target: aSymbol [
-	target := aSymbol 
+
+	target := aSymbol
 ]
 
 { #category : #accessing }

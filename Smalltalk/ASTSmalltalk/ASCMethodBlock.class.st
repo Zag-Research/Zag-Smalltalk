@@ -52,24 +52,24 @@ ASCMethodBlock >> nonlocalNameLookupObject: aGenerator [
 	stack := ASEmptyStack new nonlocalNameLookupObject: aGenerator 
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASCMethodBlock >> outputTo: output [
 
 	output outputMethodStart: label.
 	primitive
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
-stack requiredContextDo: [ : context |
-		                 output visitPushContext: context ].
+	stack requiredContextDo: [ :context |
+		output visitPushContext: context ].
 	output outputMethodLabel: label.
-	self outputRestTo: output
+	^ self outputRestTo: output
 ]
 
 { #category : #accessing }
-ASCMethodBlock >> primitive: anInteger selector: aSymbol [
+ASCMethodBlock >> primitive: anInteger [
 
 	primitive := anInteger.
-	selector := aSymbol
+
 ]
 
 { #category : #accessing }

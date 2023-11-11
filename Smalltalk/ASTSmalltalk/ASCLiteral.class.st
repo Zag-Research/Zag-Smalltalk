@@ -12,7 +12,7 @@ Class {
 
 { #category : #'code generation' }
 ASCLiteral >> outputTo: output [ 
-	output visitPushLiteral: literal
+	^ output visitPushLiteral: literal
 ]
 
 { #category : #'instance creation' }

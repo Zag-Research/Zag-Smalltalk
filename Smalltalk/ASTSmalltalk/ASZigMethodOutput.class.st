@@ -28,19 +28,23 @@ ASZigMethodOutput >> blockNumber [
 ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
-		  codeGenerator := ASCodeGenerator new
-			                   context: self;
+		  codeGenerator := self codeGeneratorClass new
+			                   output: self;
 			                   targetClass: forClass ]
+]
+
+{ #category : #'code generation' }
+ASZigMethodOutput >> codeGeneratorClass [ ^ ASCodeGenerator 
 ]
 
 { #category : #compiling }
 ASZigMethodOutput >> compileBlock: anASCBlock [
 
-	anASCBlock block = ourObject ifTrue: [ ^ self ].
+	self assert: anASCBlock block ~= ourObject.
 	(self blockClass new testing: testing)
 		context: context;
 		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block
+		generateCode: anASCBlock block for: forClass 
 ]
 
 { #category : #'code generation' }
@@ -97,16 +101,15 @@ ASZigMethodOutput >> selector [
 	^ codeGenerator selector
 ]
 
+{ #category : #settings }
+ASZigMethodOutput >> tailCallOptimize: aBoolean [ 
+	^ self codeGenerator tailCallOptimize: aBoolean
+]
+
 { #category : #'code generation' }
 ASZigMethodOutput >> verifySelector: anObject [
 
 	self subclassResponsibility 
-]
-
-{ #category : #API }
-ASZigMethodOutput >> visitDrop [
-
-	self putEmbedded: #drop
 ]
 
 { #category : #API }
@@ -136,11 +139,6 @@ ASZigMethodOutput >> visitPushLocal: localNumber [
 	^ self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
-ASZigMethodOutput >> visitPushLocalOrBlock: anObject [ 
-	^ self subclassResponsibility
-]
-
 { #category : #API }
 ASZigMethodOutput >> visitReturnTop [
 	^ self subclassResponsibility
@@ -148,11 +146,6 @@ ASZigMethodOutput >> visitReturnTop [
 
 { #category : #API }
 ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #'as yet unclassified' }
-ASZigMethodOutput >> visitStoreLocal: anASLocal [ 
 	^ self subclassResponsibility
 ]
 

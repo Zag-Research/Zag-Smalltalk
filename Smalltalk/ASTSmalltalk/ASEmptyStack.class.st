@@ -18,7 +18,7 @@ ASEmptyStack >> depth [
 { #category : #accessing }
 ASEmptyStack >> find: aSymbol [
 
-	self halt
+	self error
 ]
 
 { #category : #'instance initialization' }

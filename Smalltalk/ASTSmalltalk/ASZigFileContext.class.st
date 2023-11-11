@@ -84,7 +84,7 @@ ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 	^ string
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> outputTo: stream [
 
 	self processComponents.
@@ -122,7 +122,7 @@ ASZigFileContext >> processComponents [
 		temp do: [ :each | each generateCode ] ]
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll: 'const std = @import("std");
@@ -151,7 +151,7 @@ const empty = &[0]Object{};
 '
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 
 	stream nextPutAll: 'fn initSmalltalk() void {
@@ -159,14 +159,14 @@ ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 '
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeInitSmalltalkSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeMainPrefixOn: stream [
 
 	stream nextPutAll: 'pub fn main() !void {
@@ -174,14 +174,14 @@ ASZigFileContext >> writeMainPrefixOn: stream [
 '
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeMainSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
 	| label |

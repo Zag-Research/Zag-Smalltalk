@@ -44,6 +44,12 @@ ASCBlock >> manifest [
 ^	manifest
 ]
 
+{ #category : #accessing }
+ASCBlock >> name [
+
+	^ self
+]
+
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 

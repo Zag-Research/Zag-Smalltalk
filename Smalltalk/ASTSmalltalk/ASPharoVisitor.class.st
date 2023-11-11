@@ -139,10 +139,9 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 	method := ASMethodNode
 		          class: aRBMethodNode methodClass
 		          selector: selector
-		          arguments:
-		          (aRBMethodNode arguments collect: #name as: Array)
+		          arguments: aRBMethodNode argumentNames
 		          locals:
-		          (aRBMethodNode temporaries collect: #name as: Array)
+		          (aRBMethodNode temporaryNames)
 		          body: (ASSequence new: aRBMethodNode statements size).
 	method pragmas:
 		(aRBMethodNode pragmas do: [ :pram | self visit: pram ]).

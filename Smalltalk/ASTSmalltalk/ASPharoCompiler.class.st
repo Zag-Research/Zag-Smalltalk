@@ -32,20 +32,6 @@ ASPharoCompiler >> buildFromClass: aClass method: aCompiledMethod [
 ]
 
 { #category : #compiling }
-ASPharoCompiler >> compile [
-
-	| visitor anASMethodNode |
-	visitor := ASPharoVisitor compiler: self.
-	anASMethodNode := visitor visit: method ast.
-	
-	"result is an AS version of the pharo ast, should inlining occur here?"
-	"Now we need to emit the code using a visitor or in the future IBurg implmentation that is rule based"
-	
-	(ASMethodStatementVisitor codeGenerator: codeGenerator) emit: anASMethodNode selectors: selectors.
-	"^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast"
-]
-
-{ #category : #compiling }
 ASPharoCompiler >> compileMethod: aCompiledMethod [
 
 	| visitor result |
