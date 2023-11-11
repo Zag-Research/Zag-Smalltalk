@@ -134,6 +134,7 @@ ASCompiler >> findClass: aClass [
 ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [ 
 	| savedScope |
 	savedScope := currentScope.
+	anASMethodOrBlock nestedScopeOf: savedScope.
 	currentScope := anASMethodOrBlock.
 	aFullBlockClosure ensure: [ currentScope := savedScope ]
 ]

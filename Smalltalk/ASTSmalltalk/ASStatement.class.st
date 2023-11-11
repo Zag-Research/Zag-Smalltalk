@@ -33,6 +33,11 @@ ASStatement >> blocks [
 	^ OrderedCollection new:0
 ]
 
+{ #category : #accessing }
+ASStatement >> children [
+	^ OrderedCollection new: 0
+]
+
 { #category : #compiling }
 ASStatement >> invalidAST [
 

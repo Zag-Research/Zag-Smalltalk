@@ -88,6 +88,26 @@ ASMethodNode >> hash [
 	^ className hash bitXor: selector hash
 ]
 
+{ #category : #accessing }
+ASMethodNode >> inspectAST [
+	<inspectorPresentationOrder: 33 title: 'ZigAST'>
+	^ SpTreeTablePresenter new
+		  roots: self roots;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
+		  yourself
+]
+
+{ #category : #accessing }
+ASMethodNode >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream nextPut: $(.
+	aStream print: selector.
+	aStream nextPut: $)
+	
+]
+
 { #category : #testing }
 ASMethodNode >> isASBlock [
 	^false
@@ -96,11 +116,6 @@ ASMethodNode >> isASBlock [
 { #category : #accessing }
 ASMethodNode >> maxBlockLocals [
 	^0
-]
-
-{ #category : #accessing }
-ASMethodNode >> nameSpace [
-	^(nestedScopeOf name, '>>', selector) asSymbol asZigString
 ]
 
 { #category : #accessing }
@@ -147,131 +162,4 @@ ASMethodNode >> startMethod: aGenerator [
 		pragma isPrimitive ifTrue: [
 			primitive := (pragma arguments at: 1) value ] ].
 	aGenerator startMethod: primitive selector: selector.
-]
-
-{ #category : #visiting }
-ASMethodNode >> variableIndex: anASVar [
-	^ (clsrData indexOf: anASVar name) asString.
-]
-
-{ #category : #writing }
-ASMethodNode >> writeDispatch: aStream with: smys [ 
-	aStream tab.
-	aStream << 'try dispatch.addMethod(ClassIndex.' << class name << ', ' << self nameSpace << '.asCompiledMethodPtr());'.
-	aStream cr
-]
-
-{ #category : #initialization }
-ASMethodNode >> writeLiterals: aStream with: syms [
-	"check if the method used a placeholder for recursive sends and update that placeholders name with the method name"
-
-	| complexBlocks |
-	aStream tab.
-	aStream << self nameSpace.
-	aStream << '.setLiterals('.
-	syms
-		associationAt: selector
-		ifPresent: [ :sym |
-		aStream << ('&[_]Object{sym.' , sym key , '}, ') ]
-		ifAbsent: [ aStream << 'empty,' ].
-
-	complexBlocks := OrderedCollection new.
-	complexBlocks ifEmpty: [ aStream << 'empty' ] ifNotEmpty: [
-		aStream << '&[_]Object{'.
-		complexBlocks
-			do: [ :block | aStream << block selector asZigString ]
-			separatedBy: [ aStream << ', ' ].
-		aStream << '}' ].
-
-	aStream << ');'.
-	aStream cr
-]
-
-{ #category : #accessing }
-ASMethodNode >> writeMethod: aStream with: syms [
-
-	| stackVariables stackSize blockVisitor |
-	"what are the stack variables?"
-	stackVariables := OrderedCollection new.
-
-	"set the selector for each block that needs a closure and add it to the stack variables"
-	blockVisitor := ASBlockVisitor selector: selector.
-	blockVisitor visit: body.
-
-	self buildClosureData: blockVisitor modifiers.
-	blockVisitor blocks do: [ :b | b closureData: clsrData ].
-
-	stackVariables addAll: blockVisitor closures.
-	stackVariables addAll:
-		((blockVisitor filterVars: locals) collect: [ :local | local name ]).
-
-	"capture the size of the stack before arguments are added"
-	stackSize := stackVariables size.
-
-	"add the locals, arguments and self"
-	stackVariables addAll:
-		(arguments collect: [ :arg | arg name ]) reverse.
-	stackVariables addLast: #self.
-
-	aStream cr.
-	aStream << 'var ' << self nameSpace << ' ='.
-	aStream cr.
-	aStream tab.
-
-	aStream << 'compileMethod(' << (syms
-		 at: selector
-		 ifPresent: [ :value | value ]
-		 ifAbsentPut: [ syms virutalName ]) << ',' << stackSize asString
-	<< ','
-	<< (self maxBlockLocals asString , '+' , self closureSize asString)
-	<< ',.{'.
-	aStream cr.
-
-	"verify selector or primitive?"
-	pragmas
-		ifEmpty: [
-			aStream tab.
-			aStream << '&e.verifySelector,'.
-			aStream cr ]
-		ifNotEmpty: [
-			pragmas do: [ :pragma |
-				aStream tab.
-				aStream << '&p.p' << (pragma arguments at: 1) value asString
-				<< ','.
-				aStream cr ] ].
-
-	"create dummy context"
-	aStream tab.
-	aStream << '&e.pushContext,"^",'.
-	aStream cr.
-
-	blockVisitor writeClosureData: aStream stackVariables: stackVariables.
-
-	"ouput any block closure"
-	blockVisitor blocks doWithIndex: [ :block :index |
-		aStream tab.
-		aStream
-		<<
-		(block zigClosureString: stackVariables index: (index - 1) asString).
-		aStream cr ].
-
-	"write the instructions"
-	self
-		writeBody: syms
-		stackVars: stackVariables
-		writer: aStream
-		blocks: blockVisitor.
-
-	"write out the implicit return"
-	body requiresImplicitReturn ifTrue: [
-		aStream tab.
-		aStream << '&e.returnTop,' ].
-	aStream cr. "should this be hardcoded?"
-	aStream << '});'.
-	aStream cr.
-
-	"ouput compile methods for the blocks"
-	blockVisitor blocks do: [ :block |
-		block isNonLocalReturn ifFalse: [
-			block writeBlock: aStream with: syms] ]
 ]

@@ -11,9 +11,20 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #asserting }
+ASCBlock >> assertIsValue [
+
+	
+]
+
 { #category : #accessing }
 ASCBlock >> block [
 	^ block
+]
+
+{ #category : #accessing }
+ASCBlock >> children [
+	^ block body asOrderedCollection 
 ]
 
 { #category : #initialization }
@@ -22,23 +33,21 @@ super initialize .
 manifest := false
 ]
 
+{ #category : #serializing }
+ASCBlock >> makeManifest [ 	
+		  manifest := true
+]
+
 { #category : #accessing }
 ASCBlock >> manifest [
 
 ^	manifest
 ]
 
-{ #category : #serializing }
-ASCBlock >> manifest: aGenerator [
-
-	^ manifest ifFalse: [
-		manifest := true.
-		aGenerator manifest: self ]
-]
-
 { #category : #'code generation' }
 ASCBlock >> outputTo: output [
 
+manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self
 ]
 

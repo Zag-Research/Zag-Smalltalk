@@ -65,7 +65,7 @@ ASZigMethodOutput >> methodGenerator [ ^ self
 ]
 
 { #category : #'code generation' }
-ASZigMethodOutput >> outputMethodEnd [
+ASZigMethodOutput >> outputBasicBlockEnd [
 
 	self subclassResponsibility
 ]

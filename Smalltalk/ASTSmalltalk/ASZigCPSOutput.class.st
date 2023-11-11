@@ -87,7 +87,7 @@ ASZigCPSOutput >> lVal: aString [
 ]
 
 { #category : #'code generation' }
-ASZigCPSOutput >> outputMethodEnd [
+ASZigCPSOutput >> outputBasicBlockEnd [
 
 	mainStream nextPutAll: '}
 '
@@ -122,10 +122,8 @@ ASZigCPSOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
 	codeGenerator basicBlocksUnorderedDo: [ :bb |
-				currentBasicBlock := bb.
-		maxDepth := maxDepth max: currentBasicBlock maxDepth.
-		currentBasicBlock outputTo: self ].
-
+		currentBasicBlock := bb.
+		currentBasicBlock outputTo: self ]
 ]
 
 { #category : #'code generation' }
@@ -242,7 +240,8 @@ ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 				rVal: #sp;
 				nextPutAll: '.at(';
 				print: offset;
-				nextPut: $) ].
+				nextPut: $) ]
+		other: nil.
 	self
 		nextPut: $);
 		endStatement
@@ -319,7 +318,8 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 
 { #category : #visiting }
 ASZigCPSOutput >> visitStoreLocal: anASLocal [
-			currentBasicBlock
+
+	currentBasicBlock
 		offsetOf: anASLocal name
 		local: [ :local |
 			self
@@ -329,13 +329,13 @@ ASZigCPSOutput >> visitStoreLocal: anASLocal [
 			self
 				rVal: #sp;
 				nextPutAll: '.atPut(';
-				print: offset ].
+				print: offset ]
+		other: nil.
 	self
 		nextPutAll: ',';
 		rVal: #sp;
 		nextPutAll: '.top)';
-		endStatement.
-
+		endStatement
 ]
 
 { #category : #writing }

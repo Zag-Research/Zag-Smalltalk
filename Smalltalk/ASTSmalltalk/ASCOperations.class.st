@@ -18,6 +18,11 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : #accessing }
+ASCOperations >> children [
+^ OrderedCollection new:0
+]
+
 { #category : #serializing }
 ASCOperations >> manifest: aGenerator [
 
@@ -28,6 +33,11 @@ ASCOperations >> manifest: aGenerator [
 ASCOperations >> outputTo: aCodeEmitter [
 
 	self subclassResponsibility
+]
+
+{ #category : #testing }
+ASCOperations >> requiresContext [
+	^ false
 ]
 
 { #category : #'instance creation' }

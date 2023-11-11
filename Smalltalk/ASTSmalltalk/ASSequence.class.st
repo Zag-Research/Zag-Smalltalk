@@ -9,6 +9,21 @@ Class {
 }
 
 { #category : #comparing }
+ASSequence >> children [
+	^ self
+]
+
+{ #category : #'filter streaming' }
+ASSequence >> contents [
+"create a stream to write the AST on and return it as a String"
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectZagASTOn: stream.
+
+	^ stream contents
+]
+
+{ #category : #comparing }
 ASSequence >> isImmediateThunk [
 
 	^ self size == 1 and: [ self first isImmediateThunk ]
@@ -24,6 +39,11 @@ ASSequence >> isNonLocalReturn [
 ASSequence >> isNonLocalThunk [
 
 	^ self size == 1 and: [ self first isNonLocalThunk ]
+]
+
+{ #category : #printing }
+ASSequence >> printOn: aStream [
+	^ self printAsSelfEvaluatingFormOn: aStream
 ]
 
 { #category : #comparing }

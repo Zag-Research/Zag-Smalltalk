@@ -18,6 +18,11 @@ ASStackContextPlaceholder class >> from: anASStack [
 ]
 
 { #category : #accessing }
+ASStackContextPlaceholder >> depth [
+	^ rest depth
+]
+
+{ #category : #accessing }
 ASStackContextPlaceholder >> find: aSymbol [
 	^ rest find: aSymbol
 ]
@@ -34,13 +39,14 @@ ASStackContextPlaceholder >> makeContextRequired [
 ]
 
 { #category : #API }
-ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
 		  offset: anInteger
 		  to: anObject
 		  local: blockLocal
 		  stack: blockStack
+		  other: blockOther
 ]
 
 { #category : #API }

@@ -33,9 +33,25 @@ ASAssign >> blocks [
 	^expression blocks
 ]
 
+{ #category : #accessing }
+ASAssign >> children [
+	| c |
+	c := OrderedCollection new.
+	c add: expression.
+	^ c
+]
+
 { #category : #comparing }
 ASAssign >> expression [
 	^ expression
+]
+
+{ #category : #printing }
+ASAssign >> inspectZagASTOn: s [
+	super inspectZagASTOn: s.
+	s << $(; << 'variable:'; space.
+	variable printOn: s.
+	s << $)
 ]
 
 { #category : #testing }
@@ -80,12 +96,12 @@ ASAssign >> variable: v expression: e [
 ASAssign >> zigWalk: aGenerator [
 
 	expression zigWalk: aGenerator.
-	^ aGenerator assignLocal: variable
+	^ aGenerator storeVariable: variable
 ]
 
 { #category : #compiling }
 ASAssign >> zigWalkDiscard: aGenerator [
 
 	expression zigWalk: aGenerator.
-	^ aGenerator popLocal: variable
+	^ aGenerator popVariable: variable
 ]

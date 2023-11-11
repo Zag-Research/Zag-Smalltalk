@@ -51,9 +51,10 @@ ASPharoVisitor >> visitArrayNode: aRBArrayNode [
 
 { #category : #visiting }
 ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
+
 	^ ASAssign
 		  variable: (compiler lookup: aRBAssignmentNode variable name)
-		  expression: (self visit: aRBAssignmentNode value)
+		  expression: (self visit: aRBAssignmentNode value) 
 ]
 
 { #category : #visiting }

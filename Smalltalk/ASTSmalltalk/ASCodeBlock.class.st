@@ -8,7 +8,8 @@ Class {
 	#instVars : [
 		'body',
 		'locals',
-		'scope'
+		'scope',
+		'nestedScopeOf'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
@@ -41,16 +42,13 @@ ASCodeBlock >> body: anASSequence [
 	body := anASSequence
 ]
 
-{ #category : #'instance creation' }
-ASCodeBlock >> buildClosureData: variables [
-	clsrData := OrderedCollection new.
-	clsrData add: #footer.
-	clsrData addAll: variables
-]
-
-{ #category : #'instance creation' }
-ASCodeBlock >> closureData [
-	^clsrData
+{ #category : #accessing }
+ASCodeBlock >> children [
+	| c |
+	c := OrderedCollection new.
+	c addAll: locals.
+	c add: body.
+	^ c
 ]
 
 { #category : #initialization }
@@ -85,19 +83,20 @@ ASCodeBlock >> locals: aCollection [
 		          collect: [ :symbol | 
 			          | local |
 			          local := ASLocal name: symbol.
-			          scope at: symbol put: local.
+			scope at: symbol put: local.
 			local ]
 		          as: Array
 ]
 
-{ #category : #scopes }
+{ #category : #initialization }
 ASCodeBlock >> lookup: symbol [
 	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
 ]
 
-{ #category : #scopes }
-ASCodeBlock >> nestedScopeOf: anASClassNode [ 
+{ #category : #initialization }
+ASCodeBlock >> nestedScopeOf: anASClassNode [
 	nestedScopeOf := anASClassNode
+	
 ]
 
 { #category : #printing }
@@ -113,50 +112,14 @@ ASCodeBlock >> printOn: s [
 ]
 
 { #category : #accessing }
+ASCodeBlock >> roots [
+	| roots |
+	roots := OrderedCollection new.
+	roots add: self.
+	^ roots
+]
+
+{ #category : #initialization }
 ASCodeBlock >> scope [
-	^ scope
-]
-
-{ #category : #writing }
-ASCodeBlock >> writeBody: symbols stackVars: stackVariables codeGenerator: codeGenerator blocks: anASBlockVisitor [
-
-	| statementVisitor |
-	anASBlockVisitor
-		initializeClosureData: codeGenerator
-		stackVariables: stackVariables.
-
-	statementVisitor := self
-		                    statementVisitor: symbols
-		                    stackVars: stackVariables.
-	statementVisitor codeGenerator: codeGenerator.
-
-	body acceptVisitor: statementVisitor.
-
-	"check to see what types variables have"
-	(self filter: statementVisitor instructionStack) do: [ :instruction |
-		codeGenerator emitInstruction: instruction ]
-]
-
-{ #category : #writing }
-ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
-
-	| statementVisitor codeGenerator |
-	anASBlockVisitor
-		initializeClosureData: aStream
-		stackVariables: stackVariables.
-
-	aStream cr.
-	codeGenerator := ASZigCompileMethodOutput stream: aStream.
-	statementVisitor := self
-		                    statementVisitor: symbols
-		                    stackVars: stackVariables.
-	statementVisitor codeGenerator: codeGenerator.
-
-	body acceptVisitor: statementVisitor.
-
-	"check to see what types variables have"
-	(self filter: statementVisitor instructionStack) do: [ :instruction |
-		aStream tab.
-		aStream << instruction.
-		aStream cr ]
+ ^ scope
 ]

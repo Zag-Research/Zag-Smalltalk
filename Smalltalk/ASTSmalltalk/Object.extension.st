@@ -63,6 +63,22 @@ Object >> astObject: anASImage [
 ]
 
 { #category : #'*ASTSmalltalk' }
+Object >> contents [
+"create a stream to write the AST on and return it as a String"
+	| stream |
+	stream := WriteStream on: String new.
+	self inspectZagASTOn: stream.
+
+	^ stream contents
+]
+
+{ #category : #'*ASTSmalltalk' }
+Object >> inspectZagASTOn: aStream [
+	aStream
+		nextPutAll: self class name.
+]
+
+{ #category : #'*ASTSmalltalk' }
 Object >> zigCompileObject: aGenerator [
 
 	| slots label |

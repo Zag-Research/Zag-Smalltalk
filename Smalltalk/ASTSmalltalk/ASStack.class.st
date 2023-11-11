@@ -14,11 +14,6 @@ ASStack >> at: aSymbol [
 ]
 
 { #category : #accessing }
-ASStack >> depth [ 
-^ 0
-]
-
-{ #category : #accessing }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
@@ -30,15 +25,20 @@ ASStack >> isEmpty [
 ]
 
 { #category : #API }
-ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
-	self subclassResponsibility
+self subclassResponsibility 
 ]
 
 { #category : #API }
-ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack [
+ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
 
-	^ self offset: 0 to: aSymbol local: blockLocal stack: blockStack
+	^ self
+		  offset: 0
+		  to: aSymbol
+		  local: blockLocal
+		  stack: blockStack
+		  other: nil
 ]
 
 { #category : #adding }

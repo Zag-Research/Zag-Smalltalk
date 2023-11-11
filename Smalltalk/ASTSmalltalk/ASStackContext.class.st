@@ -11,8 +11,16 @@ Class {
 }
 
 { #category : #accessing }
-ASStackContext >> blocks: aCollection [ 
+ASStackContext >> blocks: aCollection [
+aCollection isCollection ifFalse: [ self halt ].
 	blocks := aCollection
+]
+
+{ #category : #'instance creation' }
+ASStackContext >> from: anASStack [
+
+	rest := anASStack.
+	blocks := #()
 ]
 
 { #category : #initialization }
@@ -27,7 +35,7 @@ ASStackContext >> makeContextRequired [
 ]
 
 { #category : #API }
-ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockStack [
+ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	| index |
 	index := blocks indexOf: anObject.
@@ -36,7 +44,8 @@ ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockS
 		  offset: blocks size
 		  to: anObject
 		  local: nil
-		  stack: blockLocal 
+		  stack: blockLocal
+		  other: blockOther
 ]
 
 { #category : #enumerating }
