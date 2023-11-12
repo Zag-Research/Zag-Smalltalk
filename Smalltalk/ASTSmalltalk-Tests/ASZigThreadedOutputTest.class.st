@@ -149,7 +149,7 @@ ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -165,7 +165,7 @@ ASZigThreadedOutputTest >> testZig_simple2 [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'&e.verifySelector,":Msimple2:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
 { #category : #tests }
