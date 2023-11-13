@@ -16,6 +16,12 @@ ASZigCPSBlockOutput >> block [
 	^ methodGenerator 	block
 ]
 
+{ #category : #'code generation' }
+ASZigCPSBlockOutput >> codeGeneratorClass [
+
+	^ ASCodeGeneratorBlock
+]
+
 { #category : #compiling }
 ASZigCPSBlockOutput >> methodGenerator [
 

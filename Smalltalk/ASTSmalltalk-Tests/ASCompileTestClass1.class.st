@@ -148,6 +148,24 @@ ASCompileTestClass1 >> simple1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> simple1_noreturn [
+
+	 42
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> simple2 [
+
+	^ 25 + 17
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> simple2_noreturn [
+
+	25 + 17
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simpleBlock [
 
 	^ [ :each |
@@ -175,6 +193,7 @@ ASCompileTestClass1 >> unaries [
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> unariesPlus [
 
+	42 negated. 
 	^ 23 negated abs max: 42
 ]
 

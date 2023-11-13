@@ -21,7 +21,7 @@ ASCInlineBlock >> locals: locals arguments: arguments [
 	locals do: [ :each | self pushUnknownNamed: each ]
 ]
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASCInlineBlock >> outputTo: output [
 
 	output outputMethodStart: label.
@@ -29,7 +29,7 @@ ASCInlineBlock >> outputTo: output [
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
 	output outputMethodLabel: label.
-	self outputRestTo: output
+	^ self outputRestTo: output
 ]
 
 { #category : #accessing }

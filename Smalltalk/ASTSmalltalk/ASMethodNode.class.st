@@ -60,12 +60,6 @@ ASMethodNode >> = other [
 				  self className = other className ] ]
 ]
 
-{ #category : #visiting }
-ASMethodNode >> acceptVisitor: aVisitor [
-
-	^ aVisitor visitMethodNode: self
-]
-
 { #category : #accessing }
 ASMethodNode >> class: anASClassNode [
 
@@ -156,10 +150,17 @@ ASMethodNode >> stackSize [
 ]
 
 { #category : #codegen }
-ASMethodNode >> startMethod: aGenerator [
-	| primitive |
+ASMethodNode >> zigWalkMethod: aGenerator [
+
+	aGenerator selector: selector.
+	aGenerator
+		locals: (locals collect: #name)
+		arguments: (arguments collect: #name).
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
-			primitive := (pragma arguments at: 1) value ] ].
-	aGenerator startMethod: primitive selector: selector.
+			aGenerator primitive: (pragma arguments at: 1) value ] ].
+	^ body
+		  zigWalkEmpty: [ aGenerator returnSelf ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkMethodReturn: aGenerator ]
 ]

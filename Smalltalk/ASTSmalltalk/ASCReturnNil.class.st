@@ -1,20 +1,20 @@
 "
-Clean up stack and return self
+Clean up stack and return nil
 "
 Class {
-	#name : #ASCReturnSelf,
+	#name : #ASCReturnNil,
 	#superclass : #ASCOperations,
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #'code generation' }
-ASCReturnSelf >> outputTo: output [
+ASCReturnNil >> outputTo: output [
 
-	^ output visitReturnSelf
+	^ output visitReturnNil
 ]
 
 { #category : #'instance creation' }
-ASCReturnSelf >> with: ignored [
+ASCReturnNil >> with: ignored [
 
 
 ]

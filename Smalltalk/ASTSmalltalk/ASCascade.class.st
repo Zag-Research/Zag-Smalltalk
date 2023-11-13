@@ -71,11 +71,12 @@ ASCascade >> target: expression [
 
 { #category : #compiling }
 ASCascade >> zigWalk: aGenerator [
-
+| size |
+	size := sends size.
 	target zigWalkTarget: aGenerator.
 	sends doWithIndex: [ :each :idx |
 		idx = 1
 			ifTrue: [ aGenerator putDup ]
-			ifFalse: [ aGenerator putCopyOver ].
+			ifFalse: [ idx = size ifTrue: [ aGenerator drop ] ifFalse: [aGenerator putCopyOver] ].
 		each zigWalk: aGenerator ]
 ]

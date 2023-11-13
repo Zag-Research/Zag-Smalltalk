@@ -87,8 +87,18 @@ ASReturn >> zigWalk: aGenerator [
 ]
 
 { #category : #compiling }
+ASReturn >> zigWalkBlockReturn: anASCodeGenerator [ 
+	self shouldBeImplemented.
+]
+
+{ #category : #compiling }
 ASReturn >> zigWalkDiscard: aGenerator [
 
-	expression zigWalkForReturn: aGenerator.
-	^ aGenerator returnTop
+	(expression zigWalkForReturn: aGenerator) ifFalse: [
+	^ aGenerator returnTop]
+]
+
+{ #category : #compiling }
+ASReturn >> zigWalkMethodReturn: aGenerator [ 
+	^ self zigWalkDiscard: aGenerator
 ]

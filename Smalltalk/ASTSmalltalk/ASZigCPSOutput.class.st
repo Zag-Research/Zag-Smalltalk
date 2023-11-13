@@ -280,13 +280,14 @@ ASZigCPSOutput >> visitReturnTop [
 { #category : #API }
 ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 
-	self
+	index ifNotNil: [self
 		nextPutAll: 'context.setReturn(&';
 		nextPutAll: componentName;
 		nextPutAll: '.code[';
 		print: index - 1;
 		nextPutAll: '])';
-		endStatement;
+		endStatement].
+		self 
 		lConst: #pc;
 		nextPutAll: 'dispatch.lookup(';
 		putDirectSymbol: aSelector;

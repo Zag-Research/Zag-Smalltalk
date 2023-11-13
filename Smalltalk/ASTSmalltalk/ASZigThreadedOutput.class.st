@@ -19,12 +19,6 @@ ASZigThreadedOutput >> branch: command to: target [
 ]
 
 { #category : #API }
-ASZigThreadedOutput >> drop [
-
-	self putEmbedded: #drop
-]
-
-{ #category : #API }
 ASZigThreadedOutput >> endMethod [
 
 	self label: nil
@@ -173,9 +167,15 @@ ASZigThreadedOutput >> visitReturnTop [
 ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
 	self
-		putEmbedded: ('send' , aSelector numArgs asString) asSymbol;
+		putEmbedded: ('send' , aSelector numArgs asString
+			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
 		putSymbol: aSelector;
 		comma
+]
+
+{ #category : #visiting }
+ASZigThreadedOutput >> visitSimple: aSymbol [ 
+	^ self putEmbedded: aSymbol
 ]
 
 { #category : #visiting }

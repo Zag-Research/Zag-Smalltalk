@@ -7,10 +7,10 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
-{ #category : #wriiting }
+{ #category : #writing }
 ASCReturnBlock >> outputTo: output [
 
 	output outputMethodStart: label.
 	output outputMethodLabel: label.
-	self outputRestTo: output
+	^ self outputRestTo: output
 ]

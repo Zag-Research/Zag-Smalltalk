@@ -42,7 +42,8 @@ ASZigOutput >> generateCode: anASNode [
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
 	alreadyGenerated := false.
-	context processComponents
+	context processComponents.
+	^ self
 ]
 
 { #category : #generation }
@@ -165,11 +166,6 @@ ASZigOutput >> putSymbol: aSymbol [
 ASZigOutput >> refListString [
 self flag: #daniel " what should this returnTop  ".
 ^''
-]
-
-{ #category : #accessing }
-ASZigOutput >> selector [
-self subclassResponsibility 
 ]
 
 { #category : #initialization }

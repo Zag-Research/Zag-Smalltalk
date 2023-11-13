@@ -21,11 +21,6 @@ ASCodeBlock >> = other [
 		locals = other locals and: [ body = other body ] ]
 ]
 
-{ #category : #visiting }
-ASCodeBlock >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
 { #category : #accessing }
 ASCodeBlock >> addStatement: anASStatement [
 

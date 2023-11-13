@@ -15,5 +15,5 @@ ASCSelf >> name [
 { #category : #'code generation' }
 ASCSelf >> outputTo: anOutput [
 
-	anOutput visitPushLocal: offset
+	^ anOutput visitPushLocal: offset
 ]

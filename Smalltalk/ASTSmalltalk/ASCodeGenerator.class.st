@@ -13,7 +13,6 @@ Class {
 	#name : #ASCodeGenerator,
 	#superclass : #Object,
 	#instVars : [
-		'context',
 		'selector',
 		'code',
 		'basicBlocks',
@@ -22,7 +21,9 @@ Class {
 		'localVariables',
 		'targetClass',
 		'maxDepth',
-		'inline'
+		'inline',
+		'output',
+		'tailCallOptimize'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
 }
@@ -57,22 +58,16 @@ ASCodeGenerator >> classOf: aString [
 ASCodeGenerator >> compileBlock: aBlockClosure [
 	"compiling of blocks doesn't work right now"
 
-	aBlockClosure manifest ifTrue: [ context compileBlock: aBlockClosure ]
-
-
-]
-
-{ #category : #accessing }
-ASCodeGenerator >> context: anASFileContext [
-
-	context := anASFileContext.
-
+	aBlockClosure manifest ifTrue: [
+		output compileBlock: aBlockClosure ] 
 ]
 
 { #category : #API }
 ASCodeGenerator >> drop [
 
-	code doDrop; put: #drop
+	code
+		doDrop;
+		putSimple: #drop
 ]
 
 { #category : #initialization }
@@ -119,7 +114,6 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth.
 		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
-	self halt.
 	blocks := blocks select: #manifest.
 	blocks do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
 ]
@@ -133,7 +127,8 @@ ASCodeGenerator >> initialize [
 	basicBlocks add: code.
 	blocks := OrderedCollection new.
 	maxDepth := 0.
-	inline := false
+	inline := false.
+	tailCallOptimize := true
 ]
 
 { #category : #accessing }
@@ -151,7 +146,7 @@ ASCodeGenerator >> inspectBasicBlocks [
 { #category : #accessing }
 ASCodeGenerator >> locals: locals arguments: arguments [
 
-	context forClass ifNotNil: [ :theClass |
+	output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
 	code locals: locals arguments: arguments
 ]
@@ -163,10 +158,15 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 		aSymbol = variable name ]
 ]
 
+{ #category : #compiling }
+ASCodeGenerator >> lookupName: aString block: anUndefinedObject [ 
+	self shouldBeImplemented.
+]
+
 { #category : #accessing }
 ASCodeGenerator >> lookupObject: anObject [
 
-	^ context lookupObject: anObject
+	^ output lookupObject: anObject
 ]
 
 { #category : #serializing }
@@ -192,10 +192,22 @@ ASCodeGenerator >> nameBasicBlocks [
 			index: idx ]
 ]
 
+{ #category : #accessing }
+ASCodeGenerator >> output: anASFileContext [
+
+	output := anASFileContext
+]
+
 { #category : #API }
 ASCodeGenerator >> popVariable: aSymbol [
 
 	^ code popVariable: aSymbol
+]
+
+{ #category : #API }
+ASCodeGenerator >> primitive: primitiveNumber [
+
+	code primitive: primitiveNumber
 ]
 
 { #category : #API }
@@ -240,6 +252,12 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 ]
 
 { #category : #API }
+ASCodeGenerator >> returnSelf [
+
+	code returnSelf
+]
+
+{ #category : #API }
 ASCodeGenerator >> returnTop [
 
 	code
@@ -256,33 +274,26 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	name := context name.
+	name := output name.
 	code selector: aSymbol 
 ]
 
 { #category : #API }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
-	code := code send: aSymbol targetClass: aTargetClass tail: tail.
-	basicBlocks add: code.
-	aSymbol numArgs + 1 timesRepeat: [
-		code doDrop.
-].
-	code doPush: ASUnknownValue new.
-
-]
-
-{ #category : #API }
-ASCodeGenerator >> startMethod: primitiveNumber selector: aSymbol [
-
-	self selector: aSymbol.
-	code primitive: primitiveNumber selector: aSymbol 
+	code := code send: aSymbol targetClass: aTargetClass tail: tail&tailCallOptimize .
+	^ code ifNotNil: [ basicBlocks add: code ]
 ]
 
 { #category : #API }
 ASCodeGenerator >> storeVariable: anASLocal [
 
 	^ code storeVariable: anASLocal
+]
+
+{ #category : #settings }
+ASCodeGenerator >> tailCallOptimize: aBoolean [ 
+	tailCallOptimize:= aBoolean 
 ]
 
 { #category : #accessing }

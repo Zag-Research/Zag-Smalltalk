@@ -36,11 +36,6 @@ ASBlock class >> locals: locals body: body [
 		  body: body
 ]
 
-{ #category : #compiling }
-ASBlock >> acceptVisitor: aVisitor [
-	^ aVisitor visitBlockNode: self
-]
-
 { #category : #accessing }
 ASBlock >> blocks [
 
@@ -66,17 +61,6 @@ ASBlock >> isASBlock [
 ]
 
 { #category : #accessing }
-ASBlock >> isNonLocalReturn [
-	^ body isNonLocalReturn
-]
-
-{ #category : #testing }
-ASBlock >> isNonLocalThunk [
-
-	^ body isNonLocalThunk 
-]
-
-{ #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size
 ]
@@ -98,10 +82,6 @@ ASBlock >> selector [
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
-{ #category : #codegen }
-ASBlock >> startMethod: aGenerator [
-]
-
 { #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
@@ -109,56 +89,22 @@ ASBlock >> tell: aCompiler youAreSent: aSymbol [
 ]
 
 { #category : #codegen }
-ASBlock >> zigCompileBlock: aGenerator [
-
-	| selector |
-	selector := (String streamContents: [ :s |
-		             arguments isEmpty
-			             ifTrue: [ s nextPutAll: 'value' ]
-			             ifFalse: [
-			             arguments size timesRepeat: [ s nextPutAll: 'value:' ] ] ])
-		            asSymbol.
-	aGenerator startMethod: nil selector: selector.
-	aGenerator locals: (locals collect: #name) arguments: arguments.
-	body zigWalk: aGenerator
-]
-
-{ #category : #building }
-ASBlock >> zigNonLocalBlockString: stackVariables [
-
-	self flag: #daniel. " use a Dictionary "
-	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
-		| return |
-		"tests to see if there is a built in literal function"
-		return := (body at: 1) expression.
-		return isASLiteral ifTrue: [
-			| literal |
-			literal := return literal.
-			literal = true ifTrue: [ ^ '&e.pushNonlocalBlock_true,' ].
-			literal = false ifTrue: [ ^ '&e.pushNonlocalBlock_false,' ].
-			literal isNil ifTrue: [ ^ '&e.pushNonlocalBlock_nil,' ].
-			literal = 1 ifTrue: [ ^ '&e.pushNonlocalBlock_one,' ].
-			literal = -1 ifTrue: [ ^ '&e.pushNonlocalBlock_minusOne,' ].
-			literal = 0 ifTrue: [ ^ '&e.pushNonlocalBlock_zero,' ].
-			literal = 2 ifTrue: [ ^ '&e.pushNonlocalBlock_two,' ] ].
-		return isASSelf ifTrue: [
-			^ '&e.pushNonlocalBlock_self,'
-			  , (stackVariables indexOf: 'self') asString , ',' ] ]
-]
-
-{ #category : #building }
-ASBlock >> zigPushBlockString: syms and: stackVariables [
-
-	self isNonLocalReturn ifTrue: [
-		^ self zigNonLocalBlockString: stackVariables ].
-
-	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
-]
-
-{ #category : #codegen }
 ASBlock >> zigWalk: aGenerator [
 
 	^ aGenerator pushBlock: self
+]
+
+{ #category : #codegen }
+ASBlock >> zigWalkMethod: aGenerator [
+
+	aGenerator
+		locals: (locals collect: #name)
+		arguments: (arguments collect: #name).
+	aGenerator selector: self selector.
+	^ body
+		  zigWalkEmpty: [ aGenerator returnNil ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
 ]
 
 { #category : #compiling }
