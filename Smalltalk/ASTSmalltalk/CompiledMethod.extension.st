@@ -24,14 +24,14 @@ CompiledMethod >> inspectionThread [
 ]
 
 { #category : #'*ASTSmalltalk' }
-CompiledMethod >> inspectionZigAST [
+CompiledMethod >> inspectionZagAST [
 	<inspectorPresentationOrder: 61 title: 'ZagAST'>
 	^ (ASPharoCompiler new astFor: self) inspectAST
 ]
 
 { #category : #'*ASTSmalltalk' }
-CompiledMethod >> inspectionZigBlocks [
-	<inspectorPresentationOrder: 60 title: 'ZigBlocks'>
+CompiledMethod >> inspectionZagCode [
+	<inspectorPresentationOrder: 60 title: 'ZagCode'>
 	| ast file output |
 	ast := ASPharoCompiler new astFor: self.
 
