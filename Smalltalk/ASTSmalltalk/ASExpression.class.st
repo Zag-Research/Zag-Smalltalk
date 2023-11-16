@@ -50,8 +50,9 @@ ASExpression >> zigWalkForReturn: aGenerator [
 ]
 
 { #category : #compiling }
-ASExpression >> zigWalkMethodReturn: aGenerator [ 
-	self zigWalk: aGenerator.
+ASExpression >> zigWalkMethodReturn: aGenerator [
+
+	self zigWalkDiscard: aGenerator.
 	^ aGenerator returnSelf
 ]
 
