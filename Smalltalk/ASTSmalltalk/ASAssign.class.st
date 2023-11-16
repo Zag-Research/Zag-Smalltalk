@@ -48,8 +48,10 @@ ASAssign >> expression [
 
 { #category : #printing }
 ASAssign >> inspectZagASTOn: s [
+
 	super inspectZagASTOn: s.
-	s << $(; << 'variable:'; space.
+	s
+		<< $(.
 	variable printOn: s.
 	s << $)
 ]

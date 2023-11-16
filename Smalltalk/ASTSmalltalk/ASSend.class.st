@@ -70,15 +70,10 @@ ASSend >> children [
 
 { #category : #printing }
 ASSend >> inspectZagASTOn: s [
+
 	super inspectZagASTOn: s.
 	s << $(.
-	s << 'selector:'.
-	s space.
 	selector printOn: s.
-	s << ' target: '.
-	s << target class name.
-	s space.
-	args doWithIndex: [ :a :i | s<< #arg; << i asString; << $:; space; << a class name].
 	s << $)
 ]
 

@@ -26,12 +26,9 @@ ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
-{ #category : #compiling }
-ASRef >> inspectZagASTOn: s [
-	super inspectZagASTOn: s.
-	s << $(.
-	variable printOn: s.
-	s << $)
+{ #category : #accessing }
+ASRef >> children [ 
+	^ { variable }
 ]
 
 { #category : #comparing }
