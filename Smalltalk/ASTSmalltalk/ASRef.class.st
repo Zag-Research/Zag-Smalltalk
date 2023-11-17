@@ -29,11 +29,6 @@ ASRef >> acceptVisitor: aVisitor [
 ]
 
 { #category : 'accessing' }
-ASRef >> children [ 
-	^ { variable }
-]
-
-{ #category : 'accessing' }
 ASRef >> inspectZagASTOn: s [
 
 	super inspectZagASTOn: s.
