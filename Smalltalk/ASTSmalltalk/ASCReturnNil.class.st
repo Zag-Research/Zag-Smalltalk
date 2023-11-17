@@ -2,18 +2,20 @@
 Clean up stack and return nil
 "
 Class {
-	#name : #ASCReturnNil,
-	#superclass : #ASCOperations,
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASCReturnNil',
+	#superclass : 'ASCOperations',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASCReturnNil >> outputTo: output [
 
 	^ output visitReturnNil
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCReturnNil >> with: ignored [
 
 

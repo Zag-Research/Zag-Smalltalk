@@ -3,41 +3,43 @@ I represent a block of code.
 
 "
 Class {
-	#name : #ASCodeBlock,
-	#superclass : #Object,
+	#name : 'ASCodeBlock',
+	#superclass : 'Object',
 	#instVars : [
 		'body',
 		'locals',
 		'scope',
 		'nestedScopeOf'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCodeBlock >> = other [
 
 	^ self class = other class and: [ 
 		locals = other locals and: [ body = other body ] ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> addStatement: anASStatement [
 
 	body add: anASStatement
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body [
 	^ body
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body: anASSequence [
 	body := anASSequence
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> children [
 	| c |
 	c := OrderedCollection new.
@@ -46,7 +48,7 @@ ASCodeBlock >> children [
 	^ c
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> initialize [
 
 	super initialize.
@@ -55,23 +57,23 @@ ASCodeBlock >> initialize [
 	body := ASSequence new
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASRef [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASVariable [
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals [
 
 	^ locals
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals: aCollection [
 
 	locals := aCollection
@@ -83,18 +85,18 @@ ASCodeBlock >> locals: aCollection [
 		          as: Array
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> lookup: symbol [
 	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> nestedScopeOf: anASClassNode [
 	nestedScopeOf := anASClassNode
 	
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASCodeBlock >> printOn: s [
 
 	locals isEmpty ifFalse: [ 
@@ -106,7 +108,7 @@ ASCodeBlock >> printOn: s [
 	s << '}'
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> roots [
 	| roots |
 	roots := OrderedCollection new.
@@ -114,7 +116,7 @@ ASCodeBlock >> roots [
 	^ roots
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> scope [
  ^ scope
 ]

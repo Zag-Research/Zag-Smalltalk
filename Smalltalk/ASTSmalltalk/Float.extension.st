@@ -1,11 +1,11 @@
-Extension { #name : #Float }
+Extension { #name : 'Float' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Float >> astImageObject: anASImage [ 
 	^ ('16r',self hex) asNumber
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Float >> astObject: anASImage [ 
 	^ self
 ]

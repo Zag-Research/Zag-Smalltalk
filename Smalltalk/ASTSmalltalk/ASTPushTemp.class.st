@@ -1,10 +1,12 @@
 Class {
-	#name : #ASTPushTemp,
-	#superclass : #ASTTemps,
-	#category : #'ASTSmalltalk-IR'
+	#name : 'ASTPushTemp',
+	#superclass : 'ASTTemps',
+	#category : 'ASTSmalltalk-IR',
+	#package : 'ASTSmalltalk',
+	#tag : 'IR'
 }
 
-{ #category : #thread }
+{ #category : 'thread' }
 ASTPushTemp >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: '&p.pushTemp,'.

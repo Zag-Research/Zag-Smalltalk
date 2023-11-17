@@ -4,15 +4,17 @@ I represent literal (hence immutable) values at compile time.
 I have subclasses that include mutable versions
 "
 Class {
-	#name : #ASCLiteralValue,
-	#superclass : #ASCClassValue,
+	#name : 'ASCLiteralValue',
+	#superclass : 'ASCClassValue',
 	#instVars : [
 		'min'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #common }
+{ #category : 'common' }
 ASCLiteralValue >> init: anObject [
 
 	valueClass ifNil: [
@@ -22,7 +24,7 @@ ASCLiteralValue >> init: anObject [
 	self error 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCLiteralValue >> min [ 
 ^ min
 ]

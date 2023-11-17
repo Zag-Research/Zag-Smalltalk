@@ -2,27 +2,29 @@
 I contain all the common respersentation for Methods and Blocks
 "
 Class {
-	#name : #ASMethodOrBlock,
-	#superclass : #ASCodeBlock,
+	#name : 'ASMethodOrBlock',
+	#superclass : 'ASCodeBlock',
 	#instVars : [
 		'arguments'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodOrBlock >> = other [
 
 	^ super = other and: [ 
 		  self arguments = other arguments  ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments [
 	^ arguments
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments: aCollection [
 
 	arguments := aCollection
@@ -34,7 +36,7 @@ ASMethodOrBlock >> arguments: aCollection [
 		             as: Array 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> children [
 	| c |
 	c := super children.
@@ -42,7 +44,7 @@ ASMethodOrBlock >> children [
 	^ c
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
 | method |
 	method := (ASPharoVisitor compiler: self) visit: aCompiledMethod ast.
@@ -50,14 +52,14 @@ ASMethodOrBlock >> compileMethod: aCompiledMethod [
 	^ method
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMethodOrBlock >> initialize [
 
 	super initialize.
 	arguments := #(  )
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 

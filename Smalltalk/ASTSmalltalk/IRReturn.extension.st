@@ -1,6 +1,6 @@
-Extension { #name : #IRReturn }
+Extension { #name : 'IRReturn' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRReturn >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: 'p.@"returnWithContext",'.

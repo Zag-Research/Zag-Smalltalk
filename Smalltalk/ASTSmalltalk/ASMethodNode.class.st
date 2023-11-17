@@ -2,17 +2,19 @@
 I represent a method, which is the same as a Block except that the return must be explicit
 "
 Class {
-	#name : #ASMethodNode,
-	#superclass : #ASMethodOrBlock,
+	#name : 'ASMethodNode',
+	#superclass : 'ASMethodOrBlock',
 	#instVars : [
 		'selector',
 		'className',
 		'pragmas'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
 self halt.
 	^ self new
@@ -22,7 +24,7 @@ self halt.
 		  body: body
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
 	^ self new
 		  class: aClass;
@@ -33,7 +35,7 @@ ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: lo
 		  pragmas: OrderedCollection new
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol body: body [
 
 	^ self new
@@ -42,7 +44,7 @@ ASMethodNode class >> class: aClass selector: aSymbol body: body [
 		  body: body
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body [
 
 	^ self new
@@ -52,7 +54,7 @@ ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body 
 		  body: body
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> = other [
 
 	^ super = other and: [ 
@@ -60,29 +62,29 @@ ASMethodNode >> = other [
 				  self className = other className ] ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> class: anASClassNode [
 
 	"class := anASClassNode"
 ]
 
-{ #category : #introspection }
+{ #category : 'introspection' }
 ASMethodNode >> className [
 
 	^ className
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> hash [
 	^ className hash bitXor: selector hash
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> inspectAST [
 	<inspectorPresentationOrder: 33 title: 'ZigAST'>
 	^ SpTreeTablePresenter new
@@ -93,7 +95,7 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream nextPut: $(.
@@ -102,27 +104,27 @@ ASMethodNode >> inspectZagASTOn: aStream [
 	
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASMethodNode >> isASBlock [
 	^false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> maxBlockLocals [
 	^0
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> pragmas [
 	^ pragmas 
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASMethodNode >> pragmas: somePragmas [ 
 	pragmas := somePragmas 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodNode >> printOn: s [
 
 	s
@@ -134,22 +136,22 @@ ASMethodNode >> printOn: s [
 	super printOn: s 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector [
 	^ selector
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector: aString [ 
 	selector := aString
 ]
 
-{ #category : #utilities }
+{ #category : 'utilities' }
 ASMethodNode >> stackSize [
 	^0
 ]
 
-{ #category : #codegen }
+{ #category : 'codegen' }
 ASMethodNode >> zigWalkMethod: aGenerator [
 
 	aGenerator selector: selector.

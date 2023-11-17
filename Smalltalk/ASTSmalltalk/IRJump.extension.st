@@ -1,6 +1,6 @@
-Extension { #name : #IRJump }
+Extension { #name : 'IRJump' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRJump >> threadFormatOn: threadPrinter [
 
 	^ self destination

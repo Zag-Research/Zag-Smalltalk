@@ -1,11 +1,11 @@
-Extension { #name : #Character }
+Extension { #name : 'Character' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Character >> astImageObject: anASImage [ 
 	^ anASImage literal: self asInteger class: 7
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Character >> astObject: anASImage [ 
 	^ self
 ]

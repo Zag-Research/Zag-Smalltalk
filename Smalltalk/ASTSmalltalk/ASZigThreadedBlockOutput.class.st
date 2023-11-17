@@ -2,40 +2,42 @@
 I output BlockClosures
 "
 Class {
-	#name : #ASZigThreadedBlockOutput,
-	#superclass : #ASZigThreadedOutput,
+	#name : 'ASZigThreadedBlockOutput',
+	#superclass : 'ASZigThreadedOutput',
 	#instVars : [
 		'methodGenerator',
 		'block'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedBlockOutput >> codeGeneratorClass [
 
 	^ ASCodeGeneratorBlock
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigThreadedBlockOutput >> methodGenerator [
 
 	^ methodGenerator
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anObject [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitStoreLocal: anASLocal [ 
 	^ self subclassResponsibility
 ]

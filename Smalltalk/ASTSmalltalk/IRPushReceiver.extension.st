@@ -1,6 +1,6 @@
-Extension { #name : #IRPushReceiver }
+Extension { #name : 'IRPushReceiver' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRPushReceiver >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

@@ -2,15 +2,17 @@
 I represent a variable (local, parameters, inherited local/parameters, instance, class, shared).
 "
 Class {
-	#name : #ASVariable,
-	#superclass : #Object,
+	#name : 'ASVariable',
+	#superclass : 'Object',
 	#instVars : [
 		'name'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'reflective operations' }
+{ #category : 'reflective operations' }
 ASVariable class >> doesNotUnderstand: aMessage [
 
 	aMessage selector numArgs > 0 ifTrue: [ 
@@ -18,30 +20,30 @@ ASVariable class >> doesNotUnderstand: aMessage [
 	^ self name: aMessage selector
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASVariable class >> name: aString [ 
 	^ self new name: aString
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASVariable >> = other [
 
 	^ self class = other class and: [ self name = other name ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASVariable >> children [
  ^ OrderedCollection new:0
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASVariable >> inspectStringOn: s [
 
 	s << self className << ' ' <<
 	name 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASVariable >> inspectZagASTOn: s [
 
 	s << self className << $(.
@@ -49,60 +51,60 @@ ASVariable >> inspectZagASTOn: s [
 	s << $)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASVariable >> isASArg [
 	^false
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASVariable >> isASBlock [
 
 	^ false
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASVariable >> name [
 
 	^ name
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASVariable >> name: aSymbol [
 
 	name := aSymbol
 ]
 
-{ #category : #affecting }
+{ #category : 'affecting' }
 ASVariable >> pop: output [
 ^ self subclassResponsibility 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASVariable >> printOn: s [
 
 	s << self className << ' ' <<
 	name 
 ]
 
-{ #category : #affecting }
+{ #category : 'affecting' }
 ASVariable >> push: output [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #affecting }
+{ #category : 'affecting' }
 ASVariable >> store: output [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASVariable >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASVariable >> variable [
 
 	^ self shouldBeImplemented
