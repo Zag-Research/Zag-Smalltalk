@@ -10,6 +10,15 @@ Class {
 	#category : #'ASTSmalltalk-AST'
 }
 
+{ #category : #'tests - instance creation' }
+ASMethodOrBlock class >> arguments: args locals: locals body: body [
+
+	^ (self locals: locals
+		  body: body)
+		  arguments: args
+		  
+]
+
 { #category : #comparing }
 ASMethodOrBlock >> = other [
 
@@ -25,13 +34,7 @@ ASMethodOrBlock >> arguments [
 { #category : #accessing }
 ASMethodOrBlock >> arguments: aCollection [
 
-	arguments := aCollection
-		             collect: [ :symbol |
-			             | arg |
-			             arg := ASParameter name: symbol.
-
-			             arg ]
-		             as: Array 
+	arguments := aCollection asArray
 ]
 
 { #category : #accessing }

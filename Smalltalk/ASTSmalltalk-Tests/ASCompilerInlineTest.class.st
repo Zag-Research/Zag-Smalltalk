@@ -19,17 +19,18 @@ ASCompilerInlineTest >> testGives43 [
 	self
 		assert: ASCompileTestClass1 >> #gives43
 		inlinesTo: (ASMethodNode
-				 class: ASCompileTestClass1
 				 selector: #gives43
 				 locals: #( #forty2 )
-				 body: { 
-						 (ASAssign variable: (ASLocal name: #forty2) expression: (ASSend
-								   target: (ASSend
-										    target: (ASSelf method: #gives43)
-										    selector: #unaries
-										    args: {  })
-								   selector: #*
-								   args: { (ASLiteral literal: 2) })).
+				 body: {
+						 (ASAssign
+							  variable: (ASLocal name: #forty2)
+							  expression: (ASSend
+									   target: (ASSend
+											    target: (ASSelf method: #gives43)
+											    selector: #unaries
+											    args: {  })
+									   selector: #*
+									   args: { (ASLiteral literal: 2) })).
 						 (ASReturn expression: (ASSend
 								   target: (ASSelf method: #gives43)
 								   selector: #plus1:

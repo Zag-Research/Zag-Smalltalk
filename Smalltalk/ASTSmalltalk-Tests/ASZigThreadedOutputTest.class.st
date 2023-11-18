@@ -149,7 +149,7 @@ ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.drop,&e.returnSelf,'
 ]
 
 { #category : #tests }
@@ -249,5 +249,5 @@ ASZigThreadedOutputTest >> testZig_unaries_notail [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,&e.returnTop.'
 ]

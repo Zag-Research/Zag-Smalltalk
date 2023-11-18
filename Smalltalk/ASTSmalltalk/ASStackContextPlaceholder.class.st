@@ -22,6 +22,13 @@ ASStackContextPlaceholder >> depth [
 	^ rest depth
 ]
 
+{ #category : #removing }
+ASStackContextPlaceholder >> drop: count [
+
+	count = 0 ifTrue: [ ^ self ].
+	^ self error: 'stack underflow'
+]
+
 { #category : #accessing }
 ASStackContextPlaceholder >> find: aSymbol [
 	^ rest find: aSymbol

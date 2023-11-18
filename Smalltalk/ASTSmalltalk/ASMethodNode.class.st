@@ -6,50 +6,40 @@ Class {
 	#superclass : #ASMethodOrBlock,
 	#instVars : [
 		'selector',
-		'className',
 		'pragmas'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
-self halt.
-	^ self new
-		  class: aClass;
-		  selector: aSymbol;
-		  arguments: args;
-		  body: body
+ASMethodNode class >> selector: aSymbol arguments: args locals: locals body: body [
+
+	^ (self selector: aSymbol locals: locals body: body) arguments: args
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
+ASMethodNode class >> selector: aSymbol body: body [
+
 	^ self new
-		  class: aClass;
 		  selector: aSymbol;
-		  arguments: args;
-		  locals: locals;
 		  body: body;
-		  pragmas: OrderedCollection new
+		  pragmas: #(  )
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol body: body [
+ASMethodNode class >> selector: aSymbol locals: locals body: body [
 
-	^ self new
-		  class: aClass;
+	^ (self locals: locals body: body)
 		  selector: aSymbol;
-		  body: body
+		  pragmas: #(  )
 ]
 
 { #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body [
+ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals: locals body: body [
 
-	^ self new
-		  class: aClass;
+	^ (self arguments: args locals: locals body: body)
 		  selector: aSymbol;
-		  locals: locals;
-		  body: body
+		  pragmas: pragmas
 ]
 
 { #category : #comparing }
@@ -61,25 +51,20 @@ ASMethodNode >> = other [
 ]
 
 { #category : #accessing }
-ASMethodNode >> class: anASClassNode [
-
-	"class := anASClassNode"
-]
-
-{ #category : #introspection }
-ASMethodNode >> className [
-
-	^ className
-]
-
-{ #category : #accessing }
 ASMethodNode >> closureSize [
 	^0
 ]
 
 { #category : #comparing }
 ASMethodNode >> hash [
-	^ className hash bitXor: selector hash
+
+	^ selector hash
+]
+
+{ #category : #initialization }
+ASMethodNode >> initialize [ 
+	super initialize .
+	pragmas :=  OrderedCollection new
 ]
 
 { #category : #accessing }
@@ -127,11 +112,9 @@ ASMethodNode >> printOn: s [
 
 	s
 		nextPutAll: self class name;
-		nextPutAll: ' class: ';
-		nextPutAll: (className ifNil: [ '?' ]);
 		nextPutAll: ' selector: ';
 		print: selector.
-	super printOn: s 
+	super printOn: s
 ]
 
 { #category : #accessing }

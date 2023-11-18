@@ -131,10 +131,11 @@ ASCompiler >> findClass: aClass [
 ]
 
 { #category : #compiling }
-ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [ 
+ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [
+
 	| savedScope |
 	savedScope := currentScope.
-	anASMethodOrBlock nestedScopeOf: savedScope.
+"	anASMethodOrBlock nestedScopeOf: savedScope."
 	currentScope := anASMethodOrBlock.
 	aFullBlockClosure ensure: [ currentScope := savedScope ]
 ]
@@ -168,7 +169,7 @@ ASCompiler >> inlineTraditionalMethods [
 
 { #category : #compiling }
 ASCompiler >> lookup: aSymbol [
-	^ currentScope lookup: aSymbol
+	^ aSymbol
 ]
 
 { #category : #accessing }

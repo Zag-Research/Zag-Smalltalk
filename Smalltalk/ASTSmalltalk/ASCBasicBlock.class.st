@@ -202,7 +202,7 @@ stack requiredContextDo: aBlock
 { #category : #initialization }
 ASCBasicBlock >> returnSelf [
 
-	^ self put: ASCReturnTop new
+	^ self put: ASCReturnSelf new
 ]
 
 { #category : #initialization }

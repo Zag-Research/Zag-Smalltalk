@@ -7,12 +7,18 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'body',
-		'locals',
-		'scope',
-		'nestedScopeOf'
+		'locals'
 	],
 	#category : #'ASTSmalltalk-AST'
 }
+
+{ #category : #'tests - instance creation' }
+ASCodeBlock class >> locals: locals body: body [
+
+	^ self new
+		  locals: locals;
+		  body: body
+]
 
 { #category : #comparing }
 ASCodeBlock >> = other [
@@ -51,7 +57,6 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	scope := Dictionary new.
 	body := ASSequence new
 ]
 
@@ -74,24 +79,7 @@ ASCodeBlock >> locals [
 { #category : #accessing }
 ASCodeBlock >> locals: aCollection [
 
-	locals := aCollection
-		          collect: [ :symbol | 
-			          | local |
-			          local := ASLocal name: symbol.
-			scope at: symbol put: local.
-			local ]
-		          as: Array
-]
-
-{ #category : #initialization }
-ASCodeBlock >> lookup: symbol [
-	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
-]
-
-{ #category : #initialization }
-ASCodeBlock >> nestedScopeOf: anASClassNode [
-	nestedScopeOf := anASClassNode
-	
+	locals := aCollection asArray
 ]
 
 { #category : #printing }
@@ -112,9 +100,4 @@ ASCodeBlock >> roots [
 	roots := OrderedCollection new.
 	roots add: self.
 	^ roots
-]
-
-{ #category : #initialization }
-ASCodeBlock >> scope [
- ^ scope
 ]

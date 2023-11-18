@@ -41,7 +41,7 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 				rest isEmpty ifTrue: [ ^ self ].
 				current := rest atRandom ifNil: [ ^ self ] ]
 			ifNotNil: [ :next | current := next ].
-		rest remove: current ].
+		rest remove: current ]
 ]
 
 { #category : #enumerating }

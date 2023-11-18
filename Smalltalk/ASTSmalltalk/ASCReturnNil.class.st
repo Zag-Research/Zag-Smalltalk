@@ -7,6 +7,16 @@ Class {
 	#category : #'ASTSmalltalk-CodeGen'
 }
 
+{ #category : #'block handling' }
+ASCReturnNil >> manifestParameters: stack [
+]
+
+{ #category : #accessing }
+ASCReturnNil >> next [
+
+	^ nil
+]
+
 { #category : #'code generation' }
 ASCReturnNil >> outputTo: output [
 

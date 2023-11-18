@@ -38,7 +38,7 @@ ASPharoVisitor >> visit: aRBNode [
 { #category : #visiting }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
 
-	^ ASRef variable: (ASParameter new name: aRBVariableNode name)
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
@@ -94,7 +94,7 @@ ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
 { #category : #visiting }
 ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
 
-	^ ASRef variable: (ASGlobalVariable name: aRBVariableNode name)
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
@@ -137,14 +137,12 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 	selector := aRBMethodNode selector.
 	compiler definingClass: aRBMethodNode methodClass.
 	method := ASMethodNode
-		          class: aRBMethodNode methodClass
 		          selector: selector
-		          arguments: aRBMethodNode argumentNames
-		          locals:
-		          (aRBMethodNode temporaryNames)
+ pragmas:
+		(aRBMethodNode pragmas do: [ :pram | self visit: pram ])
+				          arguments: aRBMethodNode argumentNames
+		          locals: aRBMethodNode temporaryNames
 		          body: (ASSequence new: aRBMethodNode statements size).
-	method pragmas:
-		(aRBMethodNode pragmas do: [ :pram | self visit: pram ]).
 	compiler definingMethod: method.
 	compiler inScope: method do: [
 		aRBMethodNode statements doWithIndex: [ :statement :index |
@@ -179,7 +177,7 @@ ASPharoVisitor >> visitSuperNode: aRBVariableNode [
 { #category : #visiting }
 ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
 
-	^ ASRef variable: (ASLocal name: aRBVariableNode name)
+	^ ASRef variable: aRBVariableNode name
 ]
 
 { #category : #visiting }
