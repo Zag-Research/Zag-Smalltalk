@@ -295,7 +295,7 @@ ASTObject >> identityHash [
 	^ self basicIdentityHash bitShift: 18
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> ifNil: nilBlock [
 	"Return self, or evaluate the block if I'm == nil (q.v.)"
 
@@ -316,11 +316,11 @@ ASTObject >> ifNotNil: ifNotNilBlock [
 	^ ifNotNilBlock cull: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 ASTObject >> ifNotNil: ifNotNilBlock ifNil: nilBlock [
 	"If I got here, I am not nil, so evaluate the block ifNotNilBlock"
 
-	^ ifNotNilBlock value
+	^ ifNotNilBlock cull: self
 ]
 
 { #category : #'as yet unclassified' }

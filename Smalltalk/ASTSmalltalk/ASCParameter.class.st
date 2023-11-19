@@ -3,24 +3,41 @@ I am a parameter for a method.
 ASCSelf is a subclass
 "
 Class {
-	#name : #ASCParameter,
-	#superclass : #ASCValue,
+	#name : 'ASCParameter',
+	#superclass : 'ASCValue',
 	#instVars : [
-		'refMax',
-		'refMin'
+		'offset',
+		'name',
+		'stack'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
-ASCParameter class >> name: localName offset: offset [
-
-	^ self new name: name offset: offset
+{ #category : 'instance creation' }
+ASCParameter class >> inBasicBlock: anASCBasicBlock [ 
+	^ self new inBasicBlock: anASCBasicBlock 
 ]
 
-{ #category : #'state tracking' }
-ASCParameter >> referencedAt: depth [
+{ #category : 'instance initialization' }
+ASCParameter >> inBasicBlock: anASCBasicBlock [ 
+	stack := anASCBasicBlock stack
+]
 
-	refMin := depth min: refMin.
-	refMax := depth max: refMax
+{ #category : 'accessing' }
+ASCParameter >> name [ 
+^ name
+]
+
+{ #category : 'accessing' }
+ASCParameter >> name: aSymbol [
+
+	name := aSymbol 
+]
+
+{ #category : 'accessing' }
+ASCParameter >> offset [
+
+	^ stack offsetTo: self name
 ]

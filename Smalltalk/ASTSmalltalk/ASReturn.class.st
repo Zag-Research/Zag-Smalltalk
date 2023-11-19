@@ -2,58 +2,73 @@
 I am the only non-expression statement type
 "
 Class {
-	#name : #ASReturn,
-	#superclass : #ASStatement,
+	#name : 'ASReturn',
+	#superclass : 'ASStatement',
 	#instVars : [
 		'expression'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASReturn class >> expression: anASNode [
 ^self new expression: anASNode
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASReturn >> = other [
 
 	^ self class = other class and: [ self expression = other expression ]
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASReturn >> acceptVisitor: aVisitor [
 
 	^ aVisitor visitReturn: self
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASReturn >> blocks [
 	^expression blocks
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
+ASReturn >> children [
+| exp |
+	exp := OrderedCollection new.
+	exp add: expression.
+	^ exp
+]
+
+{ #category : 'accessing' }
 ASReturn >> expression [
 
 	^ expression
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASReturn >> expression: anASNode [
 	expression := anASNode
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
+ASReturn >> isNonLocalThunk [
+	^ expression isNonLocalThunkable
+]
+
+{ #category : 'testing' }
 ASReturn >> isReturn [
 	^ true
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASReturn >> maxDepth [
 	^expression maxDepth
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASReturn >> printOn: s [
 
 	s << self className << ' expression: ('.
@@ -61,8 +76,31 @@ ASReturn >> printOn: s [
 	s << ')'
 ]
 
-{ #category : #codegen }
-ASReturn >> zigCompileMethod: aGenerator [ 
-	expression zigCompileMethod: aGenerator.
-	aGenerator returnTop 
+{ #category : 'accessing' }
+ASReturn >> tell: aCompiler youAreSent: aSymbol [
+
+	^ expression tell: aCompiler youAreSent: aSymbol
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalk: aGenerator [
+
+	^ ASTInvalid signal: 'return can only be at statement level'
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkBlockReturn: anASCodeGenerator [ 
+	self shouldBeImplemented.
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkDiscard: aGenerator [
+
+	(expression zigWalkForReturn: aGenerator) ifFalse: [
+	^ aGenerator returnTop]
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkMethodReturn: aGenerator [ 
+	^ self zigWalkDiscard: aGenerator
 ]

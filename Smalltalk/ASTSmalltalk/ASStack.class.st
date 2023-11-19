@@ -1,71 +1,72 @@
 "
-I reperesent a stack of values within a method.
-
-Initially this will simply retain the values.
-
-Eventually it will implement Phi nodes for SSA evaluation, supporting some level of type inference
-
-Code generators can inquire as to values and types
+I reperesent an empty stack of values within a method.
 "
 Class {
-	#name : #ASStack,
-	#superclass : #Object,
-	#instVars : [
-		'top',
-		'rest'
-	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASStack',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
-ASStack class >> from: anASStack [
-	^ self basicNew from: anASStack 
+{ #category : 'accessing' }
+ASStack >> at: aSymbol [
+
+	^ (self find: aSymbol) top
 ]
 
-{ #category : #accessing }
-ASStack >> depth [
-	^ rest ifNil: [ 0 ] ifNotNil: [ 1 + rest depth ]
+{ #category : 'accessing' }
+ASStack >> find: aSymbol [
+self subclassResponsibility 
 ]
 
-{ #category : #accessing }
-ASStack >> drop [
-	^ rest
-]
-
-{ #category : #removing }
-ASStack >> drop: count [ 
-	count = 0 ifTrue: [ ^self ].
-	^ rest drop: count-1
-]
-
-{ #category : #'instance creation' }
-ASStack >> from: anASStack [
-
-	rest := anASStack 
-]
-
-{ #category : #testing }
+{ #category : 'testing' }
 ASStack >> isEmpty [
 
-	^ rest isNil 
+	^ true
 ]
 
-{ #category : #adding }
+{ #category : 'API' }
+ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+
+self subclassResponsibility 
+]
+
+{ #category : 'API' }
+ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
+
+	^ self
+		  offset: 0
+		  to: aSymbol
+		  local: blockLocal
+		  stack: blockStack
+		  other: nil
+]
+
+{ #category : 'adding' }
 ASStack >> push: anObject [
 
 	| newStack |
-	newStack := self class from: self.
+	newStack := ASStackElement from: self.
 	newStack top: anObject.
-	^ newStack
+	^ newStack 
 ]
 
-{ #category : #accessing }
-ASStack >> top [
-^ top
+{ #category : 'API' }
+ASStack >> pushPlaceholderContext [ 
+	^ ASStackContextPlaceholder new from: self
 ]
 
-{ #category : #accessing }
-ASStack >> top: value [
+{ #category : 'API' }
+ASStack >> pushUnknown [
+	^ self push: ASCUnknownValue new
+]
 
-	 top := value
+{ #category : 'API' }
+ASStack >> stackNames: aCollection [
+
+	aCollection ifEmpty: [ ^ self ].
+	^ ASStackNamed new
+		  from: (self stackNames: aCollection allButFirst);
+		  name: aCollection first
 ]

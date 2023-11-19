@@ -6,8 +6,8 @@ I provide a context for CodeGenerators. I maintain a collection of them as well 
 When asked to output, I output a header of all the external zag references, then I ask each of the generators for their definition and output that. Then I output the symbol table, and an initSmalltalk method. In there I initialize primitives and the symbol table, then I ask each of the generators for their initialization code. Finally I output a main function.
 "
 Class {
-	#name : #ASZigFileContext,
-	#superclass : #Object,
+	#name : 'ASZigFileContext',
+	#superclass : 'Object',
 	#instVars : [
 		'symbols',
 		'components',
@@ -15,28 +15,35 @@ Class {
 		'names',
 		'pendingComponents'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #components }
-ASZigFileContext >> add: aGenerator [
+{ #category : 'components' }
+ASZigFileContext >> addComponent: aGenerator [
 
 	pendingComponents add: aGenerator.
-	components add: aGenerator 
+	components add: aGenerator
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASZigFileContext >> addSymbol: aSymbol [
 
 	symbols add: aSymbol
 ]
 
-{ #category : #register }
+{ #category : 'converting' }
+ASZigFileContext >> asString [
+^ String streamContents: [ :s | self outputTo: s ]
+]
+
+{ #category : 'register' }
 ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
 	objects at: anASNode put: anASGenerator 
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASZigFileContext >> initialize [
 
 	super initialize.
@@ -47,19 +54,19 @@ ASZigFileContext >> initialize [
 	pendingComponents := OrderedCollection new
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigFileContext >> lookupObject: anObject [
 
 	^ objects at: anObject ifAbsent: [ ^ nil ]
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 ASZigFileContext >> name: anObject prefix: aString main: aString2 [
 
 	^ self name: anObject prefix: aString main: aString2 seq: 0
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 
 	| string |
@@ -79,7 +86,7 @@ ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 	^ string
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> outputTo: stream [
 
 	self processComponents.
@@ -95,19 +102,19 @@ ASZigFileContext >> outputTo: stream [
 	stream flush
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASZigFileContext >> predefinedSymbol: aSymbol [
 
 	^ (symbols predefinedSymbol: aSymbol)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASZigFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
 ]
 
-{ #category : #components }
+{ #category : 'components' }
 ASZigFileContext >> processComponents [
 
 	| temp |
@@ -117,7 +124,7 @@ ASZigFileContext >> processComponents [
 		temp do: [ :each | each generateCode ] ]
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll: 'const std = @import("std");
@@ -146,7 +153,7 @@ const empty = &[0]Object{};
 '
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 
 	stream nextPutAll: 'fn initSmalltalk() void {
@@ -154,7 +161,7 @@ ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 '
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeInitSmalltalkSuffixOn: stream [
 
 	stream nextPutAll: '}
@@ -163,7 +170,7 @@ pub fn main() !void {
 '
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeMainPrefixOn: stream [
 
 	stream nextPutAll: 'pub fn main() !void {
@@ -171,21 +178,21 @@ ASZigFileContext >> writeMainPrefixOn: stream [
 '
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeMainSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
 	| label |
 	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
-		nextPutAll: label;
+		nextPutAll: label zigName;
 		nextPutAll: ' = '.
 	^ label
 ]

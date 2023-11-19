@@ -2,49 +2,60 @@
 I create an array from a sequence of expressions { axp1 . exp2 }
 "
 Class {
-	#name : #ASArray,
-	#superclass : #ASExpression,
-	#instVars : [
-		'statements'
-	],
-	#category : #'ASTSmalltalk-AST'
+	#name : 'ASArray',
+	#superclass : 'ASExpression',
+	#type : 'variable',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
-ASArray class >> statements: aCollection [ 
-	^ self new statements: aCollection
+{ #category : 'instance creation' }
+ASArray class >> statements: aCollection [
+
+	^ aCollection collect: #yourself as: self
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASArray >> = other [
 
 	^ self class = other class and: [ 
 			  self statements = other statements ]
 ]
 
-{ #category : #printing }
+{ #category : 'visiting' }
+ASArray >> acceptVisitor: aVisitor [
+
+	^aVisitor visitArray: self
+]
+
+{ #category : 'printing' }
 ASArray >> baseValue [
-   | bv |
+
+	| bv |
 	bv := OrderedCollection new.
-	statements 
-		do: [ :statement | bv add: statement baseValue].
+	self do: [ :statement | bv add: statement baseValue ].
 	^ bv asArray
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
+ASArray >> do: aBlock [
+	1 to: self size do: [ : idx| aBlock value: (self at: idx) ]
+]
+
+{ #category : 'printing' }
 ASArray >> printOn: s [
-	s << self class name << ' statements: {'.
-	statements do: [: statement| statement printOn: s ] separatedBy: [ s << ' . ' ].
+
+	s << self class name << ' {'.
+	self
+		do: [ :statement | statement printOn: s ]
+		separatedBy: [ s << ' . ' ].
 	s << '}'
 ]
 
-{ #category : #accessing }
-ASArray >> statements [
+{ #category : 'compiling' }
+ASArray >> zigWalk: aGenerator [
 
-	^ statements
-]
-
-{ #category : #accessing }
-ASArray >> statements: aCollection [ 
-	statements := aCollection
+	self do: [ : each| each zigWalk: aGenerator ].
+	^ aGenerator pushArray: self size
 ]

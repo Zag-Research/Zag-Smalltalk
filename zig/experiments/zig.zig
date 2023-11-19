@@ -15,5 +15,6 @@ const SP = [*]Object;
 pub fn main() void {
     var a = [_]Object{.{.data=0}}**5;
     var sp: SP = a[0..];
+    {}
     @import("std").debug.print("sp.top() = {}\n",.{sp[0]});
 }

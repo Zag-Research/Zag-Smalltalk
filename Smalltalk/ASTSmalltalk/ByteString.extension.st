@@ -1,6 +1,6 @@
-Extension { #name : #ByteString }
+Extension { #name : 'ByteString' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 ByteString >> writeRawOn: aWriteStream [ 
 	aWriteStream nextPutAll: self asByteArray.
 

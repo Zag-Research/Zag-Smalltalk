@@ -1,19 +1,21 @@
 Class {
-	#name : #ASEnd,
-	#superclass : #ASClosers,
-	#category : #'ASTSmalltalk-Tokens'
+	#name : 'ASEnd',
+	#superclass : 'ASClosers',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASEnd >> atEnd [
 	^ true
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASEnd >> expectEnd [
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASEnd >> statement: anASCompiler [ 
 	^ nil
 ]

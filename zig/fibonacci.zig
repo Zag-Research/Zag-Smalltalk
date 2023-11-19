@@ -206,20 +206,20 @@ fn fibCPSSendSetup() CompiledMethodPtr {
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return start;
 }
-// test "fibCPSSend" {
-//     const start = fibCPSSendSetup();
-//     std.debug.print(" - {s} {*} {*}",.{cached, &fibCPSSendM.code[0], &fibCPSSend});
-//     var n: i32 = 1;
-//     while (n <= testReps) : (n += 1) {
-//         var objs = [_]Object{Object.from(n)};
-//         var te = TestExecution.new();
-//         te.init();
-//         const result = te.run(objs[0..], start);
-//         std.debug.print("\nfib({}) = {any}", .{ n, result });
-//         try std.testing.expectEqual(result.len, 1);
-//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-//     }
-// }
+test "fibCPSSend" {
+    const start = fibCPSSendSetup();
+    std.debug.print(" - {s} {*} {*}",.{cached, &fibCPSSendM.code[0], &fibCPSSend});
+    var n: i32 = 1;
+    while (n <= testReps) : (n += 1) {
+        var objs = [_]Object{Object.from(n)};
+        var te = TestExecution.new();
+        te.init();
+        const result = te.run(objs[0..], start);
+        std.debug.print("\nfib({}) = {any}", .{ n, result });
+        try std.testing.expectEqual(result.len, 1);
+        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+    }
+}
 fn runCPSSend(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibCPSSendSetup();
@@ -327,19 +327,19 @@ fn fibDispatchSetup() CompiledMethodPtr {
     fibonacci.forDispatch(ClassIndex.SmallInteger);
     return start;
 }
-// test "fibDispatch" {
-//     const start = fibDispatchSetup();
-//     var n: u32 = 1;
-//     while (n <= testReps) : (n += 1) {
-//         var objs = [_]Object{Object.from(n)};
-//         var te = TestExecution.new();
-//         te.init();
-//         const result = te.run(objs[0..], start);
-//         std.debug.print("\nfib({}) = {any}", .{ n, result });
-//         std.testing.expectEqual(result.len, 1) catch @panic("result.len");
-//         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
-//     }
-// }
+test "fibDispatch" {
+    const start = fibDispatchSetup();
+    var n: u32 = 1;
+    while (n <= testReps) : (n += 1) {
+        var objs = [_]Object{Object.from(n)};
+        var te = TestExecution.new();
+        te.init();
+        const result = te.run(objs[0..], start);
+        std.debug.print("\nfib({}) = {any}", .{ n, result });
+        std.testing.expectEqual(result.len, 1) catch @panic("result.len");
+        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
+    }
+}
 fn runDispatch(run:usize) usize {
     if (debugPrint) std.debug.print("{},",.{run});
     const method = fibDispatchSetup();

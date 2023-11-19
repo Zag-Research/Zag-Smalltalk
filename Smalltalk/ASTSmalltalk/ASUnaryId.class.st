@@ -1,10 +1,12 @@
 Class {
-	#name : #ASUnaryId,
-	#superclass : #ASIdentifier,
-	#category : #'ASTSmalltalk-Tokens'
+	#name : 'ASUnaryId',
+	#superclass : 'ASIdentifier',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> addScope: anASCompiler scope: scope [ 
 	anASCompiler nextToken.
 	scope add: value.
@@ -12,18 +14,18 @@ ASUnaryId >> addScope: anASCompiler scope: scope [
 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASUnaryId >> arity [
 	^ 1
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> assignExpression: anASCompiler [
 	anASCompiler nextToken.
 	^ anASCompiler peek possibleAssign: anASCompiler target: self
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> binaryExpression: anASCompiler target: target [
 
 	anASCompiler nextToken. " consume the selector "
@@ -32,12 +34,12 @@ ASUnaryId >> binaryExpression: anASCompiler target: target [
 		  target: (ASSend new target: target; selector: value args: #(  ))
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> classSelector: anASCompiler args: aCollection [ 
 	^ anASCompiler nextToken value asSymbol
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> keywordExpression: anASCompiler target: target [
 
 	anASCompiler nextToken. " consume the selector "
@@ -46,19 +48,19 @@ ASUnaryId >> keywordExpression: anASCompiler target: target [
 		  target: (ASSend new target: target; selector: value args: #(  ))
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> parameterFrom: anASCompiler [ 
 	anASCompiler nextToken.
 	^ value
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> statement: anASCompiler [
 	^ self assignExpression: anASCompiler 
 
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASUnaryId >> unaryExpression: anASCompiler target: target [
 
 	anASCompiler nextToken. " consume the selector "

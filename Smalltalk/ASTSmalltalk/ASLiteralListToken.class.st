@@ -1,10 +1,12 @@
 Class {
-	#name : #ASLiteralListToken,
-	#superclass : #ASSimple,
-	#category : #'ASTSmalltalk-Tokens'
+	#name : 'ASLiteralListToken',
+	#superclass : 'ASSimple',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASLiteralListToken >> parseWith: anASCompiler [
 	self shouldBeImplemented
 ]

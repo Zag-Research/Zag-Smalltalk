@@ -2,39 +2,41 @@
 I format an IRMethod to generate Zig code to create a method thread.
 "
 Class {
-	#name : #ASTThreadFormat,
-	#superclass : #Object,
+	#name : 'ASTThreadFormat',
+	#superclass : 'Object',
 	#instVars : [
 		'stream',
 		'method'
 	],
-	#category : #'ASTSmalltalk-Threaded'
+	#category : 'ASTSmalltalk-Threaded',
+	#package : 'ASTSmalltalk',
+	#tag : 'Threaded'
 }
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> cr [
 	^ stream cr
 ]
 
-{ #category : #'printing/formatting' }
+{ #category : 'printing/formatting' }
 ASTThreadFormat >> ir: anIrMethod [
 
 	| prevBranchLabel |
 	stream := WriteStream with: ''.
 	method := anIrMethod asAST.
-	method primitive ifNotNil: [ :primitive | 
+	method primitive ifNotNil: [ :primitive |
 		stream
 			nextPutAll: '&p.p';
 			nextPutAll: primitive asString;
 			nextPutAll: ',Code.int(-1),';
 			cr ].
-	method needsContext ifTrue: [ 
+	method needsContext ifTrue: [
 		stream
 			nextPutAll: '&p.pushContext,"^",';
 			cr ].
 	prevBranchLabel := nil.
-	method allSequencesDo: [ :irSequence | 
-		prevBranchLabel == irSequence ifFalse: [ 
+	method allSequencesDo: [ :irSequence |
+		prevBranchLabel == irSequence ifFalse: [
 			prevBranchLabel threadFormatOn: stream.
 			stream cr ].
 		stream
@@ -42,11 +44,11 @@ ASTThreadFormat >> ir: anIrMethod [
 			nextPutAll: irSequence orderNumber asString;
 			nextPutAll: ':",';
 			cr.
-		irSequence sequence do: [ :irInstruction | 
+		irSequence do: [ :irInstruction |
 			prevBranchLabel := irInstruction threadFormatOn: self.
 			stream cr ] ].
 	prevBranchLabel threadFormatOn: stream.
-	^ String streamContents: [ :s | 
+	^ String streamContents: [ :s |
 		  s
 			  nextPutAll: 'const prog = compileTuple(sym.';
 			  nextPutAll: method selector;
@@ -62,7 +64,7 @@ ASTThreadFormat >> ir: anIrMethod [
 			  cr ]
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASTThreadFormat >> loop [
 
 	| x |
@@ -73,22 +75,22 @@ ASTThreadFormat >> loop [
 			ifFalse: [ x * 3 + 1 ] ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> nextPut: aCharacter [ 
 	^ stream nextPut: aCharacter
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> nextPutAll: aString [ 
 	^ stream nextPutAll: aString
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> printTempOffset: aSymbol [
 	stream nextPutAll: (method tempMap at: aSymbol) asString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTThreadFormat >> temporaryNames [
 	| x |
 	x := 42.

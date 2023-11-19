@@ -2,79 +2,122 @@
 I have subclasses for all the statments that can exist in the body of a method or a block.
 "
 Class {
-	#name : #ASStatement,
-	#superclass : #Object,
+	#name : 'ASStatement',
+	#superclass : 'Object',
 	#classInstVars : [
 		'index'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStatement class >> nextIndex [
 	index ifNil: [ index:=0 ].
 	index := index+1.
 	^index asString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStatement class >> resetIndex [
 index:= nil
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASStatement >> acceptVisitor: aVisitor [
 	self subclassResponsibility 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStatement >> blocks [
 
 	^ OrderedCollection new:0
 ]
 
-{ #category : #testing }
+{ #category : 'accessing' }
+ASStatement >> children [
+
+	^ {  }
+]
+
+{ #category : 'compiling' }
+ASStatement >> invalidAST [
+
+	^ ASTInvalid signal
+]
+
+{ #category : 'compiling' }
+ASStatement >> invalidAST: aString [
+
+	^ ASTInvalid signal: aString
+]
+
+{ #category : 'testing' }
 ASStatement >> isASAssign [
 
 	^ false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASBlock [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASLiteral [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASRef [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASSelf [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASSend [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStatement >> isASVariable [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
+ASStatement >> isImmediateThunk [
+^ false
+]
+
+{ #category : 'testing' }
 ASStatement >> isReturn [
 	^false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStatement >> maxDepth [
 	^0
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalk: aGenerator [
+
+	self subclassResponsibility 
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkBlockReturn: aGenerator [
+
+	self subclassResponsibility
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkDiscard: aGenerator [
+
+	self subclassResponsibility
 ]

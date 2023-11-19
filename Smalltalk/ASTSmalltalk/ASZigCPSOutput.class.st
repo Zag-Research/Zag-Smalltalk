@@ -2,28 +2,45 @@
 I generate text-based as a sequence of Continuation-Passing-Style Zig function
 "
 Class {
-	#name : #ASZigCPSOutput,
-	#superclass : #ASZigMethodOutput,
+	#name : 'ASZigCPSOutput',
+	#superclass : 'ASZigMethodOutput',
 	#instVars : [
 		'auxStream',
 		'skipRest',
 		'currentLVal',
 		'lVals'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #printing }
-ASZigCPSOutput class >> testing [
-	^ self new testing
+{ #category : 'compiling' }
+ASZigCPSOutput class >> blockClass [ ^ ASZigCPSBlockOutput 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigCPSOutput >> checkBreakAtCall: aSymbol [
 	^ true
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'code generation' }
+ASZigCPSOutput >> doBasicBlock: bb [
+
+	self
+		nextPutAll: '    return @call(tailCall,';
+		id: bb label;
+		nextPutAll: ',.{';
+		id: self name;
+		nextPutAll: '.at(';
+		print: bb number + 1;
+		nextPutAll: '), ';
+		rVal: #sp;
+		nextPutAll: ', process, context, selector, cache })';
+		endStatement 
+]
+
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
 	mainStream nextPutAll: ';
@@ -33,12 +50,19 @@ ASZigCPSOutput >> endStatement [
 		currentLVal := nil ]
 ]
 
-{ #category : #flagging }
+{ #category : 'flagging' }
 ASZigCPSOutput >> flush [
 	skipRest := true
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'initialization' }
+ASZigCPSOutput >> initialize [
+
+	super initialize.
+	auxStream := '' writeStream
+]
+
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> lConst: aString [
 
 	| s |
@@ -51,7 +75,7 @@ ASZigCPSOutput >> lConst: aString [
 		nextPut: $=
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> lVal: aString [
 
 	| s |
@@ -64,112 +88,169 @@ ASZigCPSOutput >> lVal: aString [
 		nextPut: $=
 ]
 
-{ #category : #'code generation' }
-ASZigCPSOutput >> outputEnd: bb [
+{ #category : 'code generation' }
+ASZigCPSOutput >> outputBasicBlockEnd [
 
-	skipRest ifTrue: [ ^ self ].
-	bb test = #returnTop ifTrue: [  ].
-	bb test ifNotNil: [ :else |
-		self
-			nextPutAll: '    return @call(tailCall,';
-			id: else label;
-			nextPutAll: ',.{';
-			id: self name;
-			nextPutAll: '.at(';
-			print: else number + 1;
-			nextPutAll: '), sp, process, context, selector, cache });
-' ]	.
-bb else ifNotNil: [ :else |
-		self
-			nextPutAll: '    return @call(tailCall,';
-			id: else label;
-			nextPutAll: ',.{';
-			id: self name;
-			nextPutAll: '.at(';
-			print: else number + 1;
-			nextPutAll: '), sp, process, context, selector, cache });
-' ]
+	mainStream nextPutAll: '}
+'
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
+ASZigCPSOutput >> outputMethodLabel: bbLabel [
+
+	auxStream
+		nextPut: $&;
+		nextPutAll: bbLabel zigName;
+		nextPut: $,.
+
+]
+
+{ #category : 'code generation' }
+ASZigCPSOutput >> outputMethodStart: bbLabel [
+
+
+	self
+		nextPutAll: 'fn ';
+		id: bbLabel;
+		nextPutAll:
+			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+'.
+	currentLVal := nil.
+	lVals := Dictionary new
+]
+
+{ #category : 'code generation' }
 ASZigCPSOutput >> outputToStream [
 
-	codeGenerator cleanupAndGetPrimitive ifNotNil: [ :primitive |
-		self error ].
-	codeGenerator unorderedBasicBlocksDo: [ :bb |
-		self
-			nextPutAll: 'fn ';
-			id: bb label;
-			nextPutAll:
-				'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-'.
-		skipRest := false.
-		currentLVal := nil.
-		lVals := Dictionary new.
-		bb visitAll: self.
-		self outputEnd: bb.
-		mainStream nextPutAll: '}    
-' ]
+	codeGenerator finalAnalysis.
+	codeGenerator basicBlocksUnorderedDo: [ :bb |
+		currentBasicBlock := bb.
+		currentBasicBlock outputTo: self ]
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'code generation' }
+ASZigCPSOutput >> putTestOpposite: test [
+
+	test = #ifTrue ifTrue: [
+		^ self
+			nextPutAll: 'if(!';
+			  rVal: #sp;
+			  nextPutAll: '.top().isFalse())@panic("non-boolean");' ].
+	self error
+]
+
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> rVal: aString [
 
 	self nextPutAll: (lVals at: aString ifAbsent: [ aString ])
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> startMethod: primitiveNumber [
-
-	primitiveNumber = 0
-		ifTrue: [ self putEmbedded: #verifySelector ]
-		ifFalse: [ self putPrimitive: primitiveNumber ]
+{ #category : 'local variable handling' }
+ASZigCPSOutput >> sp: anInteger [ 
+	self rVal: #sp;nextPutAll: '.at(';print: anInteger ;nextPut: $)
 ]
 
-{ #category : #API }
+{ #category : 'code generation' }
+ASZigCPSOutput >> verifySelector: aSymbol [
+
+	self
+		nextPutAll: 'if(!';
+		putDirectSymbol: aSymbol;
+		nextPutAll:
+			'.hashEquals(selector))return @call(tailCall,dnu,.{pc,sp,process,context,selector,cache})';
+		endStatement
+]
+
+{ #category : 'API' }
 ASZigCPSOutput >> visitCall: aSelector doBreak: doBreak [
 
 	self halt
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitLiteral: literal [
+{ #category : 'API' }
+ASZigCPSOutput >> visitPopLocal: anASLocal [
+
+	self
+	visitStoreLocal: anASLocal;
+		lVal: #sp;
+		rVal: #sp;
+		nextPutAll: '.drop()';
+		endStatement
+]
+
+{ #category : 'API' }
+ASZigCPSOutput >> visitPushBlock: anASCBlock [
+
+	anASCBlock manifest
+		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
+		ifFalse: [ self visitPushLiteral: nil ] 
+]
+
+{ #category : 'API' }
+ASZigCPSOutput >> visitPushContext: aMethodBlock [
+
+	self
+		lVal: #context;
+		rVal: #context;
+		nextPutAll: '.push(';
+		rVal: #sp;
+		nextPutAll: ', process, &';
+		nextPutAll: componentName;
+		nextPutAll: ', 0, 2, 0)';
+		endStatement;
+		lVal: #sp;
+		rVal: #context;
+		nextPutAll: '.asNewSp()';
+		endStatement
+]
+
+{ #category : 'API' }
+ASZigCPSOutput >> visitPushLiteral: aLiteral [
 
 	self
 		lVal: #sp;
 		rVal: #sp;
 		nextPutAll: '.push(';
-		nextPutAll: literal asZigLiteral;
+		nextPutAll: aLiteral asZigLiteral;
 		nextPut: $);
 		endStatement 
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitPopLocal: anInteger [ 
-	self nextPutAll: 'context.setLocal(';
-	print: anInteger;
-	nextPutAll: ',';
-	rVal: #sp;
-	nextPutAll: '.top)';
-	endStatement;
-	lVal: #sp;
-	rVal: #sp;
-	nextPutAll: '.drop()';
-	endStatement 
+{ #category : 'API' }
+ASZigCPSOutput >> visitPushLocal: anASLocal [
+^
+	self
+		visitPushLocalOrBlock: anASLocal name
 ]
 
-{ #category : #visiting }
-ASZigCPSOutput >> visitPushLocal: anInteger [ 
-	self lVal: #sp;
-	rVal: #sp;
-	nextPutAll: '.push(context.getLocal(';
-	print: anInteger;
-	nextPutAll: '))';
-	endStatement 
+{ #category : 'API' }
+ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
+
+	self
+		lVal: #sp;
+		rVal: #sp;
+		nextPutAll: '.push('.
+	currentBasicBlock
+		offsetOf: anObject
+		local: [ :local |
+			self
+				nextPutAll: 'context.getLocal(';
+				print: local;
+				nextPut: $) ]
+		stack: [ :offset |
+			self
+				rVal: #sp;
+				nextPutAll: '.at(';
+				print: offset;
+				nextPut: $) ]
+		other: nil.
+	self
+		nextPut: $);
+		endStatement
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> visitReturn [
+{ #category : 'API' }
+ASZigCPSOutput >> visitReturnTop [
 
 	self
 		lConst: #top;
@@ -190,23 +271,41 @@ ASZigCPSOutput >> visitReturn [
 		rVal: #result;
 		nextPutAll: '.ctxt';
 		endStatement;
-		nextPutAll:
-			'return @call(tailCall, cContext.npc, .{ cContext.tpc, newSp, process, callerContext, selector, cache })';
+		nextPutAll: 'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';
+		rVal: #sp;
+		nextPutAll: ', process, cContext, selector, cache })';
 		endStatement;
 		flush
 ]
 
-{ #category : #API }
-ASZigCPSOutput >> visitSend: aSelector doBreak: doBreak [
+{ #category : 'API' }
+ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 
-	self
-		nextPutAll: 'context.setReturn(';
-		nextPut: $);
-		endStatement ;
+	index ifNotNil: [self
+		nextPutAll: 'context.setReturn(&';
+		nextPutAll: componentName;
+		nextPutAll: '.code[';
+		print: index - 1;
+		nextPutAll: '])';
+		endStatement].
+		self 
 		lConst: #pc;
-		nextPutAll: 'dispatch.lookup(newSelector, .SmallInteger)';
-		endStatement ;
-		nextPutAll:     'return @call(tailCall,';
+		nextPutAll: 'dispatch.lookup(';
+		putDirectSymbol: aSelector;
+		nextPutAll: ', '.
+	target
+		ifNotNil: [
+			self
+				nextPut: $.;
+				nextPutAll: target name;
+				nextPut: $) ]
+		ifNil: [
+			self
+				sp: aSelector numArgs;
+				nextPutAll: '.classIndex)' ].
+	self
+		endStatement;
+		nextPutAll: 'return @call(tailCall,';
 		rVal: #pc;
 		nextPutAll: '.prim,.{';
 		rVal: #pc;
@@ -219,7 +318,29 @@ ASZigCPSOutput >> visitSend: aSelector doBreak: doBreak [
 		flush
 ]
 
-{ #category : #writing }
+{ #category : 'visiting' }
+ASZigCPSOutput >> visitStoreLocal: anASLocal [
+
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				nextPutAll: 'context.setLocal(';
+				print: local ]
+		stack: [ :offset |
+			self
+				rVal: #sp;
+				nextPutAll: '.atPut(';
+				print: offset ]
+		other: nil.
+	self
+		nextPutAll: ',';
+		rVal: #sp;
+		nextPutAll: '.top)';
+		endStatement
+]
+
+{ #category : 'writing' }
 ASZigCPSOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
@@ -239,11 +360,11 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 		nextPutAll: mainStream contents 
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigCPSOutput >> writeInitializationOn: stream [
 
 	stream
-		nextPutAll: componentName;
+		nextPutAll: componentName zigName;
 		nextPutAll: '.setLiterals(&[_]Object{';
 		nextPutAll: self setLiteralString;
 		nextPutAll: '},&[_]Object{';

@@ -2,36 +2,52 @@
 I represent a reference to a variable (local, parameters, inherited local/parameters, instance, class, shared).
 "
 Class {
-	#name : #ASRef,
-	#superclass : #ASExpression,
+	#name : 'ASRef',
+	#superclass : 'ASExpression',
 	#instVars : [
 		'variable'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASRef class >> variable: aSymbol [
 ^ self new variable: aSymbol
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASRef >> = other [
 
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
-{ #category : #comparing }
+{ #category : 'accessing' }
+ASRef >> inspectZagASTOn: s [
+
+	super inspectZagASTOn: s.
+	s << $(.
+	variable inspectZagASTOn: s.
+	s << $)
+]
+
+{ #category : 'comparing' }
 ASRef >> isASRef [
 	^true
 ]
 
-{ #category : #printing }
+{ #category : 'testing' }
+ASRef >> isImmediateThunk [
+^ variable isImmediateThunk
+]
+
+{ #category : 'printing' }
 ASRef >> printOn: s [
 
 	s << self className << ' variable: ('.
@@ -39,20 +55,20 @@ ASRef >> printOn: s [
 	s << ')'
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASRef >> variable [
 
 	^ variable
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASRef >> variable: aSymbol [
 
 	variable := aSymbol
 ]
 
-{ #category : #codegen }
-ASRef >> zigCompileMethod: aGenerator [
+{ #category : 'compiling' }
+ASRef >> zigWalk: aGenerator [
 
-	aGenerator pushVariable: variable
+	^ aGenerator pushVariable: variable
 ]

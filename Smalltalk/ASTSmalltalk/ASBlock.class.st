@@ -4,14 +4,16 @@ I represent a BlockClosure which like a Method except that returns return from t
 Note that this is also an ASExpression although the class taxonomy doesn't reflect it.
 "
 Class {
-	#name : #ASBlock,
-	#superclass : #ASMethodOrBlock,
+	#name : 'ASBlock',
+	#superclass : 'ASMethodOrBlock',
 	#traits : 'ASValue',
 	#classTraits : 'ASValue classTrait',
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASBlock class >> arguments: args body: body [
 
 	^ self new
@@ -19,7 +21,7 @@ ASBlock class >> arguments: args body: body [
 		  body: body
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASBlock class >> arguments: args locals: locals body: body [
 
 	^ self new
@@ -28,7 +30,7 @@ ASBlock class >> arguments: args locals: locals body: body [
 		  body: body
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASBlock class >> locals: locals body: body [
 
 	^ self new
@@ -36,12 +38,7 @@ ASBlock class >> locals: locals body: body [
 		  body: body
 ]
 
-{ #category : #compiling }
-ASBlock >> acceptVisitor: aVisitor [
-	^ aVisitor visitBlockNode: self
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASBlock >> blocks [
 
 	| blocks |
@@ -50,7 +47,7 @@ ASBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASBlock >> buildStack [
 	| stackVariables |
 	stackVariables := OrderedCollection new.
@@ -60,35 +57,24 @@ ASBlock >> buildStack [
 	^ stackVariables reverse.
 ]
 
-{ #category : #'as yet unclassified' }
-ASBlock >> filter: zigInstructions [
-zigInstructions last = '&e.drop,' ifTrue: [ zigInstructions removeLast ].
-	^ zigInstructions
-]
-
-{ #category : #testing }
+{ #category : 'testing' }
 ASBlock >> isASBlock [
 	^true
 ]
 
-{ #category : #accessing }
-ASBlock >> isNonLocalReturn [
-	^ body isNonLocalReturn
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASBlock >> maxDepth [
 	^locals size
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASBlock >> printOn: s [
 
 	s << self className.
 	super printOn: s
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASBlock >> selector [
 
 	| size |
@@ -98,127 +84,34 @@ ASBlock >> selector [
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
-{ #category : #'as yet unclassified' }
-ASBlock >> statementVisitor: symbols stackVars: stackVariables [
-	^ ASBlockStatementVisitor new
-		  symbols: symbols
-		  stackVars: stackVariables
-		  closure: self
-]
-
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
 ]
 
-{ #category : #writing }
-ASBlock >> write: codeGenerator with: syms [
+{ #category : 'codegen' }
+ASBlock >> zigWalk: aGenerator [
 
-	| stackVariables selector | "no idea where selector comes from "
-	stackVariables := self buildStack.
-
-
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	codeGenerator pushNamespace: selector asSymbol asZigString.
-
-	selector := codeGenerator symbolOrVirtual:
-		            selector asSymbol asZigString.
-	codeGenerator
-		emitMethod: selector
-		numLocals: locals size
-		stackSize: self maxDepth
-		closureSize: 0.
-
-	codeGenerator emitVerifySelector.
-
-	"create dummy context"
-	codeGenerator pushContext.
-
-	self
-		writeBody: syms
-		stackVars: stackVariables
-		codeGenerator: codeGenerator
-		blocks: (ASBlockVisitor selector: nil).
-
-	codeGenerator returnTop.
-	codeGenerator pushClose
+	^ aGenerator pushBlock: self
 ]
 
-{ #category : #writing }
-ASBlock >> writeBlock: aStream with: syms [
+{ #category : 'codegen' }
+ASBlock >> zigWalkMethod: aGenerator [
 
-	| stackVariables |
-	stackVariables := self buildStack.
-
-	aStream cr.
-	"isRecursive ifTrue: [ aStream << 'const ' << selector << '_ = comptime indexSymbol(1);'. aStream cr ]."
-	aStream << 'var ' << self selector asZigString << ' ='.
-	aStream cr.
-	aStream tab.
-	aStream << 'compileMethod(' << (syms
-		 at: self selector zigName
-		 ifPresent: [ :value | value ]
-		 ifAbsentPut: [ syms virutalName ]) << ',' << locals size asString
-	<< ',' << self maxDepth asString << ',.{'.
-	aStream cr.
-
-	aStream tab.
-	aStream << '&e.verifySelector,'.
-	aStream cr.
-
-	"create dummy context"
-	aStream tab.
-	aStream << '&e.pushContext,"^",'.
-	aStream cr.
-
-	self
-		writeBody: syms
-		stackVars: stackVariables
-		writer: aStream
-		blocks: (ASBlockVisitor selector: nil).
-
-	aStream tab.
-	aStream << '&e.returnTop,'.
-	aStream cr. "should this be hardcoded?"
-	aStream << '});'.
-	aStream cr
+	aGenerator
+		locals: (locals collect: #name)
+		arguments: (arguments collect: #name).
+	aGenerator selector: self selector.
+	^ body
+		  zigWalkEmpty: [ aGenerator returnNil ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
 ]
 
-{ #category : #codegen }
-ASBlock >> zigCompileMethod: aGenerator [
+{ #category : 'compiling' }
+ASBlock >> zigWalkTarget: aGenerator [
 
-	aGenerator pushBlock: self
-]
-
-{ #category : #building }
-ASBlock >> zigNonLocalBlockString: stackVariables [
-
-	self flag: #daniel. " use a Dictionary "
-	(body size == 1 and: (body at: 1) isReturn) ifTrue: [ "this is a simple block with a local return"
-		| return |
-		"tests to see if there is a built in literal function"
-		return := (body at: 1) expression.
-		return isASLiteral ifTrue: [
-			| literal |
-			literal := return literal.
-			literal = true ifTrue: [ ^ '&e.pushNonlocalBlock_true,' ].
-			literal = false ifTrue: [ ^ '&e.pushNonlocalBlock_false,' ].
-			literal isNil ifTrue: [ ^ '&e.pushNonlocalBlock_nil,' ].
-			literal = 1 ifTrue: [ ^ '&e.pushNonlocalBlock_one,' ].
-			literal = -1 ifTrue: [ ^ '&e.pushNonlocalBlock_minusOne,' ].
-			literal = 0 ifTrue: [ ^ '&e.pushNonlocalBlock_zero,' ].
-			literal = 2 ifTrue: [ ^ '&e.pushNonlocalBlock_two,' ] ].
-		return isASSelf ifTrue: [
-			^ '&e.pushNonlocalBlock_self,'
-			  , (stackVariables indexOf: 'self') asString , ',' ] ]
-]
-
-{ #category : #building }
-ASBlock >> zigPushBlockString: syms and: stackVariables [
-
-	self isNonLocalReturn ifTrue: [
-		^ self zigNonLocalBlockString: stackVariables ].
-
-	^ '&e.pushLocal,' , (stackVariables indexOf: self selector) asString , ','
+	self zigWalk: aGenerator.
+	^ BlockClosure 
 ]

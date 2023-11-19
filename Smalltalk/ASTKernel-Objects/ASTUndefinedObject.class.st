@@ -40,6 +40,13 @@ ASTUndefinedObject >> ifNotNil: aBlock [
 ]
 
 { #category : #testing }
+ASTUndefinedObject >> ifNotNil: ifNotNilBlock ifNil: nilBlock [
+	"If the receiver is not nil, pass it as argument to the ifNotNilBlock block. else execute the nilBlock block"
+
+	^ nilBlock value
+]
+
+{ #category : #testing }
 ASTUndefinedObject >> isNil [
 	"Answer true if the receiver is nil."
 

@@ -2,118 +2,162 @@
 My subclasses output text versions of methods
 "
 Class {
-	#name : #ASZigMethodOutput,
-	#superclass : #ASZigOutput,
+	#name : 'ASZigMethodOutput',
+	#superclass : 'ASZigOutput',
 	#instVars : [
 		'codeGenerator',
-		'closureSize'
+		'maxDepth',
+		'numLocals',
+		'currentBasicBlock'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'as yet unclassified' }
-ASZigMethodOutput class >> testing [
-	^ self subclassResponsibility
+{ #category : 'compiling' }
+ASZigMethodOutput >> blockClass [
+	^ self class blockClass
 ]
 
-{ #category : #'code generation' }
+{ #category : 'accessing' }
+ASZigMethodOutput >> blockNumber [
+	^ currentBasicBlock := currentBasicBlock + 1.
+
+]
+
+{ #category : 'code generation' }
 ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
-		  codeGenerator := ASCodeGenerator new context: self.
-		  breakAtCall ifTrue: [ codeGenerator breakAtCall ].
-		  codeGenerator ]
+		  codeGenerator := self codeGeneratorClass new
+			                   output: self;
+			                   targetClass: forClass ]
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> drop [
-	^ self subclassResponsibility
+{ #category : 'code generation' }
+ASZigMethodOutput >> codeGeneratorClass [ ^ ASCodeGenerator 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'compiling' }
+ASZigMethodOutput >> compileBlock: anASCBlock [
+
+	self assert: anASCBlock block ~= ourObject.
+	(self blockClass new testing: testing)
+		context: context;
+		methodGenerator: self methodGenerator block: self blockNumber;
+		generateCode: anASCBlock block for: forClass 
+]
+
+{ #category : 'code generation' }
 ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	ourObject zigCompileMethod: self codeGenerator.
+	self codeGenerator generate: ourObject.
 	self outputToStream
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASZigMethodOutput >> initialize [
 
 	super initialize.
-	closureSize := 0
+	maxDepth := 0.
+	currentBasicBlock := 0
 ]
 
-{ #category : #'code generation' }
+{ #category : 'compiling' }
+ASZigMethodOutput >> methodGenerator [ ^ self
+]
+
+{ #category : 'code generation' }
+ASZigMethodOutput >> outputBasicBlockEnd [
+
+	self subclassResponsibility
+]
+
+{ #category : 'code generation' }
+ASZigMethodOutput >> outputMethodLabel: bbLabel [ 
+	^ self subclassResponsibility
+]
+
+{ #category : 'code generation' }
+ASZigMethodOutput >> outputMethodStart: bbLabel [
+
+self subclassResponsibility 
+]
+
+{ #category : 'code generation' }
 ASZigMethodOutput >> outputToStream [ 
 
 self subclassResponsibility 
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> popLocal: localNumber [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigMethodOutput >> prefix [ ^ 'M'
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> pushBlock: stackIndex [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> pushContext [
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> pushLiteral: aLiteral [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> pushLocal: localNumber [ 
-	^ self subclassResponsibility
-]
-
-{ #category : #API }
-ASZigMethodOutput >> returnTop [
-	^ self subclassResponsibility
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigMethodOutput >> selector [
 
 	^ codeGenerator selector
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> send: aSelector useCall: useCall [ 
+{ #category : 'settings' }
+ASZigMethodOutput >> tailCallOptimize: aBoolean [ 
+	^ self codeGenerator tailCallOptimize: aBoolean
+]
+
+{ #category : 'code generation' }
+ASZigMethodOutput >> verifySelector: anObject [
+
+	self subclassResponsibility 
+]
+
+{ #category : 'API' }
+ASZigMethodOutput >> visitPopLocal: localNumber [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
-ASZigMethodOutput >> startMethod: primitiveNumber [ 
+{ #category : 'API' }
+ASZigMethodOutput >> visitPushBlock: stackIndex [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #writing }
+{ #category : 'API' }
+ASZigMethodOutput >> visitPushContext: unused [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASZigMethodOutput >> visitPushLiteral: aLiteral [ 
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASZigMethodOutput >> visitPushLocal: localNumber [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASZigMethodOutput >> visitReturnTop [
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [ 
+	^ self subclassResponsibility
+]
+
+{ #category : 'writing' }
 ASZigMethodOutput >> writeDefinitionOn: anObject [
 
 	self subclassResponsibility
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigMethodOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility

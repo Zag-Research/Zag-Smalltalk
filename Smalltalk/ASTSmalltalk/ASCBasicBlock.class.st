@@ -8,53 +8,62 @@ I have a `then` field which is the block I will go to if the named test is true.
 If there is no test, or if the test is false, then I will continue with the `else` block.
 "
 Class {
-	#name : #ASCBasicBlock,
-	#superclass : #Object,
+	#name : 'ASCBasicBlock',
+	#superclass : 'Object',
 	#instVars : [
 		'stack',
 		'maxDepth',
 		'operations',
 		'label',
-		'test',
-		'else',
-		'then'
+		'index'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #adding }
-ASCBasicBlock >> addTo: aCollection [ 
-	self shouldBeImplemented.
+{ #category : 'accessing' }
+ASCBasicBlock >> blocks [
+
+	| blocks block |
+	blocks := OrderedCollection new.
+	block := self next.
+	[ block notNil ] whileTrue: [
+		blocks add: block.
+		block := block next ].
+
+	^ blocks
 ]
 
-{ #category : #break }
-ASCBasicBlock >> break [
-
-	else := self class new stack: stack .
-	^ else
+{ #category : 'inlining' }
+ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
+	^ false
 ]
 
-{ #category : #stackAccessHelpers }
+{ #category : 'accessing' }
+ASCBasicBlock >> children [
+	^ operations
+]
+
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
 	stack := stack drop: aSymbol numArgs
 ]
 
-{ #category : #stackAccessHelpers }
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDrop [
-
-	stack := stack drop.
-
+	stack := stack drop
 ]
 
-{ #category : #stackAccessHelpers }
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDrop: n [
 
 	stack := stack drop: n.
 
 ]
 
-{ #category : #stackAccessHelpers }
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPop [
 
 	| result |
@@ -63,109 +72,198 @@ ASCBasicBlock >> doPop [
 	^ result
 ]
 
-{ #category : #stackAccessHelpers }
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
 
 	stack := stack push: anObject.
 	maxDepth := maxDepth max: stack depth
 ]
 
-{ #category : #accessing }
-ASCBasicBlock >> else [
-	^ else
+{ #category : 'initialization' }
+ASCBasicBlock >> endWithReturnTop [
+
+	^ self put: ASCReturnTop new
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> else: anInteger [
-
-	else := anInteger
+{ #category : 'accessing' }
+ASCBasicBlock >> index [
+	^ index
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> ifFalseGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifFalse:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifNilGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifNil:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifNotNilGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifNotNil:
-]
-
-{ #category : #initialization }
-ASCBasicBlock >> ifTrueGoTo: aBasicBlock [
-
-	then := aBasicBlock.
-	test := #ifTrue:
-]
-
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCBasicBlock >> initialize [
 
 	super initialize.
-	operations := OrderedCollection new
+	operations := OrderedCollection new.
+	maxDepth := 0
 ]
 
-{ #category : #wriiting }
-ASCBasicBlock >> isUnfinished [
-	^ test ifNil: [ else isNil ] ifNotNil: [ false ]
-]
-
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCBasicBlock >> label [
 	^ label
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> label: anObject [
+{ #category : 'initialization' }
+ASCBasicBlock >> label: aString index: anInteger [
 
-	label := anObject
+	label := aString .
+	index := anInteger 
 ]
 
-{ #category : #wriiting }
-ASCBasicBlock >> outputTo: output [
+{ #category : 'API' }
+ASCBasicBlock >> makeContextRequired [
+	stack := stack makeContextRequired 
+]
+
+{ #category : 'inlining' }
+ASCBasicBlock >> markBlockClosuresToManifest [
+
+	| last |
+	last := operations last.
+	last requiresContext ifTrue: [ stack := stack makeContextRequired.
+ ].
+	last manifestParameters: stack
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> maxDepth [
+	^ maxDepth
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> next [
+	^ operations last next
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
+
+	^ stack
+		  offset: 0
+		  to: anObject
+		  local: localBlock
+		  stack: localBlock
+		  other: nil
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> outputRestTo: output [
 
 	operations do: [ :operation | operation outputTo: output ].
-	test ifNotNil: [ :t | output branch: t to: then ].
-	else ifNotNil: [ output branch: #br to: else ]
+	^ output outputBasicBlockEnd
 ]
 
-{ #category : #initialization }
+{ #category : 'writing' }
+ASCBasicBlock >> outputTo: output [
+
+	self subclassResponsibility 
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> popVariable: anASVariable [
+
+	stack top makeManifest.
+	self put: (ASCPopVariable with: anASVariable).
+	self doDrop
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushUnknownNamed: aSymbol [
+
+	stack := ASStackNamed new
+		         from: stack;
+		         name: aSymbol.
+	stack top: (ASCClassValue new init: Object)
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushVariable: anASVariable [
+
+	| target |
+	target := stack find: anASVariable name.
+	self put: (ASCPushVariable with: anASVariable).
+	self doPush: target top
+]
+
+{ #category : 'initialization' }
 ASCBasicBlock >> put: anObject [
-	operations add: anObject 
+
+	^ operations add: anObject
 ]
 
-{ #category : #initialization }
+{ #category : 'API' }
+ASCBasicBlock >> putSimple: aSymbol [ 
+	^ self put: (ASCSimple with: aSymbol)
+]
+
+{ #category : 'enumerating' }
+ASCBasicBlock >> requiredContextDo: aBlock [
+stack requiredContextDo: aBlock 
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> returnSelf [
+
+	^ self put: ASCReturnTop new
+]
+
+{ #category : 'initialization' }
 ASCBasicBlock >> returnTop [
 
-	test := #returnTop
+	^ self put: ASCReturnTop new
 ]
 
-{ #category : #accessing }
+{ #category : 'initialization' }
+ASCBasicBlock >> roots [
+
+	| roots |
+	roots := OrderedCollection new.
+	roots add: self.
+	roots addAll: self blocks.
+
+	^ roots
+]
+
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
+
+	| next send |
+	next := tailCall ifFalse: [ ASCReturnBlock new ].
+	send := ASCSend new
+		        selector: aSymbol;
+		        return: next;
+		        target: target.
+	self put: send.
+	next ifNotNil: [
+		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
+	^ next
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> stack [
+	^ stack
+]
+
+{ #category : 'accessing' }
 ASCBasicBlock >> stack: anASStack [
 
 	stack := anASStack.
 	maxDepth := stack depth
 ]
 
-{ #category : #initialization }
-ASCBasicBlock >> then: anInteger [
-
-	else := anInteger.
-
+{ #category : 'stackAccessHelpers' }
+ASCBasicBlock >> stackTop [
+	^ stack top
 ]
 
-{ #category : #visiting }
-ASCBasicBlock >> visitAll: aVisitor [
-	operations do: [ : operation | operation zigAccept: aVisitor ]
+{ #category : 'API' }
+ASCBasicBlock >> storeVariable: anASVariable [
+
+	stack top makeManifest.
+	self put: (ASCStoreVariable with: anASVariable)
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> top [
+	^ stack top
 ]

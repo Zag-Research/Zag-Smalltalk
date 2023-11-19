@@ -28,9 +28,10 @@ ASCompileTestClass1 >> + n1 [
 
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> addTwoNumbers [
-|sum|
-	sum := 4 + 5.
-	^sum
+
+	| sum foo |
+	foo := sum := 4 + 5.
+	^ sum + foo
 ]
 
 { #category : #'testing - examples' }
@@ -64,10 +65,25 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> fib2: anInt [
+
+	anInt < 2 ifTrue: [ ^ 1 ].
+	^ (self fib2: anInt - 1) + self fib2: anInt - 2
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> fib: anInt [
 	^ anInt < 2
 		ifTrue: [1] 
 		ifFalse: [(self fib: anInt-1) + self fib: anInt-2]
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> fibonacci [
+
+	^ self < 2
+		  ifTrue: [ 1 ]
+		  ifFalse: [ ( self - 1) fibonacci + (self - 2) fibonacci ]
 ]
 
 { #category : #'testing - examples' }
@@ -132,6 +148,24 @@ ASCompileTestClass1 >> simple1 [
 ]
 
 { #category : #'testing - examples' }
+ASCompileTestClass1 >> simple1_noreturn [
+
+	 42
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> simple2 [
+
+	^ 25 + 17
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> simple2_noreturn [
+
+	25 + 17
+]
+
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simpleBlock [
 
 	^ [ :each |
@@ -154,6 +188,13 @@ ASCompileTestClass1 >> testAssignment [
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> unaries [
 	^ 23 negated abs
+]
+
+{ #category : #'testing - examples' }
+ASCompileTestClass1 >> unariesPlus [
+
+	42 negated. 
+	^ 23 negated abs max: 42
 ]
 
 { #category : #'testing - examples' }

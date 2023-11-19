@@ -22,7 +22,7 @@ ASZigCompileObjectTest class >> writeCompileMethodSmallIntegerMinus [
 	file := ASZigFileContext new.
 	ASZigCompileObjectOutput new
 		context: file; 
-		generateCodeFor: ast.
+		generateCode: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerMinusAsCompileObject.zig' writeStreamDo: [ :stream |
 		stream truncate.
@@ -47,7 +47,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_SmallIntegerPlus [
 	file := ASZigFileContext new.
 	ASZigCompileObjectOutput new
 		context: file; 
-		generateCodeFor: ast.
+		generateCode: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
 		stream truncate.
@@ -63,7 +63,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_fib [
 	file := ASZigFileContext new.
 	ASZigCompileObjectOutput new
 		context: file; 
-		generateCodeFor: ast.
+		generateCode: ast.
 	FileSystem disk workingDirectory / 'zigFibAsCompileObject.zig'
 		writeStreamDo: [ :stream |
 			stream truncate.
@@ -88,7 +88,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_foobar [
 	file := ASZigFileContext new.
 	ASZigCompileObjectOutput new
 		context: file; 
-		generateCodeFor: ast.
+		generateCode: ast.
 	FileSystem disk workingDirectory
 	/ 'zigSmallIntegerAddAsCompileObject.zig' writeStreamDo: [ :stream |
 		stream truncate.
@@ -111,7 +111,7 @@ ASZigCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
 	ast := ASPharoCompiler new astFor: SmallInteger >> #+.
 	file := ASZigFileContext new.
 	codeGen := ASZigCompileObjectOutput new context: file.
-	codeGen generateCodeFor: ast.
+	codeGen generateCode: ast.
 	self assert: codeGen name equals: 'Obj1'.
 	self
 		assert: codeGen asString
@@ -126,7 +126,7 @@ ASZigCompileObjectTest >> testCompileMethod_fib [
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 	file := ASZigFileContext new.
 	codeGen := ASZigCompileObjectOutput new context: file.
-	codeGen generateCodeFor: ast.
+	codeGen generateCode: ast.
 	self assert: codeGen name equals: 'Obj1'.
 	self
 		assert: (codeGen asString first: 32)

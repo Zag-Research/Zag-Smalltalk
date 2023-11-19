@@ -41,25 +41,26 @@ ASPharoCompilerTest >> testASTNodesEqual [
 		printsAs: 'ASLocal a'.
 	self
 		assert: ASAssign
-		instancesEqualAfter: [ :obj | obj variable: ASLocal a expression: 42 ]
+		instancesEqualAfter: [ :obj |
+		obj variable: ASLocal a expression: 42 ]
 		printsAs: 'ASAssign variable: ASLocal a expression: (42)'.
 	self
 		assert: ASMethodNode
-		instancesEqualAfter: [ :obj | 
+		instancesEqualAfter: [ :obj |
 			obj
 				class: Object;
 				selector: #a ]
 		printsAs: 'ASMethodNode class: Object selector: #a body: {}'.
 	self
 		assert: ASMethodNode
-		instancesEqualAfter: [ :obj | 
+		instancesEqualAfter: [ :obj |
 			obj
 				class: Object;
 				selector: #a;
 				arguments: #( a1 a2 a3 );
 				locals: #( l1 l2 );
-				addStatement: 17;
-				addStatement: 42 ]
+				add: 17;
+				add: 42 ]
 		printsAs:
 		'ASMethodNode class: Object selector: #a arguments: #(a1 a2 a3) locals: #(l1 l2) body: {17 . 42}'
 ]
@@ -86,13 +87,13 @@ ASPharoCompilerTest >> testBlock [
 									    (ASAssign
 										     variable: (ASLocal name: #temp)
 										     expression: (ASSend
-												      target: (ASRef variable: (ASArg name: #each))
+												      target: (ASRef variable: (ASParameter name: #each))
 												      selector: #+
 												      args: { (ASLiteral literal: 5) })).
 									    (ASSend
 										     target: (ASRef variable: (ASLocal name: #temp))
 										     selector: #+
-										     args: { (ASLiteral literal: 3) }) }) })) } )
+										     args: { (ASLiteral literal: 3) }) }) })) } asASSequence)
 ]
 
 { #category : #tests }
@@ -143,7 +144,7 @@ ASPharoCompilerTest >> testCascade [
 											    target: (ASLiteral literal: 3)
 											    selector: #negated
 											    args: {  }) }).
-									  (ASSend selector: #abs args: {  }) }) })
+									  (ASSend selector: #abs args: {  }) }) } asASSequence)
 ]
 
 { #category : #tests }
@@ -154,7 +155,8 @@ ASPharoCompilerTest >> testClassVar [
 		compilesTo: (ASMethodNode
 				 class: ASCompileTestClass1
 				 selector: #classVar
-				 body: { (ASReturn expression: (ASRef variable: ASClassVar Foo)) })
+				 body:
+				 { (ASReturn expression: (ASRef variable: ASClassVariable Foo)) }  asASSequence)
 ]
 
 { #category : #tests }
@@ -166,7 +168,7 @@ ASPharoCompilerTest >> testGives43 [
 				 class: ASCompileTestClass1
 				 selector: #gives43
 				 locals: #( #forty2 )
-				 body: { 
+				 body: {
 						 (ASAssign variable: ASLocal forty2 expression: (ASSend
 								   target: (ASSend
 										    target: (ASSelf method: #gives43)
@@ -180,7 +182,7 @@ ASPharoCompilerTest >> testGives43 [
 								   args: { (ASSend
 										    target: (ASRef variable: ASLocal forty2)
 										    selector: #-
-										    args: { (ASLiteral literal: 4) }) })) })
+										    args: { (ASLiteral literal: 4) }) })) } asASSequence) 
 ]
 
 { #category : #tests }
@@ -191,7 +193,8 @@ ASPharoCompilerTest >> testInstVar [
 		compilesTo: (ASMethodNode
 				 class: ASCompileTestClass1
 				 selector: #instVar
-				 body: { (ASReturn expression: (ASRef variable: (ASInstance name: #bar))) })
+				 body: { (ASReturn expression:
+						  (ASRef variable: (ASInstanceVariable name: #bar))) } asASSequence) 
 ]
 
 { #category : #tests }
@@ -203,9 +206,9 @@ ASPharoCompilerTest >> testObject [
 				 class: ASCompileTestClass1
 				 selector: #object
 				 body: { (ASReturn expression: (ASSend
-							   target: (ASRef variable: (ASGlobal name: #Object))
+							   target: (ASRef variable: (ASGlobalVariable name: #Object))
 							   selector: #new
-							   args: {  })) })
+							   args: {  })) } asASSequence)
 ]
 
 { #category : #tests }
@@ -216,12 +219,12 @@ ASPharoCompilerTest >> testOr [
 			 selector: #|
 			 arguments: #( #n1 )
 			 locals: #( #temp )
-			 body: { 
+			 body: {
 					 (ASAssign variable: ASLocal temp expression: (ASSend
 							   target: (ASSelf method: #|)
 							   selector: #|
-							   args: { (ASRef variable: ASArg n1) })).
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) })
+							   args: { (ASRef variable: ASParameter n1) })).
+					 (ASReturn expression: (ASRef variable: ASLocal temp)) } asASSequence)
 ]
 
 { #category : #tests }
@@ -232,14 +235,15 @@ ASPharoCompilerTest >> testOrOr [
 			 selector: #'||'
 			 arguments: #( #n1 )
 			 locals: #( #temp #temp2 )
-			 body: { 
+			 body: {
 					 (ASAssign
 						  variable: ASLocal temp
-						  expression: (ASAssign variable: (ASLocal temp2) expression: (ASSend
+						  expression:
+							  (ASAssign variable: ASLocal temp2 expression: (ASSend
 									    target: (ASSelf method: #'||')
 									    selector: #'||'
-									    args: { (ASRef variable: ASArg n1) }))).
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) })
+									    args: { (ASRef variable: ASParameter n1) }))).
+					 (ASReturn expression: (ASRef variable: ASLocal temp)) } asASSequence)
 ]
 
 { #category : #tests }
@@ -250,12 +254,12 @@ ASPharoCompilerTest >> testPlus [
 			 selector: #+
 			 arguments: #( n1 )
 			 locals: #( temp )
-			 body: { 
+			 body: {
 					 (ASAssign variable: ASLocal temp expression: (ASSend
 							   target: (ASSelf method: #+)
 							   selector: #+
-							   args: { (ASRef variable: ASArg n1) })). 
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) })
+							   args: { (ASRef variable: ASParameter n1) })).
+					 (ASReturn expression: (ASRef variable: ASLocal temp)) } asASSequence)
 ]
 
 { #category : #tests }
@@ -268,8 +272,8 @@ ASPharoCompilerTest >> testPlus1 [
 				 selector: #plus1:;
 				 arguments: #( aNumber );
 				 body: { (ASReturn new expression: (ASSend new
-								   target: (ASRef new variable: (ASArg name: #aNumber));
-								   selector: #+ args: { (ASLiteral new literal: 1) })) })
+								   target: (ASRef new variable: (ASParameter name: #aNumber));
+								   selector: #+ args: { (ASLiteral new literal: 1) })) } asASSequence)
 ]
 
 { #category : #tests }
@@ -283,20 +287,23 @@ ASPharoCompilerTest >> testPlusAndAnd [
 				 arguments: #( n1 n2 n3 );
 				 body: { (ASReturn new expression: (ASSend new
 								   target: (ASSend new
-										    target: (ASRef new variable: (ASArg name: #n1));
-										    selector: #+ args: { (ASRef new variable: (ASArg name: #n2) )});
-								   selector: #+ args: { (ASRef new variable: (ASArg name: #n3) )})) })
+										    target: (ASRef new variable: (ASParameter name: #n1));
+										    selector: #+
+										    args: { (ASRef new variable: (ASParameter name: #n2)) });
+								   selector: #+
+								   args: { (ASRef new variable: (ASParameter name: #n3)) })) } asASSequence)
 ]
 
 { #category : #tests }
 ASPharoCompilerTest >> testPool [
-
 	" pool variable counts as a class variable "
 
 	self assert: ASCompileTestClass3 >> #pool compilesTo: (ASMethodNode
 			 class: ASCompileTestClass3
 			 selector: #pool
-			 body: { (ASReturn expression: (ASRef variable: (ASClassVar name: #Foo))) })
+			 body:
+			 { (ASReturn expression:
+				  (ASRef variable: (ASClassVariable name: #Foo))) } asASSequence)
 ]
 
 { #category : #tests }
@@ -307,7 +314,7 @@ ASPharoCompilerTest >> testSimple1 [
 		compilesTo: (ASMethodNode new
 				 class: ASCompileTestClass1;
 				 selector: #simple1;
-				 body: { (ASReturn new expression: (ASLiteral new literal: 42)) })
+				 body: { (ASReturn new expression: (ASLiteral new literal: 42)) } asASSequence)
 ]
 
 { #category : #tests }
@@ -325,7 +332,7 @@ ASPharoCompilerTest >> testSuper [
 									    selector: #classVar
 									    args: {  })
 							   selector: #negated
-							   args: {  })) })
+							   args: {  })) } asASSequence)
 ]
 
 { #category : #tests }

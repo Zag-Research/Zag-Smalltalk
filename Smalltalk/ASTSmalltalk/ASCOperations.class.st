@@ -2,29 +2,47 @@
 I am the superclass of all the CodeGenerator operations
 "
 Class {
-	#name : #ASCOperations,
-	#superclass : #Object,
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASCOperations',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCOperations class >> with: anObject [
 	^ self new with: anObject
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCOperations class >> with: anObject and: another [
 
 	^ self new with: anObject and: another
 ]
 
-{ #category : #'code generation' }
+{ #category : 'accessing' }
+ASCOperations >> children [
+^ OrderedCollection new:0
+]
+
+{ #category : 'serializing' }
+ASCOperations >> manifest: aGenerator [
+
+
+]
+
+{ #category : 'code generation' }
 ASCOperations >> outputTo: aCodeEmitter [
 
 	self subclassResponsibility
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'testing' }
+ASCOperations >> requiresContext [
+	^ false
+]
+
+{ #category : 'instance creation' }
 ASCOperations >> with: anObject [ 
 	^ self subclassResponsibility
 ]

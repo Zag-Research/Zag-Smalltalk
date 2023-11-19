@@ -2,21 +2,23 @@
 I implement the visitor pattern to walk a Pharo AST and transform it to our AST.
 "
 Class {
-	#name : #ASPharoVisitor,
-	#superclass : #Object,
+	#name : 'ASPharoVisitor',
+	#superclass : 'Object',
 	#instVars : [
 		'compiler',
 		'variables'
 	],
-	#category : #'ASTSmalltalk-Compiler'
+	#category : 'ASTSmalltalk-Compiler',
+	#package : 'ASTSmalltalk',
+	#tag : 'Compiler'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASPharoVisitor class >> compiler: anASPharoCompiler [
 	^ self new compiler: anASPharoCompiler
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASPharoVisitor >> addVariable: variableName [ 
 	variables
 		at: variableName
@@ -24,52 +26,55 @@ ASPharoVisitor >> addVariable: variableName [
 		ifAbsentPut: [ OrderedCollection new ].
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASPharoVisitor >> compiler: anASPharoCompiler [
 variables := Dictionary new.
 	compiler := anASPharoCompiler
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visit: aRBNode [
 	^ aRBNode acceptVisitor: self	
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitArgumentVariableNode: aRBVariableNode [
-	self addVariable: aRBVariableNode name.
-	^ ASRef variable: (ASArg new name: aRBVariableNode name)
+
+	^ ASRef variable: (ASParameter new name: aRBVariableNode name)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitArrayNode: aRBArrayNode [
 
-	^ ASArray statements:
-		  (aRBArrayNode statements collect: [ :statement | 
-			   self visit: statement ] as: Array)
+	^ (aRBArrayNode statements
+			   collect: [ :statement | self visit: statement ]
+			   as: ASArray)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
+
 	^ ASAssign
 		  variable: (compiler lookup: aRBAssignmentNode variable name)
-		  expression: (self visit: aRBAssignmentNode value)
+		  expression: (self visit: aRBAssignmentNode value) 
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 
-	^ ASBlock
+	| block body |
+	body := ASSequence new: aRBBlockNode statements size.
+	block := ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
-		  body: ASSequence new.
-"	compiler inScope: block do: [
-		aRBBlockNode statements do: [ :statement |
-			block addStatement: (self visit: statement) ] ].
-	^ block"
+		  body: body.
+	compiler inScope: block do: [
+		aRBBlockNode statements doWithIndex: [ :statement :index |
+			body at: index put: (self visit: statement) ] ].
+	^ block
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 
 	^ ASCascade
@@ -82,36 +87,36 @@ ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 				   as: Array)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
-self addVariable: aRBVariableNode name.
-	^ ASRef variable: (ASClassVar name: aRBVariableNode name)
+
+	^ ASRef variable: (ASClassVariable name: aRBVariableNode name)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
-self addVariable: aRBVariableNode name.
-	^ ASRef variable: (ASGlobal name: aRBVariableNode name)
+
+	^ ASRef variable: (ASGlobalVariable name: aRBVariableNode name)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
-self addVariable: aRBVariableNode name.
-	^ ASRef variable: (ASInstance name: aRBVariableNode name)
+
+	^ ASRef variable: (ASInstanceVariable name: aRBVariableNode name)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitLiteralArrayNode: aRBLiteralArrayNode [ 
 	^ ASLiteral literal: (aRBLiteralArrayNode contents collect: #value as: Array)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitLiteralValueNode: aRBLiteralValueNode [
 
 	^ ASLiteral literal: aRBLiteralValueNode value
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 
 	| target selector |
@@ -127,7 +132,7 @@ ASPharoVisitor >> visitMessageNode: aRBMessageNode [
 				   as: Array)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 
 	| selector method |
@@ -136,52 +141,52 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 	method := ASMethodNode
 		          class: aRBMethodNode methodClass
 		          selector: selector
-		          arguments:
-		          (aRBMethodNode arguments collect: #name as: Array)
+		          arguments: aRBMethodNode argumentNames
 		          locals:
-		          (aRBMethodNode temporaries collect: #name as: Array)
-		          body: ASSequence new.
-	method pragmas: (aRBMethodNode pragmas do: [ :pram | self visit: pram  ]).
+		          (aRBMethodNode temporaryNames)
+		          body: (ASSequence new: aRBMethodNode statements size).
+	method pragmas:
+		(aRBMethodNode pragmas do: [ :pram | self visit: pram ]).
 	compiler definingMethod: method.
-	compiler inScope: method do: [ 
-		aRBMethodNode statements do: [ :statement | 
-			method addStatement: (self visit: statement) ] ].
+	compiler inScope: method do: [
+		aRBMethodNode statements doWithIndex: [ :statement :index |
+			method body at: index put: (self visit: statement) ] ].
 	^ method
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitPragmaNode: aRBPragmaNode [
 
 	^ ASPragma args:
 		  (aRBPragmaNode arguments collect: [ :arg | self visit: arg ]) 
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitReturnNode: aRBReturnNode [
 
 	^ ASReturn expression: (self visit: aRBReturnNode value)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitSelfNode: aRBVariableNode [
 
 	^ ASSelf method: compiler definingMethod selector
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitSuperNode: aRBVariableNode [
 	^ ASSuper
 		  method: compiler definingMethod
 		  superclass: compiler definingClass superclass
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitTemporaryVariableNode: aRBVariableNode [
-	self addVariable: aRBVariableNode name.
+
 	^ ASRef variable: (ASLocal name: aRBVariableNode name)
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASPharoVisitor >> visitThisContextNode: anRBVariableNode [
-	^ ASInstance name: anRBVariableNode name
+	^ ASInstanceVariable name: anRBVariableNode name
 ]

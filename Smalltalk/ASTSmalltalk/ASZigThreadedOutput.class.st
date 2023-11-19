@@ -2,56 +2,59 @@
 I generate text-based code compiled by the `compileMethod` compile-time Zig function
 "
 Class {
-	#name : #ASZigThreadedOutput,
-	#superclass : #ASZigMethodOutput,
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASZigThreadedOutput',
+	#superclass : 'ASZigMethodOutput',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #printing }
-ASZigThreadedOutput class >> testing [
-	^ self new testing
+{ #category : 'compiling' }
+ASZigThreadedOutput class >> blockClass [
+	^ ASZigThreadedBlockOutput
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> branch: command to: target [
 	command = #br ifTrue: [ 
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> drop [
-
-	self putEmbedded: #drop
-]
-
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> endMethod [
 
 	self label: nil
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
+ASZigThreadedOutput >> outputBasicBlockEnd [
+	
+]
+
+{ #category : 'code generation' }
+ASZigThreadedOutput >> outputMethodLabel: bbLabel [
+
+	self label: bbLabel
+]
+
+{ #category : 'code generation' }
+ASZigThreadedOutput >> outputMethodStart: bbLabel [
+
+
+]
+
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputToStream [
 
-	codeGenerator cleanupAndGetPrimitive
-		ifNil: [ self putEmbedded: #verifySelector ]
-		ifNotNil: [ :primitive | self putPrimitive: primitive ].
-	codeGenerator linearizeBasicBlocksDo: [ :bb |
-		self label: bb label.
-		bb outputTo: self ].
+	codeGenerator finalAnalysis.
+	codeGenerator basicBlocksLinearizeDo: [ :bb |
+		currentBasicBlock := bb.
+		maxDepth := maxDepth max: currentBasicBlock maxDepth.
+		currentBasicBlock outputTo: self ].
 	self endMethod
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> popLocal: localNumber [
-
-	self
-		putEmbedded: #popLocal;
-		print: localNumber;
-		comma
-]
-
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
@@ -64,22 +67,8 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
-{ #category : #accessing }
-ASZigThreadedOutput >> pushBlock: stackIndex [
-
-	self tab;
-	print: stackIndex;lf
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> pushContext [
-
-	self putEmbedded: #pushContext;
-	nextPutAll: '"^"';comma
-]
-
-{ #category : #API }
-ASZigThreadedOutput >> pushLiteral: aLiteral [
+{ #category : 'writing' }
+ASZigThreadedOutput >> primitive: anInteger [
 
 	self
 		putEmbedded: #pushLiteral;
@@ -87,7 +76,7 @@ ASZigThreadedOutput >> pushLiteral: aLiteral [
 		comma
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> pushLocal: localNumber [
 
 	self
@@ -96,15 +85,49 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 		comma
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> returnTop [
+{ #category : 'code generation' }
+ASZigThreadedOutput >> verifySelector: anObject [
 
-	self
-		putEmbedded: #returnTop
+	self putEmbedded: #verifySelector
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> send: aSelector useCall: useCall [
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPopLocal: anASLocal [
+
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				putEmbedded: #popLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #popStack;
+				print: offset;
+				comma ]
+		other: nil
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushBlock: anASCBlock [
+
+	anASCBlock manifest
+		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
+		ifFalse: [ self visitPushLiteral: nil ]
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
+
+	self
+		putEmbedded: #pushContext;
+		nextPutAll: '"^"';
+		comma
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 
 	self putEmbedded: (useCall
 			 ifTrue: [ 'call' ]
@@ -113,15 +136,70 @@ ASZigThreadedOutput >> send: aSelector useCall: useCall [
 		putSymbol: aSelector
 ]
 
-{ #category : #API }
-ASZigThreadedOutput >> startMethod: primitiveNumber [
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushLocal: anASLocal [
 
-	primitiveNumber = 0
-		ifTrue: [ self putEmbedded: #verifySelector ]
-		ifFalse: [ self putPrimitive: primitiveNumber ]
+^	self visitPushLocalOrBlock: anASLocal
 ]
 
-{ #category : #writing }
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
+
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				putEmbedded: #pushLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #pushStack;
+				print: offset;
+				comma ]
+		other: nil
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitReturnTop [
+
+	self putEmbedded: #returnTop
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
+
+	self
+		putEmbedded: ('send' , aSelector numArgs asString
+			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
+		putSymbol: aSelector;
+		comma
+]
+
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitSimple: aSymbol [ 
+	^ self putEmbedded: aSymbol
+]
+
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitStoreLocal: anASLocal [
+
+	currentBasicBlock
+		offsetOf: anASLocal name
+		local: [ :local |
+			self
+				putEmbedded: #storeLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #storeStack;
+				print: offset;
+				comma ]
+		other: nil
+]
+
+{ #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
@@ -140,7 +218,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 		lf
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigThreadedOutput >> writeInitializationOn: stream [
 
 	stream

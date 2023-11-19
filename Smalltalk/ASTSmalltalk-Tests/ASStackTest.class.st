@@ -5,6 +5,25 @@ Class {
 }
 
 { #category : #tests }
+ASStackTest >> testNames [
+
+	| stack |
+	stack := ASStack new push: 42.
+	stack := stack stackNames: #( l1 p2 p1 self ).
+	stack at: #p1 put: 17.
+	stack := stack push: 99.
+	self assert: stack drop drop drop top equals: 17.
+	self assert: (stack offsetTo: #p1) equals: 3.
+	stack := stack pushPlaceholderContext.
+	stack := stack push: 12.
+	stack := stack push: 27.
+	stack := stack stackNames: #( b1 ).
+	stack := stack push: 98.
+	self assert: (stack offsetTo: #b1) equals: 1.
+	self assert: (stack at: #l1) equals: 42
+]
+
+{ #category : #tests }
 ASStackTest >> testSimple [
 
 	| stack2 stack3 |

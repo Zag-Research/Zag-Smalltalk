@@ -24,15 +24,13 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCodeFor: ast.
-	output pushLocal: #self.
-	output pushLocal: #sum.
+		          generateCode: ast.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",&e.popLocal,0,&e.pushLocal,0,&e.returnTop,&e.pushLocal,1,'
+		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1tail,Sym.@"+",'
 ]
 
 { #category : #tests }
@@ -43,8 +41,23 @@ ASZigThreadedOutputTest >> testZig_fib [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		          context: file;
-		          generateCodeFor: ast.
-	self assert: output name equals: 'Mfib'.
+		          generateCode: ast.
+	self assert: output name equals: 'Mfib:'.
+	self
+		assert: output asString
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_fibonacci [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast for: SmallInteger.
+	self assert: output name equals: 'Mfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
@@ -68,21 +81,11 @@ ASZigThreadedOutputTest >> testZig_prim [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'Mprim'.
 	self
 		assert: output asString
 		equals: '&p.p1,":Mprim:1",&e.pushLiteral,False,&e.returnTop,'
-]
-
-{ #category : #tests }
-ASZigThreadedOutputTest >> testZig_pushDrop [
-
-	| output |
-	output := ASZigThreadedOutput new testing.
-	output drop.
-
-	self assert: output asString equals: '&e.drop,'
 ]
 
 { #category : #tests }
@@ -99,8 +102,8 @@ ASZigThreadedOutputTest >> testZig_pushLabel [
 ASZigThreadedOutputTest >> testZig_pushLiteral [
 
 	| output |
-	output := ASZigThreadedOutput new testing.
-	output pushLiteral: 10.
+	output := ASZigThreadedOutput  testing.
+	output visitPushLiteral: 10.
 
 	self
 		assert: output asString
@@ -108,27 +111,11 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 ]
 
 { #category : #tests }
-ASZigThreadedOutputTest >> testZig_pushLocal [
-
-	| output selfIndex |
-	selfIndex := 5.
-	output := ASZigThreadedOutput new testing.
-	output codeGenerator
-		locals: #( foo bar )
-		arguments: #( blat fubar ).
-	output pushLocal: #self.
-
-	self
-		assert: output asString
-		equals: '&e.pushLocal,' , selfIndex asString , ', // #self' 
-]
-
-{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
 	| output |
-	output := ASZigThreadedOutput new testing.
-	output returnTop.
+	output := ASZigThreadedOutput testing.
+	output visitReturnTop.
 
 	self assert: output asString equals: '&e.returnTop,'
 ]
@@ -141,8 +128,57 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
-		             generateCodeFor: ast.
+		             generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple1_noreturn [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1_noreturn.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple1_noreturn'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple2 [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple2.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple2'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,":Msimple2:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_simple2_noreturn [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #simple2_noreturn.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Msimple2_noreturn'.
 	self
 		assert: output asString
 		equals:
@@ -157,13 +193,13 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 		       ASCompileTestClass1 >> #simpleBlock.
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
-		             context: file;
-		             generateCodeFor: ast.
+		          context: file;
+		          generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'MsimpleBlock'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":MsimpleBlock:1",doSomething,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLocal,0,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",":MsimpleBlock:2",&e.returnTop,'
 ]
 
 { #category : #tests }
@@ -173,27 +209,45 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
-		             context: file;
-		             generateCodeFor: ast.
+		          context: file;
+		          generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,&e.send0,Sym.i_1,&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]
 
 { #category : #tests }
-ASZigThreadedOutputTest >> testZig_unaries_break [
+ASZigThreadedOutputTest >> testZig_unariesPlus [
+
+	| output ast file |
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #unariesPlus.
+	file := ASZigFileContext new.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          generateCode: ast for: ASCompileTestClass1.
+	self assert: output name equals: 'MunariesPlus'.
+	self
+		assert: output asString
+		equals:
+		'&e.verifySelector,&e.pushContext,"^",":MunariesPlus:1",&e.pushLiteral,Object.from(42),&e.send0,Sym.negated,":MunariesPlus:2",&e.drop,&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":MunariesPlus:3",&e.send0,Sym.i_1,":MunariesPlus:4",&e.pushLiteral,Object.from(42),&e.send1tail,Sym.i_2,'
+]
+
+{ #category : #tests }
+ASZigThreadedOutputTest >> testZig_unaries_notail [
 
 	| output ast file |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
 	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing breakAtCall
-		             context: file;
-		             generateCodeFor: ast.
+	output := ASZigThreadedOutput testing
+		          context: file;
+		          tailCallOptimize: false;
+		          generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0,Sym.i_1,":Munaries:3",&e.returnTop,'
+		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]

@@ -3,61 +3,52 @@ I represent a block of code.
 
 "
 Class {
-	#name : #ASCodeBlock,
-	#superclass : #Object,
+	#name : 'ASCodeBlock',
+	#superclass : 'Object',
 	#instVars : [
 		'body',
-		'locals'
+		'locals',
+		'scope',
+		'nestedScopeOf'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCodeBlock >> = other [
 
 	^ self class = other class and: [ 
 		locals = other locals and: [ body = other body ] ]
 ]
 
-{ #category : #visiting }
-ASCodeBlock >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> addStatement: anASStatement [
 
-	body addStatement: anASStatement
+	body add: anASStatement
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body [
 	^ body
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body: anASSequence [
 	body := anASSequence
 ]
 
-{ #category : #'instance creation' }
-ASCodeBlock >> buildClosureData: variables [
-	clsrData := OrderedCollection new.
-	clsrData add: #footer.
-	clsrData addAll: variables
+{ #category : 'accessing' }
+ASCodeBlock >> children [
+	| c |
+	c := OrderedCollection new.
+	c addAll: locals.
+	c add: body.
+	^ c
 ]
 
-{ #category : #'instance creation' }
-ASCodeBlock >> closureData [
-	^clsrData
-]
-
-{ #category : #accessing }
-ASCodeBlock >> filter: instructions [
-	self subclassResponsibility 
-]
-
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> initialize [
 
 	super initialize.
@@ -65,39 +56,46 @@ ASCodeBlock >> initialize [
 	body := ASSequence new
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASRef [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASVariable [
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals [
 
 	^ locals
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals: aCollection [
 
 	locals := aCollection
 		          collect: [ :symbol |
 			          | local |
 			          local := ASLocal name: symbol.
-			          local ]
+			scope at: symbol put: local.
+			local ]
 		          as: Array
 ]
 
-{ #category : #scopes }
-ASCodeBlock >> nestedScopeOf: anASClassNode [ 
-	nestedScopeOf := anASClassNode
+{ #category : 'initialization' }
+ASCodeBlock >> lookup: symbol [
+	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
 ]
 
-{ #category : #printing }
+{ #category : 'initialization' }
+ASCodeBlock >> nestedScopeOf: anASClassNode [
+	nestedScopeOf := anASClassNode
+	
+]
+
+{ #category : 'printing' }
 ASCodeBlock >> printOn: s [
 
 	locals isEmpty ifFalse: [ 
@@ -109,52 +107,15 @@ ASCodeBlock >> printOn: s [
 	s << '}'
 ]
 
-{ #category : #writing }
-ASCodeBlock >> statementVisitor: symbols stackVars: stackVariables [
-
-	^ self subclassResponsibility 
+{ #category : 'accessing' }
+ASCodeBlock >> roots [
+	| roots |
+	roots := OrderedCollection new.
+	roots add: self.
+	^ roots
 ]
 
-{ #category : #writing }
-ASCodeBlock >> writeBody: symbols stackVars: stackVariables codeGenerator: codeGenerator blocks: anASBlockVisitor [
-
-	| statementVisitor |
-	anASBlockVisitor
-		initializeClosureData: codeGenerator
-		stackVariables: stackVariables.
-
-	statementVisitor := self
-		                    statementVisitor: symbols
-		                    stackVars: stackVariables.
-	statementVisitor codeGenerator: codeGenerator.
-
-	body acceptVisitor: statementVisitor.
-
-	"check to see what types variables have"
-	(self filter: statementVisitor instructionStack) do: [ :instruction |
-		codeGenerator emitInstruction: instruction ]
-]
-
-{ #category : #writing }
-ASCodeBlock >> writeBody: symbols stackVars: stackVariables writer: aStream blocks: anASBlockVisitor [
-
-	| statementVisitor codeGenerator |
-	anASBlockVisitor
-		initializeClosureData: aStream
-		stackVariables: stackVariables.
-
-	aStream cr.
-	codeGenerator := ASZigCompileMethodOutput stream: aStream.
-	statementVisitor := self
-		                    statementVisitor: symbols
-		                    stackVars: stackVariables.
-	statementVisitor codeGenerator: codeGenerator.
-
-	body acceptVisitor: statementVisitor.
-
-	"check to see what types variables have"
-	(self filter: statementVisitor instructionStack) do: [ :instruction |
-		aStream tab.
-		aStream << instruction.
-		aStream cr ]
+{ #category : 'initialization' }
+ASCodeBlock >> scope [
+ ^ scope
 ]

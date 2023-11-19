@@ -1,15 +1,18 @@
 Class {
-	#name : #ASTBlock,
-	#superclass : #Object,
+	#name : 'ASTBlock',
+	#superclass : 'Object',
 	#instVars : [
 		'blockNumber',
 		'sequence'
 	],
-	#category : #'ASTSmalltalk-IR'
+	#category : 'ASTSmalltalk-IR',
+	#package : 'ASTSmalltalk',
+	#tag : 'IR'
 }
 
-{ #category : #initializing }
-ASTBlock >> from: anIRSequence [ 
+{ #category : 'initializing' }
+ASTBlock >> from: anIRSequence [
+
 	blockNumber := anIRSequence orderNumber.
-	sequence := anIRSequence sequence collect: [: node| node asAST ]
+	sequence := anIRSequence collect: [ :node | node asAST ]
 ]

@@ -1,6 +1,6 @@
-Extension { #name : #IRPushFullClosure }
+Extension { #name : 'IRPushFullClosure' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRPushFullClosure >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

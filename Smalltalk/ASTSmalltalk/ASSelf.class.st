@@ -6,26 +6,28 @@ I have a field pointing to the method of the object I represent.
 If I represent ""super"" then the reference to superclass will point to the class for the dispatch
 "
 Class {
-	#name : #ASSelf,
-	#superclass : #ASExpression,
+	#name : 'ASSelf',
+	#superclass : 'ASExpression',
 	#instVars : [
 		'method'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSelf class >> method: aMethod [
 	^ self new method: aMethod
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSelf class >> method: aMethod superclass: aClass [
 
 	^ self new method: aMethod; superclass: aClass
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASSelf >> = other [
 
 	^ self class = other class and: [ 
@@ -37,41 +39,76 @@ ASSelf >> = other [
 			  self superclass = other superclass ] ]
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASSelf >> acceptVisitor: aVisitor [
 
 	^ aVisitor visitSelfNode: self
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASSelf >> isASSelf [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : 'testing' }
+ASSelf >> isImmediateThunk [
+^ true
+]
+
+{ #category : 'testing' }
+ASSelf >> isNonLocalThunkable [
+
+	^ true
+]
+
+{ #category : 'accessing' }
 ASSelf >> method [
 
 	^ method
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASSelf >> method: aMethod [
 
 	method := aMethod
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASSelf >> printOn: s [
 
 	s << self className << ' method: '.
-	(method isSymbol
-		 ifTrue: [ method ]
-		 ifFalse: [ method selector ]) printOn: s.
-	"superclass ifNotNil: [ s << ' superclass: ' << superclass name ]"
+	(method isSymbol ifTrue: [method] ifFalse: [method selector]) printOn: s.
+	superclass ifNotNil: [ s << ' superclass: ' << superclass name ]
 ]
 
-{ #category : #compiling }
+{ #category : 'accessing' }
+ASSelf >> superclass [
+
+	^ superclass
+]
+
+{ #category : 'accessing' }
+ASSelf >> superclass: aClass [
+
+	self flag: #TODO. " should be an ASClassNode, Dave thinks "
+	superclass := ASClassNode new"aClass name"
+]
+
+{ #category : 'compiling' }
 ASSelf >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toSelf: self
+]
+
+{ #category : 'compiling' }
+ASSelf >> zigWalk: anASCodeGenerator [
+
+	^ anASCodeGenerator pushSelf
+]
+
+{ #category : 'compiling' }
+ASSelf >> zigWalkTarget: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ aGenerator targetClass 
 ]
