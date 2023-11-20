@@ -1,6 +1,6 @@
-Extension { #name : 'IRPop' }
+Extension { #name : #IRPop }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRPop >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: 'p.pop,'.

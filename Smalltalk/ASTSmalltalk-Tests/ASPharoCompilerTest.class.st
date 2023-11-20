@@ -161,7 +161,7 @@ ASPharoCompilerTest >> testClassVar [
 		compilesTo: (ASMethodNode
 				 selector: #classVar
 				 body:
-					 { (ASReturn expression: (ASRef variable: ASClassVariable Foo)) }
+					 { (ASReturn expression: (ASRef variable: #Foo)) }
 						 asASSequence)
 ]
 
@@ -198,7 +198,7 @@ ASPharoCompilerTest >> testInstVar [
 		compilesTo: (ASMethodNode
 				 selector: #instVar
 				 body: { (ASReturn expression:
-						  (ASRef variable: (ASInstanceVariable name: #bar))) }
+						  (ASRef variable: (ASCInstanceVariable name: #bar))) }
 						 asASSequence)
 ]
 
@@ -210,7 +210,7 @@ ASPharoCompilerTest >> testObject [
 		compilesTo: (ASMethodNode
 				 selector: #object
 				 body: { (ASReturn expression: (ASSend
-							   target: (ASRef variable: (ASGlobalVariable name: #Object))
+							   target: (ASRef variable: (ASCGlobalVariable name: #Object))
 							   selector: #new
 							   args: {  })) } asASSequence)
 ]
@@ -305,11 +305,10 @@ ASPharoCompilerTest >> testPool [
 	" pool variable counts as a class variable "
 
 	self assert: ASCompileTestClass3 >> #pool compilesTo: (ASMethodNode
-		
 			 selector: #pool
 			 body:
 				 { (ASReturn expression:
-					  (ASRef variable: (ASClassVariable name: #Foo))) } asASSequence)
+					  (ASRef variable: (#Foo))) } asASSequence)
 ]
 
 { #category : #tests }

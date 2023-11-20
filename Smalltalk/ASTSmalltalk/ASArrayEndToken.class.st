@@ -1,7 +1,5 @@
 Class {
-	#name : 'ASArrayEndToken',
-	#superclass : 'ASClosers',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASArrayEndToken,
+	#superclass : #ASClosers,
+	#category : 'ASTSmalltalk-Tokens'
 }

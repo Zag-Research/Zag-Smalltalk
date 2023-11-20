@@ -2,19 +2,17 @@
 I am the self for the method (not the hidden self for blocks)
 "
 Class {
-	#name : 'ASCSelf',
-	#superclass : 'ASCParameter',
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#name : #ASCSelf,
+	#superclass : #ASCParameter,
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCSelf >> name [ 
 	^ #self
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCSelf >> outputTo: anOutput [
 
 	^ anOutput visitPushLocal: offset

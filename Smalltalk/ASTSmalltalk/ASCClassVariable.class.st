@@ -1,8 +1,8 @@
 "
-I represent a local (temporary) variable
+I represent a class variable
 "
 Class {
-	#name : #ASLocal,
+	#name : #ASCClassVariable,
 	#superclass : #ASCVariable,
 	#category : #'ASTSmalltalk-CodeGen'
 }

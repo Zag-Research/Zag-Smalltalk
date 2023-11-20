@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASTStoreTemp',
-	#superclass : 'ASTTemps',
-	#category : 'ASTSmalltalk-IR',
-	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#name : #ASTStoreTemp,
+	#superclass : #ASTTemps,
+	#category : 'ASTSmalltalk-IR'
 }
 
-{ #category : 'thread' }
+{ #category : #thread }
 ASTStoreTemp >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: '&p.storeTemp,'.

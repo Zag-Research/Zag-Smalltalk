@@ -1,7 +1,5 @@
 Class {
-	#name : 'ASLiteralToken',
-	#superclass : 'ASSimple',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASLiteralToken,
+	#superclass : #ASSimple,
+	#category : 'ASTSmalltalk-Tokens'
 }

@@ -1,6 +1,6 @@
-Extension { #name : 'IRSend' }
+Extension { #name : #IRSend }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRSend >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: 'p.send,'.

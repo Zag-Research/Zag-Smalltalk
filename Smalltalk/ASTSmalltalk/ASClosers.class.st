@@ -1,38 +1,36 @@
 Class {
-	#name : 'ASClosers',
-	#superclass : 'ASSyntax',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASClosers,
+	#superclass : #ASSyntax,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> binaryExpression: anASCompiler target: target [
 	^ target
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> keywordExpression: anASCompiler target: target [
 	^ target
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> keywordExpression: anASCompiler target: target selector: selector args: args [
 
 	^ ASSend new target: target; selector: selector args: args
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> nonStatements: anASCompiler [ 
 
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> possibleAssign: anASCompiler target: target [ 
 	^ target
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASClosers >> unaryExpression: anASCompiler target: target [
 	^ target
 ]

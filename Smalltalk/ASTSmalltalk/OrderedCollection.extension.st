@@ -1,6 +1,6 @@
-Extension { #name : 'OrderedCollection' }
+Extension { #name : #OrderedCollection }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 OrderedCollection >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 	^ self asArray zigCompileObject: anASZigCompileObjectGenerator
 ]

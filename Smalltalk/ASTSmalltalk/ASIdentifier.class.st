@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASIdentifier',
-	#superclass : 'ASSimple',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASIdentifier,
+	#superclass : #ASSimple,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'scanning' }
+{ #category : #scanning }
 ASIdentifier class >> with: aString [
 	| specials alphas colons last size |
 	specials := alphas := colons := size :=0.
@@ -23,17 +21,17 @@ ASIdentifier class >> with: aString [
 	^ ASImproperId new value: aString
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASIdentifier >> possibleAssign: anASCompiler target: target [ 
 	self keywordExpression: anASCompiler target: target
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASIdentifier >> unaryExpression: anASCompiler target: target [ 
 	^ target
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASIdentifier >> value: aString [
 	value := aString asSymbol
 ]

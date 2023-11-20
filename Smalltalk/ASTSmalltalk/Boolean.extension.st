@@ -1,21 +1,21 @@
-Extension { #name : 'Boolean' }
+Extension { #name : #Boolean }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Boolean >> astImageObject: anASImage [ 
 	^ anASImage literal: self asBit*2+3 class: 2+self asBit
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Boolean >> astObject: anASImage [ 
 	^ self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Boolean >> isNonLocalThunkable [ 
 ^ true
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Boolean >> zigCompileObjectReference: anASZigCompileObjectGenerator [ 
 	^ nil
 ]

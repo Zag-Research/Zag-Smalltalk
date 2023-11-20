@@ -6,29 +6,27 @@ This can be a literal value.
 Subclasses represent local variables (and maybe more in the future).
 "
 Class {
-	#name : 'ASCValue',
-	#superclass : 'ASCLiteralValue',
+	#name : #ASCValue,
+	#superclass : #ASCLiteralValue,
 	#instVars : [
 		'max'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCValue >> isRanged [
 
 	^ max isNotNil
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCValue >> max [
 
 	^ max
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCValue >> store: anObject [
 
 	| aClass |

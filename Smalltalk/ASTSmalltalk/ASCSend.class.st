@@ -2,26 +2,24 @@
 I remember the selector for sends
 "
 Class {
-	#name : 'ASCSend',
-	#superclass : 'ASCOperations',
+	#name : #ASCSend,
+	#superclass : #ASCOperations,
 	#instVars : [
 		'selector',
 		'useCall',
 		'bb',
 		'target'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASCSend >> initialize [ 
 
 super initialize .	useCall := false
 ]
 
-{ #category : 'block handling' }
+{ #category : #'block handling' }
 ASCSend >> manifestParameters: aStack [
 
 	| tStack |
@@ -31,13 +29,13 @@ ASCSend >> manifestParameters: aStack [
 		tStack := tStack drop ]
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCSend >> next [
 
 	^ bb
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCSend >> outputTo: anOutput [
 
 	^ anOutput
@@ -46,34 +44,34 @@ ASCSend >> outputTo: anOutput [
 		  target: target
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASCSend >> requiresContext [
 	^ true
 ]
 
-{ #category : 'handling' }
+{ #category : #handling }
 ASCSend >> return: aBasicBlock [
 
 	bb := aBasicBlock 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCSend >> selector: aString [ 
 	selector := aString
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCSend >> target: aSymbol [
 
 	target := aSymbol
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCSend >> useCall [
 	useCall := true
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASCSend >> with: aSymbol [
 
 	selector := aSymbol

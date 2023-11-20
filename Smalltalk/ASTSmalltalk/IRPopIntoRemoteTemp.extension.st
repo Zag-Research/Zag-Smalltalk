@@ -1,6 +1,6 @@
-Extension { #name : 'IRPopIntoRemoteTemp' }
+Extension { #name : #IRPopIntoRemoteTemp }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRPopIntoRemoteTemp >> threadFormatOn: threadPrinter [
 
 	threadPrinter printOn: threadPrinter.

@@ -2,20 +2,18 @@
 I manage the values to go into a zag symbols table. I have predefined symbols and runtime symbols.
 "
 Class {
-	#name : 'ASZigSymbols',
-	#superclass : 'Object',
+	#name : #ASZigSymbols,
+	#superclass : #Object,
 	#instVars : [
 		'runtimeDefined'
 	],
 	#classVars : [
 		'Predefined'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASZigSymbols class >> initialize [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
 
@@ -30,25 +28,25 @@ ASZigSymbols class >> initialize [
 	   #'\\' whileTrue: Object ) asSet
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASZigSymbols >> add: aSymbol [
 
 	runtimeDefined add: aSymbol
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASZigSymbols >> initialize [ 
 	super initialize .
 	runtimeDefined := Set new
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASZigSymbols >> predefinedSymbol: aSymbol [
 
 	^ (Predefined includes: aSymbol) ifTrue: [ 'Sym.' , aSymbol zigName ]
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASZigSymbols >> printable: aSymbol [
 
 	^ (self predefinedSymbol: aSymbol) ifNotNil: [ :s | s ] ifNil: [
@@ -56,7 +54,7 @@ ASZigSymbols >> printable: aSymbol [
 		  'sym.' , aSymbol zigName ]
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigSymbols >> writeDefinitionOn: stream [
 
 	| syms n |
@@ -103,7 +101,7 @@ ASZigSymbols >> writeDefinitionOn: stream [
 '
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigSymbols >> writeInitializationOn: stream [
 
 	stream nextPutAll: '    sym = Sym.init();

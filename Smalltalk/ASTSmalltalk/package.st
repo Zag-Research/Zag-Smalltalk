@@ -1,1 +1,1 @@
-Package { #name : 'ASTSmalltalk' }
+Package { #name : #ASTSmalltalk }

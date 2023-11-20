@@ -1,17 +1,15 @@
 Class {
-	#name : 'ASBinaryId',
-	#superclass : 'ASIdentifier',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASBinaryId,
+	#superclass : #ASIdentifier,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBinaryId >> arity [
 	^ 2
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASBinaryId >> binaryExpression: anASCompiler target: target [
 
 	| arg |
@@ -22,14 +20,14 @@ ASBinaryId >> binaryExpression: anASCompiler target: target [
 		  target: (ASSend new target: target; selector: value args: { arg })
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASBinaryId >> classSelector: anASCompiler args: args [ 
 	anASCompiler nextToken.
 	args add: (anASCompiler peek parameterFrom: anASCompiler).
 	^ value
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASBinaryId >> keywordExpression: anASCompiler target: target [
 
 	| arg |

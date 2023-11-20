@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASBlockStartToken',
-	#superclass : 'ASSimple',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASBlockStartToken,
+	#superclass : #ASSimple,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASBlockStartToken >> parseWith: anASCompiler [
 	self shouldBeImplemented
 ]

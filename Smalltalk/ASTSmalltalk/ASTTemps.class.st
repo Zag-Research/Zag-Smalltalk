@@ -1,15 +1,13 @@
 Class {
-	#name : 'ASTTemps',
-	#superclass : 'Object',
+	#name : #ASTTemps,
+	#superclass : #Object,
 	#instVars : [
 		'name'
 	],
-	#category : 'ASTSmalltalk-IR',
-	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#category : 'ASTSmalltalk-IR'
 }
 
-{ #category : 'initializing' }
+{ #category : #initializing }
 ASTTemps >> from: anIRTemps [
 
 	name := anIRTemps name

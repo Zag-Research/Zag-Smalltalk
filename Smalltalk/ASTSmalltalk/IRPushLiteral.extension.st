@@ -1,6 +1,6 @@
-Extension { #name : 'IRPushLiteral' }
+Extension { #name : #IRPushLiteral }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRPushLiteral >> threadFormatOn: stream [
 
 	stream nextPutAll: 'p.pushLiteral,'.
