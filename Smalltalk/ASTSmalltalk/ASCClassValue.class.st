@@ -3,7 +3,7 @@ I represent immutable values at compile time where all I know is the class.
 "
 Class {
 	#name : #ASCClassValue,
-	#superclass : #Object,
+	#superclass : #ASCVariable,
 	#instVars : [
 		'valueClass',
 		'isRanged'

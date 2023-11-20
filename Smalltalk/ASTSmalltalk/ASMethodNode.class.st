@@ -137,8 +137,8 @@ ASMethodNode >> zigWalkMethod: aGenerator [
 
 	aGenerator selector: selector.
 	aGenerator
-		locals: (locals collect: #name)
-		arguments: (arguments collect: #name).
+		locals: (locals)
+		arguments: (arguments).
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			aGenerator primitive: (pragma arguments at: 1) value ] ].

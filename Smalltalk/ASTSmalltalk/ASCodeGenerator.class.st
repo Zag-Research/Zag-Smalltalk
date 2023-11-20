@@ -236,7 +236,7 @@ ASCodeGenerator >> pushSelf [
 	value := ASCClassValue new init: targetClass.
 	code
 		doPush: value;
-		put: (ASCPushVariable with: (ASLocal new name: #self))
+		put: (ASCPushVariable with: (code stack find: #self))
 ]
 
 { #category : #API }
@@ -286,9 +286,9 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 ]
 
 { #category : #API }
-ASCodeGenerator >> storeVariable: anASLocal [
+ASCodeGenerator >> storeVariable: aSymbol [
 
-	^ code storeVariable: anASLocal
+	^ code storeVariable: aSymbol
 ]
 
 { #category : #settings }

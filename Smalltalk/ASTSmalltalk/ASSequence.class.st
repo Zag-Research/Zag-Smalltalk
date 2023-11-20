@@ -23,7 +23,7 @@ ASSequence >> contents [
 	^ stream contents
 ]
 
-{ #category : #comparing }
+{ #category : #testing }
 ASSequence >> isImmediateThunk [
 
 	^ self size == 1 and: [ self first isImmediateThunk ]

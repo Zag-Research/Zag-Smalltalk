@@ -88,7 +88,7 @@ ASPharoVisitor >> visitCascadeNode: aRBCascadeNode [
 { #category : #visiting }
 ASPharoVisitor >> visitClassVariableNode: aRBVariableNode [
 
-	^ ASRef variable: (ASClassVariable name: aRBVariableNode name)
+	^ ASRef variable: (aRBVariableNode name)
 ]
 
 { #category : #visiting }
@@ -100,7 +100,7 @@ ASPharoVisitor >> visitGlobalVariableNode: aRBVariableNode [
 { #category : #visiting }
 ASPharoVisitor >> visitInstanceVariableNode: aRBVariableNode [
 
-	^ ASRef variable: (ASInstanceVariable name: aRBVariableNode name)
+	^ ASRef variable: (ASCInstanceVariable name: aRBVariableNode name)
 ]
 
 { #category : #visiting }

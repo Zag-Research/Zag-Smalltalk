@@ -166,20 +166,29 @@ ASCBasicBlock >> popVariable: anASVariable [
 ]
 
 { #category : #API }
-ASCBasicBlock >> pushUnknownNamed: aSymbol [
+ASCBasicBlock >> pushLocalNamed: aSymbol [
 
 	stack := ASStackNamed new
 		         from: stack;
 		         name: aSymbol.
-	stack top: (ASCClassValue new init: Object)
+	^ stack top: (ASCLocal new init: Object)
 ]
 
 { #category : #API }
-ASCBasicBlock >> pushVariable: anASVariable [
+ASCBasicBlock >> pushParameterNamed: aSymbol [
+
+	stack := ASStackNamed new
+		         from: stack;
+		         name: aSymbol.
+	^ stack top: (ASCParameter new init: Object)
+]
+
+{ #category : #API }
+ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
-	target := stack find: anASVariable name.
-	self put: (ASCPushVariable with: anASVariable).
+	target := stack find: aSymbol .
+	self put: (ASCPushVariable with: aSymbol).
 	self doPush: target top
 ]
 
@@ -255,10 +264,10 @@ ASCBasicBlock >> stackTop [
 ]
 
 { #category : #API }
-ASCBasicBlock >> storeVariable: anASVariable [
+ASCBasicBlock >> storeVariable: aSymbol [
 
 	stack top makeManifest.
-	self put: (ASCStoreVariable with: anASVariable)
+	self put: (ASCStoreVariable with: (stack lookup: aSymbol))
 ]
 
 { #category : #accessing }

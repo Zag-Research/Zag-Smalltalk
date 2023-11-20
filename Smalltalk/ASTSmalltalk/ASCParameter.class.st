@@ -7,7 +7,6 @@ Class {
 	#superclass : #ASCValue,
 	#instVars : [
 		'offset',
-		'name',
 		'stack'
 	],
 	#category : #'ASTSmalltalk-CodeGen'
@@ -23,15 +22,9 @@ ASCParameter >> inBasicBlock: anASCBasicBlock [
 	stack := anASCBasicBlock stack
 ]
 
-{ #category : #accessing }
-ASCParameter >> name [ 
-^ name
-]
-
-{ #category : #accessing }
-ASCParameter >> name: aSymbol [
-
-	name := aSymbol 
+{ #category : #testing }
+ASCParameter >> isImmediateThunk [
+^ true
 ]
 
 { #category : #accessing }

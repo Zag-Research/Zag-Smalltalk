@@ -15,10 +15,10 @@ Class {
 ASCInlineBlock >> locals: locals arguments: arguments [
 
 	stack isEmpty
-		ifTrue: [ self pushUnknownNamed: #self ]
+		ifTrue: [ self pushParameterNamed: #self ]
 		ifFalse: [ stack := stack names: #( self ) ].
-			arguments reversed do: [ :each | self pushUnknownNamed: each ].
-	locals do: [ :each | self pushUnknownNamed: each ]
+			arguments reversed do: [ :each | self pushParameterNamed: each ].
+	locals do: [ :each | self pushParameterNamed: each ]
 ]
 
 { #category : #writing }

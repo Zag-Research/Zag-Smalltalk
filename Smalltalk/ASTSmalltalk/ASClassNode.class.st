@@ -43,7 +43,9 @@ ASClassNode >> lookup: symbol [
 	^ scope
 		  at: symbol
 		  ifAbsent: [
-		  ASClassVariable name: symbol "nestedScopeOf lookup: symbol" ] 
+				self halt.
+
+		  "ASClassVariable name: symbol nestedScopeOf lookup: symbol" ]
 ]
 
 { #category : #accessing }

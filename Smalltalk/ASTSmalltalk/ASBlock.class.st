@@ -6,8 +6,6 @@ Note that this is also an ASExpression although the class taxonomy doesn't refle
 Class {
 	#name : #ASBlock,
 	#superclass : #ASMethodOrBlock,
-	#traits : 'ASValue',
-	#classTraits : 'ASValue classTrait',
 	#category : #'ASTSmalltalk-AST'
 }
 

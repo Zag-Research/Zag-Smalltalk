@@ -17,6 +17,24 @@ ASCLocal >> isMutable [
 	^ true
 ]
 
+{ #category : #affecting }
+ASCLocal >> pop: output [
+
+	^ output visitPopLocal: self
+]
+
+{ #category : #affecting }
+ASCLocal >> push: output [
+
+	^ output visitPushLocal: self
+]
+
+{ #category : #affecting }
+ASCLocal >> store: output [
+
+	^ output visitStoreLocal: self
+]
+
 { #category : #'state tracking' }
 ASCLocal >> store: anObject at: depth [
 
