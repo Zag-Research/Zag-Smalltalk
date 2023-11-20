@@ -2,46 +2,48 @@
 I generate text-based code compiled by the `compileMethod` compile-time Zig function
 "
 Class {
-	#name : #ASZigThreadedOutput,
-	#superclass : #ASZigMethodOutput,
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASZigThreadedOutput',
+	#superclass : 'ASZigMethodOutput',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigThreadedOutput class >> blockClass [
 	^ ASZigThreadedBlockOutput
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> branch: command to: target [
 	command = #br ifTrue: [ 
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> endMethod [
 
 	self label: nil
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputBasicBlockEnd [
 	
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 
 	self label: bbLabel
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputMethodStart: bbLabel [
 
 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
@@ -52,7 +54,7 @@ ASZigThreadedOutput >> outputToStream [
 	self endMethod
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
@@ -65,7 +67,7 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigThreadedOutput >> primitive: anInteger [
 
 	self
@@ -74,7 +76,7 @@ ASZigThreadedOutput >> primitive: anInteger [
 		comma 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> pushLocal: localNumber [
 
 	self
@@ -83,13 +85,13 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 		comma
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedOutput >> verifySelector: anObject [
 
 	self putEmbedded: #verifySelector
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
@@ -107,7 +109,7 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 		other: nil
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
@@ -115,7 +117,7 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 		ifFalse: [ self visitPushLiteral: nil ]
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 
 	self
@@ -124,7 +126,7 @@ ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 		comma
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 
 	self
@@ -133,13 +135,13 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 		comma
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushLocal: anASLocal [
 
 ^	self visitPushLocalOrBlock: anASLocal
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
@@ -157,25 +159,25 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 		other: nil
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnNil [
 
 	self putEmbedded: #returnNil
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnSelf [
 
 		self putEmbedded: #returnSelf
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitReturnTop [
 
 	self putEmbedded: #returnTop
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
 	self
@@ -185,12 +187,12 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 		comma
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedOutput >> visitSimple: aSymbol [ 
 	^ self putEmbedded: aSymbol
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
@@ -208,7 +210,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 		other: nil
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
@@ -225,7 +227,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 		lf
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigThreadedOutput >> writeInitializationOn: stream [
 
 	stream

@@ -2,27 +2,29 @@
 I generate text-based as a sequence of Continuation-Passing-Style Zig function
 "
 Class {
-	#name : #ASZigCPSOutput,
-	#superclass : #ASZigMethodOutput,
+	#name : 'ASZigCPSOutput',
+	#superclass : 'ASZigMethodOutput',
 	#instVars : [
 		'auxStream',
 		'skipRest',
 		'currentLVal',
 		'lVals'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigCPSOutput class >> blockClass [ ^ ASZigCPSBlockOutput 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigCPSOutput >> checkBreakAtCall: aSymbol [
 	^ true
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> doBasicBlock: bb [
 
 	self
@@ -38,7 +40,7 @@ ASZigCPSOutput >> doBasicBlock: bb [
 		endStatement 
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
 	mainStream nextPutAll: ';
@@ -48,19 +50,19 @@ ASZigCPSOutput >> endStatement [
 		currentLVal := nil ]
 ]
 
-{ #category : #flagging }
+{ #category : 'flagging' }
 ASZigCPSOutput >> flush [
 	skipRest := true
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASZigCPSOutput >> initialize [
 
 	super initialize.
 	auxStream := '' writeStream
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> lConst: aString [
 
 	| s |
@@ -73,7 +75,7 @@ ASZigCPSOutput >> lConst: aString [
 		nextPut: $=
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> lVal: aString [
 
 	| s |
@@ -86,14 +88,14 @@ ASZigCPSOutput >> lVal: aString [
 		nextPut: $=
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> outputBasicBlockEnd [
 
 	mainStream nextPutAll: '}
 '
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> outputMethodLabel: bbLabel [
 
 	auxStream
@@ -103,7 +105,7 @@ ASZigCPSOutput >> outputMethodLabel: bbLabel [
 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> outputMethodStart: bbLabel [
 
 
@@ -117,7 +119,7 @@ ASZigCPSOutput >> outputMethodStart: bbLabel [
 	lVals := Dictionary new
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
@@ -126,7 +128,7 @@ ASZigCPSOutput >> outputToStream [
 		currentBasicBlock outputTo: self ]
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> putTestOpposite: test [
 
 	test = #ifTrue ifTrue: [
@@ -137,18 +139,18 @@ ASZigCPSOutput >> putTestOpposite: test [
 	self error
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> rVal: aString [
 
 	self nextPutAll: (lVals at: aString ifAbsent: [ aString ])
 ]
 
-{ #category : #'local variable handling' }
+{ #category : 'local variable handling' }
 ASZigCPSOutput >> sp: anInteger [ 
 	self rVal: #sp;nextPutAll: '.at(';print: anInteger ;nextPut: $)
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigCPSOutput >> verifySelector: aSymbol [
 
 	self
@@ -159,13 +161,13 @@ ASZigCPSOutput >> verifySelector: aSymbol [
 		endStatement
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitCall: aSelector doBreak: doBreak [
 
 	self halt
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPopLocal: anASLocal [
 
 	self
@@ -176,7 +178,7 @@ ASZigCPSOutput >> visitPopLocal: anASLocal [
 		endStatement
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
@@ -184,7 +186,7 @@ ASZigCPSOutput >> visitPushBlock: anASCBlock [
 		ifFalse: [ self visitPushLiteral: nil ] 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushContext: aMethodBlock [
 
 	self
@@ -202,7 +204,7 @@ ASZigCPSOutput >> visitPushContext: aMethodBlock [
 		endStatement
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushLiteral: aLiteral [
 
 	self
@@ -214,14 +216,14 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 		endStatement 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushLocal: anASLocal [
 ^
 	self
 		visitPushLocalOrBlock: anASLocal name
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 
 	self
@@ -247,7 +249,7 @@ ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 		endStatement
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitReturnTop [
 
 	self
@@ -277,7 +279,7 @@ ASZigCPSOutput >> visitReturnTop [
 		flush
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 
 	index ifNotNil: [self
@@ -317,7 +319,7 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 		flush
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigCPSOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
@@ -339,7 +341,7 @@ ASZigCPSOutput >> visitStoreLocal: anASLocal [
 		endStatement
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigCPSOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: self.
@@ -357,7 +359,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 	stream nextPutAll: mainStream contents
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigCPSOutput >> writeInitializationOn: stream [
 
 	stream

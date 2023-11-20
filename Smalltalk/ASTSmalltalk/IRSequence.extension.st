@@ -1,11 +1,11 @@
-Extension { #name : #IRSequence }
+Extension { #name : 'IRSequence' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRSequence >> asAST [
 	^ ASTBlock new from: self
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRSequence >> threadFormatOn: threadPrinter [
 
 	threadPrinter

@@ -1,6 +1,6 @@
-Extension { #name : #String }
+Extension { #name : 'String' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 String >> zigName [
 
 	(self allSatisfy: #isAlphaNumeric) ifTrue: [ ^ self asString ].

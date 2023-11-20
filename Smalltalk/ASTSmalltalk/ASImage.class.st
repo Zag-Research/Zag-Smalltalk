@@ -2,8 +2,8 @@
 I write out ASTSmalltalk images
 "
 Class {
-	#name : #ASImage,
-	#superclass : #Object,
+	#name : 'ASImage',
+	#superclass : 'Object',
 	#instVars : [
 		'symbols',
 		'classes',
@@ -28,17 +28,19 @@ Class {
 		'SizeMask',
 		'SizeShift'
 	],
-	#category : #'ASTSmalltalk-Image'
+	#category : 'ASTSmalltalk-Image',
+	#package : 'ASTSmalltalk',
+	#tag : 'Image'
 }
 
-{ #category : #export }
+{ #category : 'export' }
 ASImage class >> exportMethods [
 	^ self exportPackages flatCollect: [ :package |
 			package methods
 		]
 ]
 
-{ #category : #export }
+{ #category : 'export' }
 ASImage class >> exportPackages [
 	^ RPackageOrganizer default packages select: [: package |
 			((package name beginsWith: 'ASTSmalltalk')
@@ -48,7 +50,7 @@ ASImage class >> exportPackages [
 		]
 ]
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 ASImage class >> initialize [
 	BaseAddress := 16r1000000000.
 	SizeMask := 16r7fff.
@@ -62,7 +64,7 @@ ASImage class >> initialize [
 
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |
 		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
@@ -70,7 +72,7 @@ ASImage >> addFirstMethod: selector in: canonicalClasses [
 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASImage >> canonicalClasses: aClass [
 	| name side |
 	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
@@ -82,7 +84,7 @@ ASImage >> canonicalClasses: aClass [
 		]) collect: side
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> class: aClass [
 	| cc |
 	cc := (self canonicalClasses: aClass) first.
@@ -90,7 +92,7 @@ ASImage >> class: aClass [
 
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> closeOverClassesAndSelectors [
 	| tempClasses tempSelectors |
 	[ newClasses size + newSelectors size > 0 ] whileTrue: [
@@ -114,12 +116,12 @@ ASImage >> closeOverClassesAndSelectors [
 	]
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASImage >> compileMethod: aMethod [
 	self halt
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> createClassTable [ 
 	| table |
 	table := Array new: classes size.
@@ -128,7 +130,7 @@ ASImage >> createClassTable [
 	^ table
 ]
 
-{ #category : #objects }
+{ #category : 'objects' }
 ASImage >> generalObject: anObject [
 	| gen |
 	^ objects at: anObject ifAbsentPut: [
@@ -139,7 +141,7 @@ ASImage >> generalObject: anObject [
 			]
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> header: header [
 	| code key value |
 	code := 0.
@@ -161,12 +163,12 @@ ASImage >> header: header [
 	^ code
 ]
 
-{ #category : #objects }
+{ #category : 'objects' }
 ASImage >> imageObject: anObject [ 
 	^ anObject astImageObject: self
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> include: anASGenerator object: anObject [
 	| nVars extra size header format fields |
 	fields := anObject astFields.
@@ -196,7 +198,7 @@ ASImage >> include: anASGenerator object: anObject [
 	currentAddress := currentAddress + (size * 8)
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASImage >> initialize [
 	super initialize.
 	baseAddress := BaseAddress.
@@ -225,37 +227,37 @@ ASImage >> initialize [
 			self selector: selector ].
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> literal: l class: c [
 	^ 16r7FF8000000000000 + (l bitShift: 3) + c
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASImage >> method: aCompiledMethod [
 	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASImage >> methods [
 	^ methods
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> nextPutAll: aByteArray [
 	^ aStream nextPutAll: aByteArray.
 ]
 
-{ #category : #objects }
+{ #category : 'objects' }
 ASImage >> object: aObject fields: nFields elements: nElements [ 
 	self shouldBeImplemented 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASImage >> offset [
 	^ currentAddress - baseAddress
 ]
 
-{ #category : #process }
+{ #category : 'process' }
 ASImage >> processOut [
 	| gen |
 	[ process notEmpty ] whileTrue: [
@@ -265,19 +267,19 @@ ASImage >> processOut [
 	]
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> selector: aSymbol [
 	^ selectors addIfNotPresent: aSymbol andDo:  [ newSelectors add: aSymbol ].
 
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASImage >> symbol: aString [
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
 	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> writeHeap [
 	self offset / 8 writeRawOn: aStream.
 	output do: [: gen | gen writeFieldsOn: self ].
@@ -285,7 +287,7 @@ ASImage >> writeHeap [
 
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> writeImageOn: aWriteStream [
 	| table |
 	aStream := aWriteStream.
@@ -298,7 +300,7 @@ ASImage >> writeImageOn: aWriteStream [
 	
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImage >> writeSymbolTable [
 	| table |
 	symbols size writeRawOn: aStream.

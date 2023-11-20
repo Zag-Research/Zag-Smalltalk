@@ -2,22 +2,24 @@
 I represent a local variable for the method
 "
 Class {
-	#name : #ASCLocal,
-	#superclass : #ASCParameter,
+	#name : 'ASCLocal',
+	#superclass : 'ASCParameter',
 	#instVars : [
 		'modMin',
 		'modMax'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCLocal >> isMutable [
 
 	^ true
 ]
 
-{ #category : #'state tracking' }
+{ #category : 'state tracking' }
 ASCLocal >> store: anObject at: depth [
 
 	modMin := modMin ifNil: [ depth ] ifNotNil: [depth min: modMin].

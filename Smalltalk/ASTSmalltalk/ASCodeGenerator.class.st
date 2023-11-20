@@ -10,8 +10,8 @@ When I am done, a caller can access those basic blocks directly, starting from t
 Alternatively, I can provide a topological sorted list that is usefulfor a strictly linear form such as threaded code.
 "
 Class {
-	#name : #ASCodeGenerator,
-	#superclass : #Object,
+	#name : 'ASCodeGenerator',
+	#superclass : 'Object',
 	#instVars : [
 		'selector',
 		'code',
@@ -25,10 +25,12 @@ Class {
 		'output',
 		'tailCallOptimize'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #enumerating }
+{ #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
@@ -44,17 +46,17 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 		rest remove: current ]
 ]
 
-{ #category : #enumerating }
+{ #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [ 
 	basicBlocks do: aBlock
 ]
 
-{ #category : #'class relationship' }
+{ #category : 'class relationship' }
 ASCodeGenerator >> classOf: aString [ 
 	self shouldBeImplemented.
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> compileBlock: aBlockClosure [
 	"compiling of blocks doesn't work right now"
 
@@ -62,7 +64,7 @@ ASCodeGenerator >> compileBlock: aBlockClosure [
 		output compileBlock: aBlockClosure ] 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> drop [
 
 	code
@@ -70,25 +72,25 @@ ASCodeGenerator >> drop [
 		putSimple: #drop
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeGenerator >> enableInlining [
 
 	inline := true
 ]
 
-{ #category : #evaluating }
+{ #category : 'evaluating' }
 ASCodeGenerator >> eval: aString params: aCollection [
 
 	^ ASCLiteralValue new init: Object new
 ]
 
-{ #category : #'post processing' }
+{ #category : 'post processing' }
 ASCodeGenerator >> finalAnalysis [
 
 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> findTargetClass: aTarget [
 
 ^	aTarget = #self
@@ -99,12 +101,12 @@ ASCodeGenerator >> findTargetClass: aTarget [
 				ifFalse: [ nil ] ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> firstBlock [
 	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
 ]
 
-{ #category : #translating }
+{ #category : 'translating' }
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
@@ -118,7 +120,7 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	blocks do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeGenerator >> initialize [
 
 	super initialize.
@@ -131,7 +133,7 @@ ASCodeGenerator >> initialize [
 	tailCallOptimize := true
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> inspectBasicBlocks [
 	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
 	
@@ -143,7 +145,7 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> locals: locals arguments: arguments [
 
 	output forClass ifNotNil: [ :theClass |
@@ -151,36 +153,36 @@ ASCodeGenerator >> locals: locals arguments: arguments [
 	code locals: locals arguments: arguments
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASCodeGenerator >> lookupLocal: aSymbol [
 
 	^	localVariables detect: [ :variable |
 		aSymbol = variable name ]
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASCodeGenerator >> lookupName: aString block: anUndefinedObject [ 
 	self shouldBeImplemented.
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ output lookupObject: anObject
 ]
 
-{ #category : #serializing }
+{ #category : 'serializing' }
 ASCodeGenerator >> manifest: anASCBlock [
 
 	code makeContextRequired
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> name [
 	^ name
 ]
 
-{ #category : #'post processing' }
+{ #category : 'post processing' }
 ASCodeGenerator >> nameBasicBlocks [
 	basicBlocks doWithIndex: [ :bb :idx |
 		bb
@@ -192,25 +194,25 @@ ASCodeGenerator >> nameBasicBlocks [
 			index: idx ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> output: anASFileContext [
 
 	output := anASFileContext
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> popVariable: aSymbol [
 
 	^ code popVariable: aSymbol
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> primitive: primitiveNumber [
 
 	code primitive: primitiveNumber
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
@@ -221,7 +223,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 		put: block
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
 	code
@@ -229,7 +231,7 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 		put: (ASCLiteral with: aLiteral)
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
 	| value |
@@ -239,38 +241,38 @@ ASCodeGenerator >> pushSelf [
 		put: (ASCPushVariable with: (ASLocal new name: #self))
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> pushVariable: variable [
 
 	^ code pushVariable: variable
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> putEmbedded: aSymbol [
 
 	code put: aSymbol
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
 	code returnSelf
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> returnTop [
 
 	code
 		returnTop
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> selector [
 
 	^	selector
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
@@ -278,36 +280,36 @@ ASCodeGenerator >> selector: aSymbol [
 	code selector: aSymbol 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	code := code send: aSymbol targetClass: aTargetClass tail: tail&tailCallOptimize .
 	^ code ifNotNil: [ basicBlocks add: code ]
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASCodeGenerator >> storeVariable: anASLocal [
 
 	^ code storeVariable: anASLocal
 ]
 
-{ #category : #settings }
+{ #category : 'settings' }
 ASCodeGenerator >> tailCallOptimize: aBoolean [ 
 	tailCallOptimize:= aBoolean 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> targetClass [
 
 ^	targetClass
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
 ]
 
-{ #category : #'post processing' }
+{ #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
 
 inline ifFalse: [ ^ self].

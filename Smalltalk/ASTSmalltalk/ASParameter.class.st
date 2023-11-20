@@ -2,27 +2,29 @@
 I represent an argument to a method or a block
 "
 Class {
-	#name : #ASParameter,
-	#superclass : #ASLocal,
-	#category : #'ASTSmalltalk-AST'
+	#name : 'ASParameter',
+	#superclass : 'ASLocal',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASParameter >> acceptVisitor: aVisitor [ 
 	^ aVisitor visitArg: self
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASParameter >> isASArg [
 	^true
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASParameter >> isImmediateThunk [
 ^ true
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASParameter >> lookup: aGenerator [ 
 	^ aGenerator lookupLocal: self
 ]

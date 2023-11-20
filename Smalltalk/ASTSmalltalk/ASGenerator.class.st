@@ -10,23 +10,25 @@ Finally I am called to write the fields so I output the header, a possible suppl
 This 3-phase process is (a) to handle cycles in the heap, and (b) to allow the heap size, classes and symbols to be known right after the image header.
 "
 Class {
-	#name : #ASGenerator,
-	#superclass : #Object,
+	#name : 'ASGenerator',
+	#superclass : 'Object',
 	#instVars : [
 		'fields',
 		'header',
 		'address',
 		'extra'
 	],
-	#category : #'ASTSmalltalk-Image'
+	#category : 'ASTSmalltalk-Image',
+	#package : 'ASTSmalltalk',
+	#tag : 'Image'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASGenerator >> address [
 	^ address
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASGenerator >> address: anInteger extra: anInteger3 header: anObject fields: anObject1 [ 
 	address := anInteger.
 	extra := anInteger3.
@@ -35,19 +37,19 @@ ASGenerator >> address: anInteger extra: anInteger3 header: anObject fields: anO
 	^ 1 + (extra ifNil: [ 0 ] ifNotNil: [ 1 ]) + fields size
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASGenerator >> on: anASImage object: anObject [
 	anASImage include: self object: anObject
 ]
 
-{ #category : #process }
+{ #category : 'process' }
 ASGenerator >> processOn: anASImage [
 	fields do: [: value |
 		value astObject: anASImage
 	]
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASGenerator >> writeFieldsOn: anASImage [
 	header writeRawOn: anASImage.
 	extra ifNotNil: [ extra writeRawOn: anASImage ].

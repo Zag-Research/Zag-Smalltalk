@@ -1,11 +1,11 @@
-Extension { #name : #Array }
+Extension { #name : 'Array' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Array >> astFormat [
 	^ 8
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Array >> sequence [
 
 ]

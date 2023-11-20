@@ -2,22 +2,24 @@
 I represent a method, which is the same as a Block except that the return must be explicit
 "
 Class {
-	#name : #ASMethodNode,
-	#superclass : #ASMethodOrBlock,
+	#name : 'ASMethodNode',
+	#superclass : 'ASMethodOrBlock',
 	#instVars : [
 		'selector',
 		'pragmas'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol arguments: args locals: locals body: body [
 
 	^ (self selector: aSymbol locals: locals body: body) arguments: args
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol body: body [
 
 	^ self new
@@ -26,7 +28,7 @@ ASMethodNode class >> selector: aSymbol body: body [
 		  pragmas: #(  )
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol locals: locals body: body [
 
 	^ (self locals: locals body: body)
@@ -34,7 +36,7 @@ ASMethodNode class >> selector: aSymbol locals: locals body: body [
 		  pragmas: #(  )
 ]
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals: locals body: body [
 
 	^ (self arguments: args locals: locals body: body)
@@ -42,7 +44,7 @@ ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals:
 		  pragmas: pragmas
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> = other [
 
 	^ super = other and: [ 
@@ -50,24 +52,24 @@ ASMethodNode >> = other [
 				  self className = other className ] ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> hash [
 
 	^ selector hash
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMethodNode >> initialize [ 
 	super initialize .
 	pragmas :=  OrderedCollection new
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> inspectAST [
 	<inspectorPresentationOrder: 33 title: 'ZigAST'>
 	^ SpTreeTablePresenter new
@@ -78,7 +80,7 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream nextPut: $(.
@@ -87,27 +89,27 @@ ASMethodNode >> inspectZagASTOn: aStream [
 	
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASMethodNode >> isASBlock [
 	^false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> maxBlockLocals [
 	^0
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> pragmas [
 	^ pragmas 
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASMethodNode >> pragmas: somePragmas [ 
 	pragmas := somePragmas 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodNode >> printOn: s [
 
 	s
@@ -117,22 +119,22 @@ ASMethodNode >> printOn: s [
 	super printOn: s
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector [
 	^ selector
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector: aString [ 
 	selector := aString
 ]
 
-{ #category : #utilities }
+{ #category : 'utilities' }
 ASMethodNode >> stackSize [
 	^0
 ]
 
-{ #category : #codegen }
+{ #category : 'codegen' }
 ASMethodNode >> zigWalkMethod: aGenerator [
 
 	aGenerator selector: selector.
