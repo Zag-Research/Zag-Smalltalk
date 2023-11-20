@@ -20,7 +20,9 @@ Same experiments as above, but now generating native code for methods
 
 ### Threaded/Native code execution
 
-
+### Future things to look at
+- `rFwithArgs:executeMethod:`
+- `Generator` stream
 ## Development Milestones
 
 Currently out of date!
