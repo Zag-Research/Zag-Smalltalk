@@ -63,6 +63,12 @@ Object >> astObject: anASImage [
 ]
 
 { #category : '*ASTSmalltalk' }
+Object >> children [
+"return and empty list as the default children of any element"
+ ^  {  }
+]
+
+{ #category : '*ASTSmalltalk' }
 Object >> contents [
 "create a stream to write the AST on and return it as a String"
 	| stream |

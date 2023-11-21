@@ -29,6 +29,14 @@ ASLiteral >> acceptVisitor: aVisitor [
 	^ aVisitor visitPushLiteral: self
 ]
 
+{ #category : 'printing' }
+ASLiteral >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: literal.
+	aStream << $)
+]
+
 { #category : 'accessing' }
 ASLiteral >> isASLiteral [
 	^true
