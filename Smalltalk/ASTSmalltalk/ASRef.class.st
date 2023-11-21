@@ -28,9 +28,10 @@ ASRef >> acceptVisitor: aVisitor [
 	^ aVisitor visitVariable: self
 ]
 
-{ #category : 'accessing' }
-ASRef >> children [ 
-	^ { variable }
+{ #category : 'printing' }
+ASRef >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream << $( << variable << $)
 ]
 
 { #category : 'comparing' }
