@@ -2,29 +2,31 @@
 My subclasses output text versions of methods
 "
 Class {
-	#name : #ASZigMethodOutput,
-	#superclass : #ASZigOutput,
+	#name : 'ASZigMethodOutput',
+	#superclass : 'ASZigOutput',
 	#instVars : [
 		'codeGenerator',
 		'maxDepth',
 		'numLocals',
 		'currentBasicBlock'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigMethodOutput >> blockClass [
 	^ self class blockClass
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigMethodOutput >> blockNumber [
 	^ currentBasicBlock := currentBasicBlock + 1.
 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
@@ -33,11 +35,11 @@ ASZigMethodOutput >> codeGenerator [
 			                   targetClass: forClass ]
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> codeGeneratorClass [ ^ ASCodeGenerator 
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigMethodOutput >> compileBlock: anASCBlock [
 
 	self assert: anASCBlock block ~= ourObject.
@@ -47,7 +49,7 @@ ASZigMethodOutput >> compileBlock: anASCBlock [
 		generateCode: anASCBlock block for: forClass 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
@@ -56,7 +58,7 @@ ASZigMethodOutput >> generateCode [
 	self outputToStream
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASZigMethodOutput >> initialize [
 
 	super initialize.
@@ -64,98 +66,98 @@ ASZigMethodOutput >> initialize [
 	currentBasicBlock := 0
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigMethodOutput >> methodGenerator [ ^ self
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> outputBasicBlockEnd [
 
 	self subclassResponsibility
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> outputMethodLabel: bbLabel [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> outputMethodStart: bbLabel [
 
 self subclassResponsibility 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> outputToStream [ 
 
 self subclassResponsibility 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigMethodOutput >> prefix [ ^ 'M'
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigMethodOutput >> selector [
 
 	^ codeGenerator selector
 ]
 
-{ #category : #settings }
+{ #category : 'settings' }
 ASZigMethodOutput >> tailCallOptimize: aBoolean [ 
 	^ self codeGenerator tailCallOptimize: aBoolean
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigMethodOutput >> verifySelector: anObject [
 
 	self subclassResponsibility 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitPopLocal: localNumber [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitPushBlock: stackIndex [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitPushContext: unused [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitPushLiteral: aLiteral [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitPushLocal: localNumber [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitReturnTop [
 	^ self subclassResponsibility
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [ 
 	^ self subclassResponsibility
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigMethodOutput >> writeDefinitionOn: anObject [
 
 	self subclassResponsibility
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASZigMethodOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility

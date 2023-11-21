@@ -2,35 +2,37 @@
 I reperesent an empty stack of values within a method.
 "
 Class {
-	#name : #ASStack,
-	#superclass : #Object,
-	#category : #'ASTSmalltalk-CodeGen'
+	#name : 'ASStack',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStack >> at: aSymbol [
 
 	^ (self find: aSymbol) top
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStack >> isEmpty [
 
 	^ true
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 self subclassResponsibility 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
 
 	^ self
@@ -41,7 +43,7 @@ ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOth
 		  other: nil
 ]
 
-{ #category : #adding }
+{ #category : 'adding' }
 ASStack >> push: anObject [
 
 	| newStack |
@@ -50,17 +52,17 @@ ASStack >> push: anObject [
 	^ newStack 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStack >> pushPlaceholderContext [ 
 	^ ASStackContextPlaceholder new from: self
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStack >> stackNames: aCollection [
 
 	aCollection ifEmpty: [ ^ self ].

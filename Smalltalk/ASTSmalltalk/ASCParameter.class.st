@@ -3,31 +3,33 @@ I am a parameter for a method.
 ASCSelf is a subclass
 "
 Class {
-	#name : #ASCParameter,
-	#superclass : #ASCValue,
+	#name : 'ASCParameter',
+	#superclass : 'ASCValue',
 	#instVars : [
 		'offset',
 		'stack'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCParameter class >> inBasicBlock: anASCBasicBlock [ 
 	^ self new inBasicBlock: anASCBasicBlock 
 ]
 
-{ #category : #'instance initialization' }
+{ #category : 'instance initialization' }
 ASCParameter >> inBasicBlock: anASCBasicBlock [ 
 	stack := anASCBasicBlock stack
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCParameter >> isImmediateThunk [
 ^ true
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCParameter >> offset [
 
 	^ stack offsetTo: self name

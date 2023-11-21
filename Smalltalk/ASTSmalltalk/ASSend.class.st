@@ -2,35 +2,37 @@
 I represent an expression that is a message send.
 "
 Class {
-	#name : #ASSend,
-	#superclass : #ASExpression,
+	#name : 'ASSend',
+	#superclass : 'ASExpression',
 	#instVars : [
 		'target',
 		'selector',
 		'args'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSend class >> selector: aSymbol args: aCollection [
 
 	^ self new selector: aSymbol args: aCollection
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSend class >> target: aTarget selector: aSymbol [
 
 	^ self new target: aTarget; selector: aSymbol 
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSend class >> target: expression selector: aSymbol args: aCollection [
 
 	^ self new target: expression; selector: aSymbol args: aCollection
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASSend >> = other [
 
 	^ self class = other class and: [ 
@@ -38,18 +40,18 @@ ASSend >> = other [
 			  self target = other target and: [ self args = other args ] ] ]
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASSend >> acceptVisitor: aVisitor [
 
 	^ aVisitor visitSend: self
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> args [
 	^ args
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASSend >> blocks [
 
 	| blocks |
@@ -59,7 +61,7 @@ ASSend >> blocks [
 	^ blocks
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASSend >> children [
 	| childeren |
 	childeren := OrderedCollection new.
@@ -68,7 +70,7 @@ ASSend >> children [
 	^ childeren
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASSend >> inspectZagASTOn: s [
 
 	super inspectZagASTOn: s.
@@ -77,17 +79,17 @@ ASSend >> inspectZagASTOn: s [
 	s << $)
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> isASSend [
 	^true
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> maxDepth [
 	^selector numArgs
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASSend >> printOn: s [
 	s << self className.
 	target ifNotNil: [ 
@@ -101,41 +103,41 @@ ASSend >> printOn: s [
 	s << '}'
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> selector [
 	^ selector
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASSend >> selector: aSelector [
 	selector := aSelector
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> selector: aSymbol args: aCollection [
 
 	selector := aSymbol.
 	args := aCollection
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> target [
 
 	^ target
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSend >> target: expression [
 	target := expression
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASSend >> zigWalk: aGenerator [
 
 	^ self zigWalk: aGenerator tail: false
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASSend >> zigWalk: aGenerator tail: tail [
 
 	| myTarget |
@@ -145,7 +147,7 @@ ASSend >> zigWalk: aGenerator tail: tail [
 	^ tail
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASSend >> zigWalkForReturn: aGenerator [
 
 	^ self zigWalk: aGenerator  tail: true

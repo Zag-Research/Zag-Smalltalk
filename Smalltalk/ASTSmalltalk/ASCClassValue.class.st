@@ -2,20 +2,22 @@
 I represent immutable values at compile time where all I know is the class.
 "
 Class {
-	#name : #ASCClassValue,
-	#superclass : #ASCVariable,
+	#name : 'ASCClassValue',
+	#superclass : 'ASCVariable',
 	#instVars : [
 		'valueClass',
 		'isRanged'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #asserting }
+{ #category : 'asserting' }
 ASCClassValue >> assertIsValue [
 ]
 
-{ #category : #common }
+{ #category : 'common' }
 ASCClassValue >> init: aClass [
 
 	
@@ -23,33 +25,33 @@ ASCClassValue >> init: aClass [
 		^ self
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCClassValue >> isMutable [
 
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCClassValue >> isRanged [
 
 	^ isRanged ifNil: [ isRanged := valueClass canUnderstand: #'<=']
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCClassValue >> kind [
 
 	^ valueClass
 ]
 
-{ #category : #serializing }
+{ #category : 'serializing' }
 ASCClassValue >> makeManifest [
 ]
 
-{ #category : #serializing }
+{ #category : 'serializing' }
 ASCClassValue >> manifest: aGenerator [
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCClassValue >> max [
 
 	^ self isRanged
@@ -57,12 +59,12 @@ ASCClassValue >> max [
 		  ifFalse: [ nil ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCClassValue >> min [
 ^ nil
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCClassValue >> valueClass [
 	^ valueClass
 ]

@@ -4,21 +4,23 @@ I am the first block in a method.
 All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
 "
 Class {
-	#name : #ASCMethodBlock,
-	#superclass : #ASCBasicBlock,
+	#name : 'ASCMethodBlock',
+	#superclass : 'ASCBasicBlock',
 	#instVars : [
 		'primitive',
 		'selector'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 	^ self new nonlocalNameLookupObject: aGenerator 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCMethodBlock >> children [
 
 	| children |
@@ -27,14 +29,14 @@ ASCMethodBlock >> children [
 	^ children
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCMethodBlock >> initialize [
 
 	super initialize.
 	self stack: ASEmptyStack new 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
 
 	stack isEmpty
@@ -46,13 +48,13 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 	maxDepth := 0
 ]
 
-{ #category : #'instance initialization' }
+{ #category : 'instance initialization' }
 ASCMethodBlock >> nonlocalNameLookupObject: aGenerator [
 
 	stack := ASEmptyStack new nonlocalNameLookupObject: aGenerator 
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
 	output outputMethodStart: label.
@@ -65,14 +67,14 @@ ASCMethodBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCMethodBlock >> primitive: anInteger [
 
 	primitive := anInteger.
 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [ 
 	selector := aString
 ]

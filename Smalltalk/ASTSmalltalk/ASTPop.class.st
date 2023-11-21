@@ -1,9 +1,11 @@
 Class {
-	#name : #ASTPop,
-	#superclass : #Object,
-	#category : #'ASTSmalltalk-IR'
+	#name : 'ASTPop',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-IR',
+	#package : 'ASTSmalltalk',
+	#tag : 'IR'
 }
 
-{ #category : #initializing }
+{ #category : 'initializing' }
 ASTPop >> from: anIRPop [
 ]

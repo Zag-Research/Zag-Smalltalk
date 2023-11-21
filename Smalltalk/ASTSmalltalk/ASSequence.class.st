@@ -2,18 +2,20 @@
 I contain a sequence of statements that make up, among other things, the body of a method
 "
 Class {
-	#name : #ASSequence,
-	#superclass : #Array,
-	#type : #variable,
-	#category : #'ASTSmalltalk-AST'
+	#name : 'ASSequence',
+	#superclass : 'Array',
+	#type : 'variable',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASSequence >> children [
 	^ self
 ]
 
-{ #category : #'filter streaming' }
+{ #category : 'filter streaming' }
 ASSequence >> contents [
 "create a stream to write the AST on and return it as a String"
 	| stream |
@@ -23,18 +25,18 @@ ASSequence >> contents [
 	^ stream contents
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASSequence >> isImmediateThunk [
 
 	^ self size == 1 and: [ self first isImmediateThunk ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASSequence >> printOn: aStream [
 	^ self printAsSelfEvaluatingFormOn: aStream
 ]
 
-{ #category : #codegen }
+{ #category : 'codegen' }
 ASSequence >> zigWalkEmpty: emptyBlock rest: restBlock last: lastBlock [
 
 |size|

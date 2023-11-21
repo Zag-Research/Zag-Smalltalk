@@ -2,15 +2,17 @@
 I am a named stack element (i.e. a local).
 "
 Class {
-	#name : #ASStackNamed,
-	#superclass : #ASStackElement,
+	#name : 'ASStackNamed',
+	#superclass : 'ASStackElement',
 	#instVars : [
 		'name'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackNamed >> at: aSymbol put: anObject [
 
 	aSymbol = name ifFalse: [ ^
@@ -18,20 +20,20 @@ ASStackNamed >> at: aSymbol put: anObject [
 	^ self top: anObject
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackNamed >> find: aSymbol [
 
 	aSymbol = name ifTrue: [ ^ self ].
 	^ rest find: aSymbol
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
 
 	name := aSymbol
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackNamed >> offset: anInteger to: aName local: blockLocal stack: blockStack other: blockOther [
 
 	aName = name ifTrue: [ ^ blockStack value: anInteger ].
