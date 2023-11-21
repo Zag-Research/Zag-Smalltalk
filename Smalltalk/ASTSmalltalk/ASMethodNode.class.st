@@ -69,7 +69,8 @@ ASMethodNode >> initialize [
 
 { #category : #accessing }
 ASMethodNode >> inspectAST [
-	<inspectorPresentationOrder: 33 title: 'ZigAST'>
+
+	<inspectorPresentationOrder: 33 title: 'ZagAST'>
 	^ SpTreeTablePresenter new
 		  roots: self roots;
 		  children: [ :aNode | aNode children ];

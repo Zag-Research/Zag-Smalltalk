@@ -17,13 +17,6 @@ CompiledMethod >> astWith: anASPharoCompiler [
 ]
 
 { #category : #'*ASTSmalltalk' }
-CompiledMethod >> inspectionThread [
-
-	<inspectorPresentationOrder: 50 title: 'Thread'>
-	^ self ir inspectionThread
-]
-
-{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZigAST [
 	<inspectorPresentationOrder: 61 title: 'ZagAST'>
 	^ (ASPharoCompiler new astFor: self) inspectAST
@@ -31,7 +24,8 @@ CompiledMethod >> inspectionZigAST [
 
 { #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZigBlocks [
-	<inspectorPresentationOrder: 60 title: 'ZigBlocks'>
+
+	<inspectorPresentationOrder: 60 title: 'ZagBlocks'>
 	| ast file output |
 	ast := ASPharoCompiler new astFor: self.
 
