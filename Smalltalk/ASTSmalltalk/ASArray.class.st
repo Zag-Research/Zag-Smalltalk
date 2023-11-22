@@ -23,12 +23,6 @@ ASArray >> = other [
 			  self statements = other statements ]
 ]
 
-{ #category : 'visiting' }
-ASArray >> acceptVisitor: aVisitor [
-
-	^aVisitor visitArray: self
-]
-
 { #category : 'printing' }
 ASArray >> baseValue [
 

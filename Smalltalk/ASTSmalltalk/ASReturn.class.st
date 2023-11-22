@@ -23,12 +23,6 @@ ASReturn >> = other [
 	^ self class = other class and: [ self expression = other expression ]
 ]
 
-{ #category : 'visiting' }
-ASReturn >> acceptVisitor: aVisitor [
-
-	^ aVisitor visitReturn: self
-]
-
 { #category : 'accessing' }
 ASReturn >> blocks [
 	^expression blocks

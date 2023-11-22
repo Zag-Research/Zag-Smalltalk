@@ -24,11 +24,6 @@ ASStatement class >> resetIndex [
 index:= nil
 ]
 
-{ #category : 'visiting' }
-ASStatement >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
 { #category : 'accessing' }
 ASStatement >> blocks [
 

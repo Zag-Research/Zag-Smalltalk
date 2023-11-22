@@ -23,11 +23,6 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
-{ #category : 'visiting' }
-ASRef >> acceptVisitor: aVisitor [
-	^ aVisitor visitVariable: self
-]
-
 { #category : 'printing' }
 ASRef >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
@@ -60,8 +55,9 @@ ASRef >> variable [
 
 { #category : 'comparing' }
 ASRef >> variable: aSymbol [
-aSymbol isSymbol ifFalse: [ self halt].
-	variable := aSymbol
+
+	aSymbol isSymbol ifFalse: [ self halt ].
+	variable := aSymbol 
 ]
 
 { #category : 'compiling' }

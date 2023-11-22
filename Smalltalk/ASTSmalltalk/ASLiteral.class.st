@@ -23,12 +23,6 @@ ASLiteral >> = other [
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
-{ #category : 'visiting' }
-ASLiteral >> acceptVisitor: aVisitor [
-
-	^ aVisitor visitPushLiteral: self
-]
-
 { #category : 'printing' }
 ASLiteral >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
