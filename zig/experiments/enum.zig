@@ -1,6 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const A = enum(u8){a1,a2,a3};
+const A = enum(u8) { a1, a2, a3 };
 
 test "A" {
     const x = A.a2;
