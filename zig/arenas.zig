@@ -94,7 +94,7 @@ pub const GlobalArena = struct {
     }
     fn freeForAllocator(ctx: *anyopaque, buf: []u8, buf_align: u8, ret_addr: usize) void {
         const self = @as(*Self, @ptrCast(@alignCast(@alignOf(Self), ctx)));
-        _ = .{ self, buf, buf_align, ret_addr, @panic("freeForAllocator unimplemented")};
+        _ = .{ self, buf, buf_align, ret_addr, @panic("freeForAllocator unimplemented") };
     }
     fn allocIndirect(self: *Self, sp: [*]Object, hp: HeaderArray, context: ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
         const array = @as(HeapPtr, @ptrCast(std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed")));

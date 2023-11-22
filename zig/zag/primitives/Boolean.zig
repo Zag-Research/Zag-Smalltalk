@@ -50,7 +50,7 @@ pub const embedded = struct {
             sp[1] = sp[0];
             return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, selector, cache });
         }
-        if (True.equals(v))  {
+        if (True.equals(v)) {
             sp[1] = Nil;
             return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, selector, cache });
         }

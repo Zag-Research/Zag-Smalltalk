@@ -11,11 +11,6 @@ Class {
 	#tag : 'AST'
 }
 
-{ #category : 'visiting' }
-ASExpression >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
 { #category : 'compiling' }
 ASExpression >> tell: aCompiler youAreSent: aSymbol [
 

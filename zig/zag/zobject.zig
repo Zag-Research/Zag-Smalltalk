@@ -19,21 +19,21 @@ inline fn g(grp: Group) u64 {
     return grp.base();
 }
 pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-    return @bitCast(oImm(.Symbol, 0xff000000 | @as(u32,uniqueNumber)));
+    return @bitCast(oImm(.Symbol, 0xff000000 | @as(u32, uniqueNumber)));
 }
 pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-    return @bitCast(oImm(.Symbol, 0xff010000 | @as(u32,uniqueNumber)));
+    return @bitCast(oImm(.Symbol, 0xff010000 | @as(u32, uniqueNumber)));
 }
 test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
     try e(indexSymbol0(42).isSymbol());
-    try ee(oImm(.Symbol,0xff00002a),0xfff00007ff00002a);
-    try ee(indexSymbol0(0x2a).u(),0xfff00007ff00002a);
-    try ee(indexSymbol0(0x2a).indexNumber(),42);
+    try ee(oImm(.Symbol, 0xff00002a), 0xfff00007ff00002a);
+    try ee(indexSymbol0(0x2a).u(), 0xfff00007ff00002a);
+    try ee(indexSymbol0(0x2a).indexNumber(), 42);
     try e(indexSymbol1(42).isSymbol());
-    try ee(indexSymbol1(0x2a).u(),0xfff00007ff01002a);
-    try ee(indexSymbol1(0x2a).indexNumber(),42+0x10000);
+    try ee(indexSymbol1(0x2a).u(), 0xfff00007ff01002a);
+    try ee(indexSymbol1(0x2a).indexNumber(), 42 + 0x10000);
 }
 pub const ZERO = of(0);
 const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
@@ -85,8 +85,15 @@ pub const ClassIndex = enum(u16) {
     ASSend,
     ASReturn,
     ASSequence,
-    max = 0xffff-8,
-    replace7,replace6,replace5,replace4,replace3,replace2,replace1,replace0,
+    max = 0xffff - 8,
+    replace7,
+    replace6,
+    replace5,
+    replace4,
+    replace3,
+    replace2,
+    replace1,
+    replace0,
     _,
     pub const LastSpecial = @intFromEnum(Self.Context);
     const Self = @This();
@@ -94,11 +101,11 @@ pub const ClassIndex = enum(u16) {
         return @as(u64, @intFromEnum(ci)) << 32;
     }
     inline fn immediate(cg: Self) u64 {
-        return ((@as(u64, @intFromEnum(Group.immediates)) << 16) | @as(u64,@intFromEnum(cg))) << 32;
+        return ((@as(u64, @intFromEnum(Group.immediates)) << 16) | @as(u64, @intFromEnum(cg))) << 32;
     }
 };
 comptime {
-    std.debug.assert(@intFromEnum(ClassIndex.replace0)==0xffff);
+    std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
 }
 pub const Group = enum(u16) {
     immediates = 0xfff0,
@@ -144,12 +151,11 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn withClass(self: Object, cls: ClassIndex) Object {
         if (dispatchCache) {
-            return cast(@as(u64,@intFromEnum(cls))<<32 | self.hash32());
-        } else
-            return self;
+            return cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
+        } else return self;
     }
     pub inline fn withOffsetx(self: Object, offset: u32) Object {
-        return cast(@as(u64,offset)<<32 | self.hash32());
+        return cast(@as(u64, offset) << 32 | self.hash32());
     }
     pub inline fn asSymbol(self: Object) Object {
         return makeImmediate(.Symbol, self.hash32());
@@ -205,8 +211,8 @@ pub const Object = packed struct(u64) {
         return self.hash32() == other.hash32();
     }
     pub inline fn selectorEquals(self: Object, other: Object) bool { // may be false positive
-//        return (self.u()^other.u())&0xffffffffffff == 0;
-        return self.u()==other.u();
+        //        return (self.u()^other.u())&0xffffffffffff == 0;
+        return self.u() == other.u();
     }
     pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
         return self.equals(other.withImmClass(.Symbol));
@@ -215,7 +221,7 @@ pub const Object = packed struct(u64) {
         return self.atLeastInt() and self.atMostInt();
     }
     pub inline fn atLeastInt(self: Object) bool {
-        var testing = Group.smallInt.u();
+        const testing = Group.smallInt.u();
         return self.tag.u() >= testing;
     }
     pub inline fn atMostInt(self: Object) bool {
@@ -265,7 +271,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toInt(self: Object) i64 {
         if (self.isInt()) return @as(i64, @bitCast(self.u() -% u64_ZERO));
-        return -42;//        @panic("Trying to convert Object to i64");
+        return -42; //        @panic("Trying to convert Object to i64");
     }
     pub inline fn toNat(self: Object) u64 {
         if (self.isNat()) return self.u() -% u64_ZERO;
@@ -316,7 +322,7 @@ pub const Object = packed struct(u64) {
         return self.toWithCheck(T, false);
     }
     pub inline fn pointer(self: Object) ?HeapObjectPtr {
-        if (self.isMemoryAllocated()) return @ptrFromInt(@as(u48,@truncate(self.u())));
+        if (self.isMemoryAllocated()) return @ptrFromInt(@as(u48, @truncate(self.u())));
         return null;
     }
     pub fn header(self: Object) HeapObject {
@@ -426,7 +432,7 @@ pub const Object = packed struct(u64) {
             .Symbol => if (self.isIndexSymbol0()) {
                 try writer.print("#symbols.i_{}", .{self.indexNumber()});
             } else if (self.isIndexSymbol1()) {
-                try writer.print("#symbols.m_{}", .{@as(u16,@truncate(self.indexNumber()))});
+                try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
             } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toInt()}),
@@ -449,19 +455,19 @@ test "testing doubles including NaN" {
     // otherwise we'd need to check in any primitive that could create a NaN
     // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
     const e = std.testing.expect;
-    const inf = @as(f64,1.0)/0.0;
-    const zero = @as(f64,0);
-    const one = @as(f64,1);
+    const inf = @as(f64, 1.0) / 0.0;
+    const zero = @as(f64, 0);
+    const one = @as(f64, 1);
     const cast = Object.cast;
     try e(of(1).isDouble());
     try e(cast(@sqrt(-one)).isDouble());
     try e(cast(@log(-one)).isDouble());
-    try e(cast(zero/zero).isDouble());
-    try e(cast((-inf)*0.0).isDouble());
-    try e(cast((-inf)*inf).isDouble());
-    try e(cast((-inf)+inf).isDouble());
-    try e(cast(inf-inf).isDouble());
-    try e(cast(inf*0.0).isDouble());
+    try e(cast(zero / zero).isDouble());
+    try e(cast((-inf) * 0.0).isDouble());
+    try e(cast((-inf) * inf).isDouble());
+    try e(cast((-inf) + inf).isDouble());
+    try e(cast(inf - inf).isDouble());
+    try e(cast(inf * 0.0).isDouble());
     try e(cast(std.math.nan(f64)).isDouble());
 }
 test "from conversion" {

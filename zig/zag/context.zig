@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
@@ -34,7 +35,7 @@ pub const Context = struct {
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
@@ -68,9 +69,9 @@ pub const Context = struct {
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         _ = process;
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: 0x{x} {} 0x{x}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard+1)) });
+        trace("\npop: 0x{x} {} 0x{x}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)) });
         if (self.isOnStack())
-            return .{ .sp = self.asNewSp().unreserve(wordsToDiscard+1), .ctxt = self.previous() };
+            return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
         std.debug.print("\npop: {*}", .{self});
         @panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
@@ -83,8 +84,8 @@ pub const Context = struct {
     pub fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
         const newSp = (process.allocStack(sp, baseSize + locals + maxStackNeeded) catch {
             var contextMutable = self;
-            const newerSp = process.spillStack(sp,&contextMutable);
-            return contextMutable.push(newerSp,process,method,locals,maxStackNeeded,selfOffset);
+            const newerSp = process.spillStack(sp, &contextMutable);
+            return contextMutable.push(newerSp, process, method, locals, maxStackNeeded, selfOffset);
         }).unreserve(maxStackNeeded);
         trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
         trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
@@ -99,7 +100,7 @@ pub const Context = struct {
             }
         }
         ctxt.header = HeapObject.contextHeaderOnStack(baseSize + selfOffset);
-        trace("\npush: {}",.{ ctxt.header });
+        trace("\npush: {}", .{ctxt.header});
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
@@ -192,7 +193,9 @@ pub const Context = struct {
     pub fn print(self: *const Context, process: *const Process) void {
         const pr = std.debug.print;
         pr("Context: {*} {} {any}\n", .{ self, self.header, self.allLocals(process) });
-        if (self.prevCtxt) |ctxt| {ctxt.print(process);}
+        if (self.prevCtxt) |ctxt| {
+            ctxt.print(process);
+        }
     }
     pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) SP {
         self.tpc = oldPc + 1;
@@ -200,7 +203,7 @@ pub const Context = struct {
         trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
         const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
         const pc = @as([*]const Code, @ptrCast(&method.code));
-        _ = .{ pc, oldPc, sp, process, selector, cache, @panic("call unimplemented")};
+        _ = .{ pc, oldPc, sp, process, selector, cache, @panic("call unimplemented") };
         //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
     }
 };

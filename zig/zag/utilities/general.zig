@@ -1,7 +1,7 @@
 const std = @import("std");
 const phi = std.math.phi;
 pub fn inversePhi(comptime T: type) T {
-    if (T==u64) return 11400714819323198485; // the calculation gives 11400714819323197441
+    if (T == u64) return 11400714819323198485; // the calculation gives 11400714819323197441
     switch (@typeInfo(T)) {
         .Int => |int_info| switch (int_info.signedness) {
             .unsigned => return @as(T, @intFromFloat(@as(f64, @floatFromInt(1 << int_info.bits)) / phi)) | 1,
@@ -18,44 +18,49 @@ test "check inversePhi" {
     try expectEqual(inversePhi(u8), 159);
     try expectEqual(inversePhi(u64), 11400714819323198485);
 }
+const undoType = enum { immediate, euclidean, iterative };
 pub fn undoPhi(comptime T: type) T {
     // there isn't a closed form way to calculate this, but
     // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Computing_multiplicative_inverses_in_modular_structures
     // shows the Extended Eclidean algorithm can calculate in log time
-    if (true) {
-        switch (T) {
+    switch (undoType.immediate) {
+        .immediate => switch (T) {
             u32 => return 340573321,
+            u24 => return 11764425,
             u16 => return 30599,
             u8 => return 95,
             else => @compileError("invalid type for undoPhi: " ++ @typeName(T)),
-        }
-    } else if (true) {
-        // function inverse(a, n)
-        //     t := 0;     newt := 1
-        //     r := n;     newr := a
-        //     while newr ≠ 0 do
-        //         quotient := r div newr
-        //         (t, newt) := (newt, t − quotient × newt)
-        //         (r, newr) := (newr, r − quotient × newr)
-        //     if r > 1 then
-        //         return "a is not invertible"
-        //     if t < 0 then
-        //         t := t + n
-        //     return t
-    } else {
-        const phiT = inversePhi(T);
-        var undoT: T = 1;
-        var temp = phiT;
-        while (temp != 1) {
-            undoT *%= phiT;
-            temp *%= phiT;
-        }
-        return undoT;
+        },
+        .euclidean => {
+            // function inverse(a, n)
+            //     t := 0;     newt := 1
+            //     r := n;     newr := a
+            //     while newr ≠ 0 do
+            //         quotient := r div newr
+            //         (t, newt) := (newt, t − quotient × newt)
+            //         (r, newr) := (newr, r − quotient × newr)
+            //     if r > 1 then
+            //         return "a is not invertible"
+            //     if t < 0 then
+            //         t := t + n
+            //     return t
+        },
+        .iterative => {
+            const phiT = inversePhi(T);
+            var undoT: T = 1;
+            var temp = phiT;
+            while (temp != 1) {
+                undoT *%= phiT;
+                temp *%= phiT;
+            }
+            return undoT;
+        },
     }
 }
 test "check undoPhi" {
     const expectEqual = std.testing.expectEqual;
     try expectEqual(undoPhi(u32), 340573321);
+    try expectEqual(undoPhi(u24), 11764425);
     try expectEqual(undoPhi(u16), 30599);
     try expectEqual(undoPhi(u8), 95);
 }
@@ -94,6 +99,11 @@ test "undo phi" {
     try expectEqual(phi16 *% undo16, 1);
     try expectEqual((42 *% phi16) *% undo16, 42);
     try expectEqual((42321 *% phi16) *% undo16, 42321);
+    const phi24 = inversePhi(u24);
+    const undo24 = undoPhi(u24);
+    try expectEqual(phi24 *% undo24, 1);
+    try expectEqual((42 *% phi24) *% undo24, 42);
+    try expectEqual((3242321 *% phi24) *% undo24, 3242321);
     const phi32 = inversePhi(u32);
     const undo32 = undoPhi(u32);
     try expectEqual(phi32 *% undo32, 1);
@@ -117,7 +127,7 @@ pub inline fn largerPowerOf2(size: anytype) @TypeOf(size) {
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
-    var t4092: u16 = 4092; // should work with u12
+    const t4092: u16 = 4092; // should work with u12
     try expectEqual(largerPowerOf2(t4092), 4096);
     try expectEqual(largerPowerOf2(@as(u16, 1)), 1);
     try expectEqual(largerPowerOf2(@as(u16, 16)), 16);

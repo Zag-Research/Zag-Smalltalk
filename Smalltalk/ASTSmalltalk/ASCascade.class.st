@@ -26,12 +26,6 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
-{ #category : 'visiting' }
-ASCascade >> acceptVisitor: aVisitor [
-
-	^aVisitor visitCascade: self
-]
-
 { #category : 'parsing' }
 ASCascade >> maxDepth [
 	^sends ifEmpty: [ 0 ] ifNotEmpty:  [sends max: [ :send |  send maxDepth ]]

@@ -88,7 +88,7 @@ pub fn fibCPS(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: O
         return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
     }
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector, cache });
-}    
+}
 pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
     if (i.p5N(sp.top, two)) {
         sp.top = one;
@@ -208,7 +208,7 @@ fn fibCPSSendSetup() CompiledMethodPtr {
 }
 test "fibCPSSend" {
     const start = fibCPSSendSetup();
-    std.debug.print(" - {s} {*} {*}",.{cached, &fibCPSSendM.code[0], &fibCPSSend});
+    std.debug.print(" - {s} {*} {*}", .{ cached, &fibCPSSendM.code[0], &fibCPSSend });
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -220,8 +220,8 @@ test "fibCPSSend" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runCPSSend(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
+fn runCPSSend(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
     const method = fibCPSSendSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -300,7 +300,7 @@ var fibDispatch =
     &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
     &e.send0,
 
-        Sym.i_0,
+    Sym.i_0,
     &e.pushLocal0,
     &e.SmallInteger.@"-_L2", // -2
     &e.send0,
@@ -340,8 +340,8 @@ test "fibDispatch" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runDispatch(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
+fn runDispatch(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
     const method = fibDispatchSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -422,17 +422,13 @@ var @"Integer>><=" =
 });
 var @"True>>ifTrue:" =
     compileMethod(Sym.@"ifTrue:", 0, 0, .{
-        &e.verifySelector,
-        &e.dropNext,
-        &e.BlockClosure.value,
-        &e.returnNoContext,
+    &e.verifySelector,
+    &e.dropNext,
+    &e.BlockClosure.value,
+    &e.returnNoContext,
 });
 var @"False>>ifTrue:" =
-    compileMethod(Sym.@"ifTrue:", 0, 0, .{
-        &e.verifySelector,
-        &e.drop,
-        &e.returnNoContext
-});
+    compileMethod(Sym.@"ifTrue:", 0, 0, .{ &e.verifySelector, &e.drop, &e.returnNoContext });
 var fibFull =
     compileMethod(Sym.i_0, 0, 2, .{ // self-0
     &e.verifySelector,
@@ -481,19 +477,19 @@ fn fibFullSetup() CompiledMethodPtr {
 }
 test "fibFull" {
     const method = fibFullSetup();
-    var n:u32 = 1;
+    var n: u32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
-        var te =  TestExecution.new();
+        var te = TestExecution.new();
         te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("\nfib({}) = {any}",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+        const result = te.run(objs[0..], method);
+        std.debug.print("\nfib({}) = {any}", .{ n, result });
+        try std.testing.expectEqual(result.len, 1);
+        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
 const debugPrint = false;
-fn runFull(run:usize) usize {
+fn runFull(run: usize) usize {
     const method = fibFullSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -512,9 +508,9 @@ fn tstart() i128 {
         if (newT != t) return newT;
     }
 }
-fn runNative(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
-    std.debug.print("{s}",.{""});
+fn runNative(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
+    std.debug.print("{s}", .{""});
     const start = tstart();
     _ = fibNative(runs);
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1_000_000));
@@ -524,56 +520,56 @@ pub fn timing(args: [][]const u8) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(usize,nRuns).init();
+    var stat = Stats(usize, nRuns).init();
     for (args) |arg| {
-        if (eql(u8,arg,"Header")) {
+        if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{runs});
             print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
-        } else if (eql(u8,arg,"Native")) {
+        } else if (eql(u8, arg, "Native")) {
             print("Native:  ", .{});
             stat.run(runNative);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"Object")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "Object")) {
+            stat = Stats(usize, nRuns).init();
             print("Object:  ", .{});
             stat.run(runObject);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"CPS")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "CPS")) {
+            stat = Stats(usize, nRuns).init();
             print("CPS:     ", .{});
             stat.run(runCPS);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-            } else if (eql(u8,arg,"CPSSend")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "CPSSend")) {
+            stat = Stats(usize, nRuns).init();
             print("CPSSend: ", .{});
             stat.run(runCPSSend);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        } else if (eql(u8,arg,"Thread")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+        } else if (eql(u8, arg, "Thread")) {
+            stat = Stats(usize, nRuns).init();
             print("Thread:  ", .{});
             stat.run(runThread);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"Dispatch")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "Dispatch")) {
+            stat = Stats(usize, nRuns).init();
             print("Dispatch:", .{});
             stat.run(runDispatch);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        // } else if (eql(u8,arg,"Byte")) {
-        //     stat = Stats(usize,nRuns).init();
-        //     print("Byte:    ", .{});
-        //     stat.run(runByte);
-        //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+            // } else if (eql(u8,arg,"Byte")) {
+            //     stat = Stats(usize,nRuns).init();
+            //     print("Byte:    ", .{});
+            //     stat.run(runByte);
+            //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
 
-        } else if (eql(u8,arg,"Full")) {
-            stat = Stats(usize,nRuns).init();
+        } else if (eql(u8, arg, "Full")) {
+            stat = Stats(usize, nRuns).init();
             print("Full:    ", .{});
             stat.run(runFull);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        } else print("Unknown argument: {s}\n",.{arg});
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+        } else print("Unknown argument: {s}\n", .{arg});
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{"Header","Native","Object","CPS","Thread","Byte","CPSSend","Dispatch","Full"};
+    const do_all = [_][]const u8{ "Header", "Native", "Object", "CPS", "Thread", "Byte", "CPSSend", "Dispatch", "Full" };
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
@@ -582,6 +578,6 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("TEST FAIL");
     }
     const args = try std.process.argsAlloc(allocator);
-    try timing(if (args.len>1) args[1..] else @constCast(do_all[0..]));
+    try timing(if (args.len > 1) args[1..] else @constCast(do_all[0..]));
 }
 const runs: u6 = 40;

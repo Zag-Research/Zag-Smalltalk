@@ -182,7 +182,7 @@ pub const embedded = struct {
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, selector, cache });
         }
         pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-            sp.next = 
+            sp.next =
                 return @call(tailCall, pc.prim, .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, selector, cache });
         }
         pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
@@ -200,7 +200,7 @@ pub const primitives = struct {
         }
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
     pub fn p2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#-
@@ -211,7 +211,7 @@ pub const primitives = struct {
         }
         trace("\np2: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
     pub fn p7(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // at:
@@ -219,20 +219,20 @@ pub const primitives = struct {
         unreachable;
     }
     pub fn p5(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#<=
-        trace("\n<=: {any} 0x{x} 0x{x}", .{context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u()});
+        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u() });
         if (!Sym.@"<=".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         trace("\np5: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-                                                 return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache })));
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache })));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
     pub fn p9(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#*
         if (!Sym.@"*".withClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, cache.current(), .{ pc, sp, process, context, selector, cache.next() });
         const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, selector, cache });
     }
 };
@@ -272,9 +272,8 @@ test "embedded add" {
         &e.pushContext,       "^",
         &e.pushLiteral,       Object.from(3),
         &e.pushLiteral,       Object.from(40),
-        &e.SmallInteger.@"+",
-        &e.pushLiteral,        Object.from(-1),
-        &e.SmallInteger.@"+",
+        &e.SmallInteger.@"+", &e.pushLiteral,
+        Object.from(-1),      &e.SmallInteger.@"+",
         &e.returnTop,
     });
     const result = testExecute(&prog);
@@ -283,20 +282,21 @@ test "embedded add" {
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Sym.value, 0, 2, .{
-        &e.pushContext,       "^",
-        &e.pushLiteral,       Object.from(4),
-        &e.pushLiteral,       Object.from(0x3_ffff_ffff_ffff),
-        &e.printStack,
-        &e.SmallInteger.@"+", &e.returnTop,
+        &e.pushContext, "^",
+        &e.pushLiteral, Object.from(4),
+        &e.pushLiteral, Object.from(0x3_ffff_ffff_ffff),
+        &e.printStack,  &e.SmallInteger.@"+",
+        &e.returnTop,
     });
     var prog2 = compileMethod(Sym.@"+", 0, 0, .{
         &e.printStack,
-        &e.pushLiteral,     Sym.noFallback,
+        &e.pushLiteral,
+        Sym.noFallback,
         &e.returnNoContext,
     });
     prog2.asCompiledMethodPtr().forDispatch(object.ClassIndex.SmallInteger);
     const result = testExecute(&prog);
-    std.debug.print("\nresult = {any}",.{result});
+    std.debug.print("\nresult = {any}", .{result});
     try expectEqual(result[0], Sym.noFallback);
 }
 

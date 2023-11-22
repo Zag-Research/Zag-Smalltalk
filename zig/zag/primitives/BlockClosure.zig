@@ -126,7 +126,7 @@ pub const inlines = struct {
             newSp.top = val;
         const callerContext = result.ctxt;
         trace("-> {any}", .{callerContext.stack(newSp, process)});
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector, cache});
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector, cache });
     }
 };
 pub const embedded = struct {
@@ -135,7 +135,7 @@ pub const embedded = struct {
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
     pub fn value(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         const val = sp.top;
-        trace("\nvalue: {}",.{val});
+        trace("\nvalue: {}", .{val});
         switch (val.tag) {
             // .numericThunk => {
             //     if (((val.u() >> 47) & 1) == 0) {
@@ -150,7 +150,7 @@ pub const embedded = struct {
                 const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
                 const index = val.u() & 7;
                 sp.top = nonLocalValues[index];
-                trace(" {*} {}",.{targetContext,index});
+                trace(" {*} {}", .{ targetContext, index });
                 return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector, cache });
             },
             // .heapClosure => {
@@ -164,7 +164,10 @@ pub const embedded = struct {
             //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
             //     sp.top = closure.prevPrev();
             // },
-            else => {std.debug.print("\nvalue of 0x{x}",.{val}); @panic("unknown block type");},
+            else => {
+                std.debug.print("\nvalue of 0x{x}", .{val});
+                @panic("unknown block type");
+            },
             //return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.value }),
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
@@ -209,7 +212,7 @@ pub const embedded = struct {
 
     inline fn nonLocalBlock(sp: SP, tag: literalNonLocalReturn, context: ContextPtr) SP {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
-        return sp.push(Object.tagged(.nonLocalThunk,@intFromEnum(tag),context.cleanAddress()));
+        return sp.push(Object.tagged(.nonLocalThunk, @intFromEnum(tag), context.cleanAddress()));
     }
     pub fn pushNonlocalBlock_self(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
         return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .self, context), process, context, selector, cache });
@@ -230,7 +233,7 @@ pub const embedded = struct {
         return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .zero, context), process, context, selector, cache });
     }
     pub fn pushNonlocalBlock_one(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-        trace("\npushNonLocalBlock_one: {} {x} {x} {}",.{sp.top,@intFromPtr(sp),@intFromPtr(nonLocalBlock(sp, .one, context)),nonLocalBlock(sp, .one, context).top});
+        trace("\npushNonLocalBlock_one: {} {x} {x} {}", .{ sp.top, @intFromPtr(sp), @intFromPtr(nonLocalBlock(sp, .one, context)), nonLocalBlock(sp, .one, context).top });
         return @call(tailCall, pc.prim, .{ pc.next(), nonLocalBlock(sp, .one, context), process, context, selector, cache });
     }
     pub fn pushNonlocalBlock_two(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
@@ -242,12 +245,12 @@ fn testImmutableClosure(process: *Process, value: Object) !object.Group {
     var context = Context.init();
     const sp = process.endOfStack().push(value);
     var cache = execute.SendCacheStruct.init();
-    const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil,cache.dontCache());
+    const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
     if (newSp != sp) {
         try ee(value.u(), newSp.next.u());
     }
     const tag = newSp.top.tag;
-    const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil,cache.dontCache());
+    const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil, cache.dontCache());
     try ee(value.u(), newerSp.top.u());
     return tag;
 }

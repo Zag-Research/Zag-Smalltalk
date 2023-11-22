@@ -8,10 +8,6 @@ If I represent ""super"" then the reference to superclass will point to the clas
 Class {
 	#name : 'ASSelf',
 	#superclass : 'ASExpression',
-	#instVars : [
-		'method',
-		'superclass'
-	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
 	#tag : 'AST'
@@ -31,19 +27,7 @@ ASSelf class >> method: aMethod superclass: aClass [
 { #category : 'comparing' }
 ASSelf >> = other [
 
-	^ self class = other class and: [ 
-		  (self method isSymbol
-			   ifTrue: [ self method ]
-			   ifFalse: [ self method selector ]) = (other method isSymbol
-			   ifTrue: [ other method ]
-			   ifFalse: [ other method selector ]) and: [ 
-			  self superclass = other superclass ] ]
-]
-
-{ #category : 'visiting' }
-ASSelf >> acceptVisitor: aVisitor [
-
-	^ aVisitor visitSelfNode: self
+	^ self class = other class
 ]
 
 { #category : 'accessing' }
@@ -62,37 +46,10 @@ ASSelf >> isNonLocalThunkable [
 	^ true
 ]
 
-{ #category : 'accessing' }
-ASSelf >> method [
-
-	^ method
-]
-
-{ #category : 'accessing' }
-ASSelf >> method: aMethod [
-
-	method := aMethod
-]
-
 { #category : 'printing' }
 ASSelf >> printOn: s [
 
-	s << self className << ' method: '.
-	(method isSymbol ifTrue: [method] ifFalse: [method selector]) printOn: s.
-	superclass ifNotNil: [ s << ' superclass: ' << superclass name ]
-]
-
-{ #category : 'accessing' }
-ASSelf >> superclass [
-
-	^ superclass
-]
-
-{ #category : 'accessing' }
-ASSelf >> superclass: aClass [
-
-	self flag: #TODO. " should be an ASClassNode, Dave thinks "
-	superclass := ASClassNode new"aClass name"
+	s << self className 
 ]
 
 { #category : 'compiling' }
