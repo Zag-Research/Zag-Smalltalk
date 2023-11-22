@@ -53,6 +53,14 @@ ASMethodNode >> = other [
 ]
 
 { #category : 'accessing' }
+ASMethodNode >> children [
+	| c |
+	c := super children.
+	c addAll: pragmas.
+	^ c
+]
+
+{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
 ]

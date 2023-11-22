@@ -21,3 +21,11 @@ ASPragma class >> args: pramaArgs [
 ASPragma >> args: paramaArgs [
 	args := paramaArgs 
 ]
+
+{ #category : 'printing' }
+ASPragma >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream nextPut: $(.
+	args do: [ :arg | aStream print: arg literal ].
+	aStream nextPut: $)
+]
