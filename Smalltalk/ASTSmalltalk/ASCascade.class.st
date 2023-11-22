@@ -26,6 +26,15 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
+{ #category : 'accessing' }
+ASCascade >> children [
+	| c |
+	c := OrderedCollection new.
+	c add: target.
+	c addAll: sends.
+	^ c
+]
+
 { #category : 'parsing' }
 ASCascade >> maxDepth [
 	^sends ifEmpty: [ 0 ] ifNotEmpty:  [sends max: [ :send |  send maxDepth ]]
