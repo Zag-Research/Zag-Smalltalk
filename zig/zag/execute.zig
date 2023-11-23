@@ -33,7 +33,7 @@ const phi32 = @import("utilities.zig").inversePhi(u32);
 
 pub const SendCache = *SendCacheStruct;
 pub const sendCacheSize = if (dispatchCache) @sizeOf(SendCacheStruct) / @sizeOf(Code) else 0;
-pub const SendCacheStruct = extern struct {
+pub const SendCacheStruct = if (dispatchCache) extern struct {
     cache1: PC,
     cache2: PC,
     noCache: PC,
@@ -66,6 +66,17 @@ pub const SendCacheStruct = extern struct {
     pub inline fn previous(self: *Self) SendCache {
         return @ptrCast(@as([*][*]const Code, @ptrCast(self)) - 1);
     }
+} else struct {
+    const Self = @This();
+    pub fn init() Self {
+        return .{};
+    }
+    inline fn dontCache(self: *Self) SendCache {
+        return self;
+    }
+    inline fn fromDnu(self: *Self) SendCache {
+        return self;
+    }
 };
 const dnus = [_]Code{
     Code.prim(&controlPrimitives.cacheDnu),
@@ -73,14 +84,15 @@ const dnus = [_]Code{
     Code.prim(&controlPrimitives.forceDnu),
 };
 test "SendCache" {
-    const expectEqual = std.testing.expectEqual;
-    var cache = SendCacheStruct.init();
-    try expectEqual(cache.current().prim, &controlPrimitives.cacheDnu);
-    try expectEqual(cache.dontCache().current().prim, &controlPrimitives.forceDnu);
-    try expectEqual(cache.next().next().current().prim, &controlPrimitives.hardDnu);
-    try expectEqual(cache.next().next().next().current().prim, &controlPrimitives.forceDnu);
+    if (dispatchCache) {
+        const expectEqual = std.testing.expectEqual;
+        var cache = SendCacheStruct.init();
+        try expectEqual(cache.current().prim, &controlPrimitives.cacheDnu);
+        try expectEqual(cache.dontCache().current().prim, &controlPrimitives.forceDnu);
+        try expectEqual(cache.next().next().current().prim, &controlPrimitives.hardDnu);
+        try expectEqual(cache.next().next().next().current().prim, &controlPrimitives.forceDnu);
+    }
 }
-
 pub const SP = *Stack;
 const Stack = extern struct {
     top: Object,
@@ -225,14 +237,18 @@ pub const Code = extern union {
     header: heap.HeapObject,
     codeRef: PC,
     const refFlag = 1024;
+    fn baseType(comptime T: anytype) type {
+        if (T==PC) return Code;
+        return T;
+    }
     pub fn next(self: PC) PC {
         return @ptrCast(@as([*]const Code, @ptrCast(self)) + 1);
     }
     pub fn skip(self: PC, n: usize) PC {
         return @ptrCast(@as([*]const Code, @ptrCast(self)) + n);
     }
-    pub fn at(self: PC, n: usize) PC {
-        return @ptrCast(@as([*]const Code, @ptrCast(self)) + n);
+    pub fn offsetFor(self: PC, n: usize, T: anytype) *baseType(T) {
+        return @ptrCast(@as([*] baseType(T), @constCast(@ptrCast(self))) + n);
     }
     pub fn back(self: PC, n: usize) PC {
         return @ptrCast(@as([*]const Code, @ptrCast(self)) - n);
@@ -1068,7 +1084,7 @@ pub const controlPrimitives = struct {
         const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
         const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
         trace(" {*} {any}", .{ newPc, process.getStack(sp) });
-        return @call(tailCall, newPc.prim, .{ newPc.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
+        return @call(tailCall, newPc.*.prim, .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
     }
     //    pub fn tailSend0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, cache: SendCache) callconv(stdCall) SP {
     //    }
@@ -1081,7 +1097,7 @@ pub const controlPrimitives = struct {
         const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
         const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
         trace(" {*} {any}", .{ newPc, process.getStack(sp) });
-        return @call(tailCall, newPc.prim, .{ newPc.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
+        return @call(tailCall, newPc.*.prim, .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
     }
     //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, cache: SendCache) callconv(stdCall) SP {
     //    }
@@ -1147,7 +1163,7 @@ pub const controlPrimitives = struct {
     fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         trace("\nhardDnu: {} {}", .{ selector.classIndex, selector.asSymbol() });
         const newPc = lookup(selector, selector.classIndex);
-        return @call(tailCall, newPc.prim, .{ newPc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, newPc.*.prim, .{ newPc.*.next(), sp, process, context, selector, cache });
     }
     fn cacheDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         trace("\ncacheDnu: 0x{x} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol() });
