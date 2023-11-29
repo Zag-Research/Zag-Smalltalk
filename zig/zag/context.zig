@@ -69,7 +69,7 @@ pub const Context = struct {
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         _ = process;
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: 0x{x} {} 0x{x}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)) });
+        trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
         std.debug.print("\npop: {*}", .{self});
@@ -145,7 +145,7 @@ pub const Context = struct {
         self.tpc = tpc;
     }
     pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
-        self.setReturnBoth(tpc.prim, tpc.next());
+        self.setReturnBoth(tpc.prim(), tpc.next());
     }
     pub inline fn getNPc(self: *const Context) Context.ThreadedFn {
         return self.npc;
@@ -197,10 +197,10 @@ pub const Context = struct {
             ctxt.print(process);
         }
     }
-    pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) SP {
+    pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         self.tpc = oldPc + 1;
         self.npc = oldPc[0].prim;
-        trace("\ncall: N={*} T={*} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
+        trace("\ncall: N={} T={} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
         const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
         const pc = @as([*]const Code, @ptrCast(&method.code));
         _ = .{ pc, oldPc, sp, process, selector, cache, @panic("call unimplemented") };

@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("../config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const execute = @import("../execute.zig");
 const SendCache = execute.SendCache;
 const Context = execute.Context;
@@ -35,13 +36,13 @@ pub const inlines = struct {
 };
 pub const embedded = struct {
     const fallback = execute.fallback;
-    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, selector, cache });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, selector, cache });
     }
 };
 pub const primitives = struct {
-    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // new:
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // new:
         _ = .{ pc, sp, process, context, selector, cache };
         unreachable;
     }
@@ -54,7 +55,7 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     var te = execute.TestExecution.new();
     te.init();
     var objs = [_]Object{};
-    var result = te.run(objs[0..], method);
+    const result = te.run(objs[0..], method);
     std.debug.print("result = {any}\n", .{result});
     return result;
 }
