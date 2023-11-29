@@ -18,22 +18,23 @@ pub inline fn oImm(c: ClassIndex, h: u32) u64 {
 inline fn g(grp: Group) u64 {
     return grp.base();
 }
+const nonIndexSymbol = 0xffffffffff0000ff;
 pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-    return @bitCast(oImm(.Symbol, 0xff000000 | @as(u32, uniqueNumber)));
+    return @bitCast(oImm(.Symbol, 0x00000ff | @as(u32, uniqueNumber) << 8));
 }
 pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-    return @bitCast(oImm(.Symbol, 0xff010000 | @as(u32, uniqueNumber)));
+    return @bitCast(oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8));
 }
 test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
     try e(indexSymbol0(42).isSymbol());
-    try ee(oImm(.Symbol, 0xff00002a), 0xfff00007ff00002a);
-    try ee(indexSymbol0(0x2a).u(), 0xfff00007ff00002a);
+    try ee(oImm(.Symbol, 0x0002a0ff), 0xfff000070002a0ff);
+    try ee(indexSymbol0(0x2a).u(), 0xfff0000700002aff);
     try ee(indexSymbol0(0x2a).indexNumber(), 42);
     try e(indexSymbol1(42).isSymbol());
-    try ee(indexSymbol1(0x2a).u(), 0xfff00007ff01002a);
-    try ee(indexSymbol1(0x2a).indexNumber(), 42 + 0x10000);
+    try ee(indexSymbol1(0x2a).u(), 0xfff0000701002aff);
+    try ee(indexSymbol1(0x2a).indexNumber(), 0x1002a);
 }
 pub const ZERO = of(0);
 const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
@@ -135,13 +136,13 @@ pub const Object = packed struct(u64) {
     tag: Group,
     pub const empty = &[0]Object{};
     pub inline fn isIndexSymbol0(self: Object) bool {
-        return (self.u() >> 16) == (comptime indexSymbol0(0).u() >> 16);
+        return (self.u() & nonIndexSymbol) == (comptime indexSymbol0(0).u() & nonIndexSymbol);
     }
     pub inline fn isIndexSymbol1(self: Object) bool {
-        return (self.u() >> 16) == (comptime indexSymbol1(0).u() >> 16);
+        return (self.u() & nonIndexSymbol) == (comptime indexSymbol1(0).u() & nonIndexSymbol);
     }
     pub inline fn indexNumber(self: Object) u24 {
-        return @truncate(self.u());
+        return @truncate(self.u()>>8);
     }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return cast(cls.immediate() | low32);
@@ -180,19 +181,19 @@ pub const Object = packed struct(u64) {
         return cast(self.u() | u64_ZERO);
     }
     pub inline fn hash24(self: Object) u24 {
-        return @as(u24, @truncate(self.u()));
+        return @truncate(self.u()>>8);
     }
     pub inline fn hash32(self: Object) u32 {
-        return @as(u32, @truncate(self.u()));
+        return @truncate(self.u());
     }
-    pub inline fn numArgs(self: Object) u4 {
-        return @as(u4, @truncate(self.u() >> 24));
+    pub inline fn numArgs(self: Object) u8 {
+        return @truncate(self.u());
     }
     pub inline fn u(self: Object) u64 {
-        return @as(u64, @bitCast(self));
+        return @bitCast(self);
     }
     pub inline fn i(self: Object) i64 {
-        return @as(i64, @bitCast(self));
+        return @bitCast(self);
     }
     pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
         return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).u() + addr);
@@ -201,7 +202,7 @@ pub const Object = packed struct(u64) {
         return @intFromEnum(self.tag);
     }
     pub inline fn tagbitsL(self: Object) u32 {
-        return @as(u32, @truncate(self.u() >> 32));
+        return @truncate(self.u() >> 32);
     }
     pub inline fn equals(self: Object, other: Object) bool {
         return self.u() == other.u();

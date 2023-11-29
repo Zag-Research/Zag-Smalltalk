@@ -164,8 +164,11 @@ pub const SymbolTable = struct {
         self.allocator.free(self.mem);
         self.* = undefined;
     }
+    fn unPhi(obj: object.Object) u24 {
+        return @as(u24, @truncate(obj.hash32()>>8))*%undoPhi24;
+    }
     fn asString(self: *Self, string: object.Object) object.Object {
-        return self.theTreap(0).getKey(@as(u24, @truncate(string.hash32()>>8))*%undoPhi24);
+        return self.theTreap(0).getKey(unPhi(string));
     }
     pub fn lookup(self: *Self, string: object.Object) object.Object {
         return lookupDirect(self.theTreap(0), string);
@@ -203,8 +206,8 @@ pub const SymbolTable = struct {
             _ = internDirect(trp, string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[symbol.hash24() - 1].asObject()));
-    }
+        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[unPhi(symbol) - 1].asObject()));
+      }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
 test "symbols match initialized symbol table" {
@@ -216,7 +219,7 @@ test "symbols match initialized symbol table" {
     const trp = symbol.theTreap(0);
     try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
     for (initialSymbolStrings, 0..) |string, idx|
-        try expectEqual(idx + 1, symbol.lookup(string.asObject()).hash24());
+        try expectEqual(symbol_of(@intCast(idx+1),0).hash24(), symbol.lookup(string.asObject()).hash24());
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");

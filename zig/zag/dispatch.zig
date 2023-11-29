@@ -41,10 +41,8 @@ pub const addMethod = Dispatch.addMethod;
 const DispatchElement = if (config.indirectDispatch) PC else extern struct {
     prim: ThreadedFn,
     nextPointer: PC,
+    const baseType = Self;
     const Self = @This();
-    pub inline fn next(self: *const Self) PC {
-        return self.nextPointer;
-    }
     pub inline fn init(pc: PC) Self {
         return .{.prim = pc.prim,.nextPointer = pc.next()};
     }
@@ -56,6 +54,9 @@ const DispatchElement = if (config.indirectDispatch) PC else extern struct {
     }
     inline fn asIntPtr(self: *Self) *equivalentInt() {
         return @alignCast(@ptrCast(self));
+    }
+    pub inline fn next(self: *const Self) PC {
+        return self.nextPointer;
     }
 };
 const Dispatch = extern struct {
@@ -75,7 +76,7 @@ const Dispatch = extern struct {
         maxIndex,
     };
     const numberOfFixed: usize = @intFromEnum(Fixed.maxIndex);
-    const hashedMethods = (if (config.indirectDispatch) 12 else 6) - numberOfFixed;
+    const hashedMethods = (if (config.indirectDispatch) 28 else 14) - numberOfFixed; // FIX was 12 else 6
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 6);
@@ -94,12 +95,12 @@ const Dispatch = extern struct {
     }
     const dnu = if (@import("builtin").is_test) &testDnu else &execute.controlPrimitives.forceDnu;
     const dnuThread = [_]Code{Code.prim(dnu),Code.uint(0)};
-    const dnuInit: DispatchElement = if (config.indirectDispatch) @ptrCast(&dnuThread[0]) else DispatchElement{.prim=dnu,.nextPointer=&dnuThread[1]};
+    const dnuInit = DispatchElement.init(&dnuThread[0]);//if (config.indirectDispatch) @ptrCast(&dnuThread[0]) else DispatchElement{.prim=dnu,.nextPointer=&dnuThread[1]};
     var dispatchData: [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
-        trace("\naddMethod: {} {} 0x{x} {*}", .{ index, method.selector.asSymbol(), method.selector.u(), method.codePtr() });
+        trace("\naddMethod: {} {} 0x{x} {}", .{ index, method.selector.asSymbol(), method.selector.u(), method.codePtr() });
         //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
@@ -175,7 +176,7 @@ const Dispatch = extern struct {
         return @constCast(&self.methods[hash]);
     }
     inline fn doHash(selector: Object, size: u64) u64 {
-        return (selector.u() & 0xffffffff) * size >> 32;
+        return @as(u64,@intCast(@as(u32,@truncate(selector.u())))) * size >> 32;
     }
     pub inline fn lookupAddressForClass(selector: Object, index: ClassIndex) *DispatchElement {
         trace(" (lookupAddressForClass) {}", .{index});
@@ -193,21 +194,26 @@ const Dispatch = extern struct {
     //     // all the ugly casting is to make signature match
     //     return @call(tailCall, @as(*const fn (*Self, SP, *Process, CodeContextPtr, Object, SendCache) callconv(stdCall) SP, @ptrCast(code.prim)), .{ @as(*Dispatch, @ptrCast(@constCast(code.next()))), sp, process, context, selector, cache });
     // }
-    fn disambiguate(location: []Code, one: *const CompiledMethod, another: *const CompiledMethod) PC {
+    fn disambiguate2(location: []DispatchElement, one: *const CompiledMethod, another: *const CompiledMethod) DispatchElement {
         const oneHash = one.selector.hash32();
         const anotherHash = another.selector.hash32();
         const shift = @ctz(oneHash ^ anotherHash);
         if (shift == 32) unreachable;
         const bit = @as(u64, 1) << shift;
+        const offs = if (config.indirectDispatch) 1 else 0;
         if (oneHash & bit == 0) {
-            location[1] = Code.codeRef(&one.code);
-            location[2] = Code.codeRef(&another.code);
+            location[offs] = DispatchElement.init(&one.code[0]);
+            location[offs+1] = DispatchElement.init(&another.code[0]);
         } else {
-            location[1] = Code.codeRef(&another.code);
-            location[2] = Code.codeRef(&one.code);
+            location[offs] = DispatchElement.init(&another.code[0]);
+            location[offs+1] = DispatchElement.init(&one.code[0]);
         }
-        location[0] = Code.prim(bitTests[shift]);
-        return @ptrCast(location.ptr);
+        if (config.indirectDispatch) {
+            location[0] = @bitCast(Code.prim(bitTests[shift]));
+            return DispatchElement.init(@ptrCast(location.ptr));
+        } else {
+            return DispatchElement.init2(bitTests[shift],location.ptr);
+        }
     }
     fn add(self: *Self, cmp: *CompiledMethod) !void {
         while (true) {
@@ -219,26 +225,27 @@ const Dispatch = extern struct {
             self.state = .clean;
         }
         const address = self.lookupAddress(cmp.selector);
-        trace("\nadd: {} {*} {*}", .{ cmp.selector, address, address.* });
+        trace("\nadd: {} {} {}", .{ cmp.selector, address, address.* });
         const newElement = DispatchElement.init(cmp.codePtr()).asInt();
         if (@cmpxchgWeak(DispatchElement.equivalentInt(), address.asIntPtr(), dnuInit.asInt(), newElement, .SeqCst, .SeqCst) == null) {
             //trace("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
             return; // we replaced DNU with method
         }
-        // const existing = @as(*const Code, @ptrCast(address.*)).compiledMethodPtr(0);
-        // if (existing.selector.equals(cmp.selector)) {
-        //     address.* = cmp.codePtr();
-        //     return;
-        // } else trace("\nexisting: {*}", .{existing});
-        // if (self.isExternalCompiledMethod(@constCast(existing).codePtr().prim)) { // an actual cmp - not internal
-        //     const end = self.length - @offsetOf(Self, "methods") / @sizeOf(Object) - 2;
-        //     if (self.free < end) {
-        //         self.free += 3;
-        //         const disambiguator = disambiguate(@ptrCast(@as([*]Code, @ptrCast(&self.methods))[self.free - 3 .. self.free]), existing, cmp);
-        //         address.* = disambiguator;
-        //         return;
-        //     }
-        // }
+        const existing = address.compiledMethodPtr(0);
+        if (existing.selector.equals(cmp.selector)) {
+            address.set(cmp.codePtr());
+            return;
+        } else trace("\nexisting: {}", .{existing.selector});
+        if (self.isExternalCompiledMethod(@constCast(existing).codePtr().prim)) { // an actual cmp - not internal
+            const end = self.length - @offsetOf(Self, "methods") / @sizeOf(Object) - 2;
+            trace("\nfree:{} end:{} hash:{} len:{}",.{self.free,end,self.hash,self.header.length});
+            if (self.free < end) {
+                self.free += 3;
+                const disambiguator = disambiguate2(@ptrCast(@as([*]Code, @ptrCast(&self.methods))[self.free - 3 .. self.free]), existing, cmp);
+                address.* = disambiguator;
+                return;
+            }
+        }
         return error.Conflict;
     }
     const bitTests = [_]ThreadedFn{
@@ -249,154 +256,154 @@ const Dispatch = extern struct {
         &bitTest24, &bitTest25, &bitTest26, &bitTest27, &bitTest28, &bitTest29,
         &bitTest30, &bitTest31,
     };
-    const pcBits = @ctz(@as(u32, @sizeOf(DispatchElement)));
-    inline fn offset(hash: u32, pc: PC, comptime bit: comptime_int) PC {
-        const offs = (if (bit <= pcBits) hash << (pcBits - bit) else hash >> (bit - pcBits)) & @sizeOf(PC);
-        return @ptrFromInt(@intFromPtr(pc) + offs);
+    const deBits = @ctz(@as(u32, @sizeOf(DispatchElement)));
+    inline fn offset(hash: u32, pc: PC, comptime bit: comptime_int) *const DispatchElement {
+        const offs = (if (bit <= deBits) hash << (deBits - bit) else hash >> (bit - deBits)) & @sizeOf(DispatchElement);
+        return @ptrFromInt(@as(usize,@bitCast(pc.offsetBytes(offs))));
     }
     fn bitTest0(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 0);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest1(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 1);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest2(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 2);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 3);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest4(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 4);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 5);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest6(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 6);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest7(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 7);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest8(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 8);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest9(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 9);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest10(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 10);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest11(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 11);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest12(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 12);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest13(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 13);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest14(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 14);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest15(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 15);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest16(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 16);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest17(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 17);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest18(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 18);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest19(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 19);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest20(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 20);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest21(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 21);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest22(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 22);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest23(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 23);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest24(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 24);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest25(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 25);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest26(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 26);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest27(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 27);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest28(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 28);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest29(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 29);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest30(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 30);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn bitTest31(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 31);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     const primes = [_]?ThreadedFn{ null, null, null, &prime3, null, &prime5 };
     fn prime3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        const pc = programCounter.offsetFor(doHash(selector,3),DispatchElement);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        const pc = programCounter.offsetFor(doHash(selector,3));
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn prime5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        const pc = programCounter.offsetFor(doHash(selector,5),DispatchElement);
-        return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
+        const pc = programCounter.offsetFor(doHash(selector,5));
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     fn super(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         _ = .{ programCounter, sp, process, context, selector, cache, @panic("called super function") };
     }
     fn fail(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         _ = .{ programCounter, sp, process, context, selector, cache };
-        if (programCounter.uint == 0)
+        if (programCounter.uint() == 0)
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
@@ -406,7 +413,7 @@ const Dispatch = extern struct {
     }
     fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         _ = .{ process, context, selector, cache };
-        @as(*usize, @ptrFromInt(programCounter.uint)).* += 1;
+        @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
     }
 };
@@ -417,19 +424,23 @@ const Dispatch = extern struct {
 //    var foo = Self.new();
 //    foo.initDNU();
 //u}
+fn tOffset(hash: u32, ptr:*const DispatchElement, comptime bit: comptime_int) *const DispatchElement {
+    return Dispatch.offset(hash,PC.init(@ptrCast(ptr)),bit);
+}
+fn eo(lDe: *const DispatchElement, rDe: *const DispatchElement) !void {
+    try std.testing.expectEqual(@intFromPtr(lDe),@intFromPtr(rDe));
+}
 test "offset for bitTests" {
-    const offset = Dispatch.offset;
-    const ee = std.testing.expectEqual;
-    const de = [_]Code{undefined} ** 5;
-    try ee(offset(0xffffff55, &de[0], 0), &de[1]);
-    try ee(offset(0xffffff55, &de[0], 1), &de[0]);
-    try ee(offset(0xffffff55, &de[0], 2), &de[1]);
-    try ee(offset(0xffffff55, &de[0], 3), &de[0]);
-    try ee(offset(0xffffff55, &de[0], 4), &de[1]);
-    try ee(offset(0xffffff55, &de[0], 5), &de[0]);
-    try ee(offset(0xffffff55, &de[0], 6), &de[1]);
-    try ee(offset(0xffffff55, &de[0], 7), &de[0]);
-    try ee(offset(0xffffff55, &de[0], 8), &de[1]);
+    const de = [_]DispatchElement{undefined} ** 5;
+    try eo(tOffset(0xffffff55, &de[0], 0), &de[1]);
+    try eo(tOffset(0xffffff55, &de[0], 1), &de[0]);
+    try eo(tOffset(0xffffff55, &de[0], 2), &de[1]);
+    try eo(tOffset(0xffffff55, &de[0], 3), &de[0]);
+    try eo(tOffset(0xffffff55, &de[0], 4), &de[1]);
+    try eo(tOffset(0xffffff55, &de[0], 5), &de[0]);
+    try eo(tOffset(0xffffff55, &de[0], 6), &de[1]);
+    try eo(tOffset(0xffffff55, &de[0], 7), &de[0]);
+    try eo(tOffset(0xffffff55, &de[0], 8), &de[1]);
 }
 test "disambiguate" {
     const ee = std.testing.expectEqual;
@@ -452,30 +463,57 @@ test "disambiguate" {
     method2.setLiterals(empty, empty, null);
     var method3 = compileMethod(symbols.@"<=", 0, 0, .{ &fns.push3, &Code.end });
     method3.setLiterals(empty, empty, null);
-    var space = [_]Code{ Code.object(Nil), Code.object(Nil), Code.object(Nil) };
-    var dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method1), @ptrCast(&method2));
-    const push1Code: PC = @ptrCast(&method1.code);
-    const push2Code: PC = @ptrCast(&method2.code);
-    try ee(space[2].codeRef, push1Code);
-    try ee(space[1].codeRef, push2Code);
-    dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method2), @ptrCast(&method1));
-    try ee(space[2].codeRef, push1Code);
-    try ee(space[1].codeRef, push2Code);
-    var process = Process.new();
-    process.init();
-    defer process.deinit();
-    var context = Context.init();
-    const sp = process.endOfStack();
-    var cache = execute.SendCacheStruct.init();
-    if (config.dispatchCache) {
-        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
-        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself, cache.dontCache()).top.to(i64), 2);
-        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
-        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+    if (config.indirectDispatch) {
+        var space3 = [_]DispatchElement{undefined}**3;
+        var dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method1), @ptrCast(&method2));
+        const push1Code = DispatchElement.init(&method1.code[0]);
+        const push2Code = DispatchElement.init(&method2.code[0]);
+        try ee(space3[1], push1Code);
+        try ee(space3[2], push2Code);
+        dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method2), @ptrCast(&method1));
+        try ee(space3[1], push1Code);
+        try ee(space3[2], push2Code);
+        var process = Process.new();
+        process.init();
+        defer process.deinit();
+        var context = Context.init();
+        const sp = process.endOfStack();
+        var cache = execute.SendCacheStruct.init();
+        if (config.dispatchCache) {
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself, cache.dontCache()).top.to(i64), 2);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+        }
+        try ee(dispatcher.prim(), &Dispatch.bitTest8);
+        dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method3), @ptrCast(&method1));
+        try ee(dispatcher.prim(), &Dispatch.bitTest0);
+    } else {
+        var space2 = [_]DispatchElement{undefined}**2;
+        var dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method1), @ptrCast(&method2));
+        const push1Code = DispatchElement.init(&method1.code[0]);
+        const push2Code = DispatchElement.init(&method2.code[0]);
+        try ee(space2[0], push1Code);
+        try ee(space2[1], push2Code);
+        dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method2), @ptrCast(&method1));
+        try ee(space2[0], push1Code);
+        try ee(space2[1], push2Code);
+        var process = Process.new();
+        process.init();
+        defer process.deinit();
+        var context = Context.init();
+        const sp = process.endOfStack();
+        var cache = execute.SendCacheStruct.init();
+        if (config.dispatchCache) {
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself, cache.dontCache()).top.to(i64), 2);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+        }
+        try ee(dispatcher.prim, &Dispatch.bitTest2);
+        dispatcher = Dispatch.disambiguate(&space2, @ptrCast(&method3), @ptrCast(&method1));
+        try ee(dispatcher.prim, &Dispatch.bitTest4);
     }
-    try ee(dispatcher.prim, &Dispatch.bitTest2);
-    dispatcher = Dispatch.disambiguate(&space, @ptrCast(&method3), @ptrCast(&method1));
-    try ee(dispatcher.prim, &Dispatch.bitTest4);
 }
 test "isExternalCompiledMethod" {
     const e = std.testing.expect;

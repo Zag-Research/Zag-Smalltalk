@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
@@ -71,20 +72,20 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) SP {
+    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) callconv(stdCall) SP {
         trace("\ninterpretReturn: 0x{x}", .{@intFromPtr(context.method)});
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(context.method))), cache });
     }
-    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) SP {
+    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
+        trace("\ninterpretFn: {} {} {} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), cache });
     }
-    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) SP {
+    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) callconv(stdCall) SP {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
@@ -439,7 +440,7 @@ test "simple return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
     try expectEqual(result[1], Nil);
@@ -458,7 +459,7 @@ test "context return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
@@ -475,7 +476,7 @@ test "context returnTop via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(42));
 }
