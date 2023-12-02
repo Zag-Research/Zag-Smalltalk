@@ -54,9 +54,11 @@ ASMethodNode >> = other [
 
 { #category : 'accessing' }
 ASMethodNode >> children [
+
 	| c |
-	c := super children.
+	c := OrderedCollection new.
 	c addAll: pragmas.
+	c addAll: super  children.
 	^ c
 ]
 
@@ -138,7 +140,7 @@ ASMethodNode >> selectorWithArgs [
 			   s nextPutAll: keyword.
 			   s nextPut: $:.
 			   s nextPutAll: arg.
-			   s space ] ]) asSymbol
+			   s space ] ]) asSymbol 
 ]
 
 { #category : 'utilities' }
