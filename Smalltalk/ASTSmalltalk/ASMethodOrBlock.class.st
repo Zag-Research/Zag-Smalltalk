@@ -39,14 +39,6 @@ ASMethodOrBlock >> arguments: aCollection [
 	arguments := aCollection asArray
 ]
 
-{ #category : 'accessing' }
-ASMethodOrBlock >> children [
-	| c |
-	c := super children.
-	c addAll: arguments.
-	^ c
-]
-
 { #category : 'printing' }
 ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
 | method |
@@ -63,6 +55,25 @@ ASMethodOrBlock >> initialize [
 ]
 
 { #category : 'printing' }
+ASMethodOrBlock >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	
+	aStream nextPut: $(.
+	self selectorWithArgs ifNotEmpty: [ :s | aStream print: s ].
+	locals ifNotEmpty: [
+		aStream space.
+		aStream << #|.
+		aStream space.
+		locals do: [ :local |
+			aStream << local.
+			aStream space ].
+		aStream << #| ].
+
+	aStream nextPut: $)
+]
+
+{ #category : 'printing' }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 
@@ -70,4 +81,9 @@ ASMethodOrBlock >> printOn: s [
 		arguments do: [ :arg| s<< arg name] separatedBy: [ s<<' ' ].
 		s<< ')' ].
 	super printOn: s
+]
+
+{ #category : 'accessing' }
+ASMethodOrBlock >> selectorWithArgs [
+self subclassResponsibility 
 ]

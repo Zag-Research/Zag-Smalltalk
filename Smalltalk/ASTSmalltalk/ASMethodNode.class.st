@@ -89,15 +89,6 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
-{ #category : 'accessing' }
-ASMethodNode >> inspectZagASTOn: aStream [
-	super inspectZagASTOn: aStream.
-	aStream nextPut: $(.
-	aStream print: selector.
-	aStream nextPut: $)
-	
-]
-
 { #category : 'testing' }
 ASMethodNode >> isASBlock [
 	^false
@@ -136,6 +127,18 @@ ASMethodNode >> selector [
 { #category : 'accessing' }
 ASMethodNode >> selector: aString [ 
 	selector := aString
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> selectorWithArgs [
+
+	selector numArgs = 0 ifTrue: [ ^ selector ].
+	^ (String streamContents: [ :s |
+		   (selector findTokens: $:) with: arguments do: [ :keyword :arg |
+			   s nextPutAll: keyword.
+			   s nextPut: $:.
+			   s nextPutAll: arg.
+			   s space ] ]) asSymbol
 ]
 
 { #category : 'utilities' }

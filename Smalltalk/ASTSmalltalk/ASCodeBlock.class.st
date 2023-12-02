@@ -49,7 +49,6 @@ ASCodeBlock >> body: anASSequence [
 ASCodeBlock >> children [
 	| c |
 	c := OrderedCollection new.
-	c addAll: locals.
 	c add: body.
 	^ c
 ]
