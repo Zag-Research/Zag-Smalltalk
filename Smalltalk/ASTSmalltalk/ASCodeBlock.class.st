@@ -47,9 +47,10 @@ ASCodeBlock >> body: anASSequence [
 
 { #category : 'accessing' }
 ASCodeBlock >> children [
+
 	| c |
 	c := OrderedCollection new.
-	c add: body.
+	c addAll: body.
 	^ c
 ]
 
