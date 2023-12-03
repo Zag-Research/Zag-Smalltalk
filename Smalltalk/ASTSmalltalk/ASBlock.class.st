@@ -57,6 +57,20 @@ ASBlock >> selector [
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
+{ #category : 'accessing' }
+ASBlock >> selectorWithArgs [
+
+	| size |
+	size := arguments size.
+	size = 0 ifTrue: [ ^ String empty ].
+	^ (String streamContents: [ :s |
+		   arguments
+			   do: [ :arg |
+				   s nextPutAll: 'value: '.
+				   s nextPutAll: arg ]
+			   separatedBy: [ s space ] ]) asSymbol
+]
+
 { #category : 'compiling' }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
