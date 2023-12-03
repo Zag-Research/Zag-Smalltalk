@@ -45,12 +45,10 @@ const DispatchElement = if (config.indirectDispatch) PC else extern struct {
     nextPointer: PC,
     const baseType = Self;
     const Self = @This();
-    fn spacer() type { return u64;}
-    fn spacer_value() u64 { return 0;}
     pub inline fn init(code: *const Code) Self {
         return .{.primitive = code.prim,.nextPointer = PC.init(@ptrCast(@as([*]Code,@constCast(@ptrCast(code)))+1))};
     }
-    pub inline fn init2(f: ThreadedFn, code: *const Code) Self {
+    pub inline fn initDispatchElement(f: ThreadedFn, code: *const Code) Self {
         return .{.primitive = f,.nextPointer = PC.init(code)};
     }
     inline fn equivalentInt() type {
@@ -63,7 +61,7 @@ const DispatchElement = if (config.indirectDispatch) PC else extern struct {
     inline fn asInt(self: Self) equivalentInt() {
         return @bitCast(self);
     }
-    fn asIntPtr(self: *Self) *equivalentInt() { // INLINE
+    inline fn asIntPtr(self: *Self) *equivalentInt() {
         return @alignCast(@ptrCast(self));
     }
     pub inline fn prim(self: *const Self) ThreadedFn {
@@ -232,12 +230,7 @@ const Dispatch = extern struct {
             location[offs] = DispatchElement.init(&another.code[0]);
             location[offs+1] = DispatchElement.init(&one.code[0]);
         }
-        if (config.indirectDispatch) {
-            location[0] = @bitCast(Code.prim(bitTests[shift]));
-            return DispatchElement.init(@ptrCast(location.ptr));
-        } else {
-            return DispatchElement.init2(bitTests[shift],@ptrCast(location.ptr));
-        }
+        return DispatchElement.initDispatchElement(bitTests[shift],@ptrCast(location.ptr));
     }
     fn add(self: *Self, cmp: *CompiledMethod) !void {
         while (true) {

@@ -243,6 +243,10 @@ pub const PC = extern struct {
     pub inline fn init(code: *const Code) PC {
         return .{.code=code};
     }
+    pub inline fn initDispatchElement(f: ThreadedFn, code: *Code) Self {
+        code.* = Code.prim(f);
+        return .{.code=code};
+    }
     pub fn equivalentInt() type {
         return usize;
     }
@@ -255,6 +259,9 @@ pub const PC = extern struct {
     pub inline fn asIntPtr(self: *Self) *equivalentInt() {
         return @alignCast(@ptrCast(self));
     }
+    pub inline fn prim(self: PC) ThreadedFn {
+        return self.code.prim;
+    }
     pub inline fn next(self: PC) PC {
         return @bitCast(@intFromPtr(@as([*]const Code, @ptrCast(self.code)) + 1));
     }
@@ -266,9 +273,6 @@ pub const PC = extern struct {
     }
     pub inline fn prim2(self: PC) ThreadedFn {
         return @as([*]const Code, @ptrCast(self.code))[1].prim;
-    }
-    pub inline fn prim(self: PC) ThreadedFn {
-        return self.code.prim;
     }
     pub inline fn uint(self: PC) u64 {
         return self.code.uint;

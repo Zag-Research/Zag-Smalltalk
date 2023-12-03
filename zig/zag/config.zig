@@ -9,4 +9,4 @@ pub inline fn trace(format: anytype, values: anytype) void {
 }
 pub const dispatchCache = false;
 pub const indirectDispatch = true;
-pub const stdCall: std.builtin.CallingConvention = .C; // if (builtin.cpu.arch == .x86) .Stdcall else .AAPCS;
+pub const stdCall: std.builtin.CallingConvention = if (builtin.cpu.arch == .x86) .Stdcall else .C; //.AAPCS;

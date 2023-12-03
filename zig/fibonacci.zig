@@ -539,13 +539,15 @@ fn runNative(run: usize) usize {
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1_000_000));
 }
 const Stats = @import("zag/utilities/stats.zig").Stats;
-pub fn timing(args: [][]const u8) !void {
+pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
     const print = std.debug.print;
     var stat = Stats(usize, nRuns).init();
     for (args) |arg| {
-        if (eql(u8, arg, "Header")) {
+        if (eql(u8, arg, "Config")) {
+            print("Config {s}dispatch cache, {s}direct dispatch\n",.{if (dispatchCache) "" else "no ",if (config.indirectDispatch) "in" else ""});
+        } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{runs});
             print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
         } else if (eql(u8, arg, "Native")) {
@@ -588,11 +590,12 @@ pub fn timing(args: [][]const u8) !void {
             print("Full:    ", .{});
             stat.run(runFull);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
-        } else print("Unknown argument: {s}\n", .{arg});
+        } else if (!default)
+            print("Unknown argument: {s}\n", .{arg});
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Header", "Native", "Object", "CPS", "Thread", "Byte", "CPSSend", "Dispatch", "Full" };
+    const do_all = [_][]const u8{ "Config", "Header", "Native", "Object", "CPS", "Thread", "Byte", "CPSSend", "Dispatch", "Full" };
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
@@ -601,6 +604,7 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("TEST FAIL");
     }
     const args = try std.process.argsAlloc(allocator);
-    try timing(if (args.len > 1) args[1..] else @constCast(do_all[0..]));
+    const default = args.len > 1;
+    try timing(if (default) args[1..] else @constCast(do_all[0..]),default);
 }
 const runs: u6 = 40;
