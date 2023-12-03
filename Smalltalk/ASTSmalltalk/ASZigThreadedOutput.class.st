@@ -188,11 +188,6 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 ]
 
 { #category : 'visiting' }
-ASZigThreadedOutput >> visitSimple: aSymbol [ 
-	^ self putEmbedded: aSymbol
-]
-
-{ #category : 'visiting' }
 ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock

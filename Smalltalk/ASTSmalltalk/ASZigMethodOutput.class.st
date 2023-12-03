@@ -151,6 +151,11 @@ ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'visiting' }
+ASZigMethodOutput >> visitSimple: aSymbol [ 
+	^ self putEmbedded: aSymbol
+]
+
 { #category : 'writing' }
 ASZigMethodOutput >> writeDefinitionOn: anObject [
 
