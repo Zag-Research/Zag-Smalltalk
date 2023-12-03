@@ -167,7 +167,7 @@ pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, select
     newContext.setReturnBoth(fibCPSSend1, pc.skip(13)); // after first callRecursive
     const newSelector = if (dispatchCache) selector.withClass(.SmallInteger) else selector;
     const newCache = if (dispatchCache) &fibCPSSendCache else cache;
-    const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
+    const newPc = if (dispatchCache) newCache.current() else dispatch.lookupAddress(newSelector, .SmallInteger);
     return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, newSelector, if (dispatchCache) newCache.next() else cache });
 }
 fn fibCPSSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
@@ -175,7 +175,7 @@ fn fibCPSSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector:
     context.setReturnBoth(fibCPSSend2, pc.skip(3)); // after 2nd callRecursive
     const newSelector = if (dispatchCache) selector.withClass(.SmallInteger) else selector;
     const newCache = if (dispatchCache) &fibCPSSendCache else cache;
-    const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
+    const newPc = if (dispatchCache) newCache.current() else dispatch.lookupAddress(newSelector, .SmallInteger);
     return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, context, newSelector, if (dispatchCache) newCache.next() else cache });
 }
 fn fibCPSSend2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
@@ -197,6 +197,7 @@ var fibCPSSendStart =
 });
 fn fibCPSSendSetup() CompiledMethodPtr {
     sym = Sym.init();
+    dispatch.initClass(.SmallInteger);
     fibThreadMethod = fibThread.asCompiledMethodPtr();
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     const fibonacci = fibCPSSendM.asCompiledMethodPtr();
@@ -204,12 +205,11 @@ fn fibCPSSendSetup() CompiledMethodPtr {
     const start = fibCPSSendStart.asCompiledMethodPtr();
     fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
-    fibonacci.forDispatch(ClassIndex.SmallInteger);
+    fibonacci.forDispatch(.SmallInteger);
     return start;
 }
 test "fibCPSSend" {
     const start = fibCPSSendSetup();
-    std.debug.print(" - {s} {*} {*}", .{ cached, &fibCPSSendM.code[0], &fibCPSSend });
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -320,12 +320,13 @@ var fibDispatchStart =
 });
 fn fibDispatchSetup() CompiledMethodPtr {
     sym = Sym.init();
+    dispatch.initClass(.SmallInteger);
     const fibonacci = fibDispatch.asCompiledMethodPtr();
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     const start = fibDispatchStart.asCompiledMethodPtr();
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
-    fibonacci.forDispatch(ClassIndex.SmallInteger);
+    fibonacci.forDispatch(.SmallInteger);
     return start;
 }
 test "fibDispatch" {
@@ -464,16 +465,37 @@ var fibFullStart =
 });
 fn fibFullSetup() CompiledMethodPtr {
     dispatch.init();
+    dispatch.initClass(.SmallInteger);
+    dispatch.dump(.SmallInteger);
+    dispatch.initClass(.True);
+    dispatch.initClass(.False);
     primitives.init();
     sym = Sym.init();
     fibFull.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     fibFullStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    @"Integer>>+".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"Integer>>-".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"Integer>><=".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"True>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.True);
-    @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.False);
-    fibFull.asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
+    @"Integer>>+".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"Integer>>-".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"Integer>><=".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"True>>ifTrue:".asCompiledMethodPtr().forDispatch(.True);
+    @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(.False);
+    fibFull.asCompiledMethodPtr().forDispatch(.SmallInteger);
+
+    trace("\nfibFullSetup: code pointers" ++
+            \\  @Integer>>+={x}
+            \\  @Integer>>-={x}
+            \\  @Integer>><=={x}
+            \\  @True>>ifTrue:={x}
+            \\  @False>>ifTrue:={x}
+            \\  fibFull={x}
+            ,.{
+                @intFromPtr(@"Integer>>+".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"Integer>>-".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"Integer>><=".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"True>>ifTrue:".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"False>>ifTrue:".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(fibFull.asCompiledMethodPtr().codePtr()),
+    });
+    dispatch.dump(.SmallInteger);
     return @ptrCast(&fibFullStart);
 }
 test "fibFull" {

@@ -18,7 +18,7 @@ const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol0 = object.indexSymbol0;
 const indexSymbol1 = object.indexSymbol1;
 const dispatch = @import("dispatch.zig");
-const lookup = dispatch.lookup;
+const lookupAddress = dispatch.lookupAddress;
 pub const Context = @import("context.zig").Context;
 //const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
@@ -1106,7 +1106,7 @@ pub const controlPrimitives = struct {
         const self = sp.at(selector.numArgs());
         context.setReturn(pc);
         const class = self.get_class();
-        const newPc = lookup(selector, class);
+        const newPc = lookupAddress(selector, class);
         trace("\nfallback: {} {} {} {} {}", .{ selector, class, pc, newPc, newPc.prim() });
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, selector, cache });
     }
@@ -1131,7 +1131,7 @@ pub const controlPrimitives = struct {
         const selector = pc.object().withClass(class);
         trace("\nsend0: {} {}", .{ selector, class });
         const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
-        const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
+        const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
         trace(" {} {any}", .{ newPc, process.getStack(sp) });
         return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
     }
@@ -1144,7 +1144,7 @@ pub const controlPrimitives = struct {
         const selector = pc.object().withClass(class);
         trace("\nsend1: {} {}", .{ selector, class });
         const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
-        const newPc = if (dispatchCache) cache.current() else lookup(selector, class);
+        const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
         trace(" {} {any}", .{ newPc, process.getStack(sp) });
         return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
     }
@@ -1154,7 +1154,7 @@ pub const controlPrimitives = struct {
         const selector = sp.top;
         const numArgs = selector.numArgs();
         if (numArgs != 0) @panic("wrong number of args");
-        const newPc = lookup(selector, sp[numArgs + 1].get_class());
+        const newPc = lookupAddress(selector, sp[numArgs + 1].get_class());
         context.setReturn(pc);
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, selector, cache });
     }
@@ -1162,7 +1162,7 @@ pub const controlPrimitives = struct {
         const selector = sp.next;
         sp.next = sp.top;
         if (selector.numArgs() != 1) @panic("wrong number of args");
-        const newPc = lookup(selector, sp[2].get_class());
+        const newPc = lookupAddress(selector, sp[2].get_class());
         context.setTPc(pc + 1);
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, selector, cache });
     }
@@ -1211,12 +1211,12 @@ pub const controlPrimitives = struct {
     }
     fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         trace("\nhardDnu: {} {}", .{ selector.classIndex, selector.asSymbol() });
-        const newPc = lookup(selector, selector.classIndex);
+        const newPc = lookupAddress(selector, selector.classIndex);
         return @call(tailCall, newPc.prim(), .{ newPc.*.next(), sp, process, context, selector, cache });
     }
     fn cacheDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         trace("\ncacheDnu: 0x{x} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol() });
-        const newPc = lookup(selector, selector.classIndex);
+        const newPc = lookupAddress(selector, selector.classIndex);
         const newCache = cache.previous();
         newCache.cache1 = newPc;
         trace("\ncacheDnu: {} {*} {*}", .{ newCache, newCache, cache });

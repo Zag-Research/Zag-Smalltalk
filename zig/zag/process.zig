@@ -176,11 +176,11 @@ pub const Process = extern struct {
         while (sp.lessThan(endStack)) {
             const endSP = context.endOfStack(self);
             while (sp.lessThan(endSP)) {
-                std.debug.print("sp: before{} {*}\n", .{ sp.top, hp });
+                trace("sp: before{} {*}\n", .{ sp.top, hp });
                 if (sp.top.pointer()) |pointer| {
                     hp = pointer.copyTo(hp, &sp.top);
                 }
-                std.debug.print("sp: after {} {*}\n", .{ sp.top, hp });
+                trace("sp: after {} {*}\n", .{ sp.top, hp });
                 sp = sp.drop();
             }
             if (!context.isOnStack()) break;
@@ -190,11 +190,11 @@ pub const Process = extern struct {
         }
         // find self references
         while (@intFromPtr(hp) < @intFromPtr(scan)) {
-            std.debug.print("hp: {*} scan: {*}\n", .{ hp, scan });
+            trace("hp: {*} scan: {*}\n", .{ hp, scan });
             const heapObject = scan - 1;
-            std.debug.print("obj: {} {any}\n", .{ heapObject[0], heapObject[0].instVars() });
+            trace("obj: {} {any}\n", .{ heapObject[0], heapObject[0].instVars() });
             if (heapObject[0].makeIterator()) |iter| {
-                std.debug.print("iter: {}\n", .{iter});
+                trace("iter: {}\n", .{iter});
                 while (iter.next()) |objPtr| {
                     if (objPtr.pointer()) |pointer| {
                         if (pointer.isForwarded()) {
@@ -220,7 +220,7 @@ test "nursery allocation" {
     var pr = &process;
     pr.init();
     const emptySize = Process.nursery_size;
-    std.debug.print("\nemptySize = {}\n", .{emptySize});
+    trace("\nemptySize = {}\n", .{emptySize});
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();

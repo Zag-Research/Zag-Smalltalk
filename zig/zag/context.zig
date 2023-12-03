@@ -72,7 +72,7 @@ pub const Context = struct {
         trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
-        std.debug.print("\npop: {*}", .{self});
+        trace("\npop: {*}", .{self});
         @panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
         // const newSp = process.endOfStack() - itemsToKeep.len;
