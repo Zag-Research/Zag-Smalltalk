@@ -4,6 +4,8 @@ I generate text-based as a sequence of Continuation-Passing-Style Zig function
 Class {
 	#name : 'ASZigCPSOutput',
 	#superclass : 'ASZigMethodOutput',
+	#traits : 'ASOutputAPI',
+	#classTraits : 'ASOutputAPI classTrait',
 	#instVars : [
 		'auxStream',
 		'skipRest',
