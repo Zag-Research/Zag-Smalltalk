@@ -12,6 +12,15 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'printing' }
+ASCLiteral >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: literal.
+	aStream << $)
+]
+
 { #category : 'code generation' }
 ASCLiteral >> outputTo: output [ 
 	^ output visitPushLiteral: literal
