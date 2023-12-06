@@ -22,11 +22,7 @@ ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 
 { #category : 'accessing' }
 ASCMethodBlock >> children [
-
-	| children |
-	children := super children.
-	children addAll: self blocks.
-	^ children
+	^ operations
 ]
 
 { #category : 'initialization' }
@@ -34,6 +30,15 @@ ASCMethodBlock >> initialize [
 
 	super initialize.
 	self stack: ASEmptyStack new 
+]
+
+{ #category : 'printing' }
+ASCMethodBlock >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: selector.
+	aStream << $)
 ]
 
 { #category : 'accessing' }

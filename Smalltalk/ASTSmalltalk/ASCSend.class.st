@@ -21,6 +21,21 @@ ASCSend >> initialize [
 super initialize .	useCall := false
 ]
 
+{ #category : 'printing' }
+ASCSend >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: selector.
+	aStream space.
+	aStream << #return:.
+	aStream space.
+	bb
+		ifNotNil: [ aStream print: bb label ]
+		ifNil: [ aStream << #tailcall ].
+	aStream << $)
+]
+
 { #category : 'block handling' }
 ASCSend >> manifestParameters: aStack [
 

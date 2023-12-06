@@ -12,6 +12,15 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'printing' }
+ASCSimple >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: symbol.
+	aStream << $)
+]
+
 { #category : 'block handling' }
 ASCSimple >> manifestParameters: anASStackContextPlaceholder [ 
 
