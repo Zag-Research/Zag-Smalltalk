@@ -33,21 +33,30 @@ const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 
 pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
-pub const lookup = Dispatch.lookupAddressForClass;
+pub const lookupAddress = Dispatch.lookupAddressForClass;
+pub const dump = Dispatch.dump;
+pub const initClass = Dispatch.initClass;
 pub fn init() void {
     _ = Dispatch.new();
 }
 pub const addMethod = Dispatch.addMethod;
 const DispatchElement = if (config.indirectDispatch) PC else extern struct {
-    prim: ThreadedFn,
+    primitive: ThreadedFn,
     nextPointer: PC,
     const baseType = Self;
     const Self = @This();
-    pub inline fn init(pc: PC) Self {
-        return .{.prim = pc.prim,.nextPointer = pc.next()};
+    pub inline fn init(code: *const Code) Self {
+        return .{.primitive = code.prim,.nextPointer = PC.init(@ptrCast(@as([*]Code,@constCast(@ptrCast(code)))+1))};
+    }
+    pub inline fn initDispatchElement(f: ThreadedFn, code: *const Code) Self {
+        return .{.primitive = f,.nextPointer = PC.init(code)};
     }
     inline fn equivalentInt() type {
         return u128;
+    }
+    pub inline fn set(self: *Self, code: *const Code) void {
+        self.primitive = code.prim;
+        self.nextPointer = PC.init(@ptrCast(@as([*]Code,@constCast(@ptrCast(code)))+1));
     }
     inline fn asInt(self: Self) equivalentInt() {
         return @bitCast(self);
@@ -55,8 +64,23 @@ const DispatchElement = if (config.indirectDispatch) PC else extern struct {
     inline fn asIntPtr(self: *Self) *equivalentInt() {
         return @alignCast(@ptrCast(self));
     }
+    pub inline fn prim(self: *const Self) ThreadedFn {
+        return self.primitive;
+    }
     pub inline fn next(self: *const Self) PC {
         return self.nextPointer;
+    }
+    pub inline fn compiledMethodPtr(self: Self, comptime index: comptime_int) *const CompiledMethod {
+        return @fieldParentPtr(CompiledMethod, "code", @as(*const [2]Code, @ptrCast(@as([*]const Code,  @ptrFromInt(@as(usize,@bitCast(self.nextPointer)))) - index)));
+    }
+    pub fn format(
+        self: Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = .{fmt,options};
+        try writer.print("DispatchElement(ThreadedFn@{x},Code@{x})", .{@intFromPtr(self.primitive),@as(usize,@bitCast(self.nextPointer))});
     }
 };
 const Dispatch = extern struct {
@@ -65,7 +89,7 @@ const Dispatch = extern struct {
     free: u16,
     length: u16,
     state: DispatchState,
-    fixed: [numberOfFixed]DispatchElement,
+    fixed: [numberOfFixed]DispatchElement align(@sizeOf(DispatchElement)),
     methods: [hashedMethods]DispatchElement, // this is just the default... normally a larger array
     const Self = @This();
     const Fixed = enum {
@@ -76,11 +100,11 @@ const Dispatch = extern struct {
         maxIndex,
     };
     const numberOfFixed: usize = @intFromEnum(Fixed.maxIndex);
-    const hashedMethods = (if (config.indirectDispatch) 28 else 14) - numberOfFixed; // FIX was 12 else 6
+    const hashedMethods = (if (config.indirectDispatch) 59 else 29) - numberOfFixed; // FIX was 12 else 6
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 6);
-    var empty: Self = .{
+    var empty : Self = .{
         .header = HeapObject.staticHeaderWithClassLengthHash(classIndex, @offsetOf(Self, "methods") / 8 - 1 + 1, 0), // don't count header, but do count one element of methods
         .hash = 1,
         .free = 0,
@@ -91,13 +115,19 @@ const Dispatch = extern struct {
     };
     comptime {
         // @compileLog(@sizeOf(Self));
-        std.debug.assert(@as(usize, 1) << @ctz(@as(u62, @sizeOf(Self) + 8)) == @sizeOf(Self) + 8);
+        std.debug.assert(@as(usize, 1) << @ctz(@as(u62, @sizeOf(Self) + 16)) == @sizeOf(Self) + 16);
     }
     const dnu = if (@import("builtin").is_test) &testDnu else &execute.controlPrimitives.forceDnu;
     const dnuThread = [_]Code{Code.prim(dnu),Code.uint(0)};
-    const dnuInit = DispatchElement.init(&dnuThread[0]);//if (config.indirectDispatch) @ptrCast(&dnuThread[0]) else DispatchElement{.prim=dnu,.nextPointer=&dnuThread[1]};
-    var dispatchData: [max_classes]Self = undefined;
+    const dnuInit = DispatchElement.init(&dnuThread[0]);
+    var dispatchData : [max_classes]Self = undefined;
     var dispatches = [_]*Self{@constCast(&empty)} ** max_classes;
+    fn dump(index: ClassIndex) void {
+        trace("\ndump: {} {}",.{index,dispatches[@intFromEnum(index)]});
+    }
+    fn initClass(index: ClassIndex) void {
+        dispatches[@intFromEnum(index)].init();
+    }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
         trace("\naddMethod: {} {} 0x{x} {}", .{ index, method.selector.asSymbol(), method.selector.u(), method.codePtr() });
@@ -134,23 +164,25 @@ const Dispatch = extern struct {
     fn lessThan(_: void, lhs: ThreadedFn, rhs: ThreadedFn) bool {
         return @intFromPtr(lhs) < @intFromPtr(rhs);
     }
-    inline fn init(self: *Self) void {
-        self.initOfSize(@sizeOf(Self) / @sizeOf(DispatchElement));
+    inline fn init(self: *Self) align(@sizeOf(DispatchElement)) void {
+        self.initOfSize(@sizeOf(Self) / @sizeOf(usize));
     }
-    inline fn initOfSize(self: *Self, words: usize) void {
+    inline fn initOfSize(self: *Self, words: usize) align(@sizeOf(DispatchElement)) void {
         self.header = HeapObject.staticHeaderWithClassLengthHash(classIndex, words - 1, 0);
-        const nMethods: u16 = words - @offsetOf(Self, "methods") / @sizeOf(DispatchElement);
+        const nMethods: u16 = (words * @sizeOf(usize) - @offsetOf(Self, "methods")) / @sizeOf(DispatchElement);
         const hash = smallestPrimeAtLeast(nMethods * 6 / 10);
         self.hash = hash;
+        for (self.fixed[0..]) |*ptr|
+            ptr.* = dnuInit;
         for (self.methods[0..nMethods]) |*ptr|
             ptr.* = dnuInit;
         self.free = hash;
-        self.length = words;
+        self.length = nMethods;
         self.state = .clean;
     }
     fn isExternalCompiledMethod(self: *Self, cmp: ThreadedFn) bool {
         const ptr = @intFromPtr(cmp);
-        if (ptr >= @intFromPtr(self) and ptr <= @intFromPtr(self) + self.length * @sizeOf(Object)) return false;
+        if (ptr >= @intFromPtr(self) and ptr <= @intFromPtr(self) + self.header.length * @sizeOf(Object)) return false;
         var low: usize = 0;
         var high: usize = internal.len;
         while (low < high) {
@@ -170,9 +202,9 @@ const Dispatch = extern struct {
         if (ptr == dnuInit) return true;
         return false;
     }
-    inline fn lookupAddress(self: *const Self, selector: Object) *DispatchElement {
+    inline fn lookupAddress(self: *align(@sizeOf(DispatchElement)) const Self, selector: Object) align(@sizeOf(DispatchElement)) *DispatchElement {
         const hash = doHash(selector,self.hash);
-        //trace("\nlookupAddress: {} {}",.{selector,hash});
+        trace("\nlookupAddress: {} {} {*} {*}",.{selector,hash,&self.methods[0],&self.methods[hash]});
         return @constCast(&self.methods[hash]);
     }
     inline fn doHash(selector: Object, size: u64) u64 {
@@ -183,23 +215,13 @@ const Dispatch = extern struct {
         const code = dispatches[@intFromEnum(index)].lookupAddress(selector);
         return code;
     }
-    // inline fn lookup(self: *Self, selector: Object) PC {
-    //     const address = self.lookupAddress(selector);
-    //     trace("\nlookup: {} {} {*} {*}", .{ selector.asSymbol(), hashed, address, address.* });
-    //     return address.*;
-    // }
-    // pub fn dispatch(self: *Self, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-    //     const code = self.lookup(selector);
-    //     trace(" (dispatch)", .{});
-    //     // all the ugly casting is to make signature match
-    //     return @call(tailCall, @as(*const fn (*Self, SP, *Process, CodeContextPtr, Object, SendCache) callconv(stdCall) SP, @ptrCast(code.prim)), .{ @as(*Dispatch, @ptrCast(@constCast(code.next()))), sp, process, context, selector, cache });
-    // }
     fn disambiguate2(location: []DispatchElement, one: *const CompiledMethod, another: *const CompiledMethod) DispatchElement {
         const oneHash = one.selector.hash32();
         const anotherHash = another.selector.hash32();
         const shift = @ctz(oneHash ^ anotherHash);
         if (shift == 32) unreachable;
         const bit = @as(u64, 1) << shift;
+        trace("\ndisambiguate2: bit={}",.{bit});
         const offs = if (config.indirectDispatch) 1 else 0;
         if (oneHash & bit == 0) {
             location[offs] = DispatchElement.init(&one.code[0]);
@@ -208,12 +230,7 @@ const Dispatch = extern struct {
             location[offs] = DispatchElement.init(&another.code[0]);
             location[offs+1] = DispatchElement.init(&one.code[0]);
         }
-        if (config.indirectDispatch) {
-            location[0] = @bitCast(Code.prim(bitTests[shift]));
-            return DispatchElement.init(@ptrCast(location.ptr));
-        } else {
-            return DispatchElement.init2(bitTests[shift],location.ptr);
-        }
+        return DispatchElement.initDispatchElement(bitTests[shift],@ptrCast(location.ptr));
     }
     fn add(self: *Self, cmp: *CompiledMethod) !void {
         while (true) {
@@ -237,11 +254,10 @@ const Dispatch = extern struct {
             return;
         } else trace("\nexisting: {}", .{existing.selector});
         if (self.isExternalCompiledMethod(@constCast(existing).codePtr().prim)) { // an actual cmp - not internal
-            const end = self.length - @offsetOf(Self, "methods") / @sizeOf(Object) - 2;
-            trace("\nfree:{} end:{} hash:{} len:{}",.{self.free,end,self.hash,self.header.length});
-            if (self.free < end) {
+            trace("\nfree:{} hash:{} len:{} length:{}",.{self.free,self.hash,self.header.length,self.length});
+            if (self.free < self.length) {
                 self.free += 3;
-                const disambiguator = disambiguate2(@ptrCast(@as([*]Code, @ptrCast(&self.methods))[self.free - 3 .. self.free]), existing, cmp);
+                const disambiguator = disambiguate2(@ptrCast(@as([*]DispatchElement, @ptrCast(&self.methods))[self.free - 3 .. self.free]), existing, cmp);
                 address.* = disambiguator;
                 return;
             }
@@ -259,7 +275,9 @@ const Dispatch = extern struct {
     const deBits = @ctz(@as(u32, @sizeOf(DispatchElement)));
     inline fn offset(hash: u32, pc: PC, comptime bit: comptime_int) *const DispatchElement {
         const offs = (if (bit <= deBits) hash << (deBits - bit) else hash >> (bit - deBits)) & @sizeOf(DispatchElement);
-        return @ptrFromInt(@as(usize,@bitCast(pc.offsetBytes(offs))));
+        const result = @as(* const DispatchElement,@ptrFromInt(@as(usize,@bitCast(pc.offsetBytes(offs)))));
+        trace("\noffset: offs={} result={}",.{offs,result});
+        return result;
     }
     fn bitTest0(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 0);
@@ -510,9 +528,9 @@ test "disambiguate" {
             try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
             try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
         }
-        try ee(dispatcher.prim, &Dispatch.bitTest2);
-        dispatcher = Dispatch.disambiguate(&space2, @ptrCast(&method3), @ptrCast(&method1));
-        try ee(dispatcher.prim, &Dispatch.bitTest4);
+        try ee(dispatcher.prim(), &Dispatch.bitTest2);
+        dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method3), @ptrCast(&method1));
+        try ee(dispatcher.prim(), &Dispatch.bitTest4);
     }
 }
 test "isExternalCompiledMethod" {
