@@ -40,6 +40,11 @@ ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
 	^ false
 ]
 
+{ #category : 'accessing' }
+ASCBasicBlock >> children [
+	^ operations
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
