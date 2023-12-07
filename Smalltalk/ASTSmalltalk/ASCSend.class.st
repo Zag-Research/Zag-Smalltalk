@@ -25,15 +25,15 @@ super initialize .	useCall := false
 ASCSend >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream print: selector.
-	aStream space.
-	aStream << #return:.
-	aStream space.
+	aStream
+		space;
+		print: selector.
 	bb
-		ifNotNil: [ aStream print: bb label ]
-		ifNil: [ aStream << #tailcall ].
-	aStream << $)
+		ifNotNil: [
+			aStream
+				<< ' -> ';
+				print: bb label ]
+		ifNil: [ aStream << ' ( tailcall )' ]
 ]
 
 { #category : 'block handling' }

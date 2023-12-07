@@ -20,11 +20,6 @@ ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 	^ self new nonlocalNameLookupObject: aGenerator 
 ]
 
-{ #category : 'accessing' }
-ASCMethodBlock >> children [
-	^ operations
-]
-
 { #category : 'initialization' }
 ASCMethodBlock >> initialize [
 
