@@ -20,7 +20,7 @@ ASEmptyStack >> depth [
 { #category : 'accessing' }
 ASEmptyStack >> find: aSymbol [
 
-	self error
+	^ nonlocalNameLookupObject find: aSymbol
 ]
 
 { #category : 'instance initialization' }

@@ -14,3 +14,8 @@ ASCodeGeneratorBlock >> returnSelf [
 self error: 'need to push self'.
 	^ code returnTopNonlocal
 ]
+
+{ #category : 'as yet unclassified' }
+ASCodeGeneratorBlock >> selfName [
+	^ nil
+]

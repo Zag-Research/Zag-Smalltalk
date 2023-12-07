@@ -26,21 +26,7 @@ ASCLocal >> pop: output [
 ]
 
 { #category : 'affecting' }
-ASCLocal >> push: output [
-
-	^ output visitPushLocal: self
-]
-
-{ #category : 'affecting' }
 ASCLocal >> store: output [
 
 	^ output visitStoreLocal: self
-]
-
-{ #category : 'state tracking' }
-ASCLocal >> store: anObject at: depth [
-
-	modMin := modMin ifNil: [ depth ] ifNotNil: [depth min: modMin].
-	modMax := modMax ifNil: [ depth ] ifNotNil: [depth min: modMax].
-	^ self store: anObject
 ]
