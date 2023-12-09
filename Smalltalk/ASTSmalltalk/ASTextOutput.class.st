@@ -123,3 +123,9 @@ ASTextOutput >> testing: aBoolean [
 
 	testing := aBoolean
 ]
+
+{ #category : 'accessing' }
+ASTextOutput >> writeDefinitionOn: aStream [
+
+	self subclassResponsibility
+]

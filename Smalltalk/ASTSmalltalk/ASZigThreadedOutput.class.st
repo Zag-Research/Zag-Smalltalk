@@ -4,6 +4,8 @@ I generate text-based code compiled by the `compileMethod` compile-time Zig func
 Class {
 	#name : 'ASZigThreadedOutput',
 	#superclass : 'ASZigMethodOutput',
+	#traits : 'ASOutputAPI',
+	#classTraits : 'ASOutputAPI classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

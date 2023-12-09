@@ -20,16 +20,11 @@ ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
 	^ self new nonlocalNameLookupObject: aGenerator 
 ]
 
-{ #category : 'accessing' }
-ASCMethodBlock >> children [
-	^ operations
-]
-
 { #category : 'initialization' }
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	self stack: ASEmptyStack new 
+	"self stack: ASEmptyStack new"
 ]
 
 { #category : 'printing' }
@@ -44,9 +39,6 @@ ASCMethodBlock >> inspectZagASTOn: aStream [
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
 
-	stack isEmpty
-		ifTrue: [ self pushParameterNamed: #self ]
-		ifFalse: [ stack := stack stackNames: #( self ) ].
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
 	locals do: [ :each | self pushLocalNamed: each ].
 	stack := stack pushPlaceholderContext.
@@ -77,6 +69,12 @@ ASCMethodBlock >> primitive: anInteger [
 
 	primitive := anInteger.
 
+]
+
+{ #category : 'accessing' }
+ASCMethodBlock >> pushSelfNamed: selfName [
+
+	self pushParameterNamed: selfName
 ]
 
 { #category : 'accessing' }
