@@ -19,18 +19,6 @@ ASCReturnBlock >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'writing' }
-ASCReturnBlock >> inspectionZagCode [
-
-	<inspectorPresentationOrder: 0 title: 'ZagCode'>
-	^ SpTreeTablePresenter new
-		  roots: operations;
-		  children: [ :aNode | aNode children ];
-		  addColumn:
-			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
-		  yourself
-]
-
-{ #category : 'writing' }
 ASCReturnBlock >> outputTo: output [
 
 	output outputMethodStart: label.
