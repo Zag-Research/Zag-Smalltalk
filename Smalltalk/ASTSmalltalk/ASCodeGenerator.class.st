@@ -90,6 +90,12 @@ ASCodeGenerator >> finalAnalysis [
 
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> find: aSymbol [
+"is this a global or instance var?"
+self halt.
+]
+
 { #category : 'API' }
 ASCodeGenerator >> findTargetClass: aTarget [
 

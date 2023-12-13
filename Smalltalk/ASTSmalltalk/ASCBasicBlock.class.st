@@ -86,6 +86,11 @@ ASCBasicBlock >> endWithReturnTop [
 ]
 
 { #category : 'accessing' }
+ASCBasicBlock >> find: aSymbol [
+	^ stack find: aSymbol 
+]
+
+{ #category : 'accessing' }
 ASCBasicBlock >> index [
 	^ index
 ]
