@@ -16,14 +16,14 @@ Class {
 		'selector',
 		'code',
 		'basicBlocks',
-		'blocks',
 		'name',
 		'localVariables',
 		'targetClass',
 		'maxDepth',
 		'inline',
 		'output',
-		'tailCallOptimize'
+		'tailCallOptimize',
+		'blockClosures'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -90,6 +90,12 @@ ASCodeGenerator >> finalAnalysis [
 
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> find: aSymbol [
+"is this a global or instance var?"
+self halt.
+]
+
 { #category : 'API' }
 ASCodeGenerator >> findTargetClass: aTarget [
 
@@ -115,9 +121,9 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth.
-		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blocks ] ].
-	blocks := blocks select: #manifest.
-	blocks do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
+		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blockClosures ] ].
+	blockClosures := blockClosures select: #manifest.
+	blockClosures do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
 ]
 
 { #category : 'initialization' }
@@ -127,7 +133,7 @@ ASCodeGenerator >> initialize [
 	code := ASCMethodBlock nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
-	blocks := OrderedCollection new.
+	blockClosures := OrderedCollection new.
 	maxDepth := 0.
 	inline := false.
 	tailCallOptimize := true
@@ -150,7 +156,11 @@ ASCodeGenerator >> locals: locals arguments: arguments [
 
 	output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
-	code locals: locals arguments: arguments
+	code
+		pushSelfNamed: self selfName.
+	code
+		locals: locals
+		arguments: arguments
 ]
 
 { #category : 'compiling' }
@@ -217,7 +227,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
 	block := ASCBlock with: anASBlock.
-	blocks add: block.
+	blockClosures add: block.
 	code
 		doPush: block;
 		put: block
@@ -278,6 +288,11 @@ ASCodeGenerator >> selector: aSymbol [
 	selector := aSymbol.
 	name := output name.
 	code selector: aSymbol 
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> selfName [
+	^ #self
 ]
 
 { #category : 'API' }

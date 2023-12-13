@@ -16,6 +16,12 @@ ASStack >> at: aSymbol [
 ]
 
 { #category : 'accessing' }
+ASStack >> atZZZ: aSymbol [
+
+	^ (self find: aSymbol) top
+]
+
+{ #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]

@@ -34,3 +34,9 @@ ASCParameter >> offset [
 
 	^ stack offsetTo: self name
 ]
+
+{ #category : 'affecting' }
+ASCParameter >> push: output [
+
+	^ output visitPushLocal: self
+]
