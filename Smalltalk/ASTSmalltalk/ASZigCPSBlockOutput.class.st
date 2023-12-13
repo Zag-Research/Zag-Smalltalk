@@ -6,7 +6,8 @@ Class {
 	#superclass : 'ASZigCPSOutput',
 	#instVars : [
 		'methodGenerator',
-		'block'
+		'block',
+		'parentCodeGenerator'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -35,6 +36,11 @@ ASZigCPSBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
+]
+
+{ #category : 'accessing' }
+ASZigCPSBlockOutput >> parentCodeGenerator: aCodeGenerator [
+	parentCodeGenerator := aCodeGenerator 
 ]
 
 { #category : 'accessing' }
