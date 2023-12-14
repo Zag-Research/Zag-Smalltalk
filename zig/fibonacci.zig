@@ -604,7 +604,7 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("TEST FAIL");
     }
     const args = try std.process.argsAlloc(allocator);
-    const default = args.len > 1;
-    try timing(if (default) args[1..] else @constCast(do_all[0..]),default);
+    const default = args.len <= 1;
+    try timing(if (default) @constCast(do_all[0..]) else args[1..],default);
 }
 const runs: u6 = 40;

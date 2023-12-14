@@ -25,6 +25,9 @@ pub inline fn indexSymbol0(uniqueNumber: u16) Object {
 pub inline fn indexSymbol1(uniqueNumber: u16) Object {
     return @bitCast(oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8));
 }
+pub usingnamespace if (!builtin.is_test) struct {} else struct {
+    pub const SelfObject: Object = @bitCast(oImm(.Symbol, 0xf0000ff));
+};
 test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
@@ -37,10 +40,6 @@ test "indexSymbol" {
     try ee(indexSymbol1(0x2a).indexNumber(), 0x1002a);
 }
 pub const ZERO = of(0);
-const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
-const Start_of_Blocks: u64 = g(.numericThunk);
-const Start_of_Pointer_Objects: u64 = g(.heapThunk); // things that have low 48 bits is an object pointer
-const Start_of_Heap_Objects: u64 = g(.heap);
 pub const False = of(oImm(.False, 0x0));
 pub const True = of(oImm(.True, 0x1));
 pub const Nil = of(oImm(.UndefinedObject, 0xffffffff));
@@ -50,7 +49,7 @@ const Character_Base = oImm(.Character, 0);
 pub const u64_MINVAL = g(.smallInt);
 const u64_ZERO = g(.smallInt0);
 pub const u64_ZERO2 = u64_ZERO *% 2;
-const u64_MAXVAL = g(.unused1) - 1;
+const u64_MAXVAL = g(.numericThunk) - 1;
 pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
 pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
 pub const invalidHeapPointer = of(Start_of_Heap_Objects);
@@ -102,7 +101,7 @@ pub const ClassIndex = enum(u16) {
         return @as(u64, @intFromEnum(ci)) << 32;
     }
     inline fn immediate(cg: Self) u64 {
-        return ((@as(u64, @intFromEnum(Group.immediates)) << 16) | @as(u64, @intFromEnum(cg))) << 32;
+        return (@as(u64, @intFromEnum(Group.immediates)) << 48) | cg.base();
     }
 };
 comptime {
@@ -110,14 +109,19 @@ comptime {
 }
 pub const Group = enum(u16) {
     immediates = 0xfff0,
-    smallInt,
-    smallInt0 = 0xfff5,
-    smallIntMax = 0xfff8,
-    unused1,
+    smallIntMin,
+    smallIntNeg_2,
+    smallIntNeg_3,
+    smallIntNeg_4,
+    smallInt0,
+    smallIntPos_6,
+    smallIntPos_7,
+    smallIntMax,
     numericThunk,
     immediateThunk,
     heapThunk,
     nonLocalThunk,
+    nonLocalClosure,
     heapClosure,
     heap,
     _,
@@ -129,6 +133,10 @@ pub const Group = enum(u16) {
         return @intFromEnum(cg);
     }
 };
+const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
+const Start_of_Blocks: u64 = g(.numericThunk);
+const Start_of_Pointer_Objects: u64 = g(.heapThunk); // things that have low 48 bits is an object pointer
+const Start_of_Heap_Objects: u64 = g(.heap);
 pub const Object = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
@@ -211,28 +219,24 @@ pub const Object = packed struct(u64) {
         //@truncate(u24,self.u()^other.u())==0;
         return self.hash32() == other.hash32();
     }
-    pub inline fn selectorEquals(self: Object, other: Object) bool { // may be false positive
-        //        return (self.u()^other.u())&0xffffffffffff == 0;
+    pub inline fn selectorEquals(self: Object, other: Object) bool {
+        //        return (self.u()^other.u())&0xffffffffffff == 0; // may be false positive
         return self.u() == other.u();
     }
-    pub inline fn indexEquals(self: Object, other: Object) bool { // may be false positive
-        return self.equals(other.withImmClass(.Symbol));
+    pub inline fn indexEquals(self: Object, other: Object) bool {
+        return self.equals(other.withImmClass(.Symbol)); // may be false positive
     }
     pub inline fn isInt(self: Object) bool {
-        return self.atLeastInt() and self.atMostInt();
-    }
-    pub inline fn atLeastInt(self: Object) bool {
-        const testing = Group.smallInt.u();
-        return self.tag.u() >= testing;
-    }
-    pub inline fn atMostInt(self: Object) bool {
-        return self.tag.u() <= Group.smallIntMax.u();
+        return switch (self.tag) {
+            .smallIntMin, .smallIntNeg_2, .smallIntNeg_3, .smallIntNeg_4, .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => true,
+            else => false
+        };
     }
     pub inline fn isNat(self: Object) bool {
-        return self.atLeastZero() and self.atMostInt();
-    }
-    pub inline fn atLeastZero(self: Object) bool {
-        return self.tag.u() >= Group.smallInt0.u();
+        return switch (self.tag) {
+            .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => true,
+            else => false
+        };
     }
     pub inline fn isDouble(self: Object) bool {
         return self.u() <= Negative_Infinity;
@@ -395,20 +399,17 @@ pub const Object = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .heapClosure => .BlockClosure,
+            .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .nonLocalClosure, .heapClosure => .BlockClosure,
             .immediates => self.classIndex,
             .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
-            .unused1 => unreachable,
-            else => |tag| if (tag.u() <= Group.immediates.u()) .Float else .SmallInteger,
+            .smallIntMin, .smallIntNeg_2, .smallIntNeg_3, .smallIntNeg_4, .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => .SmallInteger,
+            else => .Float
         };
     }
     pub inline fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
     pub inline fn get_class(self: Object) ClassIndex {
-        return self.which_class(true);
-    }
-    pub fn full_get_class(self: Object) ClassIndex {
         return self.which_class(true);
     }
     pub inline fn promoteTo(self: Object) !Object {
