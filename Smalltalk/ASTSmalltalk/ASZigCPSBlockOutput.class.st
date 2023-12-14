@@ -6,8 +6,7 @@ Class {
 	#superclass : 'ASZigCPSOutput',
 	#instVars : [
 		'methodGenerator',
-		'block',
-		'parentCodeGenerator'
+		'block'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',

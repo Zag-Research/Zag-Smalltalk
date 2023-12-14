@@ -8,7 +8,8 @@ Class {
 		'codeGenerator',
 		'maxDepth',
 		'numLocals',
-		'currentBasicBlock'
+		'currentBasicBlock',
+		'parentCodeGenerator'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -29,8 +30,10 @@ ASZigMethodOutput >> blockNumber [
 { #category : 'code generation' }
 ASZigMethodOutput >> codeGenerator [
 
+	| parentCodeGenerator |
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
+									parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
 			                   targetClass: forClass ]
 ]
@@ -45,6 +48,7 @@ ASZigMethodOutput >> compileBlock: anASCBlock [
 	self assert: anASCBlock block ~= ourObject.
 	(self blockClass new testing: testing)
 		context: context;
+		parentCodeGenerator: codeGenerator;
 		methodGenerator: self methodGenerator block: self blockNumber;
 		generateCode: anASCBlock block for: forClass 
 ]

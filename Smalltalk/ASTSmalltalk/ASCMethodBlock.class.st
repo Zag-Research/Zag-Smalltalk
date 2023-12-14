@@ -15,11 +15,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASCMethodBlock class >> nonlocalNameLookupObject: aGenerator [
-	^ self new nonlocalNameLookupObject: aGenerator 
-]
-
 { #category : 'initialization' }
 ASCMethodBlock >> initialize [
 

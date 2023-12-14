@@ -23,7 +23,8 @@ Class {
 		'inline',
 		'output',
 		'tailCallOptimize',
-		'blockClosures'
+		'blockClosures',
+		'parentCodeGenerator'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -130,7 +131,7 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 ASCodeGenerator >> initialize [
 self halt.
 	super initialize.
-	code := ASCMethodBlock nonlocalNameLookupObject: self.
+	code := ASCMethodBlock new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -208,6 +209,12 @@ ASCodeGenerator >> nameBasicBlocks [
 ASCodeGenerator >> output: anASFileContext [
 
 	output := anASFileContext
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
+aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
+	code nonlocalNameLookupObject: aCodeGenerator]
 ]
 
 { #category : 'API' }
@@ -327,7 +334,7 @@ targetClass:= anObject
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
 
-inline ifFalse: [ ^ self].
+	inline ifFalse: [ ^ self ].
 	[
 	basicBlocks anySatisfy: [ :aBasicBlock |
 		aBasicBlock canBeInlinedBy: self ] ] whileTrue
