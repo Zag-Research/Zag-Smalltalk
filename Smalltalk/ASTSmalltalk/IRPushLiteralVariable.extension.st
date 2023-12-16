@@ -1,6 +1,6 @@
-Extension { #name : #IRPushLiteralVariable }
+Extension { #name : 'IRPushLiteralVariable' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRPushLiteralVariable >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

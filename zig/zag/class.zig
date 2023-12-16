@@ -99,8 +99,8 @@ const ClassTable = struct {
             const size = self.theObject.growSize(objectTreap.elementSize) catch ReservedNumberOfClasses * objectTreap.elementSize;
             var context = @import("context.zig").Context.init();
             var newHeapObject = self.symbolTable.arena.allocArray(ClassTable_I, size, u8, &context);
-            var memory = newHeapObject.arrayAsSlice(u8);
-            var newTreap = self.treap.resize(memory);
+            const memory = newHeapObject.arrayAsSlice(u8);
+            const newTreap = self.treap.resize(memory);
             self.treap = newTreap;
             if (Nil.equals(self.theObject)) {
                 self.theObject = newHeapObject;

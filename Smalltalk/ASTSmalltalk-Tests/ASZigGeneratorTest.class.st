@@ -31,16 +31,17 @@ ASZigGeneratorTest >> testASBlock [
 			 args: Array new).
 	body := OrderedCollection new.
 	body add: (ASSend
-			 target: (ASRef variable: (ASParameter name: #index))
+			 target: (ASRef variable: #index)
 			 selector: #'<='
 			 args: args).
 	stackVars := OrderedCollection new.
 	stackVars add: 'x'.
 
-	result := ((ASBlock arguments: Array new locals: Array new body: body) selector: '@foo:bar:1' )
+	result := ((ASBlock arguments: Array new locals: Array new body: body)
+		           selector: '@foo:bar:1')
 		          zigString: Dictionary new
 		          and: stackVars.
-	self assert: result equals: '&e.blockClosure,"@foo:bar:1",1+(3<<16),'.
+	self assert: result equals: '&e.blockClosure,"@foo:bar:1",1+(3<<16),'
 ]
 
 { #category : #tests }
@@ -180,11 +181,10 @@ var @"Integer>>size" =
 	locals := OrderedCollection new.
 	body := OrderedCollection new.
 	method := ASMethodNode
-		           class: self
-		           selector: selector
-		           arguments: arguments
-		           locals: locals
-		           body: body.
+		          selector: selector
+		          arguments: arguments
+		          locals: locals
+		          body: body.
 	method nestedScopeOf: (ASClassNode new from: Integer).
 	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
@@ -212,7 +212,6 @@ var @"Integer>>size" =
 	arguments := OrderedCollection new.
 	locals := OrderedCollection new.
 	method := ASMethodNode
-		          class: self
 		          selector: selector
 		          arguments: arguments
 		          locals: locals
@@ -248,13 +247,12 @@ var @"Integer>>size" =
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 5)).
 	method := ASMethodNode
-		          class: self
 		          selector: selector
 		          arguments: arguments
 		          locals: locals
 		          body: body.
 	method nestedScopeOf: (ASClassNode new from: Integer).
-	
+
 	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
@@ -286,13 +284,12 @@ var @"Integer>>size:" =
 	body add: (ASReturn expression:
 			 (ASSend target: (ASLiteral literal: #aCollection) selector: #size)).
 	method := ASMethodNode
-		           class: self
-		           selector: #size:
-		           arguments: arguments
-		           locals: locals
-		           body: body.
+		          selector: #size:
+		          arguments: arguments
+		          locals: locals
+		          body: body.
 	method nestedScopeOf: (ASClassNode new from: Integer).
-	
+
 	result := method writeMethod: stream with: Dictionary new.
 	value := stream wrappedStream contents asString.
 	self assert: stream wrappedStream contents equals: bytes
@@ -325,15 +322,14 @@ var @"Integer>>size:" =
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASSend
 				  target:
-				  (ASSend target: (ASParameter name: #aCollection) selector: #size)
+				  (ASSend target:  #aCollection selector: #size)
 				  selector: #+
 				  args: sendArguments)).
 	method := ASMethodNode
-		           class: self
-		           selector: #size:
-		           arguments: arguments
-		           locals: locals
-		           body: body.
+		          selector: #size:
+		          arguments: arguments
+		          locals: locals
+		          body: body.
 	method nestedScopeOf: (ASClassNode new from: Integer).
 
 	result := method writeMethod: stream with: Dictionary new.
@@ -348,13 +344,13 @@ ASZigGeneratorTest >> testASRef [
 	stackVars := OrderedCollection new.
 	stackVars add: 'p'.
 
-	result := (ASRef variable: (ASParameter name: 'p'))
+	result := (ASRef variable: #p)
 		          zigString: Dictionary new
 		          and: stackVars.
 	self assert: result equals: '&e.pushLocal, 1,'.
 
-"what happens when the stackVars doesn't have the name? exception?"
-	result := (ASRef variable: (ASParameter name: 'x'))
+	"what happens when the stackVars doesn't have the name? exception?"
+	result := (ASRef variable: #x)
 		          zigString: Dictionary new
 		          and: stackVars.
 	self assert: result equals: '&e.pushLocal, 0,'

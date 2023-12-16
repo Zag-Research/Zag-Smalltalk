@@ -4,41 +4,50 @@ I rempresent a stack context.
 I may,  or may not be reified in a particular method
 "
 Class {
-	#name : #ASStackContextPlaceholder,
-	#superclass : #ASStack,
+	#name : 'ASStackContextPlaceholder',
+	#superclass : 'ASStack',
 	#instVars : [
 		'rest'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASStackContextPlaceholder class >> from: anASStack [
 	^ self basicNew from: anASStack 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackContextPlaceholder >> depth [
 	^ rest depth
 ]
 
-{ #category : #accessing }
+{ #category : 'removing' }
+ASStackContextPlaceholder >> drop: count [
+
+	count = 0 ifTrue: [ ^ self ].
+	^ self error: 'stack underflow'
+]
+
+{ #category : 'accessing' }
 ASStackContextPlaceholder >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASStackContextPlaceholder >> from: anASStack [
 
 	rest := anASStack
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackContextPlaceholder >> makeContextRequired [
 	^ ASStackContext from: rest
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
@@ -49,12 +58,12 @@ ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal st
 		  other: blockOther
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackContextPlaceholder >> pushPlaceholderContext [ 
 self shouldNotImplement 
 ]
 
-{ #category : #enumerating }
+{ #category : 'enumerating' }
 ASStackContextPlaceholder >> requiredContextDo: aBlock [
 
 	^ self

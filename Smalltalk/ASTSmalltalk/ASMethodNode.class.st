@@ -2,57 +2,49 @@
 I represent a method, which is the same as a Block except that the return must be explicit
 "
 Class {
-	#name : #ASMethodNode,
-	#superclass : #ASMethodOrBlock,
+	#name : 'ASMethodNode',
+	#superclass : 'ASMethodOrBlock',
 	#instVars : [
 		'selector',
-		'className',
 		'pragmas'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol arguments: args body: body [
-self halt.
-	^ self new
-		  class: aClass;
-		  selector: aSymbol;
-		  arguments: args;
-		  body: body
+{ #category : 'tests - instance creation' }
+ASMethodNode class >> selector: aSymbol arguments: args locals: locals body: body [
+
+	^ (self selector: aSymbol locals: locals body: body) arguments: args
 ]
 
-{ #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol arguments: args locals: locals body: body [
+{ #category : 'tests - instance creation' }
+ASMethodNode class >> selector: aSymbol body: body [
+
 	^ self new
-		  class: aClass;
 		  selector: aSymbol;
-		  arguments: args;
-		  locals: locals;
 		  body: body;
-		  pragmas: OrderedCollection new
+		  pragmas: #(  )
 ]
 
-{ #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol body: body [
+{ #category : 'tests - instance creation' }
+ASMethodNode class >> selector: aSymbol locals: locals body: body [
 
-	^ self new
-		  class: aClass;
+	^ (self locals: locals body: body)
 		  selector: aSymbol;
-		  body: body
+		  pragmas: #(  )
 ]
 
-{ #category : #'tests - instance creation' }
-ASMethodNode class >> class: aClass selector: aSymbol locals: locals body: body [
+{ #category : 'tests - instance creation' }
+ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals: locals body: body [
 
-	^ self new
-		  class: aClass;
+	^ (self arguments: args locals: locals body: body)
 		  selector: aSymbol;
-		  locals: locals;
-		  body: body
+		  pragmas: pragmas
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> = other [
 
 	^ super = other and: [ 
@@ -60,37 +52,37 @@ ASMethodNode >> = other [
 				  self className = other className ] ]
 ]
 
-{ #category : #visiting }
-ASMethodNode >> acceptVisitor: aVisitor [
+{ #category : 'accessing' }
+ASMethodNode >> children [
 
-	^ aVisitor visitMethodNode: self
+	| c |
+	c := OrderedCollection new.
+	c addAll: pragmas.
+	c addAll: super  children.
+	^ c
 ]
 
-{ #category : #accessing }
-ASMethodNode >> class: anASClassNode [
-
-	"class := anASClassNode"
-]
-
-{ #category : #introspection }
-ASMethodNode >> className [
-
-	^ className
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodNode >> hash [
-	^ className hash bitXor: selector hash
+
+	^ selector hash
 ]
 
-{ #category : #accessing }
+{ #category : 'initialization' }
+ASMethodNode >> initialize [ 
+	super initialize .
+	pragmas :=  OrderedCollection new
+]
+
+{ #category : 'accessing' }
 ASMethodNode >> inspectAST [
-	<inspectorPresentationOrder: 33 title: 'ZigAST'>
+
+	<inspectorPresentationOrder: 33 title: 'ZagAST'>
 	^ SpTreeTablePresenter new
 		  roots: self roots;
 		  children: [ :aNode | aNode children ];
@@ -99,67 +91,75 @@ ASMethodNode >> inspectAST [
 		  yourself
 ]
 
-{ #category : #accessing }
-ASMethodNode >> inspectZagASTOn: aStream [
-	super inspectZagASTOn: aStream.
-	aStream nextPut: $(.
-	aStream print: selector.
-	aStream nextPut: $)
-	
-]
-
-{ #category : #testing }
+{ #category : 'testing' }
 ASMethodNode >> isASBlock [
 	^false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> maxBlockLocals [
 	^0
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> pragmas [
 	^ pragmas 
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASMethodNode >> pragmas: somePragmas [ 
 	pragmas := somePragmas 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodNode >> printOn: s [
 
 	s
 		nextPutAll: self class name;
-		nextPutAll: ' class: ';
-		nextPutAll: (className ifNil: [ '?' ]);
 		nextPutAll: ' selector: ';
 		print: selector.
-	super printOn: s 
+	super printOn: s
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector [
 	^ selector
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodNode >> selector: aString [ 
 	selector := aString
 ]
 
-{ #category : #utilities }
+{ #category : 'accessing' }
+ASMethodNode >> selectorWithArgs [
+
+	selector numArgs = 0 ifTrue: [ ^ selector ].
+	^ (String streamContents: [ :s |
+		   (selector findTokens: $:) with: arguments do: [ :keyword :arg |
+			   s nextPutAll: keyword.
+			   s nextPut: $:.
+			   s nextPutAll: arg.
+			   s space ] ]) asSymbol 
+]
+
+{ #category : 'utilities' }
 ASMethodNode >> stackSize [
 	^0
 ]
 
-{ #category : #codegen }
-ASMethodNode >> startMethod: aGenerator [
-	| primitive |
+{ #category : 'codegen' }
+ASMethodNode >> zigWalkMethod: aGenerator [
+
+	aGenerator selector: selector.
+	aGenerator
+		locals: (locals)
+		arguments: (arguments).
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
-			primitive := (pragma arguments at: 1) value ] ].
-	aGenerator startMethod: primitive selector: selector.
+			aGenerator primitive: (pragma arguments at: 1) value ] ].
+	^ body
+		  zigWalkEmpty: [ aGenerator returnSelf ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkMethodReturn: aGenerator ]
 ]

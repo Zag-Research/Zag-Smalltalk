@@ -38,7 +38,7 @@ pub fn init() void {
 }
 
 test "primitives" {
-    @import("std").debug.print(" - testing primitives ",.{});
+    @import("std").debug.print(" - testing primitives ", .{});
     _ = @import("primitives/Smallinteger.zig").inlines;
     _ = @import("primitives/Object.zig").inlines;
     _ = @import("primitives/Behavior.zig").inlines;

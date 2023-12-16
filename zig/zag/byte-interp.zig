@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
 const object = @import("zobject.zig");
@@ -71,20 +72,20 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) SP {
-        trace("\ninterpretReturn: 0x{x}", .{ @intFromPtr(context.method) });
-        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(context.method))), cache });
+    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) callconv(stdCall) SP {
+        trace("\ninterpretReturn: 0x{x}", .{@intFromPtr(context.method)});
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(context.method))), cache });
     }
-    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) SP {
+    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\ninterpretFn: {} {} {*} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
+        trace("\ninterpretFn: {} {} {} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
-        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object,@bitCast(@intFromPtr(method))), cache });
+        return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), cache });
     }
-    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) SP {
+    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) callconv(stdCall) SP {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
@@ -93,7 +94,7 @@ pub const ByteCode = enum(i8) {
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
-//            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
+            //            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
             pc += 1;
             branch: while (true) {
                 switch (code) {
@@ -160,7 +161,7 @@ pub const ByteCode = enum(i8) {
                         method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc - pc[0].u()) - @sizeOf(Code) - CompiledMethod.codeOffset));
                         references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
                         const stackStructure = method.stackStructure;
-                        trace(" {}",.{stackStructure});
+                        trace(" {}", .{stackStructure});
                         const locals = stackStructure.low16() & 255;
                         const maxStackNeeded = stackStructure.mid16();
                         const selfOffset = stackStructure.high16();
@@ -204,7 +205,7 @@ pub const ByteCode = enum(i8) {
                         const newSp = result.sp;
                         newSp.top = top;
                         const callerContext = result.ctxt;
-                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}",.{@intFromPtr(sp),@intFromPtr(newSp),@intFromPtr(process.endOfStack())});
+                        trace(" sp=0x{x} newSp=0x{x} end=0x{x}", .{ @intFromPtr(sp), @intFromPtr(newSp), @intFromPtr(process.endOfStack()) });
                         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Nil, cache });
                     },
                     .p1 => { // SmallInteger>>#+
@@ -223,7 +224,7 @@ pub const ByteCode = enum(i8) {
                         context.setTPc(asCodePtr(pc + 1));
                         const offset = pc[0].i();
                         if (offset >= 0) pc += 1 + @as(u64, @intCast(offset)) else pc -= @as(u64, @intCast(@as(i32, -offset) - 1));
-                        return @call(tailCall, interpret, .{ @as(PC, @alignCast(@ptrCast(pc))), sp, process, context,  @as(Object,@bitCast(@intFromPtr(method))), cache });
+                        return @call(tailCall, interpret, .{ @as(PC, @alignCast(@ptrCast(pc))), sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), cache });
                     },
                     .exit => @panic("fell off the end"),
                     else => {
@@ -269,7 +270,7 @@ pub const ByteCode = enum(i8) {
     }
 };
 pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
-    const codeSize = counts.codes+1;
+    const codeSize = counts.codes + 1;
     const refsSize = counts.refs;
     return extern struct { // structure must exactly match CompiledMethod
         header: heap.HeapObject,
@@ -281,8 +282,8 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
         footer: heap.HeapObject,
         const Self = @This();
         pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self,"references")/8 + refsSize, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
-            const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self)/8-2);
+            const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self, "references") / 8 + refsSize, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
+            const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self) / 8 - 2);
             //            @compileLog(codeSize,refsSize);
             //            trace("\nfooter={}",.{footer});
             return .{
@@ -312,7 +313,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             for (replacements, 0..) |replacement, index| {
                 const match = indexSymbol0(@truncate(index));
                 if (self.selector.equals(match)) {
-                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex)-(match.numArgs()-replacement.numArgs()));
+                    self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex) - (match.numArgs() - replacement.numArgs()));
                     self.selector = replacement;
                 }
                 for (&self.references) |*r| {
@@ -320,10 +321,10 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
                         r.* = replacement;
                 }
             }
-            for (refs, 0..) |obj, index|{
-                _ = .{obj,index, @panic("handle refs")};
+            for (refs, 0..) |obj, index| {
+                _ = .{ obj, index, @panic("handle refs") };
             }
-            return @as(*CompiledMethod,@ptrCast(self));
+            return @as(*CompiledMethod, @ptrCast(self));
         }
     };
 }
@@ -439,7 +440,7 @@ test "simple return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
     try expectEqual(result[1], Nil);
@@ -458,7 +459,7 @@ test "context return via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
@@ -475,7 +476,7 @@ test "context returnTop via TestExecution" {
     var te = TestExecution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
-    var result = te.run(objs[0..], method.setLiterals(empty, empty, null));
+    const result = te.run(objs[0..], method.setLiterals(empty, empty, null));
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(42));
 }

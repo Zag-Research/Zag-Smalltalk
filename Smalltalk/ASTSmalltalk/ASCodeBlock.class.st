@@ -3,103 +3,88 @@ I represent a block of code.
 
 "
 Class {
-	#name : #ASCodeBlock,
-	#superclass : #Object,
+	#name : 'ASCodeBlock',
+	#superclass : 'Object',
 	#instVars : [
 		'body',
-		'locals',
-		'scope',
-		'nestedScopeOf'
+		'locals'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'tests - instance creation' }
+ASCodeBlock class >> locals: locals body: body [
+
+	^ self new
+		  locals: locals;
+		  body: body
+]
+
+{ #category : 'comparing' }
 ASCodeBlock >> = other [
 
 	^ self class = other class and: [ 
 		locals = other locals and: [ body = other body ] ]
 ]
 
-{ #category : #visiting }
-ASCodeBlock >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> addStatement: anASStatement [
 
 	body add: anASStatement
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body [
 	^ body
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> body: anASSequence [
 	body := anASSequence
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> children [
+
 	| c |
 	c := OrderedCollection new.
-	c addAll: locals.
-	c add: body.
+	c addAll: body.
 	^ c
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	scope := Dictionary new.
 	body := ASSequence new
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASRef [
 	^false
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCodeBlock >> isASVariable [
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals [
 
 	^ locals
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> locals: aCollection [
 
-	locals := aCollection
-		          collect: [ :symbol | 
-			          | local |
-			          local := ASLocal name: symbol.
-			scope at: symbol put: local.
-			local ]
-		          as: Array
+	locals := aCollection asArray
 ]
 
-{ #category : #initialization }
-ASCodeBlock >> lookup: symbol [
-	^ scope at: symbol ifAbsent: [ nestedScopeOf lookup: symbol ]
-]
-
-{ #category : #initialization }
-ASCodeBlock >> nestedScopeOf: anASClassNode [
-	nestedScopeOf := anASClassNode
-	
-]
-
-{ #category : #printing }
+{ #category : 'printing' }
 ASCodeBlock >> printOn: s [
 
 	locals isEmpty ifFalse: [ 
@@ -111,15 +96,10 @@ ASCodeBlock >> printOn: s [
 	s << '}'
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCodeBlock >> roots [
 	| roots |
 	roots := OrderedCollection new.
 	roots add: self.
 	^ roots
-]
-
-{ #category : #initialization }
-ASCodeBlock >> scope [
- ^ scope
 ]

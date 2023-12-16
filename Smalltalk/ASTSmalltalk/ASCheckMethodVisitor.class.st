@@ -2,7 +2,9 @@
 I am a visitor that walks a method looking for inlining opportunities.
 "
 Class {
-	#name : #ASCheckMethodVisitor,
-	#superclass : #Object,
-	#category : #'ASTSmalltalk-Compiler'
+	#name : 'ASCheckMethodVisitor',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-Compiler',
+	#package : 'ASTSmalltalk',
+	#tag : 'Compiler'
 }

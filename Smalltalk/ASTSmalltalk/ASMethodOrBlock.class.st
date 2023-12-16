@@ -2,52 +2,44 @@
 I contain all the common respersentation for Methods and Blocks
 "
 Class {
-	#name : #ASMethodOrBlock,
-	#superclass : #ASCodeBlock,
+	#name : 'ASMethodOrBlock',
+	#superclass : 'ASCodeBlock',
 	#instVars : [
 		'arguments'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'tests - instance creation' }
+ASMethodOrBlock class >> arguments: args locals: locals body: body [
+
+	^ (self locals: locals
+		  body: body)
+		  arguments: args
+		  
+]
+
+{ #category : 'comparing' }
 ASMethodOrBlock >> = other [
 
 	^ super = other and: [ 
 		  self arguments = other arguments  ]
 ]
 
-{ #category : #visiting }
-ASMethodOrBlock >> acceptVisitor: aVisitor [
-	self subclassResponsibility 
-]
-
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments [
 	^ arguments
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments: aCollection [
 
-	arguments := aCollection
-		             collect: [ :symbol |
-			             | arg |
-			             arg := ASParameter name: symbol.
-
-			             arg ]
-		             as: Array 
+	arguments := aCollection asArray
 ]
 
-{ #category : #accessing }
-ASMethodOrBlock >> children [
-	| c |
-	c := super children.
-	c addAll: arguments.
-	^ c
-]
-
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
 | method |
 	method := (ASPharoVisitor compiler: self) visit: aCompiledMethod ast.
@@ -55,14 +47,33 @@ ASMethodOrBlock >> compileMethod: aCompiledMethod [
 	^ method
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMethodOrBlock >> initialize [
 
 	super initialize.
 	arguments := #(  )
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
+ASMethodOrBlock >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	
+	aStream nextPut: $(.
+	self selectorWithArgs ifNotEmpty: [ :s | aStream print: s ].
+	locals ifNotEmpty: [
+		aStream space.
+		aStream << #|.
+		aStream space.
+		locals do: [ :local |
+			aStream << local.
+			aStream space ].
+		aStream << #| ].
+
+	aStream nextPut: $)
+]
+
+{ #category : 'printing' }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [ 
@@ -72,18 +83,7 @@ ASMethodOrBlock >> printOn: s [
 	super printOn: s
 ]
 
-{ #category : #codegen }
-ASMethodOrBlock >> startMethod: aGenerator [
-
-	^ self subclassResponsibility 
-]
-
-{ #category : #codegen }
-ASMethodOrBlock >> zigWalkMethod: aGenerator [
-
-	aGenerator
-		locals: (locals collect: #name)
-		arguments: (arguments collect: #name).
-	self startMethod: aGenerator .
-	^ body zigWalk: aGenerator
+{ #category : 'accessing' }
+ASMethodOrBlock >> selectorWithArgs [
+self subclassResponsibility 
 ]

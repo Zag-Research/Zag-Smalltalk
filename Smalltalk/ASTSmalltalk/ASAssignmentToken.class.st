@@ -1,10 +1,12 @@
 Class {
-	#name : #ASAssignmentToken,
-	#superclass : #ASSyntax,
-	#category : #'ASTSmalltalk-Tokens'
+	#name : 'ASAssignmentToken',
+	#superclass : 'ASSyntax',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASAssignmentToken >> possibleAssign: anASCompiler target: target [
 
 	anASCompiler nextToken.

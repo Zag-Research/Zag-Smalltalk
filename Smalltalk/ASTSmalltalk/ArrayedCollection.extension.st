@@ -1,11 +1,11 @@
-Extension { #name : #ArrayedCollection }
+Extension { #name : 'ArrayedCollection' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 ArrayedCollection >> astFields [
 	^ self
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 ArrayedCollection >> astFormat [
 	^ self subclassResponsibility
 ]

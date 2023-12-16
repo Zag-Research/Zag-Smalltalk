@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const SeqCst = std.builtin.AtomicOrder.SeqCst;
 const object = @import("zobject.zig");
 const Object = object.Object;
@@ -49,11 +50,13 @@ pub const Process = extern struct {
     trapContextNumber: u64,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf(SP) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(u64);
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) SP;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP;
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const stack_size = processAvail / 9;
     const nursery_size = (processAvail - stack_size) / 2;
-    comptime { assert(stack_size <= nursery_size);}
+    comptime {
+        assert(stack_size <= nursery_size);
+    }
     const lastNurseryAge = Age.lastNurseryAge;
     var allProcesses: ?*Self = null;
     pub fn new() Self {
@@ -105,10 +108,10 @@ pub const Process = extern struct {
         return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + stack_size);
     }
     pub inline fn freeStack(self: *const Self, sp: SP) usize {
-        return (@intFromPtr(sp)-@intFromPtr(self.ptr()))/8;
+        return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
     }
     pub inline fn getStack(self: *const Self, sp: SP) []Object {
-        trace("\ngetStack: sp={x} eos={x}",.{ @intFromPtr(sp), @intFromPtr(self.endOfStack()) });
+        trace("\ngetStack: sp={x} eos={x}", .{ @intFromPtr(sp), @intFromPtr(self.endOfStack()) });
         return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     }
     pub inline fn allocStack(self: *Self, sp: SP, words: u64) !SP {
@@ -117,18 +120,18 @@ pub const Process = extern struct {
         return error.NoSpace;
     }
     pub inline fn freeNursery(self: *const Self) usize {
-        return (@intFromPtr(self.currHp)-@intFromPtr(self.currEnd))/8;
+        return (@intFromPtr(self.currHp) - @intFromPtr(self.currEnd)) / 8;
     }
     //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
     //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
     pub fn spillStack(self: *Self, sp: SP, contextMutable: *ContextPtr) SP {
         if (!contextMutable.*.isOnStack()) return sp;
         // if the Context is on the stack, both the Context and the SP will move
-        _ = .{self,@panic("unimplemented")};
+        _ = .{ self, @panic("unimplemented") };
     }
     pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
-        if (aI.wholeSize(@min(HeapObject.maxLength,nursery_size / 4))) |size| {
+        if (aI.wholeSize(@min(HeapObject.maxLength, nursery_size / 4))) |size| {
             const result = self.currHp - 1;
             const newHp = result - size;
             if (@intFromPtr(newHp) >= @intFromPtr(self.currEnd)) {
@@ -147,9 +150,9 @@ pub const Process = extern struct {
         return error.NeedNurseryCollection;
     }
     pub fn collectNursery(self: *Self, sp: SP, contextMutable: *ContextPtr, need: usize) void {
-        assert(need<=nursery_size);
-        var ageSizes = [_]usize{0}**lastNurseryAge;
-        self.collectNurseryPass(sp, contextMutable, ageSizes, lastNurseryAge+1);
+        assert(need <= nursery_size);
+        const ageSizes = [_]usize{0} ** lastNurseryAge;
+        self.collectNurseryPass(sp, contextMutable, ageSizes, lastNurseryAge + 1);
         if (self.freeNursery() >= need) return;
         // var total: usize = 0;
         // var age = lastNurseryAge;
@@ -163,7 +166,7 @@ pub const Process = extern struct {
         unreachable;
     }
     fn collectNurseryPass(self: *Self, originalSp: SP, contextMutable: *ContextPtr, sizes: [lastNurseryAge]usize, promoteAge: usize) void {
-        _ = .{sizes, promoteAge};
+        _ = .{ sizes, promoteAge };
         var scan = self.otherHeap;
         var context = contextMutable.*;
         const endStack = self.endOfStack();
@@ -173,11 +176,11 @@ pub const Process = extern struct {
         while (sp.lessThan(endStack)) {
             const endSP = context.endOfStack(self);
             while (sp.lessThan(endSP)) {
-                std.debug.print("sp: before{} {*}\n",.{sp.top,hp});
+                trace("sp: before{} {*}\n", .{ sp.top, hp });
                 if (sp.top.pointer()) |pointer| {
-                    hp = pointer.copyTo(hp,&sp.top);
+                    hp = pointer.copyTo(hp, &sp.top);
                 }
-                std.debug.print("sp: after {} {*}\n",.{sp.top,hp});
+                trace("sp: after {} {*}\n", .{ sp.top, hp });
                 sp = sp.drop();
             }
             if (!context.isOnStack()) break;
@@ -186,18 +189,18 @@ pub const Process = extern struct {
             unreachable;
         }
         // find self references
-        while (@intFromPtr(hp)<@intFromPtr(scan)) {
-            std.debug.print("hp: {*} scan: {*}\n",.{hp,scan});
-            const heapObject = scan-1;
-            std.debug.print("obj: {} {any}\n",.{heapObject[0],heapObject[0].instVars()});
+        while (@intFromPtr(hp) < @intFromPtr(scan)) {
+            trace("hp: {*} scan: {*}\n", .{ hp, scan });
+            const heapObject = scan - 1;
+            trace("obj: {} {any}\n", .{ heapObject[0], heapObject[0].instVars() });
             if (heapObject[0].makeIterator()) |iter| {
-                std.debug.print("iter: {}\n",.{iter});
+                trace("iter: {}\n", .{iter});
                 while (iter.next()) |objPtr| {
                     if (objPtr.pointer()) |pointer| {
                         if (pointer.isForwarded()) {
                             unreachable;
                         } else if (pointer.age.isNursery())
-                            hp = pointer.copyTo(hp,objPtr);
+                            hp = pointer.copyTo(hp, objPtr);
                     }
                 }
             }
@@ -217,27 +220,27 @@ test "nursery allocation" {
     var pr = &process;
     pr.init();
     const emptySize = Process.nursery_size;
-    std.debug.print("\nemptySize = {}\n",.{emptySize});
-    try ee(pr.freeNursery(),emptySize);
+    trace("\nemptySize = {}\n", .{emptySize});
+    try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var mutableContext = &initialContext;
-    var ar = try pr.alloc(ClassIndex.Class,4,null,void,false);
+    var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
     ar.nilAll();
     const o1 = ar.allocated;
-    try ee(pr.freeNursery(),emptySize-5);
-    ar = try pr.alloc(ClassIndex.Class,5,null,void,false);
+    try ee(pr.freeNursery(), emptySize - 5);
+    ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
     ar.nilAll();
-    ar = try pr.alloc(ClassIndex.Class,6,null,void,false);
+    ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     ar.nilAll();
     const o2 = ar.allocated;
-    try ee(pr.freeNursery(),emptySize-18);
-    o1.instVarPut(0,o2.asObject());
+    try ee(pr.freeNursery(), emptySize - 18);
+    o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject());
-    try ee(@intFromPtr(pr.spillStack(sp,&mutableContext)),@intFromPtr(sp));
-    try ee(@intFromPtr(&initialContext),@intFromPtr(mutableContext));
-    pr.collectNursery(sp,&mutableContext,0);
-    try ee(pr.freeNursery(),emptySize-12);
+    try ee(@intFromPtr(pr.spillStack(sp, &mutableContext)), @intFromPtr(sp));
+    try ee(@intFromPtr(&initialContext), @intFromPtr(mutableContext));
+    pr.collectNursery(sp, &mutableContext, 0);
+    try ee(pr.freeNursery(), emptySize - 12);
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1

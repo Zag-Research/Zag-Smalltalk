@@ -1,6 +1,6 @@
-Extension { #name : #IRPushDup }
+Extension { #name : 'IRPushDup' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRPushDup >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: 'p.pushDup,'.

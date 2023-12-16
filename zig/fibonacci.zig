@@ -2,6 +2,7 @@ const std = @import("std");
 const config = @import("zag/config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
+const stdCall = config.stdCall;
 const dispatchCache = config.dispatchCache;
 const cached = if (dispatchCache) "cached" else "not cached";
 const debug = std.debug;
@@ -81,35 +82,35 @@ fn runObject(run: usize) usize {
 }
 
 var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
-const fibCPST = @as(PC, @ptrCast(&fibCPSM.code[0]));
-pub fn fibCPS(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+const fibCPST = PC.init(&fibCPSM.code[0]);
+pub fn fibCPS(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
         const dPc = cache.current();
-        return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
+        return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });
     }
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector, cache });
-}    
-pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+}
+pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
     if (i.p5N(sp.top, two)) {
         sp.top = one;
         return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector, cache });
     }
     const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
-    const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim, .{ pc.skip(11), newContext.asNewSp().drop(), process, context, selector, cache }));
+    const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newContext.asNewSp().drop(), process, context, selector, cache }));
     newContext.setReturnBoth(fibCPS1, pc.skip(13)); // after first callRecursive
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, newContext, selector, cache });
 }
-fn fibCPS1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+fn fibCPS1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache }));
     context.setReturnBoth(fibCPS2, pc.skip(3)); // after 2nd callRecursive
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, context, selector, cache });
 }
-fn fibCPS2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
-    var result = context.pop(process);
+fn fibCPS2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
+    const result = context.pop(process);
     const newSp = result.sp;
     newSp.top = sum;
-    var callerContext = result.ctxt;
+    const callerContext = result.ctxt;
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector, cache });
 }
 test "fibCPS" {
@@ -129,9 +130,9 @@ test "fibCPS" {
 }
 fn runCPS(run: usize) usize {
     // For debugging
-    var p1 = object.oImm(object.ClassIndex.Symbol, 0xff00_0001);
+    const p1 = object.oImm(object.ClassIndex.Symbol, 0xff00_0001);
     _ = p1;
-    var fibCPSM2 = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
+    const fibCPSM2 = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
     _ = fibCPSM2;
     // end for debugging
 
@@ -151,10 +152,10 @@ fn runCPS(run: usize) usize {
 var fibCPSSendM = compileMethod(Sym.i_0, 0, 0, .{&fibCPSSend});
 const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
 var fibCPSSendCache = execute.SendCacheStruct.init();
-pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
     if (!fibCPSSendM.selector.selectorEquals(selector)) {
         const dPc = cache.current();
-        return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
+        return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });
     }
     if (i.p5N(sp.top, two)) {
         sp.top = one;
@@ -162,27 +163,27 @@ pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, select
     }
     const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
     const newSp = newContext.asNewSp();
-    newSp.top = i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim, .{ pc.skip(11), newSp.drop(), process, context, selector, cache });
+    newSp.top = i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newSp.drop(), process, context, selector, cache });
     newContext.setReturnBoth(fibCPSSend1, pc.skip(13)); // after first callRecursive
     const newSelector = if (dispatchCache) selector.withClass(.SmallInteger) else selector;
     const newCache = if (dispatchCache) &fibCPSSendCache else cache;
-    const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
-    return @call(tailCall, newPc.prim, .{ newPc.next(), newSp, process, newContext, newSelector, if (dispatchCache) newCache.next() else cache });
+    const newPc = if (dispatchCache) newCache.current() else dispatch.lookupAddress(newSelector, .SmallInteger);
+    return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, newSelector, if (dispatchCache) newCache.next() else cache });
 }
-fn fibCPSSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache }));
+fn fibCPSSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache }));
     context.setReturnBoth(fibCPSSend2, pc.skip(3)); // after 2nd callRecursive
     const newSelector = if (dispatchCache) selector.withClass(.SmallInteger) else selector;
     const newCache = if (dispatchCache) &fibCPSSendCache else cache;
-    const newPc = if (dispatchCache) newCache.current() else dispatch.lookup(newSelector, .SmallInteger);
-    return @call(tailCall, newPc.prim, .{ newPc.next(), newSp, process, context, newSelector, if (dispatchCache) newCache.next() else cache });
+    const newPc = if (dispatchCache) newCache.current() else dispatch.lookupAddress(newSelector, .SmallInteger);
+    return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, context, newSelector, if (dispatchCache) newCache.next() else cache });
 }
-fn fibCPSSend2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector, cache });
-    var result = context.pop(process);
+fn fibCPSSend2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
+    const result = context.pop(process);
     const newSp = result.sp;
     newSp.top = sum;
-    var callerContext = result.ctxt;
+    const callerContext = result.ctxt;
     return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector, cache });
 }
 var fibCPSSendStart =
@@ -196,6 +197,7 @@ var fibCPSSendStart =
 });
 fn fibCPSSendSetup() CompiledMethodPtr {
     sym = Sym.init();
+    dispatch.initClass(.SmallInteger);
     fibThreadMethod = fibThread.asCompiledMethodPtr();
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     const fibonacci = fibCPSSendM.asCompiledMethodPtr();
@@ -203,12 +205,11 @@ fn fibCPSSendSetup() CompiledMethodPtr {
     const start = fibCPSSendStart.asCompiledMethodPtr();
     fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
-    fibonacci.forDispatch(ClassIndex.SmallInteger);
+    fibonacci.forDispatch(.SmallInteger);
     return start;
 }
 test "fibCPSSend" {
     const start = fibCPSSendSetup();
-    std.debug.print(" - {s} {*} {*}",.{cached, &fibCPSSendM.code[0], &fibCPSSend});
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
@@ -220,8 +221,8 @@ test "fibCPSSend" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runCPSSend(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
+fn runCPSSend(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
     const method = fibCPSSendSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -300,7 +301,7 @@ var fibDispatch =
     &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
     &e.send0,
 
-        Sym.i_0,
+    Sym.i_0,
     &e.pushLocal0,
     &e.SmallInteger.@"-_L2", // -2
     &e.send0,
@@ -319,12 +320,13 @@ var fibDispatchStart =
 });
 fn fibDispatchSetup() CompiledMethodPtr {
     sym = Sym.init();
+    dispatch.initClass(.SmallInteger);
     const fibonacci = fibDispatch.asCompiledMethodPtr();
     fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     const start = fibDispatchStart.asCompiledMethodPtr();
     fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     dispatch.init();
-    fibonacci.forDispatch(ClassIndex.SmallInteger);
+    fibonacci.forDispatch(.SmallInteger);
     return start;
 }
 test "fibDispatch" {
@@ -340,8 +342,8 @@ test "fibDispatch" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runDispatch(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
+fn runDispatch(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
     const method = fibDispatchSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -422,17 +424,13 @@ var @"Integer>><=" =
 });
 var @"True>>ifTrue:" =
     compileMethod(Sym.@"ifTrue:", 0, 0, .{
-        &e.verifySelector,
-        &e.dropNext,
-        &e.BlockClosure.value,
-        &e.returnNoContext,
+    &e.verifySelector,
+    &e.dropNext,
+    &e.BlockClosure.value,
+    &e.returnNoContext,
 });
 var @"False>>ifTrue:" =
-    compileMethod(Sym.@"ifTrue:", 0, 0, .{
-        &e.verifySelector,
-        &e.drop,
-        &e.returnNoContext
-});
+    compileMethod(Sym.@"ifTrue:", 0, 0, .{ &e.verifySelector, &e.drop, &e.returnNoContext });
 var fibFull =
     compileMethod(Sym.i_0, 0, 2, .{ // self-0
     &e.verifySelector,
@@ -467,33 +465,54 @@ var fibFullStart =
 });
 fn fibFullSetup() CompiledMethodPtr {
     dispatch.init();
+    dispatch.initClass(.SmallInteger);
+    dispatch.dump(.SmallInteger);
+    dispatch.initClass(.True);
+    dispatch.initClass(.False);
     primitives.init();
     sym = Sym.init();
     fibFull.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     fibFullStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
-    @"Integer>>+".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"Integer>>-".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"Integer>><=".asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
-    @"True>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.True);
-    @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(ClassIndex.False);
-    fibFull.asCompiledMethodPtr().forDispatch(ClassIndex.SmallInteger);
+    @"Integer>>+".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"Integer>>-".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"Integer>><=".asCompiledMethodPtr().forDispatch(.SmallInteger);
+    @"True>>ifTrue:".asCompiledMethodPtr().forDispatch(.True);
+    @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(.False);
+    fibFull.asCompiledMethodPtr().forDispatch(.SmallInteger);
+
+    trace("\nfibFullSetup: code pointers" ++
+            \\  @Integer>>+={x}
+            \\  @Integer>>-={x}
+            \\  @Integer>><=={x}
+            \\  @True>>ifTrue:={x}
+            \\  @False>>ifTrue:={x}
+            \\  fibFull={x}
+            ,.{
+                @intFromPtr(@"Integer>>+".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"Integer>>-".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"Integer>><=".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"True>>ifTrue:".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(@"False>>ifTrue:".asCompiledMethodPtr().codePtr()),
+                @intFromPtr(fibFull.asCompiledMethodPtr().codePtr()),
+    });
+    dispatch.dump(.SmallInteger);
     return @ptrCast(&fibFullStart);
 }
 test "fibFull" {
     const method = fibFullSetup();
-    var n:u32 = 1;
+    var n: u32 = 1;
     while (n <= testReps) : (n += 1) {
         var objs = [_]Object{Object.from(n)};
-        var te =  TestExecution.new();
+        var te = TestExecution.new();
         te.init();
-        const result = te.run(objs[0..],method);
-        std.debug.print("\nfib({}) = {any}",.{n,result});
-        try std.testing.expectEqual(result.len,1);
-        try std.testing.expectEqual(result[0].toInt(),@as(i51,@truncate(fibNative(n))));
+        const result = te.run(objs[0..], method);
+        std.debug.print("\nfib({}) = {any}", .{ n, result });
+        try std.testing.expectEqual(result.len, 1);
+        try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
 const debugPrint = false;
-fn runFull(run:usize) usize {
+fn runFull(run: usize) usize {
     const method = fibFullSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
@@ -512,68 +531,71 @@ fn tstart() i128 {
         if (newT != t) return newT;
     }
 }
-fn runNative(run:usize) usize {
-    if (debugPrint) std.debug.print("{},",.{run});
-    std.debug.print("{s}",.{""});
+fn runNative(run: usize) usize {
+    if (debugPrint) std.debug.print("{},", .{run});
+    std.debug.print("{s}", .{""});
     const start = tstart();
     _ = fibNative(runs);
     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1_000_000));
 }
 const Stats = @import("zag/utilities/stats.zig").Stats;
-pub fn timing(args: [][]const u8) !void {
+pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(usize,nRuns).init();
+    var stat = Stats(usize, nRuns).init();
     for (args) |arg| {
-        if (eql(u8,arg,"Header")) {
+        if (eql(u8, arg, "Config")) {
+            print("Config {s}dispatch cache, {s}direct dispatch\n",.{if (dispatchCache) "" else "no ",if (config.indirectDispatch) "in" else ""});
+        } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{runs});
             print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
-        } else if (eql(u8,arg,"Native")) {
+        } else if (eql(u8, arg, "Native")) {
             print("Native:  ", .{});
             stat.run(runNative);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"Object")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "Object")) {
+            stat = Stats(usize, nRuns).init();
             print("Object:  ", .{});
             stat.run(runObject);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"CPS")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "CPS")) {
+            stat = Stats(usize, nRuns).init();
             print("CPS:     ", .{});
             stat.run(runCPS);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-            } else if (eql(u8,arg,"CPSSend")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "CPSSend")) {
+            stat = Stats(usize, nRuns).init();
             print("CPSSend: ", .{});
             stat.run(runCPSSend);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        } else if (eql(u8,arg,"Thread")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+        } else if (eql(u8, arg, "Thread")) {
+            stat = Stats(usize, nRuns).init();
             print("Thread:  ", .{});
             stat.run(runThread);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-        } else if (eql(u8,arg,"Dispatch")) {
-            stat = Stats(usize,nRuns).init();
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+        } else if (eql(u8, arg, "Dispatch")) {
+            stat = Stats(usize, nRuns).init();
             print("Dispatch:", .{});
             stat.run(runDispatch);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        // } else if (eql(u8,arg,"Byte")) {
-        //     stat = Stats(usize,nRuns).init();
-        //     print("Byte:    ", .{});
-        //     stat.run(runByte);
-        //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+            // } else if (eql(u8,arg,"Byte")) {
+            //     stat = Stats(usize,nRuns).init();
+            //     print("Byte:    ", .{});
+            //     stat.run(runByte);
+            //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
 
-        } else if (eql(u8,arg,"Full")) {
-            stat = Stats(usize,nRuns).init();
+        } else if (eql(u8, arg, "Full")) {
+            stat = Stats(usize, nRuns).init();
             print("Full:    ", .{});
             stat.run(runFull);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean())), cached});
-        } else print("Unknown argument: {s}\n",.{arg});
+            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
+        } else if (!default)
+            print("Unknown argument: {s}\n", .{arg});
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{"Header","Native","Object","CPS","Thread","Byte","CPSSend","Dispatch","Full"};
+    const do_all = [_][]const u8{ "Config", "Header", "Native", "Object", "CPS", "Thread", "Byte", "CPSSend", "Dispatch", "Full" };
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
@@ -582,6 +604,7 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("TEST FAIL");
     }
     const args = try std.process.argsAlloc(allocator);
-    try timing(if (args.len>1) args[1..] else @constCast(do_all[0..]));
+    const default = args.len <= 1;
+    try timing(if (default) @constCast(do_all[0..]) else args[1..],default);
 }
 const runs: u6 = 40;

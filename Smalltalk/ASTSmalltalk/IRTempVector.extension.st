@@ -1,6 +1,6 @@
-Extension { #name : #IRTempVector }
+Extension { #name : 'IRTempVector' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRTempVector >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

@@ -2,8 +2,8 @@
 I represent a Class that contains a number of methods and has super-classes.
 "
 Class {
-	#name : #ASClassNode,
-	#superclass : #Object,
+	#name : 'ASClassNode',
+	#superclass : 'Object',
 	#instVars : [
 		'name',
 		'classVariables',
@@ -11,15 +11,17 @@ Class {
 		'nestedScopeOf',
 		'methods'
 	],
-	#category : #'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASClassNode >> = other [
 	^ name = other name
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASClassNode >> from: aClass [
 
 	name := aClass name.
@@ -27,27 +29,33 @@ ASClassNode >> from: aClass [
 	classVariables := aClass classPool keys.
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASClassNode >> hash [
 	^ name hash
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASClassNode >> initialize [ 
 	scope := Dictionary new
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASClassNode >> lookup: symbol [
-	^ scope at: symbol ifAbsent: [ ASClassVariable name: symbol"nestedScopeOf lookup: symbol" ]
+
+	^ scope
+		  at: symbol
+		  ifAbsent: [
+				self halt.
+
+		  "ASClassVariable name: symbol nestedScopeOf lookup: symbol" ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASClassNode >> methods [
 ^ methods
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASClassNode >> name [
 
 	^ name

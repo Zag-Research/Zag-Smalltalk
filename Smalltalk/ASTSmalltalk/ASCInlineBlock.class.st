@@ -2,26 +2,28 @@
 for inlining
 "
 Class {
-	#name : #ASCInlineBlock,
-	#superclass : #ASCBasicBlock,
+	#name : 'ASCInlineBlock',
+	#superclass : 'ASCBasicBlock',
 	#instVars : [
 		'primitive',
 		'selector'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCInlineBlock >> locals: locals arguments: arguments [
 
 	stack isEmpty
-		ifTrue: [ self pushUnknownNamed: #self ]
+		ifTrue: [ self pushParameterNamed: #self ]
 		ifFalse: [ stack := stack names: #( self ) ].
-			arguments reversed do: [ :each | self pushUnknownNamed: each ].
-	locals do: [ :each | self pushUnknownNamed: each ]
+			arguments reversed do: [ :each | self pushParameterNamed: each ].
+	locals do: [ :each | self pushParameterNamed: each ]
 ]
 
-{ #category : #wriiting }
+{ #category : 'writing' }
 ASCInlineBlock >> outputTo: output [
 
 	output outputMethodStart: label.
@@ -29,17 +31,17 @@ ASCInlineBlock >> outputTo: output [
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
 	output outputMethodLabel: label.
-	self outputRestTo: output
+	^ self outputRestTo: output
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCInlineBlock >> primitive: anInteger selector: aSymbol [
 
 	primitive := anInteger.
 	selector := aSymbol
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCInlineBlock >> selector: aString [ 
 	selector := aString
 ]

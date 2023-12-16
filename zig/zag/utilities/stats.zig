@@ -14,13 +14,13 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
             .Int => true,
             else => false,
         };
-        const warmups = @min(3,@max(1,(runs+1)/3));
+        const warmups = @min(3, @max(1, (runs + 1) / 3));
         pub fn init() Self {
             return .{};
         }
-        pub fn run(self: *Self, runner: *const fn(usize) T) void {
+        pub fn run(self: *Self, runner: *const fn (usize) T) void {
             for (0..warmups) |_| _ = runner(0);
-            for (1..runs+1) |runNumber| {
+            for (1..runs + 1) |runNumber| {
                 self.addData(runner(runNumber));
             }
         }
@@ -30,8 +30,8 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
             if (runs > self.n) {
                 var i = self.n;
                 while (i > 0) : (i -= 1) {
-                    if (self.values[i-1] <= data) break;
-                    self.values[i] = self.values[i-1];
+                    if (self.values[i - 1] <= data) break;
+                    self.values[i] = self.values[i - 1];
                 }
                 self.values[i] = data;
             }
@@ -41,7 +41,7 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
         }
         pub fn median(self: *Self) ?T {
             if (runs == 0 or runs < self.n) return null;
-            return if (isInt or self.n % 2 == 1) self.values[self.n/2] else (self.values[self.n/2-1]+self.values[self.n/2])/2;
+            return if (isInt or self.n % 2 == 1) self.values[self.n / 2] else (self.values[self.n / 2 - 1] + self.values[self.n / 2]) / 2;
         }
         pub fn mean(self: Self) T {
             return if (isInt) self.sum / self.n else self.sum / @as(f64, @floatFromInt(self.n));
@@ -74,7 +74,7 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
             } else {
                 var sep: []const u8 = "";
                 const flOpts: []const u8 = comptime if (options.precision == null) "{d}" else "{d:.2}";
-                const opts:[]const u8 = comptime if (isInt) "{}" else flOpts;
+                const opts: []const u8 = comptime if (isInt) "{}" else flOpts;
                 inline for (if (fmt.len == 0) "nmxs" else fmt) |f| {
                     try writer.print("{s}", .{sep});
                     switch (f) {
@@ -95,7 +95,7 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
 test "simple int stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(usize,0).init();
+    var stat = Stats(usize, 0).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -103,15 +103,15 @@ test "simple int stats" {
     try expectEqual(stat.mean(), 3);
     try expectEqual(stat.median(), null);
     try expectEqual(stat.stdDev(), 1.0);
-    var buf: [200]u8 = undefined;
-    var buf2: [200]u8 = undefined;
+    const buf: [200]u8 = undefined;
+    const buf2: [200]u8 = undefined;
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize,10).init();
+    var stat = Stats(usize, 10).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -125,11 +125,11 @@ test "simple int stats with values" {
     try expectEqual(stat.stdDev(), 0.8164965809277257);
 }
 fn testRunner(run: usize) usize {
-    return run*2-(if (run==3 or run>8) run else 0);
+    return run * 2 - (if (run == 3 or run > 8) run else 0);
 }
 test "simple int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize,3).init();
+    var stat = Stats(usize, 3).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 4);
@@ -139,7 +139,7 @@ test "simple int stats with runner" {
 }
 test "larger int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize,10).init();
+    var stat = Stats(usize, 10).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 16);
@@ -151,15 +151,15 @@ test "larger int stats with runner" {
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(f64,0).init();
+    var stat = Stats(f64, 0).init();
     stat.addData(2.0);
     stat.addData(4.0);
     try expectEqual(stat.min(), 2.0);
     try expectEqual(stat.max(), 4.0);
     try expectEqual(stat.mean(), 3.0);
     try expectEqual(stat.stdDev(), 1.0);
-    var buf: [200]u8 = undefined;
-    var buf2: [200]u8 = undefined;
+    const buf: [200]u8 = undefined;
+    const buf2: [200]u8 = undefined;
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));

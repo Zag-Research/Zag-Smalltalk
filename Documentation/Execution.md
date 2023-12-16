@@ -144,7 +144,7 @@ Methods understand the message `compileForClass:withCodeGenerator:` which takes 
 
 BlockClosures are defined within a method or another block. A closure may:
 1. contain a non-local return in which case it has to have a reference to the context in which it was created
-2. contain values that are not modified in the method after the closure is created and is either not modified in the block either, or is not referenced in the method after the closure is created
+2. contain values that are not modified in an ancestor after the closure is created and is either not modified in the block either, or is not referenced in an ancestor or a sibling block after the closure is created
 3. reference or modify values that are also referenced or modified by the main method code or another block in which case it has to have a reference to a ClosureData object where the mutable values are stored
 
 Consider the following method, defined in Integer

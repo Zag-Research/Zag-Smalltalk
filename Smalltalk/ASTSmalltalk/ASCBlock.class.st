@@ -2,56 +2,64 @@
 I hold a ASBlock AST, to prepare for analysis
 "
 Class {
-	#name : #ASCBlock,
-	#superclass : #ASCOperations,
+	#name : 'ASCBlock',
+	#superclass : 'ASCOperations',
 	#instVars : [
 		'block',
 		'manifest'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #asserting }
+{ #category : 'asserting' }
 ASCBlock >> assertIsValue [
 
 	
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCBlock >> block [
 	^ block
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCBlock >> children [
 	^ block body asOrderedCollection 
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASCBlock >> initialize [ 
 super initialize .
 manifest := false
 ]
 
-{ #category : #serializing }
+{ #category : 'serializing' }
 ASCBlock >> makeManifest [ 	
 		  manifest := true
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASCBlock >> manifest [
 
 ^	manifest
 ]
 
-{ #category : #'code generation' }
+{ #category : 'accessing' }
+ASCBlock >> name [
+
+	^ self
+]
+
+{ #category : 'code generation' }
 ASCBlock >> outputTo: output [
 
 manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASCBlock >> with: anASBlock [
 
 	block := anASBlock

@@ -7,23 +7,25 @@ const indexSymbol = object.indexSymbol0;
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
+const inversePhi24 = @import("utilities.zig").inversePhi(u24);
+const undoPhi24 = @import("utilities.zig").undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
-inline fn symbol_of(index: usize, arity: u8) object.Object {
-    return symbol0(index | (@as(usize, arity) << 24));
+inline fn symbol_of(index: u24, arity: u8) object.Object {
+    return object.Object.makeImmediate(.Symbol, @as(u32, index *% inversePhi24) << 8 | arity);
 }
-pub inline fn symbol0(index: usize) object.Object {
-    return object.Object.makeImmediate(.Symbol, @truncate(index));
+pub inline fn symbol0(index: u24) object.Object {
+    return symbol_of(index, 0);
 }
-pub inline fn symbol1(index: usize) object.Object {
+pub inline fn symbol1(index: u24) object.Object {
     return symbol_of(index, 1);
 }
-pub inline fn symbol2(index: usize) object.Object {
+pub inline fn symbol2(index: u24) object.Object {
     return symbol_of(index, 2);
 }
-pub inline fn symbol3(index: usize) object.Object {
+pub inline fn symbol3(index: u24) object.Object {
     return symbol_of(index, 3);
 }
-pub inline fn symbol4(index: usize) object.Object {
+pub inline fn symbol4(index: u24) object.Object {
     return symbol_of(index, 4);
 }
 pub const symbols = struct {
@@ -94,14 +96,12 @@ pub const symbols = struct {
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "=",    "value",              "value:",    "cull:",   "yourself",                "doesNotUnderstand:",                                        "+",                    "-",              "*",                  "size",
-    "at:",                     "at:put:",                "~=",                                  "==",                   "~~",
-    "value:value:",            "negated",                "new",                                 "new:",                      "value:value:value:", "value:value:value:value:",
-    "valueWithArguments:",     "cull:cull:",             "cull:cull:cull:",                     "cull:cull:cull:cull:", "self",           "name",               "<",
-    "<=",                      ">=",                     ">",                                   "class",                "Class",          "Behavior",           "ClassDescription",
-    "Metaclass",               "SmallInteger",           "noFallback",                          "ifTrue:",              "ifTrue:ifFalse", "ifFalse:",           "ifFalse:ifTrue:",
-    "ifNil:",                  "ifNil:ifNotNil",         "ifNotNil:",                           "ifNotNil:ifNil:",      "perform:",       "perform:with:",      "perform:with:with:",
-    "perform:with:with:with:", "perform:withArguments:", "perform:withArguments:inSuperclass:",
+    "=",                        "value",                               "value:",     "cull:",           "yourself",             "doesNotUnderstand:", "+",            "-",             "*",                  "size",
+    "at:",                      "at:put:",                             "~=",         "==",              "~~",                   "value:value:",       "negated",      "new",           "new:",               "value:value:value:",
+    "value:value:value:value:", "valueWithArguments:",                 "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", "self",               "name",         "<",             "<=",                 ">=",
+    ">",                        "class",                               "Class",      "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger", "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
+    "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",     "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",     "perform:with:", "perform:with:with:", "perform:with:with:with:",
+    "perform:withArguments:",   "perform:withArguments:inSuperclass:",
     // add any new values here
     "Object",
 });
@@ -118,7 +118,7 @@ pub inline fn lookup(string: object.Object) object.Object {
 pub inline fn intern(string: object.Object) object.Object {
     return symbolTable.intern(string);
 }
-const ObjectTreap = Treap(object.Object, u32, u0);
+const ObjectTreap = Treap(object.Object, u24, u0);
 fn numArgs(obj: object.Object) u8 {
     const string = obj.arrayAsSlice(u8);
     if (string.len == 0) return 0;
@@ -152,7 +152,7 @@ pub const SymbolTable = struct {
         {
             // ToDo: add locking
             const size = heap.growSize(self.mem, ObjectTreap.Element) catch initialSymbolTableSize * ObjectTreap.elementSize;
-            var memory = self.allocator.alloc(ObjectTreap.Element, size) catch @panic("can't alloc");
+            const memory = self.allocator.alloc(ObjectTreap.Element, size) catch @panic("can't alloc");
             self.treap.resize(memory);
             self.allocator.free(self.mem);
             self.mem = memory;
@@ -164,8 +164,11 @@ pub const SymbolTable = struct {
         self.allocator.free(self.mem);
         self.* = undefined;
     }
+    fn unPhi(obj: object.Object) u24 {
+        return @as(u24, @truncate(obj.hash32()>>8))*%undoPhi24;
+    }
     fn asString(self: *Self, string: object.Object) object.Object {
-        return self.theTreap(0).getKey(@as(u24, @truncate(string.hash32())));
+        return self.theTreap(0).getKey(unPhi(string));
     }
     pub fn lookup(self: *Self, string: object.Object) object.Object {
         return lookupDirect(self.theTreap(0), string);
@@ -179,7 +182,7 @@ pub const SymbolTable = struct {
         return Nil;
     }
     fn intern(self: *Self, string: object.Object) object.Object {
-        var trp = self.theTreap(1);
+        const trp = self.theTreap(1);
         while (true) {
             const lu = lookupDirect(trp, string);
             if (!lu.isNil()) return lu;
@@ -198,13 +201,13 @@ pub const SymbolTable = struct {
         return symbol_of(index, nArgs);
     }
     fn loadSymbols(self: *Self, strings: []const heap.HeapObjectConstPtr) void {
-        var trp = self.theTreap(strings.len);
+        const trp = self.theTreap(strings.len);
         for (strings) |string|
             _ = internDirect(trp, string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[symbol.hash24() - 1].asObject()));
-    }
+        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[unPhi(symbol) - 1].asObject()));
+      }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
 test "symbols match initialized symbol table" {
@@ -213,10 +216,10 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    var trp = symbol.theTreap(0);
+    const trp = symbol.theTreap(0);
     try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
     for (initialSymbolStrings, 0..) |string, idx|
-        try expectEqual(idx + 1, symbol.lookup(string.asObject()).hash24());
+        try expectEqual(symbol_of(@intCast(idx+1),0).hash24(), symbol.lookup(string.asObject()).hash24());
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");

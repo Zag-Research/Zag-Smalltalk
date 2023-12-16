@@ -8,71 +8,73 @@ Eventually it will implement Phi nodes for SSA evaluation, supporting some level
 Code generators can inquire as to values and types
 "
 Class {
-	#name : #ASStackElement,
-	#superclass : #ASStack,
+	#name : 'ASStackElement',
+	#superclass : 'ASStack',
 	#instVars : [
 		'top',
 		'rest'
 	],
-	#category : #'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASStackElement class >> from: anASStack [
 	^ self basicNew from: anASStack 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackElement >> addBlockClosure: aCollection [ 
 	self shouldBeImplemented.
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> at: aSymbol put: anObject [
 	rest at: aSymbol put: anObject 
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> depth [
 
 	^ 1 + rest depth
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> drop [
 	^ rest
 ]
 
-{ #category : #removing }
+{ #category : 'removing' }
 ASStackElement >> drop: count [ 
 	count = 0 ifTrue: [ ^self ].
 	^ rest drop: count-1
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASStackElement >> from: anASStack [
 
 	rest := anASStack 
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASStackElement >> isEmpty [
 
 	^ false
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackElement >> makeContextRequired [
 	rest := rest makeContextRequired.
 	^ self
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
@@ -83,12 +85,12 @@ ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockS
 		  other: blockOther
 ]
 
-{ #category : #enumerating }
+{ #category : 'enumerating' }
 ASStackElement >> requiredContextDo: aBlock [ 
 	^ rest requiredContextDo: aBlock
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASStackElement >> stackNames: aCollection [
 
 	aCollection ifEmpty: [ ^ self ].
@@ -98,12 +100,12 @@ ASStackElement >> stackNames: aCollection [
 		  top: top
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> top [
 ^ top
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASStackElement >> top: value [
 
 value assertIsValue .
