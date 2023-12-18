@@ -1,7 +1,27 @@
 const std = @import("std");
 const math = std.math;
 const Order = math.Order;
-pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
+const Units = enum {
+    seconds,milliseconds,microseconds,nanoseconds,
+    pub fn name(self: Units) []u8 {
+        return switch (self) {
+            .seconds,     => "seconds",
+            .milliseconds => "milliseconds",
+            .microseconds => "microseconds",
+            .nanoseconds  => "nanoseconds",
+        };
+    }
+    pub fn shortName(self: Units) []u8 {
+        return switch (self) {
+            .seconds,     => "s",
+            .milliseconds => "ms",
+            .microseconds => "us",
+            .nanoseconds  => "ns",
+        };
+    }
+};
+pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Units) type {
+    const T = if (K==void) u64 else K;
     return struct {
         values: [runs]T = undefined,
         minValue: T = undefined,
@@ -15,13 +35,34 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
             else => false,
         };
         const warmups = @min(3, @max(1, (runs + 1) / 3));
+        const scale : u64 = switch (units) {
+            .seconds,     => 1_000_000_000,
+            .milliseconds => 1_000_000,
+            .microseconds => 1_000,
+            .nanoseconds  => 1,
+        };
         pub fn init() Self {
             return .{};
+        }
+        pub fn reset(self: *Self) void {
+            self.n = 0;
+            self.sum = 0;
+            self.sumsq = 0;
         }
         pub fn run(self: *Self, runner: *const fn (usize) T) void {
             for (0..warmups) |_| _ = runner(0);
             for (1..runs + 1) |runNumber| {
                 self.addData(runner(runNumber));
+            }
+        }
+        pub fn time(self: *Self, runner: *const fn (usize) void) void {
+            for (0..warmups) |_| @call(.never_inline,runner,.{0});
+            var timer = std.time.Timer.start() catch @panic("no timer available");
+            for (1..runs + 1) |runNumber| {
+                timer.reset();
+                @call(.never_inline,runner,.{runNumber});
+                const diff = timer.read()/scale;
+                self.addData(diff);
             }
         }
         pub fn addData(self: *Self, data: T) void {
@@ -83,7 +124,11 @@ pub fn Stats(comptime T: type, comptime runs: comptime_int) type {
                         'M' => try writer.print(opts, .{self.median()}),
                         'x' => try writer.print(opts, .{self.maxValue}),
                         's' => try writer.print(flOpts, .{self.stdDev()}),
+                        '%' => try writer.print("{.1}%", .{self.stdDev() * 100 / comptime if (isInt) @as(f64, @floatFromInt(self.mean())) else self.mean()}),
                         'r' => try writer.print(opts, .{(self.maxValue - self.minValue) / 2}),
+                        'u' => try writer.print("{s}", .{units.shortName()}),
+                        'U' => try writer.print("{s}", .{units.name()}),
+                        ' ' => sep = " ",
                         else => {},
                     }
                     sep = "--";

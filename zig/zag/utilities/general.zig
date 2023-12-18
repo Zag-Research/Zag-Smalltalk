@@ -185,3 +185,4 @@ test "check bitsToRepresent" {
     try expectEqual(bitsToRepresent(@as(u16, 17)), 5);
     try expectEqual(bitsToRepresent(@as(u64, 4000)), 12);
 }
+pub const crc24 = std.hash.crc.Crc24Openpgp.hash;

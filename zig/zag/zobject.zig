@@ -232,6 +232,12 @@ pub const Object = packed struct(u64) {
             else => false
         };
     }
+    pub inline fn atLeastInt(self: Object) bool { // only useful if you have a Smallinteger-u51
+        return @intFromEnum(self.tag) >= Group.smallIntMin.u();
+    }
+    pub inline fn atMostInt(self: Object) bool { // only useful if you have a Smallinteger+u51
+        return @intFromEnum(self.tag) <= Group.smallIntMax.u();
+    }
     pub inline fn isNat(self: Object) bool {
         return switch (self.tag) {
             .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => true,
