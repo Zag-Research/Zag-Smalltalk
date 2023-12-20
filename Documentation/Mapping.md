@@ -38,11 +38,11 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF1      | 0000 | 0000 | 0000 | SmallInteger minVal           |
 | FFF5      | 0000 | 0000 | 0000 | SmallInteger 0                |
 | FFF8      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
-| FFF9      | xxxx | xxxx | xxxx | (unused)                      |
-| FFFA      | xxxx | xxxx | xxxx | numeric thunk                 |
-| FFFB      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFFC      | xxxx | xxxx | xxxx | heap thunk                    |
-| FFFD      | xxxx | xxxx | xxxx | non-local thunk               |
+| FFF9      | xxxx | xxxx | xxxx | numeric thunk                 |
+| FFFA      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFFB      | xxxx | xxxx | xxxx | heap thunk                    |
+| FFFC      | xxxx | xxxx | xxxx | non-local thunk               |
+| FFFD      | xxxx | xxxx | xxxx | heap closure with non-local return                      |
 | FFFE      | xxxx | xxxx | xxxx | heap closure                  |
 | FFFF      | xxxx | xxxx | xxxx | heap object                   |
 

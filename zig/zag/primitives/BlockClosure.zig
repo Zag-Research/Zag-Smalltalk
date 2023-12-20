@@ -138,15 +138,15 @@ pub const embedded = struct {
         const val = sp.top;
         trace("\nvalue: {}", .{val});
         switch (val.tag) {
-            // .numericThunk => {
-            //     if (((val.u() >> 47) & 1) == 0) {
-            //         sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
-            //     } else {
-            //         sp.top = @as(Object, @bitCast(val.u() << 17));
-            //     }
-            // },
-            // .immediateThunk => sp.top.tag = .immediates,
-            // .heapThunk => sp.top.tag = .heap,
+            .numericThunk => {
+                if (((val.u() >> 47) & 1) == 0) {
+                    sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
+                } else {
+                    sp.top = @as(Object, @bitCast(val.u() << 17));
+                }
+            },
+            .immediateThunk => sp.top.tag = .immediates,
+            .heapThunk => sp.top.tag = .heap,
             .nonLocalThunk => {
                 const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
                 const index = val.u() & 7;
@@ -154,30 +154,29 @@ pub const embedded = struct {
                 trace(" {*} {}", .{ targetContext, index });
                 return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector, cache });
             },
-            // .heapClosure => {
-            //     const closure = val.to(heap.HeapObjectPtr);
-            //     const method = closure.prev().to(CompiledMethodPtr);
-            //     if (method != &inlines.valueClosureMethod) {
-            //         const newPc = method.codePtr();
-            //         context.setReturn(pc);
-            //         return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
-            //     }
-            //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
-            //     sp.top = closure.prevPrev();
-            // },
+            .heapClosure, .nonLocalClosure => {
+                const closure = val.to(heap.HeapObjectPtr);
+                const method = closure.prev().to(CompiledMethodPtr);
+                if (method != &inlines.valueClosureMethod) {
+                    const newPc = PC.init(method.codePtr());
+                    context.setReturn(pc);
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Sym.value, cache });
+                }
+                if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
+                sp.top = closure.prevPrev();
+            },
             else => {
                 std.debug.print("\nvalue of 0x{x}", .{val});
                 @panic("unknown block type");
             },
-            //return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.value }),
         }
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
     }
     pub fn @"value:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const val = sp.next;
         switch (val.tag) {
             .numericThunk, .immediateThunk, .heapThunk.nonLocalThunk => @panic("wrong number of parameters"),
-            .heapClosure => {
+            .heapClosure, .nonLocalClosure => {
                 const closure = val.to(heap.HeapObjectPtr);
                 const method = closure.prev().to(CompiledMethodPtr);
                 if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
@@ -192,23 +191,23 @@ pub const embedded = struct {
     }
     pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const newSp = inlines.immutableClosure(sp, process);
-        return @call(tailCall, pc.next().prim(), .{ pc.next().next(), newSp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, selector, cache });
     }
     pub fn generalClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const newSp = inlines.generalClosure(sp.drop(), process, sp.top, &mutableContext);
-        return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
     }
     pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const block = pc.indirectLiteral();
         const newSp = inlines.fullClosure(sp, process, block, &mutableContext);
-        return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
     }
     pub fn closureData(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const newSp = inlines.closureData(sp, process, pc[0].uint, &mutableContext);
-        return @call(tailCall, pc[1].prim, .{ pc + 2, newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
     }
 
     inline fn nonLocalBlock(sp: SP, tag: literalNonLocalReturn, context: ContextPtr) SP {
@@ -270,6 +269,42 @@ test "immutableClosures" {
     try ee(try testImmutableClosure(&process, Object.from(0x4000_0000_0000)), .heapClosure);
     try ee(try testImmutableClosure(&process, Object.from(-0x4000_0000_0001)), .heapClosure);
     try ee(try testImmutableClosure(&process, Object.from(1000.3)), .heapClosure);
+}
+fn testNonlocalClosure(process: *Process, value: Object) !object.Group {
+    const ee = std.testing.expectEqual;
+    var context = Context.init();
+    const sp = process.endOfStack().push(value);
+    var cache = execute.SendCacheStruct.init();
+    const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
+    if (newSp != sp) {
+        try ee(value.u(), newSp.next.u());
+    }
+    const tag = newSp.top.tag;
+    const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil, cache.dontCache());
+    try ee(value.u(), newerSp.top.u());
+    return tag;
+}
+test "nonlocalClosures" {
+    const ee = std.testing.expectEqual;
+    var process = Process.new();
+    process.init();
+        // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
+    try ee(try testNonlocalClosure(&process, True), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, False), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Nil), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Object.from(0)), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Object.from(1)), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Object.from(2)), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Object.from(-1)), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, object.SelfObject), .nonLocalThunk);
+    try ee(try testNonlocalClosure(&process, Object.from(0x3fff_ffff_ffff)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(-0x4000_0000_0000)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(1000.75)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(-1000.75)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(&process)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(0x4000_0000_0000)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(-0x4000_0000_0001)), .nonLocalClosure);
+    try ee(try testNonlocalClosure(&process, Object.from(1000.3)), .nonLocalClosure);
 }
 pub const primitives = struct {
     pub fn p201(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // value

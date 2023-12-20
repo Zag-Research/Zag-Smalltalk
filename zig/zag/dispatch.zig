@@ -91,11 +91,14 @@ const Dispatch = extern struct {
     state: DispatchState,
     fixed: [numberOfFixed]DispatchElement align(@sizeOf(DispatchElement)),
     methods: [hashedMethods]DispatchElement, // this is just the default... normally a larger array
+    //footer: HeapObject, this is a floating field  depends how many hashedMethods there are really
     const Self = @This();
     const Fixed = enum {
         equal,
+        hash,
         value,
         valueColon,
+        cullColon,
         // insert new names here
         maxIndex,
     };
