@@ -11,6 +11,5 @@ Class {
 
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
-
 	^ variable push: anOutput
 ]

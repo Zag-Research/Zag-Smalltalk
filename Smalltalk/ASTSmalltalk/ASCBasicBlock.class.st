@@ -100,7 +100,8 @@ ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
-	maxDepth := 0
+	maxDepth := 0.
+	stack := ASEmptyStack new 
 ]
 
 { #category : 'initialization' }
@@ -124,10 +125,12 @@ ASCBasicBlock >> makeContextRequired [
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
+	operations ifNotEmpty: [ 
 	last := operations last.
 	last requiresContext ifTrue: [ stack := stack makeContextRequired.
  ].
 	last manifestParameters: stack
+	]
 ]
 
 { #category : 'accessing' }
@@ -138,6 +141,12 @@ ASCBasicBlock >> maxDepth [
 { #category : 'accessing' }
 ASCBasicBlock >> next [
 	^ operations last next
+]
+
+{ #category : 'instance initialization' }
+ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
+
+	stack nonlocalNameLookupObject: aGenerator
 ]
 
 { #category : 'API' }
@@ -195,7 +204,7 @@ ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
 	target := stack find: aSymbol .
-	self put: (ASCPushVariable with: aSymbol).
+	self put: (ASCPushVariable with: target top).
 	self doPush: target top
 ]
 

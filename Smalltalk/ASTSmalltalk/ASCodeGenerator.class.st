@@ -93,8 +93,7 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'accessing' }
 ASCodeGenerator >> find: aSymbol [
-"is this a global or instance var?"
-self halt.
+	^code find: aSymbol
 ]
 
 { #category : 'API' }
@@ -129,9 +128,10 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'initialization' }
 ASCodeGenerator >> initialize [
-self halt.
+
 	super initialize.
 	code := ASCMethodBlock new.
+	code nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -255,7 +255,7 @@ ASCodeGenerator >> pushSelf [
 	value := ASCClassValue new init: targetClass.
 	code
 		doPush: value;
-		put: (ASCPushVariable with: (code stack find: #self))
+		put: (ASCPushVariable with: (code find: #self) top)
 ]
 
 { #category : 'API' }
@@ -304,9 +304,13 @@ ASCodeGenerator >> selfName [
 
 { #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
-
-	code := code send: aSymbol targetClass: aTargetClass tail: tail&tailCallOptimize .
-	^ code ifNotNil: [ basicBlocks add: code ]
+| bb |
+"why are we setting code to the return of the send:targetClass:tail: call?"
+	bb := code
+		        send: aSymbol
+		        targetClass: aTargetClass
+		        tail: tail & tailCallOptimize.
+	^ bb ifNotNil: [ basicBlocks add: bb ]
 ]
 
 { #category : 'API' }

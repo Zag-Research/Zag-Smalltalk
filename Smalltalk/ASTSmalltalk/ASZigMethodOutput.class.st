@@ -30,10 +30,9 @@ ASZigMethodOutput >> blockNumber [
 { #category : 'code generation' }
 ASZigMethodOutput >> codeGenerator [
 
-	| parentCodeGenerator |
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
-									parentCodeGenerator: parentCodeGenerator;
+			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
 			                   targetClass: forClass ]
 ]

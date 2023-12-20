@@ -9,11 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASCodeGeneratorBlock >> find: aSymbol [
-	code find: aSymbol
-]
-
 { #category : 'API' }
 ASCodeGeneratorBlock >> returnSelf [
 self error: 'need to push self'.

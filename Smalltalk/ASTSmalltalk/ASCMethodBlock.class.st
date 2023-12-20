@@ -40,12 +40,6 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 	maxDepth := 0
 ]
 
-{ #category : 'instance initialization' }
-ASCMethodBlock >> nonlocalNameLookupObject: aGenerator [
-
-	stack := ASEmptyStack new nonlocalNameLookupObject: aGenerator 
-]
-
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
@@ -68,7 +62,6 @@ ASCMethodBlock >> primitive: anInteger [
 
 { #category : 'accessing' }
 ASCMethodBlock >> pushSelfNamed: selfName [
-
 	self pushParameterNamed: selfName
 ]
 
