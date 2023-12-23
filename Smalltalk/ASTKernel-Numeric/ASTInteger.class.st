@@ -1,10 +1,11 @@
 Class {
-	#name : #ASTInteger,
-	#superclass : #ASTNumber,
-	#category : #'ASTKernel-Numeric'
+	#name : 'ASTInteger',
+	#superclass : 'ASTNumber',
+	#category : 'ASTKernel-Numeric',
+	#package : 'ASTKernel-Numeric'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInteger class >> new: length neg: neg [
 	"Answer an instance of a large integer with the given size and sign."
 
@@ -13,7 +14,7 @@ ASTInteger class >> new: length neg: neg [
 		ifFalse: [ ^ ASTLargePositiveInteger new: length ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInteger class >> readFrom: aStream [
 	"Answer a new Integer as described on the stream, aStream.
 	Embedded radix specifiers not allowed - use Number readFrom: for that."
@@ -21,7 +22,7 @@ ASTInteger class >> readFrom: aStream [
 	^ self readFrom: aStream base: 10
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInteger class >> readFrom: aStream base: base [
 	"Answer an instance of one of my concrete subclasses. Initial minus sign 
 	accepted, and bases > 10 use letters A-Z. Embedded radix specifiers not 
@@ -44,7 +45,7 @@ ASTInteger class >> readFrom: aStream base: base [
 	^ value
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> * aNumber [
 	"Refer to the comment in Number * "
 
@@ -54,7 +55,7 @@ ASTInteger >> * aNumber [
 	^ aNumber adaptToInteger: self andSend: #*
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> + aNumber [
 	"Refer to the comment in Number + "
 
@@ -65,7 +66,7 @@ ASTInteger >> + aNumber [
 	^ aNumber adaptToInteger: self andSend: #+
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> - aNumber [
 	"Refer to the comment in Number - "
 
@@ -76,7 +77,7 @@ ASTInteger >> - aNumber [
 	^ aNumber adaptToInteger: self andSend: #-
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> / aNumber [
 	"Refer to the comment in Number / "
 
@@ -91,7 +92,7 @@ ASTInteger >> / aNumber [
 	^ aNumber adaptToInteger: self andSend: #/
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> // aNumber [
 	| q |
 	aNumber = 0
@@ -106,7 +107,7 @@ ASTInteger >> // aNumber [
 		ifFalse: [ ^ q ]
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInteger >> < aNumber [
 	aNumber isInteger
 		ifTrue: [ self negative == aNumber negative
@@ -117,7 +118,7 @@ ASTInteger >> < aNumber [
 	^ aNumber adaptToInteger: self andSend: #<
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInteger >> = aNumber [
 	aNumber isNumber
 		ifFalse: [ ^ false ].
@@ -128,7 +129,7 @@ ASTInteger >> = aNumber [
 	^ aNumber adaptToInteger: self andSend: #=
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInteger >> > aNumber [
 	aNumber isInteger
 		ifTrue: [ self negative == aNumber negative
@@ -139,7 +140,7 @@ ASTInteger >> > aNumber [
 	^ aNumber adaptToInteger: self andSend: #>
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTInteger >> asFloat [
 	"Answer a Float that represents the value of the receiver.
 	Optimized to process only the significant digits of a LargeInteger."
@@ -154,14 +155,14 @@ ASTInteger >> asFloat [
 	^ sum * self sign asFloat timesTwoPower: (firstByte - 1) * 8
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTInteger >> asInteger [
 	"Answer with the receiver itself."
 
 	^ self
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 ASTInteger >> benchFib [
 	"Handy send-heavy benchmark"
 
@@ -178,7 +179,7 @@ ASTInteger >> benchFib [
 		ifFalse: [ (self - 1) benchFib + (self - 2) benchFib + 1 ]
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 ASTInteger >> benchmark [  "Handy bytecode-heavy benchmark"
 	"(500000 // time to run) = approx bytecodes per second"
 	"5000000 // (Time millisecondsToRun: [10 benchmark]) * 1000"
@@ -199,7 +200,7 @@ ASTInteger >> benchmark [  "Handy bytecode-heavy benchmark"
 	^ count
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitAnd: n [
 	"Answer an Integer whose bits are the logical AND of the receiver's bits 
 	and those of the argument, n."
@@ -212,14 +213,14 @@ ASTInteger >> bitAnd: n [
 		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitClear: aMask [
 	"Answer an Integer equal to the receiver, except with all bits cleared that are set in aMask."
 
 	^ (self bitOr: aMask) - aMask
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitInvert [
 	"Answer an Integer whose bits are the logical negation of the receiver's bits.
 	Numbers are interpreted as having 2's-complement representation."
@@ -227,7 +228,7 @@ ASTInteger >> bitInvert [
 	^ -1 - self
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitOr: n [
 	"Answer an Integer whose bits are the logical OR of the receiver's bits 
 	and those of the argument, n."
@@ -240,7 +241,7 @@ ASTInteger >> bitOr: n [
 		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitShift: shiftCount [
 	"Answer an Integer whose value (in twos-complement representation) is 
 	the receiver's value (in twos-complement representation) shifted left by 
@@ -257,7 +258,7 @@ ASTInteger >> bitShift: shiftCount [
 		lookfirst: self bytesCount) normalize
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTInteger >> bitXor: n [
 	"Answer an Integer whose bits are the logical XOR of the receiver's bits 
 	and those of the argument, n."
@@ -270,13 +271,13 @@ ASTInteger >> bitXor: n [
 		length: (self bytesCount max: norm bytesCount)
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTInteger >> byteAt: index [
 
 	self subclassResponsibility
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTInteger >> byteAt: index put: value [
 
 	"Primitive. Store the second argument (value) in the indexable field of 
@@ -289,20 +290,20 @@ ASTInteger >> byteAt: index put: value [
 	^ super byteAt: index put: value
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTInteger >> bytesCount [
 
 	self subclassResponsibility
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTInteger >> ceiling [
 	"Refer to the comment in Number|ceiling."
 
 	
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> copyto: x [
 	| stop |
 	stop := self bytesCount min: x bytesCount.
@@ -313,7 +314,7 @@ ASTInteger >> copyto: x [
 		startingAt: 1
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitAdd: arg [
 	| len arglen accum sum |
 	accum := 0.
@@ -329,7 +330,7 @@ ASTInteger >> digitAdd: arg [
 	^ sum
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitCompare: arg [
 	"Compare the magnitude of self with that of arg.
 	Return a code of 1, 0, -1 for self >, = , < arg"
@@ -349,7 +350,7 @@ ASTInteger >> digitCompare: arg [
 	^ 0
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitDiv: arg neg: ng [
 	"Answer with an array of (quotient, remainder)."
 
@@ -431,7 +432,7 @@ ASTInteger >> digitDiv: arg neg: ng [
 	^ ASTArray with: quo with: rem
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitLogic: arg op: op length: len [
 	| result neg1 neg2 rneg z1 z2 rz b1 b2 b |
 	neg1 := self negative.
@@ -478,7 +479,7 @@ ASTInteger >> digitLogic: arg op: op length: len [
 	^ result normalize
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitLshift: shiftCount [
 	| carry rShift mask len result digit byteShift bitShift highBit |
 	(highBit := self highBit) = 0
@@ -507,7 +508,7 @@ ASTInteger >> digitLshift: shiftCount [
 	^ result
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitMultiply: arg neg: ng [
 	| prod prodLen carry digit k ab |
 	(arg bytesCount = 1 and: [ (arg byteAt: 1) = 0 ])
@@ -527,7 +528,7 @@ ASTInteger >> digitMultiply: arg neg: ng [
 	^ prod normalize
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitRshift: anInteger bytes: b lookfirst: a [
 	"Shift right 8*b+anInteger bits, 0<=n<8.
 	Discard all digits beyond a, and all zeroes at or below a."
@@ -555,7 +556,7 @@ ASTInteger >> digitRshift: anInteger bytes: b lookfirst: a [
 	^ r
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> digitSubtract: arg [
 	| smaller larger z sum sl al ng |
 	sl := self bytesCount.
@@ -582,52 +583,52 @@ ASTInteger >> digitSubtract: arg [
 	^ sum normalize
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTInteger >> floor [
 	"Refer to the comment in Number|floor."
 
 	
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> growby: n [
 	^ self growto: self bytesCount + n
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASTInteger >> growto: n [
 	^ self copyto: (self species new: n)
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInteger >> hash [
 	"Hash is reimplemented because = is implemented."
 
 	^ (self lastDigit bitShift: 8) + (self byteAt: 1)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASTInteger >> isInteger [
 	"True for all subclasses of Integer."
 
 	^ true
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTInteger >> lastDigit [
 	"Answer the last digit of the integer."
 
 	^ self byteAt: self bytesCount
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTInteger >> normalize [
 	"SmallInts OK; LgInts override"
 
 	^ self
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTInteger >> printOn: aStream base: b [
 	"Print a representation of the receiver on the stream, aStream, in base, b, 
 	where 2<=b<=16."
@@ -661,7 +662,7 @@ ASTInteger >> printOn: aStream base: b [
 			pos := pos - 1 ]
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTInteger >> quo: aNumber [
 
 	"Refer to the comment in Number quo: "
@@ -678,7 +679,7 @@ ASTInteger >> quo: aNumber [
 	^ aNumber adaptToInteger: self andSend: #quo:
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTInteger >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	| j |
 	"Catches failure if LgInt replace primitive fails"
@@ -688,14 +689,14 @@ ASTInteger >> replaceFrom: start to: stop with: replacement startingAt: repStart
 		j := j + 1 ]
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTInteger >> rounded [
 	"Refer to the comment in Number|rounded."
 
 	
 ]
 
-{ #category : #enumerating }
+{ #category : 'enumerating' }
 ASTInteger >> timesRepeat: aBlock [
 	"Evaluate the argument, aBlock, the number of times represented by the 
 	receiver."
@@ -707,7 +708,7 @@ ASTInteger >> timesRepeat: aBlock [
 			count := count + 1 ]
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTInteger >> truncated [
 	"Refer to the comment in Number|truncated."
 

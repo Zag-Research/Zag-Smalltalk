@@ -1,28 +1,29 @@
 Class {
-	#name : #ASTLargeNegativeInteger,
-	#superclass : #ASTLargePositiveInteger,
-	#type : #bytes,
-	#category : #'ASTKernel-Numeric'
+	#name : 'ASTLargeNegativeInteger',
+	#superclass : 'ASTLargePositiveInteger',
+	#type : 'bytes',
+	#category : 'ASTKernel-Numeric',
+	#package : 'ASTKernel-Numeric'
 }
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargeNegativeInteger >> abs [
 	^ self negated
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargeNegativeInteger >> negated [
 	^ self copyto: (ASTLargePositiveInteger new: self bytesCount)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASTLargeNegativeInteger >> negative [
 	"Answer whether the receiver is mathematically negative."
 
 	^ true
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTLargeNegativeInteger >> normalize [
 	"Check for leading zeroes and return shortened copy if so"
 
@@ -53,7 +54,7 @@ ASTLargeNegativeInteger >> normalize [
 		ifFalse: [ ^ self ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTLargeNegativeInteger >> printOn: aStream base: b [
 	"Refer to the comment in Integer|printOn:base:."
 
@@ -61,7 +62,7 @@ ASTLargeNegativeInteger >> printOn: aStream base: b [
 	super printOn: aStream base: b
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTLargeNegativeInteger >> sign [
 	"Optimization. Answer -1 since receiver is less than 0."
 

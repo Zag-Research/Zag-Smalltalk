@@ -1,11 +1,12 @@
 Class {
-	#name : #ASTLargePositiveInteger,
-	#superclass : #ASTInteger,
-	#type : #bytes,
-	#category : #'ASTKernel-Numeric'
+	#name : 'ASTLargePositiveInteger',
+	#superclass : 'ASTInteger',
+	#type : 'bytes',
+	#category : 'ASTKernel-Numeric',
+	#package : 'ASTKernel-Numeric'
 }
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> * anInteger [
 	"Primitive. Multiply the receiver by the argument and answer with an
 	Integer result. Fail if either the argument or the result is not a
@@ -16,7 +17,7 @@ ASTLargePositiveInteger >> * anInteger [
 	^ super * anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> + anInteger [
 	"Primitive. Add the receiver to the argument and answer with an
 	Integer result. Fail if either the argument or the result is not a
@@ -27,7 +28,7 @@ ASTLargePositiveInteger >> + anInteger [
 	^ super + anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> - anInteger [
 	"Primitive. Subtract the argument from the receiver and answer with an
 	Integer result. Fail if either the argument or the result is not a
@@ -38,7 +39,7 @@ ASTLargePositiveInteger >> - anInteger [
 	^ super - anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> / anInteger [
 	"Primitive. Divide the receiver by the argument and answer with the
 	result if the division is exact. Fail if the result is not a whole integer.
@@ -50,7 +51,7 @@ ASTLargePositiveInteger >> / anInteger [
 	^ super / anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> // anInteger [
 	"Primitive. Divide the receiver by the argument and return the result.
 	Round the result down towards negative infinity to make it a whole
@@ -62,7 +63,7 @@ ASTLargePositiveInteger >> // anInteger [
 	^ super // anInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> < anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is less than the argument. Otherwise answer false. Fail if the
@@ -73,7 +74,7 @@ ASTLargePositiveInteger >> < anInteger [
 	^ super < anInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> <= anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is less than or equal to the argument. Otherwise answer false.
@@ -84,7 +85,7 @@ ASTLargePositiveInteger >> <= anInteger [
 	^ super <= anInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> = anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is equal to the argument. Otherwise answer false. Fail if the
@@ -95,7 +96,7 @@ ASTLargePositiveInteger >> = anInteger [
 	^ super = anInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> > anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is greater than the argument. Otherwise answer false. Fail if
@@ -106,7 +107,7 @@ ASTLargePositiveInteger >> > anInteger [
 	^ super > anInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> >= anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is greater than or equal to the argument. Otherwise answer
@@ -117,7 +118,7 @@ ASTLargePositiveInteger >> >= anInteger [
 	^ super >= anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> \\ anInteger [
 	"Primitive. Take the receiver modulo the argument. The result is the
 	remainder rounded towards negative infinity, of the receiver divided
@@ -129,12 +130,12 @@ ASTLargePositiveInteger >> \\ anInteger [
 	^ super \\ anInteger
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> abs [
 	
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTLargePositiveInteger >> bitAnd: anInteger [
 	"Primitive. Answer an Integer whose bits are the logical AND of the
 	receiver's bits and those of the argument. Fail if the receiver or argument
@@ -144,7 +145,7 @@ ASTLargePositiveInteger >> bitAnd: anInteger [
 	^ super bitAnd: anInteger
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTLargePositiveInteger >> bitOr: anInteger [
 	"Primitive. Answer an Integer whose bits are the logical OR of the
 	receiver's bits and those of the argument. Fail if the receiver or argument
@@ -154,7 +155,7 @@ ASTLargePositiveInteger >> bitOr: anInteger [
 	^ super bitOr: anInteger
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTLargePositiveInteger >> bitShift: anInteger [
 	"Primitive. Answer an Integer whose value (in twos-complement 
 	representation) is the receiver's value (in twos-complement
@@ -168,7 +169,7 @@ ASTLargePositiveInteger >> bitShift: anInteger [
 	^ super bitShift: anInteger
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTLargePositiveInteger >> bitXor: anInteger [
 	"Primitive. Answer an Integer whose bits are the logical XOR of the
 	receiver's bits and those of the argument. Fail if the receiver or argument
@@ -178,7 +179,7 @@ ASTLargePositiveInteger >> bitXor: anInteger [
 	^ super bitXor: anInteger
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTLargePositiveInteger >> byteAt: index [
 
 	"Primitive. Answer the value of an indexable field in the receiver. Fail if 
@@ -191,7 +192,7 @@ ASTLargePositiveInteger >> byteAt: index [
 		ifFalse: [ ^ super byteAt: index ]
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTLargePositiveInteger >> bytesCount [
 	"Primitive. Answer the number of indexable fields in the receiver. This 
 	value is the same as the largest legal subscript. Essential. See Object 
@@ -201,7 +202,7 @@ ASTLargePositiveInteger >> bytesCount [
 	self primitiveFailed
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTLargePositiveInteger >> highBit [
 	"Answer the index of the high order bit of the receiver, or zero if the receiver is zero. This method is allowed (and needed) for LargeNegativeIntegers as well, since LargeIntegers are sign/magnitude."
 
@@ -213,20 +214,20 @@ ASTLargePositiveInteger >> highBit [
 	^ lastDigit highBit + (8 * (realLength - 1))
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> negated [
 	^ (self copyto: (ASTLargeNegativeInteger new: self bytesCount))
 		normalize	"Need to normalize to catch SmallInteger minVal"
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASTLargePositiveInteger >> negative [
 	"Answer whether the receiver is mathematically negative."
 
 	^ false
 ]
 
-{ #category : #'truncation and round off' }
+{ #category : 'truncation and round off' }
 ASTLargePositiveInteger >> normalize [
 	"Check for leading zeroes and return shortened copy if so"
 
@@ -248,7 +249,7 @@ ASTLargePositiveInteger >> normalize [
 		ifFalse: [ ^ self ]
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTLargePositiveInteger >> quo: anInteger [
 	"Primitive. Divide the receiver by the argument and return the result.
 	Round the result down towards zero to make it a whole integer. Fail if
@@ -260,7 +261,7 @@ ASTLargePositiveInteger >> quo: anInteger [
 	^ super quo: anInteger
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTLargePositiveInteger >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 
@@ -272,14 +273,14 @@ ASTLargePositiveInteger >> replaceFrom: start to: stop with: replacement startin
 		startingAt: repStart
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTLargePositiveInteger >> sign [
 	"Optimization. Answer 1 since receiver is greater than 0."
 
 	^ 1
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTLargePositiveInteger >> ~= anInteger [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is equal to the argument. Otherwise answer false. Fail if the

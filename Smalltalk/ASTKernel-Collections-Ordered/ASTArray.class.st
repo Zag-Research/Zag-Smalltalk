@@ -1,18 +1,19 @@
 Class {
-	#name : #ASTArray,
-	#superclass : #ASTArrayedCollection,
-	#type : #variable,
-	#category : #'ASTKernel-Collections-Ordered'
+	#name : 'ASTArray',
+	#superclass : 'ASTArrayedCollection',
+	#type : 'variable',
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArray >> asArray [
 	"Answer with the receiver itself."
 
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArray >> asDictionary [
 	| dictionary |
 	dictionary := ASTDictionary new.
@@ -20,7 +21,7 @@ ASTArray >> asDictionary [
 	^ dictionary
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArray >> elementsExchangeIdentityWith: otherArray [
 	"This primitive performs a bulk mutation, causing all pointers to the elements of this array to be replaced by pointers to the corresponding elements of otherArray.  At the same time, all pointers to the elements of otherArray are replaced by pointers to the corresponding elements of this array."
 
@@ -28,7 +29,7 @@ ASTArray >> elementsExchangeIdentityWith: otherArray [
 	self primitiveFailed
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTArray >> hash [
 
 	"Make sure that equal (=) arrays hash equally."
@@ -37,7 +38,7 @@ ASTArray >> hash [
 	^ (self at: 1) hash + self last hash
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTArray >> printOn: aStream [
 	aStream nextPutAll: '#('.
 	self
@@ -47,7 +48,7 @@ ASTArray >> printOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTArray >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 
