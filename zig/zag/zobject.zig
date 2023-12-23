@@ -169,6 +169,9 @@ pub const Object = packed struct(u64) {
     pub inline fn asSymbol(self: Object) Object {
         return makeImmediate(.Symbol, self.hash32());
     }
+    pub inline fn asCharacter(int: u32) Object {
+        return makeImmediate(.Character, int);
+    }
     pub inline fn makeGroup(grp: Group, low48: u48) Object {
         return cast(grp.base() | low48);
     }
