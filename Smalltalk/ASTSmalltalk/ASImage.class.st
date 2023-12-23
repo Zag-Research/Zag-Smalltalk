@@ -64,6 +64,26 @@ ASImage class >> initialize [
 
 ]
 
+{ #category : 'image analysis' }
+ASImage class >> primitiveNumber: n [
+
+	^ ((#primitive: senders flatCollect: [ :m | m pragmas ])
+		    select: [ :p | p selector = #primitive: and: [p arguments first = n] ])
+]
+
+{ #category : 'image analysis' }
+ASImage class >> primitiveNumbers [
+^ (((#primitive: senders flatCollect: [ :m| m pragmas]) select: [:p| p selector = #primitive: ] thenCollect: [:p| p arguments first ]) asSet asArray select: #isInteger) asSortedCollection 
+]
+
+{ #category : 'image analysis' }
+ASImage class >> primitiveNumbers: aCollection [
+
+	^ ((#primitive: senders flatCollect: [ :m | m pragmas ]) select: [ :p |
+		  p selector = #primitive: and: [
+			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
+]
+
 { #category : 'writing' }
 ASImage >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |

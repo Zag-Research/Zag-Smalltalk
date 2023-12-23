@@ -1,10 +1,11 @@
 Class {
-	#name : #ASTSmallInteger,
-	#superclass : #ASTInteger,
-	#category : #'ASTKernel-Numeric'
+	#name : 'ASTSmallInteger',
+	#superclass : 'ASTInteger',
+	#category : 'ASTKernel-Numeric',
+	#package : 'ASTKernel-Numeric'
 }
 
-{ #category : #constants }
+{ #category : 'constants' }
 ASTSmallInteger class >> maxVal [
 
 	"Answer the maximum value for a SmallInteger."
@@ -12,7 +13,7 @@ ASTSmallInteger class >> maxVal [
 	^ 16r3FFFFFFFFFFFF
 ]
 
-{ #category : #constants }
+{ #category : 'constants' }
 ASTSmallInteger class >> minVal [
 
 	"Answer the minimum value for a SmallInteger."
@@ -20,14 +21,14 @@ ASTSmallInteger class >> minVal [
 	^ -16r4000000000000
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTSmallInteger class >> new [
 	"SmallIntegers are created as constants or by performing arithmetic."
 
 	self cannotInstantiate
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> * aNumber [
 	"Primitive. Multiply the receiver by the argument and answer with the
 	result if it is a SmallInteger. Fail if the argument or the result is not a
@@ -40,7 +41,7 @@ ASTSmallInteger >> * aNumber [
 	^ super * aNumber
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> + aNumber [
 	"Primitive. Add the receiver to the argument and answer with the result
 	if it is a SmallInteger. Fail if the argument or the result is not a
@@ -53,7 +54,7 @@ ASTSmallInteger >> + aNumber [
 	^ aNumber adaptToInteger: self andSend: #+
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> - aNumber [
 	"Primitive. Subtract the argument from the receiver and answer with the
 	result if it is a SmallInteger. Fail if the argument or the result is not a
@@ -64,7 +65,7 @@ ASTSmallInteger >> - aNumber [
 	^ super - aNumber
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> / aNumber [
 	"Primitive. Divide the receiver by the argument and return the result if the division is exact. Fail if the result is not a whole integer. Fail if the argument is 0 or is not a SmallInteger. Optional. No Lookup. See Object documentation whatIsAPrimitive."
 
@@ -76,7 +77,7 @@ ASTSmallInteger >> / aNumber [
 		ifFalse: [ ^ super / aNumber ]
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> // aNumber [
 	"Primitive. Divide the receiver by the argument and answer with the
 	result. Round the result down towards negative infinity to make it a
@@ -87,7 +88,7 @@ ASTSmallInteger >> // aNumber [
 	^ super // aNumber	"Do with quo: if primitive fails"
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> < aNumber [
 	"Primitive. Compare the receiver with the argument and answer with
 	true if the receiver is less than the argument. Otherwise answer false.
@@ -98,7 +99,7 @@ ASTSmallInteger >> < aNumber [
 	^ super < aNumber
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> <= aNumber [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is less than or equal to the argument. Otherwise answer
@@ -109,7 +110,7 @@ ASTSmallInteger >> <= aNumber [
 	^ super <= aNumber
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> = aNumber [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is equal to the argument. Otherwise answer false. Fail if the
@@ -120,7 +121,7 @@ ASTSmallInteger >> = aNumber [
 	^ super = aNumber
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> > aNumber [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is greater than the argument. Otherwise answer false. Fail if
@@ -131,7 +132,7 @@ ASTSmallInteger >> > aNumber [
 	^ super > aNumber
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> >= aNumber [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is greater than or equal to the argument. Otherwise answer
@@ -142,7 +143,7 @@ ASTSmallInteger >> >= aNumber [
 	^ super >= aNumber
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> \\ aNumber [
 	"Primitive. Take the receiver modulo the argument. The result is the
 	remainder rounded towards negative infinity, of the receiver divided by
@@ -153,14 +154,15 @@ ASTSmallInteger >> \\ aNumber [
 	^ super \\ aNumber	"Do with // if primitive fails"
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTSmallInteger >> asCharacter [
 	"Answer the Character whose value is the receiver."
 
-	^ ASTCharacter asciiValue: self
+	<primitive: 2000>
+	self primitiveFailed
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTSmallInteger >> asFloat [
 	"Primitive. Answer a Float that represents the value of the receiver.
 	Essential. See Object documentation whatIsAPrimitive."
@@ -169,12 +171,12 @@ ASTSmallInteger >> asFloat [
 	self primitiveFailed
 ]
 
-{ #category : #'reflective operations' }
+{ #category : 'reflective operations' }
 ASTSmallInteger >> basicIdentityHash [
 	^ self
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> bitAnd: arg [
 	"Primitive. Answer an Integer whose bits are the logical OR of the
 	receiver's bits and those of the argument, arg.
@@ -187,7 +189,7 @@ ASTSmallInteger >> bitAnd: arg [
 	^ (self bitInvert bitOr: arg bitInvert) bitInvert
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> bitOr: arg [
 	"Primitive. Answer an Integer whose bits are the logical OR of the
 	receiver's bits and those of the argument, arg.
@@ -202,7 +204,7 @@ ASTSmallInteger >> bitOr: arg [
 		ifFalse: [ (self bitInvert bitClear: arg) bitInvert ]
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> bitShift: arg [
 	"Primitive. Answer an Integer whose value is the receiver's value shifted
 	left by the number of bits indicated by the argument. Negative arguments
@@ -217,7 +219,7 @@ ASTSmallInteger >> bitShift: arg [
 		ifFalse: [ (self bitInvert bitShift: arg) bitInvert ]
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> bitXor: arg [
 	"Primitive. Answer an Integer whose bits are the logical XOR of the
 	receiver's bits and those of the argument, arg.
@@ -232,7 +234,7 @@ ASTSmallInteger >> bitXor: arg [
 		ifFalse: [ (self bitInvert bitXor: arg) bitInvert ]
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTSmallInteger >> byteAt: n [
 	"Answer the value of an indexable field in the receiver. Fail if the 
 	argument (the index) is not an Integer or is out of bounds."
@@ -248,14 +250,14 @@ ASTSmallInteger >> byteAt: n [
 		ifFalse: [ ^ (self bitShift: (1 - n) * 8) bitAnd: 16rFF ]
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTSmallInteger >> byteAt: n put: value [
 	"Fails. The digits of a small integer can not be modified."
 
 	self error: 'You cannot store in a SmallInteger'
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTSmallInteger >> bytesCount [
 	"Answer the number of indexable fields in the receiver. This value is the 
 	same as the largest legal subscript. Included so that a SmallInteger can 
@@ -276,12 +278,12 @@ ASTSmallInteger >> bytesCount [
 	^ 7
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> hash [
 	^ self
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> hashMultiply [
 	| low |
 	low := self bitAnd: 16383.
@@ -291,7 +293,7 @@ ASTSmallInteger >> hashMultiply [
 				* 16384) bitAnd: 16r0FFFFFFF
 ]
 
-{ #category : #'bit manipulation' }
+{ #category : 'bit manipulation' }
 ASTSmallInteger >> highBit [
 	"Answer the index of the high order bit of the receiver, or zero if the receiver is zero. Raise an error if the receiver is negative, since negative integers are defined to have an infinite number of leading 1's in 2's-complement arithmetic."
 
@@ -309,17 +311,17 @@ ASTSmallInteger >> highBit [
 	^ bitNo
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> identityHash [
 	^ self hashMultiply
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASTSmallInteger >> isSmallInteger [
 	^ true
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTSmallInteger >> printOn: aStream base: b [
 	"Refer to the comment in Integer|printOn:base:."
 
@@ -344,7 +346,7 @@ ASTSmallInteger >> printOn: aStream base: b [
 			i := i - 1 ]
 ]
 
-{ #category : #arithmetic }
+{ #category : 'arithmetic' }
 ASTSmallInteger >> quo: aNumber [
 	"Primitive. Divide the receiver by the argument and answer with the result. Round the result down towards zero to make it a whole integer. Fail if the argument is 0 or is not a MSmallInteger. Optional. See Object documentation whatIsAPrimitive."
 
@@ -356,14 +358,14 @@ ASTSmallInteger >> quo: aNumber [
 		ifFalse: [ ^ super quo: aNumber ]
 ]
 
-{ #category : #copying }
+{ #category : 'copying' }
 ASTSmallInteger >> shallowCopy [
 	"I am immutable (and not really an object), so answer myself."
 
 	
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSmallInteger >> ~= aNumber [
 	"Primitive. Compare the receiver with the argument and answer true if
 	the receiver is not equal to the argument. Otherwise answer false. Fail if
