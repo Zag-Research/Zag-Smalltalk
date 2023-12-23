@@ -41,8 +41,11 @@
 // Native arrays - 600 601 602 603 604 605 606 607 608 609 610 611 612 613 614 615 616 617 618 619 620 621 622 623 624 625 626 627 628 629
 // ExternalAddress - 630 631 632 633 634 635 636 637 638 639 640 641 642 643 644 645 646 647 648 649 650 651 652 653 654 655 656 657 658 659
 // ASTSmallInteger asCharacter - 2000
-// ASTStdIOStream read - 2001
-// ASTStdIOStream write: - 2002
+// ASTStdIOStream unicodeRead - 2001
+// ASTStdIOStream nextPut: - 2002
+// ASTStdIOStream nextPutAll: - 2003
+// ASTStdIOStream nextPutError: - 2004
+// ASTStdIOStream nextPutErrorAll: - 2005
 // ASTBehavour basicIdentityHash - 2075
 // ASTFloat basicIdentityHash - 2171
 

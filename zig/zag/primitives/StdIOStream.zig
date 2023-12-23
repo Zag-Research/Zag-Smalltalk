@@ -34,10 +34,11 @@ pub const inlines = struct {
     const stdout = std.io.getStdOut().writer();
     fn readCharacter() Object {
         var chars: [4]u8 = undefined;
-        stdin.read(chars[0..1]);
+        if (stdin.read(chars[0..1])<1) return Nil;
         const n = utf8ByteSequenceLength(chars) catch @panic("invalid utf8");
-        if (n>1)
-            stdin.read(chars[1..n]);
+        if (n>1) {
+            if (stdin.read(chars[1..n])<n-1) return Nil;
+        }
         return Object.asCharacter(utf8Decode(char[0..n]) catch @panic("invalid utf8"));
     }
 };
