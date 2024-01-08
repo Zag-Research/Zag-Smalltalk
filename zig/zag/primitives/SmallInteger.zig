@@ -243,7 +243,7 @@ const e = struct {
 };
 fn testExecute(ptr: anytype) []Object {
     const method: CompiledMethodPtr = @ptrCast(ptr);
-    var te = execute.TestExecution.new();
+    var te = execute.Execution.new();
     te.init();
     const result = te.run(&[_]Object{Nil}, method);
     return result;

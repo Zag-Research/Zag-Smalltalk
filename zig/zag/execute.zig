@@ -1229,7 +1229,7 @@ pub const controlPrimitives = struct {
         //        return @call(tailCall, pc.prim(), .{ pc+1, sp, process, context, selector, cache.next() });
     }
 };
-pub const TestExecution = struct {
+pub const Execution = struct {
     process: Process,
     ctxt: Context,
     sp: SP,
@@ -1290,7 +1290,7 @@ test "SendCache direct" {
         trace("\nmethod:< {}", .{method});
         method.setLiterals(empty, empty, &cache);
         trace("\nmethod:> {}", .{method});
-        var te = TestExecution.new();
+        var te = Execution.new();
         te.init();
         var objs = [_]Object{ Nil, True };
         const compiledMethod = method.asCompiledMethodPtr();
@@ -1311,20 +1311,20 @@ test "send with dispatch direct" {
     });
     dispatch.init();
     methodV.asCompiledMethodPtr().forDispatch(ClassIndex.UndefinedObject);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
 }
-test "simple return via TestExecution" {
+test "simple return via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 0, 0, .{
         &p.pushLiteral,     comptime Object.from(42),
         &p.returnNoContext,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
@@ -1333,35 +1333,35 @@ test "simple return via TestExecution" {
     try expectEqual(result[1], Nil);
     try expectEqual(result[2], True);
 }
-test "context return via TestExecution" {
+test "context return via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.@"at:", 0, 0, .{
         &p.pushContext,       "^",
         &p.pushLiteral,       comptime Object.from(42),
         &p.returnWithContext,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
-test "context returnTop via TestExecution" {
+test "context returnTop via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
-test "context returnTop twice via TestExecution" {
+test "context returnTop twice via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method1 = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
@@ -1375,14 +1375,14 @@ test "context returnTop twice via TestExecution" {
         &p.returnTop,
     });
     method1.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method1);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
-test "context returnTop with indirect via TestExecution" {
+test "context returnTop with indirect via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 3, 0, .{
         //        &p.noop,
@@ -1393,7 +1393,7 @@ test "context returnTop with indirect via TestExecution" {
         &p.returnTop,
     });
     method.setLiterals(empty, &[_]Object{Object.from(42)}, null);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
@@ -1417,7 +1417,7 @@ test "simple executable" {
         "label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
