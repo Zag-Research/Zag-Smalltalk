@@ -196,7 +196,7 @@ ASCBasicBlock >> pushParameterNamed: aSymbol [
 	stack := ASStackNamed new
 		         from: stack;
 		         name: aSymbol.
-	^ stack top: (ASCParameter new init: Object)
+	^ stack top: (ASCParameter new init: Object; name: aSymbol)
 ]
 
 { #category : 'API' }
