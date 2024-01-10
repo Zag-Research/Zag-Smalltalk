@@ -173,7 +173,8 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 
 { #category : 'compiling' }
 ASCodeGenerator >> lookupName: aString block: anUndefinedObject [ 
-	self shouldBeImplemented.
+	"self shouldBeImplemented."
+	code find: aString
 ]
 
 { #category : 'accessing' }

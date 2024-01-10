@@ -63,7 +63,6 @@ ASCMethodBlock >> primitive: anInteger [
 { #category : 'accessing' }
 ASCMethodBlock >> pushSelfNamed: selfName [
 
-	self halt.
 	stack := self pushParameterNamed: selfName
 ]
 

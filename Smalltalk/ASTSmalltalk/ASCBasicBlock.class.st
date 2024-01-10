@@ -187,7 +187,8 @@ ASCBasicBlock >> pushLocalNamed: aSymbol [
 	stack := ASStackNamed new
 		         from: stack;
 		         name: aSymbol.
-	^ stack top: (ASCLocal new init: Object)
+	^ stack top: (ASCLocal new init: Object;
+			   name: aSymbol)
 ]
 
 { #category : 'API' }
