@@ -18,7 +18,6 @@ self subclassResponsibility
 ]
 
 { #category : 'instance creation' }
-ASCVariableOperations >> with: anInteger [
-
-	variable := anInteger
+ASCVariableOperations >> with: ascVariable [
+	variable := ascVariable
 ]

@@ -24,7 +24,7 @@ CompiledMethod >> inspectionZagCode [
 	ast := ASPharoCompiler new astFor: self.
 
 	file := ASZigTestContext new.
-	output := ASZigCPSOutput testing
+	output := ASZigThreadedOutput testing
 		          context: file;
 		          generateCode: ast.
 

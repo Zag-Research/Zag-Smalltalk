@@ -174,10 +174,12 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> popVariable: anASVariable [
+ASCBasicBlock >> popVariable: aSymbol [
 
+	| target |
+	target := stack find: aSymbol.
 	stack top makeManifest.
-	self put: (ASCPopVariable with: anASVariable).
+	self put: (ASCPopVariable with: target top).
 	self doDrop
 ]
 
@@ -284,7 +286,7 @@ ASCBasicBlock >> stackTop [
 ASCBasicBlock >> storeVariable: aSymbol [
 
 	stack top makeManifest.
-	self put: (ASCStoreVariable with: (stack lookup: aSymbol))
+	self put: (ASCStoreVariable with: (stack find: aSymbol) top)
 ]
 
 { #category : 'accessing' }

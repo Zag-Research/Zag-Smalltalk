@@ -231,6 +231,14 @@ ASCodeGenerator >> primitive: primitiveNumber [
 ]
 
 { #category : 'API' }
+ASCodeGenerator >> pushArray: arraySize [
+	"What do I do here?"
+	"code doPush: (ASCValue ) put: (ASCSimple )"
+
+	
+]
+
+{ #category : 'API' }
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |

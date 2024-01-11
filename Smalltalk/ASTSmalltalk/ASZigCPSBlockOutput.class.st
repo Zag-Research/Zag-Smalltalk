@@ -38,11 +38,6 @@ ASZigCPSBlockOutput >> methodGenerator: anOutput block: anInteger [
 ]
 
 { #category : 'accessing' }
-ASZigCPSBlockOutput >> parentCodeGenerator: aCodeGenerator [
-	parentCodeGenerator := aCodeGenerator 
-]
-
-{ #category : 'accessing' }
 ASZigCPSBlockOutput >> prefix [
 
 	^ 'B'

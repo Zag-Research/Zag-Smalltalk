@@ -97,6 +97,11 @@ self subclassResponsibility
 ]
 
 { #category : 'accessing' }
+ASZigMethodOutput >> parentCodeGenerator: aCodeGenerator [
+	parentCodeGenerator := aCodeGenerator 
+]
+
+{ #category : 'accessing' }
 ASZigMethodOutput >> prefix [ ^ 'M'
 ]
 
