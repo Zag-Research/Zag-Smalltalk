@@ -73,6 +73,14 @@ ASCodeGenerator >> drop [
 		putSimple: #drop
 ]
 
+{ #category : 'API' }
+ASCodeGenerator >> dup [
+
+	code
+		doDup;
+		putSimple: #dup
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> enableInlining [
 

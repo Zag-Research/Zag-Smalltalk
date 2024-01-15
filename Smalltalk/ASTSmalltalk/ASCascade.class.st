@@ -81,7 +81,7 @@ ASCascade >> zigWalk: aGenerator [
 	target zigWalkTarget: aGenerator.
 	sends doWithIndex: [ :each :idx |
 		idx = 1
-			ifTrue: [ aGenerator putDup ]
+			ifTrue: [ aGenerator dup ]
 			ifFalse: [ idx = size ifTrue: [ aGenerator drop ] ifFalse: [aGenerator putCopyOver] ].
 		each zigWalk: aGenerator ]
 ]

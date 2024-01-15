@@ -64,6 +64,11 @@ ASCBasicBlock >> doDrop: n [
 ]
 
 { #category : 'stackAccessHelpers' }
+ASCBasicBlock >> doDup [
+	stack := stack from: stack top 
+]
+
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPop [
 
 	| result |
@@ -140,7 +145,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations last next
+	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
 
 { #category : 'instance initialization' }
