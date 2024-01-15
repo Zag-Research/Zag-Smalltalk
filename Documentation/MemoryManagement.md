@@ -126,9 +126,9 @@ The following operations are affected (slowed down) by supporting `become:`
 1. accessing any instance variable or indexing
 
 ### Array of Objects
-Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situation, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.
+Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situation, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.^[Note that compacting collectors somewhat mitigate this.]
 
-The allocation of an array of objects creates an object that encompasses a sequence of objects of a given size. The objects at those locations are complete object (including headers) and do not have to be homogeneous, but have to be no larger than that size. In fact, when the AoO is first allocated, all the elements will be initialized to Nil. This means that polymorphic dispatch could be used as long as the AoO is created with the largest of the objects. The `at:put:` message will fail if a larger object is provided. Elements also cannot be `Float` (for encoding reasons) but this is not a limitatiion since an array of floats is already efficiently handled.
+The allocation of an array of objects creates an object that encompasses a sequence of objects of a given size. The objects at those locations are complete objects (including headers) and do not have to be homogeneous, but have to be no larger than that size. In fact, when the AoO is first allocated, all the elements will be initialized to Nil. This means that polymorphic dispatch could be used as long as the AoO is created with the largest of the objects. The `at:put:` message will fail if a larger object is provided. Elements also cannot be `Float` (for encoding reasons) but this is not a limitation since an array of floats is already efficiently handled.
 
 The low 6 bits of the hash field for an element are the log2 of the size of the total array and allow accessing its header.
 
@@ -152,3 +152,5 @@ The disadvantages relate to garbage collection:
 - [Cornell course copying](http://www.cs.cornell.edu/courses/cs312/2003fa/lectures/sec24.htm)
 - [uta copying](https://lambda.uta.edu/cse5317/notes/node48.html)
 - [GNU Smalltalk partially-copying collector](https://www.gnu.org/software/smalltalk/manual/html_node/GC.html)
+- [OpenSmalltalk VM collector (including benchmarks)](https://dl.acm.org/doi/10.1145/3359619.3359741)
+- 

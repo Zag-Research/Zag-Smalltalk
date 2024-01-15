@@ -17,8 +17,8 @@ $ cmake -S pharo-vm -B build -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUEÂ
 $ cd build
 $ make install
 ```
+- [Clement Bera on Spur's object format](https://clementbera.wordpress.com/2014/01/16/spurs-new-object-format/) and [floating point](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/)
 - 
-
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)

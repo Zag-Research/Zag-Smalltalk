@@ -4,7 +4,13 @@
 [Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)
 [Unsafe Rust](https://doc.rust-lang.org/nightly/book/ch19-01-unsafe-rust.html)
 
-### Object encoding
+## Object encoding
+
+We use one of 2 object encodings with different properties:
+	1. NaN Encoding - which has the advantage of 64-bit floats being encoded with no change. This allows floating-point values to be directly used by other languages and potentially GPUs. This supports 50-bit SmallIntegers.
+	2. Modified Spur Encoding - which probably has faster class determination (hence dispatch), and 61-bit SmallIntegers. Most-used 64-bit floats are encoded as immediates, but some very large values (more than 2e77) will be heap-allocated.
+Defining a configuration flag allows choosing between these encodings. Once we can run real benchmarks, we will determine which is actually faster for particular workloads.
+### NaN Encoding
 The IEEE 754 64-bit binary number is encoded as follows:
 	![IEEE 754 Binary-64](images/Pasted%20image%2020210311212924.png)
 When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
@@ -31,7 +37,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0004 | 0000 | 0000 | False                         |
 | FFF0      | 0005 | 0000 | 0001 | True                          |
 | FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF0      | 0007 | aaxx | xxxx | Symbol                        |
+| FFF0      | 0007 | xxxx | xxaa | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
 | FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
 | FFF1-8    | xxxx | xxxx | xxxx | SmallInteger                  |
@@ -50,23 +56,36 @@ So, interpreted as a u64, any value that is less than or equal to -inf is a doub
 Groups C through F have the low 48 bits being the address of an object.
 Groups A through E are all `BlockClosure`s - A through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
+### Modified Spur Encoding
+Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk).
+
+Spur uses the [following format](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/):
+![[Pasted image 20240115082827.png]]
+This provides 61-bit SmallInteger and immediate floats that have an exponent range equivalent to 32-bit floats (approximately 1e-77 to 1e77) with the full 64-bit float mantissa. Determining which of the 4 types is a simple bit-test. Decoding the float is a test for the zero case and then a shift, add a 64-bit constant, and a rotate.
+
+We extend this slightly, by using all 8 possible tag values:
+0: Pointer
+1: SmallInteger
+2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code)
+3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and a 4-bit rotate.
+Because we are using all 8 possible values, where test for "is a SmallInteger" (or Float) that was simply an `and` in Spur, is an `and` followed by a `cmp`.
 ### Immediates
-All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Integers, Floats, Characters, and Symbols.
+All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Characters, and Symbols.
 
 Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-50 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
 
 #### Tag values
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
-2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. For integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 3. UndefinedObject: This encodes the singleton value `nil`.
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
 5. True: This encodes the singleton value `true`
-6. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. This isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
+6. Float - this is reserved  for the bit patterns that encode double-precision IEEE floating point. In the NaN encoding, this isn't encoded in the tag, but rather with all the values outside the range of literals (where the S+M is less than 0xFFF or the value -inf).
 7. Symbol: See [Symbols](Symbols.md) for detailed information on the format.
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Thunks and Closures
-Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. Four of these can be encoded as immediate values and obviate the need for heap allocation.
+Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. In the NaN encoding, four of these can be encoded as immediate values and obviate the need for heap allocation. For Modified Spur encoding, there is not special coding, so the first 4 don't apply.
 1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers and 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
 2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
 3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
