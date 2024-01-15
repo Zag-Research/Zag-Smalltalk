@@ -63,7 +63,7 @@ pub const Object = packed struct {
             .UndefinedObject => writer.print("nil", .{}),
             .Symbol => writer.print("#symbols.i_{}", .{self.u>>20}),
             .Character => writer.print("${c}", .{@as(u8,@truncate(self.u>>20))}),
-            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(self.u>>1))}),
+            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(self.u>>3))}),
             .Float => writer.print("{}", .{ decode(self.u) }),
             else => {
                 try writer.print("0x{x:0>16}", .{self.u});
@@ -109,11 +109,11 @@ pub fn main() !void {
         &xBig, 42, null, false, true,
         0.0,-0.0,
         xMin,
-        pow(f64,2.0,-1022),pow(f64,2.0,-600),pow(f64,2.0,-400),
+        pow(f64,2.0,-767),pow(f64,2.0,-511),
         xSmall,xSmall2,
-        0.5, 0.75, -1.0, 1.0, 2.0, 16.0, pow(f64,2.0,40),pow(f64,2.0,159),pow(f64,2.0,256),
+        0.5, 0.75, 1.0, -1.0, 2.0,
         xBig, -xBig,
-        pow(f64,2.0,257),pow(f64,2.0,600),pow(f64,2.0,800),
+        pow(f64,2.0,257),pow(f64,2.0,513),pow(f64,2.0,769),
         xMax, -xMax,
         xInf, -xInf,
         xNaN, -xNaN,
