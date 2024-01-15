@@ -1,7 +1,8 @@
 const std = @import("std");
-const rotr = std.math.rotr;
-const rotl = std.math.rotl;
-const pow = std.math.pow;
+const math = std.math;
+const rotr = math.rotr;
+const rotl = math.rotl;
+const pow = math.pow;
 pub const ClassIndex = enum(u16) {
     none = 0,
     Object,
@@ -32,10 +33,7 @@ pub const Object = packed struct {
         if (T == Object) return value;
         switch (@typeInfo(@TypeOf(value))) {
             .Int, .ComptimeInt => return @bitCast(@as(u64, value)*8+1),
-            .Float, .ComptimeFloat => {
-                const u = rotl(u64,@as(u64,@bitCast(@as(f64,value))),4)+%3;
-                return @bitCast(if (u&7>=3) u else 8);
-            },
+            .Float, .ComptimeFloat => return @bitCast(encode(value)),
             .Bool => return if (value) True else False,
             .Null => return Nil,
             .Pointer => |ptr_info| {
@@ -75,9 +73,19 @@ pub const Object = packed struct {
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.u});
     }
 };
+fn encode(x: f64) u64 {
+    const u = rotl(u64,@bitCast(x),4);
+    if (u&7>=5) {
+        if (math.isNan(x)) return 16;
+        if (math.inf(f64)==x) return 24;
+        if (math.inf(f64)==-x) return 32;
+        return 8;
+    }
+    return u+%3;
+}
 fn decode(x: u64) f64 {
-    if (x&7>=3) return @bitCast(rotr(u64,x-3,4));
-    return 0;
+    if (x&7<3) return 0;
+    return @bitCast(rotr(u64,x-3,4));
 }
 fn cvtU64(value: anytype) u64 {
     return switch (@typeInfo(@TypeOf(value))) {
@@ -90,6 +98,9 @@ fn cvtU64(value: anytype) u64 {
     };
 }
 pub fn main() !void {
+    const xMin: f64 = @bitCast(@as(u64,0x0000_0000_0000_0001));
+    const xSmall: f64 = @bitCast(@as(u64,0x2fff_ffff_ffff_ffff));
+    const xSmall2: f64 = @bitCast(@as(u64,0x3000_0000_0000_0000));
     const xBig: f64 = @bitCast(@as(u64,0x4fff_ffff_ffff_ffff));
     const xMax: f64 = @bitCast(@as(u64,0x7fef_ffff_ffff_ffff));
     const xInf: f64 = @bitCast(@as(u64,0x7ff0_0000_0000_0000));
@@ -97,7 +108,9 @@ pub fn main() !void {
     const data = .{
         &xBig, 42, null, false, true,
         0.0,-0.0,
-        pow(f64,2.0,-1022),pow(f64,2.0,-600),pow(f64,2.0,-400),pow(f64,2.0,-40),
+        xMin,
+        pow(f64,2.0,-1022),pow(f64,2.0,-600),pow(f64,2.0,-400),
+        xSmall,xSmall2,
         0.5, 0.75, -1.0, 1.0, 2.0, 16.0, pow(f64,2.0,40),pow(f64,2.0,159),pow(f64,2.0,256),
         xBig, -xBig,
         pow(f64,2.0,257),pow(f64,2.0,600),pow(f64,2.0,800),
@@ -106,6 +119,15 @@ pub fn main() !void {
         xNaN, -xNaN,
     };
     inline for (data) |x| {
-        std.debug.print("{x:0>16} {x:0>16} {} {} {}\n",.{cvtU64(x),Object.from(x).u,x,Object.from(x),Object.from(x).immediate_class()});
+        const u = Object.from(x);
+        if (u.u&7==0) {
+            std.debug.print("{x:0>16} {x:0>16} {} coded as Object {s}\n",.{cvtU64(x),u.u,x, switch (u.u>>3) {
+                else => "",
+                2 => "NaN",
+                3 => "+inf",
+                4 => "-inf",
+            }});
+        } else
+            std.debug.print("{x:0>16} {x:0>16} {} {} {}\n",.{cvtU64(x),u.u,x,u,u.immediate_class()});
     }
 }

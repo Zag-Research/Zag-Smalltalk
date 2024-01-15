@@ -67,8 +67,9 @@ We extend this slightly, by using all 8 possible tag values:
 0: Pointer
 1: SmallInteger
 2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code)
-3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and a 4-bit rotate.
-Because we are using all 8 possible values, where test for "is a SmallInteger" (or Float) that was simply an `and` in Spur, is an `and` followed by a `cmp`.
+3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits; if the resulting low 3 bits are less than 5, add 3; otherwise immediate encoding is not possible.
+
+Because we are using all 8 possible values, where the test for "is a SmallInteger" (or Float) that was simply an `and` in Spur, is an `and` followed by a `cmp` using our encoding.
 ### Immediates
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Characters, and Symbols.
 
