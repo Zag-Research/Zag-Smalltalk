@@ -15,8 +15,8 @@ const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const indexSymbol0 = object.indexSymbol0;
-const indexSymbol1 = object.indexSymbol1;
+const indexSymbol0 = object.Object.indexSymbol0;
+const indexSymbol1 = object.Object.indexSymbol1;
 const dispatch = @import("dispatch.zig");
 const lookupAddress = dispatch.lookupAddress;
 pub const Context = @import("context.zig").Context;
@@ -362,8 +362,8 @@ pub const Code = extern union {
     }
 };
 pub fn intOf(comptime str: []const u8) u12 {
-    var n: u12 = 0;
-    for (str) |c| {
+    comptime var n: u12 = 0;
+    inline for (str) |c| {
         if (c > '9') return n;
         n = n * 10 + (c - '0');
     }
@@ -778,7 +778,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    objects[n] = object.indexSymbol0(intOf(field[0..]));
+                                    objects[n] = object.Object.indexSymbol0(comptime intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -790,7 +790,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                     .Array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                objects[n] = object.indexSymbol1(lp);
+                                                                objects[n] = object.Object.indexSymbol1(lp);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;

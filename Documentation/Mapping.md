@@ -54,7 +54,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF9 group for encodings of new classes that need more than 32 auxiliary (hash) bits.
 Groups C through F have the low 48 bits being the address of an object.
-Groups A through E are all `BlockClosure`s - A through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
+Groups 9 through E are all `BlockClosure`s - 9 through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
 ### Modified Spur Encoding
 Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk).

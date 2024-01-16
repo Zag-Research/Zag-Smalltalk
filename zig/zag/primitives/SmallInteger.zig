@@ -41,7 +41,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn p_negated(self: Object) !Object { // Negate
-        const result = @as(Object, @bitCast(object.u64_ZERO2 -% self.u()));
+        const result = @as(Object, @bitCast(object.Object.u64_ZERO2 -% self.u()));
         if (result.isInt()) return result;
         return error.primitiveError;
     }
