@@ -163,29 +163,11 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn high16(self: Object) u16 {
                 return @intFromEnum(self.classIndex);
             }
-            pub inline fn isIndexSymbol0(self: Object) bool {
-                return (self.u() & nonIndexSymbol) == (comptime indexSymbol0(0).u() & nonIndexSymbol);
-            }
-            pub inline fn isIndexSymbol1(self: Object) bool {
-                return (self.u() & nonIndexSymbol) == (comptime indexSymbol1(0).u() & nonIndexSymbol);
-            }
             pub inline fn indexNumber(self: Object) u24 {
                 return @truncate(self.u()>>8);
             }
             pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
                 return @bitCast(Group.immediates.base() | (@as(u64,@intFromEnum(cls)) << 32) | low32);
-            }
-            pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
-                return makeImmediate(cls,self.hash32());
-            }
-            pub inline fn withClass(self: Object, cls: ClassIndex) Object {
-                if (config.dispatchCache) {
-                    return cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
-                } else return self;
-            }
-            pub inline fn cast(v: anytype) Object {
-                // stored using little-endian order
-                return @bitCast(v);
             }
             pub inline fn hash24(self: Object) u24 {
                 return @truncate(self.u()>>8);
@@ -199,17 +181,8 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn withOffsetx(self: Object, offset: u32) Object {
                 return cast(@as(u64, offset) << 32 | self.hash32());
             }
-            pub inline fn asSymbol(self: Object) Object {
-                return makeImmediate(.Symbol, self.hash32());
-            }
-            pub inline fn asCharacter(int: u32) Object {
-                return makeImmediate(.Character, int);
-            }
             pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
                 return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).u() + addr);
-            }
-            pub inline fn tagbits(self: Object) u16 {
-                return @intFromEnum(self.tag);
             }
             pub inline fn tagbitsL(self: Object) u32 {
                 return @truncate(self.u() >> 32);
@@ -316,7 +289,13 @@ pub const Object = switch (config.objectEncoding) {
             }
             pub usingnamespace ObjectFunctions;
     },
-    .tags => {},
+    .tags => packed struct(u64) {
+        tag: Group,
+        classIndex: ClassIndex,
+        _unused: u13,
+        hash: u32,
+        pub const Group = enum(u3) { heap=0, smallInteger, immediates, float3, float4, float5, float6, float7};
+    },
 };
 const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
@@ -328,6 +307,33 @@ const ObjectFunctions = struct {
     }
     pub inline fn equals(self: Object, other: Object) bool {
         return self.u() == other.u();
+    }
+    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
+        if (config.dispatchCache) {
+            return cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
+        } else return self;
+    }
+    pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
+        return makeImmediate(cls,self.hash32());
+    }
+    pub inline fn isIndexSymbol0(self: Object) bool {
+        return (self.u() & nonIndexSymbol) == (comptime indexSymbol0(0).u() & Object.nonIndexSymbol);
+    }
+    pub inline fn isIndexSymbol1(self: Object) bool {
+        return (self.u() & nonIndexSymbol) == (comptime indexSymbol1(0).u() & Object.nonIndexSymbol);
+    }
+    pub inline fn cast(v: anytype) Object {
+        // stored using little-endian order
+        return @bitCast(v);
+    }
+    pub inline fn asSymbol(self: Object) Object {
+        return makeImmediate(.Symbol, self.hash32());
+    }
+    pub inline fn asCharacter(int: u32) Object {
+        return makeImmediate(.Character, int);
+    }
+    pub inline fn tagbits(self: Object) u16 {
+        return @intFromEnum(self.tag);
     }
     pub inline fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
