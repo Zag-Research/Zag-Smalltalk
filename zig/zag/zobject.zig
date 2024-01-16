@@ -124,7 +124,7 @@ pub const Object = switch (config.objectEncoding) {
                 return @bitCast(v);
             }
             inline fn oImm(c: ClassIndex, h: u32) Object {
-                return of(imm(c,h));
+                return @bitCast(imm(c,h));
             }
             inline fn imm(c: ClassIndex, h: u32) u64 {
                 return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
@@ -138,6 +138,12 @@ pub const Object = switch (config.objectEncoding) {
             }
             pub inline fn indexSymbol1(uniqueNumber: u16) Object {
                 return oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8);
+            }
+            pub inline fn isIndexSymbol0(self: Object) bool {
+                return (self.u() & nonIndexSymbol) == (comptime indexSymbol0(0).u() & nonIndexSymbol);
+            }
+            pub inline fn isIndexSymbol1(self: Object) bool {
+                return (self.u() & nonIndexSymbol) == (comptime indexSymbol1(0).u() & nonIndexSymbol);
             }
             pub const invalidHeapPointer = of(Start_of_Heap_Objects);
             pub const ZERO = of(0);
@@ -181,6 +187,10 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn withOffsetx(self: Object, offset: u32) Object {
                 return cast(@as(u64, offset) << 32 | self.hash32());
             }
+            pub inline fn cast(v: anytype) Object {
+                // stored using little-endian order
+                return @bitCast(v);
+            }
             pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
                 return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).u() + addr);
             }
@@ -194,9 +204,6 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn selectorEquals(self: Object, other: Object) bool {
                 //        return (self.u()^other.u())&0xffffffffffff == 0; // may be false positive
                 return self.u() == other.u();
-            }
-            pub inline fn indexEquals(self: Object, other: Object) bool {
-                return self.equals(other.withImmClass(.Symbol)); // may be false positive
             }
             pub inline fn isInt(self: Object) bool {
                 return switch (self.tag) {
@@ -219,28 +226,12 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn isDouble(self: Object) bool {
                 return self.u() <= Negative_Infinity;
             }
-            pub inline fn isBool(self: Object) bool {
-                const tag = self.tagbitsL();
-                return tag == Object.False.tagbitsL() or tag == Object.True.tagbitsL();
-            }
-            pub inline fn isNil(self: Object) bool {
-                return self.tagbitsL() == Object.Nil.tagbitsL();
-            }
-            pub inline fn isImmediate(self: Object) bool {
-                return self.tag == .immediates;
-            }
-            pub inline fn isHeapObject(self: Object) bool {
-                return self.tag == .heap;
-            }
             pub inline fn isMemoryAllocated(self: Object) bool {
                 return self.tagbits() >= Start_of_Pointer_Objects >> 48;
             }
             pub inline fn isBlock(self: Object) bool {
                 const tag = self.tagbits();
                 return tag >= Start_of_Blocks >> 48 and !self.isHeapObject();
-            }
-            pub inline fn isSymbol(self: Object) bool {
-                return self.tagbitsL() == comptime indexSymbol0(0).tagbitsL();
             }
             pub inline fn toBoolNoCheck(self: Object) bool {
                 return @as(u1, @truncate(self.u())) == 1;
@@ -308,32 +299,41 @@ const ObjectFunctions = struct {
     pub inline fn equals(self: Object, other: Object) bool {
         return self.u() == other.u();
     }
-    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
-        if (config.dispatchCache) {
-            return cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
-        } else return self;
+    pub inline fn asSymbol(self: Object) Object {
+        return Object.makeImmediate(.Symbol, self.hash32());
     }
     pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
-        return makeImmediate(cls,self.hash32());
+        return Object.makeImmediate(cls,self.hash32());
     }
-    pub inline fn isIndexSymbol0(self: Object) bool {
-        return (self.u() & nonIndexSymbol) == (comptime indexSymbol0(0).u() & Object.nonIndexSymbol);
-    }
-    pub inline fn isIndexSymbol1(self: Object) bool {
-        return (self.u() & nonIndexSymbol) == (comptime indexSymbol1(0).u() & Object.nonIndexSymbol);
-    }
-    pub inline fn cast(v: anytype) Object {
-        // stored using little-endian order
-        return @bitCast(v);
-    }
-    pub inline fn asSymbol(self: Object) Object {
-        return makeImmediate(.Symbol, self.hash32());
+    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
+        if (config.dispatchCache) {
+            return Object.cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
+        } else return self;
     }
     pub inline fn asCharacter(int: u32) Object {
-        return makeImmediate(.Character, int);
+        return Object.makeImmediate(.Character, int);
     }
     pub inline fn tagbits(self: Object) u16 {
         return @intFromEnum(self.tag);
+    }
+    pub inline fn indexEquals(self: Object, other: Object) bool {
+        return self.equals(other.withImmClass(.Symbol)); // may be false positive
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbitsL() == comptime Object.indexSymbol0(0).tagbitsL();
+    }
+    pub inline fn isBool(self: Object) bool {
+        const tag = self.tagbitsL();
+        return tag == Object.False.tagbitsL() or tag == Object.True.tagbitsL();
+    }
+    pub inline fn isNil(self: Object) bool {
+        return self.tagbitsL() == Object.Nil.tagbitsL();
+    }
+    pub inline fn isImmediate(self: Object) bool {
+        return self.tag == .immediates;
+    }
+    pub inline fn isHeapObject(self: Object) bool {
+        return self.tag == .heap;
     }
     pub inline fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
