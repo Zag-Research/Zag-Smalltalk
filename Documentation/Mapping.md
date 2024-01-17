@@ -40,21 +40,21 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0007 | xxxx | xxaa | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
 | FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
-| FFF1-8    | xxxx | xxxx | xxxx | SmallInteger                  |
-| FFF1      | 0000 | 0000 | 0000 | SmallInteger minVal           |
-| FFF5      | 0000 | 0000 | 0000 | SmallInteger 0                |
-| FFF8      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
-| FFF9      | xxxx | xxxx | xxxx | numeric thunk                 |
-| FFFA      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFFB      | xxxx | xxxx | xxxx | heap thunk                    |
-| FFFC      | xxxx | xxxx | xxxx | non-local thunk               |
-| FFFD      | xxxx | xxxx | xxxx | heap closure with non-local return                      |
-| FFFE      | xxxx | xxxx | xxxx | heap closure                  |
-| FFFF      | xxxx | xxxx | xxxx | heap object                   |
+| FFF1      | xxxx | xxxx | xxxx | numeric thunk                 |
+| FFF2      | xxxx | xxxx | xxxx | immediate thunk               |
+| FFF3      | xxxx | xxxx | xxxx | heap thunk                    |
+| FFF4      | xxxx | xxxx | xxxx | non-local thunk               |
+| FFF5      | xxxx | xxxx | xxxx | heap closure with non-local return                      |
+| FFF6      | xxxx | xxxx | xxxx | heap closure                  |
+| FFF7      | xxxx | xxxx | xxxx | heap object                   |
+| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
+| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
+| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
+| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. There is also room in the FFF9 group for encodings of new classes that need more than 32 auxiliary (hash) bits.
-Groups C through F have the low 48 bits being the address of an object.
-Groups 9 through E are all `BlockClosure`s - 9 through D being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
+Groups 4 through 7 have the low 48 bits being the address of an object.
+Groups 1 through 6 are all `BlockClosure`s - 1 through 4 being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
 
 ### Modified Spur Encoding
 Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk).

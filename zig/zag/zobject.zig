@@ -92,6 +92,13 @@ pub const Object = switch (config.objectEncoding) {
             tag: Group,
             pub const Group = enum(u16) {
                 immediates = 0xfff0,
+                numericThunk,
+                immediateThunk,
+                heapThunk,
+                nonLocalThunk,
+                nonLocalClosure,
+                heapClosure,
+                heap,
                 smallIntMin,
                 smallIntNeg_2,
                 smallIntNeg_3,
@@ -100,13 +107,6 @@ pub const Object = switch (config.objectEncoding) {
                 smallIntPos_6,
                 smallIntPos_7,
                 smallIntMax,
-                numericThunk,
-                immediateThunk,
-                heapThunk,
-                nonLocalThunk,
-                nonLocalClosure,
-                heapClosure,
-                heap,
                 _,
                 const Self = @This();
                 inline fn base(cg: Self) u64 {
@@ -117,8 +117,6 @@ pub const Object = switch (config.objectEncoding) {
                 }
             };
             const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
-            const Start_of_Blocks: u64 = g(.numericThunk);
-            const Start_of_Pointer_Objects: u64 = g(.heapThunk); // things that have low 48 bits is an object pointer
             const Start_of_Heap_Objects: u64 = g(.heap);
             inline fn of(comptime v: u64) Object {
                 return @bitCast(v);
@@ -227,11 +225,24 @@ pub const Object = switch (config.objectEncoding) {
                 return self.rawU() <= Negative_Infinity;
             }
             pub inline fn isMemoryAllocated(self: Object) bool {
-                return @intFromEnum(self.tag) >= Start_of_Pointer_Objects >> 48;
+                return switch (self.tag) {
+                    .heapThunk,
+                    .nonLocalThunk,
+                    .nonLocalClosure,
+                    .heapClosure,
+                    .heap => true,
+                    else => false};
             }
             pub inline fn isBlock(self: Object) bool {
-                const tag = @intFromEnum(self.tag);
-                return tag >= Start_of_Blocks >> 48 and !self.isHeapObject();
+                return switch (self.tag){
+                    .numericThunk,
+                    .immediateThunk,
+                    .heapThunk,
+                    .nonLocalThunk,
+                    .nonLocalClosure,
+                    .heapClosure,
+                    .heap => true,
+                    else => false};
             }
             pub inline fn toBoolNoCheck(self: Object) bool {
                 return @as(u1, @truncate(self.rawU())) == 1;
