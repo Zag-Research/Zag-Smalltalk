@@ -528,7 +528,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     }
                 }
             }
-            trace("-> 0x{x:0>16}", .{self.selector.u()});
+            trace("-> 0x{x:0>16}", .{self.selector.rawU()});
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
@@ -843,7 +843,7 @@ test "compileObject" {
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[0].equals(o.asObject()));
-    try expectEqual(@as(u48, @truncate(o.asObject().u())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
+    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[5].equals(True));
     try expect(o.objects[6].equals(True));
     const h2: HeapObject = @bitCast(o.objects[2]);
@@ -1210,7 +1210,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector, cache });
     }
     pub fn forceDnu(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        std.debug.print("\nforceDnu: 0x{x} {} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol(), cache.fromDnu() });
+        std.debug.print("\nforceDnu: 0x{x} {} {} {}", .{ selector.hash32(), selector.classIndex, selector.asSymbol(), cache.fromDnu() });
         _ = .{ pc, sp, process, context, selector, cache, @panic("forceDnu unimplemented") };
     }
     fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {

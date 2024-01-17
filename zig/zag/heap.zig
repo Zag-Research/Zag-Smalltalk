@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
+const config = @import("config.zig");
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -585,13 +586,17 @@ pub const HeapObject = packed struct(u64) {
     pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const size = self.length + 1;
         if (size == forwardLength + 1) { // already forwarded
-            reference.* = @bitCast((reference.u() & 0xffff000000000000) + @as(u48, @truncate(@as(u64, @bitCast(self.*)))));
+            reference.* = switch (config.objectEncoding) {
+                .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@as(u64, @bitCast(self.*))))),
+                .tag => {}};
             return hp;
         }
         const target = hp - size;
         @memcpy(target[0..size], @as([*]HeapObject, @ptrCast(self.start())));
         self.* = @bitCast((@as(u64, forwardLength) << 48) + @intFromPtr(hp - 1));
-        reference.* = @bitCast((reference.u() & 0xffff000000000000) + @intFromPtr(hp - 1));
+        reference.* = switch (config.objectEncoding) {
+            .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp - 1)),
+            .tag => {}};
         return target;
     }
     pub inline fn prev(self: HeapObjectPtr) Object {

@@ -133,7 +133,7 @@ const Dispatch = extern struct {
     }
     pub fn addMethod(index: ClassIndex, method: *CompiledMethod) !void {
         if (internalNeedsInitialization) initialize();
-        trace("\naddMethod: {} {} 0x{x} {}", .{ index, method.selector.asSymbol(), method.selector.u(), method.codePtr() });
+        trace("\naddMethod: {} {} 0x{x} {}", .{ index, method.selector.asSymbol(), method.selector.hash32(), method.codePtr() });
         //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
@@ -211,7 +211,7 @@ const Dispatch = extern struct {
         return @constCast(&self.methods[hash]);
     }
     inline fn doHash(selector: Object, size: u64) u64 {
-        return @as(u64,@intCast(@as(u32,@truncate(selector.u())))) * size >> 32;
+        return @as(u64,@intCast(selector.hash32())) * size >> 32;
     }
     pub inline fn lookupAddressForClass(selector: Object, index: ClassIndex) *DispatchElement {
         trace(" (lookupAddressForClass) {}", .{index});

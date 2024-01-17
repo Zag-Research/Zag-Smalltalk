@@ -12,7 +12,7 @@ pub const objectEncoding = Encoding.nan;
 
 const Encoding = enum {
     nan,
-    tags,
+    tag,
 };
 
 const debugging = false;
