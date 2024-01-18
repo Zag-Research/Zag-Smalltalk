@@ -40,12 +40,9 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF0      | 0007 | xxxx | xxaa | Symbol                        |
 | FFF0      | 0008 | 00xx | xxxx | Character                     |
 | FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
-| FFF1      | xxxx | xxxx | xxxx | numeric thunk                 |
-| FFF2      | xxxx | xxxx | xxxx | immediate thunk               |
-| FFF3      | xxxx | xxxx | xxxx | heap thunk                    |
-| FFF4      | xxxx | xxxx | xxxx | non-local thunk               |
-| FFF5      | xxxx | xxxx | xxxx | heap closure with non-local return                      |
-| FFF6      | xxxx | xxxx | xxxx | heap closure                  |
+| FFF1-FFF4 | xxxx | xxxx | xxxx | unused                    |
+| FFF5      | xxxx | xxxx | xxxx | heap thunk                    |
+| FFF6      | xxxx | xxxx | xxxx | non-local thunk               |
 | FFF7      | xxxx | xxxx | xxxx | heap object                   |
 | FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
 | FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
@@ -69,15 +66,35 @@ We extend this slightly, by using all 8 possible tag values:
 2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code)
 3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits; if the resulting low 3 bits are less than 5, add 3; otherwise immediate encoding is not possible.
 
-Because we are using all 8 possible values, where the test for "is a SmallInteger" (or Float) that was simply an `and` in Spur, is an `and` followed by a `cmp` using our encoding.
+| Rest | | | | | | |Tag | Type                          |
+| -----|---- | --- | -----|-|---|--|---|------------ |
+| aaaaaaaa|...|...|...|aaaaaaaa|aaaaaaaa|aaaaa|000 | pointer                    |
+| xxxxxxxx|...|...|...|xxxxxxxx|xxxxxxxx|xxxxx|001 | SmallInteger   |
+| xxxxxxxx|...|...|...|xxxxxccc|cccccccc|ccccc|010 | intermediates                   |
+| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|011 | double  |
+| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|100 | double  |
+| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|101 | double  |
+| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|110 | double  |
+| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|111 | double  |
+
+Because we are using all 8 possible values of the tag field, where the test in Spur for "is a SmallInteger" (or Float) was simply an `and`, using our encoding it requires an `and` followed by a `cmp`.
 ### Immediates
+
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Characters, and Symbols.
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-50 bits. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
+| 32 bit Data | | | |Tag | Class                          |
+| ---------|-|---|--|---|------------ |
+| dddddddd|xxxxx000|00000000|00011|010 | UndefinedObject|
+| dddddddd|xxxxx000|00000000|00100|010 | False|
+| dddddddd|xxxxx000|00000000|00101|010 | True|
+| dddddddd|xxxxx000|00000000|00111|010 | Symbol|
+| dddddddd|xxxxx000|00000000|01000|010 | Character|
 
-#### Tag values
-1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
-2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-45 bits. Most immediate classes use the hash32 value which is the top 32 bits. A few use the full 45 available bits, because extended with 3 zero bits they can be treated as pointer. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
+
+#### Class numbers
+1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most, for NaN encoding). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]). In the (modified) Spur encoding, they are 61-bit integers, and different optimizations are possible.
 3. UndefinedObject: This encodes the singleton value `nil`.
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
 5. True: This encodes the singleton value `true`
@@ -86,17 +103,17 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 8. Character: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 
 ### Thunks and Closures
-Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. In the NaN encoding, four of these can be encoded as immediate values and obviate the need for heap allocation. For Modified Spur encoding, there is not special coding, so the first 4 don't apply.
-1. a numeric thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the low 48 bits. Hence this supports 47-bit SmallIntegers and 47-bit floats (any that has 0s in the least significant 17 bits). Examples: `[1]`, `[12345678901234]`, `[0.0]`, `[1000.75]`.
-2. an immediate thunk acts as a niladic BlockClosure that returns any FFF0 immediate. Examples: `[#foo]`, `[true]`, `[nil]`.
-3. a heap thunk is similar to a numeric or immediate thunk, but it returns a heap object.
-4. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
-5. all remaining closures are full block closures and are memory objects (they may have been moved to a heap or still reside on the stack), and contain the following fields in order (omitting any unused fields):
-	1. the values of `self` and any parameters or read-only locals, that are referenced (this also includes locals that are used solely in the block after being initialized in the method);
-	2. the address of any (usually 0) ContextData objects that contain mutable fields that are shared between blocks or with the main method execution;
-	3. the address of the Context if there are any non-local returns (if a closure that references a Context is forced to the heap, that will force that Context to be promoted to the heap);
-	4. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be stack allocated (which could be moved to a heap);
-	5. a footer
+Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
+1. a SmallInteger thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the hash bits. Hence this supports 32-bit SmallIntegers.
+2. a Float thunk similarly supports 32-bit float values.
+3. an immediate thunk acts as a niladic BlockClosure that returns any immediate. For modified Spur format, this only supports  the first 8K classes and 32-bit hash values, but this includes all the common values. Examples: `[#foo]`, `[true]`, `[nil]`, [$x].
+4. a heap thunk is similar, but it returns a heap object.
+5. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.
+6. all remaining closures are full block closures and are memory objects (they may have been moved to a heap or still reside on the stack), and contain the following fields in order (omitting any unused fields):
+	1. the address of the CompiledMethod object that contains various values, and the threaded code implementation (if this is the only field the block has no closure or other variable fields, so the block can be statically allocated - otherwise it needs to be stack allocated (which could be moved to a heap);
+	2. the address of the Context if there are any non-local returns (if a closure that references a Context is forced to the heap, that will force that Context to be promoted to the heap);
+	3. the address of the value holding block if there were multiple blocks in a method and mutable values needed by this block were allocated in another block (there could conceivably be multiples if there are blocks within blocks);
+	4. the values of `self` and any parameters or read-only locals, that are referenced just in this block (this also includes locals that are used solely in the block after being initialized in the method), as well as (if this is a local-holding block) any mutable locals used by this or other blocks.
 
 When a `[`some-value`]` closure is required and some-value is a literal, self, or a parameter to the method (i.e. something that can't be assigned to), runtime code returns either a numeric or immediate thunk (if the value is numeric/immediate and fits), a heap thunk when the value is a heap object, with the low 48 bits referencing the object, or, if the value doesn't fit any of these constraints, then it will fall back to a full closure with 2 fields: the CompiledMethod reference and the value. This applies to `self` or any other runtime value.
 

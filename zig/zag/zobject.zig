@@ -47,6 +47,18 @@ pub const ClassIndex = enum(u16) {
     Symbol,
     Character,
     BlockClosure,
+    ThunkSmallInteger,
+    ThunkFloat,
+    ThunkImmediate,
+    ThunkHeap,
+    ThunkReturnSelf,
+    ThunkReturnTrue,
+    ThunkReturnFalse,
+    ThunkReturnNil,
+    ThunkReturn_1,
+    ThunkReturn0,
+    ThunkReturn1,
+    ThunkReturn2,
     Array,
     String,
     SymbolTable,
@@ -92,12 +104,8 @@ pub const Object = switch (config.objectEncoding) {
             tag: Group,
             pub const Group = enum(u16) {
                 immediates = 0xfff0,
-                numericThunk,
-                immediateThunk,
-                heapThunk,
+                heapThunk = 0xfff5,
                 nonLocalThunk,
-                nonLocalClosure,
-                heapClosure,
                 heap,
                 smallIntMin,
                 smallIntNeg_2,
@@ -228,20 +236,27 @@ pub const Object = switch (config.objectEncoding) {
                 return switch (self.tag) {
                     .heapThunk,
                     .nonLocalThunk,
-                    .nonLocalClosure,
-                    .heapClosure,
                     .heap => true,
                     else => false};
             }
             pub inline fn isBlock(self: Object) bool {
                 return switch (self.tag){
-                    .numericThunk,
-                    .immediateThunk,
                     .heapThunk,
-                    .nonLocalThunk,
-                    .nonLocalClosure,
-                    .heapClosure,
-                    .heap => true,
+                    .nonLocalThunk => true,
+                    .immediates => switch (self.classIndex) {
+                        .ThunkSmallInteger,
+                        .ThunkFloat,
+                        .ThunkImmediate,
+                        .ThunkHeap,
+                        .ThunkReturnSelf,
+                        .ThunkReturnTrue,
+                        .ThunkReturnFalse,
+                        .ThunkReturnNil,
+                        .ThunkReturn_1,
+                        .ThunkReturn0,
+                        .ThunkReturn1,
+                        .ThunkReturn2 => true,
+                        else => false},
                     else => false};
             }
             pub inline fn toBoolNoCheck(self: Object) bool {
@@ -256,7 +271,7 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn rawWordAddress(self: Object) u64 {
                 return self.rawU() & 0xffff_ffff_fff8;
             }
-            pub fn toDoubleNoCheck(self: Object) f64 {
+            pub inline fn toDoubleNoCheck(self: Object) f64 {
                 return @bitCast(self);
             }
             pub inline fn from(value: anytype) Object {
@@ -282,7 +297,8 @@ pub const Object = switch (config.objectEncoding) {
             }
             inline fn which_class(self: Object, comptime full: bool) ClassIndex {
                 return switch (self.tag) {
-                    .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .nonLocalClosure, .heapClosure => .BlockClosure,
+                    .heapThunk => .BlockClosure,
+                    .nonLocalThunk => @enumFromInt(@intFromEnum(ClassIndex.ThunkReturnSelf)+(self.rawU()&7)),
                     .immediates => self.classIndex,
                     .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
                     .smallIntMin, .smallIntNeg_2, .smallIntNeg_3, .smallIntNeg_4, .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => .SmallInteger,
@@ -355,18 +371,23 @@ const ObjectFunctions = struct {
     pub inline fn hash(self: Object) Object {
         return self.from(self.hash32());
     }
-    pub inline fn toBool(self: Object) bool {
+    pub inline fn toBool(self: Object) !bool {
         if (self.isBool()) return self.toBoolNoCheck();
-        @panic("Trying to convert Object to bool");
+        return error.wrongType;
     }
-    pub inline fn toInt(self: Object) i64 {
+    pub inline fn toInt(self: Object) !i64 {
         if (self.isInt()) return self.toIntNoCheck();
-        @panic("Trying to convert Object to i64");
+        return error.wrongType;
     }
-    pub inline fn toNat(self: Object) u64 {
+    pub inline fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
-        @panic("Trying to convert Object to u64");
+        return error.wrongType;
     }
+    pub inline fn toDouble(self: Object) !u64 {
+        if (self.isDouble()) return self.toDoubleNoCheck();
+        return error.wrongType;
+    }
+    
     pub inline fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
@@ -488,7 +509,7 @@ const ObjectFunctions = struct {
                 try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
             } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
             .Character => writer.print("${c}", .{self.to(u8)}),
-            .SmallInteger => writer.print("{d}", .{self.toInt()}),
+            .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
             else => {
                 try writer.print("0x{x:0>16}", .{self.rawU()});
