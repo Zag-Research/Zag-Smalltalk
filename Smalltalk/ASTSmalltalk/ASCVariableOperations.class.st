@@ -13,11 +13,19 @@ Class {
 }
 
 { #category : 'code generation' }
+ASCVariableOperations >> inspectZagASTOn: aStream [
+	super inspectZagASTOn: aStream.
+	aStream tab.
+	aStream << variable name
+	
+]
+
+{ #category : 'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
 ]
 
 { #category : 'instance creation' }
-ASCVariableOperations >> with: anInteger [ 
-	variable := anInteger
+ASCVariableOperations >> with: ascVariable [
+	variable := ascVariable
 ]

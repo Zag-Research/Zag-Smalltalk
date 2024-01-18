@@ -22,10 +22,20 @@ ASPragma >> args: paramaArgs [
 	args := paramaArgs 
 ]
 
+{ #category : 'accessing' }
+ASPragma >> arguments [
+	^ args
+]
+
 { #category : 'printing' }
 ASPragma >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream nextPut: $(.
 	args do: [ :arg | aStream print: arg literal ].
 	aStream nextPut: $)
+]
+
+{ #category : 'testing' }
+ASPragma >> isPrimitive [
+^ true
 ]

@@ -33,8 +33,31 @@ ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 ]
 
 { #category : 'visiting' }
-ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anObject [ 
-	^ self subclassResponsibility
+ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [ 
+	"The same logic as our super but for the other case.
+	The other case will be triggered when the variable was not found.
+	In the case the variable is not found we need to go through the blocks clousre.
+	The context will have references to other closures and shared data, 
+	see Execution.md for more details."
+	currentBasicBlock
+		offsetOf: anASVariable name
+		local: [ :local |
+			self
+				putEmbedded: #pushLocal;
+				print: local;
+				comma ]
+		stack: [ :offset |
+			self
+				putEmbedded: #pushStack;
+				print: offset;
+				comma ]
+		other: "The variable is either in our context, or in the closure data" 
+			[ :offsets |
+				self
+				putEmbedded: #pushLocalData;
+				print: (offsets collectWithIndex: [:offset :index | offset withIndex: index ]);
+				comma 
+			 ]
 ]
 
 { #category : 'visiting' }

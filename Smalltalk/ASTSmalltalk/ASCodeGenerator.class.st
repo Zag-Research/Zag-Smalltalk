@@ -23,7 +23,8 @@ Class {
 		'inline',
 		'output',
 		'tailCallOptimize',
-		'blockClosures'
+		'blockClosures',
+		'parentCodeGenerator'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -72,6 +73,14 @@ ASCodeGenerator >> drop [
 		putSimple: #drop
 ]
 
+{ #category : 'API' }
+ASCodeGenerator >> dup [
+
+	code
+		doDup;
+		putSimple: #dup
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> enableInlining [
 
@@ -88,6 +97,11 @@ ASCodeGenerator >> eval: aString params: aCollection [
 ASCodeGenerator >> finalAnalysis [
 
 
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> find: aSymbol [
+	^code find: aSymbol
 ]
 
 { #category : 'API' }
@@ -124,7 +138,8 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 ASCodeGenerator >> initialize [
 
 	super initialize.
-	code := ASCMethodBlock nonlocalNameLookupObject: self.
+	code := ASCMethodBlock new.
+	code nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -166,7 +181,8 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 
 { #category : 'compiling' }
 ASCodeGenerator >> lookupName: aString block: anUndefinedObject [ 
-	self shouldBeImplemented.
+	"self shouldBeImplemented."
+	code find: aString
 ]
 
 { #category : 'accessing' }
@@ -204,6 +220,12 @@ ASCodeGenerator >> output: anASFileContext [
 	output := anASFileContext
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
+aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
+	code nonlocalNameLookupObject: aCodeGenerator]
+]
+
 { #category : 'API' }
 ASCodeGenerator >> popVariable: aSymbol [
 
@@ -214,6 +236,14 @@ ASCodeGenerator >> popVariable: aSymbol [
 ASCodeGenerator >> primitive: primitiveNumber [
 
 	code primitive: primitiveNumber
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> pushArray: arraySize [
+	"What do I do here?"
+	"code doPush: (ASCValue ) put: (ASCSimple )"
+
+	
 ]
 
 { #category : 'API' }
@@ -242,7 +272,7 @@ ASCodeGenerator >> pushSelf [
 	value := ASCClassValue new init: targetClass.
 	code
 		doPush: value;
-		put: (ASCPushVariable with: (code stack find: #self))
+		put: (ASCPushVariable with: (code find: #self) top)
 ]
 
 { #category : 'API' }
@@ -291,9 +321,13 @@ ASCodeGenerator >> selfName [
 
 { #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
-
-	code := code send: aSymbol targetClass: aTargetClass tail: tail&tailCallOptimize .
-	^ code ifNotNil: [ basicBlocks add: code ]
+| bb |
+"why are we setting code to the return of the send:targetClass:tail: call?"
+	bb := code
+		        send: aSymbol
+		        targetClass: aTargetClass
+		        tail: tail & tailCallOptimize.
+	^ bb ifNotNil: [ basicBlocks add: bb ]
 ]
 
 { #category : 'API' }
@@ -321,7 +355,7 @@ targetClass:= anObject
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
 
-inline ifFalse: [ ^ self].
+	inline ifFalse: [ ^ self ].
 	[
 	basicBlocks anySatisfy: [ :aBasicBlock |
 		aBasicBlock canBeInlinedBy: self ] ] whileTrue

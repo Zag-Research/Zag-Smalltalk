@@ -29,7 +29,6 @@ ASStackNamed >> find: aSymbol [
 
 { #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
-
 	name := aSymbol
 ]
 

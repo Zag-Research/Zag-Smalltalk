@@ -54,6 +54,7 @@ ASCBlock >> name [
 
 { #category : 'code generation' }
 ASCBlock >> outputTo: output [
+"seems like we should determin if this is a nonLocal return block"
 
 manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self

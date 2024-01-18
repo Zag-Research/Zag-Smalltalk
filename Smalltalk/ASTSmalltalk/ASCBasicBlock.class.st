@@ -41,8 +41,8 @@ ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> children [
-	^ operations
+ASCBasicBlock >> children [ 
+^operations 
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -61,6 +61,11 @@ ASCBasicBlock >> doDrop: n [
 
 	stack := stack drop: n.
 
+]
+
+{ #category : 'stackAccessHelpers' }
+ASCBasicBlock >> doDup [
+	stack := stack from: stack top 
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -86,6 +91,11 @@ ASCBasicBlock >> endWithReturnTop [
 ]
 
 { #category : 'accessing' }
+ASCBasicBlock >> find: aSymbol [
+	^ stack find: aSymbol 
+]
+
+{ #category : 'accessing' }
 ASCBasicBlock >> index [
 	^ index
 ]
@@ -95,7 +105,8 @@ ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
-	maxDepth := 0
+	maxDepth := 0.
+	stack := ASEmptyStack new 
 ]
 
 { #category : 'initialization' }
@@ -119,10 +130,12 @@ ASCBasicBlock >> makeContextRequired [
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
+	operations ifNotEmpty: [ 
 	last := operations last.
 	last requiresContext ifTrue: [ stack := stack makeContextRequired.
  ].
 	last manifestParameters: stack
+	]
 ]
 
 { #category : 'accessing' }
@@ -132,7 +145,13 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations last next
+	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
+]
+
+{ #category : 'instance initialization' }
+ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
+
+	stack nonlocalNameLookupObject: aGenerator
 ]
 
 { #category : 'API' }
@@ -160,10 +179,12 @@ ASCBasicBlock >> outputTo: output [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> popVariable: anASVariable [
+ASCBasicBlock >> popVariable: aSymbol [
 
+	| target |
+	target := stack find: aSymbol.
 	stack top makeManifest.
-	self put: (ASCPopVariable with: anASVariable).
+	self put: (ASCPopVariable with: target top).
 	self doDrop
 ]
 
@@ -173,7 +194,8 @@ ASCBasicBlock >> pushLocalNamed: aSymbol [
 	stack := ASStackNamed new
 		         from: stack;
 		         name: aSymbol.
-	^ stack top: (ASCLocal new init: Object)
+	^ stack top: (ASCLocal new init: Object;
+			   name: aSymbol)
 ]
 
 { #category : 'API' }
@@ -182,7 +204,7 @@ ASCBasicBlock >> pushParameterNamed: aSymbol [
 	stack := ASStackNamed new
 		         from: stack;
 		         name: aSymbol.
-	^ stack top: (ASCParameter new init: Object)
+	^ stack top: (ASCParameter new init: Object; name: aSymbol)
 ]
 
 { #category : 'API' }
@@ -190,7 +212,7 @@ ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
 	target := stack find: aSymbol .
-	self put: (ASCPushVariable with: aSymbol).
+	self put: (ASCPushVariable with: target top).
 	self doPush: target top
 ]
 
@@ -269,7 +291,7 @@ ASCBasicBlock >> stackTop [
 ASCBasicBlock >> storeVariable: aSymbol [
 
 	stack top makeManifest.
-	self put: (ASCStoreVariable with: (stack lookup: aSymbol))
+	self put: (ASCStoreVariable with: (stack find: aSymbol) top)
 ]
 
 { #category : 'accessing' }
