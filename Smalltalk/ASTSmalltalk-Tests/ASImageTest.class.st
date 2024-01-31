@@ -1,25 +1,27 @@
 Class {
-	#name : #ASImageTest,
-	#superclass : #TestCase,
+	#name : 'ASImageTest',
+	#superclass : 'TestCase',
 	#instVars : [
 		'imageWriter',
 		'minImageSize'
 	],
-	#category : #'ASTSmalltalk-Tests-Tests'
+	#category : 'ASTSmalltalk-Tests-Tests',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Tests'
 }
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> array: aBlock [
 	^ (self stream: aBlock) asArray
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> image [
 
 	^ ByteArray streamContents: [ :s | imageWriter writeImageOn: s ]
 ]
 
-{ #category : #running }
+{ #category : 'running' }
 ASImageTest >> setUp [
 	super setUp.
 	imageWriter := ASImage new.
@@ -27,12 +29,12 @@ ASImageTest >> setUp [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> stream: aBlock [
 	^ ByteArray streamContents: aBlock
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testAdditions [
 	| a1 a1o a2 a2o |
 	self assert: (imageWriter imageObject: 42) equals: 16r7ff8000000000155.
@@ -68,7 +70,7 @@ ASImageTest >> testAdditions [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testClasses [
 	| system object symbol class |
 	system := imageWriter class: ASTSystem.
@@ -83,18 +85,18 @@ ASImageTest >> testClasses [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testEmptyImage [
 	self assert: self image size equals: minImageSize
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testHeader [
 	self assert: (imageWriter header: #(isImmutable)) equals: 16r800000000000.
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testMethods [
 	| start |
 	start := imageWriter method: ASTSystem class >> #start.
@@ -105,13 +107,13 @@ ASImageTest >> testMethods [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testRepeatedImage [
 	self assert: self image equals: self image.
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASImageTest >> testWriteRawOn [
 	self assert: (self array: [: s | 1 writeRawOn: s ]) equals: #(1 0 0 0 0 0 0 0).
 	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).

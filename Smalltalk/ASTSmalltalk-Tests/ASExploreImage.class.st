@@ -2,16 +2,18 @@
 This class is just to extract some statistics from the running Pharo image.
 "
 Class {
-	#name : #ASExploreImage,
-	#superclass : #Object,
+	#name : 'ASExploreImage',
+	#superclass : 'Object',
 	#classVars : [
 		'Info',
 		'Something'
 	],
-	#category : #'ASTSmalltalk-Tests-Explore'
+	#category : 'ASTSmalltalk-Tests-Explore',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Explore'
 }
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 ASExploreImage class >> initialize [
 	" self initialize inspect "
 
@@ -103,7 +105,7 @@ ASExploreImage class >> initialize [
 	^ Info
 ]
 
-{ #category : #'private - accessing' }
+{ #category : 'private - accessing' }
 ASExploreImage class >> numericPrimitivesInImage [
 	" self numericPrimitivesInImage associations sorted "
 	| primitives number |
@@ -121,7 +123,7 @@ ASExploreImage class >> numericPrimitivesInImage [
 	^ primitives
 ]
 
-{ #category : #'private - accessing' }
+{ #category : 'private - accessing' }
 ASExploreImage class >> primitives [
 	" self primitives associations sorted "
 	| primitives number |

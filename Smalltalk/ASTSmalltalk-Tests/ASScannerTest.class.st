@@ -1,10 +1,12 @@
 Class {
-	#name : #ASScannerTest,
-	#superclass : #TestCase,
-	#category : #'ASTSmalltalk-Tests-Tests'
+	#name : 'ASScannerTest',
+	#superclass : 'TestCase',
+	#category : 'ASTSmalltalk-Tests-Tests',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Tests'
 }
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testAsArray [
 	self assert: (ASScanner new scanCode: ' simple') asArray equals: {'simple' asASIdentifier}.
 	self assert: (ASScanner new scanCode: ' simple 
@@ -16,7 +18,7 @@ ASScannerTest >> testAsArray [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testAsStream [
 	| scanner |
 	scanner := ASScanner new scanCode: ' simple 
@@ -34,7 +36,7 @@ ASScannerTest >> testAsStream [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testIDs [
 	self assert: (ASScanner new scanCode: ' abc ') token equals:  'abc' asASIdentifier.
 	self assert: (ASScanner new scanCode: ' * ') token equals:  $* asASIdentifier.
@@ -54,7 +56,7 @@ ASScannerTest >> testIDs [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testPlus1 [
 	| scanner |
 	scanner := ASScanner new scanCode: (ASCompileTestClass1>>#plus1:) sourceCode.
@@ -65,7 +67,7 @@ ASScannerTest >> testPlus1 [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testSimple [
 	self assert: (ASScanner new scanCode: ' ''''''^'''''' ') token equals: '''^''' asASString.
 	self assert: (ASScanner new scanCode: ' ''^'' ') token equals: '^' asASString.
@@ -89,7 +91,7 @@ ASScannerTest >> testSimple [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testSyntax [
 	self assert: (ASScanner new scanCode: ' ^ ') token equals:  $^ asASSyntax.
 	self should: [(ASScanner new scanCode: ' #+ ') token] raise:  Error.
@@ -114,7 +116,7 @@ ASScannerTest >> testSyntax [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASScannerTest >> testWhitespace [
 	self assert: (ASScanner new scanCode: ' 
 	 ') atEnd.

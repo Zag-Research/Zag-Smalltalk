@@ -19,24 +19,26 @@ Upon insertion in the left tree of y (in the left diagram), if the heap property
 Similarly, upon insertion in the right tree of x (in the right diagram), a left rotation may be required.
 "
 Class {
-	#name : #ASTreap,
-	#superclass : #ASBst,
+	#name : 'ASTreap',
+	#superclass : 'ASBst',
 	#instVars : [
 		'priority'
 	],
 	#classInstVars : [
 		'randomGenerator'
 	],
-	#category : #'ASTSmalltalk-Tests-Explore'
+	#category : 'ASTSmalltalk-Tests-Explore',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Explore'
 }
 
-{ #category : #random }
+{ #category : 'random' }
 ASTreap class >> random [
 
 	^ randomGenerator nextInteger: 16r100000000 " 32 bit random integer "
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTreap class >> withAll: data [
 	root := nil.
 	randomGenerator := Random new.
@@ -46,7 +48,7 @@ ASTreap class >> withAll: data [
 	^ root
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTreap >> insert: anASBst [ 
 	anASBst key < key ifTrue: [
 		left := left insert: anASBst.
@@ -57,7 +59,7 @@ ASTreap >> insert: anASBst [
 	]
 ]
 
-{ #category : #insertion }
+{ #category : 'insertion' }
 ASTreap >> maybeLeftRotate [
 	| t2 root |
 	self priority > right priority ifTrue: [ ^ self ].
@@ -68,7 +70,7 @@ ASTreap >> maybeLeftRotate [
 	^ root
 ]
 
-{ #category : #insertion }
+{ #category : 'insertion' }
 ASTreap >> maybeRightRotate [
 	| t2 root |
 	self priority > left priority ifTrue: [ ^ self ].
@@ -79,12 +81,12 @@ ASTreap >> maybeRightRotate [
 	^ root
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTreap >> priority [
 	^ priority
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTreap >> priority: anInteger [ 
 	priority := anInteger
 ]

@@ -30,9 +30,10 @@ ASCBlock >> children [
 ]
 
 { #category : 'initialization' }
-ASCBlock >> initialize [ 
-super initialize .
-manifest := false
+ASCBlock >> initialize [
+
+	super initialize.
+	manifest := true "false"
 ]
 
 { #category : 'serializing' }

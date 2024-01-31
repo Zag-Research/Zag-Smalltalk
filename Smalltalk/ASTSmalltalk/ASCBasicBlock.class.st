@@ -92,7 +92,8 @@ ASCBasicBlock >> endWithReturnTop [
 
 { #category : 'accessing' }
 ASCBasicBlock >> find: aSymbol [
-	^ stack find: aSymbol 
+
+	^ stack find: aSymbol
 ]
 
 { #category : 'accessing' }
@@ -130,12 +131,10 @@ ASCBasicBlock >> makeContextRequired [
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
-	operations ifNotEmpty: [ 
-	last := operations last.
-	last requiresContext ifTrue: [ stack := stack makeContextRequired.
- ].
-	last manifestParameters: stack
-	]
+	operations ifNotEmpty: [
+		last := operations last.
+		last requiresContext ifTrue: [ stack := stack makeContextRequired ].
+		last manifestParameters: stack ]
 ]
 
 { #category : 'accessing' }
@@ -145,7 +144,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
+	^ operations ifNotEmpty: [ operations last "is there a next to the last? next" ] ifEmpty: [ nil ]
 ]
 
 { #category : 'instance initialization' }

@@ -36,15 +36,15 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
 	current := basicBlocks first.
-	rest := basicBlocks allButFirst asSet.
+	rest := basicBlocks asSet.
 	[ true ] whileNotNil: [
+		rest remove: current.
 		aBlock value: current.
 		current next
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
 				current := rest atRandom ifNil: [ ^ self ] ]
-			ifNotNil: [ :next | current := next ].
-		rest remove: current ]
+			ifNotNil: [ :next | current := next ]]
 ]
 
 { #category : 'enumerating' }
@@ -101,7 +101,7 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'accessing' }
 ASCodeGenerator >> find: aSymbol [
-	^code find: aSymbol
+	^ code find: aSymbol
 ]
 
 { #category : 'API' }
