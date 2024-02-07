@@ -1,29 +1,30 @@
 Class {
-	#name : #ASTInterval,
-	#superclass : #ASTSequenceableCollection,
+	#name : 'ASTInterval',
+	#superclass : 'ASTSequenceableCollection',
 	#instVars : [
 		'start',
 		'stop',
 		'step'
 	],
-	#category : #'ASTKernel-Collections-Ordered'
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval class >> from: startInteger to: stopInteger [
 	"Answer an instance of me, starting at startNumber, ending at stopNumber, and with an interval increment of 1."
 
 	^ self basicNew setFrom: startInteger to: stopInteger by: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval class >> from: startInteger to: stopInteger by: stepInteger [
 	"Answer an instance of me, starting at startNumber, ending at stopNumber, and with an interval increment of stepNumber."
 
 	^ self basicNew setFrom: startInteger to: stopInteger by: stepInteger
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInterval >> = anInterval [
 	"Answer true if my species and anInterval species are equal, and
 	if our starts, steps and sizes are equal."
@@ -34,14 +35,14 @@ ASTInterval >> = anInterval [
 		ifFalse: [ ^ false ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> add: newObject [
 	"Adding to an Interval is not allowed."
 
 	self shouldNotImplement
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTInterval >> at: anInteger [
 	"Answer the anInteger'th element."
 
@@ -50,14 +51,14 @@ ASTInterval >> at: anInteger [
 		ifFalse: [ self errorSubscriptBounds: anInteger ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTInterval >> at: anInteger put: anObject [
 	"Storing into an Interval is not allowed."
 
 	self error: 'you can not store into an interval'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> collect: aBlock [
 	| nextValue result |
 	result := self species new: self size.
@@ -68,7 +69,7 @@ ASTInterval >> collect: aBlock [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> do: aBlock [
 	| aValue |
 	aValue := start.
@@ -81,14 +82,14 @@ ASTInterval >> do: aBlock [
 					aValue := aValue + step ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> first [
 	"Refer to the comment in SequenceableCollection|first."
 
 	^ start
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTInterval >> hash [
 	"Hash is reimplemented because = is implemented."
 
@@ -96,26 +97,26 @@ ASTInterval >> hash [
 		bitOr: self size
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> includes: aNumber [
 	^ aNumber between: self first and: self last
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> increment [
 	"Answer the receiver's interval increment."
 
 	^ step
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> last [
 	"Refer to the comment in SequenceableCollection|last."
 
 	^ stop - ((stop - start) \\ step)
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTInterval >> printOn: aStream [
 	aStream nextPut: $(.
 	start printOn: aStream.
@@ -127,21 +128,21 @@ ASTInterval >> printOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> remove: newObject [
 	"Removing from an Interval is not allowed."
 
 	self error: 'elements cannot be removed from an Interval'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> setFrom: startInteger to: stopInteger by: stepInteger [
 	start := startInteger.
 	stop := stopInteger.
 	step := stepInteger
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTInterval >> size [
 	step < 0
 		ifTrue: [ start < stop
@@ -152,7 +153,7 @@ ASTInterval >> size [
 				ifFalse: [ ^ (stop - start) // step + 1 ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTInterval >> species [
 	^ ASTArray
 ]

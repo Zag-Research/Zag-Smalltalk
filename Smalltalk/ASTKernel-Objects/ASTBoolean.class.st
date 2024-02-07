@@ -1,29 +1,31 @@
 Class {
-	#name : #ASTBoolean,
-	#superclass : #ASTObject,
-	#category : #'ASTKernel-Objects'
+	#name : 'ASTBoolean',
+	#superclass : 'ASTObject',
+	#category : 'ASTKernel-Objects',
+	#package : 'ASTKernel-Objects'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTBoolean class >> new [
 	"There is a single unique instance of each boolean."
 
 	self cannotInstantiate
 ]
 
-{ #category : #'reflective operations' }
+{ #category : 'reflective operations' }
 ASTBoolean >> basicIdentityHash [
-	"Answer the literal hashcode."
-	<primitive: 171>
+	"Answer the immediate hashcode."
 
+	<primitive: 171>
+	
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASTBoolean >> isBoolean [
 	^ true
 ]
 
-{ #category : #copying }
+{ #category : 'copying' }
 ASTBoolean >> shallowCopy [
 	"There is the only one instance of me, so answer myself."
 

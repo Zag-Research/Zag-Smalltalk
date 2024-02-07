@@ -1,1 +1,1 @@
-Package { #name : #'ASTKernel-Streams' }
+Package { #name : 'ASTKernel-Streams' }

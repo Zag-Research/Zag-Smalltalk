@@ -1,34 +1,35 @@
 Class {
-	#name : #ASTClass,
-	#superclass : #ASTClassDescription,
+	#name : 'ASTClass',
+	#superclass : 'ASTClassDescription',
 	#instVars : [
 		'name',
 		'instVarNames',
 		'classVariables'
 	],
-	#category : #'ASTKernel-Classes'
+	#category : 'ASTKernel-Classes',
+	#package : 'ASTKernel-Classes'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> classSide [
 	^ self class
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> classVariables [
 	"Answer the dictionary of class variables that I share with my sole instance, or nil if I have none."
 
 	^ classVariables
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> classVariables: aDictionary [
 	"Answer the dictionary of class variables that I share with my sole instance, or nil if I have none."
 
 	^ classVariables := aDictionary
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> initFrom: aPharoClass methodDict: newMethodDict [
 	"Fill in my instance variables from the given Class using the given MethodDictionary."
 
@@ -45,7 +46,7 @@ ASTClass >> initFrom: aPharoClass methodDict: newMethodDict [
 		ifTrue: [ classVariables := nil ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> instVarNames [
 	"Answer an Array of the receiver's instance variable names."
 
@@ -53,31 +54,31 @@ ASTClass >> instVarNames [
 	^ instVarNames
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> instVarNames: anArray [
 	instVarNames := anArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> instanceSide [
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> isMeta [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> name [
 	^ name
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> newClassBuilderForSubclass: subclassName instanceVariableNames: instVarNames classVariableNames: classVarNames [
 	^ ASTClassBuilder new
 		superclass: self;
@@ -87,7 +88,7 @@ ASTClass >> newClassBuilderForSubclass: subclassName instanceVariableNames: inst
 		yourself
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> subclass: subclassName instanceVariableNames: someInstVarNames classVariableNames: classVarNames [
 	^ (self
 		newClassBuilderForSubclass: subclassName
@@ -95,7 +96,7 @@ ASTClass >> subclass: subclassName instanceVariableNames: someInstVarNames class
 		classVariableNames: classVarNames) build
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> variableByteSubclass: subclassName instanceVariableNames: someInstVarNames classVariableNames: classVarNames [
 	^ (self
 		newClassBuilderForSubclass: subclassName
@@ -105,7 +106,7 @@ ASTClass >> variableByteSubclass: subclassName instanceVariableNames: someInstVa
 		build
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> variableSubclass: subclassName instanceVariableNames: someInstVarNames classVariableNames: classVarNames [
 	^ (self
 		newClassBuilderForSubclass: subclassName
@@ -115,7 +116,7 @@ ASTClass >> variableSubclass: subclassName instanceVariableNames: someInstVarNam
 		build
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> variableWordSubclass: subclassName instanceVariableNames: someInstVarNames classVariableNames: classVarNames [
 	^ (self
 		newClassBuilderForSubclass: subclassName
@@ -125,7 +126,7 @@ ASTClass >> variableWordSubclass: subclassName instanceVariableNames: someInstVa
 		build
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTClass >> weakSubclass: subclassName instanceVariableNames: someInstVarNames classVariableNames: classVarNames [
 	^ (self
 		newClassBuilderForSubclass: subclassName

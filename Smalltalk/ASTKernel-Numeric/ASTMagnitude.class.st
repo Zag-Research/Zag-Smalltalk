@@ -1,24 +1,25 @@
 Class {
-	#name : #ASTMagnitude,
-	#superclass : #ASTObject,
-	#category : #'ASTKernel-Numeric'
+	#name : 'ASTMagnitude',
+	#superclass : 'ASTObject',
+	#category : 'ASTKernel-Numeric',
+	#package : 'ASTKernel-Numeric'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> < aMagnitude [
 	"Answer whether the receiver is less than the argument."
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> <= aMagnitude [
 	"Answer whether the receiver is less than or equal to the argument."
 
 	^ (self > aMagnitude) not
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> = aMagnitude [
 	"Compare the receiver with the argument and answer with true if the 
 	receiver is equal to the argument. Otherwise answer false."
@@ -26,21 +27,21 @@ ASTMagnitude >> = aMagnitude [
 	^ self subclassResponsibility
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> > aMagnitude [
 	"Answer whether the receiver is greater than the argument."
 
 	^ aMagnitude < self
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> >= aMagnitude [
 	"Answer whether the receiver is greater than or equal to the argument."
 
 	^ (self < aMagnitude) not
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> between: min and: max [
 	"Answer whether the receiver is less than or equal to the argument, max, 
 	and greater than or equal to the argument, min."
@@ -48,14 +49,14 @@ ASTMagnitude >> between: min and: max [
 	^ self >= min and: [ self <= max ]
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> hash [
 	"Hash must be redefined whenever = is redefined."
 
 	^ self subclassResponsibility
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> max: aMagnitude [
 	"Answer the receiver or the argument, whichever has the greater 
 	magnitude."
@@ -65,7 +66,7 @@ ASTMagnitude >> max: aMagnitude [
 		ifFalse: [ ^ aMagnitude ]
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTMagnitude >> min: aMagnitude [
 	"Answer the receiver or the argument, whichever has the lesser 
 	magnitude."

@@ -145,7 +145,7 @@ test "simple ==" {
 }
 fn testExecute(ptr: anytype) []Object {
     const method: CompiledMethodPtr = @ptrCast(ptr);
-    var te = execute.TestExecution.new();
+    var te = execute.Execution.new();
     te.init();
     var objs = [_]Object{};
     const result = te.run(objs[0..], method);

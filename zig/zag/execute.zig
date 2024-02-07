@@ -15,8 +15,8 @@ const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
-const indexSymbol0 = object.indexSymbol0;
-const indexSymbol1 = object.indexSymbol1;
+const indexSymbol0 = object.Object.indexSymbol0;
+const indexSymbol1 = object.Object.indexSymbol1;
 const dispatch = @import("dispatch.zig");
 const lookupAddress = dispatch.lookupAddress;
 pub const Context = @import("context.zig").Context;
@@ -362,8 +362,8 @@ pub const Code = extern union {
     }
 };
 pub fn intOf(comptime str: []const u8) u12 {
-    var n: u12 = 0;
-    for (str) |c| {
+    comptime var n: u12 = 0;
+    inline for (str) |c| {
         if (c > '9') return n;
         n = n * 10 + (c - '0');
     }
@@ -528,7 +528,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                     }
                 }
             }
-            trace("-> 0x{x:0>16}", .{self.selector.u()});
+            trace("-> 0x{x:0>16}", .{self.selector.rawU()});
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
@@ -778,7 +778,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    objects[n] = object.indexSymbol0(intOf(field[0..]));
+                                    objects[n] = object.Object.indexSymbol0(comptime intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -790,7 +790,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                     .Array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                objects[n] = object.indexSymbol1(lp);
+                                                                objects[n] = object.Object.indexSymbol1(lp);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;
@@ -843,7 +843,7 @@ test "compileObject" {
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[0].equals(o.asObject()));
-    try expectEqual(@as(u48, @truncate(o.asObject().u())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
+    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[5].equals(True));
     try expect(o.objects[6].equals(True));
     const h2: HeapObject = @bitCast(o.objects[2]);
@@ -1210,7 +1210,7 @@ pub const controlPrimitives = struct {
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, selector, cache });
     }
     pub fn forceDnu(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        std.debug.print("\nforceDnu: 0x{x} {} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol(), cache.fromDnu() });
+        std.debug.print("\nforceDnu: 0x{x} {} {} {}", .{ selector.hash32(), selector.classIndex, selector.asSymbol(), cache.fromDnu() });
         _ = .{ pc, sp, process, context, selector, cache, @panic("forceDnu unimplemented") };
     }
     fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
@@ -1229,7 +1229,7 @@ pub const controlPrimitives = struct {
         //        return @call(tailCall, pc.prim(), .{ pc+1, sp, process, context, selector, cache.next() });
     }
 };
-pub const TestExecution = struct {
+pub const Execution = struct {
     process: Process,
     ctxt: Context,
     sp: SP,
@@ -1290,7 +1290,7 @@ test "SendCache direct" {
         trace("\nmethod:< {}", .{method});
         method.setLiterals(empty, empty, &cache);
         trace("\nmethod:> {}", .{method});
-        var te = TestExecution.new();
+        var te = Execution.new();
         te.init();
         var objs = [_]Object{ Nil, True };
         const compiledMethod = method.asCompiledMethodPtr();
@@ -1311,20 +1311,20 @@ test "send with dispatch direct" {
     });
     dispatch.init();
     methodV.asCompiledMethodPtr().forDispatch(ClassIndex.UndefinedObject);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(42));
 }
-test "simple return via TestExecution" {
+test "simple return via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 0, 0, .{
         &p.pushLiteral,     comptime Object.from(42),
         &p.returnNoContext,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
@@ -1333,35 +1333,35 @@ test "simple return via TestExecution" {
     try expectEqual(result[1], Nil);
     try expectEqual(result[2], True);
 }
-test "context return via TestExecution" {
+test "context return via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.@"at:", 0, 0, .{
         &p.pushContext,       "^",
         &p.pushLiteral,       comptime Object.from(42),
         &p.returnWithContext,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
     try expectEqual(result[0], True);
 }
-test "context returnTop via TestExecution" {
+test "context returnTop via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
     });
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
-test "context returnTop twice via TestExecution" {
+test "context returnTop twice via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method1 = compileMethod(Sym.yourself, 3, 0, .{
         &p.pushContext, "^",
@@ -1375,14 +1375,14 @@ test "context returnTop twice via TestExecution" {
         &p.returnTop,
     });
     method1.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method1);
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
-test "context returnTop with indirect via TestExecution" {
+test "context returnTop with indirect via Execution" {
     const expectEqual = std.testing.expectEqual;
     var method = compileMethod(Sym.yourself, 3, 0, .{
         //        &p.noop,
@@ -1393,7 +1393,7 @@ test "context returnTop with indirect via TestExecution" {
         &p.returnTop,
     });
     method.setLiterals(empty, &[_]Object{Object.from(42)}, null);
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
@@ -1417,7 +1417,7 @@ test "simple executable" {
         "label4",
     });
     var objs = [_]Object{Nil};
-    var te = TestExecution.new();
+    var te = Execution.new();
     te.init();
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);

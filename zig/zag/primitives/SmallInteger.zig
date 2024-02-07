@@ -30,18 +30,24 @@ pub fn init() void {}
 pub const inlines = struct {
     pub fn p1(self: Object, other: Object) !Object { // INLINED - Add
         if (other.isInt()) {
-            const result = @as(Object, @bitCast(self.i() +% other.toUnchecked(i64)));
+            const result = switch (config.objectEncoding) {
+                .nan => @as(Object, @bitCast(self.rawI() +% other.toUnchecked(i64))),
+                .tag => {},};
             if (result.isInt()) return result;
         }
         return error.primitiveError;
     }
     pub inline fn p1L(self: Object, other: i32) !Object { // Add a positive literal
-        const result = @as(Object, @bitCast(self.i() +% other));
+        const result = switch (config.objectEncoding) {
+            .nan => @as(Object, @bitCast(self.rawI() +% other)),
+            .tag => {},};
         if (result.atMostInt()) return result;
         return error.primitiveError;
     }
     pub inline fn p_negated(self: Object) !Object { // Negate
-        const result = @as(Object, @bitCast(object.u64_ZERO2 -% self.u()));
+        const result = switch (config.objectEncoding) {
+            .nan => @as(Object, @bitCast(object.Object.u64_ZERO2 -% self.rawU())),
+            .tag => {}};
         if (result.isInt()) return result;
         return error.primitiveError;
     }
@@ -67,14 +73,16 @@ pub const inlines = struct {
     }
     pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
         if (!other.isInt()) return error.primitiveError;
-        return self.u() <= other.u();
+        return self.rawU() <= other.rawU();
     }
     pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
-        return self.u() <= other.u();
+        return switch (config.objectEncoding) {
+            .nan => self.rawU() <= other.rawU(),
+            .tag => self.rawI() <= other.rawI};
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (!other.isInt()) return error.primitiveError;
-        return self.u() >= other.u();
+        return self.rawU() >= other.rawU();
     }
     pub inline fn p7(self: Object, other: Object) !bool { // Equal
         if (!other.isInt()) return error.primitiveError;
@@ -243,7 +251,7 @@ const e = struct {
 };
 fn testExecute(ptr: anytype) []Object {
     const method: CompiledMethodPtr = @ptrCast(ptr);
-    var te = execute.TestExecution.new();
+    var te = execute.Execution.new();
     te.init();
     const result = te.run(&[_]Object{Nil}, method);
     return result;

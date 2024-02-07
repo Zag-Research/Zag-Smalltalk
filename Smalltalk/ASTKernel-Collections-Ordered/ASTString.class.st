@@ -1,24 +1,25 @@
 Class {
-	#name : #ASTString,
-	#superclass : #ASTArrayedCollection,
-	#type : #bytes,
+	#name : 'ASTString',
+	#superclass : 'ASTArrayedCollection',
+	#type : 'bytes',
 	#classVars : [
 		'AsciiOrder',
 		'CaseInsensitiveOrder',
 		'CaseSensitiveOrder',
 		'LowercasingTable'
 	],
-	#category : #'ASTKernel-Collections-Ordered'
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString class >> cr [
 	"Answer a string containing a carriage return character."
 
 	^ self with: ASTCharacter cr
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString class >> initialize [
 	"self initialize"
 
@@ -53,7 +54,7 @@ ASTString class >> initialize [
 		collect: [ :i | i asCharacter asLowercase ]) asString
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> < aString [
 	"Answer whether the receiver sorts before aString.
 	The collation order is simple ascii (with case differences)."
@@ -61,7 +62,7 @@ ASTString >> < aString [
 	^ (self compare: self with: aString collated: AsciiOrder) = 1
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> <= aString [
 	"Answer whether the receiver sorts before or equal to aString.
 	The collation order is simple ascii (with case differences)."
@@ -69,7 +70,7 @@ ASTString >> <= aString [
 	^ (self compare: self with: aString collated: AsciiOrder) <= 2
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> = aString [
 	"Answer whether the receiver sorts equally as aString.
 	The collation order is simple ascii (with case differences)."
@@ -79,7 +80,7 @@ ASTString >> = aString [
 	^ (self compare: self with: aString collated: AsciiOrder) = 2
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> > aString [
 	"Answer whether the receiver sorts after aString.
 	The collation order is simple ascii (with case differences)."
@@ -87,7 +88,7 @@ ASTString >> > aString [
 	^ (self compare: self with: aString collated: AsciiOrder) = 3
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> >= aString [
 	"Answer whether the receiver sorts after or equal to aString.
 	The collation order is simple ascii (with case differences)."
@@ -95,7 +96,7 @@ ASTString >> >= aString [
 	^ (self compare: self with: aString collated: AsciiOrder) >= 2
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> asByteArray [
 	"Answer a ByteArray containing the ASCII values of my characters. Uses a fast primitive that avoids character conversion."
 
@@ -105,7 +106,7 @@ ASTString >> asByteArray [
 		with: self
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTString >> asLowercase [
 	"Answer a String made up from the receiver whose characters are all lowercase."
 
@@ -119,21 +120,21 @@ ASTString >> asLowercase [
 	^ result
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTString >> asString [
 	"Answer this string."
 
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> asSymbol [
 	"This is the only place that new Symbols are created. A Symbol is created if and only if there is not already a Symbol with its contents in existance."
 
 	^ ASTSymbol intern: self
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTString >> at: index [
 	"Primitive. Answer the Character stored in the field of the receiver
 	indexed by the argument. Fail if the index argument is not an Integer or
@@ -143,7 +144,7 @@ ASTString >> at: index [
 	^ (super at: index) asCharacter
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTString >> at: index put: aCharacter [
 	"Primitive. Store the Character in the field of the receiver indicated by
 	the index. Fail if the index is not an Integer or is out of bounds, or if
@@ -158,7 +159,7 @@ ASTString >> at: index put: aCharacter [
 		ifFalse: [ self error: 'Strings only store Characters' ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> compare: aString [
 	"Answer a comparison code telling how the receiver sorts relative to aString:
 		1 - before
@@ -170,7 +171,7 @@ ASTString >> compare: aString [
 	^ self compare: self with: aString collated: CaseInsensitiveOrder
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> compare: string1 with: string2 collated: order [
 	"Return 1, 2 or 3, if string1 is <, =, or > string2, with the collating order of characters given by the order array."
 
@@ -192,7 +193,7 @@ ASTString >> compare: string1 with: string2 collated: order [
 		ifFalse: [ ^ 3 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> findDelimiters: delimiters startingAt: start [
 	"Answer the index of the character within the receiver, starting at start, that matches one of the delimiters. If the receiver does not contain any of the delimiters, answer size + 1."
 
@@ -204,7 +205,7 @@ ASTString >> findDelimiters: delimiters startingAt: start [
 	^ self size + 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> findString: key startingAt: start caseSensitive: caseSensitive [
 	"Answer the index in this String at which the substring key first occurs at or after the given starting index. The match can be case-sensitive or not. Answer zero if no match is found."
 
@@ -218,7 +219,7 @@ ASTString >> findString: key startingAt: start caseSensitive: caseSensitive [
 				ifFalse: [ CaseInsensitiveOrder ])
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> findSubstring: key in: body startingAt: start matchTable: matchTable [
 	"Answer the index in the string body at which the substring key first occurs, at or beyond start. The match is determined using matchTable, which can be used to effect, eg, case-insensitive matches. If no match is found, zero will be returned."
 
@@ -244,7 +245,7 @@ ASTString >> findSubstring: key in: body startingAt: start matchTable: matchTabl
 "
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> findTokens: delimiters [
 	"Answer the collection of tokens that result from parsing self. Any character in the String delimiters marks a border. Several delimiters in a row are considered as just one separation."
 
@@ -259,7 +260,7 @@ ASTString >> findTokens: delimiters [
 	^ tokens
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTString >> hash [
 	| l m |
 	(l := m := self size) <= 2
@@ -271,7 +272,7 @@ ASTString >> hash [
 	^ (self at: 1) asciiValue * 48 + ((self at: m - 1) asciiValue + l)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> indexOf: aCharacter startingAt: start [
 	^ self
 		indexOfAscii: aCharacter asciiValue
@@ -279,7 +280,7 @@ ASTString >> indexOf: aCharacter startingAt: start [
 		startingAt: start
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> indexOf: aCharacter startingAt: startIndex ifAbsent: absentBlock [
 	"Answer the index of the given Character within me starting the search at the given index. If I do not contain the Character, answer the result of evaluating the given block."
 
@@ -293,7 +294,7 @@ ASTString >> indexOf: aCharacter startingAt: startIndex ifAbsent: absentBlock [
 		ifFalse: [ ^ ans ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> indexOfAscii: anInteger inString: aString startingAt: start [
 	"	<primitive: 245>"
 
@@ -305,7 +306,7 @@ ASTString >> indexOfAscii: anInteger inString: aString startingAt: start [
 	^ 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> numArgs [
 	"Answer the number of arguments that the receiver would take considered as a selector or -1 if it couldn't be a selector."
 
@@ -331,7 +332,7 @@ ASTString >> numArgs [
 	^ -1
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTString >> printOn: aStream [
 	"Print inside string quotes, doubling inbedded quotes."
 
@@ -344,7 +345,7 @@ ASTString >> printOn: aStream [
 	aStream nextPut: $'
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTString >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"Primitive. This destructively replaces elements from start to stop in the receiver starting at index, repStart, in the collection, replacement. Answer the receiver. Range checks are performed in the primitive only. Optional. See Object documentation whatIsAPrimitive."
 
@@ -356,7 +357,7 @@ ASTString >> replaceFrom: start to: stop with: replacement startingAt: repStart 
 		startingAt: repStart
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTString >> size [
 	"Primitive. Answer the number of indexable fields in the receiver. This
 	value is the same as the largest legal subscript. Essential. See Object
@@ -366,7 +367,7 @@ ASTString >> size [
 	^ self basicSize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> skipDelimiters: delimiters startingAt: start [
 	"Answer the index of the first character in this string starting at the given index that does NOT match one of the delimiters. If the receiver does not contain any of the delimiters, answer size + 1. Assumes the delimiters to be a non-empty string."
 
@@ -376,12 +377,12 @@ ASTString >> skipDelimiters: delimiters startingAt: start [
 	^ self size + 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> substrings [
 	^ self findTokens: ' '
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTString >> translate: aString from: start to: stop table: table [
 	"Translate the characters in the given string in place using the given mapping table."
 

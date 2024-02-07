@@ -1,1 +1,1 @@
-Package { #name : #'ASTKernel-Objects' }
+Package { #name : 'ASTKernel-Objects' }

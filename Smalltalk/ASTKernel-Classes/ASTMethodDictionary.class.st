@@ -1,10 +1,11 @@
 Class {
-	#name : #ASTMethodDictionary,
-	#superclass : #ASTDictionary,
-	#category : #'ASTKernel-Classes'
+	#name : 'ASTMethodDictionary',
+	#superclass : 'ASTDictionary',
+	#category : 'ASTKernel-Classes',
+	#package : 'ASTKernel-Classes'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary class >> new: nElements [
 	"Create a Dictionary large enough to hold nElements without growing."
 
@@ -15,12 +16,12 @@ ASTMethodDictionary class >> new: nElements [
 	^ (self basicNew: size) init: size
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> add: anAssociation [
 	^ self at: anAssociation key put: anAssociation value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> associationsDo: aBlock [
 	| key |
 	tally = 0
@@ -30,7 +31,7 @@ ASTMethodDictionary >> associationsDo: aBlock [
 			ifNotNil: [ aBlock value: key -> (array at: i) ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> at: key ifAbsent: aBlock [
 	| index |
 	index := self findElementOrNil: key.
@@ -39,7 +40,7 @@ ASTMethodDictionary >> at: key ifAbsent: aBlock [
 	^ array at: index
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTMethodDictionary >> at: key put: value [
 
 	"Set the value at key to be value."
@@ -54,21 +55,21 @@ ASTMethodDictionary >> at: key put: value [
 	^ value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> copy [
 	"Copy my values array."
 
 	^ self shallowCopy withArray: array shallowCopy
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> do: aBlock [
 	tally = 0
 		ifTrue: [ ^ self ].
 	1 to: self basicSize do: [ :i | (self basicAt: i) ifNotNil: [ aBlock value: (array at: i) ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> grow [
 	| newSelf key |
 	newSelf := self species new: self basicSize.	"This will double the size"
@@ -79,19 +80,19 @@ ASTMethodDictionary >> grow [
 	self become: newSelf
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> includesKey: aSymbol [
 	"This override assumes that pointsTo is a fast primitive."
 
 	^ super pointsTo: aSymbol
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> keyAt: index [
 	^ self basicAt: index
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> keyAtIdentityValue: value ifAbsent: exceptionBlock [
 	"Answer the key whose value equals the argument, value. If there is none, answer the result of evaluating exceptionBlock."
 
@@ -102,7 +103,7 @@ ASTMethodDictionary >> keyAtIdentityValue: value ifAbsent: exceptionBlock [
 	^ exceptionBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> keysDo: aBlock [
 	| key |
 	tally = 0
@@ -110,14 +111,14 @@ ASTMethodDictionary >> keysDo: aBlock [
 	1 to: self basicSize do: [ :i | (key := self basicAt: i) ifNotNil: [ aBlock value: key ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> removeKey: key ifAbsent: errorBlock [
 	"Pharo Candle does not support method removal."
 
 	self shouldNotImplement
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> scanFor: anObject [
 	"Scan the key array for the first slot containing either a nil (indicating an empty slot) or an element that matches anObject. Answer the index of that slot or zero if no slot is found. This method will be overridden in various subclasses that have different interpretations for matching elements."
 
@@ -133,7 +134,7 @@ ASTMethodDictionary >> scanFor: anObject [
 	^ 0	"No match AND no empty slot"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodDictionary >> swap: oneIndex with: otherIndex [
 	| element |
 	element := self basicAt: oneIndex.

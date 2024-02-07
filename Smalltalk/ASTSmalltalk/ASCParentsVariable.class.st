@@ -6,7 +6,16 @@ I wrap that in whatever is needed to access the parent's context.
 Class {
 	#name : 'ASCParentsVariable',
 	#superclass : 'ASCVariable',
+	#instVars : [
+		'variable'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'accessing' }
+ASCParentsVariable >> variable: aVariable [
+
+	variable := aVariable
+]

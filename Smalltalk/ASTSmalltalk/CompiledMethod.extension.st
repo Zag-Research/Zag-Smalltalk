@@ -24,11 +24,26 @@ CompiledMethod >> inspectionZagCode [
 	ast := ASPharoCompiler new astFor: self.
 
 	file := ASZigTestContext new.
-	output := ASZigCPSOutput testing
+	output := ASZigThreadedOutput testing
 		          context: file;
 		          generateCode: ast.
-
 	^ output codeGenerator inspectBasicBlocks
+]
+
+{ #category : '*ASTSmalltalk' }
+CompiledMethod >> inspectionZagThreadedCode [
+
+	<inspectorPresentationOrder: 63 title: 'ZagThreadedCode'>
+	| ast file output |
+	ast := ASPharoCompiler new astFor: self.
+
+	file := ASZigTestContext new.
+	output := ASZigThreadedOutput new
+		          context: file;
+		          generateCode: ast.
+	^ SpTextPresenter new
+		  text: file asString;
+		  yourself
 ]
 
 { #category : '*ASTSmalltalk' }

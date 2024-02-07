@@ -21,7 +21,7 @@ const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const ContextPtr = execute.CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
-const TestExecution = execute.TestExecution;
+const TestExecution = execute.Execution;
 const Process = @import("zag/process.zig").Process;
 const symbol = @import("zag/symbol.zig");
 const heap = @import("zag/heap.zig");
@@ -74,11 +74,8 @@ test "fibObject" {
         try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runObject(run: usize) usize {
-    if (debugPrint) std.debug.print("{},", .{run});
-    const start = tstart();
+fn runObject(_: usize) void {
     _ = fibObject(Object.from(runs)); // convert int 40 to a Zag object first
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
@@ -128,14 +125,7 @@ test "fibCPS" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runCPS(run: usize) usize {
-    // For debugging
-    const p1 = object.oImm(object.ClassIndex.Symbol, 0xff00_0001);
-    _ = p1;
-    const fibCPSM2 = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
-    _ = fibCPSM2;
-    // end for debugging
-
+fn runCPS(run: usize) void {
     fibThreadMethod = fibThread.asCompiledMethodPtr();
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     if (debugPrint) std.debug.print("{},", .{run});
@@ -144,9 +134,7 @@ fn runCPS(run: usize) usize {
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    const start = tstart();
     _ = te.run(objs[0..], method);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 var fibCPSSendM = compileMethod(Sym.i_0, 0, 0, .{&fibCPSSend});
@@ -221,15 +209,12 @@ test "fibCPSSend" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runCPSSend(run: usize) usize {
-    if (debugPrint) std.debug.print("{},", .{run});
+fn runCPSSend(_: usize) void {
     const method = fibCPSSendSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    const start = tstart();
     _ = te.run(objs[0..], method);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 var fibThread =
@@ -272,16 +257,13 @@ test "fibThread" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runThread(run: usize) usize {
-    if (debugPrint) std.debug.print("{},", .{run});
+fn runThread(_: usize) void {
     fibThreadMethod = fibThread.asCompiledMethodPtr();
     fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    const start = tstart();
     _ = te.run(objs[0..], fibThreadMethod);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 var fibDispatch =
@@ -342,15 +324,12 @@ test "fibDispatch" {
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }
-fn runDispatch(run: usize) usize {
-    if (debugPrint) std.debug.print("{},", .{run});
+fn runDispatch(_: usize) void {
     const method = fibDispatchSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    const start = tstart();
     _ = te.run(objs[0..], method);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 // const b = @import("zag/byte-interp.zig").ByteCode;
@@ -395,16 +374,13 @@ fn runDispatch(run: usize) usize {
 //         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative(n))));
 //     }
 // }
-// fn runByte(run: usize) usize {
-//     if (debugPrint) std.debug.print("{},", .{run});
+// fn runByte(run: usize) void {
 //     sym = Sym.init();
 //     const method = fibByte.setLiterals(&[_]Object{sym.fibonacci}, empty);
 //     var objs = [_]Object{Object.from(runs)};
 //     var te = TestExecution.new();
 //     te.init();
-//     const start = tstart();
 //     _ = te.run(objs[0..], method);
-//     return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 // }
 
 var @"Integer>>+" =
@@ -512,15 +488,12 @@ test "fibFull" {
     }
 }
 const debugPrint = false;
-fn runFull(run: usize) usize {
+fn runFull(_: usize) void {
     const method = fibFullSetup();
     var objs = [_]Object{Object.from(runs)};
     var te = TestExecution.new();
     te.init();
-    if (debugPrint) std.debug.print("{},", .{run});
-    const start = tstart();
     _ = te.run(objs[0..], method);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1000000));
 }
 
 const ts = std.time.nanoTimestamp;
@@ -531,19 +504,15 @@ fn tstart() i128 {
         if (newT != t) return newT;
     }
 }
-fn runNative(run: usize) usize {
-    if (debugPrint) std.debug.print("{},", .{run});
-    std.debug.print("{s}", .{""});
-    const start = tstart();
+fn runNative(_: usize) void {
     _ = fibNative(runs);
-    return @bitCast(@divTrunc(@as(i64, @truncate(ts() - start)), 1_000_000));
 }
 const Stats = @import("zag/utilities/stats.zig").Stats;
 pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(usize, nRuns).init();
+    var stat = Stats(usize, nRuns,.milliseconds).init();
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
             print("Config {s}dispatch cache, {s}direct dispatch\n",.{if (dispatchCache) "" else "no ",if (config.indirectDispatch) "in" else ""});
@@ -552,43 +521,44 @@ pub fn timing(args: [][]const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
         } else if (eql(u8, arg, "Native")) {
             print("Native:  ", .{});
-            stat.run(runNative);
+            stat.reset();
+            stat.time(runNative);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
         } else if (eql(u8, arg, "Object")) {
-            stat = Stats(usize, nRuns).init();
             print("Object:  ", .{});
-            stat.run(runObject);
+            stat.reset();
+            stat.time(runObject);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
         } else if (eql(u8, arg, "CPS")) {
-            stat = Stats(usize, nRuns).init();
             print("CPS:     ", .{});
-            stat.run(runCPS);
+            stat.reset();
+            stat.time(runCPS);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
         } else if (eql(u8, arg, "CPSSend")) {
-            stat = Stats(usize, nRuns).init();
             print("CPSSend: ", .{});
-            stat.run(runCPSSend);
+            stat.reset();
+            stat.time(runCPSSend);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
         } else if (eql(u8, arg, "Thread")) {
-            stat = Stats(usize, nRuns).init();
             print("Thread:  ", .{});
-            stat.run(runThread);
+            stat.reset();
+            stat.time(runThread);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
         } else if (eql(u8, arg, "Dispatch")) {
-            stat = Stats(usize, nRuns).init();
             print("Dispatch:", .{});
-            stat.run(runDispatch);
+            stat.reset();
+            stat.time(runDispatch);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
             // } else if (eql(u8,arg,"Byte")) {
-            //     stat = Stats(usize,nRuns).init();
             //     print("Byte:    ", .{});
-            //     stat.run(runByte);
+            //     stat.reset();
+            //     stat.time(runByte);
             //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
 
         } else if (eql(u8, arg, "Full")) {
-            stat = Stats(usize, nRuns).init();
             print("Full:    ", .{});
-            stat.run(runFull);
+            stat.reset();
+            stat.time(runFull);
             print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
         } else if (!default)
             print("Unknown argument: {s}\n", .{arg});
