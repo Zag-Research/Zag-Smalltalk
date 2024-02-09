@@ -4,9 +4,28 @@ const mem = std.mem;
 const config = @import("config.zig");
 // usingnamespace @import("config.zig");
 // const std = @This().std;
-const symbol = @import("symbol.zig");
+const debugError = false;
+const symbol = if (debugError) struct {
+    const inversePhi24 = @import("utilities.zig").inversePhi(u24);
+    inline fn symbol_of(index: u24, arity: u8) Object {
+        return Object.makeImmediate(.Symbol, @as(u32, index *% inversePhi24) << 8 | arity);
+    }
+    pub inline fn symbol0(index: u24) Object {
+        return symbol_of(index, 0);
+    }
+    pub inline fn symbol1(index: u24) Object {
+        return symbol_of(index, 1);
+    }
+    const symbols = struct {
+        pub const yourself = symbol0(5);
+    };
+    fn asString(self: Object) Object {
+        return self;
+    }
+} else @import("symbol.zig");
 const heap = @import("heap.zig");
 const HeapObject = heap.HeapObject;
+const HeapObjectHeader = heap.HeapObjectHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
@@ -277,7 +296,7 @@ pub const Object = switch (config.objectEncoding) {
             pub inline fn from(value: anytype) Object {
                 const T = @TypeOf(value);
                 if (T == Object) return value;
-                switch (@typeInfo(@TypeOf(value))) {
+                switch (@typeInfo(T)) {
                     .Int,.ComptimeInt => return cast(@as(u64, @bitCast(@as(i64, value))) +% u64_ZERO),
                     .Float => return cast(value),
                     .ComptimeFloat => return cast(@as(f64, value)),
@@ -293,7 +312,7 @@ pub const Object = switch (config.objectEncoding) {
                     },
                     else => {},
                 }
-                @compileError("Can't convert \"" ++ @typeName(@TypeOf(value)) ++ "\"");
+                @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
             }
             inline fn which_class(self: Object, comptime full: bool) ClassIndex {
                 return switch (self.tag) {
@@ -410,10 +429,9 @@ const ObjectFunctions = struct {
                             if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                 return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));
                             } else {
-                                unreachable; //return @ptrFromInt(T, @bitCast(usize, @bitCast(i64, self) << 16 >> 16)+@sizeOf(HeapObject));
+                                return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))+@sizeOf(HeapObjectHeader)));
                             }
                         }
-                        @panic("Trying to convert Object pointer to " ++ @typeName(T));
                     },
                     else => {},
                 }
@@ -452,7 +470,7 @@ const ObjectFunctions = struct {
         return self.to(HeapObjectPtr).growSize(stepSize);
     }
     pub fn isIndexable(self: Object) bool {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).isIndexable();
+        if (self.isHeapObject()) return self.to(HeapObjectConstPtr).isIndexable();
         return false;
     }
     pub fn inHeapSize(self: Object) usize {
@@ -460,13 +478,13 @@ const ObjectFunctions = struct {
         return 0;
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
+        const ord = std.math.Order;
+        if (self.equals(other)) return ord.eq;
         if (!self.isHeapObject() or !other.isHeapObject()) {
             const u64s = self.rawU();
             const u64o = other.rawU();
             return std.math.order(u64s, u64o);
         }
-        const ord = std.math.Order;
-        if (self.equals(other)) return ord.eq;
         const sla = self.arrayAsSlice(u8);
         const slb = other.arrayAsSlice(u8);
         for (sla[0..@min(sla.len, slb.len)], 0..) |va, index| {
@@ -486,7 +504,7 @@ const ObjectFunctions = struct {
     }
     pub inline fn promoteTo(self: Object) !Object {
         if (self.isUnmoving()) return self;
-        unreachable;
+        return error.PromoteUnimplemented;
         //        return arenas.GlobalArena.promote(self);
     }
     pub fn format(

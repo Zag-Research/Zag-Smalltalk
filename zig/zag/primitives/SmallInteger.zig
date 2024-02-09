@@ -53,13 +53,13 @@ pub const inlines = struct {
     }
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract
         if (other.isInt()) {
-            const result = @as(Object, @bitCast(self.i() -% other.toUnchecked(i64)));
+            const result = @as(Object, @bitCast(self.rawI() -% other.toUnchecked(i64)));
             if (result.isInt()) return result;
         }
         return error.primitiveError;
     }
     pub fn p2L(self: Object, other: i32) !Object { // INLINED - Subtract a positive literal
-        const result = @as(Object, @bitCast(self.i() -% other));
+        const result = @as(Object, @bitCast(self.rawI() -% other));
         if (result.atLeastInt()) return result;
         return error.primitiveError;
     }
@@ -78,7 +78,7 @@ pub const inlines = struct {
     pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
         return switch (config.objectEncoding) {
             .nan => self.rawU() <= other.rawU(),
-            .tag => self.rawI() <= other.rawI};
+            .tag => self.rawI() <= other.rawI()};
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (!other.isInt()) return error.primitiveError;
@@ -252,12 +252,15 @@ const e = struct {
 fn testExecute(ptr: anytype) []Object {
     const method: CompiledMethodPtr = @ptrCast(ptr);
     var te = execute.Execution.new();
+    std.debug.print("\nbefore te.init",.{});
     te.init();
+    std.debug.print("\nbefore te.run",.{});
     const result = te.run(&[_]Object{Nil}, method);
     return result;
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
+    std.debug.print("\nbefore prog",.{});
     var prog = compileMethod(Sym.value, 0, 0, .{
         &e.pushContext, "^",
         &e.pushLiteral, Object.from(3),
@@ -271,7 +274,9 @@ test "simple add" {
         &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
+    std.debug.print("\nbefore setliteral",.{});
     prog.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
+    std.debug.print("\nbefore execute",.{});
     const result = testExecute(&prog);
     try expectEqual(result[0].toInt(), 42);
 }

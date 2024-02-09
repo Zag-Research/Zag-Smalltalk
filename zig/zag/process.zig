@@ -14,9 +14,10 @@ const ClassIndex = object.ClassIndex;
 const checkEqual = @import("utilities.zig").checkEqual;
 //const dispatch = @import("dispatch.zig");
 const heap = @import("heap.zig");
+const HeapHeader = heap.HeapHeader;
+const HeapObject = heap.HeapObject;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectArray = heap.HeapObjectArray;
-const HeapObject = heap.HeapObject;
 const footer = heap.footer;
 const Age = heap.Age;
 const Format = heap.Format;
@@ -65,15 +66,14 @@ pub const Process = extern struct {
     pub fn init(self: *Self) void {
         const h = @as(HeapObjectArray, @ptrCast(&self.stack[0]));
         const stack_end = h + stack_size;
-        const at = allProcesses;
         self.sp = @ptrCast(stack_end);
-        self.currHeap = stack_end + nursery_size;
+        self.currHeap = stack_end;
         self.otherHeap = self.currHeap + nursery_size;
-        self.currEnd = stack_end;
+        self.currEnd = stack_end + nursery_size;
         self.currHp = self.currHeap;
         while (true) {
-            self.next = at;
-            self.id = if (at) |p| p.id + 1 else 1;
+            self.next = allProcesses;
+            self.id = if (allProcesses) |p| p.id + 1 else 1;
             if (@cmpxchgWeak(?*Self, &allProcesses, self.next, self, SeqCst, SeqCst) == null) break;
         }
         self.trapContextNumber = 0;
@@ -120,7 +120,7 @@ pub const Process = extern struct {
         return error.NoSpace;
     }
     pub inline fn freeNursery(self: *const Self) usize {
-        return (@intFromPtr(self.currHp) - @intFromPtr(self.currEnd)) / 8;
+        return (@intFromPtr(self.currEnd) - @intFromPtr(self.currHp)) / 8;
     }
     //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
     //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
@@ -131,13 +131,13 @@ pub const Process = extern struct {
     }
     pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
-        if (aI.wholeSize(@min(HeapObject.maxLength, nursery_size / 4))) |size| {
-            const result = self.currHp - 1;
-            const newHp = result - size;
-            if (@intFromPtr(newHp) >= @intFromPtr(self.currEnd)) {
+        if (aI.wholeSize(@min(HeapHeader.maxLength, nursery_size / 4))) |size| {
+            const result = self.currHp + 1;
+            const newHp = result + size;
+            if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
-                const obj = @as(heap.HeapObjectPtr, @ptrCast(result));
-                _ = aI.fillFooters(obj, classIndex, .nursery, indexed orelse 0, element);
+                const obj: heap.HeapObjectPtr = @ptrCast(result);
+                _ = aI.initObject(obj, classIndex, .nursery, indexed orelse 0, element);
                 return .{
                     .age = .nursery,
                     .allocated = obj,
@@ -197,14 +197,14 @@ pub const Process = extern struct {
                 trace("iter: {}\n", .{iter});
                 while (iter.next()) |objPtr| {
                     if (objPtr.pointer()) |pointer| {
-                        if (pointer.isForwarded()) {
+                        if (pointer.isForwarded()){
                             unreachable;
-                        } else if (pointer.age.isNursery())
+                        } else if (pointer.header().age.isNursery())
                             hp = pointer.copyTo(hp, objPtr);
                     }
                 }
             }
-            scan = heapObject[0].skipBack();
+            scan = heapObject[0].skipForward();
         }
         // swap heaps
         const tempHeap = self.otherHeap;
@@ -212,6 +212,7 @@ pub const Process = extern struct {
         self.currHeap = tempHeap;
         self.currHp = hp;
         self.currEnd = tempHeap - nursery_size;
+        @panic("assumes heap grows down");
     }
 };
 test "nursery allocation" {

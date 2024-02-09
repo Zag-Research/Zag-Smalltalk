@@ -14,12 +14,12 @@ const u64_MINVAL = object.u64_MINVAL;
 const heap = @import("heap.zig");
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObject = heap.HeapObject;
+const HeapHeader = heap.HeapHeader;
 const Format = heap.Format;
 const Age = heap.Age;
 //const class = @import("class.zig");
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
-const TestExecution = execute.TestExecution;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
@@ -27,7 +27,7 @@ const CompiledMethodPtr = execute.CompiledMethodPtr;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 pub const Context = struct {
-    header: HeapObject, // if not on stack there is also a footer
+    header: HeapHeader,
     method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
     tpc: PC, // threaded PC
     npc: ThreadedFn, // native PC - in Continuation Passing Style
@@ -37,10 +37,10 @@ pub const Context = struct {
     const Self = @This();
     const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP;
     const nLocals = 1;
-    const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
+    const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals + 1;
     pub fn init() Self {
         return Self{
-            .header = comptime heap.footer(baseSize + nLocals, Format.specialHeader, object.ClassIndex.Context, 0, Age.static),
+//            .header = comptime heap.footer(baseSize + nLocals, Format.specialHeader, object.ClassIndex.Context, 0, Age.static),
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,
@@ -58,7 +58,7 @@ pub const Context = struct {
         _ = fmt;
         _ = options;
 
-        try writer.print("context: {}", .{self.header});
+        try writer.print("context: {}", .{self.header()});
         if (self.prevCtxt) |ctxt|
             try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
         if (false) {
@@ -66,10 +66,13 @@ pub const Context = struct {
             try writer.print(" temps: {any}", .{self.temps[0..self.size]});
         }
     }
+    inline fn header(self: *const Context) *HeapHeader {
+        return @as(HeapObjectPtr,@constCast(@ptrCast(self))).headerPtr();
+    }
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         _ = process;
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
+        trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header().*, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
         trace("\npop: {*}", .{self});
@@ -89,7 +92,7 @@ pub const Context = struct {
         }).unreserve(maxStackNeeded);
         trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
         trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
-        const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
+        const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp.unreserve(1))));
         ctxt.prevCtxt = self;
         ctxt.trapContextNumber = process.trapContextNumber;
         ctxt.method = method;
@@ -99,8 +102,8 @@ pub const Context = struct {
                 local.* = Nil;
             }
         }
-        ctxt.header = HeapObject.contextHeaderOnStack(baseSize + selfOffset);
-        trace("\npush: {}", .{ctxt.header});
+        ctxt.header.* = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
+        trace("\npush: {}", .{ctxt.header()});
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }
@@ -213,7 +216,7 @@ const e = struct {
 // test "init context" {
 // //    const expectEqual = std.testing.expectEqual;
 // //    const objs = comptime [_]Object{True,Object.from(42)};
-//     var result = TestExecution.new();
+//     var result = execute.Execution.new();
 //     var c = result.ctxt;
 //     var process = &result.process;
 //     c.print(process);

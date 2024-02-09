@@ -3,12 +3,21 @@
 #### Overview 
 Just In Time (JIT) compilation means that the code is generated during program execution. Sometimes this is before a given method is run the first time; sometimes the method runs a few times to gather information about the execution.
 
-We choose for the default to be machine code. So if a method is to be interpreted, it will have a tiny machine code header that will verify the appropriate method is called, and then jump to the interpreter to interpret the AST.
+We choose for the default to be threaded code. A threaded method has its first "word" (pointer to machine-executable code) be a word that will verify the selector and then jump to the next threaded word.
+
+If a method is jit'ed or built-in, the first word will point to the jit'ed or built-in code directly, and it will be responsible for verifying the selector before proceeding.
 
 #### Details
+
+
+#### Importing Pharo code
 We want to be able to use the methods that are sitting in the Pharo image to run for Zag instead of rewriting every one from scratch. 
 
-Pharo has an AST for each of its methods which we want to extract, walk (to convert to a string representation), and then pass over to the Zag runtime for it to be stored in the Zag image. We have 15 methods that are implementations for `compileObject` in Pharo that simply output the string representation of the AST passed in as an argument. The process of converting methods to strings has been universalized to not only work for Zag methods but also any Pharo methods.  
+Pharo has an AST for each of its methods. It is substantially more complex AST than Zag uses, so the first step is to convert it to a Zag AST.
+
+We export Pharo methods in two forms, both converted from Zag ASTs into Zig code.
+1. the raw AST objects, generated as calls to `compileObject` which generate statically-allocated memory objects;
+2. threaded-compiled methods, generated as calls to `compiledMethod` which generate statically-allocated `CompiledMethod` objects - ready to be executed.
 
 Zag then takes the stringified version of the tree and converts it to a tree that maps to the original Pharo AST. This is what would be called the Zag AST (ASC)  
 
