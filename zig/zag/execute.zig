@@ -561,7 +561,7 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = @constCast(c1.init(Nil, 2, 3));
+    var r1 = c1.init(Nil, 2, 3);
     var r1r = [_]Object{ Nil, True };
     r1.setLiterals(empty, &r1r, null);
     try expectEqual(r1.getCodeSize(), 10);
@@ -569,10 +569,10 @@ test "CompileTimeMethod" {
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
-pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) *CompileTimeMethod(countNonLabels(tup)) {
+pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
-    var method: *methodType = @constCast(methodType.init(name, locals, maxStack));
+    var method = methodType.init(name, locals, maxStack);
     const code = method.code[0..];
     comptime var n = 0;
     comptime var cachedSend = false;

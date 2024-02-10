@@ -40,7 +40,7 @@ pub const Context = struct {
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals + 1;
     pub fn init() Self {
         return Self{
-//            .header = comptime heap.footer(baseSize + nLocals, Format.specialHeader, object.ClassIndex.Context, 0, Age.static),
+            .header = comptime HeapHeader.calc(.Context,baseSize + nLocals, 0, .static, null, Object, false) catch unreachable,
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,
@@ -72,7 +72,7 @@ pub const Context = struct {
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         _ = process;
         const wordsToDiscard = self.header.hash16();
-        trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header().*, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
+        trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
         if (self.isOnStack())
             return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
         trace("\npop: {*}", .{self});
@@ -102,8 +102,8 @@ pub const Context = struct {
                 local.* = Nil;
             }
         }
-        ctxt.header.* = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
-        trace("\npush: {}", .{ctxt.header()});
+        ctxt.header = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
+        trace("\npush: {}", .{ctxt.header});
         if (process.needsCheck()) @panic("process needsCheck");
         return ctxt;
     }

@@ -137,7 +137,7 @@ pub const Process = extern struct {
             if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
                 const obj: heap.HeapObjectPtr = @ptrCast(result);
-                _ = aI.initObject(obj, classIndex, .nursery, indexed orelse 0, element);
+                _ = aI.initObject(obj, classIndex, .nursery, indexed orelse 0);
                 return .{
                     .age = .nursery,
                     .allocated = obj,
@@ -193,7 +193,9 @@ pub const Process = extern struct {
             trace("hp: {*} scan: {*}\n", .{ hp, scan });
             const heapObject = scan - 1;
             trace("obj: {} {any}\n", .{ heapObject[0], heapObject[0].instVars() });
-            if (heapObject[0].makeIterator()) |iter| {
+            @compileLog(heapObject[0],heapObject[0].iterator());
+            if (heapObject[0].iterator()) |iter| {
+                @compileLog(iter);
                 trace("iter: {}\n", .{iter});
                 while (iter.next()) |objPtr| {
                     if (objPtr.pointer()) |pointer| {
@@ -236,7 +238,7 @@ test "nursery allocation" {
     ar.nilAll();
     const o2 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 18);
-    o1.instVarPut(0, o2.asObject());
+    try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject());
     try ee(@intFromPtr(pr.spillStack(sp, &mutableContext)), @intFromPtr(sp));
     try ee(@intFromPtr(&initialContext), @intFromPtr(mutableContext));

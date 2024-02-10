@@ -14,7 +14,6 @@ const heap = @import("heap.zig");
 const HeapPtr = heap.HeapPtr;
 const HeapObject = heap.HeapObject;
 const HeapHeader = heap.HeapHeader;
-const getHeader = heap.getHeader;
 const builtin = @import("builtin");
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
@@ -104,7 +103,7 @@ const Dispatch = extern struct {
         maxIndex,
     };
     const numberOfFixed: usize = @intFromEnum(Fixed.maxIndex);
-    const hashedMethods = (if (config.indirectDispatch) 60 else 30) - numberOfFixed; // FIX was 12 else 6
+    const hashedMethods = (if (config.indirectDispatch) 59 else 29) - numberOfFixed; // FIX was 12 else 6
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var internal = [_]ThreadedFn{&super} ** (bitTests.len + 6);
@@ -138,7 +137,7 @@ const Dispatch = extern struct {
         //method.checkFooter();
         const idx = @intFromEnum(index);
         var dispatchP = dispatches[idx];
-        if (dispatchP == empty) {
+        if (dispatchP == &empty) {
             dispatchP = &dispatchData[idx];
             dispatches[idx] = dispatchP;
             dispatchP.init();
@@ -172,7 +171,7 @@ const Dispatch = extern struct {
         self.initOfSize(@sizeOf(Self) / @sizeOf(usize));
     }
     inline fn initOfSize(self: *Self, words: usize) align(@sizeOf(DispatchElement)) void {
-        getHeader(self).* = HeapHeader.staticHeaderWithClassLengthHash(classIndex, words - 1, 0);
+        self.header = HeapHeader.staticHeaderWithClassLengthHash(classIndex, words - 1, 0);
         const nMethods: u16 = (words * @sizeOf(usize) - @offsetOf(Self, "methods")) / @sizeOf(DispatchElement);
         const hash = smallestPrimeAtLeast(nMethods * 6 / 10);
         self.hash = hash;
@@ -186,7 +185,7 @@ const Dispatch = extern struct {
     }
     fn isExternalCompiledMethod(self: *Self, cmp: ThreadedFn) bool {
         const ptr = @intFromPtr(cmp);
-        if (ptr >= @intFromPtr(self) and ptr <= @intFromPtr(self) + getHeader(self).length * @sizeOf(Object)) return false;
+        if (ptr >= @intFromPtr(self) and ptr <= @intFromPtr(self) + self.header.length * @sizeOf(Object)) return false;
         var low: usize = 0;
         var high: usize = internal.len;
         while (low < high) {
@@ -258,7 +257,7 @@ const Dispatch = extern struct {
             return;
         } else trace("\nexisting: {}", .{existing.selector});
         if (self.isExternalCompiledMethod(@constCast(existing).codePtr().prim)) { // an actual cmp - not internal
-            trace("\nfree:{} hash:{} len:{} length:{}",.{self.free,self.hash,getHeader(self).length,self.length});
+            trace("\nfree:{} hash:{} len:{} length:{}",.{self.free,self.hash,self.header.length,self.length});
             if (self.free < self.length) {
                 self.free += 3;
                 const disambiguator = disambiguate2(@ptrCast(@as([*]DispatchElement, @ptrCast(&self.methods))[self.free - 3 .. self.free]), existing, cmp);
