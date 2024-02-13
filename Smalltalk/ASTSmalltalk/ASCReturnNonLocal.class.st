@@ -14,3 +14,14 @@ ASCReturnNonLocal >> next [
 
 	^ nil
 ]
+
+{ #category : 'code generation' }
+ASCReturnNonLocal >> outputTo: output [
+
+	^ output visitReturnNonLocalTop
+]
+
+{ #category : 'instance creation' }
+ASCReturnNonLocal >> with: ignored [
+
+]
