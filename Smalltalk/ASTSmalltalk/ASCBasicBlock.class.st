@@ -232,6 +232,12 @@ stack requiredContextDo: aBlock
 ]
 
 { #category : 'initialization' }
+ASCBasicBlock >> returnNonLocal [
+
+	^ self put: ASCReturnNonLocal new
+]
+
+{ #category : 'initialization' }
 ASCBasicBlock >> returnSelf [
 
 	^ self put: ASCReturnSelf new

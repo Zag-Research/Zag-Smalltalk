@@ -10,6 +10,12 @@ Class {
 }
 
 { #category : 'API' }
+ASCodeGeneratorBlock >> returnNonLocal [
+	"need to return to the calling context's return"
+	code returnNonLocal
+]
+
+{ #category : 'API' }
 ASCodeGeneratorBlock >> returnSelf [
 self error: 'need to push self'.
 	^ code returnTopNonlocal

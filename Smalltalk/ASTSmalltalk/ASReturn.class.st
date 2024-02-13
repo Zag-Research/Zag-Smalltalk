@@ -85,9 +85,9 @@ ASReturn >> zigWalk: aGenerator [
 { #category : 'compiling' }
 ASReturn >> zigWalkBlockReturn: anASCodeGenerator [
 
-	| result |
-	result := expression zigWalkForReturn: anASCodeGenerator.
-	"result ifFalse: [ ^ anASCodeGenerator returnTop ]"
+	(expression
+		zigWalkForReturn: anASCodeGenerator)
+		ifFalse: [ ^ anASCodeGenerator returnNonLocal ]
 ]
 
 { #category : 'compiling' }
