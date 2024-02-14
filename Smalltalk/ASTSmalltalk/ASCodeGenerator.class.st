@@ -36,15 +36,15 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
 	current := basicBlocks first.
-	rest := basicBlocks asSet.
+	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
-		rest remove: current.
 		aBlock value: current.
 		current next
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
 				current := rest atRandom ifNil: [ ^ self ] ]
-			ifNotNil: [ :next | current := next ]]
+			ifNotNil: [ :next | current := next ].
+		rest remove: current ]
 ]
 
 { #category : 'enumerating' }

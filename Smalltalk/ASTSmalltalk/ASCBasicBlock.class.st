@@ -144,7 +144,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations ifNotEmpty: [ operations last "is there a next to the last? next" ] ifEmpty: [ nil ]
+	^ operations last next
 ]
 
 { #category : 'instance initialization' }
@@ -155,7 +155,7 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 
 { #category : 'API' }
 ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
-
+self halt.
 	^ stack
 		  offset: 0
 		  to: anObject
@@ -167,7 +167,7 @@ ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: b
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
 
-	operations do: [ :operation | operation outputTo: output ].
+	operations do: [ :operation | self halt. operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]
 
