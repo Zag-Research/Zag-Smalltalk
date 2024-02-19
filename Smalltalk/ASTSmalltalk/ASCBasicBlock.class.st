@@ -79,7 +79,7 @@ ASCBasicBlock >> doPop [
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
-
+self halt.
 	stack := stack push: anObject.
 	maxDepth := maxDepth max: stack depth
 ]

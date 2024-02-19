@@ -6,7 +6,8 @@ Class {
 	#superclass : 'ASCOperations',
 	#instVars : [
 		'block',
-		'manifest'
+		'manifest',
+		'name'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -50,7 +51,13 @@ ASCBlock >> manifest [
 { #category : 'accessing' }
 ASCBlock >> name [
 
-	^ self
+	^ name
+]
+
+{ #category : 'accessing' }
+ASCBlock >> name: aSymbol [
+
+	name := aSymbol 
 ]
 
 { #category : 'code generation' }

@@ -60,9 +60,8 @@ ASCodeGenerator >> classOf: aString [
 { #category : 'API' }
 ASCodeGenerator >> compileBlock: aBlockClosure [
 	"compiling of blocks doesn't work right now"
-
-	aBlockClosure manifest ifTrue: [
-		output compileBlock: aBlockClosure ] 
+self halt.
+	aBlockClosure manifest ifTrue: [ code doPush: aBlockClosure. output compileBlock: aBlockClosure ]
 ]
 
 { #category : 'API' }
@@ -251,6 +250,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
 	block := ASCBlock with: anASBlock.
+	block name: name asSymbol.
 	blockClosures add: block.
 	code
 		doPush: block;

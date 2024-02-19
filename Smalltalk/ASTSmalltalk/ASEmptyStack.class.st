@@ -29,6 +29,6 @@ ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 
 { #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-
-	^ nonlocalNameLookupObject lookupName: anObject block: blockOther 
+self halt.
+	^ nonlocalNameLookupObject lookupName: anObject block: blockOther
 ]

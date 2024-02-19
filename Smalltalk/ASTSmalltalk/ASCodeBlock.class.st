@@ -87,10 +87,10 @@ ASCodeBlock >> locals: aCollection [
 { #category : 'printing' }
 ASCodeBlock >> printOn: s [
 
-	locals isEmpty ifFalse: [ 
+	locals isEmpty ifFalse: [
 		s << ' locals: #('.
 		locals do: [ :local | s << local name ] separatedBy: [ s << ' ' ].
-		s<<')' ].
+		s << ')' ].
 	s << ' body: {'.
 	body printOn: s.
 	s << '}'
