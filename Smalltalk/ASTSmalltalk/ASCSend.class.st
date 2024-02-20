@@ -40,7 +40,6 @@ ASCSend >> inspectZagASTOn: aStream [
 ASCSend >> manifestParameters: aStack [
 
 	| tStack |
-	self halt.
 	tStack := aStack.
 	selector numArgs + 1 timesRepeat: [
 		tStack top makeManifest.

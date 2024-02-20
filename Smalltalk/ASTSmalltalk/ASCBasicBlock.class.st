@@ -79,7 +79,6 @@ ASCBasicBlock >> doPop [
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
-self halt.
 	stack := stack push: anObject.
 	maxDepth := maxDepth max: stack depth
 ]
@@ -144,7 +143,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations last next
+operations ifEmpty: [ ^nil ] ifNotEmpty: [^ operations last next]
 ]
 
 { #category : 'instance initialization' }
@@ -155,7 +154,7 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 
 { #category : 'API' }
 ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
-self halt.
+
 	^ stack
 		  offset: 0
 		  to: anObject
@@ -167,7 +166,7 @@ self halt.
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
 
-	operations do: [ :operation | self halt. operation outputTo: output ].
+	operations do: [ :operation | operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]
 
@@ -185,6 +184,15 @@ ASCBasicBlock >> popVariable: aSymbol [
 	stack top makeManifest.
 	self put: (ASCPopVariable with: target top).
 	self doDrop
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushBlockNamed: aBlockClosure [
+
+	stack := ASStackNamed new
+		         from: stack;
+		         name: aBlockClosure name.
+	^ stack top: aBlockClosure
 ]
 
 { #category : 'API' }
