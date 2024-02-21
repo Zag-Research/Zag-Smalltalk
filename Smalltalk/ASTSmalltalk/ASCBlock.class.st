@@ -55,8 +55,7 @@ ASCBlock >> name [
 
 { #category : 'accessing' }
 ASCBlock >> name: aSymbol [
-
-	name := aSymbol 
+	name := aSymbol
 ]
 
 { #category : 'code generation' }

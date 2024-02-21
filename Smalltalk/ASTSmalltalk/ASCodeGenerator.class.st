@@ -102,6 +102,7 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'accessing' }
 ASCodeGenerator >> find: aSymbol [
+
 	^ code find: aSymbol
 ]
 
@@ -253,7 +254,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
 	block := ASCBlock with: anASBlock.
-	block name: name asSymbol.
+	"block name: name asSymbol."
 	blockClosures add: block.
 	code
 		doPush: block;
@@ -324,13 +325,14 @@ ASCodeGenerator >> selfName [
 
 { #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
-| bb |
-"why are we setting code to the return of the send:targetClass:tail: call?"
+
+	| bb |
+	"why are we setting code to the return of the send:targetClass:tail: call?"
 	bb := code
-		        send: aSymbol
-		        targetClass: aTargetClass
-		        tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [ basicBlocks add: bb ]
+		      send: aSymbol
+		      targetClass: aTargetClass
+		      tail: tail & tailCallOptimize.
+	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
 ]
 
 { #category : 'API' }

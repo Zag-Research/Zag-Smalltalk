@@ -148,7 +148,6 @@ operations ifEmpty: [ ^nil ] ifNotEmpty: [^ operations last next]
 
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
-
 	stack nonlocalNameLookupObject: aGenerator
 ]
 

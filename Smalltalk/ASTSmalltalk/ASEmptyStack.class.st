@@ -19,12 +19,14 @@ ASEmptyStack >> depth [
 
 { #category : 'accessing' }
 ASEmptyStack >> find: aSymbol [
+
 	^ nonlocalNameLookupObject find: aSymbol
 ]
 
 { #category : 'instance initialization' }
-ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [ 
-	nonlocalNameLookupObject := anASCodeGenerator 
+ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
+
+	nonlocalNameLookupObject := anASCodeGenerator
 ]
 
 { #category : 'API' }
