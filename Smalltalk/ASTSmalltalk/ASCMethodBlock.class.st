@@ -19,8 +19,7 @@ Class {
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	stack := ASMethodEmptyStack new
-	"self stack: ASEmptyStack new"
+	self stack: ASEmptyStack new
 ]
 
 { #category : 'printing' }
