@@ -58,7 +58,7 @@ pub const Context = struct {
         _ = fmt;
         _ = options;
 
-        try writer.print("context: {}", .{self.header()});
+        try writer.print("context: {}", .{self.header});
         if (self.prevCtxt) |ctxt|
             try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
         if (false) {

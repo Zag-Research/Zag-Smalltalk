@@ -131,7 +131,7 @@ pub const Process = extern struct {
     }
     pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
-        if (aI.wholeSize(@min(HeapHeader.maxLength, nursery_size / 4))) |size| {
+        if (aI.objectSize(@min(HeapHeader.maxLength, nursery_size / 4))) |size| {
             const result = self.currHp + 1;
             const newHp = result + size;
             if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
@@ -177,7 +177,7 @@ pub const Process = extern struct {
             const endSP = context.endOfStack(self);
             while (sp.lessThan(endSP)) {
                 trace("sp: before{} {*}\n", .{ sp.top, hp });
-                if (sp.top.pointer()) |pointer| {
+                if (sp.top.asMemoryObject()) |pointer| {
                     hp = pointer.copyTo(hp, &sp.top);
                 }
                 trace("sp: after {} {*}\n", .{ sp.top, hp });
@@ -193,15 +193,16 @@ pub const Process = extern struct {
             trace("hp: {*} scan: {*}\n", .{ hp, scan });
             const heapObject = scan - 1;
             trace("obj: {} {any}\n", .{ heapObject[0], heapObject[0].instVars() });
-            @compileLog(heapObject[0],heapObject[0].iterator());
+            //@compileLog(heapObject[0],heapObject[0].iterator());
             if (heapObject[0].iterator()) |iter| {
-                @compileLog(iter);
+                //@compileLog(iter);
                 trace("iter: {}\n", .{iter});
-                while (iter.next()) |objPtr| {
-                    if (objPtr.pointer()) |pointer| {
+                var it = iter;
+                while (it.next()) |objPtr| {
+                    if (objPtr.asMemoryObject ()) |pointer| {
                         if (pointer.isForwarded()){
                             unreachable;
-                        } else if (pointer.header().age.isNursery())
+                        } else if (pointer.header.age.isNursery())
                             hp = pointer.copyTo(hp, objPtr);
                     }
                 }

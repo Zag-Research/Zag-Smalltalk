@@ -9,6 +9,8 @@
 We use one of 2 object encodings with different properties:
 	1. NaN Encoding - which has the advantage of 64-bit floats being encoded with no change. This allows floating-point values to be directly used by other languages and potentially GPUs. This supports 50-bit SmallIntegers.
 	2. Modified Spur Encoding - which probably has faster class determination (hence dispatch), and 61-bit SmallIntegers. Most-used 64-bit floats are encoded as immediates, but some very large values (more than 2e77) will be heap-allocated.
+Both have immediate representations for symbols, characters, booleans, `nil`, and some special closures.
+
 Defining a configuration flag allows choosing between these encodings. Once we can run real benchmarks, we will determine which is actually faster for particular workloads.
 ### NaN Encoding
 The IEEE 754 64-bit binary number is encoded as follows:
@@ -21,33 +23,33 @@ There are several ways to do NaN tagging/encoding. You can choose integers, poin
 
 So this leaves us with the following encoding based on the **S**ign+**E**xponent and **F**raction bits:
 
-| S+E       | F    | F    | F    | Type                          |
-| --------- | ---- | ---- | ---- | ----------------------------- |
-| 0000      | 0000 | 0000 | 0000 | double  +0                    |
-| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)             |
-| 7FF0      | 0000 | 0000 | 0000 | +inf                          |
-| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                  |
-| 8000      | 0000 | 0000 | 0000 | double     -0                 |
-| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)             |
-| FFF0      | 0000 | 0000 | 0000 | -inf                          |
-| FFF0      | 0000 | xxxx | xxxx | NaN (unused)                  |
-| FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)       |
-| FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger) |
-| FFF0      | 0003 | FFFF | FFFF | UndefinedObject               |
-| FFF0      | 0004 | 0000 | 0000 | False                         |
-| FFF0      | 0005 | 0000 | 0001 | True                          |
-| FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))|
-| FFF0      | 0007 | xxxx | xxaa | Symbol                        |
-| FFF0      | 0008 | 00xx | xxxx | Character                     |
-| FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy)                     |
-| FFF1-FFF4 | xxxx | xxxx | xxxx | unused                    |
-| FFF5      | xxxx | xxxx | xxxx | heap thunk                    |
-| FFF6      | xxxx | xxxx | xxxx | non-local thunk               |
-| FFF7      | xxxx | xxxx | xxxx | heap object                   |
-| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                  |
-| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal           |
-| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                |
-| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal           |
+| S+E       | F    | F    | F    | Type                                       |
+| --------- | ---- | ---- | ---- | ------------------------------------------ |
+| 0000      | 0000 | 0000 | 0000 | double  +0                                 |
+| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)                          |
+| 7FF0      | 0000 | 0000 | 0000 | +inf                                       |
+| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                               |
+| 8000      | 0000 | 0000 | 0000 | double     -0                              |
+| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)                          |
+| FFF0      | 0000 | 0000 | 0000 | -inf                                       |
+| FFF0      | 0000 | xxxx | xxxx | NaN (unused)                               |
+| FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)                    |
+| FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger)              |
+| FFF0      | 0003 | FFFF | FFFF | UndefinedObject                            |
+| FFF0      | 0004 | 0000 | 0000 | False                                      |
+| FFF0      | 0005 | 0000 | 0001 | True                                       |
+| FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))            |
+| FFF0      | 0007 | xxxx | xxaa | Symbol                                     |
+| FFF0      | 0008 | 00xx | xxxx | Character                                  |
+| FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy) |
+| FFF1-FFF4 | xxxx | xxxx | xxxx | unused                                     |
+| FFF5      | xxxx | xxxx | xxxx | heap thunk                                 |
+| FFF6      | xxxx | xxxx | xxxx | non-local thunk                            |
+| FFF7      | xxxx | xxxx | xxxx | heap object                                |
+| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                               |
+| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal                        |
+| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                             |
+| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal                        |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 4 through 7 have the low 48 bits being the address of an object.
@@ -63,34 +65,35 @@ This provides 61-bit SmallInteger and immediate floats that have an exponent ran
 We extend this slightly, by using all 8 possible tag values:
 0: Pointer
 1: SmallInteger
-2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code)
+2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code). In a few cases, the top 45 bits plus 3 low zero bits provides a 48-bit address allowing capture of closures or contexts.
 3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits; if the resulting low 3 bits are less than 5, add 3; otherwise immediate encoding is not possible.
 
-| Rest | | | | | | |Tag | Type                          |
-| -----|---- | --- | -----|-|---|--|---|------------ |
-| aaaaaaaa|...|...|...|aaaaaaaa|aaaaaaaa|aaaaa|000 | pointer                    |
-| xxxxxxxx|...|...|...|xxxxxxxx|xxxxxxxx|xxxxx|001 | SmallInteger   |
-| xxxxxxxx|...|...|...|xxxxxccc|cccccccc|ccccc|010 | intermediates                   |
-| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|011 | double  |
-| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|100 | double  |
-| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|101 | double  |
-| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|110 | double  |
-| eeeeeeee| nnnnnnnn| ...| ...| ...| nnnnnnnn| nnnns|111 | double  |
+| Rest     |          |     |          |     |          |          | Tag      | Type          |
+| -------- | -------- | --- | -------- | --- | -------- | -------- | -------- | ------------- |
+| aaaaaaaa | ...      | ... | ...      | ... | aaaaaaaa | aaaaaaaa | aaaaa000 | pointer       |
+| xxxxxxxx | ...      | ... | ...      | ... | xxxxxxxx | xxxxxxxx | xxxxx001 | SmallInteger  |
+| xxxxxxxx | ...      | ... | xxxxxxxx | ... | 00000ccc | cccccccc | ccccc010 | intermediates |
+| aaaaaaaa | ...      | ... | ...      | ... | aaaaaccc | cccccccc | ccccc010 | intermediates |
+| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn011 | double        |
+| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn100 | double        |
+| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn101 | double        |
+| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn110 | double        |
+| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn111 | double        |
 
 Because we are using all 8 possible values of the tag field, where the test in Spur for "is a SmallInteger" (or Float) was simply an `and`, using our encoding it requires an `and` followed by a `cmp`.
 ### Immediates
 
 All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Characters, and Symbols.
 
-| 32 bit Data | | | |Tag | Class                          |
-| ---------|-|---|--|---|------------ |
-| dddddddd|xxxxx000|00000000|00011|010 | UndefinedObject|
-| dddddddd|xxxxx000|00000000|00100|010 | False|
-| dddddddd|xxxxx000|00000000|00101|010 | True|
-| dddddddd|xxxxx000|00000000|00111|010 | Symbol|
-| dddddddd|xxxxx000|00000000|01000|010 | Character|
+| 32 bit Data |          |          |          |       | Tag | Class           |
+| ----------- | -------- | -------- | -------- | ----- | --- | --------------- |
+| dddddddd    | 00000000 | 00000000 | 00000000 | 00011 | 010 | UndefinedObject |
+| dddddddd    | 00000000 | 00000000 | 00000000 | 00100 | 010 | False           |
+| dddddddd    | 00000000 | 00000000 | 00000000 | 00101 | 010 | True            |
+| dddddddd    | 00000000 | 00000000 | 00000000 | 00111 | 010 | Symbol          |
+| dddddddd    | 00000000 | 00000000 | 00000000 | 01000 | 010 | Character       |
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-45 bits. Most immediate classes use the hash32 value which is the top 32 bits. A few use the full 45 available bits, because extended with 3 zero bits they can be treated as pointer. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-45 bits. Most immediate classes use the hash32 value which is the top 32 bits. A few use the full 45 available bits, because extended with 3 zero bits they can be treated as a pointer. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
 
 #### Class numbers
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most, for NaN encoding). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
@@ -104,8 +107,8 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 
 ### Thunks and Closures
 Full block closures are relatively expensive because most need to be heap allocated. Even though they will typically be discarded quickly, they take dozens of instructions to create, and put pressure on the heap - causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
-1. a SmallInteger thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the hash bits. Hence this supports 32-bit SmallIntegers.
-2. a Float thunk similarly supports 32-bit float values.
+1. a SmallInteger thunk acts as a niladic BlockClosure that returns a limited range of numeric values, encoded in the hash bits. Hence this supports 32/45-bit SmallIntegers.
+2. a Float thunk similarly supports 32/45-bit float values.
 3. an immediate thunk acts as a niladic BlockClosure that returns any immediate. For modified Spur format, this only supports  the first 8K classes and 32-bit hash values, but this includes all the common values. Examples: `[#foo]`, `[true]`, `[nil]`, `[$x]`.
 4. a heap thunk is similar, but it returns a heap object.
 5. a non-local thunk simply does a non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^2]`.

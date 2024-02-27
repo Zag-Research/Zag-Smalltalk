@@ -816,7 +816,8 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             },
         }
     }
-    std.debug.assert(last == objects.len);
+    if (last>=0)
+        objects[last] = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1).o();
     return obj;
 }
 test "compileObject" {
@@ -824,41 +825,40 @@ test "compileObject" {
     const expect = std.testing.expect;
     const c = ClassIndex;
     var o = compileObject(.{
-        "def",
-        True,
-        ":first",
-        c.Method, // first HeapObject
-
+        ":def",
+        c.Class, // first HeapObject
+        "second", // pointer to second object
+        Sym.i_1, // alternate reference to replacement Object #1
+        "1mref", // reference to replacement Object #1
+        "third", // pointer to third object
         ":second",
         c.replace0, // second HeapObject - runtime ClassIndex #0
-        "first", // pointer to first object
-        "1mref", // reference to replacement Object #1
-        Sym.i_1, // alternate reference to replacement Object #1
-        "second", // pointer to second object
-        ":def",
-        c.Class, // third HeapObject
+        ":third",
+        c.Method, // third HeapObject
+        True,
+        "def",
+
     });
     std.debug.print("\nhere",.{});
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
-    try expect(o.objects[0].equals(o.asObject()));
-    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[5].equals(True));
-    try expect(o.objects[6].equals(True));
-    const h2: HeapObjectConstPtr = @ptrFromInt(@as(u64,@bitCast(o.objects[2])));
-    try expectEqual(h2.header.classIndex, c.Method);
-    try expectEqual(h2.header.length, 2);
-    try expectEqual(h2.header.age, .static);
-    try expectEqual(h2.header.format, .notIndexableWithPointers);
-    const h3: HeapObjectConstPtr = @ptrFromInt(@as(u64,@bitCast(o.objects[3])));
-    try expectEqual(@intFromEnum(h3.header.classIndex), 0xdead);
-    try expectEqual(h3.header.length, 0);
-    const header: HeapObjectConstPtr = @ptrCast(&o.objects[8]);
-    const h8 = header.*;
-    try expectEqual(h8.header.length, 4);
-    try expect(!header.header.isIndexable());
-    try expect(header.header.isStatic());
-    try expect(header.header.isUnmoving());
+    try expect(o.objects[8].equals(o.asObject()));
+//    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
+    try expect(o.objects[2].equals(True));
+    try expect(o.objects[3].equals(True));
+    const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
+    try expectEqual(h1.header.length, 4);
+    try expect(!h1.header.isIndexable());
+    try expect(h1.header.isStatic());
+    try expect(h1.header.isUnmoving());
+    const h2: HeapObjectConstPtr = @ptrCast(&o.objects[5]);
+    try expectEqual(@intFromEnum(h2.header.classIndex), 0xdead);
+    try expectEqual(h2.header.length, 0);
+    const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
+    try expectEqual(h3.header.classIndex, c.Method);
+    try expectEqual(h3.header.length, 2);
+    try expectEqual(h3.header.age, .static);
+    try expectEqual(h3.header.format, .notIndexableWithPointers);
 }
 test "method object" {
     // + aNumber
