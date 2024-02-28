@@ -1,6 +1,6 @@
-Extension { #name : #Integer }
+Extension { #name : 'Integer' }
 
-{ #category : #'*ASTSmalltalk-Tests' }
+{ #category : '*ASTSmalltalk-Tests' }
 Integer >> fibonacci [
 
 	self <= 2 ifTrue: [ ^ 1 ].

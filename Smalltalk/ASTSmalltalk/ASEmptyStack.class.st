@@ -24,12 +24,12 @@ ASEmptyStack >> find: aSymbol [
 ]
 
 { #category : 'instance initialization' }
-ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [ 
-	nonlocalNameLookupObject := anASCodeGenerator 
+ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
+
+	nonlocalNameLookupObject := anASCodeGenerator
 ]
 
 { #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-
-	^ nonlocalNameLookupObject lookupName: anObject block: blockOther 
+	^ nonlocalNameLookupObject lookupName: anObject block: blockOther
 ]

@@ -61,6 +61,12 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 ]
 
 { #category : 'visiting' }
+ASZigThreadedBlockOutput >> visitReturnNonLocalTop [
+
+	self putEmbedded: #returnNonLocal 
+]
+
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitStoreLocal: anASLocal [ 
 	^ self subclassResponsibility
 ]

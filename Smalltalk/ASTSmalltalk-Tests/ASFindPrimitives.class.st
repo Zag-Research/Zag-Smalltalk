@@ -2,22 +2,24 @@
 I go through all the methods in a class, looking for primitives calling methods
 "
 Class {
-	#name : #ASFindPrimitives,
-	#superclass : #Object,
+	#name : 'ASFindPrimitives',
+	#superclass : 'Object',
 	#instVars : [
 		'class',
 		'primitives'
 	],
-	#category : #'ASTSmalltalk-Tests-Explore'
+	#category : 'ASTSmalltalk-Tests-Explore',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Explore'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASFindPrimitives >> on: aClass [
 
 	class := aClass
 ]
 
-{ #category : #collecting }
+{ #category : 'collecting' }
 ASFindPrimitives >> primitives [
 
 	| dict |
@@ -29,7 +31,7 @@ ASFindPrimitives >> primitives [
 	^ primitives := dict associations asSortedCollection
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASFindPrimitives >> printEmbedded: s [
 
 	self primitives do: [ :assoc | 
@@ -62,7 +64,7 @@ ASFindPrimitives >> printEmbedded: s [
 ' ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASFindPrimitives >> printInlines: s [
 
 	self primitives do: [ :assoc | 
@@ -92,7 +94,7 @@ ASFindPrimitives >> printInlines: s [
 ' ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASFindPrimitives >> printOn: s [
 
 	s nextPutAll: 'const std = @import("std");
@@ -135,7 +137,7 @@ pub const primitives = struct {
 '
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASFindPrimitives >> printPrimitives: s [
 
 	self primitives do: [ :assoc | 
@@ -152,7 +154,7 @@ ASFindPrimitives >> printPrimitives: s [
 ' ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASFindPrimitives >> writeToTmpFile [
 
 	(File named: '/tmp/' , class name , '.zig') writeStreamDo: [ :stream | 

@@ -83,8 +83,11 @@ ASReturn >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
-ASReturn >> zigWalkBlockReturn: anASCodeGenerator [ 
-	self shouldBeImplemented.
+ASReturn >> zigWalkBlockReturn: anASCodeGenerator [
+
+	(expression
+		zigWalkForReturn: anASCodeGenerator)
+		ifFalse: [ ^ anASCodeGenerator returnNonLocal ]
 ]
 
 { #category : 'compiling' }

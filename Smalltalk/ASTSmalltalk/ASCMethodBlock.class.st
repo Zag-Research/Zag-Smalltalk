@@ -19,7 +19,7 @@ Class {
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	"self stack: ASEmptyStack new"
+	self stack: ASEmptyStack new
 ]
 
 { #category : 'printing' }

@@ -61,8 +61,9 @@ ASCodeGenerator >> classOf: aString [
 ASCodeGenerator >> compileBlock: aBlockClosure [
 	"compiling of blocks doesn't work right now"
 
-	aBlockClosure manifest ifTrue: [
-		output compileBlock: aBlockClosure ] 
+	aBlockClosure manifest ifFalse: [ ^self].
+		code pushBlockNamed: aBlockClosure.
+		output compileBlock: aBlockClosure
 ]
 
 { #category : 'API' }
@@ -101,7 +102,8 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'accessing' }
 ASCodeGenerator >> find: aSymbol [
-	^code find: aSymbol
+
+	^ code find: aSymbol
 ]
 
 { #category : 'API' }
@@ -180,9 +182,10 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 ]
 
 { #category : 'compiling' }
-ASCodeGenerator >> lookupName: aString block: anUndefinedObject [ 
+ASCodeGenerator >> lookupName: aString block: anUndefinedObject [
 	"self shouldBeImplemented."
-	code find: aString
+
+	^code find: aString
 ]
 
 { #category : 'accessing' }
@@ -251,6 +254,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
 	block := ASCBlock with: anASBlock.
+	"block name: name asSymbol."
 	blockClosures add: block.
 	code
 		doPush: block;
@@ -321,13 +325,13 @@ ASCodeGenerator >> selfName [
 
 { #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
-| bb |
-"why are we setting code to the return of the send:targetClass:tail: call?"
+
+	| bb |
 	bb := code
-		        send: aSymbol
-		        targetClass: aTargetClass
-		        tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [ basicBlocks add: bb ]
+		      send: aSymbol
+		      targetClass: aTargetClass
+		      tail: tail & tailCallOptimize.
+	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
 ]
 
 { #category : 'API' }

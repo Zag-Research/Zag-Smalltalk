@@ -161,6 +161,13 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 		other: nil
 ]
 
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushNil [
+
+	self putEmbedded: #pushNil;
+		comma
+]
+
 { #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnNil [
 

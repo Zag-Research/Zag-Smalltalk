@@ -1,10 +1,12 @@
 Class {
-	#name : #ASPharoCompilerTest,
-	#superclass : #TestCase,
-	#category : #'ASTSmalltalk-Tests-Tests'
+	#name : 'ASPharoCompilerTest',
+	#superclass : 'TestCase',
+	#category : 'ASTSmalltalk-Tests-Tests',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Tests'
 }
 
-{ #category : #asserting }
+{ #category : 'asserting' }
 ASPharoCompilerTest >> assert: aMethod compilesTo: ast [
 	| result |
 	result := ASPharoCompiler new compileMethod: aMethod.
@@ -12,7 +14,7 @@ ASPharoCompilerTest >> assert: aMethod compilesTo: ast [
 
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> assert: class instancesEqualAfter: block printsAs: printString [
 
 	| obj1 obj2 |
@@ -24,7 +26,7 @@ ASPharoCompilerTest >> assert: class instancesEqualAfter: block printsAs: printS
 	self assert: obj1 printString equals: printString
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testASTNodesEqual [
 
 	self
@@ -65,7 +67,7 @@ ASPharoCompilerTest >> testASTNodesEqual [
 		'ASMethodNode class: Object selector: #a arguments: #(a1 a2 a3) locals: #(l1 l2) body: {17 . 42}'
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testBlock [
 
 	self
@@ -103,7 +105,7 @@ ASPharoCompilerTest >> testBlock [
 						 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testCascade [
 
 	self
@@ -153,7 +155,7 @@ ASPharoCompilerTest >> testCascade [
 									  (ASSend selector: #abs args: {  }) }) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testClassVar [
 
 	self
@@ -165,7 +167,7 @@ ASPharoCompilerTest >> testClassVar [
 						 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testGives43 [
 
 	self
@@ -190,7 +192,7 @@ ASPharoCompilerTest >> testGives43 [
 										    args: { (ASLiteral literal: 4) }) })) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testInstVar [
 
 	self
@@ -202,7 +204,7 @@ ASPharoCompilerTest >> testInstVar [
 						 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testObject [
 
 	self
@@ -215,7 +217,7 @@ ASPharoCompilerTest >> testObject [
 							   args: {  })) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testOr [
 
 	self assert: ASCompileTestClass1 >> #| compilesTo: (ASMethodNode
@@ -231,7 +233,7 @@ ASPharoCompilerTest >> testOr [
 					 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testOrOr [
 
 	self assert: ASCompileTestClass1 >> #'||' compilesTo: (ASMethodNode
@@ -250,7 +252,7 @@ ASPharoCompilerTest >> testOrOr [
 					 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testPlus [
 
 	self assert: ASCompileTestClass1 >> #+ compilesTo: (ASMethodNode
@@ -266,7 +268,7 @@ ASPharoCompilerTest >> testPlus [
 					 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testPlus1 [
 
 	self
@@ -281,7 +283,7 @@ ASPharoCompilerTest >> testPlus1 [
 						 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testPlusAndAnd [
 
 	self
@@ -300,7 +302,7 @@ ASPharoCompilerTest >> testPlusAndAnd [
 						 asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testPool [
 	" pool variable counts as a class variable "
 
@@ -311,7 +313,7 @@ ASPharoCompilerTest >> testPool [
 					  (ASRef variable: (#Foo))) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testSimple1 [
 
 	self
@@ -322,7 +324,7 @@ ASPharoCompilerTest >> testSimple1 [
 				 body: { (ASReturn new expression: (ASLiteral new literal: 42)) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testSuper [
 
 	self
@@ -340,7 +342,7 @@ ASPharoCompilerTest >> testSuper [
 							   args: {  })) } asASSequence)
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASPharoCompilerTest >> testUnaries [
 	| method |
 	method := ASPharoCompiler new compileMethod: ASCompileTestClass1>>#unaries.
