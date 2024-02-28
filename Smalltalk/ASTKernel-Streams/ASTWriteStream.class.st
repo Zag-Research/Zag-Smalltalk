@@ -1,13 +1,14 @@
 Class {
-	#name : #ASTWriteStream,
-	#superclass : #ASTReadStream,
+	#name : 'ASTWriteStream',
+	#superclass : 'ASTReadStream',
 	#instVars : [
 		'writeLimit'
 	],
-	#category : #'ASTKernel-Streams'
+	#category : 'ASTKernel-Streams',
+	#package : 'ASTKernel-Streams'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> contents [
 	"Answer with a copy of my collection up to the high-water mark that was written."
 
@@ -15,7 +16,7 @@ ASTWriteStream >> contents [
 	^ collection copyFrom: 1 to: readLimit
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> nextPut: anObject [
 	"Primitive. Insert the argument at the next position in the Stream represented by the receiver. Fail if the collection of this stream is not an Array or a String. Fail if the stream is positioned at its end, or if the position is out of bounds in the collection. Fail if the argument is not of the right type for the collection. Optional. See Object documentation whatIsAPrimitive."
 
@@ -26,7 +27,7 @@ ASTWriteStream >> nextPut: anObject [
 			^ collection at: position put: anObject ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> nextPutAll: aCollection [
 	"Write the elements of the given collection starting at my current position. Answer the collection."
 
@@ -48,14 +49,14 @@ ASTWriteStream >> nextPutAll: aCollection [
 	position := newEnd
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> on: aCollection [
 	super on: aCollection.
 	readLimit := 0.
 	writeLimit := aCollection size
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> pastEndPut: anObject [
 	"Grow my collection."
 
@@ -67,7 +68,7 @@ ASTWriteStream >> pastEndPut: anObject [
 	collection at: (position := position + 1) put: anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> position: anInteger [
 	"Set my read position, but remember the high-water mark that was written."
 
@@ -75,12 +76,12 @@ ASTWriteStream >> position: anInteger [
 	super position: anInteger
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTWriteStream >> size [
 	^ readLimit := readLimit max: position
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTWriteStream >> space [
 	"Append a space character to me."
 

@@ -1,28 +1,29 @@
 Class {
-	#name : #ASTSymbol,
-	#superclass : #ASTString,
-	#type : #bytes,
-	#category : #'ASTKernel-Collections-Ordered'
+	#name : 'ASTSymbol',
+	#superclass : 'ASTString',
+	#type : 'bytes',
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTSymbol class >> intern: aString [
 	<primitive: #symbolIntern>
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSymbol class >> new: size [
 	"Symbols are unique. You can create a new Symbol from a String using 'asSymbol'."
 
 	self cannotInstantiate
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSymbol >> = anObject [
 	^ self == anObject
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTSymbol >> asString [
 	"Answer a string containing my characters."
 
@@ -37,61 +38,59 @@ ASTSymbol >> asString [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSymbol >> asSymbol [
 	^ self
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTSymbol >> at: anInteger put: anObject [
 	"You cannot modify the receiver."
 
 	self errorNoModification
 ]
 
-{ #category : #'reflective operations' }
+{ #category : 'reflective operations' }
 ASTSymbol >> basicIdentityHash [
-	"Answer the receiver's character code.
-	 The value answered is unsigned. It can in theory be in the full
-	 poisitive SmallInteger range, but based on Unicode, it is fair
-	 to assume that the value is in the range [ 0 ; 16r3FFFFF ]"
-	<primitive: 171>
+	"Answer the immediate hashcode."
 
+	<primitive: 171>
+	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSymbol >> errorNoModification [
 	self error: 'Symbols can not be modified.'
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSymbol >> hash [
 	^ self identityHash
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSymbol >> numArgs [
 	^ self identityHash >> 25
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTSymbol >> printOn: aStream [
 	aStream nextPutAll: self
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTSymbol >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	self errorNoModification
 ]
 
-{ #category : #copying }
+{ #category : 'copying' }
 ASTSymbol >> shallowCopy [
 	"Answer myself because Symbols are unique."
 
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSymbol >> species [
 	^ ASTString
 ]

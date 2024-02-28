@@ -39,7 +39,7 @@ const allocMultiple = 16;
 var next_mmap_addr_hint: ?[*]align(page_size) u8 = null;
 
 fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(page_size) u8 {
-    if (builtin.os.tag == .windows) @compileError("no windows support");
+    if (builtin.os.tag == .windows) @compileError("no windows support"); // see PageAllocator for ideas
     return os.mmap(
         hint,
         size,
@@ -51,16 +51,16 @@ fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(p
 }
 fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: usize) ![]u8 {
     // may return alignment smaller than allocation so bump up if need
-    if (@as(usize, alignment) >> @as(u6, @truncate(@ctz(alignment))) != 1) unreachable; // alignedMap must have a power-of-2 alignment
-    if (alignment < page_size) unreachable; // alignedMap must have a alignment >= than page_size
+    assert(@as(usize, alignment) >> @as(u6, @truncate(@ctz(alignment))) == 1); // alignedMap must have a power-of-2 alignment
+    assert(alignment >= page_size); // alignedMap must have a alignment >= than page_size
     const slice = try mmap(hint, allocation, -1);
     const addr = @intFromPtr(slice.ptr);
     const first = mem.alignForward(usize, addr, alignment);
     const end = @intFromPtr(slice.ptr + slice.len);
     const last = mem.alignBackward(usize, end, alignment);
+    assert(first < last);
     if (addr < first) os.munmap(slice[0 .. first - addr]);
     if (last < end) os.munmap(@as([*]align(page_size) u8, @ptrFromInt(last))[0 .. end - last]);
-    if (first == last) unreachable;
     return slice[first - addr .. last - addr];
 }
 fn reserve(comptime T: type) ![]align(@sizeOf(T)) T {

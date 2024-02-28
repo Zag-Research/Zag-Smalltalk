@@ -1,27 +1,28 @@
 Class {
-	#name : #ASTOrderedCollection,
-	#superclass : #ASTSequenceableCollection,
+	#name : 'ASTOrderedCollection',
+	#superclass : 'ASTSequenceableCollection',
 	#instVars : [
 		'array',
 		'firstIndex',
 		'lastIndex'
 	],
-	#category : #'ASTKernel-Collections-Ordered'
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTOrderedCollection class >> new [
 	^ self new: 8
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection class >> new: anInteger [
 	"If a subclass adds fields, then that subclass must reimplement new:."
 
 	^ self basicNew setCollection: (ASTArray new: anInteger)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> add: newObject [
 	"Append newObject to me. Equivalent to addLast:. Answer newObject."
 
@@ -32,7 +33,7 @@ ASTOrderedCollection >> add: newObject [
 	^ newObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> addFirst: newObject [
 	"Add newObject to the beginning of the receiver. Answer newObject."
 
@@ -43,7 +44,7 @@ ASTOrderedCollection >> addFirst: newObject [
 	^ newObject
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTOrderedCollection >> at: anInteger [
 	"Answer my element at index anInteger. at: is used by a knowledgeable
 	client to access an existing element"
@@ -53,7 +54,7 @@ ASTOrderedCollection >> at: anInteger [
 		ifFalse: [ ^ array at: anInteger + firstIndex - 1 ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTOrderedCollection >> at: anInteger put: anObject [
 	"Put anObject at element index anInteger. at:put: cannot be used to
 	append, front or back, to an ordered collection; it is used by a
@@ -66,7 +67,7 @@ ASTOrderedCollection >> at: anInteger put: anObject [
 		ifFalse: [ ^ array at: index + firstIndex - 1 put: anObject ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> collect: aBlock [
 	"Evaluate aBlock with each of my elements as the argument. Collect the 
 	resulting values into a collection that is like me. Answer the new 
@@ -78,7 +79,7 @@ ASTOrderedCollection >> collect: aBlock [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> copyFrom: startIndex to: endIndex [
 	"Answer a copy of the receiver that contains elements from position
 	startIndex to endIndex."
@@ -91,7 +92,7 @@ ASTOrderedCollection >> copyFrom: startIndex to: endIndex [
 	^ targetCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> copyReplaceFrom: start to: stop with: replacementCollection [
 	"Answer a copy of the receiver with replacementCollection's elements in
 	place of the receiver's start'th to stop'th elements. This does not expect
@@ -122,7 +123,7 @@ ASTOrderedCollection >> copyReplaceFrom: start to: stop with: replacementCollect
 	^ newOrderedCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> do: aBlock [
 	"Override the superclass for performance reasons."
 
@@ -133,13 +134,13 @@ ASTOrderedCollection >> do: aBlock [
 			index := index + 1 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> errorNoSuchElement [
 	self
 		error: 'attempt to index non-existent element in an ordered collection'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> first [
 	"Answer the first element. If the receiver is empty, create an errror
 	message. This is a little faster than the implementation in the superclass."
@@ -148,7 +149,7 @@ ASTOrderedCollection >> first [
 	^ array at: firstIndex
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> grow [
 	"Become larger. Typically, a subclass must override this method if it adds instance variables."
 
@@ -162,7 +163,7 @@ ASTOrderedCollection >> grow [
 	array := newArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> insert: anObject before: spot [
 	| index delta spotIndex |
 	spotIndex := spot.
@@ -178,7 +179,7 @@ ASTOrderedCollection >> insert: anObject before: spot [
 	^ anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> last [
 	"Answer the last element. If the receiver is empty, create an errror
 	message. This is a little faster than the implementation in the superclass."
@@ -187,7 +188,7 @@ ASTOrderedCollection >> last [
 	^ array at: lastIndex
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> makeRoomAtFirst [
 	| delta index |
 	delta := array size - self size.
@@ -205,7 +206,7 @@ ASTOrderedCollection >> makeRoomAtFirst [
 	lastIndex := array size
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> makeRoomAtLast [
 	| newLast delta |
 	newLast := self size.
@@ -220,7 +221,7 @@ ASTOrderedCollection >> makeRoomAtLast [
 	lastIndex := newLast
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> remove: oldObject ifAbsent: absentBlock [
 	| index |
 	index := firstIndex.
@@ -232,7 +233,7 @@ ASTOrderedCollection >> remove: oldObject ifAbsent: absentBlock [
 	^ absentBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> removeFirst [
 	"Remove the first element of the receiver and answer it. If the receiver is 
 	empty, create an error notification."
@@ -245,7 +246,7 @@ ASTOrderedCollection >> removeFirst [
 	^ firstObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> removeIndex: removedIndex [
 	| index |
 	index := removedIndex.
@@ -256,7 +257,7 @@ ASTOrderedCollection >> removeIndex: removedIndex [
 	lastIndex := lastIndex - 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> removeLast [
 	"Remove the last element of the receiver and answer it. If the receiver is 
 	empty, create an error notification."
@@ -269,7 +270,7 @@ ASTOrderedCollection >> removeLast [
 	^ lastObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> select: aBlock [
 	"Evaluate aBlock with each of my elements as the argument. Collect into a new collection like the receiver, only those elements for which aBlock evaluates to true. Override the superclass in order to use add:, not at:put:."
 
@@ -282,14 +283,14 @@ ASTOrderedCollection >> select: aBlock [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTOrderedCollection >> setCollection: anArray [
 	array := anArray.
 	firstIndex := array size // 3 max: 1.
 	lastIndex := firstIndex - 1
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTOrderedCollection >> size [
 	^ lastIndex - firstIndex + 1
 ]

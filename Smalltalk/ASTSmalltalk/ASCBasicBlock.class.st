@@ -130,10 +130,12 @@ ASCBasicBlock >> makeContextRequired [
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
-	operations ifNotEmpty: [
-		last := operations last.
-		last requiresContext ifTrue: [ stack := stack makeContextRequired ].
-		last manifestParameters: stack ]
+	operations ifNotEmpty: [ 
+	last := operations last.
+	last requiresContext ifTrue: [ stack := stack makeContextRequired.
+ ].
+	last manifestParameters: stack
+	]
 ]
 
 { #category : 'accessing' }
@@ -143,7 +145,7 @@ ASCBasicBlock >> maxDepth [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-operations ifEmpty: [ ^nil ] ifNotEmpty: [^ operations last next]
+	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
 
 { #category : 'instance initialization' }

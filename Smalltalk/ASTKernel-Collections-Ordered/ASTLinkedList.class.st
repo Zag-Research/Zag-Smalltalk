@@ -1,21 +1,22 @@
 Class {
-	#name : #ASTLinkedList,
-	#superclass : #ASTSequenceableCollection,
+	#name : 'ASTLinkedList',
+	#superclass : 'ASTSequenceableCollection',
 	#instVars : [
 		'firstLink',
 		'lastLink'
 	],
-	#category : #'ASTKernel-Collections-Ordered'
+	#category : 'ASTKernel-Collections-Ordered',
+	#package : 'ASTKernel-Collections-Ordered'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList class >> new: anInt [
 	"LinkedList don't need capacity"
 
 	^ self new
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList class >> newFrom: aCollection [
 	"Answer an instance with same elements as aCollection."
 
@@ -24,14 +25,14 @@ ASTLinkedList class >> newFrom: aCollection [
 		yourself
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> add: aLinkOrObject [
 	"Add aLink to the end of the receiver's list. Answer aLink."
 
 	^ self addLast: aLinkOrObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> add: link after: otherLinkOrObject [
 	"Add otherLink  after link in the list. Answer aLink."
 
@@ -40,7 +41,7 @@ ASTLinkedList >> add: link after: otherLinkOrObject [
 	^ self add: link afterLink: otherLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> add: aLinkOrObject afterLink: otherLink [
 	"Add otherLink  after link in the list. Answer aLink."
 
@@ -54,7 +55,7 @@ ASTLinkedList >> add: aLinkOrObject afterLink: otherLink [
 	^ aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> add: link before: otherLinkOrObject [
 	"Add otherLink  after link in the list. Answer aLink."
 
@@ -63,7 +64,7 @@ ASTLinkedList >> add: link before: otherLinkOrObject [
 	^ self add: link beforeLink: otherLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> add: aLinkOrObject beforeLink: otherLink [
 	| currentLink |
 	firstLink == otherLink
@@ -80,7 +81,7 @@ ASTLinkedList >> add: aLinkOrObject beforeLink: otherLink [
 	^ self errorNotFound: otherLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> addFirst: aLinkOrObject [
 	"Add aLink to the beginning of the receiver's list. Answer aLink."
 
@@ -93,7 +94,7 @@ ASTLinkedList >> addFirst: aLinkOrObject [
 	^ aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> addLast: aLinkOrObject [
 	"Add aLink to the end of the receiver's list. Answer aLink."
 
@@ -106,19 +107,19 @@ ASTLinkedList >> addLast: aLinkOrObject [
 	^ aLink
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTLinkedList >> at: index [
 	^ (self linkAt: index) value
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTLinkedList >> at: index put: anObject [
 	^ self
 		at: index
 		putLink: (self linkOf: anObject ifAbsent: [ anObject asLink ])
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> at: index putLink: aLink [
 	| previousLink nextLink |
 	"Please don't put a link which is already in the list, or you will create an infinite loop"
@@ -141,7 +142,7 @@ ASTLinkedList >> at: index putLink: aLink [
 	^ aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> collect: aBlock [
 	"Evaluate aBlock with each of the receiver's elements as the argument.  
 	Collect the resulting values into a collection like the receiver. Answer  
@@ -156,14 +157,14 @@ ASTLinkedList >> collect: aBlock [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> copyWith: newElement [
 	^ self copy
 		add: newElement;
 		yourself
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> copyWithout: oldElement [
 	| newInst |
 	newInst := self class new.
@@ -174,7 +175,7 @@ ASTLinkedList >> copyWithout: oldElement [
 	^ newInst
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> do: aBlock [
 	| aLink |
 	aLink := firstLink.
@@ -183,7 +184,7 @@ ASTLinkedList >> do: aBlock [
 			aLink := aLink nextLink ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> first [
 	"Answer the first link. Create an error notification if the receiver is 
 	empty."
@@ -191,7 +192,7 @@ ASTLinkedList >> first [
 	^ self firstLink value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> firstLink [
 	"Answer the first link. Create an error notification if the receiver is 
 	empty."
@@ -200,7 +201,7 @@ ASTLinkedList >> firstLink [
 	^ firstLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> indexOf: anElement startingAt: start ifAbsent: exceptionBlock [
 	"Answer the index of the first occurence of anElement after start
 	within the receiver. If the receiver does not contain anElement, 
@@ -217,12 +218,12 @@ ASTLinkedList >> indexOf: anElement startingAt: start ifAbsent: exceptionBlock [
 	^ exceptionBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> isEmpty [
 	^ firstLink isNil
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> last [
 	"Answer the last link. Create an error notification if the receiver is 
 	empty."
@@ -230,7 +231,7 @@ ASTLinkedList >> last [
 	^ self lastLink value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> lastLink [
 	"Answer the last link. Create an error notification if the receiver is 
 	empty."
@@ -239,12 +240,12 @@ ASTLinkedList >> lastLink [
 	^ lastLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> linkAt: index [
 	^ self linkAt: index ifAbsent: [ self errorSubscriptBounds: index ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> linkAt: index ifAbsent: errorBlock [
 	| i |
 	i := 0.
@@ -255,12 +256,12 @@ ASTLinkedList >> linkAt: index ifAbsent: errorBlock [
 	^ errorBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> linkOf: anObject [
 	^ self linkOf: anObject ifAbsent: [ self error: 'No such element' ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> linkOf: anObject ifAbsent: errorBlock [
 	self
 		linksDo: [ :el | 
@@ -269,7 +270,7 @@ ASTLinkedList >> linkOf: anObject ifAbsent: errorBlock [
 	^ errorBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> linksDo: aBlock [
 	| aLink |
 	aLink := firstLink.
@@ -278,7 +279,7 @@ ASTLinkedList >> linksDo: aBlock [
 			aLink := aLink nextLink ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> postCopy [
 	| aLink |
 	super postCopy.
@@ -288,7 +289,7 @@ ASTLinkedList >> postCopy [
 			lastLink := aLink ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> remove: aLinkOrObject ifAbsent: aBlock [
 	"Remove aLink from the receiver. If it is not there, answer the result of evaluating aBlock."
 
@@ -298,14 +299,14 @@ ASTLinkedList >> remove: aLinkOrObject ifAbsent: aBlock [
 	^ aLinkOrObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeAll [
 	"Implementation note: this has to be fast"
 
 	firstLink := lastLink := nil
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeAllSuchThat: aBlock [
 	"Evaluate aBlock for each element and remove all that elements from
 	the receiver for that aBlock evaluates to true.  For LinkedLists, it's safe to use do:."
@@ -316,7 +317,7 @@ ASTLinkedList >> removeAllSuchThat: aBlock [
 				ifTrue: [ self remove: each ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeFirst [
 	"Remove the first element and answer it. If the receiver is empty, create 
 	an error notification."
@@ -332,7 +333,7 @@ ASTLinkedList >> removeFirst [
 	^ oldLink value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeLast [
 	"Remove the receiver's last element and answer it. If the receiver is 
 	empty, create an error notification."
@@ -352,12 +353,12 @@ ASTLinkedList >> removeLast [
 	^ oldLink value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeLink: aLink [
 	^ self removeLink: aLink ifAbsent: [ self error: 'no such method!' ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> removeLink: aLink ifAbsent: aBlock [
 	"Remove aLink from the receiver. If it is not there, answer the result of
 	evaluating aBlock."
@@ -378,12 +379,12 @@ ASTLinkedList >> removeLink: aLink ifAbsent: aBlock [
 	^ aLink
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> species [
 	^ ASTArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> swap: ix1 with: ix2 [
 	"Reimplemented, super would create an infinite loop"
 
@@ -417,7 +418,7 @@ ASTLinkedList >> swap: ix1 with: ix2 [
 	link2 nextLink: newLink2Next
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTLinkedList >> validIndex: index [
 	^ index > 0 and: [ index <= self size ]
 ]

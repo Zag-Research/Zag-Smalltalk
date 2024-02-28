@@ -327,7 +327,6 @@ ASCodeGenerator >> selfName [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
-	"why are we setting code to the return of the send:targetClass:tail: call?"
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
