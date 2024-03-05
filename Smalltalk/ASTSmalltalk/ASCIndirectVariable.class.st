@@ -4,7 +4,7 @@ I am a reference to a parent Method/BlockClosure variable.
 I wrap that in whatever is needed to access the parent's context.
 "
 Class {
-	#name : 'ASCParentsVariable',
+	#name : 'ASCIndirectVariable',
 	#superclass : 'ASCVariable',
 	#instVars : [
 		'variable'
@@ -15,7 +15,7 @@ Class {
 }
 
 { #category : 'accessing' }
-ASCParentsVariable >> variable: aVariable [
+ASCIndirectVariable >> variable: aVariable [
 
 	variable := aVariable
 ]

@@ -19,7 +19,6 @@ ASEmptyStack >> depth [
 
 { #category : 'accessing' }
 ASEmptyStack >> find: aSymbol [
-
 	^ nonlocalNameLookupObject find: aSymbol
 ]
 
