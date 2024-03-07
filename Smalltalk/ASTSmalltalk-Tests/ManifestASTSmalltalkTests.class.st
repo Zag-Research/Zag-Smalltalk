@@ -66,7 +66,7 @@ ManifestASTSmalltalkTests class >> ruleReTemporaryVariableCapitalizationRuleV1Fa
 
 { #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleReVariableAssignedLiteralRuleV1FalsePositive [
-	^ #(#(#(#RGClassDefinition #(#ASImageTest)) #'2021-04-23T21:16:23.052204-04:00') )
+	^ #(#(#(#RGClassDefinition #(#ASINanmageTest)) #'2021-04-23T21:16:23.052204-04:00') )
 ]
 
 { #category : 'code-critics' }

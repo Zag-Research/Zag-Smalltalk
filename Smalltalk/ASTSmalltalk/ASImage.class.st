@@ -1,5 +1,7 @@
 "
-I write out ASTSmalltalk images
+I am the abstract class to write out Zag-Smalltalk images.
+
+I have subclasses to output the two supported encodings: nan-encoded and tag-encoded (modified Spur).
 "
 Class {
 	#name : 'ASImage',
@@ -10,23 +12,51 @@ Class {
 		'baseAddress',
 		'aStream',
 		'currentAddress',
-		'objects',
-		'process',
-		'output',
-		'newClasses',
-		'selectors',
-		'newSelectors',
-		'methods'
+		'pendingObjects',
+		'symbolTableRef',
+		'classTableRef'
 	],
 	#classVars : [
 		'BaseAddress',
-		'ClassMask',
-		'FormatMask',
-		'FormatShift',
-		'HashMask',
-		'HashShift',
-		'SizeMask',
-		'SizeShift'
+		'ClassASArg',
+		'ClassASReturn',
+		'ClassASSend',
+		'ClassASSequence',
+		'ClassASSuper',
+		'ClassArray',
+		'ClassBlockClosure',
+		'ClassBlockFailure',
+		'ClassCharacter',
+		'ClassClass',
+		'ClassCompiledMethod',
+		'ClassContext',
+		'ClassContextData',
+		'ClassDispatch',
+		'ClassFalse',
+		'ClassFloat',
+		'ClassMethod',
+		'ClassObject',
+		'ClassSmallInteger',
+		'ClassString',
+		'ClassSymbol',
+		'ClassSymbolTable',
+		'ClassThunkFloat',
+		'ClassThunkHeap',
+		'ClassThunkImmediate',
+		'ClassThunkRet',
+		'ClassThunkReturn',
+		'ClassThunkReturn0',
+		'ClassThunkReturn1',
+		'ClassThunkReturn2',
+		'ClassThunkReturnFalse',
+		'ClassThunkReturnNil',
+		'ClassThunkReturnSelf',
+		'ClassThunkReturnTrue',
+		'ClassThunkSmallInteger',
+		'ClassTrue',
+		'ClassUndefinedObject',
+		'ThunkReturn_Class1',
+		'_1'
 	],
 	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
@@ -50,18 +80,22 @@ ASImage class >> exportPackages [
 		]
 ]
 
+{ #category : 'instance creation' }
+ASImage class >> image [
+
+	^ super new initHeapHeader
+]
+
 { #category : 'class initialization' }
 ASImage class >> initialize [
 	BaseAddress := 16r1000000000.
-	SizeMask := 16r7fff.
-	SizeShift := 48.
-	FormatMask := 16r1f.
-	FormatShift := 40.
-	HashShift := 20.
-	HashMask := (1<<(FormatShift-HashShift))-1.
-	ClassMask :=  (1<<HashShift)-1.
 
+]
 
+{ #category : 'instance creation' }
+ASImage class >> new [
+
+	^ self error: 'use "image" or "test" to create instances of ',self name
 ]
 
 { #category : 'image analysis' }
@@ -84,11 +118,19 @@ ASImage class >> primitiveNumbers: aCollection [
 			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
 ]
 
+{ #category : 'tests' }
+ASImage class >> test [
+	^ super new
+]
+
 { #category : 'writing' }
-ASImage >> addFirstMethod: selector in: canonicalClasses [
-	canonicalClasses do: [: class |
-		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
-	]
+ASImage >> at: position do: aBlock [
+
+	| savedPosition |
+	savedPosition := aStream position.
+	aStream position: position-baseAddress.
+	aBlock value.
+	^ aStream position: savedPosition.
 
 ]
 
@@ -105,171 +147,100 @@ ASImage >> canonicalClasses: aClass [
 ]
 
 { #category : 'adding' }
-ASImage >> class: aClass [
-	| cc |
-	cc := (self canonicalClasses: aClass) first.
-	^ classes at: cc ifAbsentPut: [ newClasses add: cc. classes size ].
-
-]
-
-{ #category : 'writing' }
-ASImage >> closeOverClassesAndSelectors [
-	| tempClasses tempSelectors |
-	[ newClasses size + newSelectors size > 0 ] whileTrue: [
-		tempClasses := newClasses.
-		newClasses := OrderedCollection new.
-		tempSelectors := newSelectors.
-		newSelectors := OrderedCollection new.
-		tempClasses do: [: class | | cc |
-			cc := self canonicalClasses: class.
-			cc first superclass ifNotNil: [: superclass | self imageObject: superclass ].
-			self imageObject: cc first.
-			selectors do: [: selector |
-				self addFirstMethod: selector in: cc.
-			]
-		].
-		tempSelectors do: [: selector |
-			classes keysDo: [: class |
-				self addFirstMethod: selector in: (self canonicalClasses: class).
-			]
-		]
-	]
-]
-
-{ #category : 'compiling' }
-ASImage >> compileMethod: aMethod [
-	self halt
-]
-
-{ #category : 'writing' }
-ASImage >> createClassTable [ 
-	| table |
-	table := Array new: classes size.
-	classes keysAndValuesDo: [: class : number |
-		table at: number+1 put: (self imageObject: class) ].
-	^ table
-]
-
-{ #category : 'objects' }
-ASImage >> generalObject: anObject [
-	| gen |
-	^ objects at: anObject ifAbsentPut: [
-				gen := ASGenerator new on: self object: anObject.
-				process add: gen.
-				self processOut.
-				gen
-			]
-]
-
-{ #category : 'adding' }
 ASImage >> header: header [
-	| code key value |
-	code := 0.
-	header do: [: flag |
-		flag isAssociation ifTrue: [
-			key := flag key.
-			value := flag value.
-			key = #class ifTrue: [ code := code bitOr: ((self class: value) bitAnd: ClassMask) . key := nil ].
-			key = #hash ifTrue: [ code := code bitOr: (value bitAnd: HashMask) << HashShift . key := nil ].
-			key = #size ifTrue: [ code := code bitOr: (value bitAnd: SizeMask) << SizeShift . key := nil ].
-			key = #format ifTrue: [ code := code bitOr: (value bitAnd: FormatMask) << FormatShift . key := nil ].
-		] ifFalse: [
-			key := flag.
-			key = #isImmutable ifTrue: [ code := code bitOr: 1 << 47 . key := nil ].
-			key = #isForwarded ifTrue: [ code := code bitOr: 1 << 63 . key := nil ].
-		].
-		key ifNotNil: [ self error: 'header field "',key asString,'" is illegal' ]
-	].
-	^ code
+
+	^ self subclassResponsibility
 ]
 
-{ #category : 'objects' }
-ASImage >> imageObject: anObject [ 
-	^ anObject astImageObject: self
+{ #category : 'initialization' }
+ASImage >> initClasses [
+
+	ClassObject := 1.
+	ClassSmallInteger := 2.
+	ClassUndefinedObject := 3.
+	ClassFalse := 4.
+	ClassTrue := 5.
+	ClassFloat := 6.
+	ClassSymbol := 7.
+	ClassCharacter := 8.
+	ClassBlockClosure := 9.
+	ClassThunkSmallInteger := 10.
+	ClassThunkFloat := 11.
+	ClassThunkImmediate := 12.
+	ClassThunkHeap := 13.
+	ClassThunkReturnSelf := 14.
+	ClassThunkReturnTrue := 15.
+	ClassThunkReturnFalse := 16.
+	ClassThunkReturnNil := 17.
+	ThunkReturn_Class1 := 18.
+	ClassThunkReturn0 := 19.
+	ClassThunkReturn1 := 20.
+	ClassThunkReturn2 := 21.
+	ClassArray := 22.
+	ClassString := 23.
+	ClassSymbolTable := 24.
+	ClassMethod := 25.
+	ClassCompiledMethod := 26.
+	ClassDispatch := 27.
+	ClassContextData := 28.
+	ClassContext := 29.
+	ClassBlockFailure := 30.
+	ClassClass := 31.
+	ClassASSuper := 32.
+	ClassASArg := 33.
+	ClassASSend := 34.
+	ClassASReturn := 35.
+	ClassASSequence := 36.
+	{
+		Object.
+		BlockClosure.
+		False.
+		True.
+		UndefinedObject.
+		SmallInteger.
+		Symbol.
+		Character.
+		Float. " all of those above must be in this order because they are the immediate/literal classes "
+		ASTSystem } do: [ :class | self put: class ]
 ]
 
-{ #category : 'adding' }
-ASImage >> include: anASGenerator object: anObject [
-	| nVars extra size header format fields |
-	fields := anObject astFields.
-	nVars := fields size.
-	header := OrderedCollection with: #class -> anObject class.
-	header add: #hash -> currentAddress.
-	format := anObject astFormat.
-	header add: #format -> format.
-	extra := nil.
-	(format & 24)>0 ifTrue: [ 
-			(format & 17) = 1 ifTrue: [ 
-					self error: 'indexable with instVars' ]
-				ifFalse: [ 
-					nVars <= SizeMask
-						ifTrue: [ header add: #size -> nVars ]
-						ifFalse: [
-							extra := nVars.
-							header add: #size -> SizeMask.
-							self error: 'oversize array' ] ]
-				  ]
-		ifFalse: [ header add: #size -> nVars ].
-	size := anASGenerator
-		address: currentAddress
-		extra: extra
-		header: (self header: header)
-		fields: fields.
-	currentAddress := currentAddress + (size * 8)
+{ #category : 'writing' }
+ASImage >> initHeapHeader [
+
+	self putRawInt: 16r6567616d69545341.
+	symbolTableRef := currentAddress.
+	self putRawInt: 0.
+	classTableRef := currentAddress.
+	self putRawInt: 0.
+	self initClasses
 ]
 
 { #category : 'initialization' }
 ASImage >> initialize [
+
 	super initialize.
+	symbols := OrderedDictionary new.
+	classes := OrderedDictionary new.
+	pendingObjects := Dictionary new.
 	baseAddress := BaseAddress.
 	currentAddress := baseAddress + 16.
-	objects := IdentityDictionary new.
-	process := OrderedCollection new.
-	output := OrderedCollection new.
-	symbols := Dictionary new.
-	classes := Dictionary new.
-	methods := Dictionary new.
-	selectors := Set new.
-	newClasses := OrderedCollection new.
-	newSelectors := OrderedCollection new.
-	#(valueWithArguments: cull: cull:cull: cull:cull:cull: cull:cull:cull:cull: " need to be first 5 symbols so that short-circuit on dispatch works "
-		value value: value:value: value:value:value: value:value:value:value: " need to be the next 5 symbols "
-		yourself == ~~ ~= = + - * size
-		) do: [: symbol |
-			self symbol: symbol ].
-	{Object . BlockClosure . False . True .
-		UndefinedObject . SmallInteger . Symbol . Character .
-		Float . " all of those above must be in this order because they are the immediate/literal classes "
-		ASTSystem
-		} do: [: class |
-			self class: class ].
-	#(start) do: [: selector |
-			self selector: selector ].
+	#( #= value value: cull: yourself doesNotUnderstand:
+	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	   negated new new: value:value:value: value:value:value:value:
+	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
+	   perform: perform:with: perform:with:with: perform:with:with:with:
+	   perform:withArguments: perform:withArguments:inSuperclass:
+	   Object ) do: [ :symbol | self symbol: symbol ].
+
 ]
 
 { #category : 'adding' }
 ASImage >> literal: l class: c [
-	^ 16r7FF8000000000000 + (l bitShift: 3) + c
-]
 
-{ #category : 'accessing' }
-ASImage >> method: aCompiledMethod [
-	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
-]
-
-{ #category : 'accessing' }
-ASImage >> methods [
-	^ methods
-]
-
-{ #category : 'writing' }
-ASImage >> nextPutAll: aByteArray [
-	^ aStream nextPutAll: aByteArray.
-]
-
-{ #category : 'objects' }
-ASImage >> object: aObject fields: nFields elements: nElements [ 
-	self shouldBeImplemented 
+^ self subclassResponsibility 
 ]
 
 { #category : 'accessing' }
@@ -277,34 +248,84 @@ ASImage >> offset [
 	^ currentAddress - baseAddress
 ]
 
-{ #category : 'process' }
-ASImage >> processOut [
-	| gen |
-	[ process notEmpty ] whileTrue: [
-		gen := process removeFirst.
-		output add: gen.
-		gen 
-	]
+{ #category : 'writing' }
+ASImage >> put: value [
+
+	^ value astImageObject: self
+]
+
+{ #category : 'writing' }
+ASImage >> putBoolean: value [
+
+	^ self putLiteral: value asBit class: ClassFalse + value asBit
 ]
 
 { #category : 'adding' }
-ASImage >> selector: aSymbol [
-	^ selectors addIfNotPresent: aSymbol andDo:  [ newSelectors add: aSymbol ].
+ASImage >> putCharacter: aCharacter [
 
+	^ self putLiteral: aCharacter asInteger class: ClassCharacter
+]
+
+{ #category : 'adding' }
+ASImage >> putClass: aClass [
+
+	| cc |
+	cc := (self canonicalClasses: aClass) first.
+	^ classes at: cc ifAbsentPut: [ classes size ]
+]
+
+{ #category : 'writing' }
+ASImage >> putLiteral: hash class: class [
+	^ self putRawInt: (self literal: hash class: class)
+]
+
+{ #category : 'writing' }
+ASImage >> putObject: value [
+
+	^ self halt. "literal: (anASImage generalObject: self) address >> 3 class: 0"
+]
+
+{ #category : 'adding' }
+ASImage >> putRawInt: anInteger [
+
+	^ aStream nextNumber: 8 put: anInteger 
+]
+
+{ #category : 'adding' }
+ASImage >> putString: aString [
+
+	self halt
+]
+
+{ #category : 'adding' }
+ASImage >> putSymbol: aString [
+
+	^ self putRawInt: (self symbol: aString)
+]
+
+{ #category : 'adding' }
+ASImage >> putUndefinedObject [
+
+	^ self literal: 7 class: ClassUndefinedObject
 ]
 
 { #category : 'adding' }
 ASImage >> symbol: aString [
+
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ self literal: (symbols at: aString ifAbsentPut: [ symbols size + 1])+(aString numArgs <<25) class: 6
+	^ self
+		  literal:
+			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
+			  + aString numArgs
+		  class: ClassSymbol
 ]
 
 { #category : 'writing' }
-ASImage >> writeHeap [
-	self offset / 8 writeRawOn: aStream.
-	output do: [: gen | gen writeFieldsOn: self ].
+ASImage >> writeClassTable [
 
-
+	self at: classTableRef do: [ self putRawInt: currentAddress ].
+	self putRawInt: classes size.
+	classes keysDo: [ :key | self put: key ]
 ]
 
 { #category : 'writing' }
@@ -322,11 +343,8 @@ ASImage >> writeImageOn: aWriteStream [
 
 { #category : 'writing' }
 ASImage >> writeSymbolTable [
-	| table |
-	symbols size writeRawOn: aStream.
-	table := Array new: symbols size.
-	symbols keysAndValuesDo: [: key : value |
-		table at: value put: key ].
-	table do: [: string | string writeWithCountOn: aStream ].
 
+	self at: symbolTableRef do: [ self putRawInt: currentAddress ].
+	self putRawInt: symbols size.
+	symbols keysDo: [ :key | self put: key ]
 ]

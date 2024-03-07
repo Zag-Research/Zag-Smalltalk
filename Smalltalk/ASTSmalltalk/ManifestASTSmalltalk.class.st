@@ -81,6 +81,13 @@ ManifestASTSmalltalk class >> ruleReturnsIfTrueRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleSendsDifferentSuperRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ASImage class' #image #true)) #'2024-03-07T10:18:00.615661-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-03-28T13:56:56.834147-04:00') )
 ]
@@ -106,7 +113,9 @@ ManifestASTSmalltalk class >> ruleUsesAddRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleUsesTrueRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') )
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') #(#(#RGMethodDefinition #(#ASImage #initClasses #false)) #'2024-03-07T08:26:01.023185-05:00') )
 ]
 
 { #category : 'code-critics' }

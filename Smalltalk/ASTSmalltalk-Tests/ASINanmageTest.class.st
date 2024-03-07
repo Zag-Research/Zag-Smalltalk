@@ -1,5 +1,5 @@
 Class {
-	#name : 'ASImageTest',
+	#name : 'ASINanmageTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'imageWriter',
@@ -11,18 +11,18 @@ Class {
 }
 
 { #category : 'tests' }
-ASImageTest >> array: aBlock [
+ASINanmageTest >> array: aBlock [
 	^ (self stream: aBlock) asArray
 ]
 
 { #category : 'tests' }
-ASImageTest >> image [
+ASINanmageTest >> image [
 
 	^ ByteArray streamContents: [ :s | imageWriter writeImageOn: s ]
 ]
 
 { #category : 'running' }
-ASImageTest >> setUp [
+ASINanmageTest >> setUp [
 	super setUp.
 	imageWriter := ASImage new.
 	minImageSize := 2686.
@@ -30,12 +30,12 @@ ASImageTest >> setUp [
 ]
 
 { #category : 'tests' }
-ASImageTest >> stream: aBlock [
+ASINanmageTest >> stream: aBlock [
 	^ ByteArray streamContents: aBlock
 ]
 
 { #category : 'tests' }
-ASImageTest >> testAdditions [
+ASINanmageTest >> testAdditions [
 	| a1 a1o a2 a2o |
 	self assert: (imageWriter imageObject: 42) equals: 16r7ff8000000000155.
 	self assert: (imageWriter imageObject: 1) equals: 16r7ff800000000000d.
@@ -71,7 +71,7 @@ ASImageTest >> testAdditions [
 ]
 
 { #category : 'tests' }
-ASImageTest >> testClasses [
+ASINanmageTest >> testClasses [
 	| system object symbol class |
 	system := imageWriter class: ASTSystem.
 	self assert: (imageWriter class: ASTSystem) equals: system.
@@ -86,18 +86,18 @@ ASImageTest >> testClasses [
 ]
 
 { #category : 'tests' }
-ASImageTest >> testEmptyImage [
+ASINanmageTest >> testEmptyImage [
 	self assert: self image size equals: minImageSize
 ]
 
 { #category : 'tests' }
-ASImageTest >> testHeader [
+ASINanmageTest >> testHeader [
 	self assert: (imageWriter header: #(isImmutable)) equals: 16r800000000000.
 
 ]
 
 { #category : 'tests' }
-ASImageTest >> testMethods [
+ASINanmageTest >> testMethods [
 	| start |
 	start := imageWriter method: ASTSystem class >> #start.
 	self assert: imageWriter methods size equals: 1.
@@ -108,13 +108,13 @@ ASImageTest >> testMethods [
 ]
 
 { #category : 'tests' }
-ASImageTest >> testRepeatedImage [
+ASINanmageTest >> testRepeatedImage [
 	self assert: self image equals: self image.
 
 ]
 
 { #category : 'tests' }
-ASImageTest >> testWriteRawOn [
+ASINanmageTest >> testWriteRawOn [
 	self assert: (self array: [: s | 1 writeRawOn: s ]) equals: #(1 0 0 0 0 0 0 0).
 	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).
 	self assert: (self array: [: s | 256 writeRawOn: s ]) equals: #(0 1 0 0 0 0 0 0).
