@@ -15,6 +15,29 @@ Class {
 }
 
 { #category : 'accessing' }
+ASCIndirectVariable >> assertIsValue [
+]
+
+{ #category : 'accessing' }
+ASCIndirectVariable >> pop: output [
+
+	^ output visitPopLocalData: self
+]
+
+{ #category : 'accessing' }
+ASCIndirectVariable >> push: output [
+
+	^ output visitPushLocalData: self
+]
+
+{ #category : 'accessing' }
+ASCIndirectVariable >> push: aSymbol on: aStack [
+	^ ASStackNamed new
+		         from: aStack;
+		         name: aSymbol 
+]
+
+{ #category : 'accessing' }
 ASCIndirectVariable >> variable: aVariable [
 
 	variable := aVariable

@@ -92,7 +92,7 @@ ASCBasicBlock >> endWithReturnTop [
 { #category : 'accessing' }
 ASCBasicBlock >> find: aSymbol [
 
-	^ stack find: aSymbol
+	^ (stack find: aSymbol) push: aSymbol on: stack
 ]
 
 { #category : 'accessing' }

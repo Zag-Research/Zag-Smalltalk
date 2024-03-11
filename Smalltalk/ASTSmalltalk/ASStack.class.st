@@ -58,6 +58,11 @@ ASStack >> push: anObject [
 	^ newStack 
 ]
 
+{ #category : 'adding' }
+ASStack >> push: aSymbol on: aStack [
+
+]
+
 { #category : 'API' }
 ASStack >> pushPlaceholderContext [ 
 	^ ASStackContextPlaceholder new from: self
