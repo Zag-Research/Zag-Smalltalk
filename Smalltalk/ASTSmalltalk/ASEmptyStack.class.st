@@ -19,8 +19,9 @@ ASEmptyStack >> depth [
 
 { #category : 'accessing' }
 ASEmptyStack >> find: aSymbol [
-| stack |
-	stack := ASStackNamed new
+
+	| stack |
+	stack := ASStackNamedIndirect new
 		         from: self;
 		         name: aSymbol.
 	stack top: (nonlocalNameLookupObject find: aSymbol).

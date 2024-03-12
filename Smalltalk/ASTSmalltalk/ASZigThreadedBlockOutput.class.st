@@ -33,6 +33,17 @@ ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 ]
 
 { #category : 'visiting' }
+ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
+	"&e.pushLocalData, i1 + (i2 << s1)"
+	self
+		putEmbedded: #pushLocalData;
+		print:
+			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
+					 offset withIndex: index ]);
+		comma
+]
+
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [ 
 	"The same logic as our super but for the other case.
 	The other case will be triggered when the variable was not found.

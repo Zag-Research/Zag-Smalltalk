@@ -19,6 +19,11 @@ ASCIndirectVariable >> assertIsValue [
 ]
 
 { #category : 'accessing' }
+ASCIndirectVariable >> offsets [
+	^#(1 3 4)
+]
+
+{ #category : 'accessing' }
 ASCIndirectVariable >> pop: output [
 
 	^ output visitPopLocalData: self
