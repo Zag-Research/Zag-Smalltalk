@@ -236,18 +236,16 @@ ASTSmallInteger >> bitXor: arg [
 
 { #category : 'system primitives' }
 ASTSmallInteger >> byteAt: n [
-	"Answer the value of an indexable field in the receiver. Fail if the 
-	argument (the index) is not an Integer or is out of bounds."
+	"Answer the value of an apparent byte-indexable field in the receiver,
+	 analogous to the large integers, which are organized as bytes."
 
-	n > 4
-		ifTrue: [ ^ 0 ].
-	self < 0
-		ifTrue: [ self = ASTSmallInteger minVal
-				ifTrue:
-					[ ^ #(0 0 0 64) at: n ].
-			"Can't negate minVal -- treat specially"
-			^ (0 - self bitShift: (1 - n) * 8) bitAnd: 16rFF ]
-		ifFalse: [ ^ (self bitShift: (1 - n) * 8) bitAnd: 16rFF ]
+	n = 1 ifTrue: [ "Negate carefully in case the receiver is SmallInteger minVal"
+		^ self < 0
+			  ifTrue: [ -256 - self bitAnd: 255 ]
+			  ifFalse: [ self bitAnd: 255 ] ].
+	^ self < 0
+		  ifTrue: [ (-256 - self bitShift: -8) + 1 byteAt: n - 1 ]
+		  ifFalse: [ (self bitShift: 8 - (n bitShift: 3)) bitAnd: 255 ]
 ]
 
 { #category : 'system primitives' }

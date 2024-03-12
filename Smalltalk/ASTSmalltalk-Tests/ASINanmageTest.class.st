@@ -10,115 +10,89 @@ Class {
 	#tag : 'Tests'
 }
 
-{ #category : 'tests' }
-ASINanmageTest >> array: aBlock [
-	^ (self stream: aBlock) asArray
-]
+{ #category : 'running' }
+ASINanmageTest >> image: aBlock equals: value [
 
-{ #category : 'tests' }
-ASINanmageTest >> image [
-
-	^ ByteArray streamContents: [ :s | imageWriter writeImageOn: s ]
+	| result |
+	result := ByteArray streamContents: [ :s |
+		          aBlock value: (ASNanImage test on: s) ].
+	value isInteger
+		ifTrue: [
+			self
+				assert: (self u64From: result) first hexString
+				equals: result hexString ]
+		ifFalse: [
+			self
+				assert: ((self u64From: result) collect: #hexString)
+				equals: (value collect: #hexString) ]
 ]
 
 { #category : 'running' }
 ASINanmageTest >> setUp [
+
 	super setUp.
-	imageWriter := ASImage new.
-	minImageSize := 2686.
 
+	ASAllocationInfo reset
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> stream: aBlock [
-	^ ByteArray streamContents: aBlock
+ASINanmageTest >> testObjects [
+
+	self
+		image: [ :i | i put: 'Hello' ]
+		equals: #( 16r1705000001000A 16r6F6C6C6548 ).
+	self
+		image: [ :i | i put: #( 4 2 ) ]
+		equals:
+		#( 16r27730000020009 16rfffc000000000004 16rfffc000000000002 ).
+	self
+		image: [ :i | i put: 4 @ 2 ]
+		equals:
+		#( 16r2770000003001D 16rfffc000000000004 16rfffc000000000002 ).
+	self
+		image: [ :i | i put: #( #( 4 2 ) 1 ) ]
+		equals:
+			#( 16r27730000040009 16rfff7001000000018 16rfffc000000000001
+			   16r27730000050009 16rfffc000000000004 16rfffc000000000002 )
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> testAdditions [
-	| a1 a1o a2 a2o |
-	self assert: (imageWriter imageObject: 42) equals: 16r7ff8000000000155.
-	self assert: (imageWriter imageObject: 1) equals: 16r7ff800000000000d.
-	self assert: (imageWriter imageObject: true) equals: 16r7ff800000000002b.
-	self assert: (imageWriter imageObject: false) equals: 16r7ff800000000001a.
-	self assert: (imageWriter imageObject: nil) equals: 16r7ff800000000003c.
-	self assert: (imageWriter imageObject: $A) equals: 16r7ff800000000020f.
-	self assert: (imageWriter imageObject: #value) equals: 16r7ff8000000000036.
-	self assert: (imageWriter imageObject: #value:) equals: 16r7ff800001000003e.
-	self assert: (imageWriter imageObject: #value:value:) equals: 16r7ff8000020000046.
-	self assert: (imageWriter imageObject: 42.0) equals: 16r4045000000000000.
-	self assert: (imageWriter imageObject: 2.0) equals: 16r4000000000000000.
-	self assert: (imageWriter imageObject: 6.25e-2) equals: 16r3fb0000000000000.
-	self assert: (imageWriter imageObject: #==) equals: 16r7ff8000010000066.
-	self assert: imageWriter offset equals: 16.
-	a1 := #(1 true nil value).
-	a1o := imageWriter imageObject: a1.
-	self assert: a1o equals: 16r7ff8001000000010.
-	self assert: imageWriter offset equals: 56.
-	self assert: (imageWriter imageObject: a1) equals: a1o.
-	self assert: imageWriter offset equals: 56.
-	self assert: (self image at64: 24) equals: 16r7ff800000000000d.
-	self assert: (self image at64: 32) equals: 16r7ff800000000002b.
-	self assert: (self image at64: 40) equals: 16r7ff800000000003c.
-	self assert: (self image at64: 48) equals: 16r7ff800000000000e.
-	a2 := { a1 . #value: }.
-	a2o := imageWriter imageObject: a2.
-	self assert: a2o equals: 16r7ff8001000000038.
-	self assert: (self image at64: 64) equals: a1o.
-	self assert: (self image at64: 72) equals: 16r7ff8000010000016.
+ASINanmageTest >> testSimple [
 
-
+	self image: [ :i | i put: 42 ] equals: 16rfffc00000000002a.
+	self image: [ :i | i put: 1 ] equals: 16rfffc000000000001.
+	self image: [ :i | i put: -1 ] equals: 16rfffbffffffffffff.
+	self image: [ :i | i put: true ] equals: 16rfff0000500000001.
+	self image: [ :i | i put: false ] equals: 16rfff0000400000000.
+	self image: [ :i | i put: nil ] equals: 16rfff00003ffffffff.
+	self image: [ :i | i put: $A ] equals: 16rfff0000800000041.
+	self image: [ :i | i put: #value ] equals: 16rfff0000700000200.
+	self image: [ :i | i put: #value: ] equals: 16rfff0000700000301.
+	self image: [ :i | i put: #value:value: ] equals: 16rfff0000700001002.
+	self image: [ :i | i put: 42.0 ] equals: 16r4045000000000000.
+	self image: [ :i | i put: 2.0 ] equals: 16r4000000000000000.
+	self image: [ :i | i put: 6.25e-2 ] equals: 16r3fb0000000000000.
+	self image: [ :i | i put: #'==' ] equals: 16rfff0000700000E01
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> testClasses [
-	| system object symbol class |
-	system := imageWriter class: ASTSystem.
-	self assert: (imageWriter class: ASTSystem) equals: system.
-	object := imageWriter class: ASTObject.
-	self assert: (imageWriter class: Object) equals: object.
-	symbol := imageWriter class: Symbol.
-	self assert: (imageWriter class: ASTSymbol) equals: symbol.
-	class := imageWriter class: Class class.
-	self assert: (imageWriter class: ASTClass class) equals: class.
+ASINanmageTest >> testU64From [
 
-
+	self assert: (self u64From: #[  ]) equals: #(  ).
+	self assert: (self u64From: #[ 1 ]) equals: #( 1 ).
+	self
+		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 ])
+		equals: #( 16r0807060504030201 ).
+	self
+		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8])
+		equals: #( 16r0807060504030201 16r0605040302010009 16r0807 )
 ]
 
-{ #category : 'tests' }
-ASINanmageTest >> testEmptyImage [
-	self assert: self image size equals: minImageSize
-]
+{ #category : 'running' }
+ASINanmageTest >> u64From: aByteArray [
 
-{ #category : 'tests' }
-ASINanmageTest >> testHeader [
-	self assert: (imageWriter header: #(isImmutable)) equals: 16r800000000000.
-
-]
-
-{ #category : 'tests' }
-ASINanmageTest >> testMethods [
-	| start |
-	start := imageWriter method: ASTSystem class >> #start.
-	self assert: imageWriter methods size equals: 1.
-	imageWriter method: ASTSystem class >> #start.
-	self assert: imageWriter methods size equals: 1.
-	self assert: start class equals: ASImage."ASTCode."
-
-]
-
-{ #category : 'tests' }
-ASINanmageTest >> testRepeatedImage [
-	self assert: self image equals: self image.
-
-]
-
-{ #category : 'tests' }
-ASINanmageTest >> testWriteRawOn [
-	self assert: (self array: [: s | 1 writeRawOn: s ]) equals: #(1 0 0 0 0 0 0 0).
-	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).
-	self assert: (self array: [: s | 256 writeRawOn: s ]) equals: #(0 1 0 0 0 0 0 0).
-	self assert: (self array: [: s | -256 writeRawOn: s ]) equals: #(0 255 255 255 255 255 255 255).
-	self assert: (self array: [: s | 258*256+3*256+4*256+5*256+6*256+7*256+8 writeRawOn: s ]) equals: #(8 7 6 5 4 3 2 1).
-
+	^ ((aByteArray groupsOf: 8) collect: [ :group |
+		  group reversed
+			  inject: 0
+			  into: [ :t :each | (t bitShift: 8) + each ] ]) asArray
 ]

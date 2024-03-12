@@ -59,6 +59,11 @@ Object >> astImageObject: anASImage [
 ]
 
 { #category : '*ASTSmalltalk' }
+Object >> astImagePut: anASImage [ 
+	^ anASImage objectObject: self
+]
+
+{ #category : '*ASTSmalltalk' }
 Object >> astObject: anASImage [ 
 	^ anASImage generalObject: self
 ]

@@ -6,7 +6,7 @@ Class {
 	#superclass : 'ASRuntimeOutput',
 	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }

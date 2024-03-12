@@ -25,9 +25,9 @@ Class {
 		'componentName',
 		'context'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'printing' }
