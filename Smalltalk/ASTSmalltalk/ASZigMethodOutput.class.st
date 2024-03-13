@@ -34,7 +34,8 @@ ASZigMethodOutput >> codeGenerator [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
-			                   targetClass: forClass ]
+			                   targetClass: forClass;
+			enclosingScope: parentCodeGenerator ]
 ]
 
 { #category : 'code generation' }
