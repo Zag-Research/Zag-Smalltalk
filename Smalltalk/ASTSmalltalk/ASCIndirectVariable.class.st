@@ -19,6 +19,10 @@ ASCIndirectVariable >> assertIsValue [
 ]
 
 { #category : 'accessing' }
+ASCIndirectVariable >> makeManifest [
+]
+
+{ #category : 'accessing' }
 ASCIndirectVariable >> offsets [
 	^#(1 3 4)
 ]
