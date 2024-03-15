@@ -31,6 +31,11 @@ ASCOperations >> manifest: aGenerator [
 
 ]
 
+{ #category : 'block handling' }
+ASCOperations >> manifestParameters: stack [
+
+]
+
 { #category : 'code generation' }
 ASCOperations >> outputTo: aCodeEmitter [
 

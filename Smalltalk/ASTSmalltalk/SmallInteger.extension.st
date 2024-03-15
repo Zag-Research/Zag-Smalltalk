@@ -12,8 +12,9 @@ SmallInteger >> asZigLiteral [
 ]
 
 { #category : '*ASTSmalltalk' }
-SmallInteger >> astImageObject: anASImage [ 
-	^ anASImage literal: self class: 5
+SmallInteger >> astImageObject: anASImage [
+
+	^ anASImage putSmallInteger: self
 ]
 
 { #category : '*ASTSmalltalk' }

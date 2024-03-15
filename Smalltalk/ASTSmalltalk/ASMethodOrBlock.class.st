@@ -76,10 +76,10 @@ ASMethodOrBlock >> inspectZagASTOn: aStream [
 { #category : 'printing' }
 ASMethodOrBlock >> printOn: s [
 
-	arguments isEmpty ifFalse: [ 
+	arguments isEmpty ifFalse: [
 		s << ' arguments: #('.
-		arguments do: [ :arg| s<< arg name] separatedBy: [ s<<' ' ].
-		s<< ')' ].
+		arguments do: [ :arg | s << arg  ] separatedBy: [ s << ' ' ].
+		s << ')' ].
 	super printOn: s
 ]
 

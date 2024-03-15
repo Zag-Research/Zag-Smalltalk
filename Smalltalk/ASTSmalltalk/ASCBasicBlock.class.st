@@ -79,7 +79,6 @@ ASCBasicBlock >> doPop [
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
-
 	stack := stack push: anObject.
 	maxDepth := maxDepth max: stack depth
 ]
@@ -92,7 +91,8 @@ ASCBasicBlock >> endWithReturnTop [
 
 { #category : 'accessing' }
 ASCBasicBlock >> find: aSymbol [
-	^ stack find: aSymbol 
+
+	^ stack find: aSymbol
 ]
 
 { #category : 'accessing' }
@@ -150,7 +150,6 @@ ASCBasicBlock >> next [
 
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
-
 	stack nonlocalNameLookupObject: aGenerator
 ]
 
@@ -186,6 +185,15 @@ ASCBasicBlock >> popVariable: aSymbol [
 	stack top makeManifest.
 	self put: (ASCPopVariable with: target top).
 	self doDrop
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushBlockNamed: aBlockClosure [
+
+	stack := ASStackNamed new
+		         from: stack;
+		         name: aBlockClosure name.
+	^ stack top: aBlockClosure
 ]
 
 { #category : 'API' }
@@ -230,6 +238,12 @@ ASCBasicBlock >> putSimple: aSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 stack requiredContextDo: aBlock 
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> returnNonLocal [
+
+	^ self put: ASCReturnNonLocal new
 ]
 
 { #category : 'initialization' }

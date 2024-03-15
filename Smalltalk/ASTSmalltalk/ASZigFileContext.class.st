@@ -1,31 +1,21 @@
 "
 I am a writer of .zig files.
 
-I provide a context for CodeGenerators. I maintain a collection of them as well as a symbol table. The code generators will tell me about any symbols that need to be added.
+I maintain a symbol table. The code generators will tell me about any symbols that need to be added.
 
 When asked to output, I output a header of all the external zag references, then I ask each of the generators for their definition and output that. Then I output the symbol table, and an initSmalltalk method. In there I initialize primitives and the symbol table, then I ask each of the generators for their initialization code. Finally I output a main function.
 "
 Class {
 	#name : 'ASZigFileContext',
-	#superclass : 'Object',
+	#superclass : 'ASFileContext',
 	#instVars : [
-		'symbols',
-		'components',
 		'objects',
-		'names',
-		'pendingComponents'
+		'names'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Contexts',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Contexts'
 }
-
-{ #category : 'components' }
-ASZigFileContext >> addComponent: aGenerator [
-
-	pendingComponents add: aGenerator.
-	components add: aGenerator
-]
 
 { #category : 'testing' }
 ASZigFileContext >> addSymbol: aSymbol [
@@ -38,7 +28,7 @@ ASZigFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
-{ #category : 'register' }
+{ #category : 'as yet unclassified' }
 ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
 	objects at: anASNode put: anASGenerator 
 ]
@@ -48,13 +38,12 @@ ASZigFileContext >> initialize [
 
 	super initialize.
 	symbols := ASZigSymbols new.
-	components := OrderedCollection new.
 	objects := Dictionary new.
 	names := Dictionary new.
-	pendingComponents := OrderedCollection new
+
 ]
 
-{ #category : 'accessing' }
+{ #category : 'as yet unclassified' }
 ASZigFileContext >> lookupObject: anObject [
 
 	^ objects at: anObject ifAbsent: [ ^ nil ]
@@ -66,7 +55,7 @@ ASZigFileContext >> name: anObject prefix: aString main: aString2 [
 	^ self name: anObject prefix: aString main: aString2 seq: 0
 ]
 
-{ #category : 'creation' }
+{ #category : 'as yet unclassified' }
 ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
 
 	| string |
@@ -112,16 +101,6 @@ ASZigFileContext >> predefinedSymbol: aSymbol [
 ASZigFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
-]
-
-{ #category : 'components' }
-ASZigFileContext >> processComponents [
-
-	| temp |
-	[ pendingComponents isEmpty ] whileFalse: [
-		temp := pendingComponents.
-		pendingComponents := OrderedCollection new.
-		temp do: [ :each | each generateCode ] ]
 ]
 
 { #category : 'writing' }

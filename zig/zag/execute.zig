@@ -20,8 +20,8 @@ const indexSymbol1 = object.Object.indexSymbol1;
 const dispatch = @import("dispatch.zig");
 const lookupAddress = dispatch.lookupAddress;
 pub const Context = @import("context.zig").Context;
-//const TestExecution = @import("context.zig").TestExecution;
 const heap = @import("heap.zig");
+const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
@@ -165,12 +165,11 @@ const fallbackPc = PC.init(&fallbackCode);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
-    header: HeapObject,
+    header: HeapHeader,
     stackStructure: Object, // number of local values beyond the parameters
     selector: Object, // must be the word before code
     code: [codeSize]Code, // will typically be a lot more then 2, as it will be the processed version of the method
     //references: [n]Object,
-    footer: HeapObject,
     const Self = @This();
     const codeSize = 2;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
@@ -179,17 +178,17 @@ pub const CompiledMethod = extern struct {
         return init2(name, methodFn, Code.end);
     }
     pub fn init2(name: Object, methodFn: ThreadedFn, methodFn2: ThreadedFn) Self {
-        const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable;
         return Self{
-            .header = footer.asHeader(),
+            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInUnits + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
             .selector = name,
             .stackStructure = Object.from(0),
             .code = [2]Code{ Code.prim(methodFn), Code.prim(methodFn2) },
-            .footer = footer,
         };
     }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: CodeContextPtr, cache: SendCache) callconv(stdCall) SP {
         const pc = PC.init(self.codePtr());
+        trace("\nexecuteX: {} {*} {*}", .{ pc, self, self.codePtr() });
+        trace("\nexecuteY: {} {} {} {}", .{ self.stackStructure, self.selector, self.code[0], self.code[1] });
         trace("\nexecute: [{*}]: {*} {} {}", .{ pc.asCodePtr(), pc.prim(), sp.top, self.selector });
         //        return @call(tailCall,pc.prim(),.{pc+1,sp,process,context,self.selector});
         return pc.prim()(pc.next(), sp, process, context, self.selector, cache);
@@ -224,7 +223,7 @@ pub const CompiledMethod = extern struct {
         self: *const Self,
         writer: anytype,
     ) !void {
-        const realHO = self.header.realHeapObject();
+        const realHO = self.header().realHeapObject();
         const all = @as([]Code, @ptrCast(realHO.asSlice() catch unreachable));
         const refs = realHO.arrayAsSlice(Object) catch unreachable;
         const locals = self.stackStructure.h0;
@@ -449,12 +448,11 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
     const refs = counts.refs;
     const caches = counts.caches;
     return extern struct { // structure must exactly match CompiledMethod
-        header: HeapObject,
+        header: HeapHeader,
         stackStructure: Object,
         selector: Object,
         code: [codes + caches * sendCacheSize]Code,
         references: [refs]Object,
-        footer: HeapObject,
         const codeOffsetInUnits = CompiledMethod.codeOffsetInUnits;
         const Self = @This();
         // comptime {
@@ -462,24 +460,22 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = @sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(name: Object, locals: u16, maxStack: u16) Self {
-            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches * cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
+        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16) Self {
+            const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes + caches * cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
-            //  trace("\nfooter={}",.{footer});
             return .{
-                .header = footer.asHeader(),
+                .header = header,
                 .selector = name,
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
                 .code = undefined,
                 .references = [_]Object{object.NotAnObject} ** refs,
-                .footer = footer,
             };
         }
         pub fn checkFooter(self: *Self) void {
             trace("\ncheckFooter: {}\n    header={}\n    footer={}\n     allocInfo={}\n   a1={x}\n   a2={x}", .{ self.selector, self.header, self.footer, Format.allocationInfo(codeOffsetInUnits + codes, refs, @sizeOf(Object), false), @intFromPtr(self), @intFromPtr(self.header.realHeapObject()) });
         }
         pub fn withCode(name: Object, locals: u16, maxStack: u16, code: [codes]Code) Self {
-            const footer = HeapObject.calcHeapObject(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches * cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
+            const footer = HeapHeader.calcHeapHeader(ClassIndex.CompiledMethod, codeOffsetInUnits + codes + caches * cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             return .{
                 .header = footer.asHeader(),
                 .selector = name,
@@ -573,7 +569,7 @@ test "CompileTimeMethod" {
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
-pub fn compileMethod(name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     var method = methodType.init(name, locals, maxStack);
@@ -713,6 +709,7 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
             var includesPointer = false;
+            var last: ?*Object = null;
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol0()) {
                     const obj = replacements[o.indexNumber()];
@@ -722,25 +719,30 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
                     o.* = Object.from(&self.objects[@as(u16, @truncate(o.indexNumber()))]);
                     includesPointer = true;
                 } else { // there is a miniscule chance of false-positive for some floating number here
-                    var header: HeapObject = @bitCast(o.*);
+                    var header: HeapHeader = @bitCast(o.*);
                     if (header.length < 1024 and
-                        header.hash == 0xffffff and
-                        header.format == .notIndexable and
-                        header.age == .static)
-                    {
-                        if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
+                            header.hash == 0xffffff and
+                            header.format == .notIndexable and
+                            header.age == .static)
+                        {
+                            if (last) |l| {
+                                var h = @as(HeapHeader,@bitCast(l.*));
+                                if (includesPointer)
+                                    h.format = h.format.withPointers();
+                                l.* = h.o();
+                            }
+                            if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
-                        if (includesPointer)
-                            header.format = .notIndexableWithPointers;
-                        header.hash ^= @truncate(@intFromPtr(o) *% phi32);
-                        o.* = @bitCast(header);
-                        includesPointer = false;
+                            header.hash ^= @truncate(@intFromPtr(o) *% phi32);
+                            o.* = @bitCast(header);
+                            includesPointer = false;
+                            last = o;
                     }
                 }
             }
         }
         pub inline fn asHeapObjectPtr(self: *Self) HeapObjectPtr {
-            return @ptrCast(&self.objects[self.objects.len - 1]);
+            return @ptrCast(&self.objects[0]);
         }
         pub inline fn asObjectArray(self: *Self) [*]Object {
             return @ptrCast(self);
@@ -756,7 +758,8 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
     var obj = objType.init();
     const objects = obj.objects[0..];
     comptime var n = 0;
-    comptime var last = 0;
+    comptime var last = -1;
+    comptime var foundPointers = false;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object, comptime_int => {
@@ -764,10 +767,17 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                 n = n + 1;
             },
             ClassIndex => {
-                const footer = HeapObject.calcHeapObject(field, n - last, 0xffffff, Age.static, null, Object, false) catch unreachable;
-                objects[n] = footer.o();
-                n += 1;
+                if (last>=0) {
+                    var h = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1);
+                    if (foundPointers)
+                        h.format = h.format.withPointers();
+                    objects[last] = h.o();
+                }
+                const header = comptime HeapHeader.calc(field, 0, 0xffffff, Age.static, null, Object, false) catch unreachable;
+                objects[n] = header.o();
+                foundPointers = false;
                 last = n;
+                n += 1;
             },
             else => {
                 comptime var found = false;
@@ -793,6 +803,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                                 objects[n] = object.Object.indexSymbol1(lp);
                                                                 n = n + 1;
                                                                 found = true;
+                                                                foundPointers = true;
                                                                 break;
                                                             }
                                                         } else lp = lp + 1;
@@ -818,7 +829,12 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             },
         }
     }
-    std.debug.assert(last == objects.len);
+    if (last>=0){
+        var h = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1);
+        if (foundPointers)
+            h.format = h.format.withPointers();
+        objects[last] = h.o();
+    }
     return obj;
 }
 test "compileObject" {
@@ -826,40 +842,40 @@ test "compileObject" {
     const expect = std.testing.expect;
     const c = ClassIndex;
     var o = compileObject(.{
-        "def",
-        True,
-        ":first",
-        c.Method, // first HeapObject
-
+        ":def",
+        c.Class, // first HeapObject
+        "second", // pointer to second object
+        Sym.i_1, // alternate reference to replacement Object #1
+        "1mref", // reference to replacement Object #1
+        "third", // pointer to third object
         ":second",
         c.replace0, // second HeapObject - runtime ClassIndex #0
-        "first", // pointer to first object
-        "1mref", // reference to replacement Object #1
-        Sym.i_1, // alternate reference to replacement Object #1
-        "second", // pointer to second object
-        ":def",
-        c.Class, // third HeapObject
+        ":third",
+        c.Method, // third HeapObject
+        True,
+        "def",
+
     });
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
-    try expect(o.objects[0].equals(o.asObject()));
-    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[5].equals(True));
-    try expect(o.objects[6].equals(True));
-    const h2: HeapObject = @bitCast(o.objects[2]);
-    try expectEqual(h2.classIndex, c.Method);
-    try expectEqual(h2.length, 2);
-    try expectEqual(h2.age, .static);
-    try expectEqual(h2.format, .notIndexableWithPointers);
-    const h3: HeapObject = @bitCast(o.objects[3]);
-    try expectEqual(@intFromEnum(h3.classIndex), 0xdead);
-    try expectEqual(h3.length, 0);
-    const footer: HeapObjectConstPtr = @ptrCast(&o.objects[8]);
-    const h8 = footer.*;
-    try expectEqual(h8.length, 4);
-    try expect(!footer.isIndexable());
-    try expect(footer.isStatic());
-    try expect(footer.isUnmoving());
+    try expect(o.objects[8].equals(o.asObject()));
+//    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
+    try expect(o.objects[2].equals(True));
+    try expect(o.objects[3].equals(True));
+    const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
+    try expectEqual(h1.header.length, 4);
+    try expect(!h1.header.isIndexable());
+    try expect(h1.header.isStatic());
+    try expect(h1.header.isUnmoving());
+    const h2: HeapObjectConstPtr = @ptrCast(&o.objects[5]);
+    try expectEqual(@intFromEnum(h2.header.classIndex), 0xdead);
+    try expectEqual(h2.header.length, 0);
+    try expectEqual(h2.header.format, .notIndexable);
+    const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
+    try expectEqual(h3.header.classIndex, c.Method);
+    try expectEqual(h3.header.length, 2);
+    try expectEqual(h3.header.age, .static);
+    try expectEqual(h3.header.format, .notIndexableWithPointers);
 }
 test "method object" {
     // + aNumber
@@ -915,7 +931,7 @@ pub const controlPrimitives = struct {
     }
     pub fn verifySelector(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\nverifySelector: 0x{x} 0x{x} {}", .{ method.selector.u(), selector.u(), pc });
+        trace("\nverifySelector: 0x{x} 0x{x} {}", .{ method.selector.rawU(), selector.rawU(), pc });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });
@@ -1259,7 +1275,7 @@ pub const Execution = struct {
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, ptr: anytype) []Object {
-        const method: CompiledMethodPtr = @ptrCast(ptr);
+        const method: CompiledMethodPtr = @constCast(@ptrCast(ptr));
         const stdout = std.io.getStdOut().writer();
         var cache = SendCacheStruct.init();
         self.initStack(source);
@@ -1301,11 +1317,11 @@ test "SendCache direct" {
 }
 test "send with dispatch direct" {
     const expectEqual = std.testing.expectEqual;
-    var method = compileMethod(Sym.yourself, 0, 0, .{
+    const method = compileMethod(Sym.yourself, 0, 0, .{
         &p.send0,           Sym.value,
         &p.primitiveFailed,
     });
-    var methodV = compileMethod(Sym.value, 0, 0, .{
+    const methodV = compileMethod(Sym.value, 0, 0, .{
         &push42,
         &p.primitiveFailed,
     });

@@ -15,6 +15,6 @@ const Encoding = enum {
     tag,
 };
 
-const debugging = false;
+const debugging = true;
 const show_error_stack = debugging;
 const show_trace = debugging;

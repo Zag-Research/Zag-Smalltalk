@@ -1,10 +1,12 @@
 Class {
-	#name : #ASZigInspectionTest,
-	#superclass : #TestCase,
-	#category : #'ASTSmalltalk-Tests-Tests'
+	#name : 'ASZigInspectionTest',
+	#superclass : 'TestCase',
+	#category : 'ASTSmalltalk-Tests-Tests',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Tests'
 }
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASZigInspectionTest >> testInspectionMadeUpAST [
 
 	| block |
@@ -13,12 +15,12 @@ ASZigInspectionTest >> testInspectionMadeUpAST [
 	block inspect
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASZigInspectionTest >> testInspectionOfZagASTForFib [
 	(ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:) inspect
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASZigInspectionTest >> testInspectionOfZagBlocksForFib [
 
 	| ast file output |

@@ -11,9 +11,9 @@ Class {
 		'currentBasicBlock',
 		'parentCodeGenerator'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'compiling' }
@@ -43,13 +43,12 @@ ASZigMethodOutput >> codeGeneratorClass [ ^ ASCodeGenerator
 
 { #category : 'compiling' }
 ASZigMethodOutput >> compileBlock: anASCBlock [
-
 	self assert: anASCBlock block ~= ourObject.
 	(self blockClass new testing: testing)
 		context: context;
 		parentCodeGenerator: codeGenerator;
 		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block for: forClass 
+		generateCode: anASCBlock block for: forClass
 ]
 
 { #category : 'code generation' }

@@ -6,9 +6,9 @@ Class {
 	#superclass : 'ASZigMethodOutput',
 	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'compiling' }
@@ -159,6 +159,13 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 				print: offset;
 				comma ]
 		other: nil
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushNil [
+
+	self putEmbedded: #pushNil;
+		comma
 ]
 
 { #category : 'visiting' }

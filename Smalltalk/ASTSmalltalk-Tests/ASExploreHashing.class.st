@@ -1,6 +1,6 @@
 Class {
-	#name : #ASExploreHashing,
-	#superclass : #TestCase,
+	#name : 'ASExploreHashing',
+	#superclass : 'TestCase',
 	#instVars : [
 		'universe',
 		'primes'
@@ -8,10 +8,12 @@ Class {
 	#classVars : [
 		'Something'
 	],
-	#category : #'ASTSmalltalk-Tests-Explore'
+	#category : 'ASTSmalltalk-Tests-Explore',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Explore'
 }
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> crtTable: n [
 " build perfect hash from prime number keys: Chang 1984 - https://doi.org/10.1145/358027.358051 "
 " unfortunately, if the universe of keys is more than about the first 15 primes, and the table includes more than a very few keys, you quickly move to BigInt calculations "
@@ -45,7 +47,7 @@ ASExploreHashing >> crtTable: n [
 	^ C "->(m collect: [: mi | C\\mi ])"
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> directPower2Table: n [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "
@@ -74,7 +76,7 @@ ASExploreHashing >> directPower2Table: n [
 	^ n->size->overflow size
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASExploreHashing >> initialize [
 	super initialize.
 	" 62816 distinct method names of 90813 different symbols "
@@ -83,7 +85,7 @@ ASExploreHashing >> initialize [
 
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> keys: n from: aCollection [
 	| keys |
 	keys := Set new.
@@ -92,7 +94,7 @@ ASExploreHashing >> keys: n from: aCollection [
 
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> min2Table: n [
 " (2 to: 35) collect: [:e| ASExploreHashing new min2Table: e] "
 	| table filled size index keys size2 |
@@ -119,7 +121,7 @@ ASExploreHashing >> min2Table: n [
 	^ n->(size/n) asFloat
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> min4Table: n [
 " (4 to: 35) collect: [:e| ASExploreHashing new min4Table: e] "
 	| table filled size index keys size4 |
@@ -154,7 +156,7 @@ ASExploreHashing >> min4Table: n [
 	^ n->(size/n) asFloat
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> minTable: n [
 " #(4 8 16 32 64 128 256) collect: [:e| ASExploreHashing new minTable: e] "
 	| table filled size index keys |
@@ -174,7 +176,7 @@ ASExploreHashing >> minTable: n [
 	^ n->(size/n) asFloat
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> twoLevelPower2Counts: n [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "
@@ -194,7 +196,7 @@ ASExploreHashing >> twoLevelPower2Counts: n [
 	^ n->size->bag valuesAndCounts
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> twoLevelPower2Table: n [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "
@@ -202,7 +204,7 @@ ASExploreHashing >> twoLevelPower2Table: n [
 	^ self twoLevelTable: n base: n asLargerPowerOfTwo scale: 2
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> twoLevelTable: n [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "
@@ -210,7 +212,7 @@ ASExploreHashing >> twoLevelTable: n [
 	^ self twoLevelTable: n base: n scale: 4/3
 ]
 
-{ #category : #exploring }
+{ #category : 'exploring' }
 ASExploreHashing >> twoLevelTable: n base: base scale: scale [
 	" Returns an array of n, followed by the size table to have no collisions,
       the size for worst-case 2 collisions, 3, etc. "

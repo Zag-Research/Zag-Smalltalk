@@ -49,6 +49,7 @@
 // ASTBehavour basicIdentityHash - 2075
 // ASTFloat basicIdentityHash - 2171
 
+const execute = @import("execute.zig");
 pub const inlines = struct {
     pub usingnamespace @import("primitives/Object.zig").inlines;
     pub usingnamespace @import("primitives/Smallinteger.zig").inlines;

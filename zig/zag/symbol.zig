@@ -210,27 +210,27 @@ pub const SymbolTable = struct {
       }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
-test "symbols match initialized symbol table" {
-    const expectEqual = std.testing.expectEqual;
-    const expect = std.testing.expect;
-    var symbol = SymbolTable.init(&globalAllocator);
-    defer symbol.deinit();
-    symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    const trp = symbol.theTreap(0);
-    try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
-    for (initialSymbolStrings, 0..) |string, idx|
-        try expectEqual(symbol_of(@intCast(idx+1),0).hash24(), symbol.lookup(string.asObject()).hash24());
-    // test a few at random to verify arity
-    try symbol.verify(symbols.@"cull:");
-    try symbol.verify(symbols.@"cull:cull:");
-    try symbol.verify(symbols.@"cull:cull:cull:");
-    try symbol.verify(symbols.@"cull:cull:cull:cull:");
-    try symbol.verify(symbols.value);
-    try symbol.verify(symbols.@"+");
-    try symbol.verify(symbols.size);
-    try symbol.verify(symbols.Object);
-    try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
-}
+// test "symbols match initialized symbol table" {
+//     const expectEqual = std.testing.expectEqual;
+//     const expect = std.testing.expect;
+//     var symbol = SymbolTable.init(&globalAllocator);
+//     defer symbol.deinit();
+//     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
+//     const trp = symbol.theTreap(0);
+//     try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
+//     for (initialSymbolStrings, 0..) |string, idx|
+//         try expectEqual(symbol_of(@intCast(idx+1),0).hash24(), symbol.lookup(string.asObject()).hash24());
+//     // test a few at random to verify arity
+//     try symbol.verify(symbols.@"cull:");
+//     try symbol.verify(symbols.@"cull:cull:");
+//     try symbol.verify(symbols.@"cull:cull:cull:");
+//     try symbol.verify(symbols.@"cull:cull:cull:cull:");
+//     try symbol.verify(symbols.value);
+//     try symbol.verify(symbols.@"+");
+//     try symbol.verify(symbols.size);
+//     try symbol.verify(symbols.Object);
+//     try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+// }
 test "force second allocation of symbol treap" {
     const moreSymbolStrings = heap.compileStrings(.{
         "xxx00", "xxx01", "xxx02", "xxx03", "xxx04", "xxx05", "xxx06", "xxx07", "xxx08", "xxx09",

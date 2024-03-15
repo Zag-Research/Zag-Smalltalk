@@ -1,6 +1,6 @@
-Extension { #name : #Object }
+Extension { #name : 'Object' }
 
-{ #category : #'*ASTSmalltalk-Tests' }
+{ #category : '*ASTSmalltalk-Tests' }
 Object >> zigCGString [
 
 	| file codeGen |
@@ -10,7 +10,7 @@ Object >> zigCGString [
 	^ codeGen asString 
 ]
 
-{ #category : #'*ASTSmalltalk-Tests' }
+{ #category : '*ASTSmalltalk-Tests' }
 Object >> zigSLString [
 
 	| file codeGen |

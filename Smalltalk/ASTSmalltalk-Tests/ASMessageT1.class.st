@@ -1,25 +1,27 @@
 Class {
-	#name : #ASMessageT1,
-	#superclass : #Object,
+	#name : 'ASMessageT1',
+	#superclass : 'Object',
 	#instVars : [
 		'field'
 	],
-	#category : #'ASTSmalltalk-Tests-Code'
+	#category : 'ASTSmalltalk-Tests-Code',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Code'
 }
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMessageT1 >> field [
 	^ field
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMessageT1 >> initialize [
 	super initialize.
 	field := SharedRandom globalGenerator next.
  
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMessageT1 >> p1 [
 	^ 40001
 ]

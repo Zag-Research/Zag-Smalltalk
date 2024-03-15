@@ -1,55 +1,57 @@
 Class {
-	#name : #ASMessageStats,
-	#superclass : #Object,
-	#category : #'ASTSmalltalk-Tests-Explore'
+	#name : 'ASMessageStats',
+	#superclass : 'Object',
+	#category : 'ASTSmalltalk-Tests-Explore',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Explore'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array1: size [
 	^ self gen: size types: { ASMessageT1 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array2: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array3: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array4: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array5: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4. ASMessageT5 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array6: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4. ASMessageT5. ASMessageT6 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array7: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4. ASMessageT5. ASMessageT6. ASMessageT7 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array8: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4. ASMessageT5. ASMessageT6. ASMessageT7. ASMessageT8 }
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMessageStats class >> array9: size [
 	^ self gen: size types: { ASMessageT1. ASMessageT2. ASMessageT3. ASMessageT4. ASMessageT5. ASMessageT6. ASMessageT7. ASMessageT8. ASMessageT9 }
 ]
 
-{ #category : #generation }
+{ #category : 'generation' }
 ASMessageStats class >> gen: anInteger types: aCollection [ 
 	| array |
 	array := Array new: anInteger.
@@ -59,7 +61,7 @@ ASMessageStats class >> gen: anInteger types: aCollection [
 	^ array
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASMessageStats class >> runP1 [
 	| size |
 	" (1 to: 2)  collect: [:x| self runP1] "

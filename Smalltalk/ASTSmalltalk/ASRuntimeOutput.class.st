@@ -4,7 +4,7 @@ I generate runtime compile objects
 Class {
 	#name : 'ASRuntimeOutput',
 	#superclass : 'Object',
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }

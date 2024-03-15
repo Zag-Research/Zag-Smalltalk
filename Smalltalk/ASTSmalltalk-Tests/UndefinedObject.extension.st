@@ -1,6 +1,6 @@
-Extension { #name : #UndefinedObject }
+Extension { #name : 'UndefinedObject' }
 
-{ #category : #'*ASTSmalltalk-Tests' }
+{ #category : '*ASTSmalltalk-Tests' }
 UndefinedObject >> insert: anASBst [ 
 	^ anASBst
 ]

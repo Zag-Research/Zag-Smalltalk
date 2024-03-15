@@ -16,18 +16,24 @@ pub const ClassIndex = enum(u16) {
     _,
 };
 pub const Object = packed struct {
-    u: u64,
+    tag: Group,
+    classIndex: ClassIndex,
+    hash: u45,
+    pub const Group = enum(u3) { heap=0, smallInteger, immediates, float3, float4, float5, float6, float7};
     pub fn immediate_class(self: Object) ClassIndex {
-        switch (self.u&7) {
-            0 => return .Object,
-            1 => return .SmallInteger,
-            2 => return @enumFromInt((self.u>>4)&0xffff),
+        switch (self.tag) {
+            .heap => return .Object,
+            .smallInteger => return .SmallInteger,
+            .immediates => return self.classIndex,
             else => return .Float,
         }
     }
-    const Nil: Object = @bitCast(@as(u64,0x000032));
-    const False: Object = @bitCast(@as(u64,0x000042));
-    const True: Object = @bitCast(@as(u64,0x100052));
+    pub inline fn u(self: Object) u64 {
+        return @bitCast(self);
+    }
+    const Nil: Object = @bitCast(@as(u64,0x00001a));
+    const False: Object = @bitCast(@as(u64,0x000022));
+    const True: Object = @bitCast(@as(u64,0x10002a));
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
@@ -55,22 +61,22 @@ pub const Object = packed struct {
         writer: anytype,
     ) !void {
         _ = options;
-
+        const selfU = self.u();
         try switch (self.immediate_class()) {
-            .Object => if (self.u==8) writer.print("float object", .{}) else writer.print("object:0x{x:0>16}", .{self.u}),
+            .Object => if (selfU==8) writer.print("float object", .{}) else writer.print("object:0x{x:0>16}", .{selfU}),
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
             .UndefinedObject => writer.print("nil", .{}),
-            .Symbol => writer.print("#symbols.i_{}", .{self.u>>20}),
-            .Character => writer.print("${c}", .{@as(u8,@truncate(self.u>>20))}),
-            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(self.u>>3))}),
-            .Float => writer.print("{}", .{ decode(self.u) }),
+            .Symbol => writer.print("#symbols.i_{}", .{self.hash}),
+            .Character => writer.print("${c}", .{@as(u8,@truncate(self.hash))}),
+            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(selfU>>3))}),
+            .Float => writer.print("{}", .{ decode(selfU) }),
             else => {
-                try writer.print("0x{x:0>16}", .{self.u});
+                try writer.print("0x{x:0>16}", .{selfU});
                 @panic("format for unknown class");
             },
         };
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.u});
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{selfU});
     }
 };
 fn encode(x: f64) u64 {
@@ -120,14 +126,15 @@ pub fn main() !void {
     };
     inline for (data) |x| {
         const u = Object.from(x);
-        if (u.u&7==0) {
-            std.debug.print("{x:0>16} {x:0>16} {} coded as Object {s}\n",.{cvtU64(x),u.u,x, switch (u.u>>3) {
+        // std.debug.print("{} {} {}\n\t",.{u.tag,u.classIndex,u.hash});
+        if (u.immediate_class()==.Object) {
+            std.debug.print("{x:0>16} {x:0>16} {} coded as Object {s}\n",.{cvtU64(x),u.u(),x, switch (u.u()>>3) {
                 else => "",
                 2 => "NaN",
                 3 => "+inf",
                 4 => "-inf",
             }});
         } else
-            std.debug.print("{x:0>16} {x:0>16} {} {} {}\n",.{cvtU64(x),u.u,x,u,u.immediate_class()});
+            std.debug.print("{x:0>16} {x:0>16} {} {} {}\n",.{cvtU64(x),u.u(),x,u,u.immediate_class()});
     }
 }

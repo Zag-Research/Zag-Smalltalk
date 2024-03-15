@@ -8,9 +8,9 @@ Class {
 		'methodGenerator',
 		'block'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'code generation' }
@@ -58,6 +58,12 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 				print: (offsets collectWithIndex: [:offset :index | offset withIndex: index ]);
 				comma 
 			 ]
+]
+
+{ #category : 'visiting' }
+ASZigThreadedBlockOutput >> visitReturnNonLocalTop [
+
+	self putEmbedded: #returnNonLocal 
 ]
 
 { #category : 'visiting' }
