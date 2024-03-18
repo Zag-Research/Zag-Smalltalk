@@ -4,6 +4,7 @@ My subclasses output text versions of methods
 Class {
 	#name : 'ASZigMethodOutput',
 	#superclass : 'ASZigOutput',
+	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'codeGenerator',
 		'maxDepth',

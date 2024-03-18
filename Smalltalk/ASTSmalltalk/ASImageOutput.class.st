@@ -2,9 +2,8 @@
 I generate runtime compile objects
 "
 Class {
-	#name : 'ASImagesOutput',
-	#superclass : 'Object',
-	#traits : 'ASOutputAPI',
+	#name : 'ASImageOutput',
+	#superclass : 'ASOutput',
 	#classTraits : 'ASOutputAPI classTrait',
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',

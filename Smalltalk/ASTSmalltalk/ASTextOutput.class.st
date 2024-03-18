@@ -16,7 +16,7 @@ There will be a runtime code generator written in Zig that will generate threade
 "
 Class {
 	#name : 'ASTextOutput',
-	#superclass : 'Object',
+	#superclass : 'ASOutput',
 	#instVars : [
 		'mainStream',
 		'symbols',

@@ -3,7 +3,7 @@ I generate runtime compile objects
 "
 Class {
 	#name : 'ASRuntimeOutput',
-	#superclass : 'Object',
+	#superclass : 'ASOutput',
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'

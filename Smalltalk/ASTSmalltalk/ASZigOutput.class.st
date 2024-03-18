@@ -4,6 +4,7 @@ I create a CompiledMethod in threaded form in Zig syntax.
 Class {
 	#name : 'ASZigOutput',
 	#superclass : 'ASTextOutput',
+	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'ourObject',
 		'alreadyGenerated',

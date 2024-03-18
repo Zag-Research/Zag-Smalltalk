@@ -2,8 +2,8 @@
 I generate text-based code compiled by the `compileMethod` compile-time Zig function
 "
 Class {
-	#name : 'ASZigThreadedOutput',
-	#superclass : 'ASZigMethodOutput',
+	#name : 'ASImageThreadedOutput',
+	#superclass : 'ASImageOutput',
 	#classTraits : 'ASOutputAPI classTrait',
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -11,41 +11,41 @@ Class {
 }
 
 { #category : 'compiling' }
-ASZigThreadedOutput class >> blockClass [
+ASImageThreadedOutput class >> blockClass [
 	^ ASZigThreadedBlockOutput
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> branch: command to: target [
+ASImageThreadedOutput >> branch: command to: target [
 	command = #br ifTrue: [ 
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> endMethod [
+ASImageThreadedOutput >> endMethod [
 
 	self label: nil
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputBasicBlockEnd [
+ASImageThreadedOutput >> outputBasicBlockEnd [
 	
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputMethodLabel: bbLabel [
+ASImageThreadedOutput >> outputMethodLabel: bbLabel [
 
 	self label: bbLabel
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputMethodStart: bbLabel [
+ASImageThreadedOutput >> outputMethodStart: bbLabel [
 
 
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputToStream [
+ASImageThreadedOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
 	codeGenerator basicBlocksLinearizeDo: [ :bb |
@@ -56,7 +56,7 @@ ASZigThreadedOutput >> outputToStream [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
+ASImageThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
 	self
 		putEmbedded: #popLocalData;
@@ -69,7 +69,7 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 ]
 
 { #category : 'writing' }
-ASZigThreadedOutput >> primitive: anInteger [
+ASImageThreadedOutput >> primitive: anInteger [
 
 	self
 		nextPutAll: '&p.p';
@@ -78,7 +78,7 @@ ASZigThreadedOutput >> primitive: anInteger [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> pushLocal: localNumber [
+ASImageThreadedOutput >> pushLocal: localNumber [
 
 	self
 		putEmbedded: #pushLocal;
@@ -87,13 +87,13 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> verifySelector: anObject [
+ASImageThreadedOutput >> verifySelector: anObject [
 
 	self putEmbedded: #verifySelector
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPopLocal: anASLocal [
+ASImageThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
@@ -111,7 +111,7 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushBlock: anASCBlock [
+ASImageThreadedOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
 		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
@@ -119,7 +119,7 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
+ASImageThreadedOutput >> visitPushContext: anUndefinedObject [
 
 	self
 		putEmbedded: #pushContext;
@@ -128,7 +128,7 @@ ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLiteral: aLiteral [
+ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 
 	self
 		putEmbedded: #pushLiteral;
@@ -137,13 +137,13 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLocal: anASLocal [
+ASImageThreadedOutput >> visitPushLocal: anASLocal [
 
 ^	self visitPushLocalOrBlock: anASLocal
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
+ASImageThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
@@ -161,32 +161,32 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushNil [
+ASImageThreadedOutput >> visitPushNil [
 
 	self putEmbedded: #pushNil;
 		comma
 ]
 
 { #category : 'visiting' }
-ASZigThreadedOutput >> visitReturnNil [
+ASImageThreadedOutput >> visitReturnNil [
 
 	self putEmbedded: #returnNil
 ]
 
 { #category : 'visiting' }
-ASZigThreadedOutput >> visitReturnSelf [
+ASImageThreadedOutput >> visitReturnSelf [
 
 		self putEmbedded: #returnSelf
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitReturnTop [
+ASImageThreadedOutput >> visitReturnTop [
 
 	self putEmbedded: #returnTop
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
+ASImageThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
 	self
 		putEmbedded: ('send' , aSelector numArgs asString
@@ -196,7 +196,7 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 ]
 
 { #category : 'visiting' }
-ASZigThreadedOutput >> visitStoreLocal: anASLocal [
+ASImageThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
@@ -214,7 +214,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 ]
 
 { #category : 'writing' }
-ASZigThreadedOutput >> writeDefinitionOn: stream [
+ASImageThreadedOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
 	stream
@@ -231,7 +231,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 ]
 
 { #category : 'writing' }
-ASZigThreadedOutput >> writeInitializationOn: stream [
+ASImageThreadedOutput >> writeInitializationOn: stream [
 
 	stream
 		nextPutAll: componentName;

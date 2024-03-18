@@ -1,9 +1,12 @@
 Class {
-	#name : 'ASINanmageTest',
+	#name : 'ASNanImageTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'imageWriter',
 		'minImageSize'
+	],
+	#pools : [
+		'ASZagConstants'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -11,7 +14,7 @@ Class {
 }
 
 { #category : 'running' }
-ASINanmageTest >> image: aBlock equals: value [
+ASNanImageTest >> image: aBlock equals: value [
 
 	| result |
 	result := ByteArray streamContents: [ :s |
@@ -28,15 +31,57 @@ ASINanmageTest >> image: aBlock equals: value [
 ]
 
 { #category : 'running' }
-ASINanmageTest >> setUp [
+ASNanImageTest >> setUp [
 
 	super setUp.
 
-	ASAllocationInfo reset
+	ASAllocationInfo reset.
+	ASZagConstants initializeForTest
+]
+
+{ #category : 'running' }
+ASNanImageTest >> tearDown [
+
+
+	ASZagConstants initializeForImage.
+	
+	super tearDown
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> testObjects [
+ASNanImageTest >> testCompile [
+
+	| ast file output |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
+	file := ASImageFileContext new.
+	output := ASZigCPSOutput testing
+		          context: file;
+		          generateCode: ast.
+	self assert: output name equals: 'Mfib:'.
+	file asString inspect.
+	self
+		assert: output asString
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'.
+	self
+		image: [ :i | i put: 'Hello' ]
+		equals: #( 16r1705000001000A 16r6F6C6C6548 ).
+	self
+		image: [ :i | i put: #( 4 2 ) ]
+		equals:
+		#( 16r27730000020009 16rfffc000000000004 16rfffc000000000002 ).
+	self
+		image: [ :i | i put: 4 @ 2 ]
+		equals:
+		#( 16r2770000003001D 16rfffc000000000004 16rfffc000000000002 ).
+	self
+		image: [ :i | i put: #( #( 4 2 ) 1 ) ]
+		equals:
+			#( 16r27730000040009 16rfff7001000000018 16rfffc000000000001
+			   16r27730000050009 16rfffc000000000004 16rfffc000000000002 )
+]
+
+{ #category : 'tests' }
+ASNanImageTest >> testObjects [
 
 	self
 		image: [ :i | i put: 'Hello' ]
@@ -57,7 +102,7 @@ ASINanmageTest >> testObjects [
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> testSimple [
+ASNanImageTest >> testSimple [
 
 	self image: [ :i | i put: 42 ] equals: 16rfffc00000000002a.
 	self image: [ :i | i put: 1 ] equals: 16rfffc000000000001.
@@ -76,7 +121,7 @@ ASINanmageTest >> testSimple [
 ]
 
 { #category : 'tests' }
-ASINanmageTest >> testU64From [
+ASNanImageTest >> testU64From [
 
 	self assert: (self u64From: #[  ]) equals: #(  ).
 	self assert: (self u64From: #[ 1 ]) equals: #( 1 ).
@@ -89,7 +134,7 @@ ASINanmageTest >> testU64From [
 ]
 
 { #category : 'running' }
-ASINanmageTest >> u64From: aByteArray [
+ASNanImageTest >> u64From: aByteArray [
 
 	^ ((aByteArray groupsOf: 8) collect: [ :group |
 		  group reversed
