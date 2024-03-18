@@ -86,6 +86,24 @@ ASImageTest >> testClasses [
 ]
 
 { #category : 'tests' }
+ASImageTest >> testCountMethodArgSizes [
+
+	| argSizes |
+	argSizes := ASExploreImage argumentsPerMethod.
+	Transcript
+		show: argSizes;
+		cr
+]
+
+{ #category : 'tests' }
+ASImageTest >> testCountMethodSizes [
+
+	| methodSizes |
+	methodSizes := ASExploreImage operatonsPerMethod.
+	Transcript show: methodSizes; cr
+]
+
+{ #category : 'tests' }
 ASImageTest >> testEmptyImage [
 	self assert: self image size equals: minImageSize
 ]

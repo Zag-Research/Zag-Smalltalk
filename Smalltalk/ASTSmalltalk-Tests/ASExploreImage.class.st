@@ -13,6 +13,28 @@ Class {
 	#tag : 'Explore'
 }
 
+{ #category : 'private - accessing' }
+ASExploreImage class >> argumentsPerMethod [
+	" self numericPrimitivesInImage associations sorted "
+
+	| argumentsPerMethod |
+	argumentsPerMethod := Array new: 20.
+	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
+		:method
+		:i |
+		| numArgs |
+		i > 100000 ifTrue: [ ^ argumentsPerMethod ].
+		numArgs := method numArgs.
+
+		numArgs > 0 ifTrue: [
+			argumentsPerMethod
+				at: numArgs
+				put: ((argumentsPerMethod at: numArgs)
+						 ifNil: [ 1 ]
+						 ifNotNil: [ :value | value + 1 ]) ] ].
+	^ argumentsPerMethod
+]
+
 { #category : 'class initialization' }
 ASExploreImage class >> initialize [
 	" self initialize inspect "
@@ -121,6 +143,29 @@ ASExploreImage class >> numericPrimitivesInImage [
 		]
 	].
 	^ primitives
+]
+
+{ #category : 'private - accessing' }
+ASExploreImage class >> operatonsPerMethod [
+	" self numericPrimitivesInImage associations sorted "
+
+	| operationsPerMethod |
+	operationsPerMethod := Array new: 200.
+	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [ :method :i |
+		| numStatements |
+		i > 60000 ifTrue: [ ^operationsPerMethod ].
+		numStatements := method ast asSequenceNode statements size.
+		
+		(numStatements isNumber and: numStatements > 0) ifTrue: [
+			operationsPerMethod at: numStatements 
+			put: (
+						(operationsPerMethod at: numStatements)
+						 ifNil: [ 1 ]
+						 ifNotNil: [ :value | value  + 1 ] 
+					)
+			].
+		].
+	^ operationsPerMethod
 ]
 
 { #category : 'private - accessing' }
