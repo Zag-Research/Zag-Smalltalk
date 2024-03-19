@@ -132,6 +132,23 @@ ASImageTest >> testRepeatedImage [
 ]
 
 { #category : 'tests' }
+ASImageTest >> testSelectorFrequency [
+
+	| selectorCountDictionary selectorDistribution |
+	selectorCountDictionary := ASExploreImage selectorsInImage.
+
+	selectorDistribution := Array new: 1000.
+	selectorCountDictionary keysAndValuesDo: [ :k :v |
+		selectorDistribution at: v put: ((selectorDistribution at: v)
+				 ifNil: [ 1 ]
+				 ifNotNil: [ :value | value + 1 ]) ].
+
+	Transcript
+		show: selectorDistribution;
+		cr
+]
+
+{ #category : 'tests' }
 ASImageTest >> testWriteRawOn [
 	self assert: (self array: [: s | 1 writeRawOn: s ]) equals: #(1 0 0 0 0 0 0 0).
 	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).

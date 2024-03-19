@@ -18,7 +18,7 @@ ASExploreImage class >> argumentsPerMethod [
 	" self numericPrimitivesInImage associations sorted "
 
 	| argumentsPerMethod |
-	argumentsPerMethod := Array new: 20.
+	argumentsPerMethod := Array new: 60.
 	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
 		:method
 		:i |
@@ -184,4 +184,16 @@ ASExploreImage class >> primitives [
 		]
 	].
 	^ primitives
+]
+
+{ #category : 'private - accessing' }
+ASExploreImage class >> selectorsInImage [
+	| imageSelectors |
+	imageSelectors := Dictionary new.
+	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
+		:method
+		:i | 
+		i > 50000 ifTrue: [ ^imageSelectors ].
+		imageSelectors at: method selector ifPresent: [:count| imageSelectors at: method selector put: count+1] ifAbsentPut: 1 ].
+	^ imageSelectors
 ]
