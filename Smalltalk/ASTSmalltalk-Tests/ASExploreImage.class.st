@@ -188,12 +188,17 @@ ASExploreImage class >> primitives [
 
 { #category : 'private - accessing' }
 ASExploreImage class >> selectorsInImage [
+
 	| imageSelectors |
 	imageSelectors := Dictionary new.
 	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
 		:method
-		:i | 
-		i > 50000 ifTrue: [ ^imageSelectors ].
-		imageSelectors at: method selector ifPresent: [:count| imageSelectors at: method selector put: count+1] ifAbsentPut: 1 ].
+		:i |
+		i > 100000 ifTrue: [ ^ imageSelectors ].
+		imageSelectors
+			at: method selector
+			ifPresent: [ :count |
+			imageSelectors at: method selector put: count + 1 ]
+			ifAbsentPut: 1 ].
 	^ imageSelectors
 ]
