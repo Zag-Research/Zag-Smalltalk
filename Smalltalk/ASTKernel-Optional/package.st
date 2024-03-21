@@ -1,1 +1,1 @@
-Package { #name : #'ASTKernel-Optional' }
+Package { #name : 'ASTKernel-Optional' }
