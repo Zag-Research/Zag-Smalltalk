@@ -8,4 +8,6 @@ Class {
 
 { #category : 'as yet unclassified' }
 ASZigLLVMOutput >> Testing [
+
+	"With another comment - again testing..."
 ]
