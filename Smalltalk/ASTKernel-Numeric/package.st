@@ -1,1 +1,1 @@
-Package { #name : 'ASTKernel-Numeric' }
+Package { #name : #'ASTKernel-Numeric' }

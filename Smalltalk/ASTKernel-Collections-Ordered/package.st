@@ -1,1 +1,1 @@
-Package { #name : 'ASTKernel-Collections-Ordered' }
+Package { #name : #'ASTKernel-Collections-Ordered' }
