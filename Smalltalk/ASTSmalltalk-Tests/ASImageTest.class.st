@@ -96,14 +96,6 @@ ASImageTest >> testCountMethodArgSizes [
 ]
 
 { #category : 'tests' }
-ASImageTest >> testCountMethodSizes [
-
-	| methodSizes |
-	methodSizes := ASExploreImage operatonsPerMethod.
-	Transcript show: methodSizes; cr
-]
-
-{ #category : 'tests' }
 ASImageTest >> testEmptyImage [
 	self assert: self image size equals: minImageSize
 ]
@@ -129,42 +121,6 @@ ASImageTest >> testMethods [
 ASImageTest >> testRepeatedImage [
 	self assert: self image equals: self image.
 
-]
-
-{ #category : 'tests' }
-ASImageTest >> testSelectorFrequence [
-
-	| selectorCountDictionary selectorDistribution |
-	selectorCountDictionary := ASExploreImage selectorsInImage.
-
-	selectorDistribution := Array new: 50.
-	selectorCountDictionary keysAndValuesDo: [ :k :v |
-		v > 50 ifTrue: [ Transcript show: k; tab; show: v; cr ]
-		 ifFalse: [ 
-		selectorDistribution at: v put: ((selectorDistribution at: v)
-				 ifNil: [ 1 ]
-				 ifNotNil: [ :value | value + 1 ]) ]].
-
-	Transcript
-		show: selectorDistribution;
-		cr
-]
-
-{ #category : 'tests' }
-ASImageTest >> testSelectorFrequency [
-
-	| selectorCountDictionary selectorDistribution |
-	selectorCountDictionary := ASExploreImage selectorsInImage.
-
-	selectorDistribution := Array new: 1000.
-	selectorCountDictionary keysAndValuesDo: [ :k :v |
-		selectorDistribution at: v put: ((selectorDistribution at: v)
-				 ifNil: [ 1 ]
-				 ifNotNil: [ :value | value + 1 ]) ].
-
-	Transcript
-		show: selectorDistribution;
-		cr
 ]
 
 { #category : 'tests' }

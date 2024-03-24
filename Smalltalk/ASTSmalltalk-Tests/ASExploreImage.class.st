@@ -124,6 +124,10 @@ ASExploreImage class >> initialize [
 	arity := Bag new.
 	implementedMethods do: [ :selector | arity add: selector numArgs ].
 	Info at: #arity put: arity valuesAndCounts associations sorted.
+	"compute the frequency of selectors to number of implmentors"
+	Info at: #selectorImplmentationFrequence put: self selectorsInImage.
+	"compute the frequence of number of operations in a method"
+	Info at: #operationsPerMethodFrequence put: self operationsPerMethod.
 	^ Info
 ]
 
@@ -146,25 +150,23 @@ ASExploreImage class >> numericPrimitivesInImage [
 ]
 
 { #category : 'private - accessing' }
-ASExploreImage class >> operatonsPerMethod [
+ASExploreImage class >> operationsPerMethod [
 	" self numericPrimitivesInImage associations sorted "
 
 	| operationsPerMethod |
 	operationsPerMethod := Array new: 200.
-	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [ :method :i |
+	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
+		:method
+		:i |
 		| numStatements |
-		i > 60000 ifTrue: [ ^operationsPerMethod ].
 		numStatements := method ast asSequenceNode statements size.
-		
-		(numStatements isNumber and: numStatements > 0) ifTrue: [
-			operationsPerMethod at: numStatements 
-			put: (
-						(operationsPerMethod at: numStatements)
+
+		(numStatements isNumber and: numStatements >= 0) ifTrue: [
+			operationsPerMethod
+				at: (numStatements + 1)
+				put: ((operationsPerMethod at: (numStatements + 1))
 						 ifNil: [ 1 ]
-						 ifNotNil: [ :value | value  + 1 ] 
-					)
-			].
-		].
+						 ifNotNil: [ :value | value + 1 ]) ] ].
 	^ operationsPerMethod
 ]
 
@@ -189,16 +191,23 @@ ASExploreImage class >> primitives [
 { #category : 'private - accessing' }
 ASExploreImage class >> selectorsInImage [
 
-	| imageSelectors |
-	imageSelectors := Dictionary new.
+	| selectorCountDictionary selectorDistribution |
+	selectorCountDictionary := Dictionary new.
 	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
 		:method
 		:i |
-		i > 100000 ifTrue: [ ^ imageSelectors ].
-		imageSelectors
+		selectorCountDictionary
 			at: method selector
 			ifPresent: [ :count |
-			imageSelectors at: method selector put: count + 1 ]
+			selectorCountDictionary at: method selector put: count + 1 ]
 			ifAbsentPut: 1 ].
-	^ imageSelectors
+
+	selectorDistribution := Array new: 1000.
+	selectorCountDictionary keysAndValuesDo: [ :k :v |
+		v > 1000 ifFalse: [
+		selectorDistribution at: v put: ((selectorDistribution at: v)
+				 ifNil: [ 1 ]
+				 ifNotNil: [ :value | value + 1 ]) ]].
+
+	^ selectorDistribution
 ]
