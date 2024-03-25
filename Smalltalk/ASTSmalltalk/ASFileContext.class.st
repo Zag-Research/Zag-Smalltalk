@@ -10,7 +10,8 @@ Class {
 	#instVars : [
 		'components',
 		'pendingComponents',
-		'symbols'
+		'symbols',
+		'objects'
 	],
 	#category : 'ASTSmalltalk-Contexts',
 	#package : 'ASTSmalltalk',
@@ -24,12 +25,24 @@ ASFileContext >> addComponent: aGenerator [
 	components add: aGenerator
 ]
 
+{ #category : 'as yet unclassified' }
+ASFileContext >> for: anASNode generatorIs: anASGenerator [ 
+	objects at: anASNode put: anASGenerator 
+]
+
 { #category : 'initialization' }
 ASFileContext >> initialize [
 
 	super initialize.
 	components := OrderedCollection new.
+	objects := Dictionary new.
 	pendingComponents := OrderedCollection new
+]
+
+{ #category : 'as yet unclassified' }
+ASFileContext >> lookupObject: anObject [
+
+	^ objects at: anObject ifAbsent: [ ^ nil ]
 ]
 
 { #category : 'components' }

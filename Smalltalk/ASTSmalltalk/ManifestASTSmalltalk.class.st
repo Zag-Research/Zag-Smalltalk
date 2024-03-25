@@ -44,7 +44,7 @@ ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-03-07T18:45:29.326509-05:00') #(#(#RGMethodDefinition #(#ASImage #headerIVars:indexed:element:weak: #false)) #'2024-03-09T01:44:49.517502-05:00') #(#(#RGMethodDefinition #(#'ASZagConstants class' #initializeForTest #true)) #'2024-03-17T18:06:52.478443-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-03-07T18:45:29.326509-05:00') #(#(#RGMethodDefinition #(#ASImage #headerIVars:indexed:element:weak: #false)) #'2024-03-09T01:44:49.517502-05:00') )
 ]
 
 { #category : 'code-critics' }

@@ -8,10 +8,19 @@ When asked to output, I output an image file.
 Class {
 	#name : 'ASImageFileContext',
 	#superclass : 'ASFileContext',
+	#instVars : [
+		'image'
+	],
 	#category : 'ASTSmalltalk-Contexts',
 	#package : 'ASTSmalltalk',
 	#tag : 'Contexts'
 }
+
+{ #category : 'instance creation' }
+ASImageFileContext class >> with: anImage [
+
+	^ self new image: anImage
+]
 
 { #category : 'testing' }
 ASImageFileContext >> addSymbol: aSymbol [
@@ -22,6 +31,17 @@ ASImageFileContext >> addSymbol: aSymbol [
 { #category : 'converting' }
 ASImageFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
+]
+
+{ #category : 'accessing' }
+ASImageFileContext >> image [
+	^ image
+]
+
+{ #category : 'instance creation' }
+ASImageFileContext >> image: anImage [
+
+	image := anImage
 ]
 
 { #category : 'initialization' }

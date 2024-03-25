@@ -1,10 +1,6 @@
 Class {
 	#name : 'ASNanImageTest',
-	#superclass : 'TestCase',
-	#instVars : [
-		'imageWriter',
-		'minImageSize'
-	],
+	#superclass : 'ASImageTest',
 	#pools : [
 		'ASZagConstants'
 	],
@@ -13,71 +9,17 @@ Class {
 	#tag : 'Tests'
 }
 
-{ #category : 'running' }
-ASNanImageTest >> image: aBlock equals: value [
-
-	| result |
-	result := ByteArray streamContents: [ :s |
-		          aBlock value: (ASNanImage test on: s) ].
-	value isInteger
-		ifTrue: [
-			self
-				assert: (self u64From: result) first hexString
-				equals: result hexString ]
-		ifFalse: [
-			self
-				assert: ((self u64From: result) collect: #hexString)
-				equals: (value collect: #hexString) ]
-]
-
-{ #category : 'running' }
-ASNanImageTest >> setUp [
-
-	super setUp.
-
-	ASAllocationInfo reset.
-	ASZagConstants initializeForTest
-]
-
-{ #category : 'running' }
-ASNanImageTest >> tearDown [
-
-
-	ASZagConstants initializeForImage.
-	
-	super tearDown
+{ #category : 'as yet unclassified' }
+ASNanImageTest >> imageClass [
+	^ ASNanImage
 ]
 
 { #category : 'tests' }
 ASNanImageTest >> testCompile [
 
-	| ast file output |
+	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	file := ASImageFileContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
-	self assert: output name equals: 'Mfib:'.
-	file asString inspect.
-	self
-		assert: output asString
-		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'.
-	self
-		image: [ :i | i put: 'Hello' ]
-		equals: #( 16r1705000001000A 16r6F6C6C6548 ).
-	self
-		image: [ :i | i put: #( 4 2 ) ]
-		equals:
-		#( 16r27730000020009 16rfffc000000000004 16rfffc000000000002 ).
-	self
-		image: [ :i | i put: 4 @ 2 ]
-		equals:
-		#( 16r2770000003001D 16rfffc000000000004 16rfffc000000000002 ).
-	self
-		image: [ :i | i put: #( #( 4 2 ) 1 ) ]
-		equals:
-			#( 16r27730000040009 16rfff7001000000018 16rfffc000000000001
-			   16r27730000050009 16rfffc000000000004 16rfffc000000000002 )
+	self threaded: ast equals: #( pushLiteral 42 returnTop )
 ]
 
 { #category : 'tests' }
@@ -131,13 +73,4 @@ ASNanImageTest >> testU64From [
 	self
 		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8])
 		equals: #( 16r0807060504030201 16r0605040302010009 16r0807 )
-]
-
-{ #category : 'running' }
-ASNanImageTest >> u64From: aByteArray [
-
-	^ ((aByteArray groupsOf: 8) collect: [ :group |
-		  group reversed
-			  inject: 0
-			  into: [ :t :each | (t bitShift: 8) + each ] ]) asArray
 ]

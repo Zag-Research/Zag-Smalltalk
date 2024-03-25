@@ -9,7 +9,6 @@ Class {
 	#name : 'ASZigFileContext',
 	#superclass : 'ASFileContext',
 	#instVars : [
-		'objects',
 		'names'
 	],
 	#category : 'ASTSmalltalk-Contexts',
@@ -28,25 +27,12 @@ ASZigFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
-{ #category : 'as yet unclassified' }
-ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
-	objects at: anASNode put: anASGenerator 
-]
-
 { #category : 'initialization' }
 ASZigFileContext >> initialize [
 
 	super initialize.
 	symbols := ASZigSymbols new.
-	objects := Dictionary new.
-	names := Dictionary new.
-
-]
-
-{ #category : 'as yet unclassified' }
-ASZigFileContext >> lookupObject: anObject [
-
-	^ objects at: anObject ifAbsent: [ ^ nil ]
+	names := Dictionary new
 ]
 
 { #category : 'creation' }

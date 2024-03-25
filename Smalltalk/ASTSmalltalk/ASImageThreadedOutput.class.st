@@ -24,7 +24,7 @@ ASImageThreadedOutput >> branch: command to: target [
 { #category : 'API' }
 ASImageThreadedOutput >> endMethod [
 
-	self label: nil
+
 ]
 
 { #category : 'code generation' }
@@ -35,7 +35,7 @@ ASImageThreadedOutput >> outputBasicBlockEnd [
 { #category : 'code generation' }
 ASImageThreadedOutput >> outputMethodLabel: bbLabel [
 
-	self label: bbLabel
+
 ]
 
 { #category : 'code generation' }
@@ -44,7 +44,7 @@ ASImageThreadedOutput >> outputMethodStart: bbLabel [
 
 ]
 
-{ #category : 'code generation' }
+{ #category : 'as yet unclassified' }
 ASImageThreadedOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
@@ -89,7 +89,7 @@ ASImageThreadedOutput >> pushLocal: localNumber [
 { #category : 'code generation' }
 ASImageThreadedOutput >> verifySelector: anObject [
 
-	self putEmbedded: #verifySelector
+	^ image putRawInt: ZfVerifySelector 
 ]
 
 { #category : 'API' }
@@ -130,10 +130,9 @@ ASImageThreadedOutput >> visitPushContext: anUndefinedObject [
 { #category : 'API' }
 ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 
-	self
-		putEmbedded: #pushLiteral;
-		nextPutAll: aLiteral asZigLiteral;
-		comma
+	image
+		putRawInt: ZfPushLiteral;
+		put: aLiteral
 ]
 
 { #category : 'API' }
@@ -182,7 +181,7 @@ ASImageThreadedOutput >> visitReturnSelf [
 { #category : 'API' }
 ASImageThreadedOutput >> visitReturnTop [
 
-	self putEmbedded: #returnTop
+	^ image putRawInt: ZfReturnTop
 ]
 
 { #category : 'API' }

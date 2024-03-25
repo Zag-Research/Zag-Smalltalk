@@ -329,6 +329,16 @@ ASImage >> literal: l class: c [
 ]
 
 { #category : 'adding' }
+ASImage >> nextRawInt [
+	"input in little-endian order"
+
+	| result |
+	result := 0.
+	0 to: 63 by: 8 do: [ :i | result := aStream next << i + result ].
+	^ result
+]
+
+{ #category : 'adding' }
 ASImage >> objectClass: aClass [
 
 	| cc |
@@ -462,6 +472,17 @@ ASImage >> putSymbol: aString [
 ASImage >> putUndefinedObject [
 
 	^ self putLiteral: 16rffffffff class: ClassUndefinedObject
+]
+
+{ #category : 'writing' }
+ASImage >> rawIntAt: position [
+
+	| savedPosition result |
+	savedPosition := aStream position.
+	aStream position: position * 8.
+	result := self nextRawInt.
+	aStream position: savedPosition.
+	^ result
 ]
 
 { #category : 'adding' }

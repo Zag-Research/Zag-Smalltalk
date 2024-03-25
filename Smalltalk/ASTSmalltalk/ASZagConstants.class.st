@@ -93,10 +93,19 @@ Class {
 		'ZfVerifyDirectSelector',
 		'ZfVerifySelector'
 	],
-	#category : 'ASTSmalltalk-Contexts',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'Contexts'
+	#tag : 'Output'
 }
+
+{ #category : 'mapping' }
+ASZagConstants class >> constantMap [
+
+	^ Dictionary new
+		  at: #pushLiteral put: ZfPushLiteral;
+		  at: #returnTop put: ZfReturnTop;
+		  yourself
+]
 
 { #category : 'class initialization' }
 ASZagConstants class >> initialize [
@@ -107,12 +116,6 @@ ASZagConstants class >> initialize [
 
 { #category : 'class initialization' }
 ASZagConstants class >> initializeForImage [
-
-	self initializeForTest
-]
-
-{ #category : 'class initialization' }
-ASZagConstants class >> initializeForTest [
 
 	ZfHashValue := 16r12345678.
 	ZfIfFalse := 1.

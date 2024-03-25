@@ -18,12 +18,10 @@ Class {
 	#name : 'ASTextOutput',
 	#superclass : 'ASOutput',
 	#instVars : [
-		'mainStream',
 		'symbols',
 		'label',
-		'testing',
 		'componentName',
-		'context'
+		'textStream'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -38,24 +36,17 @@ ASTextOutput class >> testing [
 
 { #category : 'converting' }
 ASTextOutput >> asString [
-	^ mainStream contents
+	^ textStream contents
 ]
 
 { #category : 'printing' }
 ASTextOutput >> comma [
 
-	mainStream nextPut: $,
+	textStream nextPut: $,
 ]
 
 { #category : 'accessing' }
 ASTextOutput >> comment: aString [
-]
-
-{ #category : 'accessing' }
-ASTextOutput >> context: anASFileContext [
-
-	context := anASFileContext.
-	anASFileContext addComponent: self
 ]
 
 { #category : 'completion' }
@@ -66,16 +57,15 @@ ASTextOutput >> finished [
 ASTextOutput >> initialize [
 
 	super initialize.
-	mainStream := '' writeStream.
+	textStream := '' writeStream.
 	symbols := OrderedCollection new.
-	label := 0.
-	testing := false
+	label := 0
 ]
 
 { #category : 'printing' }
 ASTextOutput >> lf [
 
-	testing ifFalse: [	mainStream lf]
+	testing ifFalse: [	textStream lf]
 ]
 
 { #category : 'accessing' }
@@ -87,12 +77,12 @@ ASTextOutput >> name [
 
 { #category : 'printing' }
 ASTextOutput >> nextPut: aCharacter [ 
-	mainStream nextPut: aCharacter
+	textStream nextPut: aCharacter
 ]
 
 { #category : 'printing' }
 ASTextOutput >> nextPutAll: aString [ 
-	mainStream nextPutAll: aString
+	textStream nextPutAll: aString
 ]
 
 { #category : 'accessing' }
@@ -104,18 +94,13 @@ ASTextOutput >> prefix [
 { #category : 'accessing' }
 ASTextOutput >> print: anObject [
 
-	mainStream print: anObject
-]
-
-{ #category : 'accessing' }
-ASTextOutput >> selector [
-	self subclassResponsibility 
+	textStream print: anObject
 ]
 
 { #category : 'printing' }
 ASTextOutput >> tab [
 
-	testing ifFalse: [ mainStream tab ]
+	testing ifFalse: [ textStream tab ]
 ]
 
 { #category : 'printing' }

@@ -44,7 +44,7 @@ ASZigCPSOutput >> doBasicBlock: bb [
 { #category : 'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
-	mainStream nextPutAll: ';
+	textStream nextPutAll: ';
 '.
 	currentLVal ifNotNil: [
 		lVals at: currentLVal put: currentLVal , '_'.
@@ -92,7 +92,7 @@ ASZigCPSOutput >> lVal: aString [
 { #category : 'code generation' }
 ASZigCPSOutput >> outputBasicBlockEnd [
 
-	mainStream nextPutAll: '}
+	textStream nextPutAll: '}
 '
 ]
 
@@ -357,7 +357,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 		nextPutAll: auxStream contents;
 		nextPutAll: ' });';
 		lf.
-	stream nextPutAll: mainStream contents
+	stream nextPutAll: textStream contents
 ]
 
 { #category : 'writing' }

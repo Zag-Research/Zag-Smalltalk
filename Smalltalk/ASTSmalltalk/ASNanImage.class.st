@@ -17,6 +17,12 @@ Class {
 	#tag : 'Image'
 }
 
+{ #category : 'as yet unclassified' }
+ASNanImage class >> convertNumber: aNumber [
+
+	^ self smallInteger: aNumber
+]
+
 { #category : 'class initialization' }
 ASNanImage class >> initialize [
 
@@ -31,6 +37,12 @@ ASNanImage class >> initialize [
 		                      (ClassThunkReturnNil
 		                       -> [ :p | GroupNonLocalThunk + p + 3 ])" }
 		                      asDictionary
+]
+
+{ #category : 'as yet unclassified' }
+ASNanImage class >> smallInteger: anInteger [
+
+	^ GroupSmallInt0 + anInteger
 ]
 
 { #category : 'adding' }
@@ -55,5 +67,5 @@ ASNanImage >> putFloat: aFloat [
 { #category : 'adding' }
 ASNanImage >> putSmallInteger: anInteger [
 
-	^ self putRawInt: GroupSmallInt0 + anInteger 
+	^ self putRawInt: (self class smallInteger: anInteger)
 ]
