@@ -1,6 +1,6 @@
-Extension { #name : 'IRPushRemoteTemp' }
+Extension { #name : #IRPushRemoteTemp }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRPushRemoteTemp >> threadFormatOn: stream [
 
 	self printOn: stream.

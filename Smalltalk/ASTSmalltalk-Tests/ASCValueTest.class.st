@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASCValueTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASCValueTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASCValueTest >> testBoolean [
 
 	| val |
@@ -17,7 +15,7 @@ ASCValueTest >> testBoolean [
 	self deny: val isRanged 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASCValueTest >> testNumbers [
 
 	| val |

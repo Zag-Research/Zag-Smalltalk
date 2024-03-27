@@ -2,9 +2,7 @@
 I represent a local (temporary) variable
 "
 Class {
-	#name : 'ASLocal',
-	#superclass : 'ASCVariable',
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#name : #ASLocal,
+	#superclass : #ASCVariable,
+	#category : 'ASTSmalltalk-CodeGen'
 }

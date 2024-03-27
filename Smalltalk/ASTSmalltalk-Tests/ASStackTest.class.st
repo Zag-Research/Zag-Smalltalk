@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASStackTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASStackTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASStackTest >> testNames [
 
 	| stack |
@@ -25,7 +23,7 @@ ASStackTest >> testNames [
 	self assert: (stack at: #l1) equals: 42
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASStackTest >> testSimple [
 
 	| stack2 stack3 |

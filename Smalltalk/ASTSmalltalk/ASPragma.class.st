@@ -2,32 +2,30 @@
 I contain pragmas for a method - the only one we currently care about is <primitive: 1>
 "
 Class {
-	#name : 'ASPragma',
-	#superclass : 'Object',
+	#name : #ASPragma,
+	#superclass : #Object,
 	#instVars : [
 		'args'
 	],
-	#category : 'ASTSmalltalk-AST',
-	#package : 'ASTSmalltalk',
-	#tag : 'AST'
+	#category : 'ASTSmalltalk-AST'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASPragma class >> args: pramaArgs [
 	^ASPragma new args: pramaArgs 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASPragma >> args: paramaArgs [
 	args := paramaArgs 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASPragma >> arguments [
 	^ args
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASPragma >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream nextPut: $(.
@@ -35,7 +33,7 @@ ASPragma >> inspectZagASTOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASPragma >> isPrimitive [
 ^ true
 ]

@@ -1,23 +1,15 @@
 Class {
-	#name : 'ASZigLLVMOutput',
-	#superclass : 'ASZigMethodOutput',
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#name : #ASZigLLVMOutput,
+	#superclass : #ASZigMethodOutput,
+	#category : #'ASTSmalltalk-Output'
 }
 
-{ #category : 'as yet unclassified' }
-ASZigLLVMOutput >> Testing [
-
-	"With another comment - again testing..."
-]
-
-{ #category : 'API' }
+{ #category : #API }
 ASZigLLVMOutput >> endMethod [
 	self label: nil
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASZigLLVMOutput >> mapLLVMTypeFor: anObject [
 	"Maps Pharo datatypes to LLVM's" 
    | pharoType llvmType |
@@ -34,33 +26,35 @@ ASZigLLVMOutput >> mapLLVMTypeFor: anObject [
     ^ llvmType
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigLLVMOutput >> outputBasicBlockEnd [
+	"Empty in threaded code implementation too"
 	mainStream nextPutAll: '}'
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASZigLLVMOutput >> outputLLVMFrom: ascBlock [ 
 	"Assuming we always recevie an ASCMethodBlock"
 	ascBlock outputRestTo: self. 
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigLLVMOutput >> outputMethodLabel: bbLabel [
 
 	"Not needed.."
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigLLVMOutput >> outputMethodStart: bbLabel [ 
 	"Not implemented in threaded code generator either"
 	self 
 		nextPutAll: 'define <type> @'.
 		"nextPutAll: bbLabel;"
 		"nextPutAll: '() '" 	
+
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigLLVMOutput >> outputToStream [
 	"Method yet to be implemented"
 	codeGenerator finalAnalysis.
@@ -68,9 +62,10 @@ ASZigLLVMOutput >> outputToStream [
 	codeGenerator basicBlocksUnorderedDo: [ :bb |
 		currentBasicBlock := bb.
 		self outputLLVMFrom: currentBasicBlock. ]
+	
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigLLVMOutput >> verifySelector: anObject [
 
 	"Does this verify the selector?"
@@ -78,16 +73,17 @@ ASZigLLVMOutput >> verifySelector: anObject [
 		nextPutAll: anObject.
 ]
 
-{ #category : 'code generation' }
+{ #category : #API }
 ASZigLLVMOutput >> visitPushLiteral: aLiteral [
 
 	self 
 		nextPutAll: (self mapLLVMTypeFor: aLiteral) asString;  
 		nextPut: $ ;
 		nextPutAll: aLiteral asString.
+		
 ]
 
-{ #category : 'code generation' }
+{ #category : #API }
 ASZigLLVMOutput >> visitReturnTop [
 
 	self 

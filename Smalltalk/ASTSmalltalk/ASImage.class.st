@@ -4,8 +4,8 @@ I am the abstract class to write out Zag-Smalltalk images.
 I have subclasses to output the two supported encodings: nan-encoded and tag-encoded (modified Spur).
 "
 Class {
-	#name : 'ASImage',
-	#superclass : 'SharedPool',
+	#name : #ASImage,
+	#superclass : #SharedPool,
 	#instVars : [
 		'symbols',
 		'classes',
@@ -57,29 +57,27 @@ Class {
 		'NotIndexableWithPointers',
 		'Special'
 	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'ASTSmalltalk-Image'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASImage class >> ClassArray [
 	^ ClassArray
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASImage class >> ClassObject [
 	^ ClassObject
 ]
 
-{ #category : 'export' }
+{ #category : #export }
 ASImage class >> exportMethods [
 	^ self exportPackages flatCollect: [ :package |
 			package methods
 		]
 ]
 
-{ #category : 'export' }
+{ #category : #export }
 ASImage class >> exportPackages [
 	^ RPackageOrganizer default packages select: [: package |
 			((package name beginsWith: 'ASTSmalltalk')
@@ -89,13 +87,13 @@ ASImage class >> exportPackages [
 		]
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASImage class >> image [
 
 	^ super new initHeapHeader
 ]
 
-{ #category : 'class initialization' }
+{ #category : #'class initialization' }
 ASImage class >> initialize [
 
 	BaseAddress := 16r1000000000.
@@ -144,25 +142,25 @@ ASImage class >> initialize [
 	IndexedWeakWithPointers := ExternalWeakWithPointers + 1
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASImage class >> new [
 
 	^ self error: 'use "image" or "test" to create instances of ',self name
 ]
 
-{ #category : 'image analysis' }
+{ #category : #'image analysis' }
 ASImage class >> primitiveNumber: n [
 
 	^ ((#primitive: senders flatCollect: [ :m | m pragmas ])
 		    select: [ :p | p selector = #primitive: and: [p arguments first = n] ])
 ]
 
-{ #category : 'image analysis' }
+{ #category : #'image analysis' }
 ASImage class >> primitiveNumbers [
 ^ (((#primitive: senders flatCollect: [ :m| m pragmas]) select: [:p| p selector = #primitive: ] thenCollect: [:p| p arguments first ]) asSet asArray select: #isInteger) asSortedCollection 
 ]
 
-{ #category : 'image analysis' }
+{ #category : #'image analysis' }
 ASImage class >> primitiveNumbers: aCollection [
 
 	^ ((#primitive: senders flatCollect: [ :m | m pragmas ]) select: [ :p |
@@ -170,12 +168,12 @@ ASImage class >> primitiveNumbers: aCollection [
 			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASImage class >> test [
 	^ super new
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> at: position put: anInteger [
 
 	| savedPosition |
@@ -185,7 +183,7 @@ ASImage >> at: position put: anInteger [
 	^ aStream position: savedPosition
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASImage >> canonicalClasses: aClass [
 	| name side |
 	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
@@ -197,7 +195,7 @@ ASImage >> canonicalClasses: aClass [
 		]) collect: side
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASImage >> class: aClass [
 
 	^ aClass astClass
@@ -210,13 +208,13 @@ ASImage >> class: aClass [
 			  c ]
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASImage >> currentAddress [
 
 	^ currentAddress
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
 
 	nElements ifNotNil: [
@@ -263,7 +261,7 @@ ASImage >> headerIVars: iVars indexed: nElements element: element weak: makeWeak
 		  instVars: iVars
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASImage >> initClasses [
 
 	classes := OrderedDictionary new.
@@ -278,7 +276,7 @@ ASImage >> initClasses [
 	ListOfClasses do: [ :class | self put: class ]
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> initHeapHeader [
 
 	self putRawInt: 16r6567616d69545341.
@@ -289,7 +287,7 @@ ASImage >> initHeapHeader [
 	self initClasses
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASImage >> initialize [
 
 	super initialize.
@@ -322,13 +320,13 @@ ASImage >> initialize [
 	ClassCharacter := 8
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> literal: l class: c [
 
 ^ self subclassResponsibility 
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> objectClass: aClass [
 
 	| cc |
@@ -337,13 +335,13 @@ ASImage >> objectClass: aClass [
 	^ classes at: cc ifAbsentPut: [ classes size ]
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> objectMethod: aMethod [
 
 	self halt
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> objectObject: anObject [
 
 	| nInstVars nExtra ai class |
@@ -354,7 +352,7 @@ ASImage >> objectObject: anObject [
 	^ ai put: anObject into: self
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> objectString: aString [
 
 	| ai |
@@ -363,41 +361,41 @@ ASImage >> objectString: aString [
 	^ self putRawByteArray: aString asByteArray 
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASImage >> on: aWriteStream [ 
 	aStream := aWriteStream 
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> pointer: p class: c [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> put: value [
 
 	^ value astImageObject: self
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> putBoolean: value [
 
 	^ self putLiteral: value asBit class: ClassFalse + value asBit
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> putCharacter: aCharacter [
 
 	^ self putLiteral: aCharacter asInteger class: ClassCharacter
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> putLiteral: hash class: class [
 	^ self putRawInt: (self literal: hash class: class)
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> putObject: object [
 
 	alreadyPuttingObject ifTrue: [
@@ -424,7 +422,7 @@ ASImage >> putObject: object [
 	alreadyPuttingObject := false
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> putPlaceholder [
 
 	| result |
@@ -434,7 +432,7 @@ ASImage >> putPlaceholder [
 	^ result
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASImage >> putRawByteArray: aCollection [
 
 	| length |
@@ -444,7 +442,7 @@ ASImage >> putRawByteArray: aCollection [
 	currentAddress := currentAddress + length
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> putRawInt: anInteger [
 	"output in little-endian order"
 
@@ -452,19 +450,19 @@ ASImage >> putRawInt: anInteger [
 	currentAddress := currentAddress + 8
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> putSymbol: aString [
 
 	^ self putRawInt: (self symbol: aString)
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> putUndefinedObject [
 
 	^ self putLiteral: 16rffffffff class: ClassUndefinedObject
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASImage >> symbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
@@ -475,7 +473,7 @@ ASImage >> symbol: aString [
 		  class: ClassSymbol
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> writeClassTable [
 
 	self at: classTableRef put: currentAddress.
@@ -483,7 +481,7 @@ ASImage >> writeClassTable [
 	classes keysDo: [ :key | self put: key ]
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASImage >> writeSymbolTable [
 
 	self at: symbolTableRef put: currentAddress.

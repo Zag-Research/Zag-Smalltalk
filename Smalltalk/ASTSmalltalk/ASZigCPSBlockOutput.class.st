@@ -2,48 +2,46 @@
 I output BlockClosures
 "
 Class {
-	#name : 'ASZigCPSBlockOutput',
-	#superclass : 'ASZigCPSOutput',
+	#name : #ASZigCPSBlockOutput,
+	#superclass : #ASZigCPSOutput,
 	#instVars : [
 		'methodGenerator',
 		'block'
 	],
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-Output'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCPSBlockOutput >> block [
 	^ methodGenerator 	block
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigCPSBlockOutput >> codeGeneratorClass [
 
 	^ ASCodeGeneratorBlock
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASZigCPSBlockOutput >> methodGenerator [
 
 	^ methodGenerator
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCPSBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCPSBlockOutput >> prefix [
 
 	^ 'B'
 ]
 
-{ #category : 'visiting' }
+{ #category : #visiting }
 ASZigCPSBlockOutput >> visitReturnSelf [
 	self nextPutAll: 'RETURNSELF';endStatement 
 ]

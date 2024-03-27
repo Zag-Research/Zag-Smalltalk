@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASZigCPSOutputTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASZigCPSOutputTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_addTwoNumbers [
 
 	| output ast file |
@@ -22,7 +20,7 @@ ASZigCPSOutputTest >> testZig_addTwoNumbers [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_fib [
 
 	| output ast file |
@@ -38,7 +36,7 @@ ASZigCPSOutputTest >> testZig_fib [
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_fib2 [
 
 	| output ast file |
@@ -54,7 +52,7 @@ ASZigCPSOutputTest >> testZig_fib2 [
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_simple1 [
 
 	| output ast file |
@@ -70,7 +68,7 @@ ASZigCPSOutputTest >> testZig_simple1 [
 		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_simpleBlock [
 
 	| output ast file |
@@ -103,7 +101,7 @@ return @call(tailCall, cContext.npc, .{ cContext.tpc, sp_, process, callerContex
 var MsimpleBlock = compileMethod(Sym.i_1,nil,2,.{&@"MsimpleBlock:1",&@"MsimpleBlock:2", });'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_unaries [
 
 	| output ast file |
@@ -117,7 +115,7 @@ ASZigCPSOutputTest >> testZig_unaries [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCPSOutputTest >> testZig_unariesPlus [
 
 	| output ast file |

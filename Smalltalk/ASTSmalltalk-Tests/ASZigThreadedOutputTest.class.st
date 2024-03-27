@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASZigThreadedOutputTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASZigThreadedOutputTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_addComment [
 
 	| output comment |
@@ -17,7 +15,7 @@ ASZigThreadedOutputTest >> testZig_addComment [
 	self assert: output asString equals: ' // ''' , comment , ''''
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 
 	| output ast file |
@@ -35,7 +33,7 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1tail,Sym.@"+",'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_fib [
 
 	| output ast file |
@@ -50,7 +48,7 @@ ASZigThreadedOutputTest >> testZig_fib [
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_fibonacci [
 
 	| output ast file |
@@ -65,7 +63,7 @@ ASZigThreadedOutputTest >> testZig_fibonacci [
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_goTo [
 
 	| output |
@@ -75,7 +73,7 @@ ASZigThreadedOutputTest >> testZig_goTo [
 	self assert: output asString equals: '"hello"'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_prim [
 
 	| output ast file |
@@ -90,7 +88,7 @@ ASZigThreadedOutputTest >> testZig_prim [
 		equals: '&p.p1,":Mprim:1",&e.pushLiteral,False,&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushLabel [
 
 	| output |
@@ -100,7 +98,7 @@ ASZigThreadedOutputTest >> testZig_pushLabel [
 	self assert: output asString equals: '":L1",'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushLiteral [
 
 	| output |
@@ -112,7 +110,7 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 		equals: '&e.pushLiteral,Object.from(10),'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
 	| output |
@@ -122,7 +120,7 @@ ASZigThreadedOutputTest >> testZig_pushReturn [
 	self assert: output asString equals: '&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simple1 [
 
 	| output ast file |
@@ -138,7 +136,7 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 
 	| output ast file |
@@ -154,7 +152,7 @@ ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.drop,&e.returnSelf,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simple2 [
 
 	| output ast file |
@@ -170,7 +168,7 @@ ASZigThreadedOutputTest >> testZig_simple2 [
 		'&e.verifySelector,":Msimple2:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simple2_noreturn [
 
 	| output ast file |
@@ -187,7 +185,7 @@ ASZigThreadedOutputTest >> testZig_simple2_noreturn [
 		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_simpleBlock [
 
 	| output ast file |
@@ -204,7 +202,7 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLocal,0,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",":MsimpleBlock:2",&e.returnTop,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_unaries [
 
 	| output ast file |
@@ -220,7 +218,7 @@ ASZigThreadedOutputTest >> testZig_unaries [
 		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_unariesPlus [
 
 	| output ast file |
@@ -237,7 +235,7 @@ ASZigThreadedOutputTest >> testZig_unariesPlus [
 		'&e.verifySelector,&e.pushContext,"^",":MunariesPlus:1",&e.pushLiteral,Object.from(42),&e.send0,Sym.negated,":MunariesPlus:2",&e.drop,&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":MunariesPlus:3",&e.send0,Sym.i_1,":MunariesPlus:4",&e.pushLiteral,Object.from(42),&e.send1tail,Sym.i_2,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigThreadedOutputTest >> testZig_unaries_notail [
 
 	| output ast file |

@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASMessageT8',
-	#superclass : 'ASMessageT1',
-	#category : 'ASTSmalltalk-Tests-Code',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Code'
+	#name : #ASMessageT8,
+	#superclass : #ASMessageT1,
+	#category : 'ASTSmalltalk-Tests-Code'
 }
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASMessageT8 >> p1 [
 	^ 40008
 ]

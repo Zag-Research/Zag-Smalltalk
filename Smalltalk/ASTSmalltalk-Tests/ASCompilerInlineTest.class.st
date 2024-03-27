@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASCompilerInlineTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASCompilerInlineTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'asserting' }
+{ #category : #asserting }
 ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 
 	| result |
@@ -15,7 +13,7 @@ ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 	self assert: result equals: ast
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASCompilerInlineTest >> testGives43 [
 
 	self

@@ -1,16 +1,14 @@
 Class {
-	#name : 'ASTBlock',
-	#superclass : 'Object',
+	#name : #ASTBlock,
+	#superclass : #Object,
 	#instVars : [
 		'blockNumber',
 		'sequence'
 	],
-	#category : 'ASTSmalltalk-IR',
-	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#category : 'ASTSmalltalk-IR'
 }
 
-{ #category : 'initializing' }
+{ #category : #initializing }
 ASTBlock >> from: anIRSequence [
 
 	blockNumber := anIRSequence orderNumber.

@@ -4,8 +4,8 @@ I implement the generic code for a Smalltalk -> AST compiler.
 I have subclasses to accept various input formats, notably Pharo ASTs and sourcecode
 "
 Class {
-	#name : 'ASCompiler',
-	#superclass : 'Object',
+	#name : #ASCompiler,
+	#superclass : #Object,
 	#instVars : [
 		'classes',
 		'methods',
@@ -22,12 +22,10 @@ Class {
 		'ClassIndices',
 		'ClassMap'
 	],
-	#category : 'ASTSmalltalk-Compiler',
-	#package : 'ASTSmalltalk',
-	#tag : 'Compiler'
+	#category : 'ASTSmalltalk-Compiler'
 }
 
-{ #category : 'class initialization' }
+{ #category : #'class initialization' }
 ASCompiler class >> initialize [
 
 	ClassIndices := #( Object False True UndefinedObject Symbol Character
@@ -47,7 +45,7 @@ ASCompiler class >> initialize [
 			ClassMap at: pharoClass classSide put: class classSide ] ]
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> addClass: aClass [
 
 	| astClass |
@@ -62,13 +60,13 @@ ASCompiler >> addClass: aClass [
 	^ astClass
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> addMethod: method [
 
 		methodsToProcess add: method 
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> buildFromClass: aClass selector: selector [
 
 	visitMessages := true.
@@ -76,30 +74,30 @@ ASCompiler >> buildFromClass: aClass selector: selector [
 	self transitiveClosure
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> buildFromClassShallow: aClass selector: selector [
 	visitMessages := false.
 	self send: selector toClass: aClass.
 	self transitiveClosure
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCompiler >> classes [
 
 	^ classes collect: #instanceSide
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> compileMethod: aCompiledMethod [
 	^ self subclassResponsibility 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCompiler >> definingClass [
 	^ definingClass
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> definingClass: aClass [
 
 	definingClass := aClass.
@@ -108,18 +106,18 @@ ASCompiler >> definingClass: aClass [
 	currentScope := aClass
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCompiler >> definingMethod [
 	^ definingMethod
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> definingMethod: aMethod [
 	definingMethod := aMethod.
 	methods add: aMethod
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> findClass: aClass [
 
 	| astClass |
@@ -132,7 +130,7 @@ ASCompiler >> findClass: aClass [
 	^ astClass
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [
 
 	| savedScope |
@@ -142,7 +140,7 @@ ASCompiler >> inScope: anASMethodOrBlock do: aFullBlockClosure [
 	aFullBlockClosure ensure: [ currentScope := savedScope ]
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASCompiler >> initialize [
 
 	super initialize.
@@ -157,29 +155,29 @@ ASCompiler >> initialize [
 	visitMessages := true.
 ]
 
-{ #category : 'inlining' }
+{ #category : #inlining }
 ASCompiler >> inlineMethods [
 	methods do: [ : aMethod |
 		ASCheckMethodVisitor new visit: aMethod ]
 ]
 
-{ #category : 'inlining' }
+{ #category : #inlining }
 ASCompiler >> inlineTraditionalMethods [
 
 	methods do: [ :aMethod | ASCheckTraditionalMethodVisitor new visit: aMethod ]
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> lookup: aSymbol [
 	^ aSymbol
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCompiler >> methods [
 	^ methods
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> selector: selector fromClass: aClass [
 
 	^ aClass methodDictionary
@@ -190,12 +188,12 @@ ASCompiler >> selector: selector fromClass: aClass [
 				  self selector: selector fromClass: (self addClass: sc) ] ]
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCompiler >> selectors [
 	^ selectors
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> send: selector toClass: aClass [
 	(self selector: selector fromClass: (self addClass: aClass))
 		ifNotNil: [ :method |
@@ -203,38 +201,38 @@ ASCompiler >> send: selector toClass: aClass [
 			self addMethod: method ]
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> sent: selector toBlock: anASBlock [
 
 		self send: selector toClass: BlockClosure 
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> sent: selector toGlobal: string [
 
 		self send: selector toClass: (Smalltalk at: string asSymbol)
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> sent: selector toLiteral: aLiteral [
 
 	self send: selector toClass: aLiteral class
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> sent: selector toSelf: unused [
 
 		self send: selector toClass: definingClass
 ]
 
-{ #category : 'notifying' }
+{ #category : #notifying }
 ASCompiler >> sentToUnknownObject: selector [
 
 	freeSelectors add: selector.
 	classes do: [ : aClass | 	self send: selector toClass: aClass ]
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> transitiveClosure [
 
 	| toProcess |
@@ -247,13 +245,13 @@ ASCompiler >> transitiveClosure [
 		]
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASCompiler >> visitMessages [
 
 	^ visitMessages
 ]
 
-{ #category : 'building' }
+{ #category : #building }
 ASCompiler >> zigString [
 
 	| visitor |

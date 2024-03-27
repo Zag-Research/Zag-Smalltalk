@@ -2,11 +2,9 @@
 I generate runtime threaded code methods
 "
 Class {
-	#name : 'ASRuntimeThreadedOutput',
-	#superclass : 'ASRuntimeOutput',
+	#name : #ASRuntimeThreadedOutput,
+	#superclass : #ASRuntimeOutput,
 	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-Output'
 }

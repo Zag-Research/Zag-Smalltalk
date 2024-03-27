@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASArrayBuildToken',
-	#superclass : 'ASSimple',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASArrayBuildToken,
+	#superclass : #ASSimple,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASArrayBuildToken >> parseWith: anASCompiler [
 	self shouldBeImplemented
 ]

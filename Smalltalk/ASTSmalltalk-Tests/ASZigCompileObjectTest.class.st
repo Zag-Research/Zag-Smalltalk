@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASZigCompileObjectTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASZigCompileObjectTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest class >> writeCompileMethodSmallIntegerMinus [
 	"
 	 + aNumber 
@@ -31,7 +29,7 @@ ASZigCompileObjectTest class >> writeCompileMethodSmallIntegerMinus [
 		file outputTo: stream ]
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest class >> writeCompileMethod_SmallIntegerPlus [
 	"
 	 + aNumber 
@@ -56,7 +54,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_SmallIntegerPlus [
 		file outputTo: stream ]
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest class >> writeCompileMethod_fib [
 
 	<script>
@@ -72,7 +70,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_fib [
 			file outputTo: stream ]
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest class >> writeCompileMethod_foobar [
 	"
 	 + aNumber 
@@ -97,7 +95,7 @@ ASZigCompileObjectTest class >> writeCompileMethod_foobar [
 		file outputTo: stream ]
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
 	"
 	 + aNumber 
@@ -122,7 +120,7 @@ ASZigCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
 		'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,' 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest >> testCompileMethod_fib [
 
 	| ast codeGen file fileString |
@@ -142,7 +140,7 @@ ASZigCompileObjectTest >> testCompileMethod_fib [
 	self assert: (fileString findString: 'ASMethodNode,});') > 0
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest >> testSimpleObjects [
 
 	self assert: 42 zigCGString equals: '42'.
@@ -157,7 +155,7 @@ ASZigCompileObjectTest >> testSimpleObjects [
 	self assert: #foo:bar: zigSLString equals: 'sym.@"foo:bar:"'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigCompileObjectTest >> testVarObjects [
 
 	self assert: (3 @ 4) zigCGString equals: '3,4,":L1",c.Point,'.

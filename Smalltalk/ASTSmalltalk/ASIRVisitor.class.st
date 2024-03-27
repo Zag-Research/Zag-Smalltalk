@@ -1,20 +1,18 @@
 Class {
-	#name : 'ASIRVisitor',
-	#superclass : 'Object',
+	#name : #ASIRVisitor,
+	#superclass : #Object,
 	#instVars : [
 		'compiler'
 	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'ASTSmalltalk-Image'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASIRVisitor class >> compiler: anASPharoCompiler [
 	^ self new compiler: anASPharoCompiler
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASIRVisitor >> compileMethod: aCompiledMethod [ 
 | method |
 	method := (ASPharoVisitor compiler: self) visit: aCompiledMethod ast.
@@ -22,12 +20,12 @@ ASIRVisitor >> compileMethod: aCompiledMethod [
 	^ method
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASIRVisitor >> compiler: anASPharoCompiler [ 
 	compiler := anASPharoCompiler
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASIRVisitor >> visitPushReceiver: anIRPushReceiver [ 
 	self shouldBeImplemented.
 ]

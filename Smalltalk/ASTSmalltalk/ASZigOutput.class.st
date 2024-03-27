@@ -2,43 +2,41 @@
 I create a CompiledMethod in threaded form in Zig syntax.
 "
 Class {
-	#name : 'ASZigOutput',
-	#superclass : 'ASTextOutput',
+	#name : #ASZigOutput,
+	#superclass : #ASTextOutput,
 	#instVars : [
 		'ourObject',
 		'alreadyGenerated',
 		'delayedLabel',
 		'forClass'
 	],
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-Output'
 }
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigOutput >> classListString [
 		^ ''
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigOutput >> comment: aString [
 
 	self nextPutAll: ' // '.
 	aString printOn: self
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigOutput >> forClass [
 
 	^ forClass 
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigOutput >> generateCode [
 	self subclassResponsibility 
 ]
 
-{ #category : 'generation' }
+{ #category : #generation }
 ASZigOutput >> generateCode: anASNode [
 
 	context for: anASNode generatorIs: self.
@@ -48,7 +46,7 @@ ASZigOutput >> generateCode: anASNode [
 	^ self
 ]
 
-{ #category : 'generation' }
+{ #category : #generation }
 ASZigOutput >> generateCode: anASNode for: aClass [
 
 	context for: anASNode generatorIs: self.
@@ -58,12 +56,12 @@ ASZigOutput >> generateCode: anASNode for: aClass [
 	context processComponents
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigOutput >> id: aString [ 
 	mainStream nextPutAll: aString zigName 
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> label: result [
 
 	delayedLabel = result ifFalse: [
@@ -81,7 +79,7 @@ ASZigOutput >> label: result [
 	^ result
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigOutput >> labelRef: aString [
 
 	self
@@ -90,7 +88,7 @@ ASZigOutput >> labelRef: aString [
 		nextPut: $"
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> makeNextLabel [
 
 	label := label + 1.
@@ -100,25 +98,25 @@ ASZigOutput >> makeNextLabel [
 
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> nextLabel [
 
 	^ self label: self makeNextLabel.
 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigOutput >> ourObject [
 
 	^ ourObject 
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> putDirectSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
@@ -128,7 +126,7 @@ ASZigOutput >> putDirectSymbol: aSymbol [
 			mainStream << 'sym.' << aSymbol zigName ]
 ]
 
-{ #category : 'API' }
+{ #category : #API }
 ASZigOutput >> putEmbedded: aString [
 
 	self
@@ -137,12 +135,12 @@ ASZigOutput >> putEmbedded: aString [
 		comma;lf
 ]
 
-{ #category : 'API' }
+{ #category : #API }
 ASZigOutput >> putInteger: anInteger [ 
 	mainStream print: anInteger 
 ]
 
-{ #category : 'API' }
+{ #category : #API }
 ASZigOutput >> putPrimitive: primitiveNumber [
 
 	self
@@ -152,7 +150,7 @@ ASZigOutput >> putPrimitive: primitiveNumber [
 		lf
 ]
 
-{ #category : 'output' }
+{ #category : #output }
 ASZigOutput >> putSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
@@ -164,13 +162,13 @@ ASZigOutput >> putSymbol: aSymbol [
 				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASZigOutput >> refListString [
 self flag: #daniel " what should this returnTop  ".
 ^''
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASZigOutput >> setLiteralString [
 
 	^ String streamContents: [ :s |
@@ -179,12 +177,12 @@ ASZigOutput >> setLiteralString [
 			  separatedBy: [ s nextPut: $, ] ]
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigOutput >> writeDefinitionOn: anObject [
 self subclassResponsibility 
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility

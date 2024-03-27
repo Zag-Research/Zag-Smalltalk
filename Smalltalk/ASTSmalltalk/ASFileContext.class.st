@@ -5,26 +5,24 @@ I provide a context for CodeGenerators. I maintain a collection of them . The co
 
 "
 Class {
-	#name : 'ASFileContext',
-	#superclass : 'Object',
+	#name : #ASFileContext,
+	#superclass : #Object,
 	#instVars : [
 		'components',
 		'pendingComponents',
 		'symbols'
 	],
-	#category : 'ASTSmalltalk-Contexts',
-	#package : 'ASTSmalltalk',
-	#tag : 'Contexts'
+	#category : 'ASTSmalltalk-Contexts'
 }
 
-{ #category : 'components' }
+{ #category : #components }
 ASFileContext >> addComponent: aGenerator [
 
 	pendingComponents add: aGenerator.
 	components add: aGenerator
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASFileContext >> initialize [
 
 	super initialize.
@@ -32,7 +30,7 @@ ASFileContext >> initialize [
 	pendingComponents := OrderedCollection new
 ]
 
-{ #category : 'components' }
+{ #category : #components }
 ASFileContext >> processComponents [
 
 	| temp |

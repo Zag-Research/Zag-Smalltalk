@@ -2,18 +2,16 @@
 for inlining
 "
 Class {
-	#name : 'ASCInlineBlock',
-	#superclass : 'ASCBasicBlock',
+	#name : #ASCInlineBlock,
+	#superclass : #ASCBasicBlock,
 	#instVars : [
 		'primitive',
 		'selector'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCInlineBlock >> locals: locals arguments: arguments [
 
 	stack isEmpty
@@ -23,7 +21,7 @@ ASCInlineBlock >> locals: locals arguments: arguments [
 	locals do: [ :each | self pushParameterNamed: each ]
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASCInlineBlock >> outputTo: output [
 
 	output outputMethodStart: label.
@@ -34,14 +32,14 @@ ASCInlineBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCInlineBlock >> primitive: anInteger selector: aSymbol [
 
 	primitive := anInteger.
 	selector := aSymbol
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCInlineBlock >> selector: aString [ 
 	selector := aString
 ]

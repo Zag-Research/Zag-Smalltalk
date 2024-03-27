@@ -1,15 +1,13 @@
 Class {
-	#name : 'ASSyntax',
-	#superclass : 'ASToken',
+	#name : #ASSyntax,
+	#superclass : #ASToken,
 	#classInstVars : [
 		'classMap'
 	],
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'class initialization' }
+{ #category : #'class initialization' }
 ASSyntax class >> initialize [
 	classMap := {
 			$^ -> ASReturnToken .
@@ -30,7 +28,7 @@ ASSyntax class >> initialize [
 		} asDictionary
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASSyntax class >> with: aCharacterOrString [ 
 	^ (classMap at: aCharacterOrString ifAbsent: [^ self error: 'invalid character sequence: ',aCharacterOrString ]) new value: aCharacterOrString
 ]

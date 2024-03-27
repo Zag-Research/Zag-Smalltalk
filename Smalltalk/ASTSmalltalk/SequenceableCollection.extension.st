@@ -1,6 +1,6 @@
-Extension { #name : 'SequenceableCollection' }
+Extension { #name : #SequenceableCollection }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 SequenceableCollection >> asASSequence [
 	^ ASSequence newFromArray: self
 ]

@@ -7,18 +7,16 @@ However, it's a lot easier to explore and run experiments in Smalltalk.
 Although hashing would likely be somewhat faster, Symbols are allocated in an array (a Rust Vec<Symbol>) and can't be moved once allocated, so a BST makes more sense. Also, while we want it to be fairly fast, it isn't on a critical execution path, really only being used when String>>#asSymbol is called (i.e. when a string has to be 'interned').
 "
 Class {
-	#name : 'ASExploreBST',
-	#superclass : 'Object',
+	#name : #ASExploreBST,
+	#superclass : #Object,
 	#instVars : [
 		'nObjects',
 		'totalDepth'
 	],
-	#category : 'ASTSmalltalk-Tests-Explore',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Explore'
+	#category : 'ASTSmalltalk-Tests-Explore'
 }
 
-{ #category : 'utility' }
+{ #category : #utility }
 ASExploreBST class >> optimalOrder: aCollection [ 
 	| size median |
 	size := aCollection size.
@@ -29,7 +27,7 @@ ASExploreBST class >> optimalOrder: aCollection [
 		(self optimalOrder: (aCollection last: size-median))
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASExploreBST class >> stats [
 	" self stats "
 	| data results |
@@ -44,7 +42,7 @@ ASExploreBST class >> stats [
 	^ results
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASExploreBST class >> statsOn: aClass data: data [
 	| aBST ms |
 	ms := [ aBST := aClass withAll: data ] timeToRun.
@@ -53,7 +51,7 @@ ASExploreBST class >> statsOn: aClass data: data [
 		result),', in ',ms humanReadablePrintString
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASExploreBST >> initialize [
 	super initialize.
 	nObjects := 0.
@@ -61,7 +59,7 @@ ASExploreBST >> initialize [
 
 ]
 
-{ #category : 'statistics' }
+{ #category : #statistics }
 ASExploreBST >> on: tree depth: depth [
 	tree ifNil: [ ^ self ].
 	nObjects := nObjects + 1.
@@ -71,7 +69,7 @@ ASExploreBST >> on: tree depth: depth [
 
 ]
 
-{ #category : 'statistics' }
+{ #category : #statistics }
 ASExploreBST >> result [
 	^ 'average depth: ',(totalDepth/nObjects printShowingDecimalPlaces: 2)
 ]

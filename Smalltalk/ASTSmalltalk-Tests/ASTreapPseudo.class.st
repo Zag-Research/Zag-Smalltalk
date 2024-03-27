@@ -6,23 +6,21 @@ The priority is simply `insertionNumber*1999999973 bitAnd: 16rffffffff` which is
 In experiments this works at least as well as using the system's more sophisticated pseudo-random generator.
 "
 Class {
-	#name : 'ASTreapPseudo',
-	#superclass : 'ASTreap',
+	#name : #ASTreapPseudo,
+	#superclass : #ASTreap,
 	#classInstVars : [
 		'index'
 	],
-	#category : 'ASTSmalltalk-Tests-Explore',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Explore'
+	#category : 'ASTSmalltalk-Tests-Explore'
 }
 
-{ #category : 'random' }
+{ #category : #random }
 ASTreapPseudo class >> random [
 	randomGenerator := randomGenerator + 1.
 	^ randomGenerator*1999999973 bitAnd: 16rffffffff " multiply by a large prime and truncate to 32 bits "
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASTreapPseudo class >> withAll: data [
 	root := nil.
 	randomGenerator := 0.

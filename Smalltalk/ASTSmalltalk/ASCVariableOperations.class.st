@@ -2,17 +2,15 @@
 I am an abstract class for local operations
 "
 Class {
-	#name : 'ASCVariableOperations',
-	#superclass : 'ASCOperations',
+	#name : #ASCVariableOperations,
+	#superclass : #ASCOperations,
 	#instVars : [
 		'variable'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.
@@ -20,12 +18,12 @@ ASCVariableOperations >> inspectZagASTOn: aStream [
 	
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASCVariableOperations >> with: ascVariable [
 	variable := ascVariable
 ]

@@ -2,8 +2,8 @@
 I write out a NaN-encoded image
 "
 Class {
-	#name : 'ASNanImage',
-	#superclass : 'ASImage',
+	#name : #ASNanImage,
+	#superclass : #ASImage,
 	#classVars : [
 		'GroupHeap',
 		'GroupHeapThunk',
@@ -12,12 +12,10 @@ Class {
 		'GroupSmallInt0',
 		'SpecialClassGroups'
 	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'ASTSmalltalk-Image'
 }
 
-{ #category : 'class initialization' }
+{ #category : #'class initialization' }
 ASNanImage class >> initialize [
 
 	GroupImmediates := 16rfff0000000000000.
@@ -33,26 +31,26 @@ ASNanImage class >> initialize [
 		                      asDictionary
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASNanImage >> literal: l class: c [
 
 	^ GroupImmediates + (c bitShift: 32) + l
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASNanImage >> pointer: p class: c [
 
 	SpecialClassGroups at: c ifPresent: [ :aBlock | ^ aBlock value: p ].
 	^ GroupHeap + p
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASNanImage >> putFloat: aFloat [
 
 	^ self putRawInt: ((aFloat at: 1) bitShift: 32) + (aFloat at: 2)
 ]
 
-{ #category : 'adding' }
+{ #category : #adding }
 ASNanImage >> putSmallInteger: anInteger [
 
 	^ self putRawInt: GroupSmallInt0 + anInteger 

@@ -1,33 +1,33 @@
-Extension { #name : 'UndefinedObject' }
+Extension { #name : #UndefinedObject }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> astImageObject: anASImage [
 
 	^ anASImage putUndefinedObject
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> isNonLocalThunkable [ ^ true
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> threadFormatOn: threadPrinter [
 
 	
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> zigCompileObject: aWriteStream [ 
 	aWriteStream nextPutAll: 'Nil'
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 
 	^ nil
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 UndefinedObject >> zigName [
 	^ 'Nil'
 ]

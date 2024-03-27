@@ -1,25 +1,23 @@
 Class {
-	#name : 'ASTJump',
-	#superclass : 'Object',
+	#name : #ASTJump,
+	#superclass : #Object,
 	#instVars : [
 		'destination'
 	],
-	#category : 'ASTSmalltalk-IR',
-	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#category : 'ASTSmalltalk-IR'
 }
 
-{ #category : 'reflective operations' }
+{ #category : #'reflective operations' }
 ASTJump >> doesNotUnderstand: foo [
 	^ 17
 ]
 
-{ #category : 'initializing' }
+{ #category : #initializing }
 ASTJump >> from: anIRJump [ 
 	destination := anIRJump destination
 ]
 
-{ #category : 'thread' }
+{ #category : #thread }
 ASTJump >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: '&p.branch,'.

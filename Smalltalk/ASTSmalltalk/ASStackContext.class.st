@@ -2,41 +2,39 @@
 I am an actual context... I only exist if a context is required for this method
 "
 Class {
-	#name : 'ASStackContext',
-	#superclass : 'ASStackContextPlaceholder',
+	#name : #ASStackContext,
+	#superclass : #ASStackContextPlaceholder,
 	#instVars : [
 		'blocks'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASStackContext >> blocks: aCollection [
 aCollection isCollection ifFalse: [ self halt ].
 	blocks := aCollection
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASStackContext >> from: anASStack [
 
 	rest := anASStack.
 	blocks := #()
 ]
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASStackContext >> initialize [ 
 super initialize .
 blocks := #()
 ]
 
-{ #category : 'API' }
+{ #category : #API }
 ASStackContext >> makeContextRequired [
 ^ self
 ]
 
-{ #category : 'API' }
+{ #category : #API }
 ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	| index |
@@ -50,7 +48,7 @@ ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockS
 		  other: blockOther
 ]
 
-{ #category : 'enumerating' }
+{ #category : #enumerating }
 ASStackContext >> requiredContextDo: aBlock [
  
 	^ aBlock value: self	

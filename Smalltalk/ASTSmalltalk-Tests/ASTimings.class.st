@@ -2,22 +2,20 @@
 I contain several benchmarks to time Zag vs. Pharo
 "
 Class {
-	#name : 'ASTimings',
-	#superclass : 'Object',
+	#name : #ASTimings,
+	#superclass : #Object,
 	#classInstVars : [
 		'stats'
 	],
-	#category : 'ASTSmalltalk-Tests-Timing',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Timing'
+	#category : 'ASTSmalltalk-Tests-Timing'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASTimings class >> stats [
 	^ stats ifNil: [ stats := Dictionary new ]
 ]
 
-{ #category : 'benchmarking' }
+{ #category : #benchmarking }
 ASTimings class >> updateBenchmarks [
 	" self stats removeKey: #fibonacci "
 	<script>
@@ -28,19 +26,19 @@ ASTimings class >> updateBenchmarks [
 	self stats inspect
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> allocate1000Megabytes [
 " a stress test that Pablo cited at ESUG2022 "
 	1 to: 1000 do: [ :e| Array new: 1024*1024 ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> dispatch1 [
 
 	1 to: 1000000000 do: [ :e | (42 + e) yourself ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> dispatch3 [
 
 	1 to: 1000000000 do: [ :e | 
@@ -49,7 +47,7 @@ ASTimings >> dispatch3 [
 			 ifFalse: [ e & 2 = 0 ]) yourself ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> dispatch3b [
 
 	1 to: 1000000000 do: [ :e | 
@@ -58,13 +56,13 @@ ASTimings >> dispatch3b [
 			 ifFalse: [ e & 2 = 0 ]) asInteger ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> fibonacci [
 
 	47 fibonacci
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : #'as yet unclassified' }
 ASTimings >> sieve [
 	100000 benchmark
 ]

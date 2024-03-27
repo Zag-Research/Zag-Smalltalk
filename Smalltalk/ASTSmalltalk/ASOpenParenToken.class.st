@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASOpenParenToken',
-	#superclass : 'ASSimple',
-	#category : 'ASTSmalltalk-Tokens',
-	#package : 'ASTSmalltalk',
-	#tag : 'Tokens'
+	#name : #ASOpenParenToken,
+	#superclass : #ASSimple,
+	#category : 'ASTSmalltalk-Tokens'
 }
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASOpenParenToken >> parseWith: anASCompiler [
 	| result |
 	anASCompiler nextToken. " discard ("

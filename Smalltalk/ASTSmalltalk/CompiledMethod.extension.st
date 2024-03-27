@@ -1,27 +1,27 @@
-Extension { #name : 'CompiledMethod' }
+Extension { #name : #CompiledMethod }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> asAST [
 	^ ASTIrMethod new from: self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> astFields [
 	self halt.
 	^ {  }
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> astImagePut: anASImage [ 
 	^ anASImage objectMethod: self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> astWith: anASPharoCompiler [ 
 	^ anASPharoCompiler compileMethod: self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZagCode [
 
 	<inspectorPresentationOrder: 60 title: 'ZagCode'>
@@ -35,7 +35,7 @@ CompiledMethod >> inspectionZagCode [
 	^ output codeGenerator inspectBasicBlocks
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZagThreadedCode [
 
 	<inspectorPresentationOrder: 63 title: 'ZagThreadedCode'>
@@ -51,7 +51,7 @@ CompiledMethod >> inspectionZagThreadedCode [
 		  yourself
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 CompiledMethod >> inspectionZigAST [
 	<inspectorPresentationOrder: 61 title: 'ZagAST'>
 	^ (ASPharoCompiler new astFor: self) inspectAST

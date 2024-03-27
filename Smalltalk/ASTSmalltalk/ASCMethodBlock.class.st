@@ -4,25 +4,23 @@ I am the first block in a method.
 All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
 "
 Class {
-	#name : 'ASCMethodBlock',
-	#superclass : 'ASCBasicBlock',
+	#name : #ASCMethodBlock,
+	#superclass : #ASCBasicBlock,
 	#instVars : [
 		'primitive',
 		'selector'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'initialization' }
+{ #category : #initialization }
 ASCMethodBlock >> initialize [
 
 	super initialize.
 	self stack: ASEmptyStack new
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASCMethodBlock >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
@@ -31,7 +29,7 @@ ASCMethodBlock >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCMethodBlock >> locals: locals arguments: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
@@ -40,7 +38,7 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 	maxDepth := 0
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASCMethodBlock >> outputTo: output [
 
 	output outputMethodStart: label.
@@ -53,20 +51,20 @@ ASCMethodBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCMethodBlock >> primitive: anInteger [
 
 	primitive := anInteger.
 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCMethodBlock >> pushSelfNamed: selfName [
 
 	stack := self pushParameterNamed: selfName
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASCMethodBlock >> selector: aString [ 
 	selector := aString
 ]

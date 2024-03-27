@@ -6,9 +6,7 @@ whileTrue: and related
 to:by:do:, to:do: and timesRepeat:
 "
 Class {
-	#name : 'ASCheckTraditionalMethodVisitor',
-	#superclass : 'ASCheckMethodVisitor',
-	#category : 'ASTSmalltalk-Compiler',
-	#package : 'ASTSmalltalk',
-	#tag : 'Compiler'
+	#name : #ASCheckTraditionalMethodVisitor,
+	#superclass : #ASCheckMethodVisitor,
+	#category : 'ASTSmalltalk-Compiler'
 }

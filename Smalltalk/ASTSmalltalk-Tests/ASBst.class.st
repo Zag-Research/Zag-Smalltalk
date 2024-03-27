@@ -12,8 +12,8 @@ I look like:
 where all the nodes less than key are in the left BST and all the nodes greater than key are in the right BST.
 "
 Class {
-	#name : 'ASBst',
-	#superclass : 'Object',
+	#name : #ASBst,
+	#superclass : #Object,
 	#instVars : [
 		'key',
 		'left',
@@ -22,12 +22,10 @@ Class {
 	#classInstVars : [
 		'root'
 	],
-	#category : 'ASTSmalltalk-Tests-Explore',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Explore'
+	#category : 'ASTSmalltalk-Tests-Explore'
 }
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASBst class >> withAll: data [
 	root := nil.
 	data do: [: key |
@@ -36,7 +34,7 @@ ASBst class >> withAll: data [
 	^ root
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> insert: anASBst [ 
 	anASBst key < key ifTrue: [
 		left := left insert: anASBst
@@ -45,27 +43,27 @@ ASBst >> insert: anASBst [
 	]
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> key [
 	^ key
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> key: aKey [ 
 	key := aKey
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> left [
 	^ left
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> left: anASTreap [ 
 	left := anASTreap
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASBst >> printOn: aStream [
 	aStream nextPut: $(.
 	key printOn: aStream.
@@ -77,12 +75,12 @@ ASBst >> printOn: aStream [
 
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> right [
 	^ right
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBst >> right: anASTreap [ 
 	right := anASTreap
 ]

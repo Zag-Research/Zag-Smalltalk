@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASZigGeneratorTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASZigGeneratorTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASAssign [
 
 	| result stackVars |
@@ -22,7 +20,7 @@ ASZigGeneratorTest >> testASAssign [
 		equals: '&e.pushLiteral, Object.from(3), &e.popLocal, 1'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlock [
 
 	| result stackVars body args |
@@ -46,7 +44,7 @@ ASZigGeneratorTest >> testASBlock [
 	self assert: result equals: '&e.blockClosure,"@foo:bar:1",1+(3<<16),'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithFalse [
 	| result body |
 	"pushNonlocalBlock_false"
@@ -58,7 +56,7 @@ ASZigGeneratorTest >> testASBlockWithFalse [
 	self assert: result equals: '&e.pushNonlocalBlock_false,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithMinusOne [
 
 	| result body |
@@ -71,7 +69,7 @@ ASZigGeneratorTest >> testASBlockWithMinusOne [
 	self assert: result equals: '&e.pushNonlocalBlock_minusOne,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithNil [
 
 	| result body |
@@ -84,7 +82,7 @@ ASZigGeneratorTest >> testASBlockWithNil [
 	self assert: result equals: '&e.pushNonlocalBlock_nil,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithOne [
 
 	| result body |
@@ -97,7 +95,7 @@ ASZigGeneratorTest >> testASBlockWithOne [
 	self assert: result equals: '&e.pushNonlocalBlock_one,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithSelf [
 
 	| result body stackVariables |
@@ -112,7 +110,7 @@ ASZigGeneratorTest >> testASBlockWithSelf [
 	self assert: result equals: '&e.pushNonlocalBlock_self,1,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithTrue [
 
 	| result body |
@@ -125,7 +123,7 @@ ASZigGeneratorTest >> testASBlockWithTrue [
 	self assert: result equals: '&e.pushNonlocalBlock_true,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithTwo [
 
 	| result body |
@@ -138,7 +136,7 @@ ASZigGeneratorTest >> testASBlockWithTwo [
 	self assert: result equals: '&e.pushNonlocalBlock_two,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASBlockWithZero [
 
 	| result body |
@@ -151,7 +149,7 @@ ASZigGeneratorTest >> testASBlockWithZero [
 	self assert: result equals: '&e.pushNonlocalBlock_zero,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASLiteral [
 
 	| result |
@@ -161,7 +159,7 @@ ASZigGeneratorTest >> testASLiteral [
 	self assert: result equals: '&e.pushLiteral, Object.from(1),'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASMethod [
 
 	| result selector arguments locals string bytes stream value body method |
@@ -193,7 +191,7 @@ var @"Integer>>size" =
 	self assert: stream wrappedStream contents equals: bytes
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASMethodNoBody [
 
 	| result selector arguments locals string bytes stream value method |
@@ -225,7 +223,7 @@ var @"Integer>>size" =
 	self assert: stream wrappedStream contents equals: bytes
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASMethodTrivialReturn [
 
 	| result selector arguments locals string bytes stream value body method |
@@ -260,7 +258,7 @@ var @"Integer>>size" =
 	self assert: stream wrappedStream contents equals: bytes
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASMethodTrivialSend [
 
 	| result arguments locals string bytes stream value body method |
@@ -297,7 +295,7 @@ var @"Integer>>size:" =
 	self assert: stream wrappedStream contents equals: bytes
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASMethodTwoSends [
 
 	| result arguments sendArguments locals string bytes stream value body method |
@@ -339,7 +337,7 @@ var @"Integer>>size:" =
 	self assert: stream wrappedStream contents equals: bytes
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASRef [
 
 	| result stackVars |
@@ -358,7 +356,7 @@ ASZigGeneratorTest >> testASRef [
 	self assert: result equals: '&e.pushLocal, 0,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASReturn [
 
 	| result stackVars |
@@ -374,7 +372,7 @@ ASZigGeneratorTest >> testASReturn [
 		equals: '&e.pushLiteral, Object.from(3),'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASSelf [
 
 	| result stackVars |
@@ -390,7 +388,7 @@ ASZigGeneratorTest >> testASSelf [
 		equals: '&e.pushSelf,'
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASZigGeneratorTest >> testASSend [
 
 	| result stackVars |

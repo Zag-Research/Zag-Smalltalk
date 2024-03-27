@@ -1,6 +1,6 @@
-Extension { #name : 'ByteSymbol' }
+Extension { #name : #ByteSymbol }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 ByteSymbol >> asZigString [
 
 	(self anySatisfy: [ :each |
@@ -9,18 +9,18 @@ ByteSymbol >> asZigString [
 	^ self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 ByteSymbol >> astImageObject: anASImage [
 
 	^ anASImage putSymbol: self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 ByteSymbol >> astObject: anASImage [ 
 	^ self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 ByteSymbol >> writeWithCountOn: aWriteStream [ 
 	self size writeRaw16On: aWriteStream.
 	aWriteStream nextPutAll: self asByteArray.

@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASPharoCompilerProgramTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASPharoCompilerProgramTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest class >> testFooBarIsolated [
 
 	<script>
@@ -22,13 +20,13 @@ ASPharoCompilerProgramTest class >> testFooBarIsolated [
 		writeStreamDo: [ :stream | file outputTo: stream ] 
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 
 	^ ASPharoCompiler new buildFromClass: class selector: method
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 
 	^ ASPharoCompiler new
@@ -36,7 +34,7 @@ ASPharoCompilerProgramTest >> buildFromClassShallow: class selector: method [
 		  selector: method
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASPharoCompilerProgramTest >> buildFromMethods: methods [
 
 	| compiler |
@@ -46,7 +44,7 @@ ASPharoCompilerProgramTest >> buildFromMethods: methods [
 	^ compiler transitiveClosure
 ]
 
-{ #category : 'script' }
+{ #category : #script }
 ASPharoCompilerProgramTest >> codeStart42 [
 	<script>
 	| result |
@@ -56,7 +54,7 @@ ASPharoCompilerProgramTest >> codeStart42 [
 	^ result zigString
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASPharoCompilerProgramTest >> compileMethod: method [
 
 	| compiler |
@@ -66,7 +64,7 @@ ASPharoCompilerProgramTest >> compileMethod: method [
 	^ compiler transitiveClosure
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASPharoCompilerProgramTest >> compileMethodWithInlining: method [
 
 	| compiler |
@@ -76,7 +74,7 @@ ASPharoCompilerProgramTest >> compileMethodWithInlining: method [
 	^ compiler inline
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testAddingTwoNumbers [
 
 	| result aStream |
@@ -90,7 +88,7 @@ ASPharoCompilerProgramTest >> testAddingTwoNumbers [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testAssignment [
 
 	| result aStream |
@@ -103,7 +101,7 @@ ASPharoCompilerProgramTest >> testAssignment [
 	aStream close
 ]
 
-{ #category : 'script' }
+{ #category : #script }
 ASPharoCompilerProgramTest >> testCodeStart42 [
 
 	| result |
@@ -118,7 +116,7 @@ ASPharoCompilerProgramTest >> testCodeStart42 [
 	self assert: result zigString equals: ''
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFib [
 
 	| result |
@@ -133,7 +131,7 @@ ASPharoCompilerProgramTest >> testFib [
 	self assert: result zigString equals: ''
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFibSubset [
 
 	| result methods aStream |
@@ -153,7 +151,7 @@ ASPharoCompilerProgramTest >> testFibSubset [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBar [
 
 	| result aStream |
@@ -166,7 +164,7 @@ ASPharoCompilerProgramTest >> testFooBar [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarInlining [
 
 	| result aStream |
@@ -181,12 +179,12 @@ ASPharoCompilerProgramTest >> testFooBarInlining [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarIsolated [
 	^ self class testFooBarIsolated
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testFooBarSubset [
 
 	| result aStream |
@@ -199,7 +197,7 @@ ASPharoCompilerProgramTest >> testFooBarSubset [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntFib [
 
 	| result aStream |
@@ -212,7 +210,7 @@ ASPharoCompilerProgramTest >> testIntFib [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntFibIsolated [
 
 	| result aStream |
@@ -225,7 +223,7 @@ ASPharoCompilerProgramTest >> testIntFibIsolated [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntbitShiftMagnitude [
 	| result aStream |
 	result := self
@@ -238,7 +236,7 @@ ASPharoCompilerProgramTest >> testIntbitShiftMagnitude [
 	aStream close.
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testIntegerBench [
 
 	| result aStream |
@@ -252,7 +250,7 @@ ASPharoCompilerProgramTest >> testIntegerBench [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testNestedBlocks [
 
 	| result aStream |
@@ -266,7 +264,7 @@ ASPharoCompilerProgramTest >> testNestedBlocks [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testPlusWithLocal [
 
 	| result aStream |
@@ -280,7 +278,7 @@ ASPharoCompilerProgramTest >> testPlusWithLocal [
 	aStream close
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASPharoCompilerProgramTest >> testStart42 [
 
 	| result |

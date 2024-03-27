@@ -1,6 +1,6 @@
-Extension { #name : 'ASLiteralToken' }
+Extension { #name : #ASLiteralToken }
 
-{ #category : '*ASTSmalltalk-Tests' }
+{ #category : #'*ASTSmalltalk-Tests' }
 ASLiteralToken >> baseValue [
 	^ value
 ]

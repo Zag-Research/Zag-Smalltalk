@@ -1,12 +1,12 @@
-Extension { #name : 'Float' }
+Extension { #name : #Float }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Float >> astImageObject: anASImage [
 
 	^ anASImage putFloat: self
 ]
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 Float >> astObject: anASImage [ 
 	^ self
 ]

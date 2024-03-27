@@ -1,12 +1,10 @@
 Class {
-	#name : 'ASSourceCompilerTest',
-	#superclass : 'TestCase',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#name : #ASSourceCompilerTest,
+	#superclass : #TestCase,
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'asserting' }
+{ #category : #asserting }
 ASSourceCompilerTest >> assertEquivalent: anObject [ 
 	| result |
 	result := ASSourceCompiler new statementForTest: anObject printString.
@@ -14,7 +12,7 @@ ASSourceCompilerTest >> assertEquivalent: anObject [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testCascade [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#cascade.
@@ -25,7 +23,7 @@ ASSourceCompilerTest >> testCascade [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testGives43 [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#gives43.
@@ -36,7 +34,7 @@ ASSourceCompilerTest >> testGives43 [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testOr [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#|.
@@ -47,7 +45,7 @@ ASSourceCompilerTest >> testOr [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testOrOr [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#||.
@@ -56,7 +54,7 @@ ASSourceCompilerTest >> testOrOr [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testPlus [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#+.
@@ -65,7 +63,7 @@ ASSourceCompilerTest >> testPlus [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testPlus1 [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#plus1:.
@@ -74,7 +72,7 @@ ASSourceCompilerTest >> testPlus1 [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testPlusAndAnd [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#plus:and:and:.
@@ -83,7 +81,7 @@ ASSourceCompilerTest >> testPlusAndAnd [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testSimple1 [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#simple1.
@@ -92,7 +90,7 @@ ASSourceCompilerTest >> testSimple1 [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testStatements [
 	self assertEquivalent: 42.
 	self assertEquivalent: #hello.
@@ -103,7 +101,7 @@ ASSourceCompilerTest >> testStatements [
 
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASSourceCompilerTest >> testUnaries [
 	| method |
 	method := ASSourceCompiler new compileMethod: ASCompileTestClass1>>#unaries.

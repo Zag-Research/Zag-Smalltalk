@@ -2,28 +2,26 @@
 I represent any literal value.
 "
 Class {
-	#name : 'ASLiteral',
-	#superclass : 'ASExpression',
+	#name : #ASLiteral,
+	#superclass : #ASExpression,
 	#instVars : [
 		'literal'
 	],
-	#category : 'ASTSmalltalk-AST',
-	#package : 'ASTSmalltalk',
-	#tag : 'AST'
+	#category : 'ASTSmalltalk-AST'
 }
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASLiteral class >> literal: aLiteralObject [
 	^ self new literal: aLiteralObject
 ]
 
-{ #category : 'comparing' }
+{ #category : #comparing }
 ASLiteral >> = other [
 
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASLiteral >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream << $(.
@@ -31,54 +29,54 @@ ASLiteral >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASLiteral >> isASLiteral [
 	^true
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASLiteral >> isImmediateThunk [
 ^ true
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASLiteral >> isNonLocalThunkable [
 
 	^ literal isNonLocalThunkable 
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASLiteral >> isSimple [
 	^ literal = true or: (literal = false or: (literal = 1 or: (literal = -1
 	  or: (literal = 0 or: (literal = 2)))))
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASLiteral >> literal [
 
 	^ literal
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASLiteral >> literal: aLiteralObject [
 
 	literal := aLiteralObject
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASLiteral >> printOn: s [
 
 	s << self className << ' literal: '.
 	literal printOn: s
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toLiteral: literal
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASLiteral >> zigWalk: aGenerator [
 
 	^ aGenerator pushLiteral: literal

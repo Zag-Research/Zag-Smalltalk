@@ -2,33 +2,31 @@
 I contain methods that are used as exemplars for tests.
 "
 Class {
-	#name : 'ASCompileTestClass1',
-	#superclass : 'Object',
+	#name : #ASCompileTestClass1,
+	#superclass : #Object,
 	#instVars : [
 		'bar'
 	],
 	#classVars : [
 		'Foo'
 	],
-	#category : 'ASTSmalltalk-Tests-Code',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Code'
+	#category : #'ASTSmalltalk-Tests-Code'
 }
 
-{ #category : 'starting' }
+{ #category : #starting }
 ASCompileTestClass1 class >> start42 [
 
 	^ 42 negated
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> + n1 [
 	| temp |
 	temp := self + n1.
 	^ temp
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> addTwoNumbers [
 
 	| sum foo |
@@ -36,7 +34,7 @@ ASCompileTestClass1 >> addTwoNumbers [
 	^ sum + foo
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> block [
 
 	^ { 
@@ -44,12 +42,12 @@ ASCompileTestClass1 >> block [
 		  4 factorial } collect: [ :each | |temp| temp := each + 5. temp + 3 ]
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> blockReturn: p1 [
 	true ifTrue: [ ^p1 ]
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |
@@ -65,27 +63,27 @@ ASCompileTestClass1 >> cascade [
 		abs
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> classVar [
 
 	^ Foo
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].
 	^ (self fib2: anInt - 1) + self fib2: anInt - 2
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> fib: anInt [
 	^ anInt < 2
 		ifTrue: [1] 
 		ifFalse: [(self fib: anInt-1) + self fib: anInt-2]
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> fibonacci [
 
 	^ self < 2
@@ -93,7 +91,7 @@ ASCompileTestClass1 >> fibonacci [
 		  ifFalse: [ ( self - 1) fibonacci + (self - 2) fibonacci ]
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> foo: p1 bar: p2 [
     | l1 l2 l3 |
     p1 < p2 ifTrue: [ ^ self ].
@@ -106,73 +104,73 @@ ASCompileTestClass1 >> foo: p1 bar: p2 [
     ^ l1
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
 	^ self plus1: (forty2 - 4)
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> instVar [
 
 	^ bar
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> object [
 
 ^ Object new
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> plus1: aNumber [
 	^ aNumber + 1
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
 	^ n1 + n2 + n3
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
 | sum |
 	sum := n1 + n2 + n3.
 	^sum
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> prim [
 	<primitive: 1>
 	^ false
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simple1 [
-	..
-	^ 42..
+	
+	^ 42
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simple1_noreturn [
 
 	 42
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simple2 [
 
 	^ 25 + 17
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simple2_noreturn [
 
 	25 + 17
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> simpleBlock [
 
 	^ [ :each |
@@ -181,7 +179,7 @@ ASCompileTestClass1 >> simpleBlock [
 	  temp + 3 ] value: 42
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> testAssignment [
 
 	| a1 a2 a3 a4 |
@@ -192,26 +190,26 @@ ASCompileTestClass1 >> testAssignment [
 	^ a1 + a2
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> unaries [
 	^ 23 negated abs
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> unariesPlus [
 
 	42 negated. 
 	^ 23 negated abs max: 42
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> | n1 [
 	| temp |
 	temp := self | n1.
 	^ temp
 ]
 
-{ #category : 'testing - examples' }
+{ #category : #'testing - examples' }
 ASCompileTestClass1 >> || n1 [
 	| temp temp2 |
 	temp := temp2 :=self || n1.

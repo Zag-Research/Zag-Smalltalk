@@ -2,25 +2,23 @@
 I compile Smalltalk source from a Tonel file into a class with methods expressed as ASTs
 "
 Class {
-	#name : 'ASSourceCompiler',
-	#superclass : 'ASCompiler',
+	#name : #ASSourceCompiler,
+	#superclass : #ASCompiler,
 	#instVars : [
 		'class',
 		'scope',
 		'aScanner'
 	],
-	#category : 'ASTSmalltalk-Compiler',
-	#package : 'ASTSmalltalk',
-	#tag : 'Compiler'
+	#category : 'ASTSmalltalk-Compiler'
 }
 
-{ #category : 'compilation' }
+{ #category : #compilation }
 ASSourceCompiler >> compileMethod: aMethod [
 	aScanner := ASScanner new scanCode: aMethod sourceCode readStream.
 	^ self compileMethodInClass: (ASClassNode new from: aMethod methodClass)
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASSourceCompiler >> compileMethodInClass: aClass [
 	| selector args method savedScope |
 	args := OrderedCollection new.
@@ -37,12 +35,12 @@ ASSourceCompiler >> compileMethodInClass: aClass [
 	^ method
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASSourceCompiler >> localDefs [
 	aScanner peek defs: self scope: scope.
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASSourceCompiler >> methodBody [
 	| statements |
 	self localDefs.
@@ -55,17 +53,17 @@ ASSourceCompiler >> methodBody [
 	^ statements
 ]
 
-{ #category : 'scanning' }
+{ #category : #scanning }
 ASSourceCompiler >> nextToken [
 	^ aScanner next
 ]
 
-{ #category : 'scanning' }
+{ #category : #scanning }
 ASSourceCompiler >> peek [
 	^ aScanner peek
 ]
 
-{ #category : 'parsing' }
+{ #category : #parsing }
 ASSourceCompiler >> statements: statements [ 
 	| statement |
 	[ statement := aScanner peek statement: self ] whileNotNil: [ statements add: statement ].

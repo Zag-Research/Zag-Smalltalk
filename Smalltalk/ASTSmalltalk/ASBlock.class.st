@@ -4,14 +4,12 @@ I represent a BlockClosure which like a Method except that returns return from t
 Note that this is also an ASExpression although the class taxonomy doesn't reflect it.
 "
 Class {
-	#name : 'ASBlock',
-	#superclass : 'ASMethodOrBlock',
-	#category : 'ASTSmalltalk-AST',
-	#package : 'ASTSmalltalk',
-	#tag : 'AST'
+	#name : #ASBlock,
+	#superclass : #ASMethodOrBlock,
+	#category : 'ASTSmalltalk-AST'
 }
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBlock >> blocks [
 
 	| blocks |
@@ -20,7 +18,7 @@ ASBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBlock >> buildStack [
 	| stackVariables |
 	stackVariables := OrderedCollection new.
@@ -30,24 +28,24 @@ ASBlock >> buildStack [
 	^ stackVariables reverse.
 ]
 
-{ #category : 'testing' }
+{ #category : #testing }
 ASBlock >> isASBlock [
 	^true
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBlock >> maxDepth [
 	^locals size
 ]
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASBlock >> printOn: s [
 
 	s << self className.
 	super printOn: s
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBlock >> selector [
 
 	| size |
@@ -57,7 +55,7 @@ ASBlock >> selector [
 		 size timesRepeat: [ s nextPutAll: 'value:' ] ]) asSymbol
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASBlock >> selectorWithArgs [
 
 	| size |
@@ -71,19 +69,19 @@ ASBlock >> selectorWithArgs [
 			   separatedBy: [ s space ] ]) asSymbol
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASBlock >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
 ]
 
-{ #category : 'codegen' }
+{ #category : #codegen }
 ASBlock >> zigWalk: aGenerator [
 
 	^ aGenerator pushBlock: self
 ]
 
-{ #category : 'codegen' }
+{ #category : #codegen }
 ASBlock >> zigWalkMethod: aGenerator [
 
 	aGenerator
@@ -96,7 +94,7 @@ ASBlock >> zigWalkMethod: aGenerator [
 		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
 ]
 
-{ #category : 'compiling' }
+{ #category : #compiling }
 ASBlock >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.

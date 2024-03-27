@@ -3,14 +3,12 @@ I generate a call to compileObject for a passed object, and include all the obje
 This is primarily oriented to generating ASTs, but it can handle most objects, including Arrays.
 "
 Class {
-	#name : 'ASZigCompileObjectOutput',
-	#superclass : 'ASZigOutput',
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#name : #ASZigCompileObjectOutput,
+	#superclass : #ASZigOutput,
+	#category : 'ASTSmalltalk-Output'
 }
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASZigCompileObjectOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
@@ -18,22 +16,22 @@ ASZigCompileObjectOutput >> generateCode [
 	ourObject zigCompileObject: self
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCompileObjectOutput >> lookupObject: anObject [
 
 	^ context lookupObject: anObject
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCompileObjectOutput >> prefix [ ^ 'Obj'
 ]
 
-{ #category : 'accessing' }
+{ #category : #accessing }
 ASZigCompileObjectOutput >> selector [
 ^ ''
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigCompileObjectOutput >> writeDefinitionOn: stream [
 
 	context writeNewDeclarationFor: self on: stream.
@@ -44,7 +42,7 @@ ASZigCompileObjectOutput >> writeDefinitionOn: stream [
 		lf
 ]
 
-{ #category : 'writing' }
+{ #category : #writing }
 ASZigCompileObjectOutput >> writeInitializationOn: stream [
 
 	stream

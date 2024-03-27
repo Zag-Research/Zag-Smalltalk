@@ -1,16 +1,14 @@
 Class {
-	#name : 'ASINanmageTest',
-	#superclass : 'TestCase',
+	#name : #ASINanmageTest,
+	#superclass : #TestCase,
 	#instVars : [
 		'imageWriter',
 		'minImageSize'
 	],
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#category : 'ASTSmalltalk-Tests-Tests'
 }
 
-{ #category : 'running' }
+{ #category : #running }
 ASINanmageTest >> image: aBlock equals: value [
 
 	| result |
@@ -27,7 +25,7 @@ ASINanmageTest >> image: aBlock equals: value [
 				equals: (value collect: #hexString) ]
 ]
 
-{ #category : 'running' }
+{ #category : #running }
 ASINanmageTest >> setUp [
 
 	super setUp.
@@ -35,7 +33,7 @@ ASINanmageTest >> setUp [
 	ASAllocationInfo reset
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASINanmageTest >> testObjects [
 
 	self
@@ -56,7 +54,7 @@ ASINanmageTest >> testObjects [
 			   16r27730000050009 16rfffc000000000004 16rfffc000000000002 )
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASINanmageTest >> testSimple [
 
 	self image: [ :i | i put: 42 ] equals: 16rfffc00000000002a.
@@ -75,7 +73,7 @@ ASINanmageTest >> testSimple [
 	self image: [ :i | i put: #'==' ] equals: 16rfff0000700000E01
 ]
 
-{ #category : 'tests' }
+{ #category : #tests }
 ASINanmageTest >> testU64From [
 
 	self assert: (self u64From: #[  ]) equals: #(  ).
@@ -88,7 +86,7 @@ ASINanmageTest >> testU64From [
 		equals: #( 16r0807060504030201 16r0605040302010009 16r0807 )
 ]
 
-{ #category : 'running' }
+{ #category : #running }
 ASINanmageTest >> u64From: aByteArray [
 
 	^ ((aByteArray groupsOf: 8) collect: [ :group |

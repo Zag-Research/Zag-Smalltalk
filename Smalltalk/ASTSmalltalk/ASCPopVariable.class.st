@@ -2,14 +2,12 @@
 I remember local pops
 "
 Class {
-	#name : 'ASCPopVariable',
-	#superclass : 'ASCVariableOperations',
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#name : #ASCPopVariable,
+	#superclass : #ASCVariableOperations,
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCPopVariable >> outputTo: anOutput [
 
 	^ variable pop: anOutput

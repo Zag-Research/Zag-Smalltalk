@@ -1,6 +1,6 @@
-Extension { #name : 'IRMethod' }
+Extension { #name : #IRMethod }
 
-{ #category : '*ASTSmalltalk' }
+{ #category : #'*ASTSmalltalk' }
 IRMethod >> inspectionThread [
 
 	<inspectorPresentationOrder: 50 title: 'Thread'>

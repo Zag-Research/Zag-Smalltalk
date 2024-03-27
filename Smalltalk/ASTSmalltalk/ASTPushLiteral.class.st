@@ -1,15 +1,13 @@
 Class {
-	#name : 'ASTPushLiteral',
-	#superclass : 'Object',
+	#name : #ASTPushLiteral,
+	#superclass : #Object,
 	#instVars : [
 		'literal'
 	],
-	#category : 'ASTSmalltalk-IR',
-	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#category : 'ASTSmalltalk-IR'
 }
 
-{ #category : 'initializing' }
+{ #category : #initializing }
 ASTPushLiteral >> from: anIRPushLiteral [ 
 	literal := anIRPushLiteral literal
 ]

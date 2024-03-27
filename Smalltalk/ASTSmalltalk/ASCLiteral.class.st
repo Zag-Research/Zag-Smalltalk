@@ -2,17 +2,15 @@
 I remember literal values to output.
 "
 Class {
-	#name : 'ASCLiteral',
-	#superclass : 'ASCOperations',
+	#name : #ASCLiteral,
+	#superclass : #ASCOperations,
 	#instVars : [
 		'literal'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
-	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#category : 'ASTSmalltalk-CodeGen'
 }
 
-{ #category : 'printing' }
+{ #category : #printing }
 ASCLiteral >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
@@ -21,12 +19,12 @@ ASCLiteral >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'code generation' }
+{ #category : #'code generation' }
 ASCLiteral >> outputTo: output [ 
 	^ output visitPushLiteral: literal
 ]
 
-{ #category : 'instance creation' }
+{ #category : #'instance creation' }
 ASCLiteral >> with: anObject [
 
 	literal := anObject 
