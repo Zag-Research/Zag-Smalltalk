@@ -91,7 +91,8 @@ ASCodeGenerator >> enableInlining [
 
 { #category : 'accessing' }
 ASCodeGenerator >> enclosingScope: aScope [
-	enclosingScope := aScope
+	enclosingScope := aScope.
+	code nonlocalNameLookupObject: aScope
 ]
 
 { #category : 'evaluating' }
@@ -150,7 +151,6 @@ ASCodeGenerator >> initialize [
 
 	super initialize.
 	code := ASCMethodBlock new.
-	code nonlocalNameLookupObject: ASLookup new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -234,8 +234,8 @@ ASCodeGenerator >> output: anASFileContext [
 
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
-aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
-	code nonlocalNameLookupObject: aCodeGenerator]
+
+		parentCodeGenerator := aCodeGenerator
 ]
 
 { #category : 'API' }

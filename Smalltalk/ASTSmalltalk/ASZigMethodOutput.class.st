@@ -35,7 +35,7 @@ ASZigMethodOutput >> codeGenerator [
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
 			                   targetClass: forClass;
-			enclosingScope: parentCodeGenerator ]
+			                   enclosingScope: (self enclosingScope) ]
 ]
 
 { #category : 'code generation' }
@@ -50,6 +50,12 @@ ASZigMethodOutput >> compileBlock: anASCBlock [
 		parentCodeGenerator: codeGenerator;
 		methodGenerator: self methodGenerator block: self blockNumber;
 		generateCode: anASCBlock block for: forClass
+]
+
+{ #category : 'compiling' }
+ASZigMethodOutput >> enclosingScope [
+
+	^ ASEnclosingScope new
 ]
 
 { #category : 'code generation' }

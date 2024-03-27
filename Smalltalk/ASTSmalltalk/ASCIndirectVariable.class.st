@@ -36,7 +36,7 @@ ASCIndirectVariable >> pop: output [
 { #category : 'accessing' }
 ASCIndirectVariable >> push: output [
 
-	^ output visitPushLocalData: self
+	^ output visitPushLocalOrBlock: self
 ]
 
 { #category : 'accessing' }
