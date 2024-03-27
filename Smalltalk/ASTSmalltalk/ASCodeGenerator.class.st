@@ -147,10 +147,10 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'initialization' }
 ASCodeGenerator >> initialize [
-self halt.
+
 	super initialize.
 	code := ASCMethodBlock new.
-	code nonlocalNameLookupObject: self.
+	code nonlocalNameLookupObject: ASLookup new.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.

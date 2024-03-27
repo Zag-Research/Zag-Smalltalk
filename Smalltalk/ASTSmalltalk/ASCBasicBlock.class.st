@@ -150,6 +150,7 @@ ASCBasicBlock >> next [
 
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
+
 	stack nonlocalNameLookupObject: aGenerator
 ]
 
