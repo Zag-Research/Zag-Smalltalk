@@ -109,7 +109,6 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'accessing' }
 ASCodeGenerator >> find: aSymbol [
-
 	| indirect |
 
 	indirect := ASCIndirectVariable new.

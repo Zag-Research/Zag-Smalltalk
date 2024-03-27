@@ -2,7 +2,7 @@
 I create a CompiledMethod in threaded form in Zig syntax.
 "
 Class {
-	#name : 'ASZigOutput',
+	#name : 'ASLlvmTextOutput',
 	#superclass : 'ASTextOutput',
 	#classTraits : '{} + TraitedClass',
 	#instVars : [
@@ -14,24 +14,24 @@ Class {
 }
 
 { #category : 'writing' }
-ASZigOutput >> classListString [
+ASLlvmTextOutput >> classListString [
 		^ ''
 ]
 
 { #category : 'accessing' }
-ASZigOutput >> comment: aString [
+ASLlvmTextOutput >> comment: aString [
 
 	self nextPutAll: ' // '.
 	aString printOn: self
 ]
 
 { #category : 'accessing' }
-ASZigOutput >> id: aString [ 
+ASLlvmTextOutput >> id: aString [ 
 	textStream nextPutAll: aString zigName 
 ]
 
 { #category : 'output' }
-ASZigOutput >> label: result [
+ASLlvmTextOutput >> label: result [
 
 	delayedLabel = result ifFalse: [
 		delayedLabel ifNotNil: [
@@ -49,7 +49,7 @@ ASZigOutput >> label: result [
 ]
 
 { #category : 'accessing' }
-ASZigOutput >> labelRef: aString [
+ASLlvmTextOutput >> labelRef: aString [
 
 	self
 		nextPut: $";
@@ -58,7 +58,7 @@ ASZigOutput >> labelRef: aString [
 ]
 
 { #category : 'output' }
-ASZigOutput >> makeNextLabel [
+ASLlvmTextOutput >> makeNextLabel [
 
 	label := label + 1.
 	^ String streamContents: [ :s |
@@ -68,25 +68,25 @@ ASZigOutput >> makeNextLabel [
 ]
 
 { #category : 'output' }
-ASZigOutput >> nextLabel [
+ASLlvmTextOutput >> nextLabel [
 
 	^ self label: self makeNextLabel.
 
 ]
 
 { #category : 'accessing' }
-ASZigOutput >> ourObject [
+ASLlvmTextOutput >> ourObject [
 
 	^ ourObject 
 ]
 
 { #category : 'output' }
-ASZigOutput >> putClass: aString [ 
+ASLlvmTextOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]
 
 { #category : 'output' }
-ASZigOutput >> putDirectSymbol: aSymbol [
+ASLlvmTextOutput >> putDirectSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
 		ifNotNil: [ :aString | textStream << aString ]
@@ -96,7 +96,7 @@ ASZigOutput >> putDirectSymbol: aSymbol [
 ]
 
 { #category : 'API' }
-ASZigOutput >> putEmbedded: aString [
+ASLlvmTextOutput >> putEmbedded: aString [
 
 	self
 		nextPutAll: '&e.';
@@ -105,12 +105,12 @@ ASZigOutput >> putEmbedded: aString [
 ]
 
 { #category : 'API' }
-ASZigOutput >> putInteger: anInteger [ 
+ASLlvmTextOutput >> putInteger: anInteger [ 
 	textStream print: anInteger 
 ]
 
 { #category : 'API' }
-ASZigOutput >> putPrimitive: primitiveNumber [
+ASLlvmTextOutput >> putPrimitive: primitiveNumber [
 
 	self
 		nextPutAll: '&p.p';
@@ -120,7 +120,7 @@ ASZigOutput >> putPrimitive: primitiveNumber [
 ]
 
 { #category : 'output' }
-ASZigOutput >> putSymbol: aSymbol [
+ASLlvmTextOutput >> putSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
 		ifNotNil: [ :aString | textStream << aString ]
@@ -132,13 +132,13 @@ ASZigOutput >> putSymbol: aSymbol [
 ]
 
 { #category : 'initialization' }
-ASZigOutput >> refListString [
+ASLlvmTextOutput >> refListString [
 self flag: #daniel " what should this returnTop  ".
 ^''
 ]
 
 { #category : 'initialization' }
-ASZigOutput >> setLiteralString [
+ASLlvmTextOutput >> setLiteralString [
 
 	^ String streamContents: [ :s |
 		  symbols
@@ -147,12 +147,12 @@ ASZigOutput >> setLiteralString [
 ]
 
 { #category : 'writing' }
-ASZigOutput >> writeDefinitionOn: anObject [
+ASLlvmTextOutput >> writeDefinitionOn: anObject [
 self subclassResponsibility 
 ]
 
 { #category : 'writing' }
-ASZigOutput >> writeInitializationOn: anObject [
+ASLlvmTextOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility
 ]
