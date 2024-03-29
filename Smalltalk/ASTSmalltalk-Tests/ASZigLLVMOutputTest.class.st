@@ -9,7 +9,7 @@ ASZigLLVMOutputTest >> testLLVMOutput [
 
 	| ast file output |
 	"Creates Zag AST - ASMethodNode"
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib2:.
 	"Convert to LLVM specific context"
 	file := ASZigFileContext new.
 	"Create new instance of generator and set testing inst. var"
