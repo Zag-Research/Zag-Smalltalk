@@ -92,8 +92,7 @@ ASZigCPSOutput >> lVal: aString [
 { #category : 'code generation' }
 ASZigCPSOutput >> outputBasicBlockEnd [
 
-	textStream nextPutAll: '}
-'
+	textStream nextPutAll: '}'
 ]
 
 { #category : 'code generation' }
@@ -114,8 +113,7 @@ ASZigCPSOutput >> outputMethodStart: bbLabel [
 		nextPutAll: 'fn ';
 		id: bbLabel;
 		nextPutAll:
-			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
-'.
+			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {'.
 	currentLVal := nil.
 	lVals := Dictionary new
 ]
@@ -219,9 +217,8 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 
 { #category : 'API' }
 ASZigCPSOutput >> visitPushLocal: anASLocal [
-^
-	self
-		visitPushLocalOrBlock: anASLocal name
+
+	^ self visitPushLocalOrBlock: anASLocal name
 ]
 
 { #category : 'API' }
@@ -315,8 +312,7 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
 		rVal: #sp;
 		nextPutAll: ', process, context, ';
 		putDirectSymbol: aSelector;
-		nextPutAll: ', cache });
-';
+		nextPutAll: ', cache });';
 		flush
 ]
 
