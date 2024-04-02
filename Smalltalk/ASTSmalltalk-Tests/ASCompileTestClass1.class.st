@@ -133,6 +133,11 @@ ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
 	^ n1 + n2 + n3
 ]
 
+{ #category : #'as yet unclassified' }
+ASCompileTestClass1 >> plus: n1 and: n2 and: n3 and:n4 [
+	^ n1 + n2 + n3 + n4
+]
+
 { #category : #'testing - examples' }
 ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
 | sum |
@@ -168,6 +173,11 @@ ASCompileTestClass1 >> simple2 [
 ASCompileTestClass1 >> simple2_noreturn [
 
 	25 + 17
+]
+
+{ #category : #'as yet unclassified' }
+ASCompileTestClass1 >> simple3 [ 
+	^ 25 + 17 + 34
 ]
 
 { #category : #'testing - examples' }
