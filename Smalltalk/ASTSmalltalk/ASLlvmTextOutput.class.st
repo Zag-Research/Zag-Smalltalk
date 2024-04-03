@@ -13,6 +13,11 @@ Class {
 	#tag : 'Output'
 }
 
+{ #category : 'writing' }
+ASLlvmTextOutput >> classListString [
+		^ ''
+]
+
 { #category : 'accessing' }
 ASLlvmTextOutput >> comment: aString [
 
