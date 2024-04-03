@@ -15,7 +15,7 @@ Class {
 
 { #category : 'writing' }
 ASLlvmTextOutput >> classListString [
-	^ ''
+		^ ''
 ]
 
 { #category : 'accessing' }
