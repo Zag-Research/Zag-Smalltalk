@@ -157,9 +157,7 @@ ASImageTest >> testWriteRawOn [
 	self assert: (self array: [: s | 256 writeRawOn: s ]) equals: #(0 1 0 0 0 0 0 0).
 	self assert: (self array: [: s | -256 writeRawOn: s ]) equals: #(0 255 255 255 255 255 255 255).
 	self assert: (self array: [: s | 258*256+3*256+4*256+5*256+6*256+7*256+8 writeRawOn: s ]) equals: #(8 7 6 5 4 3 2 1).
-]
 
-{ #category : 'tests' }
 ASImageTest >> threaded: ast equals: converted [
 
 	| image map |
