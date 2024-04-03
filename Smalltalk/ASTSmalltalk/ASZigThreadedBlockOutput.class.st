@@ -20,11 +20,6 @@ ASZigThreadedBlockOutput >> codeGeneratorClass [
 ]
 
 { #category : 'compiling' }
-ASZigThreadedBlockOutput >> enclosingScope [
-	^parentCodeGenerator
-]
-
-{ #category : 'compiling' }
 ASZigThreadedBlockOutput >> methodGenerator [
 
 	^ methodGenerator

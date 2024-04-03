@@ -21,7 +21,6 @@ ASEmptyStack >> depth [
 ASEmptyStack >> find: aSymbol [
 
 	| stack |
-	
 	stack := ASStackNamedIndirect new
 		         from: self;
 		         name: aSymbol.
