@@ -128,7 +128,7 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 { #category : 'API' }
 ASZigThreadedOutput >> visitPushLocal: anASLocal [
 
-	^ self visitPushLocalOrBlock: anASLocal
+^	self visitPushLocalOrBlock: anASLocal
 ]
 
 { #category : 'API' }
@@ -165,7 +165,7 @@ ASZigThreadedOutput >> visitReturnNil [
 { #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnSelf [
 
-	self putEmbedded: #returnSelf
+		self putEmbedded: #returnSelf
 ]
 
 { #category : 'API' }
