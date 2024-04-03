@@ -25,9 +25,7 @@ const assert = std.debug.assert;
 //const Sym = @import("symbol.zig").symbols;
 pub const Format = enum(u7) {
     immutableSizeZero,
-    indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
-    externalStruct, // this is a big allocated struct, not an Object
-    notIndexable, // this is an Object with no indexable values
+    notIndexable = NumberOfBytes + 1, // this is an Object with no indexable values
     directIndexed,
     indexed,
     indexedNonObject,
@@ -39,13 +37,14 @@ pub const Format = enum(u7) {
     directIndexedWithPointers,
     indexedWithPointers,
     indexedNonObjectWithPointers, // this has no pointers in array portion
+    indexedStruct, // this is an allocated struct, not an Object
+    externalStruct, // this is a big allocated struct, not an Object
     externalWithPointers,
     externalNonObjectWithPointers, // this has no pointers in array portion
     externalWeakWithPointers, // only this and following have weak queue link
     indexedWeakWithPointers,
     _,
     const Self = @This();
-    const pointerOffset = @intFromEnum(Format.notIndexableWithPointers) - @intFromEnum(Format.notIndexable);
     const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
     const MutableOffset = NotObject;
     const NumberOfBytes = 109;
@@ -60,10 +59,9 @@ pub const Format = enum(u7) {
     const LastWeak = @intFromEnum(Format.weakWithPointers);
     const Last = 128;
     comptime {
-        assert(@intFromEnum(Format.notIndexable) == 0x70);
-        assert(@intFromEnum(Format.notIndexableWithPointers) == 0x78);
+        assert(@intFromEnum(Format.notIndexable) == 0x6e);
+        assert(@intFromEnum(Format.notIndexableWithPointers) == 0x76);
         assert(@intFromEnum(Format.indexedWeakWithPointers) == 0x7f);
-        assert(@intFromEnum(Format.externalNonObjectWithPointers) == @intFromEnum(Format.externalNonObject) + pointerOffset);
     }
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
@@ -116,9 +114,6 @@ pub const Format = enum(u7) {
     }
     pub inline fn hasPointers(self: Self) bool {
         return @intFromEnum(self) > LastPointerFree;
-    }
-    pub inline fn withPointers(self: Self) Self {
-        return @enumFromInt(@intFromEnum(self)+pointerOffset);
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
@@ -485,25 +480,12 @@ pub const Age = enum(u4) {
     aooMarked,
     free,
     aooScanned,
-    const marked = 1;
-    const scanned = 2;
-    const markedOrScanned = marked|scanned;
-    comptime {
-        assert(@intFromEnum(Age.static)&scanned != 0);
-        assert(@intFromEnum(Age.aStruct)&scanned != 0);
-        assert(@intFromEnum(Age.free)&scanned != 0);
-        assert(@intFromEnum(Age.global)&markedOrScanned == 0);
-        assert(@intFromEnum(Age.globalMarked)&markedOrScanned == marked);
-        assert(@intFromEnum(Age.globalScanned)&markedOrScanned == markedOrScanned);
-        assert(@intFromEnum(Age.aoo)&markedOrScanned == 0);
-        assert(@intFromEnum(Age.aooMarked)&markedOrScanned == marked);
-        assert(@intFromEnum(Age.aooScanned)&markedOrScanned == markedOrScanned);
-    }
+    const markedBit = 1;
+    const scannedBit = 2;
     const Static: Age = .static;
     // const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub const lastNurseryAge = @intFromEnum(Age.nurseryLast);
-    
     inline fn needsPromotionTo(self: Self, referrer: Self) bool {
         switch (referrer) {
             .onStack => return false,
@@ -561,30 +543,29 @@ pub const Age = enum(u4) {
     pub inline fn isOnStack(self: Self) bool {
         return self == .onStack;
     }
-    pub inline fn needsToBeMarked(self: Self) bool {
-        return @intFromEnum(self)&markedOrScanned == 0 and @intFromEnum(self)>lastNurseryAge;
+    pub inline fn isMarked(self: Self) bool {
+        return switch (self) {
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => true,
+            else => false,
+        };
     }
-    pub inline fn needsToBeScanned(self: Self) bool {
-        return @intFromEnum(self)&scanned == 0;
-    }
-    pub inline fn asMarked(self: Self) Self {
-        // return @enumFromInt(@intFromEnum(self)|marked);
+    pub inline fn marked(self: Self) !Self {
         return switch (self) {
             .global => .globalMarked,
             .aoo => .aooMarked,
-            .globalMarked, .globalScanned, .aooMarked, .aooScanned => @panic("already marked"),
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => error.alreadyMarked,
             else => self,
         };
     }
-    pub inline fn asScanned(self: Self) Self {
-        // return @enumFromInt(@intFromEnum(self)|scanned);
+    pub inline fn scanned(self: Self) !Self {
         return switch (self) {
             .globalMarked => .globalScanned,
             .aooMarked => .aooScanned,
-            .globalScanned, .aooScanned => @panic("already scanned"),
-            else => @panic("not marked"),
+            .globalScanned, .aooScanned => error.alreadyScanned,
+            else => error.notMarked,
         };
     }
+    // Note: assigning a ptr to a scanned object must block for collection
 };
 
 pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge, NeedNurseryCollection };

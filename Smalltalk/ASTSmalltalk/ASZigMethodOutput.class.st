@@ -4,10 +4,16 @@ My subclasses output text versions of methods
 Class {
 	#name : 'ASZigMethodOutput',
 	#superclass : 'ASZigOutput',
-	#classTraits : '{} + TraitedClass',
-	#category : 'ASTSmalltalk-Output',
+	#instVars : [
+		'codeGenerator',
+		'maxDepth',
+		'numLocals',
+		'currentBasicBlock',
+		'parentCodeGenerator'
+	],
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'compiling' }
@@ -90,8 +96,25 @@ ASZigMethodOutput >> outputMethodStart: bbLabel [
 self subclassResponsibility 
 ]
 
+{ #category : 'code generation' }
+ASZigMethodOutput >> outputToStream [ 
+
+self subclassResponsibility 
+]
+
+{ #category : 'accessing' }
+ASZigMethodOutput >> parentCodeGenerator: aCodeGenerator [
+	parentCodeGenerator := aCodeGenerator 
+]
+
 { #category : 'accessing' }
 ASZigMethodOutput >> prefix [ ^ 'M'
+]
+
+{ #category : 'accessing' }
+ASZigMethodOutput >> selector [
+
+	^ codeGenerator selector
 ]
 
 { #category : 'settings' }

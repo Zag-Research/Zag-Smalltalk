@@ -137,34 +137,34 @@ pub const embedded = struct {
     pub fn value(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
         const val = sp.top;
         trace("\nvalue: {}", .{val});
-        switch (val.immediate_class()) {
-            // .heapThunk => sp.top.tag = .heap,
-            // .nonLocalThunk => {
-            //     const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
-            //     const index = val.u() & 7;
-            //     sp.top = nonLocalValues[index];
-            //     trace(" {*} {}", .{ targetContext, index });
-            //     return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector, cache });
-            // },
-            // .numericThunk => {
-            //     if (((val.u() >> 47) & 1) == 0) {
-            //         sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
-            //     } else {
-            //         sp.top = @as(Object, @bitCast(val.u() << 17));
-            //     }
-            // },
-            // .immediateThunk => sp.top.tag = .immediates,
-            // .heapClosure, .nonLocalClosure => {
-            //     const closure = val.to(heap.HeapObjectPtr);
-            //     const method = closure.prev().to(CompiledMethodPtr);
-            //     if (method != &inlines.valueClosureMethod) {
-            //         const newPc = PC.init(method.codePtr());
-            //         context.setReturn(pc);
-            //         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Sym.value, cache });
-            //     }
-            //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
-            //     sp.top = closure.prevPrev();
-            // },
+        switch (val.tag) {
+            .numericThunk => {
+                if (((val.u() >> 47) & 1) == 0) {
+                    sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
+                } else {
+                    sp.top = @as(Object, @bitCast(val.u() << 17));
+                }
+            },
+            .immediateThunk => sp.top.tag = .immediates,
+            .heapThunk => sp.top.tag = .heap,
+            .nonLocalThunk => {
+                const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
+                const index = val.u() & 7;
+                sp.top = nonLocalValues[index];
+                trace(" {*} {}", .{ targetContext, index });
+                return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector, cache });
+            },
+            .heapClosure, .nonLocalClosure => {
+                const closure = val.to(heap.HeapObjectPtr);
+                const method = closure.prev().to(CompiledMethodPtr);
+                if (method != &inlines.valueClosureMethod) {
+                    const newPc = PC.init(method.codePtr());
+                    context.setReturn(pc);
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Sym.value, cache });
+                }
+                if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
+                sp.top = closure.prevPrev();
+            },
             else => {
                 std.debug.print("\nvalue of 0x{x}", .{val});
                 @panic("unknown block type");

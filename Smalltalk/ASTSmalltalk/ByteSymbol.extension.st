@@ -10,9 +10,8 @@ ByteSymbol >> asZigString [
 ]
 
 { #category : '*ASTSmalltalk' }
-ByteSymbol >> astImageObject: anASImage [
-
-	^ anASImage putSymbol: self
+ByteSymbol >> astImageObject: anASImage [ 
+	^ anASImage symbol: self
 ]
 
 { #category : '*ASTSmalltalk' }

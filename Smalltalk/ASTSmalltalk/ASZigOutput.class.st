@@ -4,13 +4,15 @@ I create a CompiledMethod in threaded form in Zig syntax.
 Class {
 	#name : 'ASZigOutput',
 	#superclass : 'ASTextOutput',
-	#classTraits : '{} + TraitedClass',
 	#instVars : [
-		'delayedLabel'
+		'ourObject',
+		'alreadyGenerated',
+		'delayedLabel',
+		'forClass'
 	],
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'writing' }
@@ -26,8 +28,39 @@ ASZigOutput >> comment: aString [
 ]
 
 { #category : 'accessing' }
+ASZigOutput >> forClass [
+
+	^ forClass 
+]
+
+{ #category : 'code generation' }
+ASZigOutput >> generateCode [
+	self subclassResponsibility 
+]
+
+{ #category : 'generation' }
+ASZigOutput >> generateCode: anASNode [
+
+	context for: anASNode generatorIs: self.
+	ourObject := anASNode.
+	alreadyGenerated := false.
+	context processComponents.
+	^ self
+]
+
+{ #category : 'generation' }
+ASZigOutput >> generateCode: anASNode for: aClass [
+
+	context for: anASNode generatorIs: self.
+	ourObject := anASNode.
+	forClass := aClass.
+	alreadyGenerated := false.
+	context processComponents
+]
+
+{ #category : 'accessing' }
 ASZigOutput >> id: aString [ 
-	textStream nextPutAll: aString zigName 
+	mainStream nextPutAll: aString zigName 
 ]
 
 { #category : 'output' }
@@ -89,10 +122,10 @@ self nextPutAll: 'c.';nextPutAll: aString;comma
 ASZigOutput >> putDirectSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
-		ifNotNil: [ :aString | textStream << aString ]
+		ifNotNil: [ :aString | mainStream << aString ]
 		ifNil: [
 				context addSymbol: aSymbol.
-			textStream << 'sym.' << aSymbol zigName ]
+			mainStream << 'sym.' << aSymbol zigName ]
 ]
 
 { #category : 'API' }
@@ -106,7 +139,7 @@ ASZigOutput >> putEmbedded: aString [
 
 { #category : 'API' }
 ASZigOutput >> putInteger: anInteger [ 
-	textStream print: anInteger 
+	mainStream print: anInteger 
 ]
 
 { #category : 'API' }
@@ -123,12 +156,12 @@ ASZigOutput >> putPrimitive: primitiveNumber [
 ASZigOutput >> putSymbol: aSymbol [
 
 	(context predefinedSymbol: aSymbol)
-		ifNotNil: [ :aString | textStream << aString ]
+		ifNotNil: [ :aString | mainStream << aString ]
 		ifNil: [
 			(symbols indexOf: aSymbol ifAbsent: [
 				 symbols add: aSymbol.
 				 context addSymbol: aSymbol.
-				 symbols size ]) printOn: textStream << 'Sym.i_' ]
+				 symbols size ]) printOn: mainStream << 'Sym.i_' ]
 ]
 
 { #category : 'initialization' }
