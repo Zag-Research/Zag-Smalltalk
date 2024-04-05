@@ -3,8 +3,8 @@ I generate runtime compile objects
 "
 Class {
 	#name : 'ASRuntimeOutput',
-	#superclass : 'Object',
-	#category : 'ASTSmalltalk-CodeGen',
+	#superclass : 'ASOutput',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }

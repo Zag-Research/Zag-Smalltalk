@@ -4,7 +4,6 @@ I generate text-based as a sequence of Continuation-Passing-Style Zig function
 Class {
 	#name : 'ASZigCPSOutput',
 	#superclass : 'ASZigMethodOutput',
-	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
 	#instVars : [
 		'auxStream',
@@ -12,9 +11,9 @@ Class {
 		'currentLVal',
 		'lVals'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'compiling' }
@@ -45,7 +44,7 @@ ASZigCPSOutput >> doBasicBlock: bb [
 { #category : 'local variable handling' }
 ASZigCPSOutput >> endStatement [
 
-	mainStream nextPutAll: ';
+	textStream nextPutAll: ';
 '.
 	currentLVal ifNotNil: [
 		lVals at: currentLVal put: currentLVal , '_'.
@@ -93,7 +92,7 @@ ASZigCPSOutput >> lVal: aString [
 { #category : 'code generation' }
 ASZigCPSOutput >> outputBasicBlockEnd [
 
-	mainStream nextPutAll: '}
+	textStream nextPutAll: '}
 '
 ]
 
@@ -358,7 +357,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 		nextPutAll: auxStream contents;
 		nextPutAll: ' });';
 		lf.
-	stream nextPutAll: mainStream contents
+	stream nextPutAll: textStream contents
 ]
 
 { #category : 'writing' }
