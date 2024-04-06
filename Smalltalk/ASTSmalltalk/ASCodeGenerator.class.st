@@ -26,7 +26,7 @@ Class {
 		'blockClosures',
 		'parentCodeGenerator'
 	],
-	#category : 'ASTSmalltalk-CodeGen'
+	#category : #'ASTSmalltalk-CodeGen'
 }
 
 { #category : #enumerating }
@@ -287,6 +287,14 @@ ASCodeGenerator >> pushVariable: variable [
 ASCodeGenerator >> putEmbedded: aSymbol [
 
 	code put: aSymbol
+]
+
+{ #category : #'as yet unclassified' }
+ASCodeGenerator >> returnCode [
+	"comment stating purpose of instance-side method"
+	"scope: class-variables  &  instance-variables"
+
+	^ code.
 ]
 
 { #category : #API }

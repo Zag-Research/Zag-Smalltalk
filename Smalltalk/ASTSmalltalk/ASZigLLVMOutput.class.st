@@ -10,13 +10,11 @@ ASZigLLVMOutput >> endMethod [
 ]
 
 { #category : #'as yet unclassified' }
-ASZigLLVMOutput >> mapLLVMTypeFor: anObject [
+ASZigLLVMOutput >> mapLLVMTypeFor: type [
 	"Maps Pharo datatypes to LLVM's" 
-   | pharoType llvmType |
+   | llvmType |
     
-    pharoType := anObject class.
-    
-    llvmType := pharoType caseOf: {
+    llvmType := type caseOf: {
         [SmallInteger] -> ['i64'].
         [Float] -> ['double'].
         [Boolean] -> ['i1'].
@@ -34,24 +32,34 @@ ASZigLLVMOutput >> outputBasicBlockEnd [
 
 { #category : #'as yet unclassified' }
 ASZigLLVMOutput >> outputLLVMFrom: ascBlock [ 
-	"Assuming we always recevie an ASCMethodBlock"
 	ascBlock outputRestTo: self. 
 ]
 
 { #category : #'code generation' }
 ASZigLLVMOutput >> outputMethodLabel: bbLabel [
 
-	"Not needed.."
+	self
+		nextPutAll: ') { ';
+		nextPutAll: bbLabel asString;
+		nextPutAll: ': '.
+		
+	
 ]
 
 { #category : #'code generation' }
 ASZigLLVMOutput >> outputMethodStart: bbLabel [ 
-	"Not implemented in threaded code generator either"
-	self 
-		nextPutAll: 'define <type> @'.
-		"nextPutAll: bbLabel;"
-		"nextPutAll: '() '" 	
 
+	| type llvmType |	
+	"Geting the type of the top element in the stack"
+	type := self codeGenerator returnCode stack top valueClass.
+	llvmType := self mapLLVMTypeFor: type.
+	
+	self 
+		nextPutAll: 'define ';			
+		nextPutAll: llvmType asString.
+		
+		
+		
 ]
 
 { #category : #'code generation' }
@@ -61,7 +69,7 @@ ASZigLLVMOutput >> outputToStream [
 	"Something--"
 	codeGenerator basicBlocksUnorderedDo: [ :bb |
 		currentBasicBlock := bb.
-		self outputLLVMFrom: currentBasicBlock. ]
+		currentBasicBlock outputTo: self. ]
 	
 ]
 
@@ -70,7 +78,21 @@ ASZigLLVMOutput >> verifySelector: anObject [
 
 	"Does this verify the selector?"
 	self 
-		nextPutAll: anObject.
+		nextPutAll: ' @';
+		nextPutAll: anObject; 
+	"Other args can be added before the '{'"
+		nextPutAll: '('.
+]
+
+{ #category : #API }
+ASZigLLVMOutput >> visitPushContext: aBlock [ 
+	
+	self 
+		nextPutAll: '(';
+		"Insert LLVM arguments here"
+		nextPutAll: ')'. 
+	
+
 ]
 
 { #category : #API }

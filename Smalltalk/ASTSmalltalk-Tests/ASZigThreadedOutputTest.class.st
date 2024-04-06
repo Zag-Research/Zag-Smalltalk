@@ -1,7 +1,7 @@
 Class {
 	#name : #ASZigThreadedOutputTest,
 	#superclass : #TestCase,
-	#category : 'ASTSmalltalk-Tests-Tests'
+	#category : #'ASTSmalltalk-Tests-Tests'
 }
 
 { #category : #tests }
@@ -124,7 +124,8 @@ ASZigThreadedOutputTest >> testZig_pushReturn [
 ASZigThreadedOutputTest >> testZig_simple1 [
 
 	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
+	
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #plus1:.
 	file := ASZigFileContext new.
 	output := ASZigThreadedOutput testing
 		             context: file;
