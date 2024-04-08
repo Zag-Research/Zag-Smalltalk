@@ -137,6 +137,7 @@ pub const embedded = struct {
     pub fn value(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         const val = sp.top;
         trace("\nvalue: {}", .{val});
+
         switch (val.immediate_class()) {
             // .heapThunk => sp.top.tag = .heap,
             // .nonLocalThunk => {

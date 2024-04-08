@@ -20,7 +20,14 @@ ASEmptyStack >> depth [
 { #category : 'accessing' }
 ASEmptyStack >> find: aSymbol [
 
-	^ nonlocalNameLookupObject find: aSymbol
+	| stack |
+	stack := ASStackNamedIndirect new
+		         from: self;
+		         name: aSymbol.
+	stack top: (nonlocalNameLookupObject find: aSymbol).
+	^ stack
+	"
+	^ nonlocalNameLookupObject find: aSymbol"
 ]
 
 { #category : 'instance initialization' }

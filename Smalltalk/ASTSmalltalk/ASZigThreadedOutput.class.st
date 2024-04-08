@@ -4,10 +4,11 @@ I generate text-based code compiled by the `compileMethod` compile-time Zig func
 Class {
 	#name : 'ASZigThreadedOutput',
 	#superclass : 'ASZigMethodOutput',
+	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'compiling' }
@@ -42,6 +43,17 @@ ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 ASZigThreadedOutput >> outputMethodStart: bbLabel [
 
 
+]
+
+{ #category : 'code generation' }
+ASZigThreadedOutput >> outputToStream [
+
+	codeGenerator finalAnalysis.
+	codeGenerator basicBlocksLinearizeDo: [ :bb |
+		currentBasicBlock := bb.
+		maxDepth := maxDepth max: currentBasicBlock maxDepth.
+		currentBasicBlock outputTo: self ].
+	self endMethod
 ]
 
 { #category : 'API' }
@@ -214,7 +226,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 		nextPut: $,;
 		print: maxDepth;
 		nextPutAll: ',.{';
-		nextPutAll: textStream contents;
+		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
 		lf
 ]

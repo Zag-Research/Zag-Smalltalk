@@ -50,6 +50,11 @@ ASCompileTestClass1 >> blockReturn: p1 [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockReturnSelf [
+	true ifTrue: [ ^self ]
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |

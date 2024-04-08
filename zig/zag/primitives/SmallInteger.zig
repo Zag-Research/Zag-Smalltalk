@@ -228,7 +228,7 @@ pub const primitives = struct {
         unreachable;
     }
     pub fn p5(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // SmallInteger>>#<=
-        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).rawU(), selector.rawU() });
+        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u() });
         if (!Sym.@"<=".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });

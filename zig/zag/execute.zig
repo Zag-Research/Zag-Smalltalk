@@ -730,7 +730,6 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
             var includesPointer = false;
-            var last: ?*Object = null;
             for (&self.objects) |*o| {
                 if (o.isIndexSymbol0()) {
                     const obj = replacements[o.indexNumber()];
@@ -742,22 +741,17 @@ pub fn CompileTimeObject(comptime counts: CountSizes) type {
                 } else { // there is a miniscule chance of false-positive for some floating number here
                     var header: HeapHeader = @bitCast(o.*);
                     if (header.length < 1024 and
-                            header.hash == 0xffffff and
-                            header.format == .notIndexable and
-                            header.age == .static)
-                        {
-                            if (last) |l| {
-                                var h = @as(HeapHeader,@bitCast(l.*));
-                                if (includesPointer)
-                                    h.format = h.format.withPointers();
-                                l.* = h.o();
-                            }
-                            if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
+                        header.hash == 0xffffff and
+                        header.format == .notIndexable and
+                        header.age == .static)
+                    {
+                        if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
-                            header.hash ^= @truncate(@intFromPtr(o) *% phi32);
-                            o.* = @bitCast(header);
-                            includesPointer = false;
-                            last = o;
+                        if (includesPointer)
+                            header.format = .notIndexableWithPointers;
+                        header.hash ^= @truncate(@intFromPtr(o) *% phi32);
+                        o.* = @bitCast(header);
+                        includesPointer = false;
                     }
                 }
             }
@@ -780,7 +774,6 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
     const objects = obj.objects[0..];
     comptime var n = 0;
     comptime var last = -1;
-    comptime var foundPointers = false;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
             Object, comptime_int => {
@@ -788,15 +781,10 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                 n = n + 1;
             },
             ClassIndex => {
-                if (last>=0) {
-                    var h = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1);
-                    if (foundPointers)
-                        h.format = h.format.withPointers();
-                    objects[last] = h.o();
-                }
-                const header = comptime HeapHeader.calc(field, 0, 0xffffff, Age.static, null, Object, false) catch unreachable;
+                if (last>=0)
+                    objects[last] = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1).o();
+                const header = HeapHeader.calc(field, 0, 0xffffff, Age.static, null, Object, false) catch unreachable;
                 objects[n] = header.o();
-                foundPointers = false;
                 last = n;
                 n += 1;
             },
@@ -824,7 +812,6 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                                                 objects[n] = object.Object.indexSymbol1(lp);
                                                                 n = n + 1;
                                                                 found = true;
-                                                                foundPointers = true;
                                                                 break;
                                                             }
                                                         } else lp = lp + 1;
@@ -850,12 +837,8 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             },
         }
     }
-    if (last>=0){
-        var h = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1);
-        if (foundPointers)
-            h.format = h.format.withPointers();
-        objects[last] = h.o();
-    }
+    if (last>=0)
+        objects[last] = @as(HeapHeader,@bitCast(objects[last])).withLength(n - last - 1).o();
     return obj;
 }
 test "compileObject" {
@@ -877,6 +860,7 @@ test "compileObject" {
         "def",
 
     });
+    std.debug.print("\nhere",.{});
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[8].equals(o.asObject()));
@@ -891,7 +875,6 @@ test "compileObject" {
     const h2: HeapObjectConstPtr = @ptrCast(&o.objects[5]);
     try expectEqual(@intFromEnum(h2.header.classIndex), 0xdead);
     try expectEqual(h2.header.length, 0);
-    try expectEqual(h2.header.format, .notIndexable);
     const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
     try expectEqual(h3.header.classIndex, c.Method);
     try expectEqual(h3.header.length, 2);

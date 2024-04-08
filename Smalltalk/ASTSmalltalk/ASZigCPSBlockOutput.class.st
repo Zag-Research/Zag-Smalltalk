@@ -8,9 +8,9 @@ Class {
 		'methodGenerator',
 		'block'
 	],
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'accessing' }

@@ -605,7 +605,7 @@ const ObjectFunctions = struct {
                 @panic("format for unknown class");
             },
         };
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.rawU()});
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.u()});
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {

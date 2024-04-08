@@ -3,9 +3,9 @@ I document the API that any outputer needs to be used by ASCodeGenerator
 "
 Trait {
 	#name : 'ASOutputAPI',
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'API' }

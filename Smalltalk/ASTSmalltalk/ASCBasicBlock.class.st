@@ -92,7 +92,7 @@ ASCBasicBlock >> endWithReturnTop [
 { #category : 'accessing' }
 ASCBasicBlock >> find: aSymbol [
 
-	^ stack find: aSymbol
+	^ (stack find: aSymbol) push: aSymbol on: stack
 ]
 
 { #category : 'accessing' }
@@ -150,6 +150,7 @@ ASCBasicBlock >> next [
 
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
+
 	stack nonlocalNameLookupObject: aGenerator
 ]
 
