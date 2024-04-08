@@ -9,6 +9,14 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'accessing' }
+ASCodeGeneratorBlock >> find: aSymbol [
+
+	| indirect |
+	indirect := ASCIndirectVariable new.
+	^ indirect variable: (code find: aSymbol)
+]
+
 { #category : 'API' }
 ASCodeGeneratorBlock >> returnNonLocal [
 	"need to return to the calling context's return"
