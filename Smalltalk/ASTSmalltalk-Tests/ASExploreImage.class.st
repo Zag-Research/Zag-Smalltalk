@@ -129,6 +129,7 @@ ASExploreImage class >> initialize [
 	"compute the frequence of number of operations in a method"
 	Info at: #operationsPerMethodFrequence put: self operationsPerMethod.
 	Info at: #sendsPerMethodFrequence put: self sendsInMethodFrequence.
+	self sendStats.
 	^ Info
 ]
 
@@ -220,6 +221,19 @@ ASExploreImage class >> selectorsInImage [
 ]
 
 { #category : 'private - accessing' }
+ASExploreImage class >> sendStats [
+
+	| methods sendVisitor |
+	<script>
+	methods := ProtoObject withAllSubclasses flatCollect: #methods.
+	sendVisitor := ASSendStatsVisitor new.
+	methods doWithIndex: [ :method :i | sendVisitor visit: method ast ].
+	Info at: #totalSends put: sendVisitor totalSends.
+	Info at: #selfSends  put: sendVisitor selfSends.
+	Info at: #literalSends put: sendVisitor literalSends. 
+]
+
+{ #category : 'private - accessing' }
 ASExploreImage class >> sendsInMethodFrequence [
 
 	| selectorCountDictionary sendDistribution methods sendVisitor |
@@ -241,4 +255,9 @@ ASExploreImage class >> sendsInMethodFrequence [
 					 ifNotNil: [ :value | value + 1 ]) ].
 
 	^ sendDistribution
+]
+
+{ #category : 'accessing' }
+ASExploreImage >> foo [
+	^ self bar: 2 + 3
 ]
