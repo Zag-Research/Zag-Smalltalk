@@ -119,7 +119,7 @@ pub const inlines = struct {
         sp.top = closure.prevPrev();
         @panic("unfinished");
     }
-    fn nonLocalReturn(_: PC, sp: SP, process: *Process, targetContext: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    fn nonLocalReturn(_: PC, sp: SP, process: *Process, targetContext: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         const val = sp.top;
         const result = targetContext.pop(process);
         const newSp = result.sp;
@@ -127,52 +127,53 @@ pub const inlines = struct {
             newSp.top = val;
         const callerContext = result.ctxt;
         trace("-> {any}", .{callerContext.stack(newSp, process)});
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), selector, cache });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
     }
 };
 pub const embedded = struct {
     const fallback = execute.fallback;
     const literalNonLocalReturn = enum(u3) { self = 0, true_, false_, nil, minusOne, zero, one, two };
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
-    pub fn value(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn value(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         const val = sp.top;
         trace("\nvalue: {}", .{val});
-        switch (val.tag) {
-            .numericThunk => {
-                if (((val.u() >> 47) & 1) == 0) {
-                    sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
-                } else {
-                    sp.top = @as(Object, @bitCast(val.u() << 17));
-                }
-            },
-            .immediateThunk => sp.top.tag = .immediates,
-            .heapThunk => sp.top.tag = .heap,
-            .nonLocalThunk => {
-                const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
-                const index = val.u() & 7;
-                sp.top = nonLocalValues[index];
-                trace(" {*} {}", .{ targetContext, index });
-                return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, selector, cache });
-            },
-            .heapClosure, .nonLocalClosure => {
-                const closure = val.to(heap.HeapObjectPtr);
-                const method = closure.prev().to(CompiledMethodPtr);
-                if (method != &inlines.valueClosureMethod) {
-                    const newPc = PC.init(method.codePtr());
-                    context.setReturn(pc);
-                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Sym.value, cache });
-                }
-                if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
-                sp.top = closure.prevPrev();
-            },
+
+        switch (val.immediate_class()) {
+            // .heapThunk => sp.top.tag = .heap,
+            // .nonLocalThunk => {
+            //     const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
+            //     const index = val.u() & 7;
+            //     sp.top = nonLocalValues[index];
+            //     trace(" {*} {}", .{ targetContext, index });
+            //     return @call(tailCall, inlines.nonLocalReturn, .{ pc, sp, process, targetContext, undefined, undefined });
+            // },
+            // .numericThunk => {
+            //     if (((val.u() >> 47) & 1) == 0) {
+            //         sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
+            //     } else {
+            //         sp.top = @as(Object, @bitCast(val.u() << 17));
+            //     }
+            // },
+            // .immediateThunk => sp.top.tag = .immediates,
+            // .heapClosure, .nonLocalClosure => {
+            //     const closure = val.to(heap.HeapObjectPtr);
+            //     const method = closure.prev().to(CompiledMethodPtr);
+            //     if (method != &inlines.valueClosureMethod) {
+            //         const newPc = PC.init(method.codePtr());
+            //         context.setReturn(pc);
+            //         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Sym.value, cache });
+            //     }
+            //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
+            //     sp.top = closure.prevPrev();
+            // },
             else => {
                 std.debug.print("\nvalue of 0x{x}", .{val});
                 @panic("unknown block type");
             },
         }
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
     }
-    pub fn @"value:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn @"value:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         const val = sp.next;
         switch (val.tag) {
             .numericThunk, .immediateThunk, .heapThunk.nonLocalThunk => @panic("wrong number of parameters"),
@@ -187,57 +188,57 @@ pub const embedded = struct {
             },
             else => @panic("not closure"),
         }
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, selector, cache });
+        return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, undefined, undefined });
     }
-    pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         const newSp = inlines.immutableClosure(sp, process);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
     }
-    pub fn generalClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn generalClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const newSp = inlines.generalClosure(sp.drop(), process, sp.top, &mutableContext);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, undefined, undefined });
     }
-    pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const block = pc.indirectLiteral();
         const newSp = inlines.fullClosure(sp, process, block, &mutableContext);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, undefined, undefined });
     }
-    pub fn closureData(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn closureData(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         var mutableContext = context;
         const newSp = inlines.closureData(sp, process, pc[0].uint, &mutableContext);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, selector, cache });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, mutableContext, undefined, undefined });
     }
 
     inline fn nonLocalBlock(sp: SP, tag: literalNonLocalReturn, context: ContextPtr) SP {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         return sp.push(Object.tagged(.nonLocalThunk, @intFromEnum(tag), context.cleanAddress()));
     }
-    pub fn pushNonlocalBlock_self(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .self, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_self(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .self, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_true(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .true_, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_true(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .true_, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_false(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .false_, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_false(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .false_, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_nil(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .nil, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_nil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .nil, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_minusOne(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .minusOne, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_minusOne(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim, .{ pc + 1, nonLocalBlock(sp, .minusOne, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_zero(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim(), .{ pc + 1, nonLocalBlock(sp, .zero, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_zero(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim(), .{ pc + 1, nonLocalBlock(sp, .zero, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_one(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_one(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
         trace("\npushNonLocalBlock_one: {} {x} {x} {}", .{ sp.top, @intFromPtr(sp), @intFromPtr(nonLocalBlock(sp, .one, context)), nonLocalBlock(sp, .one, context).top });
-        return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .one, context), process, context, selector, cache });
+        return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .one, context), process, context, undefined, undefined });
     }
-    pub fn pushNonlocalBlock_two(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc[0].prim(), .{ pc + 1, nonLocalBlock(sp, .two, context), process, context, selector, cache });
+    pub fn pushNonlocalBlock_two(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        return @call(tailCall, pc[0].prim(), .{ pc + 1, nonLocalBlock(sp, .two, context), process, context, undefined, undefined });
     }
 };
 // fn testImmutableClosure(process: *Process, value: Object) !object.Group {
@@ -307,8 +308,8 @@ pub const embedded = struct {
 //     try ee(try testNonlocalClosure(&process, Object.from(1000.3)), .nonLocalClosure);
 // }
 pub const primitives = struct {
-    pub fn p201(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // value
-        if (!Sym.value.selectorEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, selector, cache });
+    pub fn p201(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP { // value
+        if (!Sym.value.selectorEquals(selector)) return @call(tailCall, execute.dnu, .{ pc, sp, process, context, undefined, undefined });
         unreachable;
     }
     pub fn p202(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // value:
