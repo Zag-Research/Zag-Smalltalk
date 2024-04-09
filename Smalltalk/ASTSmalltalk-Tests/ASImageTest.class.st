@@ -124,6 +124,26 @@ ASImageTest >> testRepeatedImage [
 ]
 
 { #category : 'tests' }
+ASImageTest >> testSendCountVisitor [
+
+	| visitor |
+	visitor := ASSendCountVisitor new.
+	visitor visit: (ASCompileTestClass1 >> #fib:) ast.
+	self assert: visitor count equals: 7.
+
+	visitor := ASSendCountVisitor new.
+	visitor visit: (ASCompileTestClass1 >> #foo:bar:) ast.
+	self assert: visitor count equals: 9.
+
+]
+
+{ #category : 'tests' }
+ASImageTest >> testSendsInMethodFrequence [
+
+	ASExploreImage sendsInMethodFrequence 
+]
+
+{ #category : 'tests' }
 ASImageTest >> testWriteRawOn [
 	self assert: (self array: [: s | 1 writeRawOn: s ]) equals: #(1 0 0 0 0 0 0 0).
 	self assert: (self array: [: s | -1 writeRawOn: s ]) equals: #(255 255 255 255 255 255 255 255).

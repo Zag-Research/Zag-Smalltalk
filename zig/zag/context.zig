@@ -91,7 +91,7 @@ pub const Context = struct {
             return contextMutable.push(newerSp, process, method, locals, maxStackNeeded, selfOffset);
         }).unreserve(maxStackNeeded);
         trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
-        trace("\npush: {} sp={*} newSp={*}", .{ method.selector, sp, newSp });
+        trace("\npush: {} sp={*} newSp={*}", .{ method.selector(), sp, newSp });
         const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp.unreserve(1))));
         ctxt.prevCtxt = self;
         ctxt.trapContextNumber = process.trapContextNumber;

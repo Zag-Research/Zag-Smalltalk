@@ -128,6 +128,7 @@ ASExploreImage class >> initialize [
 	Info at: #selectorImplmentationFrequence put: self selectorsInImage.
 	"compute the frequence of number of operations in a method"
 	Info at: #operationsPerMethodFrequence put: self operationsPerMethod.
+	Info at: #sendsPerMethodFrequence put: self sendsInMethodFrequence.
 	^ Info
 ]
 
@@ -153,9 +154,13 @@ ASExploreImage class >> numericPrimitivesInImage [
 ASExploreImage class >> operationsPerMethod [
 	" self numericPrimitivesInImage associations sorted "
 
-	| operationsPerMethod |
+	| operationsPerMethod methods |
 	operationsPerMethod := Array new: 200.
-	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
+	methods := ProtoObject withAllSubclasses flatCollect: #methods.
+	Transcript
+		show: methods size;
+		cr.
+	methods doWithIndex: [
 		:method
 		:i |
 		| numStatements |
@@ -163,8 +168,8 @@ ASExploreImage class >> operationsPerMethod [
 
 		(numStatements isNumber and: numStatements >= 0) ifTrue: [
 			operationsPerMethod
-				at: (numStatements + 1)
-				put: ((operationsPerMethod at: (numStatements + 1))
+				at: numStatements + 1
+				put: ((operationsPerMethod at: numStatements + 1)
 						 ifNil: [ 1 ]
 						 ifNotNil: [ :value | value + 1 ]) ] ].
 	^ operationsPerMethod
@@ -191,9 +196,11 @@ ASExploreImage class >> primitives [
 { #category : 'private - accessing' }
 ASExploreImage class >> selectorsInImage [
 
-	| selectorCountDictionary selectorDistribution |
+	| selectorCountDictionary selectorDistribution methods |
 	selectorCountDictionary := Dictionary new.
-	(ProtoObject withAllSubclasses flatCollect: #methods) doWithIndex: [
+	methods := ProtoObject withAllSubclasses flatCollect: #methods.
+	Transcript show: methods size; cr.
+	methods doWithIndex: [
 		:method
 		:i |
 		selectorCountDictionary
@@ -205,9 +212,33 @@ ASExploreImage class >> selectorsInImage [
 	selectorDistribution := Array new: 1000.
 	selectorCountDictionary keysAndValuesDo: [ :k :v |
 		v > 1000 ifFalse: [
-		selectorDistribution at: v put: ((selectorDistribution at: v)
-				 ifNil: [ 1 ]
-				 ifNotNil: [ :value | value + 1 ]) ]].
+			selectorDistribution at: v put: ((selectorDistribution at: v)
+					 ifNil: [ 1 ]
+					 ifNotNil: [ :value | value + 1 ]) ] ].
 
 	^ selectorDistribution
+]
+
+{ #category : 'private - accessing' }
+ASExploreImage class >> sendsInMethodFrequence [
+
+	| selectorCountDictionary sendDistribution methods sendVisitor |
+	selectorCountDictionary := Dictionary new.
+	methods := ProtoObject withAllSubclasses flatCollect: #methods.
+	sendVisitor := ASSendCountVisitor new.
+	Transcript
+		show: methods size;
+		cr.
+
+	sendDistribution := Array new: 1000.
+	methods doWithIndex: [ :method :i |
+		sendVisitor := ASSendCountVisitor new.
+		sendVisitor visit: method ast.
+		sendDistribution
+			at: (sendVisitor count + 1)
+			put: ((sendDistribution at: (sendVisitor count + 1))
+					 ifNil: [ 1 ]
+					 ifNotNil: [ :value | value + 1 ]) ].
+
+	^ sendDistribution
 ]
