@@ -41,7 +41,8 @@ ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 		print:
 			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
 					 offset withIndex: index ]);
-		comma
+		comma; 
+		lf
 ]
 
 { #category : 'visiting' }
@@ -52,10 +53,11 @@ ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
 		print:
 			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
 					 offset withIndex: index ]);
-		comma
+		comma; 
+		lf
 ]
 
-{ #category : 'visiting' }
+{ #category : 'API' }
 ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [ 
 	"The same logic as our super but for the other case.
 	The other case will be triggered when the variable was not found.
@@ -68,18 +70,21 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 			self
 				putEmbedded: #pushLocal;
 				print: local;
-				comma ]
+				comma; 
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #pushStack;
 				print: offset;
-				comma ]
+				comma; 
+				lf ]
 		other: "The variable is either in our context, or in the closure data" 
 			[ :offsets |
 				self
 				putEmbedded: #pushLocalData;
 				print: (offsets collectWithIndex: [:offset :index | offset withIndex: index ]);
-				comma 
+				comma; 
+				lf 
 			 ]
 ]
 

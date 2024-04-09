@@ -74,7 +74,6 @@ ASTextOutput >> initialize [
 
 { #category : 'printing' }
 ASTextOutput >> lf [
-
 	testing ifFalse: [	mainStream lf]
 ]
 

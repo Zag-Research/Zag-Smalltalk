@@ -35,6 +35,7 @@ ASZigFileContext >> addSymbol: aSymbol [
 
 { #category : 'converting' }
 ASZigFileContext >> asString [
+
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 

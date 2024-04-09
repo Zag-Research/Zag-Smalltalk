@@ -75,7 +75,8 @@ ASZigThreadedOutput >> primitive: anInteger [
 	self
 		nextPutAll: '&p.p';
 		print: anInteger;
-		comma 
+		comma; 
+		lf
 ]
 
 { #category : 'API' }
@@ -84,7 +85,8 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 	self
 		putEmbedded: #pushLocal;
 		print: localNumber;
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'code generation' }
@@ -102,12 +104,14 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 			self
 				putEmbedded: #popLocal;
 				print: local;
-				comma ]
+				comma; 
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #popStack;
 				print: offset;
-				comma ]
+				comma; 
+				lf ]
 		other: nil
 ]
 
@@ -125,7 +129,8 @@ ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
-		comma
+		comma; 
+		lf
 ]
 
 { #category : 'API' }
@@ -134,7 +139,8 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 	self
 		putEmbedded: #pushLiteral;
 		nextPutAll: aLiteral asZigLiteral;
-		comma
+		comma; 
+		lf
 ]
 
 { #category : 'API' }
@@ -152,12 +158,12 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 			self
 				putEmbedded: #pushLocal;
 				print: local;
-				comma ]
+				comma; lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #pushStack;
 				print: offset;
-				comma ]
+				comma; lf ]
 		other: nil
 ]
 
@@ -165,7 +171,8 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 ASZigThreadedOutput >> visitPushNil [
 
 	self putEmbedded: #pushNil;
-		comma
+		comma; 
+		lf
 ]
 
 { #category : 'visiting' }
@@ -193,7 +200,8 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 		putEmbedded: ('send' , aSelector numArgs asString
 			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
 		putSymbol: aSelector;
-		comma
+		comma; 
+		lf
 ]
 
 { #category : 'visiting' }
@@ -205,12 +213,14 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 			self
 				putEmbedded: #storeLocal;
 				print: local;
-				comma ]
+				comma; 
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #storeStack;
 				print: offset;
-				comma ]
+				comma; 
+				lf ]
 		other: nil
 ]
 

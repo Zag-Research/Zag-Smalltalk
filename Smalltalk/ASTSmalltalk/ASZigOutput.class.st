@@ -77,7 +77,8 @@ ASZigOutput >> label: result [
 			nextPutAll: '":';
 			nextPutAll: result;
 			nextPut: $";
-			comma ].
+			comma; 
+			lf ].
 	^ result
 ]
 
@@ -134,12 +135,12 @@ ASZigOutput >> putEmbedded: aString [
 	self
 		nextPutAll: '&e.';
 		nextPutAll: aString;
-		comma;lf
+		comma
 ]
 
 { #category : 'API' }
 ASZigOutput >> putInteger: anInteger [ 
-	mainStream print: anInteger 
+	mainStream print: anInteger
 ]
 
 { #category : 'API' }
@@ -148,8 +149,7 @@ ASZigOutput >> putPrimitive: primitiveNumber [
 	self
 		nextPutAll: '&p.p';
 					print: primitiveNumber;
-		comma;
-		lf
+		comma
 ]
 
 { #category : 'output' }
