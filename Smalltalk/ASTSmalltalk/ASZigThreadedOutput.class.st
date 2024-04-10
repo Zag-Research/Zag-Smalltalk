@@ -66,7 +66,8 @@ ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blo
 		print: blockIndex;
 		nextPutAll: ' << 8), // ';
 		nextPutAll: name;
-		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)'
+		nextPutAll: ' (read-only) copy offset 3 in local 1 (field in BC1)';
+		lf
 ]
 
 { #category : 'writing' }
@@ -84,13 +85,15 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 	self
 		putEmbedded: #pushLocal;
 		print: localNumber;
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'code generation' }
 ASZigThreadedOutput >> verifySelector: anObject [
 
-	self putEmbedded: #verifySelector
+	self putEmbedded: #verifySelector;
+	lf
 ]
 
 { #category : 'API' }
@@ -102,12 +105,14 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 			self
 				putEmbedded: #popLocal;
 				print: local;
-				comma ]
+				comma;
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #popStack;
 				print: offset;
-				comma ]
+				comma;
+				lf ]
 		other: nil
 ]
 
@@ -125,7 +130,8 @@ ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'API' }
@@ -134,7 +140,8 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 	self
 		putEmbedded: #pushLiteral;
 		nextPutAll: aLiteral asZigLiteral;
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'API' }
@@ -152,12 +159,14 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 			self
 				putEmbedded: #pushLocal;
 				print: local;
-				comma ]
+				comma;
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #pushStack;
 				print: offset;
-				comma ]
+				comma;
+				lf ]
 		other: nil
 ]
 
@@ -165,25 +174,29 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 ASZigThreadedOutput >> visitPushNil [
 
 	self putEmbedded: #pushNil;
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnNil [
 
-	self putEmbedded: #returnNil
+	self putEmbedded: #returnNil;
+	lf
 ]
 
 { #category : 'visiting' }
 ASZigThreadedOutput >> visitReturnSelf [
 
-		self putEmbedded: #returnSelf
+		self putEmbedded: #returnSelf;
+		lf
 ]
 
 { #category : 'API' }
 ASZigThreadedOutput >> visitReturnTop [
 
-	self putEmbedded: #returnTop
+	self putEmbedded: #returnTop;
+	lf
 ]
 
 { #category : 'API' }
@@ -193,7 +206,8 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 		putEmbedded: ('send' , aSelector numArgs asString
 			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
 		putSymbol: aSelector;
-		comma
+		comma;
+		lf
 ]
 
 { #category : 'visiting' }
@@ -205,12 +219,14 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 			self
 				putEmbedded: #storeLocal;
 				print: local;
-				comma ]
+				comma;
+				lf ]
 		stack: [ :offset |
 			self
 				putEmbedded: #storeStack;
 				print: offset;
-				comma ]
+				comma;
+				lf ]
 		other: nil
 ]
 
