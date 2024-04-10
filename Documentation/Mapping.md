@@ -158,43 +158,45 @@ There are a number of special length values:
 - 4095 - this isn't a header, it would be an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
 - 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The rest of the original object will be described by a dummy object defined by the next word (a HeapHeader).
 - 0-4093 - normal object 
-Note that the total heap space for an object can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as a remote object.
+Note that the total heap space for an object (including any footer fields) can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as an external object.
 #### Age
-The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap. For global objects, see [MemoryManagement](MemoryManagement.md).
+The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap.
 
-| Value | Meaning | Notes |
-| -- | --- | -- |
-|  0 | on Stack | only Context, or BlockClosure |
-| 1-5 | nursery heap | incremented on each copy |
-|  6 | nursery heap | will be copied to global heap on next collect |
+| Value | Meaning      | Notes                                           |
+| ----- | ------------ | ----------------------------------------------- |
+| 0     | on Stack     | only Context, or BlockClosure                   |
+| 1-5   | nursery heap | incremented on each copy                        |
+| 6     | nursery heap | will be promoted to global heap on next collect |
+| 7-15  | global heap  | see [[MemoryManagement#Object age fields]]      |
 
-Not necessarily just age 6 objects will be copied. While a copy is happening, the space occupied by each age is accumulated, so if more space is required, it knows what ages need to be moved to the global heap.
+Not necessarily just age 6 objects will be copied. While a copy is happening, the space occupied by each age is accumulated, so if more space is required, it knows what ages need to be promoted to the global heap.
 #### Format
 The format field encodes whether there are instance variables, indexable portions, pointers. Ignoring the high bit, which says the object is immutable, the object format tag is coded as follows:
 
-| Value | Name | Meaning |
-| -- | --- | --- |
-| 0 | immutableSizeZero | any empty indexable area |
-| 1-110| | size 1-110 byte arrays |
-| x6f| notObject| allocated Zig struct, not an Object |
-| x70| notIndexable| just instance variables |
-| x71| directIndexed| no index variables |
-| x72| indexed| |
-| x73| indexedNonObject| |
-| x74| external| |
-| x75| externalNonObject| |
-| x76| free | |
-| x77| special| special format: Context, CompiledMethod|
-| x78| notIndexableWithPointers| |
-| x79| directIndexedWithPointers| |
-| x7a| indexedWithPointers| |
-| x7b| indexedNonObjectWithPointers| no pointers in array portion|
-| x7c| externalWithPointers| |
-| x7d| externalNonObjectWithPointers| no pointers in array portion|
-| x7e| externalWeakWithPointers| only this and following have weak queue link|
-| x7f| weakWithPointers| |
+| Value | Name                          | Meaning                                      |
+| ----- | ----------------------------- | -------------------------------------------- |
+| 0     | immutableSizeZero             | any empty indexable area                     |
+| 1-109 |                               | size 1-109 byte arrays                       |
+| x6e   | indexedStruct                 | allocated Zig struct, not an Object          |
+| x6f   | externalStruct                | allocated Zig struct, not an Object          |
+| x70   | notIndexable                  | just instance variables                      |
+| x71   | directIndexed                 | just index variables                         |
+| x72   | indexed                       | has instvars+indexed Objects                 |
+| x73   | indexedNonObject              | has indexed 8/16/32/64-bit non-Objects       |
+| x74   | external                      | has instvars+indexed Objects                 |
+| x75   | externalNonObject             | has indexed 8/16/32/64-bit non-Objects       |
+| x76   | free                          |                                              |
+| x77   | special                       | special format: Context, CompiledMethod      |
+| x78   | notIndexableWithPointers      |                                              |
+| x79   | directIndexedWithPointers     |                                              |
+| x7a   | indexedWithPointers           |                                              |
+| x7b   | indexedNonObjectWithPointers  | no pointers in array portion                 |
+| x7c   | externalWithPointers          |                                              |
+| x7d   | externalNonObjectWithPointers | no pointers in array portion                 |
+| x7e   | externalWeakWithPointers      | only this and following have weak queue link |
+| x7f   | weakWithPointers              |                                              |
 
-The choice of values means that if the value anded with 65 is equal to 65, there are pointers, otherwise not.
+The choice of values means that if the value is greater than x76, there are pointers, otherwise not. All the "WithPointers" versions are a fixed offset from their regular versions, so can be converted easily.
 
 The remaining format bit 7 encodes whether  the object is mutable, so 0 means that any assignments will signal an exception.
 

@@ -26,6 +26,13 @@ ASPharoCompiler >> astFor: aCompiledMethod [
 	^ aCompiledMethod astWith: self
 ]
 
+{ #category : 'building' }
+ASPharoCompiler >> buildFromClass: aClass method: aCompiledMethod [
+	method := aCompiledMethod.
+	contextClass := aClass.
+	methods add: (self compileMethod: method).
+]
+
 { #category : 'compiling' }
 ASPharoCompiler >> compileMethod: aCompiledMethod [
 

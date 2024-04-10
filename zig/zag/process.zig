@@ -132,8 +132,8 @@ pub const Process = extern struct {
     pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
         if (aI.objectSize(@min(HeapHeader.maxLength, nursery_size / 4))) |size| {
-            const result = self.currHp + 1;
-            const newHp = result + size;
+            const result = self.currHp;
+            const newHp = result + size + 1;
             if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
                 const obj: heap.HeapObjectPtr = @ptrCast(result);
@@ -144,8 +144,6 @@ pub const Process = extern struct {
                     .info = aI,
                 };
             }
-        } else |err| {
-            return err;
         }
         return error.NeedNurseryCollection;
     }
@@ -230,13 +228,13 @@ test "nursery allocation" {
     var initialContext = Context.init();
     var mutableContext = &initialContext;
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
-    ar.nilAll();
+    ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
-    ar.nilAll();
+    ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
-    ar.nilAll();
+    ar.initAll();
     const o2 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 18);
     try o1.instVarPut(0, o2.asObject());

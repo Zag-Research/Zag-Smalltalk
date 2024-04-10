@@ -16,6 +16,12 @@ ASStack >> at: aSymbol [
 ]
 
 { #category : 'accessing' }
+ASStack >> atZZZ: aSymbol [
+
+	^ (self find: aSymbol) top
+]
+
+{ #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
@@ -50,6 +56,11 @@ ASStack >> push: anObject [
 	newStack := ASStackElement from: self.
 	newStack top: anObject.
 	^ newStack 
+]
+
+{ #category : 'adding' }
+ASStack >> push: aSymbol on: aStack [
+
 ]
 
 { #category : 'API' }

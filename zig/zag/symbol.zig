@@ -10,8 +10,11 @@ const Treap = @import("utilities.zig").Treap;
 const inversePhi24 = @import("utilities.zig").inversePhi(u24);
 const undoPhi24 = @import("utilities.zig").undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
+pub inline fn fromHash32(hash: u32) object.Object {
+    return object.Object.makeImmediate(.Symbol, hash);
+}
 inline fn symbol_of(index: u24, arity: u8) object.Object {
-    return object.Object.makeImmediate(.Symbol, @as(u32, index *% inversePhi24) << 8 | arity);
+    return fromHash32(@as(u32, index *% inversePhi24) << 8 | arity);
 }
 pub inline fn symbol0(index: u24) object.Object {
     return symbol_of(index, 0);

@@ -10,12 +10,12 @@ Class {
 	#classVars : [
 		'Predefined'
 	],
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'compiling' }
 ASZigSymbols class >> initialize [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
 
@@ -30,25 +30,25 @@ ASZigSymbols class >> initialize [
 	   #'\\' whileTrue: Object ) asSet
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'adding' }
 ASZigSymbols >> add: aSymbol [
 
 	runtimeDefined add: aSymbol
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'initialization' }
 ASZigSymbols >> initialize [ 
 	super initialize .
 	runtimeDefined := Set new
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
 ASZigSymbols >> predefinedSymbol: aSymbol [
 
 	^ (Predefined includes: aSymbol) ifTrue: [ 'Sym.' , aSymbol zigName ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
 ASZigSymbols >> printable: aSymbol [
 
 	^ (self predefinedSymbol: aSymbol) ifNotNil: [ :s | s ] ifNil: [
@@ -56,7 +56,7 @@ ASZigSymbols >> printable: aSymbol [
 		  'sym.' , aSymbol zigName ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'writing' }
 ASZigSymbols >> writeDefinitionOn: stream [
 
 	| syms n |
@@ -103,7 +103,7 @@ ASZigSymbols >> writeDefinitionOn: stream [
 '
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'writing' }
 ASZigSymbols >> writeInitializationOn: stream [
 
 	stream nextPutAll: '    sym = Sym.init();

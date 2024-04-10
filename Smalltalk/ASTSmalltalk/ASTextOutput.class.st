@@ -16,16 +16,18 @@ There will be a runtime code generator written in Zig that will generate threade
 "
 Class {
 	#name : 'ASTextOutput',
-	#superclass : 'ASOutput',
+	#superclass : 'Object',
 	#instVars : [
+		'mainStream',
 		'symbols',
 		'label',
+		'testing',
 		'componentName',
-		'textStream'
+		'context'
 	],
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'CodeGen'
 }
 
 { #category : 'printing' }
@@ -36,17 +38,24 @@ ASTextOutput class >> testing [
 
 { #category : 'converting' }
 ASTextOutput >> asString [
-	^ textStream contents
+	^ mainStream contents
 ]
 
 { #category : 'printing' }
 ASTextOutput >> comma [
 
-	textStream nextPut: $,
+	mainStream nextPut: $,
 ]
 
 { #category : 'accessing' }
 ASTextOutput >> comment: aString [
+]
+
+{ #category : 'accessing' }
+ASTextOutput >> context: anASFileContext [
+
+	context := anASFileContext.
+	anASFileContext addComponent: self
 ]
 
 { #category : 'completion' }
@@ -57,15 +66,16 @@ ASTextOutput >> finished [
 ASTextOutput >> initialize [
 
 	super initialize.
-	textStream := '' writeStream.
+	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
-	label := 0
+	label := 0.
+	testing := false
 ]
 
 { #category : 'printing' }
 ASTextOutput >> lf [
 
-	testing ifFalse: [	textStream lf]
+	testing ifFalse: [	mainStream lf]
 ]
 
 { #category : 'accessing' }
@@ -77,12 +87,12 @@ ASTextOutput >> name [
 
 { #category : 'printing' }
 ASTextOutput >> nextPut: aCharacter [ 
-	textStream nextPut: aCharacter
+	mainStream nextPut: aCharacter
 ]
 
 { #category : 'printing' }
 ASTextOutput >> nextPutAll: aString [ 
-	textStream nextPutAll: aString
+	mainStream nextPutAll: aString
 ]
 
 { #category : 'accessing' }
@@ -94,13 +104,18 @@ ASTextOutput >> prefix [
 { #category : 'accessing' }
 ASTextOutput >> print: anObject [
 
-	textStream print: anObject
+	mainStream print: anObject
+]
+
+{ #category : 'accessing' }
+ASTextOutput >> selector [
+	self subclassResponsibility 
 ]
 
 { #category : 'printing' }
 ASTextOutput >> tab [
 
-	testing ifFalse: [ textStream tab ]
+	testing ifFalse: [ mainStream tab ]
 ]
 
 { #category : 'printing' }

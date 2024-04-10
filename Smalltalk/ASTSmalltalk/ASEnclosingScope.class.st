@@ -1,8 +1,8 @@
 "
-I generate runtime compile objects
+I know how to lookup class and global variables.
 "
 Class {
-	#name : 'ASRuntimeOutput',
+	#name : 'ASEnclosingScope',
 	#superclass : 'Object',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',

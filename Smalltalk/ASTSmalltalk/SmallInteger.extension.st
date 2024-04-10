@@ -12,9 +12,8 @@ SmallInteger >> asZigLiteral [
 ]
 
 { #category : '*ASTSmalltalk' }
-SmallInteger >> astImageObject: anASImage [
-
-	^ anASImage putSmallInteger: self
+SmallInteger >> astImageObject: anASImage [ 
+	^ anASImage literal: self class: 5
 ]
 
 { #category : '*ASTSmalltalk' }
@@ -26,4 +25,11 @@ SmallInteger >> astObject: anASImage [
 SmallInteger >> isNonLocalThunkable [
 
 	^ self between: -1 and: 2
+]
+
+{ #category : '*ASTSmalltalk' }
+SmallInteger >> withIndex: anIndex [
+	(anIndex == 1) ifTrue: [ ^ self asString ] ifFalse: [ ^ ' + ( ', self asString, ' << ', (12* (anIndex-1)) asString, ' )' ]
+
+	
 ]

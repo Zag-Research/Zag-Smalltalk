@@ -15,19 +15,19 @@ AST Smalltalk has several features that minimize the amount of work required by 
 - all execution stacks and code addresses are outside the range of valid heap pointers, so by being careful to never save anything in a stack frame that looks like a heap reference, no scanning is required for the stacks;
 - scanning for roots can proceed very quickly (a single comparison filters all non-heap values);
 - the format of indexable objects encodes if they are pointer-free, so don't need to be scanned;
-- each thread has its own nursery heap, so there is no contention on allocation or nursery collection;
+- each process has its own nursery heap, so there is no contention on allocation or nursery collection;
 - the list of weak objects that must be scanned at the end of the collection is outside the heap.
 
 ## Heap structure
 
-The heap is structured as per-execution-thread arenas (accessible only by the execution thread itself) and a global arena accessible by all threads.
+The heap is structured as per-process arenas (accessible only by the execution proccess itself) and a global arena accessible by all processes.
 
-## Per-Thread Arenas
-Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are thread-private, there is no locking required for allocation in the nursery arena, nor for collection.
+## Per-Process Arenas
+Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are process-private, there is no locking required for allocation in the nursery arena, nor for collection.
 
 The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack and current context.
 
-If, for an allocation in the nursery, there is not enough free space in the current arena, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a thread, so no locks are required. The actual collection is done with a copying collector as much of the content is likely garbage.
+If, for an allocation in the nursery, there is not enough free space in the current arena, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a proccess, so no locks are required. The actual collection is done with a copying collector as much of the content is likely garbage.
 
 ### Stack of Contexts
 The execution stack is allocated in the stack area of each Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
@@ -36,11 +36,11 @@ The stack pointer points to the top of the working stack. If the sender's contex
 
 On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
 ### Copying Collector
-Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-thread arena, where no locks are required. This is why Zag uses this for per-thread arenas.
+Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-process arena, where no locks are required. This is why Zag uses this for per-process arenas.
 
 ## Global Arena
 The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery arena, so such objects must be promoted to the GlobalArena. There are several sources of this data:
-1. promotions from thread arenas
+1. promotions from process arenas
 2. the symbol table
 3. the strings that have the representation of symbols
 4. dispatch tables & generated code (threaded and native execution)
@@ -52,29 +52,30 @@ The GlobalArena is the eventual repository for all live data. One invariant is t
 Roots for the GlobalArena include:
 1. the symbol table reference
 2. the class table reference
-3. roots from all threads
+3. roots from all processes
 4. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
 
-If you have an arena that is accessible to multiple threads, then moving becomes a big deal - you'd have to stop all threads to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
+If you have an arena that is accessible to multiple processes, then moving becomes a big deal - you'd have to stop all processes to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
 
-The Global Arena uses a non-moving mark and sweep collector. There is a dedicated thread that periodically does a garbage collect.
+The Global Arena uses a non-moving mark and sweep collector. There is a dedicated OS thread that periodically does a garbage collect.
 
 When promoting an object to the global arena or creating a new object in the global arena if the global collector is currently marking, the age will be set to marked and scanned, otherwise it will be set to unmarked.
 
 #### Object age fields
 The age field for global objects is as follows:
 
-| Value | Meaning | Notes |
-| -- | --- | -- |
-| 7 | static | outside the stack or any heap|
-| 8 | global | |
-| 9 | global, marked as reachable | |
-| 10 | a Zig struct | ignored by GC |
-| 11 | global, already scanned | |
-| 12 | AoO | |
-| 13 | AoO, marked as reachable | |
-| 14 | free | part of a free list |
-| 15 | AoO, already scanned | |
+| Value | Meaning                     | Notes                         |
+| ----- | --------------------------- | ----------------------------- |
+| 0-6   | stack or per-process-heap   | see [[Mapping#Age]]           |
+| 7     | static                      | outside the stack or any heap |
+| 8     | global                      |                               |
+| 9     | global, marked as reachable |                               |
+| 10    | a Zig struct                | ignored by GC                 |
+| 11    | global, already scanned     |                               |
+| 12    | AoO                         |                               |
+| 13    | AoO, marked as reachable    |                               |
+| 14    | free                        | part of a free list           |
+| 15    | AoO, already scanned        |                               |
 The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots, whereas struct is just an arbitration Zig allocation. The global arena maintains a Zig Allocator structure so that any Zig allocations are handled within our space.
 
 AoO objects are objects within [[MemoryManagement#Array of Objects]].
@@ -84,20 +85,20 @@ Static objects are only scanned once per garbage collection.
 Because the global arena is non-moving, it can be used as a Zig Allocator, which means no other allocator is required. Objects allocated this way are marked with a Struct age. When free'd, they are marked with a Free age.
 
 ### Heap object structure
-All objects are allocated with the data preceded by a header. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field capturers the entire size of the in-heap object. If the object contains both slots and index fields, then the end of the object allocation will be a slice for the array, preceded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area), preceded by the slots. If there are no indexable fields, the slice won't be included.
+All objects are allocated with the data preceded by a header. As all global objects are allocated on a power-of-2 boundary up to page-size (at least 512 and more likely 4096), this means that all fields will be on the appropriate address boundary. The length field captures the entire size of the in-heap object. If the object contains both slots and index fields, then the end of the object allocation will be a slice for the array, preceded by the array contents (if they fit within an in-heap object, else the slice will point to the mega-object area), preceded by the slots. If there are no indexable fields, the slice won't be included.
 
-There are special cases for objects with a small number of indexable fields (0-62 bytes or 0-51 objects) (See [[Mapping#Format]])
+There are special cases for objects with a small number of indexable fields (0-109 bytes or 0 anything) (See [[Mapping#Format]])
 
 ## Global Arena Structure
 The Global Arena uses a binary heap.
 #### Free-space allocation
 Free-space is split up into power-of-2-sized pieces and put on the appropriate queue:
 - all allocations are on power-of-2 boundaries; hence small objects will never span 2 cache-lines. A flag can be set so no list for values smaller than a cache-line is maintained, in which case no cache line would contain multiple objects. This can reduce cache thrashing between threads/cores. Thanks to [Peter Lount](https://www.linkedin.com/in/peterlount/) for pointing out [the potential bad behaviour on multi-threaded access](https://en.algorithmica.org/hpc/cpu-cache/cache-lines/). 
-- 1-word free-space is not allocated on any queue. A 0-length object (i.e. just the header word) is stored.
-- Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate queue, and loop to allocate the rest.
+- 1-word free-space is not allocated on any queue. A 0-length free object (i.e. just the header word) is stored.
+- Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate list, and loop to allocate the rest.
 
 #### Allocation
-Allocation simply requires finding the enclosing power of 2, then taking the next block off that queue. This is done without a lock. If the appropriate queue is empty, then a value is requested off the next queue (which may also be empty which will request the next...). Once a value is found from the next queue, it is split in 2, with one of the resulting blocks prepended to its queue, and the other one being returned to the requestor. If the largest queue is empty, another block is allocated from the operating system.
+Allocation simply requires finding the enclosing power of 2, then taking the next block off that list. This is done without a lock. If the appropriate list is empty, then a value is requested off the next list (which may also be empty which will request the next...). Once a value is found from the next list, it is split in 2, with one of the resulting blocks prepended to its list, and the other one being returned to the requestor. If the list of the largest size is empty, another block is allocated from the operating system.
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory fragmentation. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
@@ -107,9 +108,9 @@ The objects with large allocations are linked together so that at the start of t
 ## `become:` `becomeForward:` `elementsForwardIdentityTo:` and `elementsExchangeIdentityWith:`
 The become instruction swaps the two heap-objects, so that all existing references to object A reference object B and all existing references to object B reference object A. In the original Smalltalk an object table was used to allow objects to be moved around (a compacting collector) and so `become` was simply a swap of the two pointers. It's hard to do this cheaply if you don't have an object table. See [Gilad Bracha's comments](https://gbracha.blogspot.com/2009/07/miracle-of-become.html)
 
-We have a compile-time (of the runtime) flag to support or not support forwarding pointers in the global heap (because it slows down many operations) which, by implication, also controls the `become:` cases in the global arena other than number 1. In the nursery they are OK, because nurseries are small, the `become:` only affects one process, and we immediately do a nursery collect.
+We have a compile-time (of the runtime) flag to support or not support forwarding (because it slows down many operations) which, by implication, also controls the `become:` cases in the global arena other than number 1. In the nursery they are OK, because nurseries are small, the `become:` only affects one process, and we immediately do a nursery collect.
 
-There is a complex approach that we considered, but full  `become:` is rare enough, and the size of in-heap portion of objects is bounded, so we instead take a simpler approach, which has 4 cases (after promoting a thread-local object if the other one is global):
+There is a complex approach that we considered, but full  `become:` is rare enough, and the size of in-heap portion of objects is bounded, so we instead take a simpler approach, which has 4 cases (after promoting a process-local object if the other one is global):
 1. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
 2. if it's a forwarding become, the source header is replaced with with a simple forwarding pointer.
 3. if both are forwarding pointers, we just swap those (after swapping the hashes)
@@ -118,7 +119,7 @@ There is a complex approach that we considered, but full  `become:` is rare enou
 
 This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from process-local heaps to the global heap.
 
-Because a `become:` can move the contents of an object, a `become:` must happen between blocks of native code. This means that `become:` must be a full send (and by implication, so must `perform:`). Therefore a global `become:` waits for all other threads to become quiescent before doing the operations. This makes `become:` a relatively expensive operation. (This is actually only critical if the rest of the smaller object in 4 above is free'd.)
+Because a `become:` can move the contents of an object, a `become:` must happen between blocks of native code. This means that `become:` must be a full send (and by implication, so must `perform:`). Therefore a global `become:` waits for all other processes to become quiescent before doing the operations. This makes `become:` a relatively expensive operation. (This is actually only critical if the rest of the smaller object in 4 above is free'd.)
 
 The following operations are affected (slowed down) by supporting `become:` 
 1. accessing any instance variable or indexing
@@ -141,7 +142,7 @@ The disadvantages relate to garbage collection:
 `at:`, `do:`, `collect:`, etc. for an array of objects return the immediate value if that is what is at the particular position, or a created heap reference.
 `at:put:` verifies that either:
 -  the value is a non-double immediate, or 
-- a heap-allocated object with a length <= the specified limit, and that value is currently on a per-thread heap (or immutable) - because we must move the object into the AoO and we don't move mutable global objects (this should not be an onerous limitation) - in this case we leave a forwarding pointer behind.
+- a heap-allocated object with a length <= the specified limit, and that value is currently on a per-process heap (or immutable) - because we must move the object into the AoO and we don't move mutable global objects (this should not be an onerous limitation) - in this case we leave a forwarding pointer behind.
 Since the hash value is changed for an object stored into an AoO, anything that assumes the previous hash is correct will fail. That would make a Dictionary have bad performance before a rehash.
 
 ## Notes

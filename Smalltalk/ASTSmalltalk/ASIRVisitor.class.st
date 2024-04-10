@@ -28,6 +28,11 @@ ASIRVisitor >> compiler: anASPharoCompiler [
 ]
 
 { #category : 'compiling' }
+ASIRVisitor >> visitMethod: anIRMethod [ 
+anIRMethod allInstructions do: [ :instr | self halt. instr visit: self ]
+]
+
+{ #category : 'compiling' }
 ASIRVisitor >> visitPushReceiver: anIRPushReceiver [ 
 	self shouldBeImplemented.
 ]

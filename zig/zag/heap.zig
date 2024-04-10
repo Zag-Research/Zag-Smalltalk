@@ -28,24 +28,23 @@ pub const Format = enum(u7) {
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
     externalStruct, // this is a big allocated struct, not an Object
     notIndexable, // this is an Object with no indexable values
+    indexedNonObject,
+    externalNonObject,
     directIndexed,
     indexed,
-    indexedNonObject,
     external,
-    externalNonObject,
     free, // this and below have no pointers
     special, // this is a special format
     notIndexableWithPointers, // this and below have no pointers in array portion
+    indexedNonObjectWithPointers, // this has no pointers in array portion
+    externalNonObjectWithPointers, // this has no pointers in array portion
     directIndexedWithPointers,
     indexedWithPointers,
-    indexedNonObjectWithPointers, // this has no pointers in array portion
     externalWithPointers,
-    externalNonObjectWithPointers, // this has no pointers in array portion
     externalWeakWithPointers, // only this and following have weak queue link
     indexedWeakWithPointers,
     _,
     const Self = @This();
-    const pointerOffset = @intFromEnum(Format.notIndexableWithPointers) - @intFromEnum(Format.notIndexable);
     const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
     const MutableOffset = NotObject;
     const NumberOfBytes = 109;
@@ -60,10 +59,9 @@ pub const Format = enum(u7) {
     const LastWeak = @intFromEnum(Format.weakWithPointers);
     const Last = 128;
     comptime {
-        assert(@intFromEnum(Format.notIndexable) == 0x70);
-        assert(@intFromEnum(Format.notIndexableWithPointers) == 0x78);
+        assert(@intFromEnum(Format.notIndexable) == 0x6e);
+        assert(@intFromEnum(Format.notIndexableWithPointers) == 0x76);
         assert(@intFromEnum(Format.indexedWeakWithPointers) == 0x7f);
-        assert(@intFromEnum(Format.externalNonObjectWithPointers) == @intFromEnum(Format.externalNonObject) + pointerOffset);
     }
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
@@ -116,9 +114,6 @@ pub const Format = enum(u7) {
     }
     pub inline fn hasPointers(self: Self) bool {
         return @intFromEnum(self) > LastPointerFree;
-    }
-    pub inline fn withPointers(self: Self) Self {
-        return @enumFromInt(@intFromEnum(self)+pointerOffset);
     }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
@@ -353,6 +348,7 @@ pub const AllocationInfo = struct {
     format: Format,
     nInstVars: u12 = 0,
     footerLength: u12 = 0,
+    isObject: bool = true,
     nExtra: usize = 0,
     footerSetup: ?*const fn(Self,HeapObjectPtr,usize) bool = null,
     const Self = @This();
@@ -379,34 +375,43 @@ pub const AllocationInfo = struct {
             }
             if (iVars == 0) {
                 if (nElements == 0 or (element == u8 and nElements <= Format.NumberOfBytes))
-                    return .{ .format = @as(Format, @enumFromInt(nElements)), .nExtra = arraySize };
+                    return .{ .format = @as(Format, @enumFromInt(nElements)), .nExtra = arraySize, .isObject = element==Object };
                 if (element == Object and nElements <= maxSize)
-                    return .{ .format = .directIndexed, .nExtra = @intCast(arraySize) };
+                    return .{ .format = .directIndexed, .nExtra = arraySize };
             }
             if (iVars + arraySize > maxSize - 2)
-                return .{ .format = if (element == Object) .external else .externalNonObject, .nInstVars = iVars, .footerLength = 2 };
-            return .{ .format = if (element == Object) .indexed else .indexedNonObject, .nInstVars = iVars, .nExtra =  arraySize, .footerLength = 2 };
+                return .{ .format = if (element == Object) .external else .externalNonObject, .nInstVars = iVars, .footerLength = 2, .isObject = element==Object };
+            return .{ .format = if (element == Object) .indexed else .indexedNonObject, .nInstVars = iVars, .nExtra =  arraySize, .footerLength = 2, .isObject = element==Object };
         }
         if (makeWeak)
-            return .{ .format = .indexedWeakWithPointers, .nInstVars = iVars, .footerLength = 3 };
+            return .{ .format = .indexedWeakWithPointers, .nInstVars = iVars, .footerLength = 3, .isObject = element==Object };
         return .{ .format = .notIndexable, .nInstVars = iVars };
     }
 
     pub inline fn requiresIndex(self: Self) bool {
         return self.footerLength > 0;
     }
-    pub inline fn objectSize(self: Self, maxLength: u12) !u12 {
+    pub inline fn objectSize(self: Self, maxLength: u12) ?u12 {
         const size = self.nInstVars + self.nExtra + self.footerLength;
-        if (size + 1 >= maxLength) return error.ObjectTooLarge;
+        if (size + 1 >= maxLength) return null;
         return @intCast(size);
+    }
+    inline fn objectHeapSize(self: Self) u12 {
+        if(self.objectSize(HeapHeader.maxLength)) |size| return size;
+        return self.nInstVars+%self.footerLength;
     }
     pub inline fn needsExternalAllocation(self: Self) bool {
         return self.format.isExternal();
     }
-    pub inline fn nilAll(self: Self, theHeapObject: HeapObjectPtr) void {
+    pub inline fn initAll(self: Self, theHeapObject: HeapObjectPtr) void {
         const start = theHeapObject.asObjectArray();
         for (start[0..self.nInstVars]) |*obj|
             obj.* = Nil;
+        if (self.nExtra>0) {
+            const fill: Object = if (self.isObject) Nil else object.ZERO;
+            for (start[0..self.nInstVars+self.nExtra]) |*obj|
+                obj.* = fill;
+        }
     }
     inline fn heapHeader(self: Self, classIndex: ClassIndex, age: Age, hash: u24) HeapHeader {
         return .{
@@ -414,7 +419,7 @@ pub const AllocationInfo = struct {
             .hash = hash,
             .format = self.format,
             .age = age,
-            .length = self.footerLength,
+            .length = self.objectHeapSize(),
         };
     }
     fn indexedFooter(self: Self, theHeapObject: HeapObjectPtr, nElements: usize) bool {
@@ -455,16 +460,16 @@ test "allocationInfo" {
     // allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, mSize: ?usize, makeWeak: bool)
     try ee(AllocationInfo.calc(0, null, Object, false), AllocationInfo{ .format = .notIndexable });
     try ee(AllocationInfo.calc(10, null, void, false), AllocationInfo{ .format = .notIndexable, .nInstVars = 10 });
-    try ee(AllocationInfo.calc(10, null, void, true), AllocationInfo{ .format = .indexedWeakWithPointers, .nInstVars = 10, .footerLength = 3 });
-    try ee(AllocationInfo.calc(0, 0, void, false), AllocationInfo{ .format = .immutableSizeZero });
-    try ee(AllocationInfo.calc(10, 9, u8, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 2, .footerLength = 2 });
-    try ee(AllocationInfo.calc(10, 9, u16, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 3, .footerLength = 2 });
-    try ee(AllocationInfo.calc(10, 90, u64, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 90, .footerLength = 2 });
+    try ee(AllocationInfo.calc(10, null, void, true), AllocationInfo{ .format = .indexedWeakWithPointers, .nInstVars = 10, .footerLength = 3, .isObject = false });
+    try ee(AllocationInfo.calc(0, 0, Object, false), AllocationInfo{ .format = .immutableSizeZero });
+    try ee(AllocationInfo.calc(10, 9, u8, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 2, .footerLength = 2, .isObject = false });
+    try ee(AllocationInfo.calc(10, 9, u16, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 3, .footerLength = 2, .isObject = false });
+    try ee(AllocationInfo.calc(10, 90, u64, false), AllocationInfo{ .format = .indexedNonObject, .nInstVars = 10, .nExtra = 90, .footerLength = 2, .isObject = false });
     try ee(AllocationInfo.calc(0, 90, Object, false), AllocationInfo{ .format = .directIndexed, .nExtra = 90 });
-    try ee(AllocationInfo.calc(0, 90, u8, false), AllocationInfo{ .format = @enumFromInt(90), .nExtra = 12});
-    try ee(AllocationInfo.calc(0, 90, u16, false), AllocationInfo{ .format = .indexedNonObject, .nExtra = 23, .footerLength = 2 });
-    try ee(AllocationInfo.calc(0, 127, u8, false), AllocationInfo{ .format = .indexedNonObject, .nExtra = 16, .footerLength = 2 });
-    try ee(AllocationInfo.calc(10, 90, u64, true), AllocationInfo{ .format = .indexedWeakWithPointers, .nInstVars = 10, .nExtra = 90, .footerLength = 3 });
+    try ee(AllocationInfo.calc(0, 90, u8, false), AllocationInfo{ .format = @enumFromInt(90), .nExtra = 12, .isObject = false});
+    try ee(AllocationInfo.calc(0, 90, u16, false), AllocationInfo{ .format = .indexedNonObject, .nExtra = 23, .footerLength = 2, .isObject = false });
+    try ee(AllocationInfo.calc(0, 127, u8, false), AllocationInfo{ .format = .indexedNonObject, .nExtra = 16, .footerLength = 2, .isObject = false });
+    try ee(AllocationInfo.calc(10, 90, Object, true), AllocationInfo{ .format = .indexedWeakWithPointers, .nInstVars = 10, .nExtra = 90, .footerLength = 3 });
     try ee(AllocationInfo.calc(10, 9000, Object, false), AllocationInfo{ .format = .external, .nInstVars = 10, .footerLength = 2 });
     try ee(AllocationInfo.calc(10, 9000, Object, true), AllocationInfo{ .format = .externalWeakWithPointers, .nInstVars = 10, .footerLength = 3 });
 }
@@ -485,25 +490,12 @@ pub const Age = enum(u4) {
     aooMarked,
     free,
     aooScanned,
-    const marked = 1;
-    const scanned = 2;
-    const markedOrScanned = marked|scanned;
-    comptime {
-        assert(@intFromEnum(Age.static)&scanned != 0);
-        assert(@intFromEnum(Age.aStruct)&scanned != 0);
-        assert(@intFromEnum(Age.free)&scanned != 0);
-        assert(@intFromEnum(Age.global)&markedOrScanned == 0);
-        assert(@intFromEnum(Age.globalMarked)&markedOrScanned == marked);
-        assert(@intFromEnum(Age.globalScanned)&markedOrScanned == markedOrScanned);
-        assert(@intFromEnum(Age.aoo)&markedOrScanned == 0);
-        assert(@intFromEnum(Age.aooMarked)&markedOrScanned == marked);
-        assert(@intFromEnum(Age.aooScanned)&markedOrScanned == markedOrScanned);
-    }
+    const markedBit = 1;
+    const scannedBit = 2;
     const Static: Age = .static;
     // const ScanMask: u4 = GlobalScanned; // anded with this give 0 or Struct for non-global; Global, GlobalMarked or GlobalScanned for global (AoO or not)
     const Self = @This();
     pub const lastNurseryAge = @intFromEnum(Age.nurseryLast);
-    
     inline fn needsPromotionTo(self: Self, referrer: Self) bool {
         switch (referrer) {
             .onStack => return false,
@@ -561,30 +553,29 @@ pub const Age = enum(u4) {
     pub inline fn isOnStack(self: Self) bool {
         return self == .onStack;
     }
-    pub inline fn needsToBeMarked(self: Self) bool {
-        return @intFromEnum(self)&markedOrScanned == 0 and @intFromEnum(self)>lastNurseryAge;
+    pub inline fn isMarked(self: Self) bool {
+        return switch (self) {
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => true,
+            else => false,
+        };
     }
-    pub inline fn needsToBeScanned(self: Self) bool {
-        return @intFromEnum(self)&scanned == 0;
-    }
-    pub inline fn asMarked(self: Self) Self {
-        // return @enumFromInt(@intFromEnum(self)|marked);
+    pub inline fn marked(self: Self) !Self {
         return switch (self) {
             .global => .globalMarked,
             .aoo => .aooMarked,
-            .globalMarked, .globalScanned, .aooMarked, .aooScanned => @panic("already marked"),
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => error.alreadyMarked,
             else => self,
         };
     }
-    pub inline fn asScanned(self: Self) Self {
-        // return @enumFromInt(@intFromEnum(self)|scanned);
+    pub inline fn scanned(self: Self) !Self {
         return switch (self) {
             .globalMarked => .globalScanned,
             .aooMarked => .aooScanned,
-            .globalScanned, .aooScanned => @panic("already scanned"),
-            else => @panic("not marked"),
+            .globalScanned, .aooScanned => error.alreadyScanned,
+            else => error.notMarked,
         };
     }
+    // Note: assigning a ptr to a scanned object must block for collection
 };
 
 pub const AllocErrors = error{ Fail, HeapFull, NotIndexable, ObjectTooLarge, NeedNurseryCollection };
@@ -592,8 +583,8 @@ pub const AllocResult = struct {
     age: Age,
     allocated: HeapObjectPtr,
     info: AllocationInfo,
-    pub fn nilAll(self: *AllocResult) void {
-        self.info.nilAll(self.allocated);
+    pub fn initAll(self: *AllocResult) void {
+        self.info.initAll(self.allocated);
     }
 };
 pub const AllocReturn = AllocErrors!AllocResult;
@@ -637,9 +628,6 @@ pub const HeapHeader = packed struct(u64) {
     }
     pub inline fn simpleStackHeaderX(classIndex: ClassIndex, length: u12, hash: u24) Self {
         return .{ .classIndex = classIndex, .hash = hash, .format = .directIndexed, .age = .onStack, .length = length };
-    }
-    pub inline fn simpleFloatHeader(hash: u24, age: Age) Self {
-        return .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 };
     }
     inline fn init(length: u12, format: Format, classIndex: ClassIndex, hash: u24, age: Age) Self {
         return .{
@@ -992,7 +980,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, Object.from(abcde).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, (Object.from(abcde)).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));
