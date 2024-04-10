@@ -15,14 +15,6 @@ ASNanImageTest >> imageClass [
 ]
 
 { #category : 'tests' }
-ASNanImageTest >> testCompile [
-
-	| ast |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	self threaded: ast equals: #( pushLiteral 42 returnTop )
-]
-
-{ #category : 'tests' }
 ASNanImageTest >> testObjects [
 
 	self
@@ -73,4 +65,23 @@ ASNanImageTest >> testU64From [
 	self
 		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8])
 		equals: #( 16r0807060504030201 16r0605040302010009 16r0807 )
+]
+
+{ #category : 'tests' }
+ASNanImageTest >> test_simple1 [
+
+	| ast |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
+	self threaded: ast equals: #( verifySelector pushLiteral 42 returnTop )
+]
+
+{ #category : 'tests' }
+ASNanImageTest >> test_simple1_noreturn [
+
+	| ast |
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #simple1_noreturn.
+	self
+		threaded: ast
+		equals: #( verifySelector pushLiteral 42 drop returnSelf )
 ]

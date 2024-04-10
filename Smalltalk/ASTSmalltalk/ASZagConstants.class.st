@@ -5,6 +5,7 @@ Class {
 	#name : 'ASZagConstants',
 	#superclass : 'SharedPool',
 	#classVars : [
+		'Addresses',
 		'PredefinedSymbols',
 		'ZfBasicAt',
 		'ZfBasicAtPut',
@@ -81,6 +82,7 @@ Class {
 		'ZfReplaceLiteral0',
 		'ZfReplaceLiteral1',
 		'ZfReturnNoContext',
+		'ZfReturnSelf',
 		'ZfReturnTop',
 		'ZfReturnWithContext',
 		'ZfSend0',
@@ -104,6 +106,8 @@ ASZagConstants class >> constantMap [
 	^ Dictionary new
 		  at: #pushLiteral put: ZfPushLiteral;
 		  at: #returnTop put: ZfReturnTop;
+		  at: #drop put: ZfDrop;
+		  at: #verifySelector put: ZfVerifySelector;
 		  yourself
 ]
 
@@ -112,6 +116,7 @@ ASZagConstants class >> initialize [
 
 	PredefinedSymbols := #(  ).
 	self initializeForImage.
+	Addresses := self constantMap
 ]
 
 { #category : 'class initialization' }
@@ -185,6 +190,7 @@ ASZagConstants class >> initializeForImage [
 	ZfValue := 65.
 	ZfVerifyDirectSelector := 66.
 	ZfVerifySelector := 67.
+	ZfReturnSelf := 68.
 	ZfP1 := 4097.
 	ZfP2 := 4098.
 	ZfP5 := 4101.

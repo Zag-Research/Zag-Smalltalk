@@ -26,6 +26,12 @@ ASImageTest >> image: aBlock equals: value [
 				equals: (value collect: #hexString) ]
 ]
 
+{ #category : 'tests' }
+ASImageTest >> imageClass [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'running' }
 ASImageTest >> setUp [
 
@@ -37,8 +43,7 @@ ASImageTest >> setUp [
 { #category : 'tests' }
 ASImageTest >> threaded: ast equals: converted [
 
-	| image map |
-	map := ASZagConstants constantMap.
+	| image |
 	image := self imageClass test on: (ReadWriteStream on: #[  ]).
 	ASImageThreadedOutput new
 		context: (ASImageFileContext with: image);
@@ -49,7 +54,7 @@ ASImageTest >> threaded: ast equals: converted [
 		each isSymbol
 			ifTrue: [
 				self
-					assert: code = (map at: each)
+					assert: code = (Addresses at: each)
 					description: [
 					'expected: ' , each , ' but found: ' , code hexString ] ]
 			ifFalse: [

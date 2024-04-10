@@ -175,7 +175,7 @@ ASImageThreadedOutput >> visitReturnNil [
 { #category : 'visiting' }
 ASImageThreadedOutput >> visitReturnSelf [
 
-		self putEmbedded: #returnSelf
+	^ image putRawInt: ZfReturnSelf
 ]
 
 { #category : 'API' }
@@ -192,6 +192,11 @@ ASImageThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass 
 			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
 		putSymbol: aSelector;
 		comma
+]
+
+{ #category : 'visiting' }
+ASImageThreadedOutput >> visitSimple: aString [ 
+	^ image putRawInt: (Addresses at: aString)
 ]
 
 { #category : 'visiting' }
