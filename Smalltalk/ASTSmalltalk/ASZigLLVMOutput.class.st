@@ -11,7 +11,7 @@ ASZigLLVMOutput >> endMethod [
 
 { #category : #'as yet unclassified' }
 ASZigLLVMOutput >> mapLLVMTypeFor: type [
-	"Maps Pharo datatypes to LLVM's" 
+	"Maps Pharo datatypes to LLVMs" 
    | llvmType |
     
     llvmType := type caseOf: {
