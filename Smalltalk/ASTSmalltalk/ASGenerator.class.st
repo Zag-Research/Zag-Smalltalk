@@ -37,18 +37,6 @@ ASGenerator >> address: anInteger extra: anInteger3 header: anObject fields: anO
 	^ 1 + (extra ifNil: [ 0 ] ifNotNil: [ 1 ]) + fields size
 ]
 
-{ #category : 'initialization' }
-ASGenerator >> on: anASImage object: anObject [
-	anASImage include: self object: anObject
-]
-
-{ #category : 'process' }
-ASGenerator >> processOn: anASImage [
-	fields do: [: value |
-		value astObject: anASImage
-	]
-]
-
 { #category : 'writing' }
 ASGenerator >> writeFieldsOn: anASImage [
 	header writeRawOn: anASImage.

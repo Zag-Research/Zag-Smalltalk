@@ -7,57 +7,25 @@ When asked to output, I output a header of all the external zag references, then
 "
 Class {
 	#name : 'ASZigFileContext',
-	#superclass : 'Object',
+	#superclass : 'ASFileContext',
 	#instVars : [
-		'symbols',
-		'components',
-		'objects',
-		'names',
-		'pendingComponents'
+		'names'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
-
-{ #category : 'components' }
-ASZigFileContext >> addComponent: aGenerator [
-
-	pendingComponents add: aGenerator.
-	components add: aGenerator
-]
-
-{ #category : 'testing' }
-ASZigFileContext >> addSymbol: aSymbol [
-
-	symbols add: aSymbol
-]
 
 { #category : 'converting' }
 ASZigFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
-{ #category : 'register' }
-ASZigFileContext >> for: anASNode generatorIs: anASGenerator [ 
-	objects at: anASNode put: anASGenerator 
-]
-
 { #category : 'initialization' }
 ASZigFileContext >> initialize [
 
 	super initialize.
-	symbols := ASZigSymbols new.
-	components := OrderedCollection new.
-	objects := Dictionary new.
-	names := Dictionary new.
-	pendingComponents := OrderedCollection new
-]
-
-{ #category : 'accessing' }
-ASZigFileContext >> lookupObject: anObject [
-
-	^ objects at: anObject ifAbsent: [ ^ nil ]
+	names := Dictionary new
 ]
 
 { #category : 'creation' }
@@ -112,16 +80,6 @@ ASZigFileContext >> predefinedSymbol: aSymbol [
 ASZigFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
-]
-
-{ #category : 'components' }
-ASZigFileContext >> processComponents [
-
-	| temp |
-	[ pendingComponents isEmpty ] whileFalse: [
-		temp := pendingComponents.
-		pendingComponents := OrderedCollection new.
-		temp do: [ :each | each generateCode ] ]
 ]
 
 { #category : 'writing' }

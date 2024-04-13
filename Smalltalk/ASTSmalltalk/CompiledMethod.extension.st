@@ -12,6 +12,11 @@ CompiledMethod >> astFields [
 ]
 
 { #category : '*ASTSmalltalk' }
+CompiledMethod >> astImagePut: anASImage [ 
+	^ anASImage objectMethod: self
+]
+
+{ #category : '*ASTSmalltalk' }
 CompiledMethod >> astWith: anASPharoCompiler [ 
 	^ anASPharoCompiler compileMethod: self
 ]
