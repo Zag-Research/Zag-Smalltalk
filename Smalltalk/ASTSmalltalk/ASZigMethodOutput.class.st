@@ -161,7 +161,7 @@ ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [
 
 { #category : 'visiting' }
 ASZigMethodOutput >> visitSimple: aSymbol [ 
-	^ self putEmbedded: aSymbol
+	^ self putEmbedded: aSymbol; lf
 ]
 
 { #category : 'writing' }
