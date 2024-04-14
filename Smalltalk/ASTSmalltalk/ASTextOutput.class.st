@@ -15,8 +15,8 @@ There are text generators that are used to create text files (currently only in 
 There will be a runtime code generator written in Zig that will generate threaded or JIT code at runtime.
 "
 Class {
-	#name : #ASTextOutput,
-	#superclass : #Object,
+	#name : 'ASTextOutput',
+	#superclass : 'Object',
 	#instVars : [
 		'mainStream',
 		'symbols',
@@ -25,42 +25,44 @@ Class {
 		'componentName',
 		'context'
 	],
-	#category : 'ASTSmalltalk-Output'
+	#category : 'ASTSmalltalk-Output',
+	#package : 'ASTSmalltalk',
+	#tag : 'Output'
 }
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput class >> testing [
 
 	^ self new testing: true
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASTextOutput >> asString [
 	^ mainStream contents
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> comma [
 
 	mainStream nextPut: $,
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> comment: aString [
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> context: anASFileContext [
 
 	context := anASFileContext.
 	anASFileContext addComponent: self
 ]
 
-{ #category : #completion }
+{ #category : 'completion' }
 ASTextOutput >> finished [
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASTextOutput >> initialize [
 
 	super initialize.
@@ -70,59 +72,59 @@ ASTextOutput >> initialize [
 	testing := false
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> lf [
 
 	testing ifFalse: [	mainStream lf]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> name [
 
 	^ componentName ifNil: [
 		  componentName := context name: self prefix: self prefix main: self selector ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> nextPut: aCharacter [ 
 	mainStream nextPut: aCharacter
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> nextPutAll: aString [ 
 	mainStream nextPutAll: aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> prefix [
 
 	^ 'Z'
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> print: anObject [
 
 	mainStream print: anObject
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> selector [
 	self subclassResponsibility 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> tab [
 
 	testing ifFalse: [ mainStream tab ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTextOutput >> testing: aBoolean [
 
 	testing := aBoolean
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTextOutput >> writeDefinitionOn: aStream [
 
 	self subclassResponsibility

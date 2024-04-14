@@ -4,16 +4,18 @@ I am the scanner used by the ASCompile compiler
 I accept Unicode and will treat many special characters as binary message name characters, and most letters in various scripts as unary or keyword message names.
 "
 Class {
-	#name : #ASScanner,
-	#superclass : #Object,
+	#name : 'ASScanner',
+	#superclass : 'Object',
 	#instVars : [
 		'aStream',
 		'peek'
 	],
-	#category : 'ASTSmalltalk-Compiler'
+	#category : 'ASTSmalltalk-Compiler',
+	#package : 'ASTSmalltalk',
+	#tag : 'Compiler'
 }
 
-{ #category : #conversion }
+{ #category : 'conversion' }
 ASScanner >> asArray [
 	^ Array streamContents: [: s |
 		[ self atEnd ] whileFalse: [
@@ -22,12 +24,12 @@ ASScanner >> asArray [
 	]
 ]
 
-{ #category : #conversion }
+{ #category : 'conversion' }
 ASScanner >> atEnd [
 	^ self peek atEnd
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> binaryIdentifier [ 
 	^ (String streamContents: [: s | | char |
 			[
@@ -37,12 +39,12 @@ ASScanner >> binaryIdentifier [
 		]) asASIdentifier
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> identifier [
 	^ self identifierString asASIdentifier
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
@@ -56,13 +58,13 @@ ASScanner >> identifierString [
 		])
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> next [
 	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> number [ 
 	^ (String streamContents: [: s |
 			[
@@ -72,19 +74,19 @@ ASScanner >> number [
 		]) asNumber asASLiteral
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> peek [
 	peek ifNotNil: [ ^ peek ].
 	^ peek := self token
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> scanCode: aStringOrStream [
 	aStream := aStringOrStream readStream.
 
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> string [
 	aStream next.
 	^ (String streamContents: [: s | | char |
@@ -96,7 +98,7 @@ ASScanner >> string [
 		]) asASString
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> symbol [
 	| char |
 	aStream next.
@@ -108,7 +110,7 @@ ASScanner >> symbol [
 ^ self error: 'invalid symbol'
 ]
 
-{ #category : #scanning }
+{ #category : 'scanning' }
 ASScanner >> token [
 
 	| char |

@@ -1,12 +1,12 @@
-Extension { #name : #Symbol }
+Extension { #name : 'Symbol' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Symbol >> zigCompileObject: aWriteStream [
 
 	aWriteStream putSymbol: self
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 Symbol >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 
 	^ nil

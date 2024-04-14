@@ -2,26 +2,28 @@
 I create an array from a sequence of expressions { axp1 . exp2 }
 "
 Class {
-	#name : #ASArray,
-	#superclass : #ASExpression,
-	#type : #variable,
-	#category : 'ASTSmalltalk-AST'
+	#name : 'ASArray',
+	#superclass : 'ASExpression',
+	#type : 'variable',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASArray class >> statements: aCollection [
 
 	^ aCollection collect: #yourself as: self
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASArray >> = other [
 
 	^ self class = other class and: [ 
 			  self statements = other statements ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASArray >> baseValue [
 
 	| bv |
@@ -30,12 +32,12 @@ ASArray >> baseValue [
 	^ bv asArray
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASArray >> do: aBlock [
 	1 to: self size do: [ : idx| aBlock value: (self at: idx) ]
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 ASArray >> fillFrom: aCollection with: aBlock [
 	"Evaluate aBlock with each of aCollections's elements as the argument.
 	Collect the resulting values into self. Answer self."
@@ -46,7 +48,7 @@ ASArray >> fillFrom: aCollection with: aBlock [
 		self at: (index := index + 1) put: (aBlock value: each) ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASArray >> printOn: s [
 
 	s << self class name << ' {'.
@@ -56,7 +58,7 @@ ASArray >> printOn: s [
 	s << '}'
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASArray >> zigWalk: aGenerator [
 
 	self do: [ : each| each zigWalk: aGenerator ].

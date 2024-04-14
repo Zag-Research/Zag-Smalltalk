@@ -1,10 +1,12 @@
 Class {
-	#name : #ASTPopIntoTemp,
-	#superclass : #ASTTemps,
-	#category : 'ASTSmalltalk-IR'
+	#name : 'ASTPopIntoTemp',
+	#superclass : 'ASTTemps',
+	#category : 'ASTSmalltalk-IR',
+	#package : 'ASTSmalltalk',
+	#tag : 'IR'
 }
 
-{ #category : #thread }
+{ #category : 'thread' }
 ASTPopIntoTemp >> threadFormatOn: threadPrinter [
 
 	threadPrinter nextPutAll: '&p.popIntoTemp,'.

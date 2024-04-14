@@ -1,17 +1,19 @@
 Class {
-	#name : #ASZigLLVMOutput,
-	#superclass : #ASZigMethodOutput,
-	#category : #'ASTSmalltalk-Output'
+	#name : 'ASZigLLVMOutput',
+	#superclass : 'ASZigMethodOutput',
+	#category : 'ASTSmalltalk-Output',
+	#package : 'ASTSmalltalk',
+	#tag : 'Output'
 }
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigLLVMOutput >> endMethod [
 	self label: nil
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASZigLLVMOutput >> mapLLVMTypeFor: type [
-	"Maps Pharo datatypes to LLVMs" 
+	"Maps Pharo datatypes to LLVMs - need to change to dispatch" 
    | llvmType |
     
     llvmType := type caseOf: {
@@ -24,18 +26,17 @@ ASZigLLVMOutput >> mapLLVMTypeFor: type [
     ^ llvmType
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigLLVMOutput >> outputBasicBlockEnd [
-	"Empty in threaded code implementation too"
 	mainStream nextPutAll: '}'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASZigLLVMOutput >> outputLLVMFrom: ascBlock [ 
 	ascBlock outputRestTo: self. 
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigLLVMOutput >> outputMethodLabel: bbLabel [
 
 	self
@@ -46,7 +47,7 @@ ASZigLLVMOutput >> outputMethodLabel: bbLabel [
 	
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigLLVMOutput >> outputMethodStart: bbLabel [ 
 
 	| type llvmType |	
@@ -62,7 +63,7 @@ ASZigLLVMOutput >> outputMethodStart: bbLabel [
 		
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigLLVMOutput >> outputToStream [
 	"Method yet to be implemented"
 	codeGenerator finalAnalysis.
@@ -73,10 +74,9 @@ ASZigLLVMOutput >> outputToStream [
 	
 ]
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigLLVMOutput >> verifySelector: anObject [
 
-	"Does this verify the selector?"
 	self 
 		nextPutAll: ' @';
 		nextPutAll: anObject; 
@@ -84,7 +84,7 @@ ASZigLLVMOutput >> verifySelector: anObject [
 		nextPutAll: '('.
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigLLVMOutput >> visitPushContext: aBlock [ 
 	
 	self 
@@ -95,7 +95,7 @@ ASZigLLVMOutput >> visitPushContext: aBlock [
 
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigLLVMOutput >> visitPushLiteral: aLiteral [
 
 	self 
@@ -105,7 +105,7 @@ ASZigLLVMOutput >> visitPushLiteral: aLiteral [
 		
 ]
 
-{ #category : #API }
+{ #category : 'API' }
 ASZigLLVMOutput >> visitReturnTop [
 
 	self 

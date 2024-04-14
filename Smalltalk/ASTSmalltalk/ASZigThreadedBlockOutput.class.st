@@ -2,35 +2,37 @@
 I output BlockClosures
 "
 Class {
-	#name : #ASZigThreadedBlockOutput,
-	#superclass : #ASZigThreadedOutput,
+	#name : 'ASZigThreadedBlockOutput',
+	#superclass : 'ASZigThreadedOutput',
 	#instVars : [
 		'methodGenerator',
 		'block'
 	],
-	#category : 'ASTSmalltalk-Output'
+	#category : 'ASTSmalltalk-Output',
+	#package : 'ASTSmalltalk',
+	#tag : 'Output'
 }
 
-{ #category : #'code generation' }
+{ #category : 'code generation' }
 ASZigThreadedBlockOutput >> codeGeneratorClass [
 
 	^ ASCodeGeneratorBlock
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASZigThreadedBlockOutput >> methodGenerator [
 
 	^ methodGenerator
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [ 
 	"The same logic as our super but for the other case.
 	The other case will be triggered when the variable was not found.
@@ -58,13 +60,13 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 			 ]
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitReturnNonLocalTop [
 
 	self putEmbedded: #returnNonLocal 
 ]
 
-{ #category : #visiting }
+{ #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitStoreLocal: anASLocal [ 
 	^ self subclassResponsibility
 ]

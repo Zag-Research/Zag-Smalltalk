@@ -1,6 +1,6 @@
-Extension { #name : #IRPushInstVar }
+Extension { #name : 'IRPushInstVar' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 IRPushInstVar >> threadFormatOn: anASTThreadFormat [
 
 	anASTThreadFormat

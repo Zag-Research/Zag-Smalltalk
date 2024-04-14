@@ -2,15 +2,17 @@
 I contain all the common respersentation for Methods and Blocks
 "
 Class {
-	#name : #ASMethodOrBlock,
-	#superclass : #ASCodeBlock,
+	#name : 'ASMethodOrBlock',
+	#superclass : 'ASCodeBlock',
 	#instVars : [
 		'arguments'
 	],
-	#category : 'ASTSmalltalk-AST'
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'tests - instance creation' }
+{ #category : 'tests - instance creation' }
 ASMethodOrBlock class >> arguments: args locals: locals body: body [
 
 	^ (self locals: locals
@@ -19,25 +21,25 @@ ASMethodOrBlock class >> arguments: args locals: locals body: body [
 		  
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASMethodOrBlock >> = other [
 
 	^ super = other and: [ 
 		  self arguments = other arguments  ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments [
 	^ arguments
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> arguments: aCollection [
 
 	arguments := aCollection asArray
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> compileMethod: aCompiledMethod [ 
 | method |
 	method := (ASPharoVisitor compiler: self) visit: aCompiledMethod ast.
@@ -45,14 +47,14 @@ ASMethodOrBlock >> compileMethod: aCompiledMethod [
 	^ method
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASMethodOrBlock >> initialize [
 
 	super initialize.
 	arguments := #(  )
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
@@ -71,7 +73,7 @@ ASMethodOrBlock >> inspectZagASTOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASMethodOrBlock >> printOn: s [
 
 	arguments isEmpty ifFalse: [
@@ -81,7 +83,7 @@ ASMethodOrBlock >> printOn: s [
 	super printOn: s
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASMethodOrBlock >> selectorWithArgs [
 self subclassResponsibility 
 ]

@@ -1,15 +1,17 @@
 Class {
-	#name : #ASSimple,
-	#superclass : #ASToken,
-	#category : 'ASTSmalltalk-Tokens'
+	#name : 'ASSimple',
+	#superclass : 'ASToken',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSimple >> assignExpression: anASCompiler [ 
 	^ self keywordExpression: anASCompiler
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSimple >> binaryExpression: anASCompiler [
 
 	anASCompiler nextToken.
@@ -18,7 +20,7 @@ ASSimple >> binaryExpression: anASCompiler [
 		  target: (self parseWith: anASCompiler)
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSimple >> keywordExpression: anASCompiler [
 
 	anASCompiler nextToken.
@@ -27,12 +29,12 @@ ASSimple >> keywordExpression: anASCompiler [
 		  target: (self parseWith: anASCompiler)
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSimple >> parseWith: anASCompiler [
 
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASSimple >> unaryExpression: anASCompiler [
 
 	anASCompiler nextToken.

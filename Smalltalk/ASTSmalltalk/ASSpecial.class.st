@@ -1,10 +1,12 @@
 Class {
-	#name : #ASSpecial,
-	#superclass : #ASLiteralToken,
-	#category : 'ASTSmalltalk-Tokens'
+	#name : 'ASSpecial',
+	#superclass : 'ASLiteralToken',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASSpecial >> isSpecial [
 	^ true
 ]

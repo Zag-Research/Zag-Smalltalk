@@ -1,6 +1,6 @@
 Class {
-	#name : #ASAllocationInfo,
-	#superclass : #Object,
+	#name : 'ASAllocationInfo',
+	#superclass : 'Object',
 	#instVars : [
 		'format',
 		'instVars',
@@ -14,41 +14,43 @@ Class {
 	#pools : [
 		'ASImage'
 	],
-	#category : 'ASTSmalltalk-Image'
+	#category : 'ASTSmalltalk-Image',
+	#package : 'ASTSmalltalk',
+	#tag : 'Image'
 }
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 ASAllocationInfo class >> initialize [
 
 	AgeStatic := 7.
 	self reset
 ]
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 ASAllocationInfo class >> reset [
 
 	HashCounter := 0
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASAllocationInfo >> extra: anObject [
 
 	extra := anObject
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASAllocationInfo >> footerLength: anObject [
 
 	footerLength := anObject
 ]
 
-{ #category : #formatting }
+{ #category : 'formatting' }
 ASAllocationInfo >> format: fmt [ 
 
 	format := fmt
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASAllocationInfo >> header: classNumber [
 
 	| length |
@@ -58,7 +60,7 @@ ASAllocationInfo >> header: classNumber [
 	^ length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16 + classNumber
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASAllocationInfo >> initialize [
 
 	super initialize.
@@ -67,13 +69,13 @@ ASAllocationInfo >> initialize [
 	extra := 0
 ]
 
-{ #category : #formatting }
+{ #category : 'formatting' }
 ASAllocationInfo >> instVars: n [
 
 	instVars := n
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASAllocationInfo >> put: anObject into: anImage [
 
 	| address class |

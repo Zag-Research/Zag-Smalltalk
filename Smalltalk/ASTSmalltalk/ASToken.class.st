@@ -2,66 +2,68 @@
 I am the tokens for the AST scanner
 "
 Class {
-	#name : #ASToken,
-	#superclass : #Object,
+	#name : 'ASToken',
+	#superclass : 'Object',
 	#instVars : [
 		'value'
 	],
-	#category : 'ASTSmalltalk-Tokens'
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASToken >> = other [
 	^ self class = other class and: [value = other value]
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASToken >> atEnd [
 	^ false
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASToken >> classSelector: anASCompiler args: aCollection selector: selector [ 
 	^ selector asSymbol
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASToken >> defs: anASCompiler scope: anASMethodNode [ 
 
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASToken >> expectEnd [
 	self error: 'Unexpected token: ',self asString
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASToken >> isLiteral [
 	^ false
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASToken >> printOn: s [
 	s << $< << value asString << $>
 
 ]
 
-{ #category : #parsing }
+{ #category : 'parsing' }
 ASToken >> processKeyword: anASCompiler target: anASLiteral [ 
 	^ nil
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASToken >> symbol [
 	^ value asSymbol
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASToken >> value [
 	^ value
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASToken >> value: aString [
 	value := aString.
 

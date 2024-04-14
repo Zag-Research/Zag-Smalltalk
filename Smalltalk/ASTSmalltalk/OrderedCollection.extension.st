@@ -1,6 +1,6 @@
-Extension { #name : #OrderedCollection }
+Extension { #name : 'OrderedCollection' }
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 OrderedCollection >> add: anObject at: position [
 
 	[ self size < position ] whileTrue: [ self add: nil ].
@@ -8,7 +8,7 @@ OrderedCollection >> add: anObject at: position [
 	^ position
 ]
 
-{ #category : #'*ASTSmalltalk' }
+{ #category : '*ASTSmalltalk' }
 OrderedCollection >> zigCompileObjectReference: anASZigCompileObjectGenerator [
 	^ self asArray zigCompileObject: anASZigCompileObjectGenerator
 ]

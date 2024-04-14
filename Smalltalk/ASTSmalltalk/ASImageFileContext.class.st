@@ -6,23 +6,25 @@ I maintain a symbol table. The code generators will tell me about any symbols th
 When asked to output, I output an image file.
 "
 Class {
-	#name : #ASImageFileContext,
-	#superclass : #ASFileContext,
-	#category : 'ASTSmalltalk-Contexts'
+	#name : 'ASImageFileContext',
+	#superclass : 'ASFileContext',
+	#category : 'ASTSmalltalk-Contexts',
+	#package : 'ASTSmalltalk',
+	#tag : 'Contexts'
 }
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASImageFileContext >> addSymbol: aSymbol [
 
 	symbols add: aSymbol
 ]
 
-{ #category : #converting }
+{ #category : 'converting' }
 ASImageFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 ASImageFileContext >> initialize [
 
 	super initialize.
@@ -30,13 +32,13 @@ ASImageFileContext >> initialize [
 
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 ASImageFileContext >> name: anObject prefix: aString main: aString2 [
 
 	^ self name: anObject prefix: aString main: aString2 seq: 0
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> outputTo: stream [
 
 	self processComponents.
@@ -52,19 +54,19 @@ ASImageFileContext >> outputTo: stream [
 	stream flush
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASImageFileContext >> predefinedSymbol: aSymbol [
 
 	^ (symbols predefinedSymbol: aSymbol)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASImageFileContext >> printable: aSymbol [
 
 	^ symbols printable: aSymbol
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll: 'const std = @import("std");
@@ -93,7 +95,7 @@ const empty = &[0]Object{};
 '
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeInitSmalltalkPrefixOn: stream [
 
 	stream nextPutAll: 'fn initSmalltalk() void {
@@ -101,14 +103,14 @@ ASImageFileContext >> writeInitSmalltalkPrefixOn: stream [
 '
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeInitSmalltalkSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeMainPrefixOn: stream [
 
 	stream nextPutAll: 'pub fn main() !void {
@@ -116,14 +118,14 @@ ASImageFileContext >> writeMainPrefixOn: stream [
 '
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeMainSuffixOn: stream [
 
 	stream nextPutAll: '}
 '
 ]
 
-{ #category : #writing }
+{ #category : 'writing' }
 ASImageFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
 	| label |

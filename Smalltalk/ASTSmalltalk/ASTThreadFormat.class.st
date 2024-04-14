@@ -2,21 +2,23 @@
 I format an IRMethod to generate Zig code to create a method thread.
 "
 Class {
-	#name : #ASTThreadFormat,
-	#superclass : #Object,
+	#name : 'ASTThreadFormat',
+	#superclass : 'Object',
 	#instVars : [
 		'stream',
 		'method'
 	],
-	#category : 'ASTSmalltalk-Threaded'
+	#category : 'ASTSmalltalk-Threaded',
+	#package : 'ASTSmalltalk',
+	#tag : 'Threaded'
 }
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> cr [
 	^ stream cr
 ]
 
-{ #category : #'printing/formatting' }
+{ #category : 'printing/formatting' }
 ASTThreadFormat >> ir: anIrMethod [
 
 	| prevBranchLabel |
@@ -62,7 +64,7 @@ ASTThreadFormat >> ir: anIrMethod [
 			  cr ]
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 ASTThreadFormat >> loop [
 
 	| x |
@@ -73,22 +75,22 @@ ASTThreadFormat >> loop [
 			ifFalse: [ x * 3 + 1 ] ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> nextPut: aCharacter [ 
 	^ stream nextPut: aCharacter
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> nextPutAll: aString [ 
 	^ stream nextPutAll: aString
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTThreadFormat >> printTempOffset: aSymbol [
 	stream nextPutAll: (method tempMap at: aSymbol) asString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTThreadFormat >> temporaryNames [
 	| x |
 	x := 42.

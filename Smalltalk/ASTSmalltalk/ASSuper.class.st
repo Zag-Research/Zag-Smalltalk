@@ -3,29 +3,31 @@ I represent a reference to super.
 
 "
 Class {
-	#name : #ASSuper,
-	#superclass : #ASSelf,
-	#category : 'ASTSmalltalk-AST'
+	#name : 'ASSuper',
+	#superclass : 'ASSelf',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSuper class >> method: aMethod [
 	^ self new method: aMethod
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASSuper class >> method: aMethod superclass: aClass [
 
 	^ self new method: aMethod; superclass: aClass
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASSuper >> zigWalk: aGenerator [
 
 	self invalidAST:  '"super" in a non-target position'
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASSuper >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.

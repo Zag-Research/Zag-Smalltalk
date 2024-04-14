@@ -2,12 +2,14 @@
 I am an error raised if the code generator detects an invalid AST (such as `super` in a non-target position)
 "
 Class {
-	#name : #ASTInvalid,
-	#superclass : #Error,
-	#category : 'ASTSmalltalk-AST'
+	#name : 'ASTInvalid',
+	#superclass : 'Error',
+	#category : 'ASTSmalltalk-AST',
+	#package : 'ASTSmalltalk',
+	#tag : 'AST'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTInvalid >> messageText [
 
 	^ String streamContents: [ :strm |

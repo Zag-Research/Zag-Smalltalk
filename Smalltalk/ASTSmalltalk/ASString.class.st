@@ -1,10 +1,12 @@
 Class {
-	#name : #ASString,
-	#superclass : #ASLiteralToken,
-	#category : 'ASTSmalltalk-Tokens'
+	#name : 'ASString',
+	#superclass : 'ASLiteralToken',
+	#category : 'ASTSmalltalk-Tokens',
+	#package : 'ASTSmalltalk',
+	#tag : 'Tokens'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASString >> arity [
 	| last |
 	last := value last.

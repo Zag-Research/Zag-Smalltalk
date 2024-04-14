@@ -2,28 +2,30 @@
 I represent a variable (local, parameters, inherited local/parameters, instance, class, shared).
 "
 Class {
-	#name : #ASCVariable,
-	#superclass : #Object,
+	#name : 'ASCVariable',
+	#superclass : 'Object',
 	#instVars : [
 		'name'
 	],
-	#category : 'ASTSmalltalk-CodeGen'
+	#category : 'ASTSmalltalk-CodeGen',
+	#package : 'ASTSmalltalk',
+	#tag : 'CodeGen'
 }
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCVariable >> = other [
 
 	^ self class = other class and: [ self name = other name ]
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASCVariable >> inspectStringOn: s [
 
 	s << self className << ' ' <<
 	name 
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASCVariable >> inspectZagASTOn: s [
 
 	s << self className << $(.
@@ -31,36 +33,36 @@ ASCVariable >> inspectZagASTOn: s [
 	s << $)
 ]
 
-{ #category : #testing }
+{ #category : 'testing' }
 ASCVariable >> isASArg [
 	^false
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCVariable >> isASBlock [
 
 	^ false
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCVariable >> name [
 
 	^ name
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASCVariable >> name: aSymbol [
 
 	name := aSymbol
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASCVariable >> printOn: s [
 
 	s << self className << ' ' << name
 ]
 
-{ #category : #compiling }
+{ #category : 'compiling' }
 ASCVariable >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sentToUnknownObject: aSymbol
