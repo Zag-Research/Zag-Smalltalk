@@ -14,7 +14,7 @@ ASImageTest >> image: aBlock equals: value [
 
 	| result |
 	result := ByteArray streamContents: [ :s |
-		          aBlock value: (ASNanImage test on: s) ].
+		          aBlock value: (self imageClass test on: s) ].
 	value isInteger
 		ifTrue: [
 			self

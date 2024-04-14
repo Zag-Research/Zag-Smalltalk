@@ -11,6 +11,7 @@ Class {
 
 { #category : 'as yet unclassified' }
 ASNanImageTest >> imageClass [
+
 	^ ASNanImage
 ]
 

@@ -10,9 +10,9 @@ Class {
 		'delayedLabel',
 		'forClass'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'writing' }

@@ -54,12 +54,12 @@ Object >> astFormat [
 
 { #category : '*ASTSmalltalk' }
 Object >> astImageObject: anASImage [ 
-	^ anASImage literal: (anASImage generalObject: self) address >> 3 class: 0
+	^ anASImage putObject: self
 ]
 
 { #category : '*ASTSmalltalk' }
-Object >> astObject: anASImage [ 
-	^ anASImage generalObject: self
+Object >> astImagePut: anASImage [ 
+	^ anASImage objectObject: self
 ]
 
 { #category : '*ASTSmalltalk' }

@@ -5,9 +5,9 @@ This is primarily oriented to generating ASTs, but it can handle most objects, i
 Class {
 	#name : 'ASZigCompileObjectOutput',
 	#superclass : 'ASZigOutput',
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'code generation' }

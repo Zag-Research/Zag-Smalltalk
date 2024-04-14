@@ -6,9 +6,9 @@ Class {
 	#superclass : 'ASZigMethodOutput',
 	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Output'
 }
 
 { #category : 'compiling' }

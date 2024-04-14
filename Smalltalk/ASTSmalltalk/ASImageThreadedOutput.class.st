@@ -5,6 +5,9 @@ Class {
 	#name : 'ASImageThreadedOutput',
 	#superclass : 'ASImageOutput',
 	#classTraits : 'ASOutputAPI classTrait',
+	#classVars : [
+		'ASZagConstants'
+	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
