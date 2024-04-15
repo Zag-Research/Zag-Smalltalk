@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const dispatchCache = config.dispatchCache;
 const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
 const Process = @import("process.zig").Process;
@@ -31,75 +30,76 @@ const Age = heap.Age;
 const symbol = @import("symbol.zig");
 const Sym = symbol.symbols;
 const phi32 = @import("utilities.zig").inversePhi(u32);
+pub const doDnu = controlPrimitives.hardDnu;
 
-pub const SendCache = *SendCacheStruct;
-pub const sendCacheSize = if (dispatchCache) @sizeOf(SendCacheStruct) / @sizeOf(Code) else 0;
-pub const SendCacheStruct = if (dispatchCache) extern struct {
-    cache1: PC,
-    cache2: PC,
-    noCache: PC,
-    dnu: PC,
-    const Self = @This();
-    pub fn init() Self {
-        return initWith(&dnus[0]);
-    }
-    pub fn initWith(fn1: PC) Self {
-        return .{
-            .cache1 = @ptrCast(fn1),
-            .cache2 = @ptrCast(fn1),
-            .noCache = @ptrCast(&dnus[1]),
-            .dnu = @ptrCast(&dnus[2]),
-        };
-    }
-    pub fn current(self: *Self) PC { // INLINE
-        return self.cache1;
-    }
-    pub inline fn next(self: *Self) SendCache {
-        trace("\nnext: {}", .{self});
-        return @ptrCast(&self.cache2);
-    }
-    pub inline fn fromDnu(self: *Self) SendCache {
-        return @fieldParentPtr(SendCacheStruct, "dnu", @as(*PC, @ptrCast(self))).previous();
-    }
-    pub inline fn dontCache(self: *Self) SendCache { // don't use on a SendCache that is the result of `next`
-        return @ptrCast(&self.dnu);
-    }
-    pub inline fn previous(self: *Self) SendCache {
-        return @ptrCast(@as([*][*]const Code, @ptrCast(self)) - 1);
-    }
-} else struct {
-    const Self = @This();
-    pub fn init() Self {
-        return .{};
-    }
-    pub inline fn current(_: *Self) PC {
-        return fallbackPc;
-    }
-    pub inline fn next(self: *Self) SendCache {
-        return self;
-    }
-    pub inline fn dontCache(self: *Self) SendCache {
-        return self;
-    }
-    inline fn fromDnu(self: *Self) SendCache {
-        return self;
-    }
-};
+// pub const SendCache = *SendCacheStruct;
+pub const sendCacheSize = 0; //if (dispatchCache) @sizeOf(SendCacheStruct) / @sizeOf(Code) else 0;
+// pub const SendCacheStruct = if (dispatchCache) extern struct {
+//     cache1: PC,
+//     cache2: PC,
+//     noCache: PC,
+//     dnu: PC,
+//     const Self = @This();
+//     pub fn init() Self {
+//         return initWith(&dnus[0]);
+//     }
+//     pub fn initWith(fn1: PC) Self {
+//         return .{
+//             .cache1 = @ptrCast(fn1),
+//             .cache2 = @ptrCast(fn1),
+//             .noCache = @ptrCast(&dnus[1]),
+//             .dnu = @ptrCast(&dnus[2]),
+//         };
+//     }
+//     pub fn current(self: *Self) PC { // INLINE
+//         return self.cache1;
+//     }
+//     pub inline fn next(self: *Self) SendCache {
+//         trace("\nnext: {}", .{self});
+//         return @ptrCast(&self.cache2);
+//     }
+//     pub inline fn fromDnu(self: *Self) SendCache {
+//         return @fieldParentPtr(SendCacheStruct, "dnu", @as(*PC, @ptrCast(self))).previous();
+//     }
+//     pub inline fn dontCache(self: *Self) SendCache { // don't use on a SendCache that is the result of `next`
+//         return @ptrCast(&self.dnu);
+//     }
+//     pub inline fn previous(self: *Self) SendCache {
+//         return @ptrCast(@as([*][*]const Code, @ptrCast(self)) - 1);
+//     }
+// } else struct {
+//     const Self = @This();
+//     pub fn init() Self {
+//         return .{};
+//     }
+//     pub inline fn current(_: *Self) PC {
+//         return fallbackPc;
+//     }
+//     pub inline fn next(self: *Self) SendCache {
+//         return self;
+//     }
+//     pub inline fn dontCache(self: *Self) SendCache {
+//         return self;
+//     }
+//     inline fn fromDnu(self: *Self) SendCache {
+//         return self;
+//     }
+// };
 const dnus = [_]Code{
     Code.prim(&controlPrimitives.cacheDnu),
     Code.prim(&controlPrimitives.hardDnu),
     Code.prim(&controlPrimitives.forceDnu),
 };
-test "SendCache" {
-    if (dispatchCache) {
-        const expectEqual = std.testing.expectEqual;
-        var cache = SendCacheStruct.init();
-        try expectEqual(cache.current().prim, &controlPrimitives.cacheDnu);
-        try expectEqual(cache.dontCache().current().prim, &controlPrimitives.forceDnu);
-        try expectEqual(cache.next().next().current().prim, &controlPrimitives.hardDnu);
-        try expectEqual(cache.next().next().next().current().prim, &controlPrimitives.forceDnu);
-    }
-}
+// test "SendCache" {
+//     if (dispatchCache) {
+//         const expectEqual = std.testing.expectEqual;
+//         var cache = SendCacheStruct.init();
+//         try expectEqual(cache.current().prim, &controlPrimitives.cacheDnu);
+//         try expectEqual(cache.dontCache().current().prim, &controlPrimitives.forceDnu);
+//         try expectEqual(cache.next().next().current().prim, &controlPrimitives.hardDnu);
+//         try expectEqual(cache.next().next().next().current().prim, &controlPrimitives.forceDnu);
+//     }
+// }
 pub const SP = *Stack;
 const Stack = extern struct {
     top: Object,
@@ -152,14 +152,14 @@ test "Stack" {
     _ = sp1.drop().push(Object.from(42));
     try ee(stack[9].to(i64), 42);
 }
-pub fn check(pc: PC, sp: SP, process: *Process, context: CodeContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+pub fn check(pc: PC, sp: SP, process: *Process, context: CodeContextPtr, _: Object) callconv(stdCall) SP {
     if (process.debugger()) |debugger|
-        return @call(tailCall, debugger, .{ pc, sp, process, context, undefined, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, debugger, .{ pc, sp, process, context, undefined });
+    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
 }
 
-pub const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP;
-//const TFn = fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) [*]Object;
+pub const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP;
+//const TFn = fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object) [*]Object;
 pub const fallback = controlPrimitives.fallback;
 const fallbackCode = Code.prim(&fallback);
 const fallbackPc = PC.init(&fallbackCode);
@@ -187,17 +187,16 @@ pub const CompiledMethod = extern struct {
             .code = [codeSize]Code{ Code.prim(methodFn), Code.prim(methodFn2), Code.classSelector(.none, name) },
         };
     }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: CodeContextPtr, cache: SendCache) callconv(stdCall) SP {
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: CodeContextPtr) callconv(stdCall) SP {
         const pc = PC.init(self.codePtr());
         trace("\nexecuteX: {} {*} {*}", .{ pc, self, self.codePtr() });
         trace("\nexecuteY: {} {x} {} {}", .{ self.stackStructure, self.code[2], self.code[0], self.code[1] });
         trace("\nexecute: [{*}]: {*} {} {}", .{ pc.asCodePtr(), pc.prim(), sp.top, self.selector() });
         //        return @call(tailCall,pc.prim(),.{pc+1,sp,process,context,self.selector});
-        return pc.prim()(pc.next(), sp, process, context, self.selector(), cache);
+        return pc.prim()(pc.next(), sp, process, context, self.selector());
     }
     pub fn forDispatch(self: *Self, class: ClassIndex) void {
         trace("\nforDispatch: {x} {}",.{self.code[2],class});
-        if (dispatchCache) self.selector = self.selector.withClass(class);
         dispatch.addMethod(class, self) catch @panic("addMethod failed");
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -311,7 +310,7 @@ pub const PC = extern struct {
         return @as(*const Object, @ptrCast(@as([*]const Code, @ptrCast(self.code)) + 1 + offset)).*;
     }
     pub inline fn compiledMethodPtr(self: PC, comptime index: comptime_int) *const CompiledMethod {
-        return @fieldParentPtr(CompiledMethod, "code", @as(*const [3]Code, @ptrCast(@as([*]const Code, @ptrFromInt(@as(usize,@bitCast(self)))) - index)));
+        return @fieldParentPtr("code", @as(*const [3]Code, @ptrCast(@as([*]const Code, @ptrFromInt(@as(usize,@bitCast(self)))) - index)));
     }
     pub fn XXXchoose(self: PC, v: u32) PC {
         if (v == 0) return self.codeRef;
@@ -353,7 +352,7 @@ pub const Code = extern union {
     pub inline fn codeRef(c: [*]const Code) Code {
         return Code{ .uint = @intFromPtr(@constCast(c)) };
     }
-    pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: Object) callconv(stdCall) SP {
         return sp;
     }
     var endCode = [_]Code{.{ .prim = &end }};
@@ -407,8 +406,8 @@ pub fn countNonLabels(comptime tup: anytype) CountSizes {
                 o += 1;
             },
             ThreadedFn => {
-                if (field == &controlPrimitives.send0 or
-                    field == &controlPrimitives.send1) d += 1;
+                if (field == &controlPrimitives.send or
+                    field == &controlPrimitives.sendTail) d += 1;
                 c += 1;
             },
             comptime_int, comptime_float, ClassIndex => {
@@ -440,7 +439,7 @@ test "countNonLabels" {
     const expectEqual = std.testing.expectEqual;
     const r1 = countNonLabels(.{
         ":abc",
-        &p.send1,
+        &p.send,
         "def",
         True,
         comptime Object.from(42),
@@ -475,7 +474,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         //     if (checkEqual(CompiledMethod.codeOffset,@offsetOf(Self,"code"))) |s|
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
-        const cacheSize = @sizeOf(SendCacheStruct) / @sizeOf(Code);
+        const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
         pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16) Self {
             const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes + caches * cacheSize + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
@@ -507,23 +506,17 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object, cache: ?SendCache) void {
+        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
             //trace("\nsetLiterals: 0x{x:0>16} {any}", .{ self.selector.u(), replacements });
-            var cachedSend = false;
             for (&self.code) |*c| {
-                if (dispatchCache and (c.prim == &controlPrimitives.send0 or c.prim == &controlPrimitives.send1)) {
-                    cachedSend = true;
-                    unreachable;
-                } else {
-                    if (c.object.isIndexSymbol0()) {
-                        const index = c.object.indexNumber();
-                        c.* = Code.object(replacements[index]);
-                    }
-                    if (dispatchCache and cachedSend) {
-                        @as(SendCache, @ptrCast(@as([*]Code, @ptrCast(c)) + 1)).* = if (cache) |aSendCache| aSendCache.* else SendCacheStruct.init();
-                        cachedSend = false;
-                    }
+                if (c.object.isIndexSymbol0()) {
+                    const index = c.object.indexNumber();
+                    c.* = Code.object(replacements[index]);
                 }
+                // if (dispatchCache and cachedSend) {
+                //     @as(SendCache, @ptrCast(@as([*]Code, @ptrCast(c)) + 1)).* = if (cache) |aSendCache| aSendCache.* else SendCacheStruct.init();
+                //     cachedSend = false;
+                // }
             }
             if (self.selector.isIndexSymbol0()) {
                 const replacement = replacements[self.selector.indexNumber()];
@@ -580,7 +573,7 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Nil, 2, 3);
     var r1r = [_]Object{ Nil, True };
-    r1.setLiterals(empty, &r1r, null);
+    r1.setLiterals(empty, &r1r);
     try expectEqual(r1.getCodeSize(), 11);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -620,8 +613,6 @@ pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, compt
                 n = n + 1;
             },
             ThreadedFn => {
-                if (field == &controlPrimitives.send0 or
-                    field == &controlPrimitives.send1) cachedSend = dispatchCache;
                 code[n] = Code.prim(field);
                 n = n + 1;
             },
@@ -650,8 +641,8 @@ pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, compt
                                     inline for (tup) |t| {
                                         if (@TypeOf(t) == ThreadedFn) {
                                             lp += 1;
-                                            if (t == &controlPrimitives.send0 or
-                                                t == &controlPrimitives.send1) lp += 4;
+                                            if (t == &controlPrimitives.send or
+                                                t == &controlPrimitives.sendTail) lp += 4;
                                         } else switch (@typeInfo(@TypeOf(t))) {
                                             .Pointer => |tPointer| {
                                                 switch (@typeInfo(tPointer.child)) {
@@ -699,7 +690,7 @@ const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.hardDnu, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", Sym.i_0, null });
-    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)}, null);
+    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
     //    for (t,0..) |tv,idx|
     //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
@@ -927,270 +918,271 @@ test "compileObject" {
 pub const controlPrimitives = struct {
     const ContextPtr = CodeContextPtr;
     pub inline fn checkSpace(pc: PC, sp: SP, process: *Process, context: ContextPtr, needed: usize) void {
-        _ = process;
-        _ = pc;
-        _ = context;
-        _ = sp;
-        _ = needed;
+        _ = .{pc, sp, process, context, needed};
     }
-    pub fn verifySelector(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\nverifySelector: 0x{x} 0x{x} {}", .{ method.selector.rawU(), selector.rawU(), pc });
-        if (!method.selector.selectorEquals(selector)) {
-            const dPc = cache.current();
-            return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });
-        }
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+    pub fn send(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{pc, sp, process, context, selector, @panic("send")};
     }
-    pub fn verifyDirectSelector(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
+    pub fn sendTail(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{pc, sp, process, context, selector, @panic("send")};
+    }
+    pub fn verifySelector(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = selector;
+        //const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
+        //trace("\nverifySelector: 0x{x} 0x{x} {}", .{ method.selector.rawU(), selector.rawU(), pc });
+        // if (!method.selector.selectorEquals(selector)) {
+        //     return @call(tailCall, hardDnu, .{ pc, sp, process, context, selector});
+        // }
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    }
+    pub fn verifyDirectSelector(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
         const method = (&pc[0]).compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\nverifyDirectSelector: {} {} {}", .{ method.selector, selector, pc });
         if (!method.selector.selectorEquals(selector)) {
-            const dPc = cache.current();
-            return @call(tailCall, dPc.prim, .{ dPc + 1, sp, process, context, selector, cache.next() });
+            return @call(tailCall, hardDnu, .{ pc, sp, process, context, selector });
         }
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn branch(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn branch(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const offset = pc.int();
         trace("\nbranch offset: {}", .{offset});
         if (offset >= 0) {
             const target = pc.skip(@as(u64, @intCast(offset)) + 1);
-            if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined, undefined });
-            return @call(tailCall, target.prim(), .{ target.next(), sp, process, context, undefined, undefined });
+            if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined });
+            return @call(tailCall, target.prim(), .{ target.next(), sp, process, context, undefined });
         }
         const target = pc.next().back(@as(u64, @intCast(-offset)));
-        if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined, undefined });
-        return @call(tailCall, target.prim(), .{ target.next(), sp, process.decCheck(), context, undefined, undefined });
+        if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined });
+        return @call(tailCall, target.prim(), .{ target.next(), sp, process.decCheck(), context, undefined });
     }
-    pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nifTrue: {any}", .{context.stack(sp, process)});
         const v = sp.top;
-        if (True.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined, undefined });
-        if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined, undefined });
+        if (True.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+        if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
         @panic("non boolean");
     }
-    pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nifFalse: {any}", .{context.stack(sp, process)});
         const v = sp.top;
-        if (False.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined, undefined });
-        if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined, undefined });
+        if (False.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+        if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
         @panic("non boolean");
     }
-    pub fn ifNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn ifNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const v = sp[0];
-        if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.pop(), process, context, undefined, undefined });
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp.pop(), process, context, undefined, undefined });
+        if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.pop(), process, context, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp.pop(), process, context, undefined });
     }
-    pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const v = sp[0];
-        if (Nil.equals(v)) return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp.pop(), process, context, undefined, undefined });
-        return @call(tailCall, branch, .{ pc, sp.pop(), process, context, undefined, undefined });
+        if (Nil.equals(v)) return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp.pop(), process, context, undefined });
+        return @call(tailCall, branch, .{ pc, sp.pop(), process, context, undefined });
     }
-    pub fn primFailure(_: PC, _: SP, _: *Process, _: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn primFailure(_: PC, _: SP, _: *Process, _: ContextPtr, _: Object) callconv(stdCall) SP {
         @panic("primFailure");
     }
-    pub fn dup(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn dup(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(sp.top);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn over(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn over(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(sp.next);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn drop(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.drop(), process, context, undefined, undefined });
+    pub fn drop(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp.drop(), process, context, undefined });
     }
-    pub fn dropNext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn dropNext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\ndropNext: {}", .{sp.top});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(sp.top), process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(sp.top), process, context, undefined });
     }
-    pub fn swap(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn swap(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const saved = sp.top;
         sp.top = sp.next;
         sp.next = saved;
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         sp.top = pc[0].object;
         trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp, process, context, undefined });
     }
-    pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         sp.top = Object.from(0);
         trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         sp.top = Object.from(1);
         trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn pushLiteral(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteral(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(pc.object());
         trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
     }
-    pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(0));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(1));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(2));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(-1));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(pc.literalIndirect());
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Nil);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(True);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(False);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushThisContext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushThisContext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(context));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(context.getLocal(pc.uint()));
         trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
     }
-    pub fn pushLocal0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLocal0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const newSp = sp.push(context.getLocal(0));
         trace("\npushLocal0: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn popLocal0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn popLocal0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         context.setLocal(0, sp.top);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp + 1, process, context, undefined });
     }
-    pub fn storeLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn storeLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nstoreIntoLocal: {} {}", .{ pc.uint, sp.top });
         context.setLocal(pc.uint, sp.top);
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp, process, context, undefined });
     }
-    pub fn pushLocalField(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLocalField(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const ref = pc.uint;
         const local = context.getLocal(ref & 0xff);
         const newSp = sp.push(local.getField(ref >> 12));
         trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), newSp, process, context, undefined });
     }
-    pub fn popLocalField(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn popLocalField(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const ref = pc.uint;
         const local = context.getLocal(ref & 0xfff);
         trace("\npopLocalField: {} {}", .{ ref, sp.top });
         local.setField(ref >> 12, sp.top);
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp + 1, process, context, undefined });
     }
-    pub fn pushLocalData(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushLocalData(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const ref = pc.uint;
         const local = context.getLocal(ref & 0xfff);
         const newSp = sp.push(local - (ref >> 12));
         trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), newSp, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), newSp, process, context, undefined });
     }
-    pub fn popLocalData(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn popLocalData(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const ref = pc.uint;
         const local = context.getLocal(ref & 0xff);
         trace("\npopLocalData: {} {}", .{ ref, sp.top });
         local.setData(ref >> 12, sp.top);
-        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim, .{ pc.skip(2), sp + 1, process, context, undefined });
     }
-    pub fn popLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn popLocal(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\npopIntoLocal: {} {}", .{ pc.uint(), sp.top });
         context.setLocal(pc.uint(), sp.top);
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined, undefined });
+        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
     }
-    pub fn printStack(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn printStack(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nstack: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        _ = .{ pc, sp, process, context, selector, cache, @panic("primitiveFailed") };
+    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{ pc, sp, process, context, selector, @panic("primitiveFailed") };
     }
-    pub fn fallback(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn fallback(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
         const self = sp.at(selector.numArgs());
         context.setReturn(pc);
         const class = self.get_class();
         const newPc = lookupAddress(selector, class);
         trace("\nfallback: {} {} {} {} {}", .{ selector, class, pc, newPc, newPc.prim() });
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    pub fn call(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn call(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         context.setReturn(pc.next());
         const offset = pc.uint();
         const method = pc.skip(offset + 1).object().to(CompiledMethodPtr);
         const newPc = PC.init(method.codePtr());
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         context.setReturn(pc.next());
         const offset = pc.int();
         const newPc = pc.next().back(@intCast(-offset));
         trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    pub fn send0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) callconv(stdCall) SP {
-        const self = sp.top;
-        context.setReturn(pc.next().skip(sendCacheSize));
-        const class = self.get_class();
-        const selector = pc.object().withClass(class);
-        trace("\nsend0: {} {}", .{ selector, class });
-        const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
-        const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
-        trace(" {} {any}", .{ newPc, process.getStack(sp) });
-        return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
-    }
-    //    pub fn tailSend0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, cache: SendCache) callconv(stdCall) SP {
+    // pub fn send0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+    //     const self = sp.top;
+    //     context.setReturn(pc.next().skip(sendCacheSize));
+    //     const class = self.get_class();
+    //     const selector = pc.object().withClass(class);
+    //     trace("\nsend0: {} {}", .{ selector, class });
+    //     const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
+    //     const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
+    //     trace(" {} {any}", .{ newPc, process.getStack(sp) });
+    //     return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector });
+    // }
+    //    pub fn tailSend0(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
     //    }
-    pub fn send1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) callconv(stdCall) SP {
-        const self = sp.next;
-        context.setReturn(pc.next().skip(sendCacheSize));
-        const class = self.get_class();
-        const selector = pc.object().withClass(class);
-        trace("\nsend1: {} {}", .{ selector, class });
-        const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
-        const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
-        trace(" {} {any}", .{ newPc, process.getStack(sp) });
-        return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector, if (dispatchCache) cache.next() else prevCache });
-    }
-    //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, cache: SendCache) callconv(stdCall) SP {
+    // pub fn send1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, prevCache: SendCache) callconv(stdCall) SP {
+    //     const self = sp.next;
+    //     context.setReturn(pc.next().skip(sendCacheSize));
+    //     const class = self.get_class();
+    //     const selector = pc.object().withClass(class);
+    //     trace("\nsend1: {} {}", .{ selector, class });
+    //     const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
+    //     const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
+    //     trace(" {} {any}", .{ newPc, process.getStack(sp) });
+    //     return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, selector });
+    // }
+    //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
     //    }
-    pub fn perform(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn perform(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const selector = sp.top;
         const numArgs = selector.numArgs();
         if (numArgs != 0) @panic("wrong number of args");
         const newPc = lookupAddress(selector, sp[numArgs + 1].get_class());
         context.setReturn(pc);
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
     }
-    pub fn performWith(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn performWith(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const selector = sp.next;
         sp.next = sp.top;
         if (selector.numArgs() != 1) @panic("wrong number of args");
         const newPc = lookupAddress(selector, sp[2].get_class());
         context.setTPc(pc + 1);
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
     }
-    pub fn pushContext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn pushContext(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         const method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc.back(pc.uint()).asCodePtr()) - CompiledMethod.codeOffset));
         const stackStructure = method.stackStructure;
         const locals = stackStructure.low16() & 255;
@@ -1200,9 +1192,9 @@ pub const controlPrimitives = struct {
         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
         const newSp = ctxt.asNewSp();
         trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.selector(), selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, undefined, undefined });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, undefined });
     }
-    pub fn returnWithContext(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn returnWithContext(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nreturnWithContext: {any} -> ", .{context.stack(sp, process)});
         const result = context.pop(process);
         const newSp = result.sp;
@@ -1212,9 +1204,9 @@ pub const controlPrimitives = struct {
             trace("{any}", .{stack});
         } else trace("{}", .{stack.len});
         trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
     }
-    pub fn returnTop(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn returnTop(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nreturnTop: {any} ", .{context.stack(sp, process)});
         const top = sp.top;
         const result = context.pop(process);
@@ -1223,31 +1215,31 @@ pub const controlPrimitives = struct {
         const callerContext = result.ctxt;
         trace("-> {x}", .{@intFromPtr(newSp)});
         trace("-> {any}", .{callerContext.stack(newSp, process)});
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
     }
-    pub fn returnNoContext(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+    pub fn returnNoContext(_: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
         trace("\nreturnNoContext: {x} {any} N={} T={}", .{ context.method.code[2], context.stack(sp, process), context.getNPc(), context.getTPc() });
-        return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, undefined, undefined });
+        return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, undefined });
     }
-    pub fn forceDnu(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        std.debug.print("\nforceDnu: 0x{x} {} {} {}", .{ selector.hash32(), selector.classIndex, selector.asSymbol(), cache.fromDnu() });
-        _ = .{ pc, sp, process, context, selector, cache, @panic("forceDnu unimplemented") };
+    pub fn forceDnu(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+        std.debug.print("\nforceDnu: 0x{x} {} {}", .{ selector.hash32(), selector.classIndex, selector.asSymbol() });
+        _ = .{ pc, sp, process, context, selector, @panic("forceDnu unimplemented") };
     }
-    fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn hardDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
         trace("\nhardDnu: {} {}", .{ selector.classIndex, selector.asSymbol() });
         const newPc = lookupAddress(selector, selector.classIndex);
-        return @call(tailCall, newPc.prim(), .{ newPc.*.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, newPc.prim(), .{ newPc.*.next(), sp, process, context, undefined });
     }
-    fn cacheDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        trace("\ncacheDnu: 0x{x} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol() });
-        const newPc = lookupAddress(selector, selector.classIndex);
-        const newCache = cache.previous();
-        newCache.cache1 = newPc;
-        trace("\ncacheDnu: {} {*} {*}", .{ newCache, newCache, cache });
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined, undefined });
-        //        const pc = cache.current();
-        //        return @call(tailCall, pc.prim(), .{ pc+1, sp, process, context, selector, cache.next() });
-    }
+    // fn cacheDnu(_: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+    //     trace("\ncacheDnu: 0x{x} {} {}", .{ selector.u(), selector.classIndex, selector.asSymbol() });
+    //     const newPc = lookupAddress(selector, selector.classIndex);
+    //     const newCache = cache.previous();
+    //     newCache.cache1 = newPc;
+    //     trace("\ncacheDnu: {} {*} {*}", .{ newCache, newCache, cache });
+    //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
+    //     //        const pc = cache.current();
+    //     //        return @call(tailCall, pc.prim(), .{ pc+1, sp, process, context, selector, cache.next() });
+    // }
 };
 pub const Execution = struct {
     process: Process,
@@ -1281,48 +1273,24 @@ pub const Execution = struct {
     pub fn run(self: *Self, source: []const Object, ptr: anytype) []Object {
         const method: CompiledMethodPtr = @constCast(@ptrCast(ptr));
         const stdout = std.io.getStdOut().writer();
-        var cache = SendCacheStruct.init();
         self.initStack(source);
         self.ctxt.setReturn(Code.endThread);
         if (@TypeOf(trace) == @TypeOf(std.debug.print) and trace == std.debug.print) method.write(stdout) catch unreachable;
         //        trace("\nrun: {} {*}",.{cache.dontCache(),cache.dontCache().current()});
-        return self.stack(method.execute(self.sp, &self.process, &self.ctxt, cache.dontCache()));
+        return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
 };
 const p = struct {
     usingnamespace controlPrimitives;
 };
-fn push42(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+fn push42(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object) callconv(stdCall) SP {
     const newSp = sp.push(Object.from(42));
     return newSp;
-}
-test "SendCache direct" {
-    if (dispatchCache) {
-        const expectEqual = std.testing.expectEqual;
-        var method = compileMethod(Sym.yourself, 0, 0, .{
-            &p.send0,           Sym.value,
-            &p.primitiveFailed,
-        });
-        const myDnu = Code.prim(&push42);
-        var cache = SendCacheStruct.initWith(&myDnu);
-        //    _ = cache;    method.setLiterals(empty, empty, null);
-        trace("\ncache: {}", .{cache});
-        trace("\nmethod:< {}", .{method});
-        method.setLiterals(empty, empty, &cache);
-        trace("\nmethod:> {}", .{method});
-        var te = Execution.new();
-        te.init();
-        var objs = [_]Object{ Nil, True };
-        const compiledMethod = method.asCompiledMethodPtr();
-        const result = te.run(objs[0..], compiledMethod);
-        try expectEqual(result.len, 3);
-        try expectEqual(result[0], Object.from(42));
-    } else std.debug.print("dispatch cache not enabled - succeeds vacuously ", .{});
 }
 test "send with dispatch direct" {
     const expectEqual = std.testing.expectEqual;
     const method = compileMethod(Sym.yourself, 0, 0, .{
-        &p.send0,           Sym.value,
+        &p.send,           Sym.value,
         &p.primitiveFailed,
     });
     const methodV = compileMethod(Sym.value, 0, 0, .{
@@ -1394,7 +1362,7 @@ test "context returnTop twice via Execution" {
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
     });
-    method1.setLiterals(empty, &[_]Object{Object.from(&method2)}, null);
+    method1.setLiterals(empty, &[_]Object{Object.from(&method2)});
     var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };
@@ -1412,7 +1380,7 @@ test "context returnTop with indirect via Execution" {
         "0Obj",
         &p.returnTop,
     });
-    method.setLiterals(empty, &[_]Object{Object.from(42)}, null);
+    method.setLiterals(empty, &[_]Object{Object.from(42)});
     var te = Execution.new();
     te.init();
     var objs = [_]Object{ Nil, True };

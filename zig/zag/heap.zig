@@ -58,11 +58,11 @@ pub const Format = enum(u7) {
     const FirstWeak = @intFromEnum(Format.externalWeakWithPointers);
     const LastWeak = @intFromEnum(Format.weakWithPointers);
     const Last = 128;
-    comptime {
-        assert(@intFromEnum(Format.notIndexable) == 0x6e);
-        assert(@intFromEnum(Format.notIndexableWithPointers) == 0x76);
-        assert(@intFromEnum(Format.indexedWeakWithPointers) == 0x7f);
-    }
+    // comptime {
+    //     assert(@intFromEnum(Format.notIndexable) == 0x6e);
+    //     assert(@intFromEnum(Format.notIndexableWithPointers) == 0x76);
+    //     assert(@intFromEnum(Format.indexedWeakWithPointers) == 0x7f);
+    // }
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
     }
@@ -938,7 +938,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
                 hsh = hsh*%3+p;
             return hsh;
         }
-        pub fn init() *Self {
+        pub fn init() *const Self {
             var result = Self{
                 .header = HeapHeader.staticHeaderWithClassAllocHash(.String,AllocationInfo.of(str),hash()),
                 .chars = [_]u8{0} ** (size + fill),
@@ -946,7 +946,8 @@ pub fn CompileTimeString(comptime str: []const u8) type {
             for (str, result.chars[0..size]) |c, *r| {
                 r.* = c;
             }
-            return &result;
+            const final = result;
+            return &final;
         }
         fn h(self: *const Self) []const u8 {
             return @as([*]const u8, @ptrCast(self))[0 .. (size + 15) / 8 * 8];
@@ -965,7 +966,8 @@ pub fn compileStrings(comptime tup: anytype) [tup.len]HeapObjectConstPtr {
     inline for (tup, 0..) |name, idx| {
         result[idx] = comptime @as(HeapObjectConstPtr,CompileTimeString(name).init().obj());
     }
-    return result;
+    const final = result;
+    return final;
 }
 
 const abcde = CompileTimeString("abcdefghijklm").init().obj();

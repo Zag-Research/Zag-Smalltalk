@@ -72,7 +72,7 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, cache: SendCache) callconv(stdCall) SP {
+    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, _: SendCache) callconv(stdCall) SP {
         trace("\ninterpretReturn: 0x{x}", .{@intFromPtr(context.method)});
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(context.method))), undefined });
     }
