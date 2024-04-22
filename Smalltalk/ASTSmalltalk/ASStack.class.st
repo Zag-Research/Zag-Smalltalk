@@ -46,15 +46,14 @@ ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOth
 		  to: aSymbol
 		  local: blockLocal
 		  stack: blockStack
-		  other: nil
+		  other: blockOther 
 ]
 
 { #category : 'adding' }
 ASStack >> push: anObject [
-
 	| newStack |
 	newStack := ASStackElement from: self.
-	newStack top: anObject.
+	newStack top: (ASCClassValue new init: anObject class).
 	^ newStack 
 ]
 

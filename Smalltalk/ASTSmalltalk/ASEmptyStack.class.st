@@ -5,12 +5,19 @@ Class {
 	#name : 'ASEmptyStack',
 	#superclass : 'ASStack',
 	#instVars : [
-		'nonlocalNameLookupObject'
+		'nonlocalNameLookupObject',
+		'blocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'accessing' }
+ASEmptyStack >> blocks: aCollection [
+aCollection isCollection ifFalse: [ self halt ].
+	blocks := aCollection 
+]
 
 { #category : 'accessing' }
 ASEmptyStack >> depth [ 
@@ -30,6 +37,12 @@ ASEmptyStack >> find: aSymbol [
 	^ nonlocalNameLookupObject find: aSymbol"
 ]
 
+{ #category : 'initialization' }
+ASEmptyStack >> initialize [
+	super initialize.
+	blocks := #()
+]
+
 { #category : 'instance initialization' }
 ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 
@@ -37,6 +50,18 @@ ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 ]
 
 { #category : 'API' }
+ASEmptyStack >> offset: anInteger to: anObject [
+	^anInteger 
+]
+
+{ #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ nonlocalNameLookupObject lookupName: anObject block: blockOther
+
+	blocks do: [ :block || index | index := (block indexOf: anObject). index ifNotNil: [ ^blockOther value: index ]].
+	
+	^ self error: 'something bad happend'
+]
+
+{ #category : 'initialization' }
+ASEmptyStack >> requiredContextDo: x [
 ]

@@ -7,6 +7,16 @@ Class {
 }
 
 { #category : 'tests' }
+ASZigThreadedOutputTest >> testZigAST_fib [
+
+	| ast |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	self
+		assert: ast
+		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+]
+
+{ #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_addComment [
 
 	| output comment |

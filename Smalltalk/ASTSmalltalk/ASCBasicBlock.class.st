@@ -155,14 +155,18 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
-
+ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
 	^ stack
 		  offset: 0
 		  to: anObject
-		  local: localBlock
-		  stack: localBlock
-		  other: nil
+		  local: blockLocal
+		  stack: blockStack
+		  other: blockOther 
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> offsetToSelf [
+	^stack offset: 0 to: nil
 ]
 
 { #category : 'writing' }

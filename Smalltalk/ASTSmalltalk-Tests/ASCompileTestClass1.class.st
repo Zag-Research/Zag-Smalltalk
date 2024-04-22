@@ -55,6 +55,12 @@ ASCompileTestClass1 >> blockReturnSelf [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> bracketSend [ 
+
+	5 + (self fib: 2)
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |
@@ -87,7 +93,7 @@ ASCompileTestClass1 >> fib2: anInt [
 ASCompileTestClass1 >> fib: anInt [
 	^ anInt < 2
 		ifTrue: [1] 
-		ifFalse: [(self fib: anInt-1) + self fib: anInt-2]
+		ifFalse: [(self fib: anInt-1) + (self fib: anInt-2)]
 ]
 
 { #category : 'testing - examples' }

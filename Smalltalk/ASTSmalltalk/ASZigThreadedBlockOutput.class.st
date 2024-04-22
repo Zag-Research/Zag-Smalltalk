@@ -36,25 +36,60 @@ ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 	"&e.popLocalData, i1 + (i2 << s1)"
 
-	self
+	"self
 		putEmbedded: #popLocalData;
 		print:
 			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
 					 offset withIndex: index ]);
 		comma;
-		lf
+		lf"
+	currentBasicBlock
+		offsetOf: aASCIndirectVariable name
+		local: nil
+		stack: [ :offset |
+			self
+				putEmbedded: #popStack;
+				print: (currentBasicBlock offsetToSelf);
+				print: offset;
+				comma; 
+				lf ]
+		other:  [ :offsets |
+			self
+				putEmbedded: #popLocalData;
+				print: (offsets collectWithIndex: [ :offset :index |
+					 offset withIndex: index ]);
+				comma;
+				lf ]
 ]
 
 { #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
 	"&e.pushLocalData, i1 + (i2 << s1)"
-	self
+	"self
 		putEmbedded: #pushLocalData;
 		print:
 			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
 					 offset withIndex: index ]);
 		comma;
-		lf
+		lf"
+		currentBasicBlock
+		offsetOf: aASCIndirectVariable name
+		local: nil
+		stack: [ :offset |
+				self putEmbedded: #pushFromContext;
+				print: offset;
+				nextPutAll: ' + ( ';
+				print: currentBasicBlock offsetToSelf;
+				nextPutAll: ' << 12 )';
+				comma; 
+				lf ]
+		other:  [ :offsets |
+			self
+				putEmbedded: #pushIndiect;
+				print: (offsets collectWithIndex: [ :offset :index |
+					 offset withIndex: index ]);
+				comma;
+				lf ]
 ]
 
 { #category : 'API' }

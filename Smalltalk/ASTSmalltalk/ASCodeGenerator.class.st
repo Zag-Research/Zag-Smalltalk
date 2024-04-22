@@ -112,6 +112,7 @@ ASCodeGenerator >> find: aSymbol [
 	| indirect |
 
 	indirect := ASCIndirectVariable new.
+	indirect name: aSymbol.
 	^ indirect variable: (code find: aSymbol)
 ]
 
@@ -223,6 +224,16 @@ ASCodeGenerator >> nameBasicBlocks [
 						 nextPut: $:;
 						 print: idx ])
 			index: idx ]
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'accessing' }
