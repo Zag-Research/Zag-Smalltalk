@@ -72,7 +72,7 @@ const DispatchElement = if (config.indirectDispatch) PC else extern struct {
         return self.nextPointer;
     }
     pub inline fn compiledMethodPtr(self: Self, comptime index: comptime_int) *const CompiledMethod {
-        return @fieldParentPtr(CompiledMethod, "code", @as(*const [2]Code, @ptrCast(@as([*]const Code,  @ptrFromInt(@as(usize,@bitCast(self.nextPointer)))) - index)));
+        return @fieldParentPtr("code", @as(*const [2]Code, @ptrCast(@as([*]const Code,  @ptrFromInt(@as(usize,@bitCast(self.nextPointer)))) - index)));
     }
     pub fn format(
         self: Self,
@@ -240,7 +240,7 @@ const Dispatch = extern struct {
         trace("\nadd: {}", .{ cmp.selector()});
         while (true) {
             trace("\nadd: {*}",.{self});
-            if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .SeqCst, .SeqCst)) |notClean| {
+            if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
                 if (notClean == .dead) return error.DeadDispatch;
             } else break;
         }
@@ -251,7 +251,7 @@ const Dispatch = extern struct {
         const address = self.lookupAddress(cmp.selector());
         trace("\nadd: {} {} {}", .{ cmp.selector(), address, address.* });
         const newElement = DispatchElement.init(cmp.codePtr()).asInt();
-        if (@cmpxchgWeak(DispatchElement.equivalentInt(), address.asIntPtr(), dnuInit.asInt(), newElement, .SeqCst, .SeqCst) == null) {
+        if (@cmpxchgWeak(DispatchElement.equivalentInt(), address.asIntPtr(), dnuInit.asInt(), newElement, .seq_cst, .seq_cst) == null) {
             //trace("\nexchange: {*} {*} {*} {}", .{ address.*, dnuInit, cmp.codePtr(), cmp.codePtr()[0] });
             return; // we replaced DNU with method
         }
@@ -286,158 +286,158 @@ const Dispatch = extern struct {
         trace("\noffset: offs={} result={}",.{offs,result});
         return result;
     }
-    fn bitTest0(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest0(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 0);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest1(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest1(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 1);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest2(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest2(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 2);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 3);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest4(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest4(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 4);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 5);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest6(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest6(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 6);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest7(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest7(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 7);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest8(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest8(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 8);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest9(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest9(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 9);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest10(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest10(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 10);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest11(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest11(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 11);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest12(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest12(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 12);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest13(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest13(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 13);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest14(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest14(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 14);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest15(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest15(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 15);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest16(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest16(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 16);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest17(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest17(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 17);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest18(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest18(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 18);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest19(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest19(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 19);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest20(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest20(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 20);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest21(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest21(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 21);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest22(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest22(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 22);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest23(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest23(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 23);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest24(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest24(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 24);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest25(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest25(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 25);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest26(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest26(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 26);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest27(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest27(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 27);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest28(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest28(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 28);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest29(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest29(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 29);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest30(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest30(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 30);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn bitTest31(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn bitTest31(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = offset(selector.hash32(), programCounter, 31);
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
     const primes = [_]?ThreadedFn{ null, null, null, &prime3, null, &prime5 };
-    fn prime3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn prime3(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = programCounter.offsetFor(doHash(selector,3));
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn prime5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+    fn prime5(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
         const pc = programCounter.offsetFor(doHash(selector,5));
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    fn super(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        _ = .{ programCounter, sp, process, context, selector, cache, @panic("called super function") };
+    fn super(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{ programCounter, sp, process, context, selector, @panic("called super function") };
     }
-    fn fail(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        _ = .{ programCounter, sp, process, context, selector, cache };
+    fn fail(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{ programCounter, sp, process, context, selector };
         if (programCounter.uint() == 0)
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
-    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        _ = .{ programCounter, sp, process, context, selector, cache };
+    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{ programCounter, sp, process, context, selector };
         return sp.push(object.NotAnObject);
     }
-    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP {
-        _ = .{ process, context, selector, cache };
+    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP {
+        _ = .{ process, context, selector };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
     }
@@ -471,23 +471,23 @@ test "disambiguate" {
     const ee = std.testing.expectEqual;
     const empty = Object.empty;
     const fns = struct {
-        fn push1(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        fn push1(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object) callconv(stdCall) SP {
             return sp.push(Object.from(1));
         }
-        fn push2(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        fn push2(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object) callconv(stdCall) SP {
             return sp.push(Object.from(2));
         }
-        fn push3(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object, _: SendCache) callconv(stdCall) SP {
+        fn push3(_: PC, sp: SP, _: *Process, _: CodeContextPtr, _: Object) callconv(stdCall) SP {
             return sp.push(Object.from(3));
         }
     };
     // value=01101 yourself=00001 @"<="=11101
     var method1 = compileMethod(symbols.value, 0, 0, .{ &fns.push1, &Code.end });
-    method1.setLiterals(empty, empty, null);
+    method1.setLiterals(empty, empty);
     var method2 = compileMethod(symbols.yourself, 0, 0, .{ &fns.push2, &Code.end });
-    method2.setLiterals(empty, empty, null);
+    method2.setLiterals(empty, empty);
     var method3 = compileMethod(symbols.@"<=", 0, 0, .{ &fns.push3, &Code.end });
-    method3.setLiterals(empty, empty, null);
+    method3.setLiterals(empty, empty);
     if (config.indirectDispatch) {
         var space3 = [_]DispatchElement{undefined}**3;
         var dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method1), @ptrCast(&method2));
@@ -501,15 +501,6 @@ test "disambiguate" {
         var process = Process.new();
         process.init();
         defer process.deinit();
-        var context = Context.init();
-        const sp = process.endOfStack();
-        var cache = execute.SendCacheStruct.init();
-        if (config.dispatchCache) {
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself, cache.dontCache()).top.to(i64), 2);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
-        }
         try ee(dispatcher.prim(), &Dispatch.bitTest8);
         dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method3), @ptrCast(&method1));
         try ee(dispatcher.prim(), &Dispatch.bitTest0);
@@ -528,12 +519,11 @@ test "disambiguate" {
         defer process.deinit();
         var context = Context.init();
         const sp = process.endOfStack();
-        var cache = execute.SendCacheStruct.init();
         if (config.dispatchCache) {
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself, cache.dontCache()).top.to(i64), 2);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=", cache.dontCache()).top.to(i64), 3);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value, cache.dontCache()).top.to(i64), 1);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself).top.to(i64), 2);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=").top.to(i64), 3);
+            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
         }
         try ee(dispatcher.prim(), &Dispatch.bitTest2);
         dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method3), @ptrCast(&method1));
@@ -568,12 +558,12 @@ fn doDispatch(tE: *TestExecution, dispatch: *Dispatch, selector: Object) []Objec
 //     var temp: usize = 0;
 //     const methodType = compiledMethodType(2);
 //     const fns = struct {
-//         fn testYourself(_: PC, sp: SP, _: *Process, _: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+//         fn testYourself(_: PC, sp: SP, _: *Process, _: CodeContextPtr, selector: Object) callconv(stdCall) SP {
 //             if (!selector.equals(symbols.yourself)) @panic("hash doesn't match");
 //             sp.top = Object.cast(sp.top.u() + 2);
 //             return sp;
 //         }
-//         fn testAt(_: PC, sp: SP, _: *Process, _: CodeContextPtr, selector: Object, _: SendCache) callconv(stdCall) SP {
+//         fn testAt(_: PC, sp: SP, _: *Process, _: CodeContextPtr, selector: Object) callconv(stdCall) SP {
 //             if (!selector.equals(symbols.@"at:")) @panic("hash doesn't match");
 //             sp.top = Object.cast(sp.top.u() + 4);
 //             return sp;

@@ -6,7 +6,7 @@ const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
-const SeqCst = std.builtin.AtomicOrder.SeqCst;
+const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -51,7 +51,7 @@ pub const Process = extern struct {
     trapContextNumber: u64,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf(SP) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(u64);
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP;
+    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: CodeContextPtr, selector: Object) callconv(stdCall) SP;
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const stack_size = processAvail / 9;
     const nursery_size = (processAvail - stack_size) / 2;
