@@ -1,3 +1,6 @@
+"
+I have the knowledge of how to encode values for SpurPlus images
+"
 Class {
 	#name : 'ASSpurPlusImage',
 	#superclass : 'ASImage',
