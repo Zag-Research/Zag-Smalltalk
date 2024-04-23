@@ -2,6 +2,7 @@ Class {
 	#name : 'ASNanImageTest',
 	#superclass : 'ASImageTest',
 	#pools : [
+		'ASImage',
 		'ASZagConstants'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
@@ -73,7 +74,9 @@ ASNanImageTest >> test_simple1 [
 
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	self threaded: ast equals: #( verifySelector pushLiteral 42 returnTop )
+	self
+		threaded: ast
+		equals: #( ZfPushLiteral 42 ZfReturnTop )
 ]
 
 { #category : 'tests' }
@@ -84,5 +87,5 @@ ASNanImageTest >> test_simple1_noreturn [
 		       ASCompileTestClass1 >> #simple1_noreturn.
 	self
 		threaded: ast
-		equals: #( verifySelector pushLiteral 42 drop returnSelf )
+		equals: #( ZfPushLiteral 42 ZfDrop ZfReturnSelf )
 ]

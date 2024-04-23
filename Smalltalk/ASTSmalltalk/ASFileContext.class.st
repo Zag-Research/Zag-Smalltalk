@@ -1,3 +1,10 @@
+"
+I am a file context for code outputters.
+
+I provide a context for CodeGenerators. I maintain a collection of them as well as a symbol table. The code generators will tell me about any symbols that need to be added.
+
+
+"
 Class {
 	#name : 'ASFileContext',
 	#superclass : 'Object',

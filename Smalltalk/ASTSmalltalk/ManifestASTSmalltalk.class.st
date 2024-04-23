@@ -12,10 +12,7 @@ Class {
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleBadMessageRule2V1FalsePositive [
 
-	^ #( #( #( #RGMethodDefinition #( #ASGenerator #writeFieldsOn:
-	              #false ) )
-	        #'2021-03-28T22:55:47.987048-04:00' )
-	     #( #( #RGPackageDefinition #( #ASTSmalltalk ) )
+	^ #( #( #( #RGPackageDefinition #( #ASTSmalltalk ) )
 	        #'2021-04-23T13:00:23.089715-04:00' ) )
 ]
 
@@ -69,9 +66,10 @@ ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 	        #'2024-04-12T11:41:16.943424-04:00' )
 	     #( #( #RGMethodDefinition #( #ASImage #initialize #false ) )
 	        #'2024-04-13T09:00:24.594294-04:00' )
-	     #( #( #RGMethodDefinition #( #ASImage #headerIVars:indexed:element:weak:
-	              #false ) )
-	        #'2024-04-13T09:58:46.605919-04:00' ) )
+	     #( #( #RGMethodDefinition #( #'ASAllocationInfo class'
+	              #headerIVars:indexed:element:weak:
+	              #true ) )
+	        #'2024-04-13T20:36:41.511805-04:00' ) )
 ]
 
 { #category : 'code-critics' }

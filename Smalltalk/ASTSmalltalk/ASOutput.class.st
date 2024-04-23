@@ -5,7 +5,6 @@ Class {
 	#name : 'ASOutput',
 	#superclass : 'Object',
 	#instVars : [
-		'',
 		'alreadyGenerated',
 		'ourObject',
 		'codeGenerator',
