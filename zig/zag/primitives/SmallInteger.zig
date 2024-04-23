@@ -12,6 +12,7 @@ const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const doDnu = execute.doDnu;
+const MethodSignature = execute.MethodSignature;
 const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");
 const Object = object.Object;
@@ -149,24 +150,24 @@ test "inline primitives" {
 pub const embedded = struct {
     const fallback = execute.fallback;
     pub const SmallInteger = struct {
-        pub fn @"+"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"+"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             trace("\n+: {any}", .{context.stack(sp, process)});
             const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"+" }));
             trace(" -> {any}", .{context.stack(newSp, process)});
             return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
         }
-        pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             sp.top = inlines.p1L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
                 return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"+", undefined });
             };
             return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"-"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"-"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"-" });
             return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, undefined });
         }
-        pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             trace("\n-_L1: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
@@ -175,7 +176,7 @@ pub const embedded = struct {
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"-_L2"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"-_L2"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             trace("\n-_L2: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 2) catch {
                 const newSp = sp.push(Object.from(2));
@@ -184,17 +185,17 @@ pub const embedded = struct {
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"<="(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"<="(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             const newSp = sp.dropPut(Object.from(inlines.p5(sp[1], sp[0]) catch {
                 return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"<=", undefined });
             }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
         }
-        pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             sp.next =
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, undefined });
         }
-        pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object) callconv(stdCall) SP {
+        pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
             const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"*" }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
         }

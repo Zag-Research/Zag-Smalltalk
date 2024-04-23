@@ -19,7 +19,6 @@ const CompiledMethodPtr = execute.CompiledMethodPtr;
 const ContextPtr = execute.CodeContextPtr;
 const compileByteCodeMethod = @import("zag/byte-interp.zig").compileByteCodeMethod;
 const TestExecution = execute.Execution;
-const hardDnu = execute.hardDnu;
 const Process = @import("zag/process.zig").Process;
 const symbol = @import("zag/symbol.zig");
 const heap = @import("zag/heap.zig");
@@ -80,7 +79,7 @@ var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
 const fibCPST = PC.init(&fibCPSM.code[0]);
 pub fn fibCPS(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
-        return @call(tailCall, hardDnu, .{ pc, sp, process, context, selector});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector});
     }
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector });
 }
@@ -139,7 +138,7 @@ const fibCPSSendT = @as([*]Code, @ptrCast(&fibCPSSendM.code[0]));
 var fibCPSSendCache = execute.SendCacheStruct.init();
 pub fn fibCPSSend(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
     if (!fibCPSSendM.selector.selectorEquals(selector)) {
-        return @call(tailCall, hardDnu, .{ pc, sp, process, context, selector });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector });
     }
     if (i.p5N(sp.top, two)) {
         sp.top = one;
@@ -180,11 +179,11 @@ fn fibCPSSendSetup() CompiledMethodPtr {
     sym = Sym.init();
     dispatch.initClass(.SmallInteger);
     fibThreadMethod = fibThread.asCompiledMethodPtr();
-    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibThread.setLiterals(&[_]Object{sym.fibonacci}, empty);
     const fibonacci = fibCPSSendM.asCompiledMethodPtr();
-    fibCPSSendM.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibCPSSendM.setLiterals(&[_]Object{sym.fibonacci}, empty);
     const start = fibCPSSendStart.asCompiledMethodPtr();
-    fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibCPSSendStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
     fibonacci.forDispatch(.SmallInteger);
     return start;
@@ -212,7 +211,6 @@ fn runCPSSend(_: usize) void {
 
 var fibThread =
     compileMethod(Sym.i_0, 0, 2, .{
-    &e.verifySelector,
     ":recurse",
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, two,
@@ -261,7 +259,6 @@ fn runThread(_: usize) void {
 
 var fibDispatch =
     compileMethod(Sym.i_0, 0, 2, .{
-    &e.verifySelector,
     &e.dup, // self
     &e.pushLiteral2, //&e.pushLiteral, two,
     &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
@@ -297,9 +294,9 @@ fn fibDispatchSetup() CompiledMethodPtr {
     sym = Sym.init();
     dispatch.initClass(.SmallInteger);
     const fibonacci = fibDispatch.asCompiledMethodPtr();
-    fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibDispatch.setLiterals(&[_]Object{sym.fibonacci}, empty);
     const start = fibDispatchStart.asCompiledMethodPtr();
-    fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+    fibDispatchStart.setLiterals(&[_]Object{sym.fibonacci}, empty);
     dispatch.init();
     fibonacci.forDispatch(.SmallInteger);
     return start;
@@ -399,10 +396,9 @@ var @"True>>ifTrue:" =
     &e.returnNoContext,
 });
 var @"False>>ifTrue:" =
-    compileMethod(Sym.@"ifTrue:", 0, 0, .{ &e.verifySelector, &e.drop, &e.returnNoContext });
+    compileMethod(Sym.@"ifTrue:", 0, 0, .{ &e.drop, &e.returnNoContext });
 var fibFull =
     compileMethod(Sym.i_0, 0, 2, .{ // self-0
-    &e.verifySelector,
     &e.pushContext,
     "^",
     &e.pushLocal,   0, // self

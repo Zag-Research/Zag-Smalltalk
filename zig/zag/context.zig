@@ -35,7 +35,7 @@ pub const Context = struct {
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP;
+    const ThreadedFn = execute.ThreadedFn;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals + 1;
     pub fn init() Self {
