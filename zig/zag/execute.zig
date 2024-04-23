@@ -81,7 +81,8 @@ test "Stack" {
     _ = sp1.drop().push(Object.from(42));
     try ee(stack[9].to(i64), 42);
 }
-pub fn check(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+pub fn check(pc: PC, sp: SP, _process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    const process: *Process = @alignCast(@ptrCast(_process));
     if (process.debugger()) |debugger|
         return @call(tailCall, debugger, .{ pc, sp, process, context, undefined });
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
@@ -1459,7 +1460,7 @@ const Dispatch = extern struct {
         maxIndex,
     };
     const numberOfFixed: usize = @intFromEnum(Fixed.maxIndex);
-    const hashedMethods = (if (config.indirectDispatch) 59 else 29) - numberOfFixed; // FIX was 12 else 6
+    const hashedMethods = 29 - numberOfFixed; // FIX was 12 else 6
     const classIndex = ClassIndex.Dispatch;
     const DispatchState = enum(u8) { clean, beingUpdated, dead };
     var empty = Self{
@@ -1627,47 +1628,29 @@ test "disambiguate" {
     method2.setLiterals(empty, empty);
     var method3 = compileMethod(symbols.@"<=", 0, 0, .{ &fns.push3, &Code.end });
     method3.setLiterals(empty, empty);
-    if (config.indirectDispatch) {
-        var space3 = [_]DispatchElement{undefined}**3;
-        var dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method1), @ptrCast(&method2));
-        const push1Code = DispatchElement.init(&method1.code[0]);
-        const push2Code = DispatchElement.init(&method2.code[0]);
-        try ee(space3[1], push1Code);
-        try ee(space3[2], push2Code);
-        dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method2), @ptrCast(&method1));
-        try ee(space3[1], push1Code);
-        try ee(space3[2], push2Code);
-        var process = Process.new();
-        process.init();
-        defer process.deinit();
-        try ee(dispatcher.prim(), &Dispatch.bitTest8);
-        dispatcher = Dispatch.disambiguate2(&space3, @ptrCast(&method3), @ptrCast(&method1));
-        try ee(dispatcher.prim(), &Dispatch.bitTest0);
-    } else {
-        var space2 = [_]DispatchElement{undefined}**2;
-        var dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method1), @ptrCast(&method2));
-        const push1Code = DispatchElement.init(&method1.code[0]);
-        const push2Code = DispatchElement.init(&method2.code[0]);
-        try ee(space2[0], push1Code);
-        try ee(space2[1], push2Code);
-        dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method2), @ptrCast(&method1));
-        try ee(space2[0], push1Code);
-        try ee(space2[1], push2Code);
-        var process = Process.new();
-        process.init();
-        defer process.deinit();
-        var context = Context.init();
-        const sp = process.endOfStack();
-        if (config.dispatchCache) {
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself).top.to(i64), 2);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=").top.to(i64), 3);
-            try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
-        }
-        try ee(dispatcher.prim(), &Dispatch.bitTest2);
-        dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method3), @ptrCast(&method1));
-        try ee(dispatcher.prim(), &Dispatch.bitTest4);
+    var space2 = [_]DispatchElement{undefined}**2;
+    var dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method1), @ptrCast(&method2));
+    const push1Code = DispatchElement.init(&method1.code[0]);
+    const push2Code = DispatchElement.init(&method2.code[0]);
+    try ee(space2[0], push1Code);
+    try ee(space2[1], push2Code);
+    dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method2), @ptrCast(&method1));
+    try ee(space2[0], push1Code);
+    try ee(space2[1], push2Code);
+    var process = Process.new();
+    process.init();
+    defer process.deinit();
+    var context = Context.init();
+    const sp = process.endOfStack();
+    if (config.dispatchCache) {
+        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
+        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.yourself).top.to(i64), 2);
+        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.@"<=").top.to(i64), 3);
+        try ee(dispatcher.prim(dispatcher.next(), sp, &process, &context, symbols.value).top.to(i64), 1);
     }
+    try ee(dispatcher.prim(), &Dispatch.bitTest2);
+        dispatcher = Dispatch.disambiguate2(&space2, @ptrCast(&method3), @ptrCast(&method1));
+    try ee(dispatcher.prim(), &Dispatch.bitTest4);
 }
 test "isExternalCompiledMethod" {
     const e = std.testing.expect;
