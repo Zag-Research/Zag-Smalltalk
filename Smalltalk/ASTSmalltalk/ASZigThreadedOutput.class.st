@@ -125,6 +125,16 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASZigThreadedOutput >> visitPushContext [
+
+	self
+		putEmbedded: #pushContext;
+		nextPutAll: '"^"';
+		comma;
+		lf
+]
+
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
 
 	self

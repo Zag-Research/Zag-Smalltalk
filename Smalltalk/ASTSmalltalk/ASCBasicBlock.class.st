@@ -178,7 +178,6 @@ ASCBasicBlock >> offsetToSelf [
 
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
-
 	operations do: [ :operation | operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]

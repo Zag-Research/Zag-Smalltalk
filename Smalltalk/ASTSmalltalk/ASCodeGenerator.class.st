@@ -140,8 +140,7 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth.
-		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blockClosures ] ].
+		maxDepth := maxDepth max: aBasicBlock maxDepth ].
 	blockClosures := blockClosures select: #manifest.
 	blockClosures do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
 ]

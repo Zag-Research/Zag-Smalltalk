@@ -42,5 +42,5 @@ ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockS
 
 { #category : 'enumerating' }
 ASStackContext >> requiredContextDo: aBlock [
-^ rest requiredContextDo: aBlock
+^ aBlock value
 ]

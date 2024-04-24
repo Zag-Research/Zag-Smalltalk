@@ -47,8 +47,8 @@ ASCMethodBlock >> outputTo: output [
 	primitive
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
-	stack requiredContextDo: [ :context |
-		output visitPushContext: context ].
+	stack requiredContextDo: [ 
+		output visitPushContext ].
 	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]
