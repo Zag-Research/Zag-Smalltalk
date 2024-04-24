@@ -7,6 +7,52 @@ Class {
 }
 
 { #category : 'tests' }
+ASStackTest >> testLookupBlocks [
+
+	| stack result blocks mb1 mb2 |
+	stack := ASEmptyStack new.
+
+	mb1 := ASCMethodBlock new.
+	mb2 := ASCMethodBlock new.
+	blocks := OrderedCollection with: mb1; with: mb2.
+	stack blocks: blocks.
+
+	stack := ASStackNamed from: stack.
+	stack name: #p1.
+	stack := ASStackNamed from: stack.
+	stack name: #p2.
+	stack := ASStackContext from: stack.
+	stack := ASStackElement from: stack.
+	stack top: (ASCClassValue new init: SmallInteger class).
+
+
+
+	result := stack
+		          offset: 0
+		          to: #p1
+		          local: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
+	self assert: result equals: #A1.
+
+	result := stack
+		          offset: 0
+		          to: #p2
+		          local: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
+	self assert: result equals: #A0.
+
+	result := stack
+		          offset: 0
+		          to: #mb1
+		          local: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
+	self assert: result equals: #C0
+]
+
+{ #category : 'tests' }
 ASStackTest >> testLookupContext [
 	| stack result |
 	stack := ASEmptyStack new.

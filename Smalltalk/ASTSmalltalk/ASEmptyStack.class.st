@@ -15,8 +15,8 @@ Class {
 
 { #category : 'accessing' }
 ASEmptyStack >> blocks: aCollection [
-aCollection isCollection ifFalse: [ self halt ].
-	blocks := aCollection 
+	aCollection isCollection ifFalse: [ self error: 'blocks must be a collection' ].
+	blocks := aCollection
 ]
 
 { #category : 'accessing' }
@@ -57,8 +57,11 @@ ASEmptyStack >> offset: anInteger to: anObject [
 { #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
-	blocks do: [ :block || index | index := (block indexOf: anObject). index ifNotNil: [ ^blockOther value: index ]].
-	
+	blocks do: [ :block |
+		| index |
+		index := block indexOf: anObject.
+		index > 0 ifTrue: [ ^ blockOther value: index ] ].
+
 	^ self error: 'something bad happend'
 ]
 

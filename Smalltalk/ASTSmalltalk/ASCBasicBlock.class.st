@@ -100,6 +100,13 @@ ASCBasicBlock >> index [
 	^ index
 ]
 
+{ #category : 'stackAccessHelpers' }
+ASCBasicBlock >> indexOf: anObject [
+"delegate to stack?"
+	^ stack offset: 0 to: anObject 
+
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> initialize [
 
