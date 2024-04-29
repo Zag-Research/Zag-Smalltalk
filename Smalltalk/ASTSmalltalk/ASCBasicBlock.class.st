@@ -113,7 +113,7 @@ ASCBasicBlock >> initialize [
 	super initialize.
 	operations := OrderedCollection new.
 	maxDepth := 0.
-	stack := ASEmptyStack new 
+	stack := ASEmptyStack new.
 ]
 
 { #category : 'initialization' }
@@ -172,8 +172,15 @@ ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: b
 ]
 
 { #category : 'initialization' }
-ASCBasicBlock >> offsetToSelf [
-	^stack offset: 0 to: nil
+ASCBasicBlock >> offsetTo: anObject [
+
+	^ stack offset: 0 to: anObject
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
+	aBlock value: label.
+	 ^ stack offset: 0 to: anObject
 ]
 
 { #category : 'writing' }

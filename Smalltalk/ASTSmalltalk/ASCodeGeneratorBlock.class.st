@@ -9,6 +9,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'initialization' }
+ASCodeGeneratorBlock >> initialize [ 
+	super initialize.
+	code makeBlockClosure
+]
+
 { #category : 'API' }
 ASCodeGeneratorBlock >> returnNonLocal [
 	"need to return to the calling context's return"

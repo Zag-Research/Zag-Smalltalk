@@ -65,6 +65,7 @@ ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 { #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
 	"&e.pushLocalData, i1 + (i2 << s1)"
+
 	"self
 		putEmbedded: #pushLocalData;
 		print:
@@ -72,22 +73,28 @@ ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
 					 offset withIndex: index ]);
 		comma;
 		lf"
-		currentBasicBlock
+	currentBasicBlock
 		offsetOf: aASCIndirectVariable name
 		local: nil
 		stack: [ :offset |
-				self putEmbedded: #pushFromContext;
+			self
+				putEmbedded: #pushFromContext;
 				print: offset;
 				nextPutAll: ' + ( ';
-				print: currentBasicBlock offsetToSelf;
+				print: (currentBasicBlock offsetTo: nil);
 				nextPutAll: ' << 12 )';
-				comma; 
+				comma;
 				lf ]
-		other:  [ :offsets |
+		other: [ :bcOffset :methodOffset :objectOffset |
 			self
 				putEmbedded: #pushIndiect;
-				print: (offsets collectWithIndex: [ :offset :index |
-					 offset withIndex: index ]);
+				print: bcOffset;
+				"offset of block closure"nextPutAll: ' + ( ';
+				print: methodOffset;
+				nextPutAll: ' << 12 )';
+				nextPutAll: ' + ( ';
+				print: objectOffset;
+				nextPutAll: ' << 12 )';
 				comma;
 				lf ]
 ]

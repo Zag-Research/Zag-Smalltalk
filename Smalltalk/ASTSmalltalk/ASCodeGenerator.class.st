@@ -142,7 +142,8 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
 	blockClosures := blockClosures select: #manifest.
-	blockClosures do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
+	blockClosures do: [ :aBlockClosure |
+		self compileBlock: aBlockClosure ]
 ]
 
 { #category : 'initialization' }
@@ -233,6 +234,11 @@ ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: block
 { #category : 'API' }
 ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
 	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
+	^ code offsetTo: anObject methodBlock: aBlock 
 ]
 
 { #category : 'accessing' }

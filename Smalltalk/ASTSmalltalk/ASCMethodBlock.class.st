@@ -15,13 +15,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'initialization' }
-ASCMethodBlock >> initialize [
-
-	super initialize.
-	self stack: ASEmptyStack new
-]
-
 { #category : 'printing' }
 ASCMethodBlock >> inspectZagASTOn: aStream [
 
@@ -40,6 +33,11 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 	maxDepth := 0
 ]
 
+{ #category : 'accessing' }
+ASCMethodBlock >> makeBlockClosure [
+	stack := ASStackBlockClosure from: stack
+]
+
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
@@ -47,8 +45,7 @@ ASCMethodBlock >> outputTo: output [
 	primitive
 		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
-	stack requiredContextDo: [ 
-		output visitPushContext ].
+	stack requiredContextDo: [ output visitPushContext ].
 	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]

@@ -37,8 +37,11 @@ manifest := false
 ]
 
 { #category : 'serializing' }
-ASCBlock >> makeManifest [ 	
-		  manifest := true
+ASCBlock >> makeManifest [
+	"a block becomes manifest for one of two reasons, 
+		1. if the block contains a pops or stores into a variable
+		2. if the block contains a send"
+	manifest := true
 ]
 
 { #category : 'accessing' }

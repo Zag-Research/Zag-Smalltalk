@@ -9,14 +9,20 @@ Class {
 { #category : 'tests' }
 ASStackTest >> testLookupBlocks [
 
-	| stack result blocks mb1 mb2 |
+	| stack result cg output |
 	stack := ASEmptyStack new.
+	stack := ASStackBlockClosure from: stack.
 
-	mb1 := ASCMethodBlock new.
-	mb2 := ASCMethodBlock new.
-	blocks := OrderedCollection with: mb1; with: mb2.
-	stack blocks: blocks.
+	output := ASZigThreadedOutput new.
+	output context: ASZigFileContext new.
+	output codeGenerator.
+	cg := ASCodeGenerator new.
+	cg output: output.
+	cg selector: #test.
+	cg nameBasicBlocks.
+	cg locals: { #mb1 } arguments: { #aSample }.
 
+	stack nonlocalNameLookupObject: cg.
 	stack := ASStackNamed from: stack.
 	stack name: #p1.
 	stack := ASStackNamed from: stack.
@@ -48,8 +54,9 @@ ASStackTest >> testLookupBlocks [
 		          to: #mb1
 		          local: [ :offest | #A , offest asString ]
 		          stack: [ :offest | #B , offest asString ]
-		          other: [ :offest | #C , offest asString ].
-	self assert: result equals: #C0
+		          other: [ :o1 :o2 :o3 |
+		          #C , o1 asString , o2 asString , o3 asString ].
+	self assert: result equals: #C210
 ]
 
 { #category : 'tests' }
