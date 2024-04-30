@@ -34,45 +34,35 @@ ASZigThreadedBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 { #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
-	"&e.popLocalData, i1 + (i2 << s1)"
 
-	"self
-		putEmbedded: #popLocalData;
-		print:
-			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
-					 offset withIndex: index ]);
-		comma;
-		lf"
 	currentBasicBlock
 		offsetOf: aASCIndirectVariable name
 		local: nil
 		stack: [ :offset |
 			self
-				putEmbedded: #popStack;
-				print: (currentBasicBlock offsetToSelf);
+				putEmbedded: #popFromContaxt; "or popStack?"
+				print: currentBasicBlock offsetToSelf;
+				nextPutAll: ' + ( ';
 				print: offset;
+				nextPutAll: ' << 12 )';
 				comma; 
 				lf ]
-		other:  [ :offsets |
+		other: [ :bcOffset :methodOffset :objectOffset |
 			self
-				putEmbedded: #popLocalData;
-				print: (offsets collectWithIndex: [ :offset :index |
-					 offset withIndex: index ]);
+				putEmbedded: #popIndiect;
+				print: bcOffset;
+				"offset of block closure"nextPutAll: ' + ( ';
+				print: methodOffset;
+				nextPutAll: ' << 12 )';
+				nextPutAll: ' + ( ';
+				print: objectOffset;
+				nextPutAll: ' << 12 )';
 				comma;
 				lf ]
 ]
 
 { #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
-	"&e.pushLocalData, i1 + (i2 << s1)"
-
-	"self
-		putEmbedded: #pushLocalData;
-		print:
-			(aASCIndirectVariable offsets collectWithIndex: [ :offset :index |
-					 offset withIndex: index ]);
-		comma;
-		lf"
 	currentBasicBlock
 		offsetOf: aASCIndirectVariable name
 		local: nil

@@ -36,6 +36,11 @@ super initialize .
 manifest := false
 ]
 
+{ #category : 'accessing' }
+ASCBlock >> label [
+	^ '1mref'
+]
+
 { #category : 'serializing' }
 ASCBlock >> makeManifest [
 	"a block becomes manifest for one of two reasons, 
