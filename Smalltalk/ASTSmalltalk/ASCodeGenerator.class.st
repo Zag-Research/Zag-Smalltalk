@@ -106,14 +106,9 @@ ASCodeGenerator >> finalAnalysis [
 
 ]
 
-{ #category : 'accessing' }
+{ #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
-
-	| indirect |
-
-	indirect := ASCIndirectVariable new.
-	indirect name: aSymbol.
-	^ indirect variable: (code find: aSymbol)
+	^ code find: aSymbol 
 ]
 
 { #category : 'API' }

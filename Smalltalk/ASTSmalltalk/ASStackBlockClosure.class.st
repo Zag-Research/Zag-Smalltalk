@@ -27,7 +27,6 @@ ASStackBlockClosure >> depth [
 
 { #category : 'accessing' }
 ASStackBlockClosure >> find: aSymbol [
-
 	^ rest find: aSymbol
 ]
 
@@ -39,7 +38,7 @@ ASStackBlockClosure >> from: anASStack [
 
 { #category : 'accessing' }
 ASStackBlockClosure >> lookUp: methodName [
-	(blockClosure contains: methodName) ifFalse: [ blockClosure add: methodName ].
+	blockClosure indexOf: methodName ifAbsent: [ blockClosure add: methodName].
 	^ blockClosure indexOf: methodName 
 ]
 
