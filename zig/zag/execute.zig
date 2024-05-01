@@ -169,8 +169,6 @@ pub const CompiledMethod = extern struct {
             .code = undefined,
         };
     }
-    extern fn llvmFib(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
-    const llvmCM = CompiledMethod.initLLVM(Sym.yourself,@ptrCast(llvmFib));
     pub fn execute(self: *Self, sp: SP, process: TFProcess, context: TFContext) callconv(stdCall) SP {
         var code = [_]Code{Code.method(self)};
         trace("\nexecute: {} {} {}",.{self.verifier,sp,self.signature});
@@ -1765,4 +1763,9 @@ inline fn bumpSize(size: u16) u16 {
 }
 inline fn initialSize(size: usize) u16 {
     return @import("utilities.zig").largerPowerOf2(@max(@as(u16, @intCast(size)), 4));
+}
+pub extern fn llvmFib(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
+const llvmCM = CompiledMethod.init(Sym.yourself,@ptrCast(&llvmFib));
+test "llvm external" {
+    _ = llvmCM;
 }
