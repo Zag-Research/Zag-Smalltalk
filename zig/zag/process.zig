@@ -63,9 +63,13 @@ pub const Process = extern struct {
     pub fn new() Self {
         return undefined;
     }
+    pub fn resetForTest() void {
+        allProcesses = null;
+    }
     pub fn init(self: *Self) void {
         const h = @as(HeapObjectArray, @ptrCast(&self.stack[0]));
         const stack_end = h + stack_size;
+        std.debug.assert(self == self.ptr());
         self.sp = @ptrCast(stack_end);
         self.currHeap = stack_end;
         self.otherHeap = self.currHeap + nursery_size;
@@ -74,6 +78,7 @@ pub const Process = extern struct {
         while (true) {
             self.next = allProcesses;
             self.id = if (allProcesses) |p| p.id + 1 else 1;
+            trace("\nprocess.init {}",.{self.id});
             if (@cmpxchgWeak(?*Self, &allProcesses, self.next, self, SeqCst, SeqCst) == null) break;
         }
         self.trapContextNumber = 0;
@@ -96,7 +101,7 @@ pub const Process = extern struct {
         return @as(*Self, @ptrFromInt(@intFromPtr(self) & ~@as(usize, checkMax)));
     }
     pub inline fn debugger(self: *Self) ?ThreadedFn {
-        return self.debugFn;
+        return self.ptr().debugFn;
     }
     inline fn ptr(self: *const Self) *Self {
         return @as(*Self, @ptrFromInt(@intFromPtr(self.noCheck())));
@@ -107,11 +112,13 @@ pub const Process = extern struct {
     pub inline fn endOfStack(self: *const Self) SP {
         return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + stack_size);
     }
+    pub inline fn setSp(self: *Self, sp: SP) void {
+        self.ptr().sp = sp;
+    }
     pub inline fn freeStack(self: *const Self, sp: SP) usize {
         return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
     }
     pub inline fn getStack(self: *const Self, sp: SP) []Object {
-        trace("\ngetStack: sp={x} eos={x}", .{ @intFromPtr(sp), @intFromPtr(self.endOfStack()) });
         return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     }
     pub inline fn allocStack(self: *Self, sp: SP, words: u64) !SP {
@@ -119,11 +126,12 @@ pub const Process = extern struct {
         if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
         return error.NoSpace;
     }
-    pub inline fn freeNursery(self: *const Self) usize {
-        return (@intFromPtr(self.currEnd) - @intFromPtr(self.currHp)) / 8;
+    pub inline fn getHeap(self: *const Self) []HeapObject {
+        return self.ptr().currHeap[0..((@intFromPtr(self.ptr().currHp) - @intFromPtr(self.ptr().currHeap)) / @sizeOf(Object))];
     }
-    //allocationInfo(iVars: u12, indexed: ?usize, eSize: ?usize, makeWeak: bool)
-    //fillFooters(self: Self, theHeapObject: HeapObjectPtr, classIndex: u16, age: Age, nElements: usize, elementSize: usize)
+    pub inline fn freeNursery(self: *const Self) usize {
+        return (@intFromPtr(self.ptr().currEnd) - @intFromPtr(self.ptr().currHp)) / 8;
+    }
     pub fn spillStack(self: *Self, sp: SP, contextMutable: *ContextPtr) SP {
         if (!contextMutable.*.isOnStack()) return sp;
         // if the Context is on the stack, both the Context and the SP will move
@@ -137,7 +145,7 @@ pub const Process = extern struct {
             if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
                 self.currHp = newHp;
                 const obj: heap.HeapObjectPtr = @ptrCast(result);
-                _ = aI.initObject(obj, classIndex, .nursery, indexed orelse 0);
+                aI.initObjectStructure(obj, classIndex, .nursery);
                 return .{
                     .age = .nursery,
                     .allocated = obj,
@@ -215,6 +223,18 @@ pub const Process = extern struct {
         self.currEnd = tempHeap - nursery_size;
         @panic("assumes heap grows down");
     }
+    pub fn format(
+        orig: *const Process,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        const self = orig.ptr();
+        try writer.print("process: {} .stack = {any}",.{self.id,self.getStack(self.sp)});
+        try writer.print(" .heap = {any}",.{self.getHeap()});
+    }
 };
 test "nursery allocation" {
     const ee = std.testing.expectEqual;
@@ -228,14 +248,13 @@ test "nursery allocation" {
     var initialContext = Context.init();
     var mutableContext = &initialContext;
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
-    ar.initAll();
+    _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
-    ar.initAll();
+    _ = ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
-    ar.initAll();
-    const o2 = ar.allocated;
+    const o2 = ar.initAll();
     try ee(pr.freeNursery(), emptySize - 18);
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject());
