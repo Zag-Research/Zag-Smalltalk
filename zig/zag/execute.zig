@@ -144,7 +144,7 @@ pub const MethodSignature = extern struct {
         writer: anytype,
     ) !void {
         _ = .{fmt,options};
-        try writer.print("MethodSignature({},{})", .{symbol.fromHash32(self.selectorHash),self.class});
+        try writer.print("MethodSignature({x},{})", .{self.selectorHash,self.class}); // .{symbol.fromHash32(self.selectorHash),self.class});
     }
 };
 pub const CodeContextPtr = *Context;
@@ -170,9 +170,9 @@ pub const CompiledMethod = extern struct {
         };
     }
     pub fn execute(self: *Self, sp: SP, process: TFProcess, context: TFContext) callconv(stdCall) SP {
-        var code = [_]Code{Code.method(self)};
-        trace("\nexecute: {} {} {}",.{self.verifier,sp,self.signature});
-        return self.verifier(PC.init(&code[0]), sp, process, context, self.signature);
+        const pc = PC.init(&self.code[0]);
+        trace("\nexecute: {} {} {}",.{pc,sp,self.signature});
+        return pc.prim()(pc.next(), sp, process, context, self.signature);
     }
     pub fn forDispatch(self: *Self, class: ClassIndex) void {
         self.signature.class = class;
@@ -1098,8 +1098,9 @@ pub const controlPrimitives = struct {
         const context = tfAsContext(_context);
         context.setReturn(pc.next());
         const offset = pc.uint();
-        const method = pc.skip(offset + 1).object().to(CompiledMethodPtr);
+        const method = pc.skip(offset + 1).method();
         const newPc = PC.init(method.codePtr());
+        trace("\ncall: {} {} {}",.{offset,method,newPc});
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
     pub fn callRecursive(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
@@ -1764,8 +1765,30 @@ inline fn bumpSize(size: u16) u16 {
 inline fn initialSize(size: usize) u16 {
     return @import("utilities.zig").largerPowerOf2(@max(@as(u16, @intCast(size)), 4));
 }
-pub extern fn llvmFib(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
-const llvmCM = CompiledMethod.init(Sym.yourself,@ptrCast(&llvmFib));
+pub extern fn llvmPL0(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
+const llvmPL0CM = CompiledMethod.init(Sym.yourself,@ptrCast(&llvmPL0));
 test "llvm external" {
-    _ = llvmCM;
+    const expectEqual = std.testing.expectEqual;
+    Process.resetForTest();
+    const pl0 = if (true) &p.pushLiteral0 else llvmPL0CM;
+    var method = compileMethod(Sym.yourself, 1, 0, .{
+        &p.pushContext,           "^",
+        ":label1",                &p.pushLiteral,
+        comptime Object.from(42), &p.popLocal,
+        0,                        &p.pushLocal0,
+        pl0,          &p.pushLiteralTrue,
+        &p.ifFalse,               "label3",
+        &p.branch,                "label2",
+        ":label3",                &p.pushLocal,
+        0,                        ":label4",
+        &p.returnTop,             ":label2",
+        pl0,          &p.branch,
+        "label4",
+    });
+    var objs = [_]Object{Nil};
+    var te = Execution.new();
+    te.init();
+    const result = te.run(objs[0..], &method);
+    try expectEqual(result.len, 1);
+    try expectEqual(result[0], Object.from(0));
 }
