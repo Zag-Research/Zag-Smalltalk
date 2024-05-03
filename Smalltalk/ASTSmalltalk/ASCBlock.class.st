@@ -7,12 +7,30 @@ Class {
 	#instVars : [
 		'block',
 		'manifest',
-		'name'
+		'name',
+		'label'
+	],
+	#classInstVars : [
+		'index'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'label' }
+ASCBlock class >> labelIndex [
+
+	index ifNil: [ index := 0 ].
+	index := index + 1.
+	^ index
+]
+
+{ #category : 'label' }
+ASCBlock class >> resetLabelIndex [
+
+ index := 0
+]
 
 { #category : 'asserting' }
 ASCBlock >> assertIsValue [
@@ -38,7 +56,9 @@ manifest := false
 
 { #category : 'accessing' }
 ASCBlock >> label [
-	^ '1mref'
+	label ifNil: [ label := self class labelIndex asString, 'mref' ].
+	^ label
+	
 ]
 
 { #category : 'serializing' }

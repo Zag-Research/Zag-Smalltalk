@@ -36,6 +36,7 @@ Class {
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
+	ASCBlock resetLabelIndex.
 	current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
