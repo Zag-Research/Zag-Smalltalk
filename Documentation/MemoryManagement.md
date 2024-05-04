@@ -36,7 +36,7 @@ The stack pointer points to the top of the working stack. If the sender's contex
 
 On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
 ### Copying Collector
-Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-process arena, where no locks are required. This is why Zag uses this for per-process arenas.
+Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-process arena, where no locks are required. This is why Zag uses this for [[Garbage Collection#Per-process arenas|per-process arena collection]].
 
 ## Global Arena
 The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery arena, so such objects must be promoted to the GlobalArena. There are several sources of this data:
@@ -57,7 +57,7 @@ Roots for the GlobalArena include:
 
 If you have an arena that is accessible to multiple processes, then moving becomes a big deal - you'd have to stop all processes to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
 
-The Global Arena uses a non-moving mark and sweep collector. There is a dedicated OS thread that periodically does a garbage collect.
+The Global Arena uses a non-moving mark and sweep collector. There is a dedicated OS thread that periodically does a [[Garbage Collection#Global arenas|global collection]].
 
 When promoting an object to the global arena or creating a new object in the global arena if the global collector is currently marking, the age will be set to marked and scanned, otherwise it will be set to unmarked.
 

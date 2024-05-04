@@ -1,8 +1,5 @@
-## Mapping
-[Virtual Machine Warmup Blows Hot and Cold](https://youtu.be/vLl4GteL9Mw)
-[mmap man page](https://www.man7.org/linux/man-pages/man2/mmap.2.html)
-[Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)
-[Unsafe Rust](https://doc.rust-lang.org/nightly/book/ch19-01-unsafe-rust.html)
+# Mapping
+
 
 ## Object encoding
 
@@ -52,8 +49,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal                        |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
-Groups 4 through 7 have the low 48 bits being the address of an object.
-Groups 1 through 6 are all `BlockClosure`s - 1 through 4 being immediate blocks (see [[Mapping#Thunks and Closures]]) and E being a full closure
+Groups 5 through 7 have the low 48 bits being the address of an object.
 
 ### Modified Spur Encoding
 Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk).
@@ -275,3 +271,8 @@ And a string would look like:
 | 3 | indexable classes have 2 iVars |
 | 13 | indexable classes have 3-6 iVars |
 
+##  References
+[Virtual Machine Warmup Blows Hot and Cold](https://youtu.be/vLl4GteL9Mw)
+[mmap man page](https://www.man7.org/linux/man-pages/man2/mmap.2.html)
+[Rusty Runtimes: Building Languages In Rust](https://youtu.be/U3upi-y2pCk)
+[Unsafe Rust](https://doc.rust-lang.org/nightly/book/ch19-01-unsafe-rust.html)

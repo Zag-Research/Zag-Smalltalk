@@ -311,6 +311,11 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 	code put: aSymbol
 ]
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> returnCode [ 
+	^ code.
+]
+
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 

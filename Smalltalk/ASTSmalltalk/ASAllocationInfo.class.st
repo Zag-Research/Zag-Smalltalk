@@ -1,3 +1,8 @@
+"
+I know how to generate memory objects.
+
+I parallel what is done by the AlocationInfo struct in heap.zig
+"
 Class {
 	#name : 'ASAllocationInfo',
 	#superclass : 'Object',
@@ -18,6 +23,53 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Image'
 }
+
+{ #category : 'adding' }
+ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
+
+	nElements ifNotNil: [
+		| arraySize |
+		arraySize := nElements * (element ifNil: [ 8 ]) + 7 // 8.
+		makeWeak ifTrue: [
+			iVars + arraySize + 3 > MaxHeaderLength ifTrue: [
+				^ self new
+					  format: ExternalWeakWithPointers;
+					  instVars: iVars;
+					  footerLength: 3 ].
+			^ self new
+				  format: IndexedWeakWithPointers;
+				  instVars: iVars;
+				  extra: arraySize;
+				  footerLength: 3 ].
+		iVars == 0 ifTrue: [
+			(nElements == 0 or: [ element = 1 and: [ nElements < 110 ] ])
+				ifTrue: [
+					^ self new
+						  format: nElements;
+						  extra: arraySize ].
+			element ifNil: [
+				nElements <= MaxHeaderLength ifTrue: [
+					^ self new
+						  format: DirectIndexed;
+						  extra: arraySize ] ] ].
+		iVars + arraySize > (MaxHeaderLength - 2) ifTrue: [
+			^ self new
+				  format: (element = Object
+						   ifTrue: [ External ]
+						   ifFalse: [ ExternalNonObject ]);
+				  instVars: iVars;
+				  footerLength: 2 ].
+		^ self new
+			  format: (element = Object
+					   ifTrue: [ Indexed ]
+					   ifFalse: [ IndexedNonObject ]);
+			  instVars: iVars;
+			  extra: arraySize;
+			  footerLength: 2 ].
+	^ self new
+		  format: NotIndexable;
+		  instVars: iVars
+]
 
 { #category : 'initialization' }
 ASAllocationInfo class >> initialize [

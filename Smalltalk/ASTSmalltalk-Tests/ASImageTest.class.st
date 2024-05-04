@@ -54,7 +54,7 @@ ASImageTest >> threaded: ast equals: converted [
 		each isSymbol
 			ifTrue: [
 				self
-					assert: code = (Addresses at: each)
+					assert: code = (ASZagConstants classVarNamed: each)
 					description: [
 					'expected: ' , each , ' but found: ' , code hexString ] ]
 			ifFalse: [

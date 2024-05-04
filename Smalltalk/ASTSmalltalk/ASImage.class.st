@@ -272,75 +272,6 @@ ASImage >> double: c [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'adding' }
-ASImage >> header: header [
-	| code key value |
-	code := 0.
-	header do: [: flag |
-		flag isAssociation ifTrue: [
-			key := flag key.
-			value := flag value.
-			key = #class ifTrue: [ code := code bitOr: ((self class: value) bitAnd: ClassMask) . key := nil ].
-			key = #hash ifTrue: [ code := code bitOr: (value bitAnd: HashMask) << HashShift . key := nil ].
-			key = #size ifTrue: [ code := code bitOr: (value bitAnd: SizeMask) << SizeShift . key := nil ].
-			key = #format ifTrue: [ code := code bitOr: (value bitAnd: FormatMask) << FormatShift . key := nil ].
-		] ifFalse: [
-			key := flag.
-			key = #isImmutable ifTrue: [ code := code bitOr: 1 << 47 . key := nil ].
-			key = #isForwarded ifTrue: [ code := code bitOr: 1 << 63 . key := nil ].
-		].
-		key ifNotNil: [ self error: 'header field "',key asString,'" is illegal' ]
-	].
-	^ code
-]
-
-{ #category : 'adding' }
-ASImage >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
-
-	nElements ifNotNil: [
-		| arraySize |
-		arraySize := nElements * (element ifNil: [ 8 ]) + 7 // 8.
-		makeWeak ifTrue: [
-			iVars + arraySize + 3 > MaxHeaderLength ifTrue: [
-				^ ASAllocationInfo new
-					  format: ExternalWeakWithPointers;
-					  instVars: iVars;
-					  footerLength: 3 ].
-			^ ASAllocationInfo new
-				  format: IndexedWeakWithPointers;
-				  instVars: iVars;
-				  extra: arraySize;
-				  footerLength: 3 ].
-		iVars == 0 ifTrue: [
-			(nElements == 0 or: [ element = 1 and: [ nElements < 110 ] ])
-				ifTrue: [
-					^ ASAllocationInfo new
-						  format: nElements;
-						  extra: arraySize ].
-			element ifNil: [
-				nElements <= MaxHeaderLength ifTrue: [
-					^ ASAllocationInfo new
-						  format: DirectIndexed;
-						  extra: arraySize ] ] ].
-		iVars + arraySize > (MaxHeaderLength - 2) ifTrue: [
-			^ ASAllocationInfo new
-				  format: (element = Object
-						   ifTrue: [ External ]
-						   ifFalse: [ ExternalNonObject ]);
-				  instVars: iVars;
-				  footerLength: 2 ].
-		^ ASAllocationInfo new
-			  format: (element = Object
-					   ifTrue: [ Indexed ]
-					   ifFalse: [ IndexedNonObject ]);
-			  instVars: iVars;
-			  extra: arraySize;
-			  footerLength: 2 ].
-	^ ASAllocationInfo new
-		  format: NotIndexable;
-		  instVars: iVars
-]
-
 { #category : 'objects' }
 ASImage >> imageObject: anObject [ 
 	^ anObject astImageObject: self
@@ -473,8 +404,12 @@ ASImage >> objectObject: anObject [
 	| nInstVars nExtra ai class |
 	class := anObject class.
 	nInstVars := class allSlots size.
-	nExtra := class isVariable ifTrue: [anObject size].
-	ai := self headerIVars: nInstVars indexed: nExtra element: nil weak: false.
+	nExtra := class isVariable ifTrue: [ anObject size ].
+	ai := ASAllocationInfo
+		      headerIVars: nInstVars
+		      indexed: nExtra
+		      element: nil
+		      weak: false.
 	^ ai put: anObject into: self
 ]
 
@@ -482,8 +417,12 @@ ASImage >> objectObject: anObject [
 ASImage >> objectString: aString [
 
 	| ai |
-	ai := self headerIVars: 0 indexed: aString size element: 1 weak: false.
-	self putRawInt: (ai header: ClassString ).
+	ai := ASAllocationInfo
+		      headerIVars: 0
+		      indexed: aString size
+		      element: 1
+		      weak: false.
+	self putRawInt: (ai header: ClassString).
 	^ self putRawByteArray: aString asByteArray
 ]
 
