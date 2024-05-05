@@ -49,6 +49,11 @@ ASSelf >> isNonLocalThunkable [
 	^ true
 ]
 
+{ #category : 'accessing' }
+ASSelf >> method: aMethod [
+	method := aMethod
+]
+
 { #category : 'printing' }
 ASSelf >> printOn: s [
 
