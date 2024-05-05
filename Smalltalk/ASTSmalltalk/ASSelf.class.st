@@ -8,6 +8,9 @@ If I represent ""super"" then the reference to superclass will point to the clas
 Class {
 	#name : 'ASSelf',
 	#superclass : 'ASExpression',
+	#instVars : [
+		'method'
+	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
 	#tag : 'AST'
