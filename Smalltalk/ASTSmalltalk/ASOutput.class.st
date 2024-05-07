@@ -162,6 +162,11 @@ ASOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASOutput >> visitPushContext [
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
 ASOutput >> visitPushContext: anUndefinedObject [
 
 	^ self subclassResponsibility

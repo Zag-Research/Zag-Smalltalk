@@ -48,6 +48,14 @@ ASStackContextPlaceholder >> makeContextRequired [
 ]
 
 { #category : 'API' }
+ASStackContextPlaceholder >> offset: anInteger to: anObject [ 
+
+	^ rest
+		  offset: anInteger
+		  to: anObject
+]
+
+{ #category : 'API' }
 ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 
 	^ rest

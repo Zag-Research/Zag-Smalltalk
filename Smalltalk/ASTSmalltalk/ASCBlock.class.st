@@ -7,12 +7,30 @@ Class {
 	#instVars : [
 		'block',
 		'manifest',
-		'name'
+		'name',
+		'label'
+	],
+	#classInstVars : [
+		'index'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'label' }
+ASCBlock class >> labelIndex [
+
+	index ifNil: [ index := 0 ].
+	index := index + 1.
+	^ index
+]
+
+{ #category : 'label' }
+ASCBlock class >> resetLabelIndex [
+
+ index := 0
+]
 
 { #category : 'asserting' }
 ASCBlock >> assertIsValue [
@@ -36,9 +54,19 @@ super initialize .
 manifest := false
 ]
 
+{ #category : 'accessing' }
+ASCBlock >> label [
+	label ifNil: [ label := self class labelIndex asString, 'mref' ].
+	^ label
+	
+]
+
 { #category : 'serializing' }
-ASCBlock >> makeManifest [ 	
-		  manifest := true
+ASCBlock >> makeManifest [
+	"a block becomes manifest for one of two reasons, 
+		1. if the block contains a pops or stores into a variable
+		2. if the block contains a send"
+	manifest := true
 ]
 
 { #category : 'accessing' }

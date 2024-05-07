@@ -133,6 +133,12 @@ ASZigMethodOutput >> visitPushBlock: stackIndex [
 ]
 
 { #category : 'API' }
+ASZigMethodOutput >> visitPushContext [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
 ASZigMethodOutput >> visitPushContext: unused [
 
 	^ self subclassResponsibility

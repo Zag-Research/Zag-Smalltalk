@@ -69,6 +69,13 @@ ASOutputAPI >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASOutputAPI >> visitPushContext [
+
+
+	^ self explicitRequirement
+]
+
+{ #category : 'API' }
 ASOutputAPI >> visitPushContext: anUndefinedObject [
 
 
