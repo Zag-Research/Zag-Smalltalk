@@ -1811,3 +1811,20 @@ test "llvm external" {
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }
+test "simple llvm" {
+    const expectEqual = std.testing.expectEqual;
+    Process.resetForTest();
+    const pl0 = if (true) &p.pushLiteral0 else llvmPL0CM;
+    var method = compileMethod(Sym.yourself, 0, 0, .{
+        pl0,
+        &p.returnNoContext,
+    });
+    var te = Execution.new();
+    te.init();
+    var objs = [_]Object{ Nil, True };
+    const result = te.run(objs[0..], &method);
+    try expectEqual(result.len, 3);
+    try expectEqual(result[0], Object.from(0));
+    try expectEqual(result[1], Nil);
+    try expectEqual(result[2], True);
+}
