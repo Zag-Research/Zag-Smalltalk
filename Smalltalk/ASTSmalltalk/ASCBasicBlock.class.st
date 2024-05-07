@@ -100,13 +100,20 @@ ASCBasicBlock >> index [
 	^ index
 ]
 
+{ #category : 'stackAccessHelpers' }
+ASCBasicBlock >> indexOf: anObject [
+"delegate to stack?"
+	^ stack offset: 0 to: anObject 
+
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
 	maxDepth := 0.
-	stack := ASEmptyStack new 
+	stack := ASEmptyStack new.
 ]
 
 { #category : 'initialization' }
@@ -155,19 +162,29 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject local: localBlock stack: stackBlock other: blockOther [
-
+ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
 	^ stack
 		  offset: 0
 		  to: anObject
-		  local: localBlock
-		  stack: localBlock
-		  other: nil
+		  local: blockLocal
+		  stack: blockStack
+		  other: blockOther 
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> offsetTo: anObject [
+
+	^ stack offset: 0 to: anObject
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
+	aBlock value: label.
+	 ^ stack offset: 0 to: anObject
 ]
 
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
-
 	operations do: [ :operation | operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]

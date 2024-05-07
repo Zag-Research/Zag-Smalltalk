@@ -36,6 +36,7 @@ Class {
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
+	ASCBlock resetLabelIndex.
 	current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
@@ -106,13 +107,9 @@ ASCodeGenerator >> finalAnalysis [
 
 ]
 
-{ #category : 'accessing' }
+{ #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
-
-	| indirect |
-
-	indirect := ASCIndirectVariable new.
-	^ indirect variable: (code find: aSymbol)
+	^ code find: aSymbol 
 ]
 
 { #category : 'API' }
@@ -139,10 +136,10 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth.
-		aBasicBlock requiredContextDo: [ :ctxt | ctxt blocks: blockClosures ] ].
+		maxDepth := maxDepth max: aBasicBlock maxDepth ].
 	blockClosures := blockClosures select: #manifest.
-	blockClosures do: [ :aBlockClosure | self compileBlock: aBlockClosure ]
+	blockClosures do: [ :aBlockClosure |
+		self compileBlock: aBlockClosure ]
 ]
 
 { #category : 'initialization' }
@@ -223,6 +220,21 @@ ASCodeGenerator >> nameBasicBlocks [
 						 nextPut: $:;
 						 print: idx ])
 			index: idx ]
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
+	^ code offsetTo: anObject methodBlock: aBlock 
 ]
 
 { #category : 'accessing' }
