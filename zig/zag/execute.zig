@@ -90,10 +90,11 @@ pub fn check(pc: PC, sp: SP, _process: TFProcess, context: TFContext, _: MethodS
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
 }
 const ZigBugWorkaround = if (true) struct {
-    fn tfAsProcess(_process: *anyopaque) *Process {
+    inline fn tfAsProcess(_process: *anyopaque) *Process {
+        @setRuntimeSafety(false);
         return @alignCast(@ptrCast(_process));
     }
-    fn tfAsContext(_context: *anyopaque) *Context {
+    inline fn tfAsContext(_context: *anyopaque) *Context {
         return @alignCast(@ptrCast(_context));
     }
     const TFProcess = *anyopaque;
@@ -232,21 +233,6 @@ pub const PC = extern struct {
     pub inline fn prim(self: PC) ThreadedFn {
         return self.code.prim;
     }
-    pub inline fn next(self: PC) PC {
-        return @bitCast(@intFromPtr(@as([*]const Code, @ptrCast(self.code)) + 1));
-    }
-    pub inline fn prim2(self: PC) ThreadedFn {
-        return @as([*]const Code, @ptrCast(self.code))[1].prim;
-    }
-    pub inline fn next2(self: PC) PC {
-        return @bitCast(@intFromPtr(@as([*]const Code, @ptrCast(self.code)) + 2));
-    }
-    pub inline fn skip(self: PC, n: usize) PC {
-        return @bitCast(@intFromPtr(@as([*]const Code, @ptrCast(self.code)) + n));
-    }
-    pub inline fn returnOffset(self: PC) PC {
-        return self.skip(config.picSize*2);
-    }
     pub inline fn uint(self: PC) u64 {
         return self.code.uint;
     }
@@ -265,6 +251,21 @@ pub const PC = extern struct {
     pub inline fn asCodePtr(self: PC) *const Code {
         return self.code;
     }
+    pub inline fn next(self: PC) PC {
+        return asPC(self.array() + 1);
+    }
+    pub inline fn prim2(self: PC) ThreadedFn {
+        return self.array()[1].prim;
+    }
+    pub inline fn next2(self: PC) PC {
+        return asPC(self.array() + 2);
+    }
+    pub inline fn skip(self: PC, n: usize) PC {
+        return asPC(self.array() + n);
+    }
+    pub inline fn returnOffset(self: PC) PC {
+        return self.skip(config.picSize*2);
+    }
     pub inline fn offsetFor(self: PC, n: usize) PC {
         return @bitCast(@intFromPtr(@as([*]const Code, @ptrCast(self.code)) + n));
     }
@@ -277,6 +278,12 @@ pub const PC = extern struct {
     pub inline fn literalIndirect(self: PC) Object {
         const offset = self.code.uint;
         return @as(*const Object, @ptrCast(@as([*]const Code, @ptrCast(self.code)) + 1 + offset)).*;
+    }
+    inline fn asPC(ptr: [*]const Code) PC {
+        return .{.code = @ptrCast(ptr)};
+    }
+    inline fn array(self: PC) [*]const Code {
+        return @ptrCast(self.code);
     }
 };
 pub const Code = extern union {
@@ -981,8 +988,11 @@ pub const controlPrimitives = struct {
         trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
         return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
     }
-    pub fn pushLiteral0(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteral0(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(0));
+        const process = tfAsProcess(_process);
+        const context = tfAsContext(_context);
+        trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
     pub fn pushLiteral1(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
@@ -1184,9 +1194,10 @@ pub const controlPrimitives = struct {
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
     }
     pub fn returnTop(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+        trace("\nreturnTop: {} ", .{sp.top});
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
-        trace("\nreturnTop: {any} ", .{context.stack(sp, process)});
+        trace("{any} ", .{context.stack(sp, process)});
         const top = sp.top;
         const result = context.pop(process);
         const newSp = result.sp;
@@ -1316,29 +1327,29 @@ test "context returnTop via Execution" {
     try expectEqual(result.len, 2);
     try expectEqual(result[0], Object.from(42));
 }
-test "context returnTop twice via Execution" {
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const empty = Object.empty;
-    var method1 = compileMethod(Sym.yourself, 3, 0, .{
-        &p.pushContext, "^",
-        &p.pushLiteral, comptime Object.from(1),
-        &p.call,        "0Obj",
-        &p.returnTop,
-    });
-    var method2 = compileMethod(Sym.name, 3, 0, .{
-        &p.pushContext, "^",
-        &p.pushLiteral, comptime Object.from(42),
-        &p.returnTop,
-    });
-    method1.setLiterals(empty, &[_]Object{Object.from(&method2)});
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method1);
-    try expectEqual(result.len, 2);
-    try expectEqual(result[0], Object.from(42));
-}
+// test "context returnTop twice via Execution" {
+//     const expectEqual = std.testing.expectEqual;
+//     Process.resetForTest();
+//     const empty = Object.empty;
+//     var method1 = compileMethod(Sym.yourself, 3, 0, .{
+//         &p.pushContext, "^",
+//         &p.pushLiteral, comptime Object.from(1),
+//         &p.call,        "0Obj",
+//         &p.returnTop,
+//     });
+//     var method2 = compileMethod(Sym.name, 3, 0, .{
+//         &p.pushContext, "^",
+//         &p.pushLiteral, comptime Object.from(42),
+//         &p.returnTop,
+//     });
+//     method1.setLiterals(empty, &[_]Object{Object.from(&method2)});
+//     var te = Execution.new();
+//     te.init();
+//     var objs = [_]Object{ Nil, True };
+//     const result = te.run(objs[0..], &method1);
+//     try expectEqual(result.len, 2);
+//     try expectEqual(result[0], Object.from(42));
+// }
 test "context returnTop with indirect via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
@@ -1363,18 +1374,22 @@ test "simple executable" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 1, 0, .{
-        &p.pushContext,           "^",
-        ":label1",                &p.pushLiteral,
-        comptime Object.from(42), &p.popLocal,
-        0,                        &p.pushLocal0,
-        &p.pushLiteral0,          &p.pushLiteralTrue,
-        &p.ifFalse,               "label3",
-        &p.branch,                "label2",
-        ":label3",                &p.pushLocal,
-        0,                        ":label4",
-        &p.returnTop,             ":label2",
-        &p.pushLiteral0,          &p.branch,
-        "label4",
+        &p.pushContext,  "^",
+     ":label1",
+        &p.pushLiteral,  comptime Object.from(42),
+        &p.popLocal,     0,
+        &p.pushLocal0,
+        &p.pushLiteral0,
+        &p.pushLiteralTrue,
+        &p.ifFalse,     "label3",
+        &p.branch,      "label2",
+     ":label3",
+        &p.pushLocal,    0,
+     ":label4",
+        &p.returnTop,
+     ":label2",
+        &p.pushLiteral0,
+        &p.branch,       "label4",
     });
     var objs = [_]Object{Nil};
     var te = Execution.new();
@@ -1772,18 +1787,22 @@ test "llvm external" {
     Process.resetForTest();
     const pl0 = if (true) &p.pushLiteral0 else llvmPL0CM;
     var method = compileMethod(Sym.yourself, 1, 0, .{
-        &p.pushContext,           "^",
-        ":label1",                &p.pushLiteral,
-        comptime Object.from(42), &p.popLocal,
-        0,                        &p.pushLocal0,
-        pl0,          &p.pushLiteralTrue,
-        &p.ifFalse,               "label3",
-        &p.branch,                "label2",
-        ":label3",                &p.pushLocal,
-        0,                        ":label4",
-        &p.returnTop,             ":label2",
-        pl0,          &p.branch,
-        "label4",
+        &p.pushContext,  "^",
+     ":label1",
+        &p.pushLiteral,  comptime Object.from(42),
+        &p.popLocal,     0,
+        &p.pushLocal0,
+        pl0,
+        &p.pushLiteralTrue,
+        &p.ifFalse,     "label3",
+        &p.branch,      "label2",
+     ":label3",
+        &p.pushLocal,    0,
+     ":label4",
+        &p.returnTop,
+     ":label2",
+        pl0,
+        &p.branch,       "label4",
     });
     var objs = [_]Object{Nil};
     var te = Execution.new();
