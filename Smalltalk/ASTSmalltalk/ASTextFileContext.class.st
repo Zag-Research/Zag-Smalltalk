@@ -102,3 +102,8 @@ ASTextFileContext >> writeMainSuffixOn: stream [
 
 	^ self subclassResponsibility
 ]
+
+{ #category : 'as yet unclassified' }
+ASTextFileContext >> writeNewDeclarationFor: aGenerator on: stream [ 
+	^ self subclassResponsibility
+]

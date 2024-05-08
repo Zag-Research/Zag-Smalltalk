@@ -109,6 +109,11 @@ ASOutput >> initialize [
 	numLocals := 0
 ]
 
+{ #category : 'as yet unclassified' }
+ASOutput >> name [
+	^ self subclassResponsibility
+]
+
 { #category : 'API' }
 ASOutput >> outputToStream [
 
