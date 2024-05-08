@@ -5,8 +5,8 @@ Class {
 	#name : 'ASImageThreadedOutput',
 	#superclass : 'ASImageOutput',
 	#classTraits : 'ASOutputAPI classTrait',
-	#classVars : [
-		'ASZagConstants'
+	#instVars : [
+		'delayedLabel'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -20,8 +20,12 @@ ASImageThreadedOutput class >> blockClass [
 
 { #category : 'API' }
 ASImageThreadedOutput >> branch: command to: target [
-	command = #br ifTrue: [ 
-	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
+
+	command = #br
+		ifTrue: [ delayedLabel := target label ]
+		ifFalse: [
+			self putEmbedded: command.
+			target ifNotNil: [ self labelRef: target label ] ]
 ]
 
 { #category : 'API' }
@@ -92,7 +96,7 @@ ASImageThreadedOutput >> pushLocal: localNumber [
 { #category : 'code generation' }
 ASImageThreadedOutput >> verifySelector: anObject [
 
-	^ image putRawInt: ZfVerifySelector 
+	^ image putRawInt: ZfVerifySelector
 ]
 
 { #category : 'API' }

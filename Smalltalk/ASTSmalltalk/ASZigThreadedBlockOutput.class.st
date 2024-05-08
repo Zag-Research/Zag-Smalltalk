@@ -4,6 +4,7 @@ I output BlockClosures
 Class {
 	#name : 'ASZigThreadedBlockOutput',
 	#superclass : 'ASZigThreadedOutput',
+	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'methodGenerator',
 		'block'

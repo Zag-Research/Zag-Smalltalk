@@ -1,5 +1,5 @@
 Class {
-	#name : 'ASZigLLVMOutputTest',
+	#name : 'ASLLVMOutputTest',
 	#superclass : 'TestCase',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -7,7 +7,7 @@ Class {
 }
 
 { #category : 'tests' }
-ASZigLLVMOutputTest >> testLLVMOutput [
+ASLLVMOutputTest >> testLLVMOutput [
 	"in-progress"
 	| ast file output |
 	"Creates Zag AST - ASMethodNode"
@@ -15,7 +15,7 @@ ASZigLLVMOutputTest >> testLLVMOutput [
 	"Convert to LLVM specific context"
 	file := ASZigFileContext new.
 	"Create new instance of generator and set testing inst. var"
-	output	 := ASZigLLVMOutput testing.
+	output	 := ASLLVMOutput testing.
 	"Init file context"
 	output context: file.
 	"Output LLVM IR to generator's writestream"

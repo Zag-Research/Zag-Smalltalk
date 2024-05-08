@@ -4,7 +4,6 @@ I generate text-based code compiled by the `compileMethod` compile-time Zig func
 Class {
 	#name : 'ASZigThreadedOutput',
 	#superclass : 'ASZigMethodOutput',
-	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -139,7 +138,7 @@ ASZigThreadedOutput >> visitPushContext [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushContext: anUndefinedObject [
+ASZigThreadedOutput >> visitPushContext: unused [
 
 	self
 		putEmbedded: #pushContext;

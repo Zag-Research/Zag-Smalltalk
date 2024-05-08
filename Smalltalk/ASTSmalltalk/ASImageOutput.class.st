@@ -1,3 +1,6 @@
+"
+I output to an image
+"
 Class {
 	#name : 'ASImageOutput',
 	#superclass : 'ASOutput',

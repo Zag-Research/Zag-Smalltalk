@@ -4,30 +4,12 @@ My subclasses output text versions of methods
 Class {
 	#name : 'ASZigMethodOutput',
 	#superclass : 'ASZigOutput',
-	#instVars : [
-		'codeGenerator',
-		'maxDepth',
-		'numLocals',
-		'currentBasicBlock',
-		'parentCodeGenerator'
-	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
 }
 
-{ #category : 'compiling' }
-ASZigMethodOutput >> blockClass [
-	^ self class blockClass
-]
-
-{ #category : 'accessing' }
-ASZigMethodOutput >> blockNumber [
-	^ currentBasicBlock := currentBasicBlock + 1.
-
-]
-
-{ #category : 'code generation' }
+{ #category : 'API' }
 ASZigMethodOutput >> codeGenerator [
 
 	^ codeGenerator ifNil: [
@@ -36,20 +18,6 @@ ASZigMethodOutput >> codeGenerator [
 			                   output: self;
 			                   targetClass: forClass;
 			enclosingScope: parentCodeGenerator ]
-]
-
-{ #category : 'code generation' }
-ASZigMethodOutput >> codeGeneratorClass [ ^ ASCodeGenerator 
-]
-
-{ #category : 'compiling' }
-ASZigMethodOutput >> compileBlock: anASCBlock [
-	self assert: anASCBlock block ~= ourObject.
-	(self blockClass new testing: testing)
-		context: context;
-		parentCodeGenerator: codeGenerator;
-		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block for: forClass
 ]
 
 { #category : 'code generation' }
@@ -67,6 +35,25 @@ ASZigMethodOutput >> initialize [
 	super initialize.
 	maxDepth := 0.
 	currentBasicBlock := 0
+]
+
+{ #category : 'output' }
+ASZigMethodOutput >> label: result [
+
+	delayedLabel = result ifFalse: [
+		delayedLabel ifNotNil: [
+			self
+				putEmbedded: #br;
+				labelRef: delayedLabel ] ].
+	delayedLabel := nil.
+	result ifNotNil: [
+		self
+			nextPutAll: '":';
+			nextPutAll: result;
+			nextPut: $";
+			comma;
+			lf ].
+	^ result
 ]
 
 { #category : 'compiling' }
@@ -90,15 +77,10 @@ ASZigMethodOutput >> outputMethodStart: bbLabel [
 self subclassResponsibility 
 ]
 
-{ #category : 'code generation' }
+{ #category : 'API' }
 ASZigMethodOutput >> outputToStream [ 
 
 self subclassResponsibility 
-]
-
-{ #category : 'accessing' }
-ASZigMethodOutput >> parentCodeGenerator: aCodeGenerator [
-	parentCodeGenerator := aCodeGenerator 
 ]
 
 { #category : 'accessing' }
@@ -120,22 +102,6 @@ ASZigMethodOutput >> tailCallOptimize: aBoolean [
 ASZigMethodOutput >> verifySelector: anObject [
 
 	self subclassResponsibility 
-]
-
-{ #category : 'API' }
-ASZigMethodOutput >> visitPopLocal: localNumber [ 
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASZigMethodOutput >> visitPushBlock: stackIndex [ 
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASZigMethodOutput >> visitPushContext [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -168,16 +134,4 @@ ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [
 { #category : 'visiting' }
 ASZigMethodOutput >> visitSimple: aSymbol [ 
 	^ self putEmbedded: aSymbol; lf
-]
-
-{ #category : 'writing' }
-ASZigMethodOutput >> writeDefinitionOn: anObject [
-
-	self subclassResponsibility
-]
-
-{ #category : 'writing' }
-ASZigMethodOutput >> writeInitializationOn: anObject [
-
-	self subclassResponsibility
 ]

@@ -5,10 +5,7 @@ Class {
 	#name : 'ASZigOutput',
 	#superclass : 'ASTextOutput',
 	#instVars : [
-		'ourObject',
-		'alreadyGenerated',
-		'delayedLabel',
-		'forClass'
+		'delayedLabel'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -31,11 +28,6 @@ ASZigOutput >> comment: aString [
 ASZigOutput >> forClass [
 
 	^ forClass 
-]
-
-{ #category : 'code generation' }
-ASZigOutput >> generateCode [
-	self subclassResponsibility 
 ]
 
 { #category : 'generation' }
@@ -61,25 +53,6 @@ ASZigOutput >> generateCode: anASNode for: aClass [
 { #category : 'accessing' }
 ASZigOutput >> id: aString [ 
 	mainStream nextPutAll: aString zigName 
-]
-
-{ #category : 'output' }
-ASZigOutput >> label: result [
-
-	delayedLabel = result ifFalse: [
-		delayedLabel ifNotNil: [
-			self
-				putEmbedded: #br;
-				labelRef: delayedLabel] ].
-			delayedLabel := nil .
-	result ifNotNil: [
-		self
-			nextPutAll: '":';
-			nextPutAll: result;
-			nextPut: $";
-			comma;
-			lf ].
-	^ result
 ]
 
 { #category : 'accessing' }
@@ -177,15 +150,4 @@ ASZigOutput >> setLiteralString [
 		  symbols
 			  do: [ :each | s nextPutAll: (context printable: each) ]
 			  separatedBy: [ s nextPut: $, ] ]
-]
-
-{ #category : 'writing' }
-ASZigOutput >> writeDefinitionOn: anObject [
-self subclassResponsibility 
-]
-
-{ #category : 'writing' }
-ASZigOutput >> writeInitializationOn: anObject [
-
-	self subclassResponsibility
 ]

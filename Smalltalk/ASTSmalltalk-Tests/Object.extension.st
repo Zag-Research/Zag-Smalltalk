@@ -5,9 +5,9 @@ Object >> zigCGString [
 
 	| file codeGen |
 	file := ASZigFileContext new.
-	codeGen := ASZigCompileObjectOutput new context: file.
+	codeGen := ASZigCompileObjectOutput testing context: file.
 	self zigCompileObject: codeGen.
-	^ codeGen asString 
+	^ codeGen asString
 ]
 
 { #category : '*ASTSmalltalk-Tests' }

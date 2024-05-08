@@ -4,6 +4,8 @@ I generate runtime compile objects
 Class {
 	#name : 'ASOutput',
 	#superclass : 'Object',
+	#traits : 'ASOutputAPI',
+	#classTraits : 'ASOutputAPI classTrait',
 	#instVars : [
 		'alreadyGenerated',
 		'ourObject',
@@ -29,11 +31,6 @@ ASOutput >> blockClass [
 { #category : 'API' }
 ASOutput >> blockNumber [
 	^ currentBasicBlock := currentBasicBlock + 1
-]
-
-{ #category : 'API' }
-ASOutput >> branch: command to: unused [
-	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -65,11 +62,6 @@ ASOutput >> context: anASContext [
 
 	context := anASContext.
 	anASContext addComponent: self
-]
-
-{ #category : 'API' }
-ASOutput >> endMethod [
-	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -134,68 +126,7 @@ ASOutput >> parentCodeGenerator: aCodeGenerator [
 ]
 
 { #category : 'API' }
-ASOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> pushLocal: localNumber [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
 ASOutput >> selector [
 
 	^ codeGenerator selector
-]
-
-{ #category : 'API' }
-ASOutput >> visitPopLocal: anASLocal [
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushBlock: anASCBlock [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushContext [
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushContext: anUndefinedObject [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushLiteral: anUndefinedObject [
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushLocal: anUndefinedObject [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitPushLocalOrBlock: anUndefinedObject [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitReturnTop [
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASOutput >> visitSend: aSelector returnIndex: index target: aClass [
-
-	^ self subclassResponsibility
 ]
