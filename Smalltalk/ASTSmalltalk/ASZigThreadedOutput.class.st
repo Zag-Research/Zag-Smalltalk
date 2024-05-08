@@ -120,8 +120,22 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
-		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
+		ifTrue: [ 
+			self putEmbedded: #BlockClosure, '.', #nonLocalBlock;
+			nextPutAll: anASCBlock label; 
+			comma; 
+			lf]
 		ifFalse: [ self visitPushLiteral: nil ]
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitPushContext [
+
+	self
+		putEmbedded: #pushContext;
+		nextPutAll: '"^"';
+		comma;
+		lf
 ]
 
 { #category : 'API' }

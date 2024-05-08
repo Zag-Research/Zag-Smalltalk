@@ -35,7 +35,7 @@ pub const Context = struct {
     trapContextNumber: u64,
     temps: [nLocals]Object,
     const Self = @This();
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP;
+    const ThreadedFn = execute.ThreadedFn;
     const nLocals = 1;
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals + 1;
     pub fn init() Self {
@@ -74,7 +74,7 @@ pub const Context = struct {
         const wordsToDiscard = self.header.hash16();
         trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
         if (self.isOnStack())
-            return .{ .sp = self.asNewSp().unreserve(wordsToDiscard + 1), .ctxt = self.previous() };
+            return .{ .sp = self.asNewSp().unreserve(wordsToDiscard), .ctxt = self.previous() };
         trace("\npop: {*}", .{self});
         @panic("incomplete");
         // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];

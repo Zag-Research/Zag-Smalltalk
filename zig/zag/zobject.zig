@@ -423,11 +423,6 @@ const ObjectFunctions = struct {
     pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
         return Object.makeImmediate(cls,self.hash32());
     }
-    pub inline fn withClass(self: Object, cls: ClassIndex) Object {
-        if (config.dispatchCache) {
-            return Object.cast(@as(u64, @intFromEnum(cls)) << 32 | self.hash32());
-        } else return self;
-    }
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
     }

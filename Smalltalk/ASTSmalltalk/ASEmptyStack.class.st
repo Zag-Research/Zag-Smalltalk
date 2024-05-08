@@ -5,7 +5,8 @@ Class {
 	#name : 'ASEmptyStack',
 	#superclass : 'ASStack',
 	#instVars : [
-		'nonlocalNameLookupObject'
+		'nonlocalNameLookupObject',
+		'blocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -37,6 +38,16 @@ ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 ]
 
 { #category : 'API' }
+ASEmptyStack >> offset: anInteger to: anObject [
+	^anInteger 
+]
+
+{ #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ nonlocalNameLookupObject lookupName: anObject block: blockOther
+
+	^ self error: 'something bad happend'
+]
+
+{ #category : 'initialization' }
+ASEmptyStack >> requiredContextDo: x [
 ]

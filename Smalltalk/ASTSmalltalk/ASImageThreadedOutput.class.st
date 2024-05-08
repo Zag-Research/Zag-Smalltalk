@@ -122,6 +122,15 @@ ASImageThreadedOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASImageThreadedOutput >> visitPushContext [
+
+	self
+		putEmbedded: #pushContext;
+		nextPutAll: '"^"';
+		comma
+]
+
+{ #category : 'API' }
 ASImageThreadedOutput >> visitPushContext: anUndefinedObject [
 
 	self

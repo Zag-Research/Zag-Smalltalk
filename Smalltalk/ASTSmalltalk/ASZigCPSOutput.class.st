@@ -189,6 +189,24 @@ ASZigCPSOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASZigCPSOutput >> visitPushContext [
+
+	self
+		lVal: #context;
+		rVal: #context;
+		nextPutAll: '.push(';
+		rVal: #sp;
+		nextPutAll: ', process, &';
+		nextPutAll: componentName;
+		nextPutAll: ', 0, 2, 0)';
+		endStatement;
+		lVal: #sp;
+		rVal: #context;
+		nextPutAll: '.asNewSp()';
+		endStatement
+]
+
+{ #category : 'API' }
 ASZigCPSOutput >> visitPushContext: aMethodBlock [
 
 	self
