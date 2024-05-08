@@ -7,42 +7,45 @@ Class {
 	#classVars : [
 		'GroupHeap',
 		'GroupImmediates',
-		'GroupSmallInt0'
+		'GroupSmallInt'
 	],
 	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
 	#tag : 'Image'
 }
 
+{ #category : 'adding' }
+ASSpurPlusImage class >> double: aFloat [
+
+	| anASSpurPlusImage |
+	anASSpurPlusImage := self new.
+
+	anASSpurPlusImage halt.
+	^ ((aFloat at: 1) bitShift: 32) + (aFloat at: 2)
+]
+
 { #category : 'class initialization' }
 ASSpurPlusImage class >> initialize [
 
 	GroupHeap := 0.
-	GroupSmallInt0 := 1.
+	GroupSmallInt := 1.
 	GroupImmediates := 2
 ]
 
 { #category : 'adding' }
-ASSpurPlusImage >> double: aFloat [
-
-	self halt.
-	^ ((aFloat at: 1) bitShift: 32) + (aFloat at: 2)
-]
-
-{ #category : 'adding' }
-ASSpurPlusImage >> literal: l class: c [
+ASSpurPlusImage class >> literal: l class: c [
 
 	^ (c bitShift: 3) + (l bitShift: 19) + GroupImmediates
 ]
 
 { #category : 'adding' }
-ASSpurPlusImage >> pointer: p class: c [
+ASSpurPlusImage class >> pointer: p class: c [
 
 	^ p
 ]
 
 { #category : 'adding' }
-ASSpurPlusImage >> smallInteger: anInteger [
+ASSpurPlusImage class >> smallInteger: anInteger [
 
-	^ anInteger << 3 + GroupSmallInt0
+	^ anInteger << 3 + GroupSmallInt
 ]

@@ -68,6 +68,20 @@ Class {
 	#tag : 'Image'
 }
 
+{ #category : 'converting' }
+ASImage class >> convertNumber: aNumber [
+
+	aNumber isInteger ifTrue: [ ^ self smallInteger: aNumber ].
+	aNumber isFloat  ifTrue: [ ^ self double: aNumber ].
+	self error: 'unexpected number'
+]
+
+{ #category : 'converting' }
+ASImage class >> double: aNumber [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'export' }
 ASImage class >> exportMethods [
 	^ self exportPackages flatCollect: [ :package |
@@ -151,10 +165,22 @@ ASImage class >> initialize [
 	IndexedWeakWithPointers := ExternalWeakWithPointers + 1
 ]
 
+{ #category : 'converting' }
+ASImage class >> literal: l class: c [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'instance creation' }
 ASImage class >> new [
 
 	^ self error: 'use "image" or "test" to create instances of ',self name
+]
+
+{ #category : 'converting' }
+ASImage class >> pointer: p class: c [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'image analysis' }
@@ -175,6 +201,12 @@ ASImage class >> primitiveNumbers: aCollection [
 	^ ((#primitive: senders flatCollect: [ :m | m pragmas ]) select: [ :p |
 		  p selector = #primitive: and: [
 			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
+]
+
+{ #category : 'converting' }
+ASImage class >> smallInteger: aNumber [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'instance creation' }
@@ -267,9 +299,8 @@ ASImage >> currentAddress [
 ]
 
 { #category : 'adding' }
-ASImage >> double: c [
-
-	^ self subclassResponsibility
+ASImage >> double: n [ 
+	^ self class double: n 
 ]
 
 { #category : 'objects' }
@@ -332,9 +363,8 @@ ASImage >> initialize [
 ]
 
 { #category : 'adding' }
-ASImage >> literal: l class: c [
-
-	^ self subclassResponsibility 
+ASImage >> literal: l class: c [ 
+	^ self class literal: l class: c 
 ]
 
 { #category : 'writing' }
@@ -432,9 +462,8 @@ ASImage >> on: aWriteStream [
 ]
 
 { #category : 'adding' }
-ASImage >> pointer: p class: c [
-
-	^ self subclassResponsibility
+ASImage >> pointer: p class: c [ 
+	^ self class pointer: p class: c 
 ]
 
 { #category : 'process' }
@@ -558,9 +587,8 @@ ASImage >> selector: aSymbol [
 ]
 
 { #category : 'adding' }
-ASImage >> smallInteger: c [
-
-	^ self subclassResponsibility
+ASImage >> smallInteger: n [ 
+	^ self class smallInteger: n 
 ]
 
 { #category : 'adding' }

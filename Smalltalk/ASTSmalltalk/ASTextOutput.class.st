@@ -16,14 +16,11 @@ There will be a runtime code generator written in Zig that will generate threade
 "
 Class {
 	#name : 'ASTextOutput',
-	#superclass : 'Object',
+	#superclass : 'ASOutput',
 	#instVars : [
 		'mainStream',
 		'symbols',
-		'label',
-		'testing',
-		'componentName',
-		'context'
+		'label'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -82,7 +79,10 @@ ASTextOutput >> lf [
 ASTextOutput >> name [
 
 	^ componentName ifNil: [
-		  componentName := context name: self prefix: self prefix main: self selector ]
+		  componentName := context
+			                   name: self
+			                   prefix: self prefix
+			                   main: self selector ]
 ]
 
 { #category : 'printing' }
@@ -124,8 +124,14 @@ ASTextOutput >> testing: aBoolean [
 	testing := aBoolean
 ]
 
-{ #category : 'accessing' }
+{ #category : 'writing' }
 ASTextOutput >> writeDefinitionOn: aStream [
+
+	self subclassResponsibility
+]
+
+{ #category : 'writing' }
+ASTextOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility
 ]

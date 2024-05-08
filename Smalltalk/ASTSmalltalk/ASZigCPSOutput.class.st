@@ -4,13 +4,12 @@ I generate text-based as a sequence of Continuation-Passing-Style Zig function
 Class {
 	#name : 'ASZigCPSOutput',
 	#superclass : 'ASZigMethodOutput',
-	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
 	#instVars : [
-		'auxStream',
-		'skipRest',
 		'currentLVal',
-		'lVals'
+		'lVals',
+		'auxStream',
+		'skipRest'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -54,6 +53,7 @@ ASZigCPSOutput >> endStatement [
 
 { #category : 'flagging' }
 ASZigCPSOutput >> flush [
+
 	skipRest := true
 ]
 
@@ -207,7 +207,7 @@ ASZigCPSOutput >> visitPushContext [
 ]
 
 { #category : 'API' }
-ASZigCPSOutput >> visitPushContext: aMethodBlock [
+ASZigCPSOutput >> visitPushContext: unused [
 
 	self
 		lVal: #context;

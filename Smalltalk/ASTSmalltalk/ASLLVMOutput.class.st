@@ -1,18 +1,28 @@
 Class {
-	#name : 'ASZigLLVMOutput',
+	#name : 'ASLLVMOutput',
 	#superclass : 'ASZigMethodOutput',
+	#instVars : [
+		'sequence'
+	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
 }
 
 { #category : 'API' }
-ASZigLLVMOutput >> endMethod [
+ASLLVMOutput >> endMethod [
 	self label: nil
 ]
 
 { #category : 'as yet unclassified' }
-ASZigLLVMOutput >> mapLLVMTypeFor: type [
+ASLLVMOutput >> iniitialize [
+
+	super initialize.
+	sequence := 0
+]
+
+{ #category : 'as yet unclassified' }
+ASLLVMOutput >> mapLLVMTypeFor: type [
 	"Maps Pharo datatypes to LLVMs - need to change to dispatch soon" 
    | llvmType |
     
@@ -26,13 +36,20 @@ ASZigLLVMOutput >> mapLLVMTypeFor: type [
     ^ llvmType
 ]
 
-{ #category : 'code generation' }
-ASZigLLVMOutput >> outputBasicBlockEnd [
-	mainStream nextPutAll: '}'
+{ #category : 'as yet unclassified' }
+ASLLVMOutput >> nextVariable [
+
+	sequence := sequence + 1.
+	^ '%v' , sequence asString
 ]
 
 { #category : 'code generation' }
-ASZigLLVMOutput >> outputMethodLabel: bbLabel [
+ASLLVMOutput >> outputBasicBlockEnd [
+
+]
+
+{ #category : 'code generation' }
+ASLLVMOutput >> outputMethodLabel: bbLabel [
 
 	self
 		nextPutAll: ') { ';
@@ -41,7 +58,7 @@ ASZigLLVMOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigLLVMOutput >> outputMethodStart: bbLabel [ 
+ASLLVMOutput >> outputMethodStart: bbLabel [ 
 
 	| type llvmType |	
 	"Geting the type of the top element in the stack"
@@ -54,7 +71,7 @@ ASZigLLVMOutput >> outputMethodStart: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigLLVMOutput >> outputToStream [
+ASLLVMOutput >> outputToStream [
 	"Method yet to be implemented"
 	codeGenerator finalAnalysis.
 	"Something--"
@@ -64,7 +81,7 @@ ASZigLLVMOutput >> outputToStream [
 ]
 
 { #category : 'code generation' }
-ASZigLLVMOutput >> verifySelector: anObject [
+ASLLVMOutput >> verifySelector: anObject [
 
 	self 
 		nextPutAll: ' @';
@@ -74,16 +91,15 @@ ASZigLLVMOutput >> verifySelector: anObject [
 ]
 
 { #category : 'API' }
-ASZigLLVMOutput >> visitPushContext: aBlock [ 
-	
-	self 
+ASLLVMOutput >> visitPushContext: unused [
+
+	self
 		nextPutAll: '(';
-		"Insert LLVM arguments here"
-		nextPutAll: ')'. 
+		"Insert LLVM arguments here"nextPutAll: ')'
 ]
 
 { #category : 'API' }
-ASZigLLVMOutput >> visitPushLiteral: aLiteral [
+ASLLVMOutput >> visitPushLiteral: aLiteral [
 
 	self 
 		nextPutAll: (self mapLLVMTypeFor: aLiteral) asString;  
@@ -92,7 +108,7 @@ ASZigLLVMOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigLLVMOutput >> visitReturnTop [
+ASLLVMOutput >> visitReturnTop [
 
 	self 
 		nextPutAll: 'ret '.

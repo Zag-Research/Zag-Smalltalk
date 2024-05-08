@@ -11,9 +11,7 @@ ASZigThreadedOutputTest >> testZigAST_fib [
 
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	self
-		assert: ast
-		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+	self assert: ast equals: (ASMethodNode selector: #fib: arguments: #(anInt) body: {{ASReturn expression: (ASSend target: (ASSend target: (ASRef variable: (#anInt)) selector: #< args: {ASLiteral literal: 2}) selector: #ifTrue:ifFalse: args: {ASBlock body: {{ASLiteral literal: 1}} . ASBlock body: {{ASSend target: (ASSend target: (ASSelf) selector: #fib: args: {ASSend target: (ASRef variable: (#anInt)) selector: #- args: {ASLiteral literal: 1}}) selector: #+ args: {ASSend target: (ASSelf) selector: #fib: args: {ASSend target: (ASRef variable: (#anInt)) selector: #- args: {ASLiteral literal: 2}}}}}})}}) 
 ]
 
 { #category : 'tests' }

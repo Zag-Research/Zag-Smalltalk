@@ -5,79 +5,17 @@ When asked to output, I output a header of all the external zag references, then
 "
 Class {
 	#name : 'ASZigFileContext',
-	#superclass : 'ASFileContext',
-	#instVars : [
-		'names'
-	],
+	#superclass : 'ASTextFileContext',
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
 }
-
-{ #category : 'converting' }
-ASZigFileContext >> asString [
-^ String streamContents: [ :s | self outputTo: s ]
-]
 
 { #category : 'initialization' }
 ASZigFileContext >> initialize [
 
 	super initialize.
 	names := Dictionary new
-]
-
-{ #category : 'creation' }
-ASZigFileContext >> name: anObject prefix: aString main: aString2 [
-
-	^ self name: anObject prefix: aString main: aString2 seq: 0
-]
-
-{ #category : 'creation' }
-ASZigFileContext >> name: generator prefix: prefix main: main seq: seq [
-
-	| string |
-	string := prefix , (seq = 0
-		           ifTrue: [
-			           main isEmptyOrNil
-				           ifTrue: [ '1' ]
-				           ifFalse: [ '' ] ]
-		           ifFalse: [ seq asString ]) , (main ifNil: ['']).
-	names at: string ifPresent: [
-		^ self
-			  name: generator
-			  prefix: prefix
-			  main: main
-			  seq: seq + 1 ].
-	names at: string put: generator.
-	^ string
-]
-
-{ #category : 'writing' }
-ASZigFileContext >> outputTo: stream [
-
-	self processComponents.
-	self writeHeaderOn: stream.
-	components do: [ :each | each writeDefinitionOn: stream ].
-	symbols writeDefinitionOn: stream.
-	self writeInitSmalltalkPrefixOn: stream.
-	symbols writeInitializationOn: stream.
-	components do: [ :each | each writeInitializationOn: stream ].
-	self writeInitSmalltalkSuffixOn: stream.
-	self writeMainPrefixOn: stream.
-	self writeMainSuffixOn: stream.
-	stream flush
-]
-
-{ #category : 'testing' }
-ASZigFileContext >> predefinedSymbol: aSymbol [
-
-	^ (symbols predefinedSymbol: aSymbol)
-]
-
-{ #category : 'testing' }
-ASZigFileContext >> printable: aSymbol [
-
-	^ symbols printable: aSymbol
 ]
 
 { #category : 'writing' }
@@ -124,7 +62,7 @@ ASZigFileContext >> writeInitSmalltalkSuffixOn: stream [
 '
 ]
 
-{ #category : 'writing' }
+{ #category : 'as yet unclassified' }
 ASZigFileContext >> writeMainPrefixOn: stream [
 
 	stream nextPutAll: 'pub fn main() !void {
@@ -132,7 +70,7 @@ ASZigFileContext >> writeMainPrefixOn: stream [
 '
 ]
 
-{ #category : 'writing' }
+{ #category : 'as yet unclassified' }
 ASZigFileContext >> writeMainSuffixOn: stream [
 
 	stream nextPutAll: '}

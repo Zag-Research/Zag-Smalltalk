@@ -2,8 +2,8 @@
 I output BlockClosures
 "
 Class {
-	#name : 'ASZigCPSBlockOutput',
-	#superclass : 'ASZigCPSOutput',
+	#name : 'ASLLVMBlockOutput',
+	#superclass : 'ASLLVMOutput',
 	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'methodGenerator',
@@ -15,36 +15,36 @@ Class {
 }
 
 { #category : 'accessing' }
-ASZigCPSBlockOutput >> block [
+ASLLVMBlockOutput >> block [
 	^ methodGenerator 	block
 ]
 
 { #category : 'code generation' }
-ASZigCPSBlockOutput >> codeGeneratorClass [
+ASLLVMBlockOutput >> codeGeneratorClass [
 
 	^ ASCodeGeneratorBlock
 ]
 
 { #category : 'compiling' }
-ASZigCPSBlockOutput >> methodGenerator [
+ASLLVMBlockOutput >> methodGenerator [
 
 	^ methodGenerator
 ]
 
 { #category : 'accessing' }
-ASZigCPSBlockOutput >> methodGenerator: anOutput block: anInteger [
+ASLLVMBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
 ]
 
 { #category : 'accessing' }
-ASZigCPSBlockOutput >> prefix [
+ASLLVMBlockOutput >> prefix [
 
 	^ 'B'
 ]
 
 { #category : 'visiting' }
-ASZigCPSBlockOutput >> visitReturnSelf [
+ASLLVMBlockOutput >> visitReturnSelf [
 	self nextPutAll: 'RETURNSELF';endStatement 
 ]
