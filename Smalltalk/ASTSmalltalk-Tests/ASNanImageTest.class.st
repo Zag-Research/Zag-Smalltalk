@@ -74,9 +74,7 @@ ASNanImageTest >> test_simple1 [
 
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	self
-		threaded: ast
-		equals: #( ZfPushLiteral 42 ZfReturnTop )
+	self threaded: ast equals: { ZfPushLiteral . 42 . ZfReturnTop }
 ]
 
 { #category : 'tests' }

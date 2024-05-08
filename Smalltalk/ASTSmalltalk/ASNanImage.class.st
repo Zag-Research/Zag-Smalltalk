@@ -4,58 +4,44 @@ I have the knowledge of how to encode values for NaN images
 Class {
 	#name : 'ASNanImage',
 	#superclass : 'ASImage',
+	#classVars : [
+		'GroupHeap',
+		'GroupImmediates',
+		'GroupSmallInt0'
+	],
 	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
 	#tag : 'Image'
 }
 
-{ #category : 'as yet unclassified' }
-ASNanImage class >> convertNumber: anInteger [
-
-	anInteger isInteger ifTrue: [ ^ self smallInteger: anInteger ].
-	self error: 'unexpected number'
-]
-
-{ #category : 'adding' }
+{ #category : 'converting' }
 ASNanImage class >> double: n [
 
 	^ ('16r' , n hex) asNumber
 ]
 
-{ #category : 'adding' }
+{ #category : 'class initialization' }
+ASNanImage class >> initialize [
+
+	GroupHeap := 16rFFF7000000000000.
+	GroupSmallInt0 := 16rFFFC000000000000.
+	GroupImmediates := 16rFFF0000000000000
+]
+
+{ #category : 'converting' }
 ASNanImage class >> literal: l class: c [
 
-	^ 16rFFF0000000000000 + l + (c bitShift: 32)
+	^ GroupImmediates + l + (c bitShift: 32)
 ]
 
-{ #category : 'adding' }
+{ #category : 'converting' }
 ASNanImage class >> pointer: p class: c [
 
-	^ 16rFFF7000000000000 + p
+	^ GroupHeap + p
 ]
 
-{ #category : 'adding' }
+{ #category : 'converting' }
 ASNanImage class >> smallInteger: n [
 
-	^ 16rFFFC000000000000 + n
-]
-
-{ #category : 'adding' }
-ASNanImage >> double: n [ 
-	^ self class double: n 
-]
-
-{ #category : 'adding' }
-ASNanImage >> literal: l class: c [ 
-	^ self class literal: l class: c 
-]
-
-{ #category : 'adding' }
-ASNanImage >> pointer: p class: c [ 
-	^ self class pointer: p class: c 
-]
-
-{ #category : 'adding' }
-ASNanImage >> smallInteger: n [ 
-	^ self class smallInteger: n 
+	^ GroupSmallInt0 + n
 ]

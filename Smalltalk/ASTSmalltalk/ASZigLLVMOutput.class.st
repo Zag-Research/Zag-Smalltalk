@@ -1,6 +1,9 @@
 Class {
 	#name : 'ASZigLLVMOutput',
 	#superclass : 'ASZigMethodOutput',
+	#instVars : [
+		'sequence'
+	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
@@ -9,6 +12,13 @@ Class {
 { #category : 'API' }
 ASZigLLVMOutput >> endMethod [
 	self label: nil
+]
+
+{ #category : 'as yet unclassified' }
+ASZigLLVMOutput >> iniitialize [
+
+	super initialize.
+	sequence := 0
 ]
 
 { #category : 'as yet unclassified' }
@@ -24,6 +34,13 @@ ASZigLLVMOutput >> mapLLVMTypeFor: type [
     } otherwise: ['void'].
     
     ^ llvmType
+]
+
+{ #category : 'as yet unclassified' }
+ASZigLLVMOutput >> nextVariable [
+
+	sequence := sequence + 1.
+	^ '%v' , sequence asString
 ]
 
 { #category : 'code generation' }
