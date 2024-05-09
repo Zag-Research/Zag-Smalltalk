@@ -441,12 +441,12 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, verifier: ThreadedFn) Self {
+        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, verifier: ThreadedFn, class: ClassIndex) Self {
             const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
             return .{
                 .header = header,
-                .signature = .{ .selectorHash=name.hash32(), .class=.none},
+                .signature = .{ .selectorHash=name.hash32(), .class=class},
                 .verifier = verifier,
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
                 .code = undefined,
@@ -530,7 +530,7 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, &controlPrimitives.verifyMethod);
+    var r1 = c1.init(Sym.value, 2, 3, &controlPrimitives.verifyMethod,.none);
     var r1r = [_]Object{ Nil, True };
     r1.setLiterals(empty, &r1r);
     try expectEqual(r1.getCodeSize(), 10);
@@ -538,13 +538,13 @@ test "CompileTimeMethod" {
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
-pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    return compileMethodWith(name, locals, maxStack, &controlPrimitives.verifyMethod, tup);
+pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+    return compileMethodWith(name, locals, maxStack, class, &controlPrimitives.verifyMethod, tup);
 }
-pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime verifier: ThreadedFn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ThreadedFn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
-    var method = methodType.init(name, locals, maxStack, verifier);
+    var method = methodType.init(name, locals, maxStack, verifier, class);
     const code = method.code[0..];
     comptime var n = 0;
     inline for (tup) |field| {
@@ -642,7 +642,7 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
 const print = std.io.getStdOut().writer().print;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(Sym.yourself, 0, 0, .{ ":abc", &p.setupSend, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", Sym.i_0, null });
+    var m = compileMethod(Sym.yourself, 0, 0,.none, .{ ":abc", &p.setupSend, "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", Sym.i_0, null });
     m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
     //    for (t,0..) |tv,idx|
@@ -1198,6 +1198,9 @@ pub const controlPrimitives = struct {
         trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
     }
+    pub fn returnNonLocal(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
+        unreachable;
+    }
     pub fn returnTop(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
         trace("\nreturnTop: {} ", .{sp.top});
         const process = tfAsProcess(_process);
@@ -1267,13 +1270,13 @@ fn push42(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callcon
 test "send with dispatch direct" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    const method = compileMethod(Sym.yourself, 0, 0, .{
+    const method = compileMethod(Sym.yourself, 0, 0,.none, .{
         &p.pushContext, "^",
         &p.setupSend, Sym.value,
         &p.dynamicDispatch,
         &p.returnWithContext,
     });
-    const methodV = compileMethod(Sym.value, 0, 0, .{
+    const methodV = compileMethod(Sym.value, 0, 0,.none, .{
         &push42,
         &p.returnNoContext,
     });
@@ -1290,7 +1293,7 @@ test "send with dispatch direct" {
 test "simple return via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 0, 0, .{
+    var method = compileMethod(Sym.yourself, 0, 0,.none, .{
         &p.pushLiteral,     comptime Object.from(42),
         &p.returnNoContext,
     });
@@ -1306,7 +1309,7 @@ test "simple return via Execution" {
 test "context return via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.@"at:", 0, 0, .{
+    var method = compileMethod(Sym.@"at:", 0, 0,.none, .{
         &p.pushContext,       "^",
         &p.pushLiteral,       comptime Object.from(42),
         &p.returnWithContext,
@@ -1321,7 +1324,7 @@ test "context return via Execution" {
 test "context returnTop via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 3, 0, .{
+    var method = compileMethod(Sym.yourself, 3, 0,.none, .{
         &p.pushContext, "^",
         &p.pushLiteral, comptime Object.from(42),
         &p.returnTop,
@@ -1360,7 +1363,7 @@ test "context returnTop with indirect via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const empty = Object.empty;
-    var method = compileMethod(Sym.yourself, 3, 0, .{
+    var method = compileMethod(Sym.yourself, 3, 0,.none, .{
         //        &p.noop,
         &p.pushContext,
         "^",
@@ -1379,7 +1382,7 @@ test "context returnTop with indirect via Execution" {
 test "simple executable" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 1, 0, .{
+    var method = compileMethod(Sym.yourself, 1, 0,.none, .{
         &p.pushContext,  "^",
      ":label1",
         &p.pushLiteral,  comptime Object.from(42),
@@ -1792,7 +1795,7 @@ test "llvm external" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl0 = if (true) &p.pushLiteral0 else llvmPL0CM;
-    var method = compileMethod(Sym.yourself, 1, 0, .{
+    var method = compileMethod(Sym.yourself, 1, 0,.none, .{
         &p.pushContext,  "^",
      ":label1",
         &p.pushLiteral,  comptime Object.from(42),
@@ -1821,7 +1824,7 @@ test "simple llvm" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl0 = if (true) &p.pushLiteral0 else llvmPL0CM;
-    var method = compileMethod(Sym.yourself, 0, 0, .{
+    var method = compileMethod(Sym.yourself, 0, 0,.none, .{
         pl0,
         &p.returnNoContext,
     });

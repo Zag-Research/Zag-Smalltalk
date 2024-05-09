@@ -19,7 +19,7 @@ const Sym = @import("zag/symbol.zig").symbols;
 // fib
 //   self <= 2 ifTrue: [^ 1]
 //   ^ (self - 1) fib + (self - 2) fib
-const _fibCM = compileMethod(Sym.fibonacci,0,2,.{&fib,&fib1,&fib2});
+const _fibCM = compileMethod(Sym.fibonacci,0,2,.SmallInteger,.{&fib,&fib1,&fib2});
 const fibCM = _fibCM.asCompiledMethodPtr();
 export fn fib(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
     const process = tfAsProcess(_process);
