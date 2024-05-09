@@ -45,6 +45,11 @@ const Stack = extern struct {
         newSp.top = v;
         return newSp;
     }
+    pub inline fn pushRawInt(self: SP, v: u64) SP {
+        const newSp = self.reserve(1);
+        newSp.top = @bitCast(v);
+        return newSp;
+    }
     pub inline fn dropPut(self: SP, v: Object) SP {
         self.next = v;
         return self.unreserve(1);
@@ -188,6 +193,9 @@ pub const CompiledMethod = extern struct {
     pub inline fn codePtr(self: *const Self) * const Code {
         return &self.code[0];
     }
+    pub inline fn codePc(self: *const Self) PC {
+        return PC.init(@ptrCast(&self.code[0]));
+    }
     pub inline fn selectorHash32(self: *const Self) u32 {
         return self.signature.selectorHash;
     }
@@ -227,9 +235,6 @@ pub const PC = extern struct {
     pub inline fn init(code: *const Code) PC {
         return .{.code=code};
     }
-    // inline fn from(_method:*const CompiledMethod) PC {
-    //     return .{.code = &_method.code[0]};
-    // }
     pub inline fn prim(self: PC) ThreadedFn {
         return self.code.prim;
     }
@@ -462,7 +467,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         fn cacheOffset(_: *Self, codeOffs: usize, cacheOffs: usize) u32 {
             return @truncate((codes - codeOffs) + refs + (cacheOffs * cacheSize));
         }
-        pub fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
+        pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
@@ -1263,9 +1268,10 @@ test "send with dispatch direct" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const method = compileMethod(Sym.yourself, 0, 0, .{
+        &p.pushContext, "^",
         &p.setupSend, Sym.value,
         &p.dynamicDispatch,
-        &p.returnNoContext,
+        &p.returnWithContext,
     });
     const methodV = compileMethod(Sym.value, 0, 0, .{
         &push42,

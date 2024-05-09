@@ -160,7 +160,7 @@ pub const Context = struct {
         self.tpc = tpc;
     }
     pub inline fn getSelf(self: *const Context) Object {
-        const wordsToDiscard = self.asHeapObjectPtr().hash16();
+        const wordsToDiscard = self.header.hash16();
         return self.asObjectPtr()[wordsToDiscard];
     }
     pub inline fn setResult(self: *const Context, value: Object) void {

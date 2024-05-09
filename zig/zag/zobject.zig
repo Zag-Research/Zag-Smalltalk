@@ -229,6 +229,9 @@ const NanObject = packed struct(u64) {
         // stored using little-endian order
         return @bitCast(v);
     }
+    pub inline fn untaggedInt(self: Object) u64 {
+        return self.toNatNoCheck();
+    }
     pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
         return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).rawU() + addr);
     }
@@ -358,6 +361,60 @@ const TagObject = packed struct(u64) {
     pub inline fn cast(v: anytype) Object {
         // stored using little-endian order
         return @bitCast(v);
+    }
+    const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
+    const Start_of_Heap_Objects: u64 = g(.heap);
+    inline fn of(comptime v: u64) Object {
+        return @bitCast(v);
+    }
+    inline fn oImm(c: ClassIndex, h: u32) Object {
+        return @bitCast(imm(c,h));
+    }
+    inline fn imm(c: ClassIndex, h: u32) u64 {
+        return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
+    }
+    inline fn g(grp: Group) u64 {
+        return grp.base();
+    }
+    const nonIndexSymbol = 0xffffffffff0000ff;
+    pub inline fn indexSymbol0(uniqueNumber: u16) Object {
+        return oImm(.Symbol, 0x00000ff | @as(u32, uniqueNumber) << 8);
+    }
+    pub inline fn indexSymbol1(uniqueNumber: u16) Object {
+        return oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8);
+    }
+    pub inline fn isIndexSymbol0(self: Object) bool {
+        return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
+    }
+    pub inline fn isIndexSymbol1(self: Object) bool {
+        return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
+    }
+    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
+    pub const ZERO = of(0);
+    pub const False = oImm(.False, 0x0);
+    pub const True = oImm(.True, 0x1);
+    pub const Nil = oImm(.UndefinedObject, 0xffffffff);
+    pub const NotAnObject = oImm(.UndefinedObject, 0x3); // never a valid object... should never be visible to managed language
+    pub const u64_MINVAL = g(.smallInt);
+    const u64_ZERO = g(.smallInt0);
+    pub const u64_ZERO2 = u64_ZERO *% 2;
+    const u64_MAXVAL = g(.numericThunk) - 1;
+    pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
+    pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
+    pub inline fn indexNumber(self: Object) u24 {
+        return @truncate(self.hash>>8);
+    }
+    pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
+        return .{.tag=.immediates,.classIndex=cls,.hash=low32};
+    }
+    pub inline fn hash24(self: Object) u24 {
+        return @truncate(self.hash>>8);
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(self.hash);
+    }
+    pub inline fn numArgs(self: Object) u8 {
+        return @truncate(self.hash);
     }
     const nanMemObject = simpleFloat(math.nan(f64),.static);
     const pInfMemObject = simpleFloat(math.inf(f64),.static);
