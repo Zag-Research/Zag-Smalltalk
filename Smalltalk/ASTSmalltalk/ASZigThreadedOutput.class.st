@@ -216,9 +216,11 @@ ASZigThreadedOutput >> visitReturnTop [
 ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
 	self
-		putEmbedded: ('send' , aSelector numArgs asString
-			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
+		putEmbedded: 'setupSend';
 		putSymbol: aSelector;
+		comma;
+		lf;
+		putEmbedded: 'dynamicDispatch';
 		comma;
 		lf
 ]
