@@ -16,7 +16,8 @@ Class {
 		'maxDepth',
 		'context',
 		'testing',
-		'numLocals'
+		'numLocals',
+		'componentName'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
