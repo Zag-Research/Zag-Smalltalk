@@ -85,7 +85,7 @@ pub const Context = struct {
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
     pub fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
-        const newSp = (process.allocStack(sp, baseSize + locals + maxStackNeeded) catch {
+        const newSp = (process.allocStackSpace(sp, baseSize + locals + maxStackNeeded) catch {
             var contextMutable = self;
             const newerSp = process.spillStack(sp, &contextMutable);
             return contextMutable.push(newerSp, process, method, locals, maxStackNeeded, selfOffset);
