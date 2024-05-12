@@ -1,10 +1,6 @@
-"
-I output BlockClosures
-"
 Class {
 	#name : 'ASLLBlockOutput',
 	#superclass : 'ASLLMethodOutput',
-	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'methodGenerator',
 		'block'

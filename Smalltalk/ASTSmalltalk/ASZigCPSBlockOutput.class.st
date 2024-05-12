@@ -1,10 +1,6 @@
-"
-I output BlockClosures
-"
 Class {
 	#name : 'ASZigCPSBlockOutput',
 	#superclass : 'ASZigCPSOutput',
-	#classTraits : '{} + TraitedClass',
 	#instVars : [
 		'methodGenerator',
 		'block'
