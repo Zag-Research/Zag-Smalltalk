@@ -84,6 +84,7 @@ pub const symbols = struct {
     pub const @"perform:with:with:with:" = symbol4(50);
     pub const @"perform:withArguments:" = symbol2(51);
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
+    pub const fibonacci = symbol3(53);
     // define any new symbols here
     pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
     pub const i_0 = indexSymbol(0);
@@ -105,6 +106,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     ">",                        "class",                               "Class",      "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger", "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
     "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",     "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",     "perform:with:", "perform:with:with:", "perform:with:with:with:",
     "perform:withArguments:",   "perform:withArguments:inSuperclass:",
+    "fibonacci",
     // add any new values here
     "Object",
 });
