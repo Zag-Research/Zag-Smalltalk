@@ -1,3 +1,6 @@
+"
+I implement the Richards scheduling benchmark
+"
 Class {
 	#name : 'BeRichardsBenchmark',
 	#superclass : 'BeRiObject',
@@ -29,7 +32,7 @@ BeRichardsBenchmark class >> report: string times: count run: aBlock [
 { #category : 'instance creation' }
 BeRichardsBenchmark class >> standardBenchmark [
         "This the combined benchmark."
-        "Planner standardBenchmark"
+        "BeRichardsBenchmark standardBenchmark"
 
         self report: 'Richards simulations' times: 100 run: [ self start ]
 ]
