@@ -1,40 +1,42 @@
 Class {
-	#name : #BeRiWorkerTaskDataRecord,
-	#superclass : #BeRiObject,
+	#name : 'BeRiWorkerTaskDataRecord',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'destination',
 		'count'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiWorkerTaskDataRecord class >> create [
     ^super new create
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiWorkerTaskDataRecord >> count [
     ^count
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiWorkerTaskDataRecord >> count: aCount [
     count := aCount
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiWorkerTaskDataRecord >> create [
     destination := HandlerA.
     count := 0
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiWorkerTaskDataRecord >> destination [
     ^destination
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiWorkerTaskDataRecord >> destination: aHandler [
     destination := aHandler
 ]

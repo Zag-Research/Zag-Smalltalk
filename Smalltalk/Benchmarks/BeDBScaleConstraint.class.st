@@ -8,16 +8,18 @@ Instance variables:
 	offset		offset input variable <BeDBVariable>
 "
 Class {
-	#name : #BeDBScaleConstraint,
-	#superclass : #BeDBBinaryConstraint,
+	#name : 'BeDBScaleConstraint',
+	#superclass : 'BeDBBinaryConstraint',
 	#instVars : [
 		'scale',
 		'offset'
 	],
-	#category : #'Benchmarks-Constraints'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBScaleConstraint class >> var: src var: scale var: offset var: dst strength: strengthSymbol [
 	"Install a scale constraint with the given strength on the given
 	 variables."
@@ -25,7 +27,7 @@ BeDBScaleConstraint class >> var: src var: scale var: offset var: dst strength: 
 	^(self new) src: src scale: scale offset: offset dst: dst strength: strengthSymbol
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBScaleConstraint >> addToGraph [
 	"Add myself to the constraint graph."
 
@@ -36,7 +38,7 @@ BeDBScaleConstraint >> addToGraph [
 	direction := nil.
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBScaleConstraint >> execute [
 	"Enforce this constraint. Assume that it is satisfied."
 
@@ -45,7 +47,7 @@ BeDBScaleConstraint >> execute [
 		ifFalse: [v1 value: (v2 value - offset value) // scale value].
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBScaleConstraint >> inputsDo: aBlock [
 	"Evaluate the given block on my current input variable."
 
@@ -54,7 +56,7 @@ BeDBScaleConstraint >> inputsDo: aBlock [
 		ifFalse: [aBlock value: v2; value: scale; value: offset].
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBScaleConstraint >> recalculate [
 	"Calculate the walkabout strength, the stay flag, and, if it is 'stay',
 	 the value for the current output of this constraint. Assume this
@@ -69,7 +71,7 @@ BeDBScaleConstraint >> recalculate [
 	(out stay) ifTrue: [self execute].		"stay optimization"
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBScaleConstraint >> removeFromGraph [
 	"Remove myself from the constraint graph."
 
@@ -80,7 +82,7 @@ BeDBScaleConstraint >> removeFromGraph [
 	direction := nil.
 ]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 BeDBScaleConstraint >> src: srcVar scale: scaleVar offset: offsetVar dst: dstVar strength: strengthSymbol [
 	"Initialize myself with the given variables and strength."
 

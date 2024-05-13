@@ -1,28 +1,30 @@
 Class {
-	#name : #BeRiDeviceTaskDataRecord,
-	#superclass : #BeRiObject,
+	#name : 'BeRiDeviceTaskDataRecord',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'pending'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiDeviceTaskDataRecord class >> create [
     ^super new create
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiDeviceTaskDataRecord >> create [
     pending := nil
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiDeviceTaskDataRecord >> pending [
     ^pending
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiDeviceTaskDataRecord >> pending: packet [ 
     pending := packet
 ]

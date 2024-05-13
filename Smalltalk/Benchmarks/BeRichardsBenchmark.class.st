@@ -1,6 +1,6 @@
 Class {
-	#name : #BeRichardsBenchmark,
-	#superclass : #BeRiObject,
+	#name : 'BeRichardsBenchmark',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'taskList',
 		'currentTask',
@@ -11,10 +11,12 @@ Class {
 		'queuePacketCount',
 		'holdCount'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRichardsBenchmark class >> report: string times: count run: aBlock [
         "Report the time required to execute the given block."
 
@@ -24,7 +26,7 @@ BeRichardsBenchmark class >> report: string times: count run: aBlock [
         Transcript show: string, ' ', (time // count) printString, ' milliseconds'; cr.
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRichardsBenchmark class >> standardBenchmark [
         "This the combined benchmark."
         "Planner standardBenchmark"
@@ -32,21 +34,21 @@ BeRichardsBenchmark class >> standardBenchmark [
         self report: 'Richards simulations' times: 100 run: [ self start ]
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRichardsBenchmark class >> start [
     "BeRichardsBenchmark start"
 
     ^self new start
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRichardsBenchmark class >> start: trace [
     "BeRichardsBenchmark start: true"
 
     ^self new start: trace
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createDevice: identity priority: priority work: workX state: state [ 
     | dataX |
     dataX := BeRiDeviceTaskDataRecord create.
@@ -75,7 +77,7 @@ BeRichardsBenchmark >> createDevice: identity priority: priority work: workX sta
 	data: dataX
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createHandler: identity priority: priority work: workX state: state [ 
     | dataX |
     dataX := BeRiHandlerTaskDataRecord create.
@@ -110,7 +112,7 @@ BeRichardsBenchmark >> createHandler: identity priority: priority work: workX st
 	data: dataX
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createIdler: identity priority: priority work: workX state: state [ 
     | dataX |
     dataX := BeRiIdleTaskDataRecord create.
@@ -136,7 +138,7 @@ BeRichardsBenchmark >> createIdler: identity priority: priority work: workX stat
 	data: dataX
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createPacket: link identity: identity kind: kind [ 
     ^BeRiPacket
 	create: link
@@ -144,7 +146,7 @@ BeRichardsBenchmark >> createPacket: link identity: identity kind: kind [
 	kind: kind
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createTask: identity priority: priority work: workX state: state function: aBlock data: data [ 
     | t |
     t := BeRiTaskControlBlock
@@ -159,7 +161,7 @@ BeRichardsBenchmark >> createTask: identity priority: priority work: workX state
     taskTable at: identity put: t
 ]
 
-{ #category : #creation }
+{ #category : 'creation' }
 BeRichardsBenchmark >> createWorker: identity priority: priority work: workX state: state [ 
     | dataX |
     dataX := BeRiWorkerTaskDataRecord create.
@@ -188,7 +190,7 @@ BeRichardsBenchmark >> createWorker: identity priority: priority work: workX sta
 	data: dataX
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> findTask: identity [ 
     | t |
     t := taskTable at: identity.
@@ -196,27 +198,27 @@ BeRichardsBenchmark >> findTask: identity [
     ^t
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> holdSelf [
     holdCount := holdCount + 1.
     currentTask taskHolding: true.
     ^currentTask link
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> initScheduler [
     queuePacketCount := holdCount := 0.
     taskTable := Array new: 6.
     taskList := nil
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> initTrace: trace [
     tracing := trace.
     layout := 0
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> queuePacket: packet [ 
     | t |
     t := self findTask: packet identity.
@@ -227,7 +229,7 @@ BeRichardsBenchmark >> queuePacket: packet [
     ^t addInput: packet checkPriority: currentTask
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> release: identity [ 
     | t |
     t := self findTask: identity.
@@ -238,7 +240,7 @@ BeRichardsBenchmark >> release: identity [
 	ifFalse: [^currentTask]
 ]
 
-{ #category : #scheduling }
+{ #category : 'scheduling' }
 BeRichardsBenchmark >> schedule [
     currentTask := taskList. 
     [currentTask isNil]
@@ -251,13 +253,13 @@ BeRichardsBenchmark >> schedule [
 		    currentTask := currentTask runTask]]
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRichardsBenchmark >> start [
     ^self start: false
 
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRichardsBenchmark >> start: trace [
     | workQ mark1 mark2 mark3 mark4 |
     self initTrace: trace; initScheduler.
@@ -351,7 +353,7 @@ BeRichardsBenchmark >> start: trace [
   ^mark3 - mark2
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> trace: id [ 
     layout := layout - 1.
     0 >= layout
@@ -361,7 +363,7 @@ BeRichardsBenchmark >> trace: id [
     Transcript show: id printString
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeRichardsBenchmark >> wait [ 
     currentTask taskWaiting: true.
     ^currentTask
