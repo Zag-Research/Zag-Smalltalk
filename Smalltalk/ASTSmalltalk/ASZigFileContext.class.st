@@ -47,7 +47,14 @@ const compileMethod = execute.compileMethod;
 { #category : 'writing' }
 ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 
-	stream nextPutAll: 'fn initSmalltalk() void {
+	stream 
+	nextPutAll: 'var sym: Sym = undefined;';
+	lf;
+	nextPutAll: 'const e = primitives.embedded;';
+	lf;
+	nextPutAll: 'const p = primitives.primitives;';
+	lf;
+	nextPutAll: 'fn initSmalltalk() void {
     primitives.init();
 '
 ]

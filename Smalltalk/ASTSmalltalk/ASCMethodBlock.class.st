@@ -40,10 +40,8 @@ ASCMethodBlock >> makeBlockClosure [
 
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
-
 	output outputMethodStart: label.
 	primitive
-		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
 	stack requiredContextDo: [ output visitPushContext ].
 	output outputMethodLabel: label.

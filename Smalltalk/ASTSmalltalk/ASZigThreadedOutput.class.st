@@ -75,7 +75,8 @@ ASZigThreadedOutput >> primitive: anInteger [
 	self
 		nextPutAll: '&p.p';
 		print: anInteger;
-		comma 
+		comma;
+		lf
 ]
 
 { #category : 'API' }
@@ -120,8 +121,10 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
 		ifTrue: [ 
-			self putEmbedded: #BlockClosure, '.', #nonLocalBlock;
+			self putEmbedded: #BlockClosure, '.', #fullClosure;
+			nextPut: $";
 			nextPutAll: anASCBlock label; 
+			nextPut: $";
 			comma; 
 			lf]
 		ifFalse: [ self visitPushLiteral: nil ]
@@ -129,7 +132,6 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 { #category : 'API' }
 ASZigThreadedOutput >> visitPushContext [
-
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
@@ -139,7 +141,6 @@ ASZigThreadedOutput >> visitPushContext [
 
 { #category : 'API' }
 ASZigThreadedOutput >> visitPushContext: unused [
-
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
@@ -221,7 +222,6 @@ ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 		comma;
 		lf;
 		putEmbedded: 'dynamicDispatch';
-		comma;
 		lf
 ]
 
@@ -247,7 +247,6 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
-
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
@@ -256,7 +255,11 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 		print: numLocals;
 		nextPut: $,;
 		print: maxDepth;
+		nextPut: $,;
+		nextPut: $.;
+		nextPutAll: forClass name;
 		nextPutAll: ',.{';
+		lf;
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
 		lf
@@ -264,7 +267,6 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeInitializationOn: stream [
-
 	stream
 		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';

@@ -16,7 +16,7 @@ ASPharoCompilerProgramTest class >> testFibIsolated [
 
 	ASZigThreadedOutput new
 		context: file;
-		generateCode: ast.
+		generateCode: ast for: ASCompileTestClass1.
 
 	FileSystem disk workingDirectory / 'zigFib.zig'
 		writeStreamDo: [ :stream | file outputTo: stream ] 
