@@ -1,25 +1,62 @@
 Class {
 	#name : 'ASZigThreadedOutputTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASZigTests',
+	#instVars : [
+		'output'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
+{ #category : 'running' }
+ASZigThreadedOutputTest >> setUp [
+
+	super setUp.
+	output := ASZigThreadedOutput testing context: file
+]
+
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZigAST_fib [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	self assert: ast equals: (ASMethodNode selector: #fib: arguments: #(anInt) body: {{ASReturn expression: (ASSend target: (ASSend target: (ASRef variable: (#anInt)) selector: #< args: {ASLiteral literal: 2}) selector: #ifTrue:ifFalse: args: {ASBlock body: {{ASLiteral literal: 1}} . ASBlock body: {{ASSend target: (ASSend target: (ASSelf) selector: #fib: args: {ASSend target: (ASRef variable: (#anInt)) selector: #- args: {ASLiteral literal: 1}}) selector: #+ args: {ASSend target: (ASSelf) selector: #fib: args: {ASSend target: (ASRef variable: (#anInt)) selector: #- args: {ASLiteral literal: 2}}}}}})}}) 
+	ast := self astFor: ASCompileTestClass1 >> #fib:.
+	self assert: ast equals: (ASMethodNode
+			 selector: #fib:
+			 arguments: #( anInt )
+			 body: { { (ASReturn expression: (ASSend
+						   target: (ASSend
+								    target: (ASRef variable: #anInt)
+								    selector: #<
+								    args: { (ASLiteral literal: 2) })
+						   selector: #ifTrue:ifFalse:
+						   args: {
+								   (ASBlock body: { { (ASLiteral literal: 1) } }).
+								   (ASBlock body: { { (ASSend
+										     target:
+											     (ASSend
+												      target: ASSelf
+												      selector: #fib:
+												      args: { (ASSend
+														       target: (ASRef variable: #anInt)
+														       selector: #-
+														       args: { (ASLiteral literal: 1) }) })
+										     selector: #+
+										     args:
+											     { (ASSend
+												      target: ASSelf
+												      selector: #fib:
+												      args: { (ASSend
+														       target: (ASRef variable: #anInt)
+														       selector: #-
+														       args: { (ASLiteral literal: 2) }) }) }) } }) })) } })
 ]
 
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_addComment [
 
-	| output comment |
+	| comment |
 	comment := 'this is a comment!'.
-	output := ASZigThreadedOutput new.
 	output comment: comment.
 
 	self assert: output asString equals: ' // ''' , comment , ''''
@@ -28,13 +65,9 @@ ASZigThreadedOutputTest >> testZig_addComment [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #addTwoNumbers.
-	file := ASZigTestContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #addTwoNumbers.
+	output generateCode: ast.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
 	self
@@ -46,12 +79,9 @@ ASZigThreadedOutputTest >> testZig_addTwoNumbers [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_fib [
 
-	| output ast file |
+	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
+	output generateCode: ast.
 	self assert: output name equals: 'Mfib:'.
 	self
 		assert: output asString
@@ -61,12 +91,9 @@ ASZigThreadedOutputTest >> testZig_fib [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_fibonacci [
 
-	| output ast file |
+	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast for: SmallInteger.
+	output generateCode: ast for: SmallInteger.
 	self assert: output name equals: 'Mfibonacci'.
 	self
 		assert: output asString
@@ -76,8 +103,6 @@ ASZigThreadedOutputTest >> testZig_fibonacci [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_goTo [
 
-	| output |
-	output := ASZigThreadedOutput new.
 	output labelRef: #hello.
 
 	self assert: output asString equals: '"hello"'
@@ -86,12 +111,9 @@ ASZigThreadedOutputTest >> testZig_goTo [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_prim [
 
-	| output ast file |
+	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #prim.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		             context: file;
-		             generateCode: ast.
+	output generateCode: ast.
 	self assert: output name equals: 'Mprim'.
 	self
 		assert: output asString
@@ -101,8 +123,6 @@ ASZigThreadedOutputTest >> testZig_prim [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_pushLabel [
 
-	| output |
-	output := ASZigThreadedOutput new.
 	self assert: output nextLabel equals: 'L1'.
 
 	self assert: output asString equals: '":L1",'
@@ -111,8 +131,6 @@ ASZigThreadedOutputTest >> testZig_pushLabel [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_pushLiteral [
 
-	| output |
-	output := ASZigThreadedOutput  testing.
 	output visitPushLiteral: 10.
 
 	self
@@ -123,8 +141,6 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
-	| output |
-	output := ASZigThreadedOutput testing.
 	output visitReturnTop.
 
 	self assert: output asString equals: '&e.returnTop,'
@@ -133,12 +149,9 @@ ASZigThreadedOutputTest >> testZig_pushReturn [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_simple1 [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		             context: file;
-		             generateCode: ast.
+	| ast |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.	file := ASZigFileContext new.
+	output generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
 	self
 		assert: output asString
@@ -149,12 +162,10 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1_noreturn.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor:
+		       ASCompileTestClass1 >> #simple1_noreturn.
+	output generateCode: ast.
 	self assert: output name equals: 'Msimple1_noreturn'.
 	self
 		assert: output asString
@@ -165,12 +176,9 @@ ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_simple2 [
 
-	| output ast file |
+	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple2.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
+	output generateCode: ast.
 	self assert: output name equals: 'Msimple2'.
 	self
 		assert: output asString
@@ -181,13 +189,10 @@ ASZigThreadedOutputTest >> testZig_simple2 [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_simple2_noreturn [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
+	| ast |
+	ast := self astFor:
 		       ASCompileTestClass1 >> #simple2_noreturn.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
+	output generateCode: ast.
 	self assert: output name equals: 'Msimple2_noreturn'.
 	self
 		assert: output asString
@@ -198,13 +203,9 @@ ASZigThreadedOutputTest >> testZig_simple2_noreturn [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_simpleBlock [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #simpleBlock.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast for: ASCompileTestClass1.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #simpleBlock.
+	output generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'MsimpleBlock'.
 	self
 		assert: output asString
@@ -215,12 +216,9 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_unaries [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast for: ASCompileTestClass1.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #unaries.
+	output generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString
@@ -231,13 +229,10 @@ ASZigThreadedOutputTest >> testZig_unaries [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_unariesPlus [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
+	| ast |
+	ast := self astFor:
 		       ASCompileTestClass1 >> #unariesPlus.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast for: ASCompileTestClass1.
+	output generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'MunariesPlus'.
 	self
 		assert: output asString
@@ -248,13 +243,11 @@ ASZigThreadedOutputTest >> testZig_unariesPlus [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_unaries_notail [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
-	file := ASZigFileContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          tailCallOptimize: false;
-		          generateCode: ast for: ASCompileTestClass1.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #unaries.
+	output
+		tailCallOptimize: false;
+		generateCode: ast for: ASCompileTestClass1.
 	self assert: output name equals: 'Munaries'.
 	self
 		assert: output asString

@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASZigCompileObjectTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASZigTests',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
@@ -109,25 +109,23 @@ ASZigCompileObjectTest >> testCompileMethod_SmallIntegerPlus [
          ^ super + aNumber
 "
 
-	| ast codeGen file |
+	| ast codeGen |
 	self halt.
-	ast := ASPharoCompiler new astFor: SmallInteger >> #+.
-	file := ASZigFileContext new.
+	ast := self astFor: SmallInteger >> #+.
 	codeGen := ASZigCompileObjectOutput new context: file.
 	codeGen generateCode: ast.
 	self assert: codeGen name equals: 'Obj1'.
 	self
 		assert: codeGen asString
 		equals:
-		'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,' 
+		'Sym.i_1,":L1",c.ASArg,"L1",":L2",c.ASRef,2,":L3",c.ASLiteral,"L3",":L4",c.Array,"L2",Sym.<,"L4",":L5",c.ASSend,":L6",c.Array,"L6",Nil,":L7",c.ASSequence,":L8",c.Array,":L9",c.Array,"L7","L8","L9",":L10",c.ASBlock,":L11",c.Array,"L11",Nil,":L12",c.ASSequence,":L13",c.Array,":L14",c.Array,"L12","L13","L14",":L15",c.ASBlock,"L10","L15",":L16",c.Array,"L5",Sym.i_2,"L16",":L17",c.ASSend,"L17",":L18",c.ASReturn,"L18",":L19",c.Array,"L19",Nil,":L20",c.ASSequence,":L21",c.Array,Sym.i_1,":L22",c.ASArg,"L22",":L23",c.Array,":L24",c.Array,"L20","L21","L23",Sym.i_3,Nil,"L24",":L25",c.ASMethodNode,'
 ]
 
 { #category : 'tests' }
 ASZigCompileObjectTest >> testCompileMethod_fib [
 
-	| ast codeGen file fileString |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	file := ASZigFileContext new.
+	| ast codeGen fileString |
+	ast := self astFor: ASCompileTestClass1 >> #fib:.
 	codeGen := ASZigCompileObjectOutput new context: file.
 	codeGen generateCode: ast.
 	self assert: codeGen name equals: 'Obj1'.

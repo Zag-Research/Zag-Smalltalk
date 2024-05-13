@@ -1,23 +1,30 @@
 Class {
 	#name : 'ASLLVMOutputTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASLLVMTests',
+	#instVars : [
+		'output'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
+{ #category : 'running' }
+ASLLVMOutputTest >> setUp [
+
+	super setUp.
+
+	"Create new instance of generator and set testing inst. var"
+	output := ASLLMethodOutput testing context: file
+]
+
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVMOutput [
 	"in-progress"
-	| ast file output |
+
+	| ast |
 	"Creates Zag AST - ASMethodNode"
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	"Convert to LLVM specific context"
-	file := ASZigFileContext new.
-	"Create new instance of generator and set testing inst. var"
-	output	 := ASLLMethodOutput testing.
-	"Init file context"
-	output context: file.
+	ast := self astFor: ASCompileTestClass1 >> #simple1.
 	"Output LLVM IR to generator's writestream"
-	output generateCode: ast.
+	output generateCode: ast
 ]
