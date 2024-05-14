@@ -11,12 +11,12 @@ ASPharoCompilerProgramTest class >> testFibIsolated [
 
 	<script>
 	| ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	ast := ASPharoCompiler new astFor: SmallInteger >> #fibonacci.
 	file := ASZigFileContext new.
 
 	ASZigThreadedOutput new
 		context: file;
-		generateCode: ast for: ASCompileTestClass1.
+		generateCode: ast for: SmallInteger.
 
 	FileSystem disk workingDirectory / 'zigFib.zig'
 		writeStreamDo: [ :stream | file outputTo: stream ] 

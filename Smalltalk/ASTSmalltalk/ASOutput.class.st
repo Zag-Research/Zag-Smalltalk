@@ -55,7 +55,7 @@ ASOutput >> compileBlock: anASCBlock [
 		context: context;
 		parentCodeGenerator: codeGenerator;
 		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block for: forClass
+		generateCode: anASCBlock block for: BlockClosure
 ]
 
 { #category : 'API' }
