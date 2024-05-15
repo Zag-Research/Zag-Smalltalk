@@ -239,7 +239,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name zigName;
+		nextPutAll: self name;
 		nextPut: $,;
 		print: numLocals;
 		nextPut: $,;

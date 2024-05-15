@@ -85,6 +85,7 @@ ASZigFileContext >> writeMainSuffixOn: stream [
 ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
 	| label |
+	self halt.
 	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';
