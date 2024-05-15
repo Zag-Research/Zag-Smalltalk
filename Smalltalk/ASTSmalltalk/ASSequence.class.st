@@ -10,6 +10,12 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'converting' }
+ASSequence >> asASSequence [
+
+	^ self
+]
+
 { #category : 'testing' }
 ASSequence >> isImmediateThunk [
 

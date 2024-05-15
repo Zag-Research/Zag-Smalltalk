@@ -57,7 +57,7 @@ ASZigThreadedOutputTest >> testZig_addComment [
 
 	| comment |
 	comment := 'this is a comment!'.
-	output comment: comment.
+	output asString;comment: comment.
 
 	self assert: output asString equals: ' // ''' , comment , ''''
 ]
@@ -94,6 +94,7 @@ ASZigThreadedOutputTest >> testZig_fibonacci [
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
 	output generateCode: ast for: SmallInteger.
+	output codeGenerator basicBlocksLinearizeDo: #inspect.
 	self assert: output name equals: 'Mfibonacci'.
 	self
 		assert: output asString
@@ -150,7 +151,7 @@ ASZigThreadedOutputTest >> testZig_pushReturn [
 ASZigThreadedOutputTest >> testZig_simple1 [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.	file := ASZigFileContext new.
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
 	output generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
 	self

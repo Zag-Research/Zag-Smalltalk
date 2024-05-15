@@ -44,17 +44,6 @@ ASZigThreadedOutput >> outputMethodStart: bbLabel [
 
 ]
 
-{ #category : 'code generation' }
-ASZigThreadedOutput >> outputToStream [
-
-	codeGenerator finalAnalysis.
-	codeGenerator basicBlocksLinearizeDo: [ :bb |
-		currentBasicBlock := bb.
-		maxDepth := maxDepth max: currentBasicBlock maxDepth.
-		currentBasicBlock outputTo: self ].
-	self endMethod
-]
-
 { #category : 'API' }
 ASZigThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 

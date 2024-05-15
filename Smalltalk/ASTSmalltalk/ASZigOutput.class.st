@@ -25,32 +25,6 @@ ASZigOutput >> comment: aString [
 ]
 
 { #category : 'accessing' }
-ASZigOutput >> forClass [
-
-	^ forClass 
-]
-
-{ #category : 'generation' }
-ASZigOutput >> generateCode: anASNode [
-
-	context for: anASNode generatorIs: self.
-	ourObject := anASNode.
-	alreadyGenerated := false.
-	context processComponents.
-	^ self
-]
-
-{ #category : 'generation' }
-ASZigOutput >> generateCode: anASNode for: aClass [
-
-	context for: anASNode generatorIs: self.
-	ourObject := anASNode.
-	forClass := aClass.
-	alreadyGenerated := false.
-	context processComponents
-]
-
-{ #category : 'accessing' }
 ASZigOutput >> id: aString [ 
 	mainStream nextPutAll: aString zigName 
 ]

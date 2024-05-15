@@ -35,6 +35,7 @@ ASTextOutput class >> testing [
 
 { #category : 'converting' }
 ASTextOutput >> asString [
+
 	^ mainStream contents
 ]
 
@@ -105,11 +106,6 @@ ASTextOutput >> prefix [
 ASTextOutput >> print: anObject [
 
 	mainStream print: anObject
-]
-
-{ #category : 'accessing' }
-ASTextOutput >> selector [
-	self subclassResponsibility 
 ]
 
 { #category : 'printing' }

@@ -122,15 +122,6 @@ ASZigCPSOutput >> outputMethodStart: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigCPSOutput >> outputToStream [
-
-	codeGenerator finalAnalysis.
-	codeGenerator basicBlocksUnorderedDo: [ :bb |
-		currentBasicBlock := bb.
-		currentBasicBlock outputTo: self ]
-]
-
-{ #category : 'code generation' }
 ASZigCPSOutput >> putTestOpposite: test [
 
 	test = #ifTrue ifTrue: [

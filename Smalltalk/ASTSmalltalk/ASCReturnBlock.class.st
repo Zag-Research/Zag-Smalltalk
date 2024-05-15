@@ -9,15 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'printing' }
-ASCReturnBlock >> inspectZagASTOn: aStream [
-
-	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream print: label.
-	aStream << $)
-]
-
 { #category : 'writing' }
 ASCReturnBlock >> inspectionZagCode [
 
@@ -28,12 +19,4 @@ ASCReturnBlock >> inspectionZagCode [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
-]
-
-{ #category : 'writing' }
-ASCReturnBlock >> outputTo: output [
-
-	output outputMethodStart: label.
-	output outputMethodLabel: label.
-	^ self outputRestTo: output
 ]

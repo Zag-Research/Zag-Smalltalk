@@ -66,6 +66,11 @@ ASOutput >> context: anASContext [
 ]
 
 { #category : 'API' }
+ASOutput >> endMethod [
+
+]
+
+{ #category : 'API' }
 ASOutput >> forClass [
 
 	^ forClass
@@ -76,8 +81,7 @@ ASOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	self codeGenerator generate: ourObject.
-	self outputToStream
+	self codeGenerator generate: ourObject
 ]
 
 { #category : 'API' }
@@ -86,8 +90,7 @@ ASOutput >> generateCode: anASNode [
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
 	alreadyGenerated := false.
-	context processComponents.
-	^ self
+	context processComponents
 ]
 
 { #category : 'API' }
@@ -119,6 +122,7 @@ ASOutput >> name [
 ASOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
+	self setupForOutput.
 	codeGenerator basicBlocksLinearizeDo: [ :bb |
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: currentBasicBlock maxDepth.
@@ -135,4 +139,8 @@ ASOutput >> parentCodeGenerator: aCodeGenerator [
 ASOutput >> selector [
 
 	^ codeGenerator selector
+]
+
+{ #category : 'API' }
+ASOutput >> setupForOutput [
 ]
