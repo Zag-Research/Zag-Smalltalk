@@ -64,7 +64,8 @@ ASZigThreadedOutput >> primitive: anInteger [
 	self
 		nextPutAll: '&p.p';
 		print: anInteger;
-		comma 
+		comma;
+		lf
 ]
 
 { #category : 'API' }
@@ -109,8 +110,10 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
 		ifTrue: [ 
-			self putEmbedded: #BlockClosure, '.', #nonLocalBlock;
+			self putEmbedded: #BlockClosure, '.', #fullClosure;
+			nextPut: $";
 			nextPutAll: anASCBlock label; 
+			nextPut: $";
 			comma; 
 			lf]
 		ifFalse: [ self visitPushLiteral: nil ]
@@ -118,7 +121,6 @@ ASZigThreadedOutput >> visitPushBlock: anASCBlock [
 
 { #category : 'API' }
 ASZigThreadedOutput >> visitPushContext [
-
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
@@ -128,7 +130,6 @@ ASZigThreadedOutput >> visitPushContext [
 
 { #category : 'API' }
 ASZigThreadedOutput >> visitPushContext: unused [
-
 	self
 		putEmbedded: #pushContext;
 		nextPutAll: '"^"';
@@ -205,10 +206,11 @@ ASZigThreadedOutput >> visitReturnTop [
 ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
 
 	self
-		putEmbedded: ('send' , aSelector numArgs asString
-			 , (index ifNil: [ 'tail' ] ifNotNil: [ '' ])) asSymbol;
+		putEmbedded: 'setupSend';
 		putSymbol: aSelector;
 		comma;
+		lf;
+		putEmbedded: 'dynamicDispatch';
 		lf
 ]
 
@@ -234,7 +236,6 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
-
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
@@ -243,7 +244,11 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 		print: numLocals;
 		nextPut: $,;
 		print: maxDepth;
+		nextPut: $,;
+		nextPut: $.;
+		nextPutAll: forClass name;
 		nextPutAll: ',.{';
+		lf;
 		nextPutAll: mainStream contents;
 		nextPutAll: ' });';
 		lf
@@ -251,7 +256,6 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeInitializationOn: stream [
-
 	stream
 		nextPutAll: componentName;
 		nextPutAll: '.setLiterals(&[_]Object{';
