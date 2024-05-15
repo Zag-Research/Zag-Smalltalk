@@ -125,9 +125,3 @@ ASTextOutput >> writeDefinitionOn: aStream [
 
 	self subclassResponsibility
 ]
-
-{ #category : 'writing' }
-ASTextOutput >> writeInitializationOn: anObject [
-
-	self subclassResponsibility
-]

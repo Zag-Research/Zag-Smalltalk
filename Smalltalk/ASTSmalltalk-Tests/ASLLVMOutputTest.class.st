@@ -88,3 +88,20 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg nameBasicBlocks.
 	cg inspect
 ]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_inlined_simple [
+
+	| cg |
+	cg := output codeGenerator.
+	cg targetClass: SmallInteger.
+	cg selector: #simple.
+	cg locals: #(  ) arguments: #(  ).
+	cg pushLiteral: 42.
+	cg returnTop.
+	cg nameBasicBlocks.
+	cg inspect.
+	output outputToStream.
+	self halt.
+	file asString inspect
+]

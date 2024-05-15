@@ -113,3 +113,13 @@ ASLLMethodOutput >> visitReturnTop [
 	self 
 		nextPutAll: 'ret '.
 ]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeDefinitionOn: aWriteStream [ 
+
+]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeInitializationOn: aWriteStream [ 
+
+]

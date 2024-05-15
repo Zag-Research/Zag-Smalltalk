@@ -15,5 +15,5 @@ ASLLVMTests >> setUp [
 	super setUp.
 
 	"Convert to LLVM specific context"
-	file := ASZigFileContext new
+	file := ASLLFileContext new
 ]

@@ -29,14 +29,6 @@ ASZigMethodOutput >> generateCode [
 	self outputToStream
 ]
 
-{ #category : 'initialization' }
-ASZigMethodOutput >> initialize [
-
-	super initialize.
-	maxDepth := 0.
-	currentBasicBlock := 0
-]
-
 { #category : 'output' }
 ASZigMethodOutput >> label: result [
 

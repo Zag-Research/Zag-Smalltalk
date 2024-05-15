@@ -98,9 +98,9 @@ ASTextFileContext >> writeMainPrefixOn: stream [
 ]
 
 { #category : 'writing' }
-ASTextFileContext >> writeMainSuffixOn: stream [
+ASTextFileContext >> writeMainSuffixOn: aStream [
 
-	^ self subclassResponsibility
+	aStream << #writeMainSuffixOn:
 ]
 
 { #category : 'as yet unclassified' }
