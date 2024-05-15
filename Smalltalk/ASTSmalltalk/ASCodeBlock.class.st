@@ -41,8 +41,9 @@ ASCodeBlock >> body [
 ]
 
 { #category : 'accessing' }
-ASCodeBlock >> body: anASSequence [
-	body := anASSequence
+ASCodeBlock >> body: aCollection [
+
+	body := aCollection asASSequence
 ]
 
 { #category : 'accessing' }

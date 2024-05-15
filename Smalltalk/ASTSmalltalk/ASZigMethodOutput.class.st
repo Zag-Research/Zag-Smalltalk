@@ -17,7 +17,7 @@ ASZigMethodOutput >> codeGenerator [
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
 			                   targetClass: forClass;
-			enclosingScope: parentCodeGenerator ]
+			                   enclosingScope: parentCodeGenerator ]
 ]
 
 { #category : 'code generation' }
@@ -27,14 +27,6 @@ ASZigMethodOutput >> generateCode [
 	alreadyGenerated := true.
 	self codeGenerator generate: ourObject.
 	self outputToStream
-]
-
-{ #category : 'initialization' }
-ASZigMethodOutput >> initialize [
-
-	super initialize.
-	maxDepth := 0.
-	currentBasicBlock := 0
 ]
 
 { #category : 'output' }
@@ -77,20 +69,8 @@ ASZigMethodOutput >> outputMethodStart: bbLabel [
 self subclassResponsibility 
 ]
 
-{ #category : 'API' }
-ASZigMethodOutput >> outputToStream [ 
-
-self subclassResponsibility 
-]
-
 { #category : 'accessing' }
 ASZigMethodOutput >> prefix [ ^ 'M'
-]
-
-{ #category : 'accessing' }
-ASZigMethodOutput >> selector [
-
-	^ codeGenerator selector
 ]
 
 { #category : 'settings' }
@@ -102,12 +82,6 @@ ASZigMethodOutput >> tailCallOptimize: aBoolean [
 ASZigMethodOutput >> verifySelector: anObject [
 
 	self subclassResponsibility 
-]
-
-{ #category : 'API' }
-ASZigMethodOutput >> visitPushContext: unused [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'API' }

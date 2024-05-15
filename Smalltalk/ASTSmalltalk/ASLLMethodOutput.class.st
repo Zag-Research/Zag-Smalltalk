@@ -9,6 +9,11 @@ Class {
 	#tag : 'Output'
 }
 
+{ #category : 'compiling' }
+ASLLMethodOutput class >> blockClass [
+	^ ASLLBlockOutput
+]
+
 { #category : 'API' }
 ASLLMethodOutput >> endMethod [
 	self label: nil
@@ -34,6 +39,11 @@ ASLLMethodOutput >> mapLLVMTypeFor: type [
     } otherwise: ['void'].
     
     ^ llvmType
+]
+
+{ #category : 'compiling' }
+ASLLMethodOutput >> methodGenerator [
+	^ self
 ]
 
 { #category : 'as yet unclassified' }
@@ -71,16 +81,6 @@ ASLLMethodOutput >> outputMethodStart: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASLLMethodOutput >> outputToStream [
-	"Method yet to be implemented"
-	codeGenerator finalAnalysis.
-	"Something--"
-	codeGenerator basicBlocksUnorderedDo: [ :bb |
-		currentBasicBlock := bb.
-		currentBasicBlock outputTo: self. ]
-]
-
-{ #category : 'code generation' }
 ASLLMethodOutput >> verifySelector: anObject [
 
 	self 
@@ -112,4 +112,14 @@ ASLLMethodOutput >> visitReturnTop [
 
 	self 
 		nextPutAll: 'ret '.
+]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeDefinitionOn: aWriteStream [ 
+
+]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeInitializationOn: aWriteStream [ 
+
 ]

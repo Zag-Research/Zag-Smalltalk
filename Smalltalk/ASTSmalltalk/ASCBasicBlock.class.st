@@ -45,6 +45,20 @@ ASCBasicBlock >> children [
 ^operations 
 ]
 
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> classCase: aCollection complete: aBoolean [
+
+	| case |
+	case := ASCCase new complete: aBoolean.
+	aCollection do: [ :class |
+		| next |
+		next := ASCInlineBlock new.
+		case at: class put: next.
+		next stack: stack ].
+	self put: case.
+	^ case
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -83,6 +97,21 @@ ASCBasicBlock >> doPush: anObject [
 	maxDepth := maxDepth max: stack depth
 ]
 
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> embed: aSymbol [
+
+	| next send |
+	next := ASCReturnBlock new.
+	send := ASCEmbed new
+		        selector: aSymbol;
+		        return: next;
+		        target: nil.
+	self put: send.
+	next ifNotNil: [
+		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
+	^ next
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> endWithReturnTop [
 
@@ -114,6 +143,16 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new.
 	maxDepth := 0.
 	stack := ASEmptyStack new.
+]
+
+{ #category : 'printing' }
+ASCBasicBlock >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream
+		<< $(;
+		<< label;
+		<< $)
 ]
 
 { #category : 'initialization' }
@@ -192,7 +231,9 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	self subclassResponsibility 
+	output outputMethodStart: label.
+	output outputMethodLabel: label.
+	^ self outputRestTo: output
 ]
 
 { #category : 'API' }

@@ -87,7 +87,7 @@ ASMethodNode >> inspectAST [
 		  roots: self roots;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
-			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
+			  (SpStringTableColumn evaluated: #contents);
 		  yourself
 ]
 

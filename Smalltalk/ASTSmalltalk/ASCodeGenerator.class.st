@@ -54,9 +54,25 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 	basicBlocks do: aBlock
 ]
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> classCase: aCollection complete: aBoolean [
+
+	| case |
+	case := code classCase: aCollection complete: aBoolean.
+	basicBlocks addAll: case blocks.
+	code := nil.
+	^ case blocks
+]
+
 { #category : 'class relationship' }
 ASCodeGenerator >> classOf: aString [ 
 	self shouldBeImplemented.
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> code: anASCBasicBlock [
+
+	code := anASCBasicBlock
 ]
 
 { #category : 'API' }
@@ -172,11 +188,8 @@ ASCodeGenerator >> locals: locals arguments: arguments [
 
 	output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
-	code
-		pushSelfNamed: self selfName.
-	code
-		locals: locals
-		arguments: arguments
+	code pushSelfNamed: self selfName.
+	code locals: locals arguments: arguments
 ]
 
 { #category : 'compiling' }
@@ -357,6 +370,16 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		      targetClass: aTargetClass
 		      tail: tail & tailCallOptimize.
 	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> sendEmbedded: aSymbol [
+
+	| bb |
+	bb := code embed: aSymbol.
+	^ bb ifNotNil: [
+		  basicBlocks add: bb.
+		  code := bb ]
 ]
 
 { #category : 'API' }

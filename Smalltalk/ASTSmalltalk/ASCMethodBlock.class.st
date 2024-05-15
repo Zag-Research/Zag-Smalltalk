@@ -15,15 +15,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'printing' }
-ASCMethodBlock >> inspectZagASTOn: aStream [
-
-	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream print: selector.
-	aStream << $)
-]
-
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
 
@@ -62,6 +53,7 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> selector: aString [ 
-	selector := aString
+ASCMethodBlock >> selector: aString [
+
+	selector := label := aString
 ]

@@ -1,39 +1,41 @@
 Class {
-	#name : #BeRiIdleTaskDataRecord,
-	#superclass : #BeRiObject,
+	#name : 'BeRiIdleTaskDataRecord',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'control',
 		'count'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiIdleTaskDataRecord class >> create [
     ^super new create
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiIdleTaskDataRecord >> control [
     ^control
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiIdleTaskDataRecord >> control: aNumber [
     control := aNumber
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiIdleTaskDataRecord >> count [
     ^count
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiIdleTaskDataRecord >> count: aCount [
     count := aCount
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiIdleTaskDataRecord >> create [
     control := 1.
     count := 10000

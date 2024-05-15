@@ -17,7 +17,8 @@ Class {
 		'context',
 		'testing',
 		'numLocals',
-		'componentName'
+		'componentName',
+		'blockNumber'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -31,7 +32,8 @@ ASOutput >> blockClass [
 
 { #category : 'API' }
 ASOutput >> blockNumber [
-	^ currentBasicBlock := currentBasicBlock + 1
+
+	^ blockNumber := blockNumber + 1
 ]
 
 { #category : 'API' }
@@ -66,6 +68,11 @@ ASOutput >> context: anASContext [
 ]
 
 { #category : 'API' }
+ASOutput >> endMethod [
+
+]
+
+{ #category : 'API' }
 ASOutput >> forClass [
 
 	^ forClass
@@ -76,8 +83,8 @@ ASOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	self codeGenerator generate: ourObject.
-	self outputToStream
+	ourObject ifNotNil: [
+	self codeGenerator generate: ourObject]
 ]
 
 { #category : 'API' }
@@ -85,9 +92,7 @@ ASOutput >> generateCode: anASNode [
 
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
-	alreadyGenerated := false.
-	context processComponents.
-	^ self
+	context processComponents
 ]
 
 { #category : 'API' }
@@ -96,18 +101,16 @@ ASOutput >> generateCode: anASNode for: aClass [
 	context for: anASNode generatorIs: self.
 	ourObject := anASNode.
 	forClass := aClass.
-	alreadyGenerated := false.
 	context processComponents
 ]
 
-{ #category : 'API' }
+{ #category : 'initialization' }
 ASOutput >> initialize [
 
 	super initialize.
-	currentBasicBlock := 0.
-	testing := false.
+	alreadyGenerated := false.
 	maxDepth := 0.
-	numLocals := 0
+	blockNumber := 0
 ]
 
 { #category : 'as yet unclassified' }
@@ -119,6 +122,7 @@ ASOutput >> name [
 ASOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
+	self setupForOutput.
 	codeGenerator basicBlocksLinearizeDo: [ :bb |
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: currentBasicBlock maxDepth.
@@ -135,4 +139,8 @@ ASOutput >> parentCodeGenerator: aCodeGenerator [
 ASOutput >> selector [
 
 	^ codeGenerator selector
+]
+
+{ #category : 'API' }
+ASOutput >> setupForOutput [
 ]

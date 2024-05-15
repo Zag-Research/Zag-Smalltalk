@@ -10,17 +10,19 @@ Instance variables:
 					nil (not satisfied)
 "
 Class {
-	#name : #BeDBBinaryConstraint,
-	#superclass : #BeDBAbstractConstraint,
+	#name : 'BeDBBinaryConstraint',
+	#superclass : 'BeDBAbstractConstraint',
 	#instVars : [
 		'v1',
 		'v2',
 		'direction'
 	],
-	#category : #'Benchmarks-Constraints'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBBinaryConstraint >> addToGraph [
 	"Add myself to the constraint graph."
 
@@ -29,7 +31,7 @@ BeDBBinaryConstraint >> addToGraph [
 	direction := nil.
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> chooseMethod: mark [
 	"Decide if I can be satisfied and which way I should flow based on
 	 the relative strength of the variables I relate, and record that
@@ -57,14 +59,14 @@ BeDBBinaryConstraint >> chooseMethod: mark [
 				ifFalse: [^direction := nil]].
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> execute [
 	"Enforce this constraint. Assume that it is satisfied."
 
 	self subclassResponsibility
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> inputsDo: aBlock [
 	"Evaluate the given block on my current input variable."
 
@@ -73,21 +75,21 @@ BeDBBinaryConstraint >> inputsDo: aBlock [
 		ifFalse: [aBlock value: v2].
 ]
 
-{ #category : #queries }
+{ #category : 'queries' }
 BeDBBinaryConstraint >> isSatisfied [
 	"Answer true if this constraint is satisfied in the current solution."
 
 	^direction notNil
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> markUnsatisfied [
 	"Record the fact that I am unsatisfied."
 
 	direction := nil.
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> output [
 	"Answer my current output variable."
 
@@ -96,7 +98,7 @@ BeDBBinaryConstraint >> output [
 		ifFalse: [^v1]
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBBinaryConstraint >> recalculate [
 	"Calculate the walkabout strength, the stay flag, and, if it is 'stay',
          the value for the current output of this constraint. Assume this
@@ -111,7 +113,7 @@ BeDBBinaryConstraint >> recalculate [
 	(out stay) ifTrue: [self execute].		"stay optimization"
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBBinaryConstraint >> removeFromGraph [
 	"Remove myself from the constraint graph."
 
@@ -120,7 +122,7 @@ BeDBBinaryConstraint >> removeFromGraph [
 	direction := nil.
 ]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 BeDBBinaryConstraint >> var: variable1 var: variable2 strength: strengthSymbol [
 	"Initialize myself with the given variables and strength."
 

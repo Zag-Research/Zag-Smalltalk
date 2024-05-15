@@ -1,36 +1,38 @@
 Class {
 	#name : 'ASZigCPSOutputTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASZigTests',
+	#instVars : [
+		'output'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
+{ #category : 'running' }
+ASZigCPSOutputTest >> setUp [
+
+	super setUp.
+	output := ASZigCPSOutput testing context: file
+]
+
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_addTwoNumbers [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #addTwoNumbers.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #addTwoNumbers.
+	output generateCode: ast.
 
 	self assert: output name equals: 'MaddTwoNumbers'.
-	output asString inspect.
-
+	output asString inspect
 ]
 
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_fib [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing
-		             context: file;
-		             generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #fib:.
+	output generateCode: ast.
 	self assert: output name equals: 'Mfib:'.
 	file asString inspect.
 	self
@@ -41,12 +43,9 @@ ASZigCPSOutputTest >> testZig_fib [
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_fib2 [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib2:.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #fib2:.
+	output generateCode: ast.
 	self assert: output name equals: 'Mfib2:'.
 	file asString inspect.
 	self
@@ -57,12 +56,9 @@ ASZigCPSOutputTest >> testZig_fib2 [
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_simple1 [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #simple1.
+	output generateCode: ast.
 	self assert: output name equals: 'Msimple1'.
 	self
 		assert: output asString
@@ -73,13 +69,9 @@ ASZigCPSOutputTest >> testZig_simple1 [
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_simpleBlock [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #simpleBlock.
-	file := ASZigFileContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #simpleBlock.
+	output generateCode: ast.
 	self assert: output name equals: 'MsimpleBlock'.
 	file asString inspect.
 	self
@@ -106,27 +98,19 @@ var MsimpleBlock = compileMethod(Sym.i_1,nil,2,.{&@"MsimpleBlock:1",&@"MsimpleBl
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_unaries [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #unaries.
-	file := ASZigTestContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #unaries.
+	output generateCode: ast.
 	self assert: output name equals: 'Munaries'.
 	file asString inspect
-
 ]
 
 { #category : 'tests' }
 ASZigCPSOutputTest >> testZig_unariesPlus [
 
-	| output ast file |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #unariesPlus.
-	file := ASZigTestContext new.
-	output := ASZigCPSOutput testing
-		          context: file;
-		          generateCode: ast.
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #unariesPlus.
+	output generateCode: ast.
 	self assert: output name equals: 'MunariesPlus'.
 	file asString inspect
 ]
