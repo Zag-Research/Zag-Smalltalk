@@ -66,6 +66,7 @@ ASTextOutput >> initialize [
 	super initialize.
 	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
+	numLocals := 0.
 	label := 0.
 	testing := false
 ]
