@@ -157,7 +157,7 @@ ASZigThreadedOutputTest >> testZig_simple1 [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
 { #category : 'tests' }
@@ -171,7 +171,7 @@ ASZigThreadedOutputTest >> testZig_simple1_noreturn [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.drop,&e.returnSelf,'
+		'":Msimple1_noreturn:1",&e.pushLiteral,Object.from(42),&e.drop,&e.returnSelf,'
 ]
 
 { #category : 'tests' }
@@ -184,7 +184,7 @@ ASZigThreadedOutputTest >> testZig_simple2 [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple2:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'&e.pushContext,"^",":Msimple2:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
 { #category : 'tests' }
@@ -198,7 +198,7 @@ ASZigThreadedOutputTest >> testZig_simple2_noreturn [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,":Msimple1:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
+		'&e.pushContext,"^",":Msimple2_noreturn:1",&e.pushLiteral,Object.from(42),&e.returnTop,'
 ]
 
 { #category : 'tests' }
@@ -211,7 +211,7 @@ ASZigThreadedOutputTest >> testZig_simpleBlock [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLocal,0,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",":MsimpleBlock:2",&e.returnTop,'
+		'&e.pushContext,"^",":MsimpleBlock:1",doSomething,&e.pushLocal,0,&e.pushLiteral,Object.from(42),&e.send1,Sym.@"value:",":MsimpleBlock:2",&e.returnTop,'
 ]
 
 { #category : 'tests' }
@@ -224,7 +224,7 @@ ASZigThreadedOutputTest >> testZig_unaries [
 	self
 		assert: output asString
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
+		'&e.pushContext,"^",":Munaries:1",&e.pushLiteral,Object.from(23),&e.send0,Sym.negated,":Munaries:2",&e.send0tail,Sym.i_1,'
 ]
 
 { #category : 'tests' }
