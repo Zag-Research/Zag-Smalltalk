@@ -352,7 +352,8 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	name := output name.
+	"label for blocks of code"
+	name := output name zigName.
 	code selector: aSymbol 
 ]
 

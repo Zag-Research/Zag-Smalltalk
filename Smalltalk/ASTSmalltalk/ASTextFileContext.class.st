@@ -21,11 +21,7 @@ ASTextFileContext >> asString [
 
 { #category : 'creation' }
 ASTextFileContext >> name: anObject prefix: aPrefix main: aSymbol [
-| predefined |
-self halt.
-	predefined := symbols predefinedSymbol: aSymbol.
-	predefined ifNotNil: [ ^predefined ] ifNil: [ 
-	^ (self name: anObject prefix: aPrefix main: aSymbol seq: 0) zigName ]
+^ (self name: anObject prefix: aPrefix main: aSymbol seq: 0)
 ]
 
 { #category : 'creation' }

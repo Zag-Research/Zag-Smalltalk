@@ -27,6 +27,13 @@ ASZigThreadedOutput >> endMethod [
 	self label: nil
 ]
 
+{ #category : 'accessing' }
+ASZigThreadedOutput >> methodName [
+	| predefined |
+	predefined := context predefinedSymbol: self selector.
+	predefined ifNotNil: [ ^predefined ] ifNil: [ ^ self name]
+]
+
 { #category : 'code generation' }
 ASZigThreadedOutput >> outputBasicBlockEnd [
 	
@@ -239,7 +246,7 @@ ASZigThreadedOutput >> writeDefinitionOn: stream [
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name;
+		nextPutAll: self methodName;
 		nextPut: $,;
 		print: numLocals;
 		nextPut: $,;

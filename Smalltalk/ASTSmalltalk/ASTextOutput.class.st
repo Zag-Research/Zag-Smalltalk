@@ -78,20 +78,11 @@ ASTextOutput >> lf [
 
 { #category : 'accessing' }
 ASTextOutput >> name [
-self halt.
-	componentName ifNil: [
-		  componentName := context
-			                   name: self
-			                   prefix: self prefix
-			                   main: self selector
-		 ].
-	^ componentName 
-	"^ componentName ifNil: [
+^ componentName ifNil: [
 		  componentName := context
 			                   name: self
 			                   prefix: self prefix
 			                   main: self selector ]
-		"
 ]
 
 { #category : 'printing' }
