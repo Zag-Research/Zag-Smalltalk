@@ -37,7 +37,7 @@ pub const Context = struct {
     const Self = @This();
     const ThreadedFn = execute.ThreadedFn;
     const nLocals = 1;
-    const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals + 1;
+    const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self{
             .header = comptime HeapHeader.calc(.Context,baseSize + nLocals, 0, .static, null, Object, false) catch unreachable,
@@ -85,7 +85,7 @@ pub const Context = struct {
         // return .{.sp=newSp,.ctxt=self.previous()};
     }
     pub fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
-        const newSp = (process.allocStackSpace(sp, baseSize + locals + maxStackNeeded) catch {
+        const newSp = (process.allocStackSpace(sp, baseSize + 1 + locals + maxStackNeeded) catch {
             var contextMutable = self;
             const newerSp = process.spillStack(sp, &contextMutable);
             return contextMutable.push(newerSp, process, method, locals, maxStackNeeded, selfOffset);
@@ -94,7 +94,7 @@ pub const Context = struct {
         trace("\npush: {} sp={*} newSp={*}", .{ method.selector(), sp, newSp });
         const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp.unreserve(1))));
         ctxt.prevCtxt = self;
-        ctxt.trapContextNumber = process.trapContextNumber;
+        ctxt.trapContextNumber = process.ptr().trapContextNumber;
         ctxt.method = method;
         {
             @setRuntimeSafety(false);

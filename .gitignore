@@ -59,4 +59,5 @@ zig/sieve
 # Additions
 /JanTest.zig
 zig-cache/
-zig-out/ 
+zig-out/
+*.ll

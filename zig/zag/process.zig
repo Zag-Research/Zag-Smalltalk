@@ -38,17 +38,17 @@ const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
 pub const Process = extern struct {
     stack: [stack_size]Object,
-    nursery0: [nursery_size]Object,
-    nursery1: [nursery_size]Object,
     next: ?*Self,
     id: u64,
+    trapContextNumber: u64,
     debugFn: ?ThreadedFn,
     sp: SP,
     currHeap: HeapObjectArray,
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
-    trapContextNumber: u64,
+    nursery0: [nursery_size]Object,
+    nursery1: [nursery_size]Object,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf(SP) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(u64);
     const ThreadedFn = execute.ThreadedFn;
