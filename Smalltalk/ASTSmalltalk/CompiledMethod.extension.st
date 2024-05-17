@@ -45,7 +45,7 @@ CompiledMethod >> inspectionZagThreadedCode [
 	file := ASZigTestContext new.
 	output := ASZigThreadedOutput new
 		          context: file;
-		          generateCode: ast.
+		          generateCode: ast for: self classBinding.
 	^ SpTextPresenter new
 		  text: file asString;
 		  yourself

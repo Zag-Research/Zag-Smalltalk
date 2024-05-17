@@ -28,6 +28,13 @@ ASStackNamed >> find: aSymbol [
 ]
 
 { #category : 'accessing' }
+ASStackNamed >> llvmName [
+
+	^ llvmName ifNil: [
+		  llvmName := super llvmName, name ]
+]
+
+{ #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
@@ -44,7 +51,7 @@ ASStackNamed >> offset: anInteger to: aName [
 { #category : 'API' }
 ASStackNamed >> offset: anInteger to: aName local: blockLocal stack: blockStack other: blockOther [
 
-	aName = name ifTrue: [ ^ blockStack value: anInteger ].
+	aName = name ifTrue: [ ^ blockStack cull: anInteger cull: self ].
 	^ rest
 		  offset: anInteger + 1
 		  to: aName

@@ -15,6 +15,7 @@ Class {
 ASZigFileContext >> initialize [
 
 	super initialize.
+	symbols := ASZagSymbols new.
 	names := Dictionary new
 ]
 
@@ -22,35 +23,39 @@ ASZigFileContext >> initialize [
 ASZigFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll: 'const std = @import("std");
-const debug = std.debug;
-const math = std.math;
-const stdout = std.io.getStdOut().writer();
-const Object = @import("zag/zobject.zig").Object;
-const ClassIndex = @import("zag/zobject.zig").ClassIndex;
-const Nil = @import("zag/zobject.zig").Nil;
-const True = @import("zag/zobject.zig").True;
-const False = @import("zag/zobject.zig").False;
-const indexSymbol = @import("zag/zobject.zig").indexSymbol;
-const execute = @import("zag/execute.zig");
+const config = @import("zag/config.zig");
 const tailCall = config.tailCall;
-const Code = execute.Code;
-const compileMethod = execute.compileMethod;
-const compileObject = execute.compileObject;
-const ContextPtr = execute.CodeContextPtr;
-const TestExecution = execute.TestExecution;
-const primitives = @import("zag/primitives.zig");
-const Process = @import("zag/process.zig").Process;
-const symbol = @import("zag/symbol.zig");
+const trace = config.trace;
+const stdCall = config.stdCall;
 const heap = @import("zag/heap.zig");
-
-const empty = &[0]Object{};
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
 '
 ]
 
 { #category : 'writing' }
 ASZigFileContext >> writeInitSmalltalkPrefixOn: stream [
 
-	stream nextPutAll: 'fn initSmalltalk() void {
+	stream 
+	nextPutAll: 'var sym: Sym = undefined;';
+	lf;
+	nextPutAll: 'const e = primitives.embedded;';
+	lf;
+	nextPutAll: 'const p = primitives.primitives;';
+	lf;
+	nextPutAll: 'fn initSmalltalk() void {
     primitives.init();
 '
 ]

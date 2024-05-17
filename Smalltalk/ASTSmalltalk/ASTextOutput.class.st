@@ -35,6 +35,7 @@ ASTextOutput class >> testing [
 
 { #category : 'converting' }
 ASTextOutput >> asString [
+
 	^ mainStream contents
 ]
 
@@ -107,11 +108,6 @@ ASTextOutput >> print: anObject [
 	mainStream print: anObject
 ]
 
-{ #category : 'accessing' }
-ASTextOutput >> selector [
-	self subclassResponsibility 
-]
-
 { #category : 'printing' }
 ASTextOutput >> tab [
 
@@ -126,12 +122,6 @@ ASTextOutput >> testing: aBoolean [
 
 { #category : 'writing' }
 ASTextOutput >> writeDefinitionOn: aStream [
-
-	self subclassResponsibility
-]
-
-{ #category : 'writing' }
-ASTextOutput >> writeInitializationOn: anObject [
 
 	self subclassResponsibility
 ]

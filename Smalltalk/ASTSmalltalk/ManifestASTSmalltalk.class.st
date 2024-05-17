@@ -129,6 +129,13 @@ ManifestASTSmalltalk class >> ruleToDoCollectRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASStackElement #nameReset #false)) #'2024-05-13T08:20:53.254599-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleUsesAddRuleV1FalsePositive [
 
 	<ignoreForCoverage>

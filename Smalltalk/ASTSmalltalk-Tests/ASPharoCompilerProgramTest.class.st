@@ -7,6 +7,22 @@ Class {
 }
 
 { #category : 'tests' }
+ASPharoCompilerProgramTest class >> testFibIsolated [
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: SmallInteger >> #fibonacci.
+	file := ASZigFileContext new.
+
+	ASZigThreadedOutput new
+		context: file;
+		generateCode: ast for: SmallInteger.
+
+	FileSystem disk workingDirectory / 'zigFib.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ] 
+]
+
+{ #category : 'tests' }
 ASPharoCompilerProgramTest class >> testFooBarIsolated [
 
 	<script>

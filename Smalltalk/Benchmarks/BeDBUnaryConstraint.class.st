@@ -7,16 +7,18 @@ Instance variables:
 	satisfied		true if I am currently satisfied <Boolean>
 "
 Class {
-	#name : #BeDBUnaryConstraint,
-	#superclass : #BeDBAbstractConstraint,
+	#name : 'BeDBUnaryConstraint',
+	#superclass : 'BeDBAbstractConstraint',
 	#instVars : [
 		'output',
 		'satisfied'
 	],
-	#category : #'Benchmarks-Constraints'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBUnaryConstraint >> addToGraph [
 	"Add myself to the constraint graph."
 
@@ -24,7 +26,7 @@ BeDBUnaryConstraint >> addToGraph [
 	satisfied := false.
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> chooseMethod: mark [
 	"Decide if I can be satisfied and record that decision."
 
@@ -33,40 +35,40 @@ BeDBUnaryConstraint >> chooseMethod: mark [
 		[strength stronger: output walkStrength].
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> execute [
 	"Enforce this constraint. Assume that it is satisfied."
 
 	self subclassResponsibility
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> inputsDo: aBlock [
 	"I have no input variables."
 ]
 
-{ #category : #queries }
+{ #category : 'queries' }
 BeDBUnaryConstraint >> isSatisfied [
 	"Answer true if this constraint is satisfied in the current solution."
 
 	^satisfied
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> markUnsatisfied [
 	"Record the fact that I am unsatisfied."
 
 	satisfied := false.
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> output [
 	"Answer my current output variable."
 
 	^output
 ]
 
-{ #category : #planning }
+{ #category : 'planning' }
 BeDBUnaryConstraint >> recalculate [
 	"Calculate the walkabout strength, the stay flag, and, if it is 'stay',
 	 the value for the current output of this constraint. Assume this
@@ -77,7 +79,7 @@ BeDBUnaryConstraint >> recalculate [
 	(output stay) ifTrue: [self execute].	"stay optimization"
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBUnaryConstraint >> removeFromGraph [
 	"Remove myself from the constraint graph."
 
@@ -85,7 +87,7 @@ BeDBUnaryConstraint >> removeFromGraph [
 	satisfied := false.
 ]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 BeDBUnaryConstraint >> var: aVariable strength: strengthSymbol [
 	"Initialize myself with the given variable and strength."
 

@@ -4,13 +4,15 @@ resatisfy all currently satisfiable constraints in the face of one or more
 changing inputs.
 "
 Class {
-	#name : #BeDBPlan,
-	#superclass : #OrderedCollection,
-	#type : #variable,
-	#category : #'Benchmarks-DeltaBlue'
+	#name : 'BeDBPlan',
+	#superclass : 'OrderedCollection',
+	#type : 'variable',
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #execution }
+{ #category : 'execution' }
 BeDBPlan >> execute [
 	"Execute my constraints in order."
 

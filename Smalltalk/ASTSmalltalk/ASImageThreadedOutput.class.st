@@ -51,17 +51,6 @@ ASImageThreadedOutput >> outputMethodStart: bbLabel [
 
 ]
 
-{ #category : 'as yet unclassified' }
-ASImageThreadedOutput >> outputToStream [
-
-	codeGenerator finalAnalysis.
-	codeGenerator basicBlocksLinearizeDo: [ :bb |
-		currentBasicBlock := bb.
-		maxDepth := maxDepth max: currentBasicBlock maxDepth.
-		currentBasicBlock outputTo: self ].
-	self endMethod
-]
-
 { #category : 'API' }
 ASImageThreadedOutput >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
 
