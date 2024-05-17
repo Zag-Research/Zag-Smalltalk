@@ -15,26 +15,213 @@ ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 	self assert: result equals: ast
 ]
 
+{ #category : 'asserting' }
+ASCompilerInlineTest >> assert: aCompileMethod outputInlinesTo: code [
+
+	| compiledAST file output |
+	compiledAST := ASPharoCompiler new astFor: aCompileMethod.
+
+	file := ASZigFileContext new.
+	ASZigThreadedOutput withInlining
+		context: file;
+		generateCode: compiledAST for: SmallInteger.
+
+	output := ReadWriteStream on: String new.
+	file outputTo: output.
+
+	output contents.
+	self assert: output contents equals: code
+]
+
+{ #category : 'asserting' }
+ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
+
+	| compiledAST file output |
+	compiledAST := ASPharoCompiler new astFor: aCompileMethod.
+
+	file := ASZigFileContext new.
+	ASZigThreadedOutput new
+		context: file;
+		generateCode: compiledAST for: SmallInteger.
+
+	output := ReadWriteStream on: String new.
+	file outputTo: output.
+
+	output contents.
+	self assert: output contents equals: code
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFoo [
+
+	self
+		assert: ASCompileTestClass1 >> #gives43
+		outputTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mgives43 = compileMethod(Mgives43,0,6,.SmallInteger,.{
+&e.pushContext,"^",
+":Mgives43:1",
+&e.pushLocal,1,
+&e.setupSend,Sym.i_1,
+&e.dynamicDispatch,
+":Mgives43:2",
+&e.pushLiteral,Object.from(2),
+&e.setupSend,Sym.@"*",
+&e.dynamicDispatch,
+":Mgives43:3",
+&e.popLocal,0,
+&e.pushLocal,1,
+&e.pushLocal,0,
+&e.pushLiteral,Object.from(4),
+&e.setupSend,Sym.@"-",
+&e.dynamicDispatch,
+":Mgives43:4",
+&e.setupSend,Sym.i_2,
+&e.dynamicDispatch,
+ });
+const Sym = struct {
+	unaries: Object,
+	@"plus1:": Object,
+    const ss = heap.compileStrings(.{
+	"unaries",
+	"plus1:",
+    });
+    usingnamespace symbol.symbols;
+    fn init() Sym {
+        return .{
+	.unaries = symbol.intern(ss[0].asObject()),
+	.@"plus1:" = symbol.intern(ss[1].asObject()),
+        };
+    }
+};
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+    sym = Sym.init();
+Mgives43.setLiterals(&[_]Object{sym.unaries,sym.@"plus1:"},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFooInlined [
+
+	self
+		assert: ASCompileTestClass1 >> #gives43
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mgives43 = compileMethod(Mgives43,0,6,.SmallInteger,.{
+&e.pushContext,"^",
+":Mgives43:1",
+&e.pushLocal,1,
+&e.setupSend,Sym.i_1,
+&e.dynamicDispatch,
+":Mgives43:2",
+&e.pushLiteral,Object.from(2),
+&e.setupSend,Sym.@"*",
+&e.dynamicDispatch,
+":Mgives43:3",
+&e.popLocal,0,
+&e.pushLocal,1,
+&e.pushLocal,0,
+&e.pushLiteral,Object.from(4),
+&e.setupSend,Sym.@"-",
+&e.dynamicDispatch,
+":Mgives43:4",
+&e.setupSend,Sym.i_2,
+&e.dynamicDispatch,
+ });
+const Sym = struct {
+	unaries: Object,
+	@"plus1:": Object,
+    const ss = heap.compileStrings(.{
+	"unaries",
+	"plus1:",
+    });
+    usingnamespace symbol.symbols;
+    fn init() Sym {
+        return .{
+	.unaries = symbol.intern(ss[0].asObject()),
+	.@"plus1:" = symbol.intern(ss[1].asObject()),
+        };
+    }
+};
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+    sym = Sym.init();
+Mgives43.setLiterals(&[_]Object{sym.unaries,sym.@"plus1:"},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
 { #category : 'tests' }
 ASCompilerInlineTest >> testGives43 [
 
 	self
 		assert: ASCompileTestClass1 >> #gives43
-		inlinesTo:
-		(ASMethodNode selector: #gives43 locals: #( #forty2 ) body: (ASSequence newFromArray: {
-			(ASAssign variable: #forty2 expression: (ASSend
-				  target: (ASSend
-						   target: (ASSelf method: #gives43)
-						   selector: #unaries
-						   args: {  })
-				  selector: #*
-				  args: { (ASLiteral literal: 2) })).
-			(ASReturn expression: (ASSend
-				  target: (ASSelf method: #gives43)
-				  selector: #plus1:
-				  args: { (ASSend
-						   target: (ASRef variable: #forty2)
-						   selector: #-
-						   args: { (ASLiteral literal: 4) }) })).
-		}))
+		inlinesTo: (ASMethodNode
+				 selector: #gives43
+				 locals: #( #forty2 )
+				 body: (ASSequence newFromArray: {
+							  (ASAssign variable: #forty2 expression: (ASSend
+									    target: (ASSend
+											     target: (ASSelf method: #gives43)
+											     selector: #unaries
+											     args: {  })
+									    selector: #*
+									    args: { (ASLiteral literal: 2) })).
+							  (ASReturn expression: (ASSend
+									    target: (ASSelf method: #gives43)
+									    selector: #plus1:
+									    args: { (ASSend
+											     target: (ASRef variable: #forty2)
+											     selector: #-
+											     args: { (ASLiteral literal: 4) }) })) }))
 ]

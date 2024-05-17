@@ -18,12 +18,18 @@ Class {
 		'testing',
 		'numLocals',
 		'componentName',
-		'blockNumber'
+		'blockNumber',
+		'inlining'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'
 }
+
+{ #category : 'as yet unclassified' }
+ASOutput class >> withInlining [
+	^ self new inlining: true
+]
 
 { #category : 'API' }
 ASOutput >> blockClass [
@@ -38,12 +44,13 @@ ASOutput >> blockNumber [
 
 { #category : 'API' }
 ASOutput >> codeGenerator [
-
+self halt.
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
-			                   targetClass: forClass ]
+			                   targetClass: forClass;
+			                   inlining: inlining ]
 ]
 
 { #category : 'API' }
@@ -110,7 +117,13 @@ ASOutput >> initialize [
 	super initialize.
 	alreadyGenerated := false.
 	maxDepth := 0.
-	blockNumber := 0
+	blockNumber := 0.
+	inlining := false
+]
+
+{ #category : 'API' }
+ASOutput >> inlining: aBoolean [
+	inlining := aBoolean
 ]
 
 { #category : 'as yet unclassified' }

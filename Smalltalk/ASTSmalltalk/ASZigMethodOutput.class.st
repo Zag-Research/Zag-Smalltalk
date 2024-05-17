@@ -11,11 +11,11 @@ Class {
 
 { #category : 'API' }
 ASZigMethodOutput >> codeGenerator [
-
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   output: self;
+			                   inlining: inlining;
 			                   targetClass: forClass;
 			                   enclosingScope: parentCodeGenerator ]
 ]

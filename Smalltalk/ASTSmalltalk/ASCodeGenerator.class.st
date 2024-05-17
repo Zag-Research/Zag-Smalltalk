@@ -171,6 +171,11 @@ ASCodeGenerator >> initialize [
 	tailCallOptimize := true
 ]
 
+{ #category : 'initialization' }
+ASCodeGenerator >> inlining: aBoolean [
+	inline := aBoolean
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> inspectBasicBlocks [
 	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
@@ -407,7 +412,6 @@ targetClass:= anObject
 
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
-
 	inline ifFalse: [ ^ self ].
 	[
 	basicBlocks anySatisfy: [ :aBasicBlock |
