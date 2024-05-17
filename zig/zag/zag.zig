@@ -1,106 +1,157 @@
-const fixThisUpLater = "atAllPut primitives/Object
-basicAt primitives/Object
-basicAtPut primitives/Object
-ifFalse primitives/Boolean
-ifFalseIfTrue primitives/Boolean
-ifTrue primitives/Boolean
-ifTrueIfFalse primitives/Boolean
-newA primitives/Behavior
-value primitives/BlockClosure
-branch execute
-cacheDnu execute
-call execute
-callRecursive execute
-closureData primitives/BlockClosure
-drop execute
-dropNext execute
-dup execute
-fallback execute
-forceDnu execute
-fullClosure primitives/BlockClosure
-generalClosure primitives/BlockClosure
-hardDnu execute
-ifFalse execute
-ifNil execute
-ifNotNil execute
-ifTrue execute
-immutableClosure primitives/BlockClosure
-nonLocalReturn primitives/BlockClosure
-over execute
-p1 primitives/SmallInteger
-p2 primitives/SmallInteger
-p5 primitives/SmallInteger
-p7 primitives/SmallInteger
-p9 primitives/SmallInteger
-p60 primitives/Object
-p61 primitives/Object
-p70 primitives/Behavior
-p71 primitives/Behavior
-p83 primitives/Object
-p84 primitives/Object
-p100 primitives/Object
-p110 primitives/Object
-p145 primitives/Object
-p169 primitives/Object
-p201 primitives/BlockClosure
-p202 primitives/BlockClosure
-p203 primitives/BlockClosure
-p204 primitives/BlockClosure
-p205 primitives/BlockClosure
-perform execute
-performWith execute
-popLocal execute
-popLocal0 execute
-popLocalData execute
-popLocalField execute
-primFailure execute
-primitiveFailed execute
-printStack execute
-pushContext execute
-pushLiteral execute
-pushLiteral0 execute
-pushLiteral1 execute
-pushLiteral2 execute
-pushLiteralFalse execute
-pushLiteralIndirect execute
-pushLiteralNil execute
-pushLiteralTrue execute
-pushLiteral_1 execute
-pushLocal execute
-pushLocal0 execute
-pushLocalData execute
-pushLocalField execute
-pushNonlocalBlock_false primitives/BlockClosure
-pushNonlocalBlock_minusOne primitives/BlockClosure
-pushNonlocalBlock_nil primitives/BlockClosure
-pushNonlocalBlock_one primitives/BlockClosure
-pushNonlocalBlock_self primitives/BlockClosure
-pushNonlocalBlock_true primitives/BlockClosure
-pushNonlocalBlock_two primitives/BlockClosure
-pushNonlocalBlock_zero primitives/BlockClosure
-pushThisContext execute
-pushValue primitives/BlockClosure
-replaceLiteral execute
-replaceLiteral0 execute
-replaceLiteral1 execute
-returnNoContext execute
-returnTop execute
-returnWithContext execute
-send0 execute
-send1 execute
-storeLocal execute
-swap execute
-tailSend0 execute
-tailSend1 execute
-value primitives/BlockClosure
-verifyDirectSelector execute
-verifySelector execute
-";
-pub fn main() void {
-    print("'From zag on 13 March 2024 at 7:53:53.977136 am'!
+const std = @import("std");
+const execute = @import("execute.zig");
+const primitives = @import("primitives.zig");
+const ThreadedFn = execute.ThreadedFn;
+const Reference = struct {
+    str: []const u8,
+    addr: ThreadedFn,
+};
+pub fn compileReferences(comptime tup: anytype) [tup.len/2]Reference {
+    @setEvalBranchQuota(3000);
+    comptime var result: [tup.len/2]Reference = undefined;
+    inline for (tup, 0..) |field, idx| {
+        if (idx&1==0) {
+            result[idx/2].str = comptime field[0..];
+        } else
+            result[idx/2].addr = field;
+    }
+    const final = result;
+    return final;
+}
+const references = compileReferences(.{
+    // grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -n 's;./\(.*\)[.]zig:[ 	]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
+"branch",&execute.embedded.branch,
+"call",&execute.embedded.call,
+"callRecursive",&execute.embedded.callRecursive,
+"closureData",&primitives.embedded.BlockClosure.closureData,
+"drop",&execute.embedded.drop,
+"dropNext",&execute.embedded.dropNext,
+"dup",&execute.embedded.dup,
+"dynamicDispatch",&execute.embedded.dynamicDispatch,
+"fallback",&execute.embedded.fallback,
+"fullClosure",&primitives.embedded.BlockClosure.fullClosure,
+"generalClosure",&primitives.embedded.BlockClosure.generalClosure,
+"ifFalse",&execute.embedded.ifFalse,
+"ifNil",&execute.embedded.ifNil,
+"ifNotNil",&execute.embedded.ifNotNil,
+"ifTrue",&execute.embedded.ifTrue,
+"immutableClosure",&primitives.embedded.BlockClosure.immutableClosure,
+"over",&execute.embedded.over,
+"p201",&primitives.primitives.p201,
+"p202",&primitives.primitives.p202,
+"p203",&primitives.primitives.p203,
+"p204",&primitives.primitives.p204,
+"p205",&primitives.primitives.p205,
+//"perform",&execute.embedded.perform,
+//"performWith",&execute.embedded.performWith,
+"popLocal",&execute.embedded.popLocal,
+"popLocal0",&execute.embedded.popLocal0,
+"popLocalData",&execute.embedded.popLocalData,
+"popLocalField",&execute.embedded.popLocalField,
+"printStack",&execute.embedded.printStack,
+"pushContext",&execute.embedded.pushContext,
+"pushLiteral",&execute.embedded.pushLiteral,
+"pushLiteral0",&execute.embedded.pushLiteral0,
+"pushLiteral1",&execute.embedded.pushLiteral1,
+"pushLiteral2",&execute.embedded.pushLiteral2,
+"pushLiteralFalse",&execute.embedded.pushLiteralFalse,
+"pushLiteralIndirect",&execute.embedded.pushLiteralIndirect,
+"pushLiteralNil",&execute.embedded.pushLiteralNil,
+"pushLiteralTrue",&execute.embedded.pushLiteralTrue,
+"pushLiteral_1",&execute.embedded.pushLiteral_1,
+"pushLocal",&execute.embedded.pushLocal,
+"pushLocal0",&execute.embedded.pushLocal0,
+"pushLocalData",&execute.embedded.pushLocalData,
+"pushLocalField",&execute.embedded.pushLocalField,
+"pushNonlocalBlock_false",&primitives.embedded.BlockClosure.pushNonlocalBlock_false,
+"pushNonlocalBlock_minusOne",&primitives.embedded.BlockClosure.pushNonlocalBlock_minusOne,
+"pushNonlocalBlock_nil",&primitives.embedded.BlockClosure.pushNonlocalBlock_nil,
+"pushNonlocalBlock_one",&primitives.embedded.BlockClosure.pushNonlocalBlock_one,
+"pushNonlocalBlock_self",&primitives.embedded.BlockClosure.pushNonlocalBlock_self,
+"pushNonlocalBlock_true",&primitives.embedded.BlockClosure.pushNonlocalBlock_true,
+"pushNonlocalBlock_two",&primitives.embedded.BlockClosure.pushNonlocalBlock_two,
+"pushNonlocalBlock_zero",&primitives.embedded.BlockClosure.pushNonlocalBlock_zero,
+"pushThisContext",&execute.embedded.pushThisContext,
+"replaceLiteral",&execute.embedded.replaceLiteral,
+"replaceLiteral0",&execute.embedded.replaceLiteral0,
+"replaceLiteral1",&execute.embedded.replaceLiteral1,
+"returnNoContext",&execute.embedded.returnNoContext,
+"returnNonLocal",&execute.embedded.returnNonLocal,
+"returnTop",&execute.embedded.returnTop,
+"returnWithContext",&execute.embedded.returnWithContext,
+"setupSend",&execute.embedded.setupSend,
+"setupTailSend",&execute.embedded.setupTailSend,
+"setupTailSend0",&execute.embedded.setupTailSend0,
+"storeLocal",&execute.embedded.storeLocal,
+"swap",&execute.embedded.swap,
+"value:",&primitives.embedded.BlockClosure.@"value:",
+"verifyMethod",&execute.embedded.verifyMethod,
+});
+var zfHashValue: u64 = 0;
+const print = std.debug.print;
+fn capitalize(c: u8) u8 {
+    return c-'a'+'A';
+}
+fn hash(addr: ThreadedFn) void {
+    zfHashValue = std.math.rotr(u64,zfHashValue,1) +% @intFromPtr(addr);
+}
+fn calculateAndWriteHeader(writeFile: bool) void {
+    if (writeFile) {
+        print(
+            \\{s}I have shared variables generated by zag so that images can be generated that directly reference zig code.
+             \\From zag on {s} at {s}{s}
+                ,.{"\"","13 March 2024","7:53:53.977136 am","\n"});
+        print(
+            \\Class {s}
+            \\	#name : 'ASZagConstants',
+            \\	#superclass : 'SharedPool',
+            \\	#classVars : [
+            \\		'Addresses',
+            \\		'PredefinedSymbols',
+            \\		'ZfHashValue',{c}
+                ,.{"{",'\n'});
+        for (references[0..]) |ref|
+            print("\t\t'Zf{c}{s}',\n",.{capitalize(ref.str[0]),ref.str[1..]});
+        print(
+            \\	],
+            \\	#category : 'ASTSmalltalk-Output',
+            \\	#package : 'ASTSmalltalk',
+            \\	#tag : 'Output'
+            \\{s}
+            \\
+            \\{s} #category : 'mapping' {s}
+            \\ASZagConstants class >> constantMap [
+            \\
+            \\	^ Dictionary new{s}
+                ,.{"}","{","}","\n"});
+        for (references[0..]) |ref|
+            print("\t\t  at: #{s} put: Zf{c}{s};\n",.{ref.str,capitalize(ref.str[0]),ref.str[1..]});
+        print(
+            \\		  yourself
+            \\]
+            \\
+            \\{s} #category : 'class initialization' {s}
+            \\ASZagConstants class >> initialize [
+            \\
+            \\	PredefinedSymbols := #(  ).
+            \\	self initializeForImage.
+            \\	Addresses := self constantMap
+            \\]
+            \\
+            \\{s} #category : 'class initialization' {s}
+            \\ASZagConstants class >> initializeForImage [{s}
+                ,.{"{","}","{","}","\n"});
+        //	ZfIfFalse := 1.
+    }
+    for (references[0..]) |ref|
+        hash(ref.addr);
+    if (writeFile) {
+        for (references[0..]) |ref|
+            print("\tZf{c}{s} := {}.\n",.{capitalize(ref.str[0]),ref.str[1..],@intFromPtr(ref.addr)});
+        print("\tZfHashValue := {}\n]\n",.{zfHashValue});
+    }
+}
 
-!ASZagConstants class methodsFor: 'class initialization' stamp: '3/13/2024 07:53'!
-initialize
-",.{});
-	PredefinedSymbols := #().
-	ZfP1 := 16r1234.! !
+pub fn main() void {
+    calculateAndWriteHeader(true);
+}

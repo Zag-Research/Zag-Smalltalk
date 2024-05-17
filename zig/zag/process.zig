@@ -38,17 +38,17 @@ const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
 pub const Process = extern struct {
     stack: [stack_size]Object,
-    nursery0: [nursery_size]Object,
-    nursery1: [nursery_size]Object,
     next: ?*Self,
     id: u64,
+    trapContextNumber: u64,
     debugFn: ?ThreadedFn,
     sp: SP,
     currHeap: HeapObjectArray,
     currHp: HeapObjectArray,
     currEnd: HeapObjectArray,
     otherHeap: HeapObjectArray,
-    trapContextNumber: u64,
+    nursery0: [nursery_size]Object,
+    nursery1: [nursery_size]Object,
     const Self = @This();
     const headerSize = @sizeOf(?*Self) + @sizeOf(u64) + @sizeOf(?ThreadedFn) + @sizeOf(SP) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(HeapObjectArray) + @sizeOf(u64);
     const ThreadedFn = execute.ThreadedFn;
@@ -59,6 +59,8 @@ pub const Process = extern struct {
         assert(stack_size <= nursery_size);
     }
     const lastNurseryAge = Age.lastNurseryAge;
+    const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
+    const maxStackObjectSize = @min(HeapHeader.maxLength, stack_size / 4);
     var allProcesses: ?*Self = null;
     pub fn new() Self {
         return undefined;
@@ -121,7 +123,7 @@ pub const Process = extern struct {
     pub inline fn getStack(self: *const Self, sp: SP) []Object {
         return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     }
-    pub inline fn allocStack(self: *Self, sp: SP, words: u64) !SP {
+    pub inline fn allocStackSpace(self: *Self, sp: SP, words: usize) !SP {
         const newSp = sp.reserve(words);
         if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
         return error.NoSpace;
@@ -139,7 +141,7 @@ pub const Process = extern struct {
     }
     pub fn alloc(self: *Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
-        if (aI.objectSize(@min(HeapHeader.maxLength, nursery_size / 4))) |size| {
+        if (aI.objectSize(maxNurseryObjectSize)) |size| {
             const result = self.currHp;
             const newHp = result + size + 1;
             if (@intFromPtr(newHp) <= @intFromPtr(self.currEnd)) {
@@ -155,6 +157,19 @@ pub const Process = extern struct {
         }
         return error.NeedNurseryCollection;
     }
+    pub fn allocStack(self: *Self, oldSp: SP, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type) !SP {
+        const aI = allocationInfo(iVars, indexed, element, false);
+        if (aI.objectSize(maxStackObjectSize)) |size| {
+            const sp = try self.allocStackSpace(oldSp, size + 2);
+            const obj: heap.HeapObjectPtr = @ptrCast(sp.array() + 1);
+            sp.top = Object.from(obj);
+            aI.initObjectStructure(obj, classIndex, .onStack);
+            aI.initContents(obj);
+            return sp;
+        }
+        return error.NoSpace;
+    }
+    
     pub fn collectNursery(self: *Self, sp: SP, contextMutable: *ContextPtr, need: usize) void {
         assert(need <= nursery_size);
         const ageSizes = [_]usize{0} ** lastNurseryAge;
