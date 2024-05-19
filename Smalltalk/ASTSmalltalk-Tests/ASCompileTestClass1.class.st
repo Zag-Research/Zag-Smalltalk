@@ -111,6 +111,7 @@ ASCompileTestClass1 >> fibonacci [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
+
 	^ self bar
 ]
 

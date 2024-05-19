@@ -36,8 +36,12 @@ ASCBasicBlock >> blocks [
 ]
 
 { #category : 'inlining' }
-ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
-	^ false
+ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
+| aSend |
+	aSend := operations last.
+	aSend isSend ifFalse: [ ^ false ].
+	"check if the send can be inlined"
+	^ anASCodeGenerator inline: aSend
 ]
 
 { #category : 'accessing' }

@@ -171,6 +171,22 @@ ASCodeGenerator >> initialize [
 	tailCallOptimize := true
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> inline: anASCSend [
+	| cg |
+	targetClass == anASCSend target ifFalse: [ ^false ].
+	
+		self halt. "inline a self method"
+		cg := ASCodeGenerator newFrom: self.
+		cg
+			send: anASCSend selector
+			targetClass: anASCSend target
+			tail: false.
+		cg firstBlock.
+		
+	^true
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> inlining: aBoolean [
 	inline := aBoolean
@@ -178,10 +194,10 @@ ASCodeGenerator >> inlining: aBoolean [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inspectBasicBlocks [
+
 	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
-	
 	^ SpTreeTablePresenter new
-		  roots: basicBlocks;
+		  roots: self zagBlocks;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
@@ -413,7 +429,18 @@ targetClass:= anObject
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
 	inline ifFalse: [ ^ self ].
-	[
+	[ | bbCopy | 
+		bbCopy := OrderedCollection new.
+		bbCopy addAll: basicBlocks.
 	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self ] ] whileTrue
+		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
+]
+
+{ #category : 'post processing' }
+ASCodeGenerator >> zagBlocks [
+	| zagBlocks |
+	zagBlocks := OrderedCollection new.
+	
+	^ basicBlocks 
+	
 ]

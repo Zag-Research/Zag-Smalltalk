@@ -52,10 +52,19 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testCodeGeneratorInlining [
+
+	| cg |
+	cg := ASCodeGenerator new.
+	cg send: #foo targetClass: ASCompileTestClass1 tail: false.
+	cg tryInlining.
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo [
 
 	self
-		assert: ASCompileTestClass1 >> #gives43
+		assert: ASCompileTestClass1 >> #foo
 		outputTo: 'const std = @import("std");
 const config = @import("zag/config.zig");
 const tailCall = config.tailCall;
@@ -76,39 +85,22 @@ const TFContext = execute.TFContext;
 const tfAsContext = execute.tfAsContext;
 const MethodSignature = execute.MethodSignature;
 const compileMethod = execute.compileMethod;
-var Mgives43 = compileMethod(Mgives43,0,6,.SmallInteger,.{
+var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
 &e.pushContext,"^",
-":Mgives43:1",
-&e.pushLocal,1,
-&e.setupSend,Sym.i_1,
-&e.dynamicDispatch,
-":Mgives43:2",
-&e.pushLiteral,Object.from(2),
-&e.setupSend,Sym.@"*",
-&e.dynamicDispatch,
-":Mgives43:3",
-&e.popLocal,0,
-&e.pushLocal,1,
+":Mfoo:1",
 &e.pushLocal,0,
-&e.pushLiteral,Object.from(4),
-&e.setupSend,Sym.@"-",
-&e.dynamicDispatch,
-":Mgives43:4",
-&e.setupSend,Sym.i_2,
+&e.setupSend,Sym.i_1,
 &e.dynamicDispatch,
  });
 const Sym = struct {
-	unaries: Object,
-	@"plus1:": Object,
+	bar: Object,
     const ss = heap.compileStrings(.{
-	"unaries",
-	"plus1:",
+	"bar",
     });
     usingnamespace symbol.symbols;
     fn init() Sym {
         return .{
-	.unaries = symbol.intern(ss[0].asObject()),
-	.@"plus1:" = symbol.intern(ss[1].asObject()),
+	.bar = symbol.intern(ss[0].asObject()),
         };
     }
 };
@@ -118,7 +110,7 @@ const p = primitives.primitives;
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-Mgives43.setLiterals(&[_]Object{sym.unaries,sym.@"plus1:"},&[_]Object{},null);
+Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
 }
 pub fn main() !void {
     initSmalltalk();
@@ -130,7 +122,7 @@ pub fn main() !void {
 ASCompilerInlineTest >> testFooInlined [
 
 	self
-		assert: ASCompileTestClass1 >> #gives43
+		assert: ASCompileTestClass1 >> #foo
 		outputInlinesTo: 'const std = @import("std");
 const config = @import("zag/config.zig");
 const tailCall = config.tailCall;
@@ -151,39 +143,22 @@ const TFContext = execute.TFContext;
 const tfAsContext = execute.tfAsContext;
 const MethodSignature = execute.MethodSignature;
 const compileMethod = execute.compileMethod;
-var Mgives43 = compileMethod(Mgives43,0,6,.SmallInteger,.{
+var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
 &e.pushContext,"^",
-":Mgives43:1",
-&e.pushLocal,1,
-&e.setupSend,Sym.i_1,
-&e.dynamicDispatch,
-":Mgives43:2",
-&e.pushLiteral,Object.from(2),
-&e.setupSend,Sym.@"*",
-&e.dynamicDispatch,
-":Mgives43:3",
-&e.popLocal,0,
-&e.pushLocal,1,
+":Mfoo:1",
 &e.pushLocal,0,
-&e.pushLiteral,Object.from(4),
-&e.setupSend,Sym.@"-",
-&e.dynamicDispatch,
-":Mgives43:4",
-&e.setupSend,Sym.i_2,
+&e.setupSend,Sym.i_1,
 &e.dynamicDispatch,
  });
 const Sym = struct {
-	unaries: Object,
-	@"plus1:": Object,
+	bar: Object,
     const ss = heap.compileStrings(.{
-	"unaries",
-	"plus1:",
+	"bar",
     });
     usingnamespace symbol.symbols;
     fn init() Sym {
         return .{
-	.unaries = symbol.intern(ss[0].asObject()),
-	.@"plus1:" = symbol.intern(ss[1].asObject()),
+	.bar = symbol.intern(ss[0].asObject()),
         };
     }
 };
@@ -193,7 +168,7 @@ const p = primitives.primitives;
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-Mgives43.setLiterals(&[_]Object{sym.unaries,sym.@"plus1:"},&[_]Object{},null);
+Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
 }
 pub fn main() !void {
     initSmalltalk();

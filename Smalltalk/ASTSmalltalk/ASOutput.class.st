@@ -44,7 +44,6 @@ ASOutput >> blockNumber [
 
 { #category : 'API' }
 ASOutput >> codeGenerator [
-self halt.
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;

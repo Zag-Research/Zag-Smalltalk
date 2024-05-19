@@ -36,6 +36,11 @@ ASCSend >> inspectZagASTOn: aStream [
 		ifNil: [ aStream << ' ( tailcall )' ]
 ]
 
+{ #category : 'accessing' }
+ASCSend >> isSend [
+	^ true
+]
+
 { #category : 'block handling' }
 ASCSend >> manifestParameters: aStack [
 
@@ -73,13 +78,23 @@ ASCSend >> return: aBasicBlock [
 ]
 
 { #category : 'accessing' }
+ASCSend >> selector [
+	^ selector 
+]
+
+{ #category : 'accessing' }
 ASCSend >> selector: aString [ 
 	selector := aString
 ]
 
 { #category : 'accessing' }
-ASCSend >> target: aSymbol [
+ASCSend >> target [
 
+	^ target
+]
+
+{ #category : 'accessing' }
+ASCSend >> target: aSymbol [
 	target := aSymbol
 ]
 
