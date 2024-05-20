@@ -19,6 +19,14 @@ ASTextFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
+{ #category : 'initialization' }
+ASTextFileContext >> initialize [
+
+	super initialize.
+	symbols := ASZagSymbols new.
+
+]
+
 { #category : 'creation' }
 ASTextFileContext >> name: anObject prefix: aString main: aString2 [
 

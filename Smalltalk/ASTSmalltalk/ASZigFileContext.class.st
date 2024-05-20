@@ -15,7 +15,6 @@ Class {
 ASZigFileContext >> initialize [
 
 	super initialize.
-	symbols := ASZagSymbols new.
 	names := Dictionary new
 ]
 
