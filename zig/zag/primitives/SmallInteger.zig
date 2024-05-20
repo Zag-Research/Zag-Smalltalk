@@ -4,14 +4,13 @@ const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
 const execute = @import("../execute.zig");
-const Context = execute.Context;
-const ContextPtr = *Context;
+const TFProcess = execute.TFProcess;
+const TFContext = execute.TFContext;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const doDnu = execute.doDnu;
 const MethodSignature = execute.MethodSignature;
 const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");
@@ -149,96 +148,91 @@ test "inline primitives" {
 }
 pub const embedded = struct {
     const fallback = execute.fallback;
+    const plus =  MethodSignature.from(symbols.@"+",.SmallInteger);
+    const minus =  MethodSignature.from(symbols.@"-",.SmallInteger);
     pub const SmallInteger = struct {
-        pub fn @"+"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
-            trace("\n+: {any}", .{context.stack(sp, process)});
-            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"+" }));
-            trace(" -> {any}", .{context.stack(newSp, process)});
+        pub fn @"+"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context,plus }));
             return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
         }
-        pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+        pub fn @"+_L1"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
             sp.top = inlines.p1L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"+", undefined });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, plus });
             };
             return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"-"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
-            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"-" });
+        pub fn @"-"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, minus });
             return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, undefined });
         }
-        pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+        pub fn @"-_L1"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
             trace("\n-_L1: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"-" });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, minus });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"-_L2"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+        pub fn @"-_L2"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
             trace("\n-_L2: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 2) catch {
                 const newSp = sp.push(Object.from(2));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, symbols.@"-" });
+                return @call(tailCall, fallback, .{ pc, newSp, process, context, minus });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
         }
-        pub fn @"<="(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+        pub fn @"<="(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
             const newSp = sp.dropPut(Object.from(inlines.p5(sp[1], sp[0]) catch {
                 return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"<=", undefined });
             }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
         }
-        pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+        pub fn @"<=_N"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
             sp.next =
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, undefined });
         }
-        pub fn @"*"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
-            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"*" }));
+        pub fn @"*"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, MethodSignature.from(symbols.@"*",.SmallInteger) }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
         }
     };
 };
 pub const primitives = struct {
-    pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP { // SmallInteger>>#+
+    pub fn p1(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#+
         trace("\n+: {any}", .{context.stack(sp, process)});
-        if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
-            return @call(tailCall, doDnu, .{ pc, sp, process, context, selector });
-        }
+        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector }));
+                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
-    pub fn p2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP { // SmallInteger>>#-
+    pub fn p2(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#-
         trace("\n-: {any}", .{context.stack(sp, process)});
-        if (!Sym.@"-".withClass(.SmallInteger).selectorEquals(selector)) {
-            return @call(tailCall, doDnu, .{ pc, sp, process, context, selector });
-        }
+        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np2: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector }));
+                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
-    pub fn p7(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP { // at:
-        _ = .{ pc, sp, process, context, selector, @panic("p7 unimplemented") };
+    pub fn p7(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // at:
+        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+        @panic("p7 unimplemented");
     }
-    pub fn p5(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP { // SmallInteger>>#<=
-        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), selector.u() });
-        if (!Sym.@"<=".withClass(.SmallInteger).selectorEquals(selector)) {
-            return @call(tailCall, doDnu, .{ pc, sp, process, context, selector });
-        }
+    pub fn p5(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#<=
+        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), signature.u() });
+        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np5: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-                                                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector })));
+                                                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
-    pub fn p9(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP { // SmallInteger>>#*
-        if (!Sym.@"*".withClass(.SmallInteger).selectorEquals(selector)) return @call(tailCall, doDnu, .{ pc, sp, process, context, selector });
+    pub fn p9(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#*
+        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, selector }));
+            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
 };
@@ -258,7 +252,7 @@ fn testExecute(ptr: anytype) []Object {
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
     std.debug.print("\nbefore prog",.{});
-    var prog = compileMethod(Sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .none, .{
         &e.pushContext, "^",
         &e.pushLiteral, Object.from(3),
         &e.pushLiteral, Object.from(40),
@@ -267,7 +261,7 @@ test "simple add" {
         &e.call,        "0Obj",
         &e.returnTop,
     });
-    var method2 = compileMethod(Sym.@"+", 0, 0, .{
+    var method2 = compileMethod(Sym.@"+", 0, 0, .SmallInteger, .{
         &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
@@ -279,7 +273,7 @@ test "simple add" {
 }
 test "embedded add" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Sym.value, 0, 0, .{
+    var prog = compileMethod(Sym.value, 0, 0, .none, .{
         &e.pushContext,       "^",
         &e.pushLiteral,       Object.from(3),
         &e.pushLiteral,       Object.from(40),
@@ -292,14 +286,14 @@ test "embedded add" {
 }
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
-    var prog = compileMethod(Sym.value, 0, 2, .{
+    var prog = compileMethod(Sym.value, 0, 2, .none, .{
         &e.pushContext, "^",
         &e.pushLiteral, Object.from(4),
         &e.pushLiteral, Object.from(0x3_ffff_ffff_ffff),
         &e.printStack,  &e.SmallInteger.@"+",
         &e.returnTop,
     });
-    var prog2 = compileMethod(Sym.@"+", 0, 0, .{
+    var prog2 = compileMethod(Sym.@"+", 0, 0, .none, .{
         &e.printStack,
         &e.pushLiteral,
         Sym.noFallback,
