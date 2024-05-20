@@ -105,7 +105,7 @@ pub const Process = extern struct {
     pub inline fn debugger(self: *Self) ?ThreadedFn {
         return self.ptr().debugFn;
     }
-    inline fn ptr(self: *const Self) *Self {
+    pub inline fn ptr(self: *const Self) *Self {
         return @as(*Self, @ptrFromInt(@intFromPtr(self.noCheck())));
     }
     pub fn deinit(self: *Self) void {

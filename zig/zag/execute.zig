@@ -131,6 +131,9 @@ const fallbackPc = PC.init(&fallbackCode);
 pub const MethodSignature = extern struct {
     selectorHash: u32,
     class: ClassIndex,
+    pub fn from(selector: Object,class: ClassIndex) MethodSignature {
+        return .{.selectorHash = selector.hash32(), .class=class};
+    }
     fn equals(self: MethodSignature, other: MethodSignature) bool {
         return @as(u64,@bitCast(self))==@as(u64,@bitCast(other));
     }
