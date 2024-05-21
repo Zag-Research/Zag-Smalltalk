@@ -45,8 +45,8 @@ ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> children [ 
-^operations 
+ASCBasicBlock >> children [
+	^ operations
 ]
 
 { #category : 'abstract interpretation' }

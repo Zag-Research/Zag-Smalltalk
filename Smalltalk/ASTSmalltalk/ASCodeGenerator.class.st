@@ -438,9 +438,9 @@ ASCodeGenerator >> tryInlining [
 
 { #category : 'post processing' }
 ASCodeGenerator >> zagBlocks [
+
 	| zagBlocks |
-	zagBlocks := OrderedCollection new.
-	
-	^ basicBlocks 
-	
+	zagBlocks := OrderedCollection newFrom: basicBlocks.
+	zagBlocks addAll: (blockClosures collect: [ :bc | InspectBlock from: bc ]).
+	^ zagBlocks
 ]

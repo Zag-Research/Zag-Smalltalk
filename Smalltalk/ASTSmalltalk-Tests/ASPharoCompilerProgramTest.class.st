@@ -27,7 +27,7 @@ ASPharoCompilerProgramTest class >> testFibWithInlining [
 
 	<script>
 	| ast file |
-	ast := ASPharoCompiler new astFor: SmallInteger >> #fibonacci.
+	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
 	file := ASZigFileContext new.
 
 	ASZigThreadedOutput withInlining
@@ -35,7 +35,7 @@ ASPharoCompilerProgramTest class >> testFibWithInlining [
 		generateCode: ast for: SmallInteger.
 
 	FileSystem disk workingDirectory / 'zigFibWithInlining.zig'
-		writeStreamDo: [ :stream | file outputTo: stream ] 
+		writeStreamDo: [ :stream | file outputTo: stream ]
 ]
 
 { #category : 'tests' }

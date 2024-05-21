@@ -29,12 +29,6 @@ SmallInteger >> fib [
 ]
 
 { #category : '*ASTSmalltalk' }
-SmallInteger >> fibonacci [ 
-	self <= 2 ifTrue: [^ 1].
-	^ (self - 1) fib + (self - 2) fib
-]
-
-{ #category : '*ASTSmalltalk' }
 SmallInteger >> isNonLocalThunkable [
 
 	^ self between: -1 and: 2
