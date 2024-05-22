@@ -147,6 +147,7 @@ var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
 &e.pushContext,"^",
 ":Mfoo:1",
 &e.pushLocal,0,
+&e.case,,
 &e.setupSend,Sym.i_1,
 &e.dynamicDispatch,
  });

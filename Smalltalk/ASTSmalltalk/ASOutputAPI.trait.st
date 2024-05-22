@@ -55,6 +55,13 @@ ASOutputAPI >> pushLocal: localNumber [
 ]
 
 { #category : 'API' }
+ASOutputAPI >> visitCase: aClassToBlockMap [
+
+
+	^ self explicitRequirement
+]
+
+{ #category : 'API' }
 ASOutputAPI >> visitPopLocal: anASLocal [
 
 

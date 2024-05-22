@@ -178,13 +178,13 @@ ASCodeGenerator >> inline: anASCSend [
 	
 		self halt. "inline a self method"
 		cg := ASCodeGenerator newFrom: self.
-		cg
+		"cg
 			send: anASCSend selector
 			targetClass: anASCSend target
-			tail: false.
+			tail: false."
 		cg firstBlock.
 		
-	^true
+	^false
 ]
 
 { #category : 'initialization' }
