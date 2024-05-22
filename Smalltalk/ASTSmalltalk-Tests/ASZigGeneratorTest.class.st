@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASZigGeneratorTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASZigTests',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'

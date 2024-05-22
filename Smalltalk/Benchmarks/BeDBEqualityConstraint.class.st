@@ -2,12 +2,14 @@
 I constrain two variables to have the same value: ""v1 = v2"".
 "
 Class {
-	#name : #BeDBEqualityConstraint,
-	#superclass : #BeDBBinaryConstraint,
-	#category : #'Benchmarks-Constraints'
+	#name : 'BeDBEqualityConstraint',
+	#superclass : 'BeDBBinaryConstraint',
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBEqualityConstraint class >> var: variable1 var: variable2 strength: strengthSymbol [
 	"Install a constraint with the given strength equating the given
 	 variables."
@@ -15,7 +17,7 @@ BeDBEqualityConstraint class >> var: variable1 var: variable2 strength: strength
 	^(self new) var: variable1 var: variable2 strength: strengthSymbol
 ]
 
-{ #category : #execution }
+{ #category : 'execution' }
 BeDBEqualityConstraint >> execute [
 	"Enforce this constraint. Assume that it is satisfied."
 

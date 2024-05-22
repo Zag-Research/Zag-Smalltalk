@@ -8,18 +8,20 @@ Washington TR 89-08-06).
 To run the benchmark, execute the expression `BeDBPlanner standardBenchmark'.
 "
 Class {
-	#name : #BeDBPlanner,
-	#superclass : #Object,
+	#name : 'BeDBPlanner',
+	#superclass : 'Benchmark',
 	#instVars : [
 		'currentMark'
 	],
 	#classInstVars : [
 		'currentPlanner'
 	],
-	#category : #'Benchmarks-DeltaBlue'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 BeDBPlanner class >> chainTest: n [
 	"Do chain-of-equality-constraints performance tests."
 
@@ -44,17 +46,18 @@ BeDBPlanner class >> chainTest: n [
 	editConstraint destroyConstraint
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeDBPlanner class >> current [
 	^currentPlanner
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBPlanner class >> new [
-	^currentPlanner := super new initialize
+
+	^ currentPlanner := super new
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 BeDBPlanner class >> projectionTest: n [
 	"This test constructs a two sets of variables related to each other by
 	 a simple linear transformation (scale and offset)."
@@ -89,7 +92,7 @@ BeDBPlanner class >> projectionTest: n [
 			ifTrue: [self error: 'Projection test 4 failed!']].
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 BeDBPlanner class >> report: string times: count run: aBlock [
 	"Report the time required to execute the given block."
 
@@ -98,7 +101,7 @@ BeDBPlanner class >> report: string times: count run: aBlock [
 	Transcript show: string, ' ', (time // count) printString, ' microseconds'; cr.
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 BeDBPlanner class >> standardBenchmark [
 	"This the combined benchmark."
 	"BeDBPlanner standardBenchmark"
@@ -109,12 +112,12 @@ BeDBPlanner class >> standardBenchmark [
 	]
 ]
 
-{ #category : #benchmarks }
+{ #category : 'benchmarks' }
 BeDBPlanner class >> start [
 	^ self standardBenchmark
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> addConstraintsConsuming: v to: aCollection [
 
 	| determiningC |
@@ -125,7 +128,7 @@ BeDBPlanner >> addConstraintsConsuming: v to: aCollection [
 			[aCollection add: c]].
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> addPropagate: c mark: mark [
 	"Recompute the walkabout strengths and stay flags of all variables
 	 downstream of the given constraint and recompute the actual values
@@ -151,7 +154,7 @@ BeDBPlanner >> addPropagate: c mark: mark [
 	^true
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> changeVar: aVariable newValue: newValue [
 
 	| editConstraint plan |
@@ -163,7 +166,7 @@ BeDBPlanner >> changeVar: aVariable newValue: newValue [
 	editConstraint destroyConstraint.
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> constraintsConsuming: v do: aBlock [
 
 	| determiningC |
@@ -174,7 +177,7 @@ BeDBPlanner >> constraintsConsuming: v do: aBlock [
 			[aBlock value: c]].
 ]
 
-{ #category : #'planning/value propagation' }
+{ #category : 'planning/value propagation' }
 BeDBPlanner >> extractPlanFromConstraints: constraints [
 	"Extract a plan for resatisfaction starting from the outputs of the
 	 given constraints, usually a set of input constraints."
@@ -186,7 +189,7 @@ BeDBPlanner >> extractPlanFromConstraints: constraints [
 	^self makePlan: sources
 ]
 
-{ #category : #'planning/value propagation' }
+{ #category : 'planning/value propagation' }
 BeDBPlanner >> extractPlanFromVariables: variables [
 	"Extract a plan from the dataflow graph having the given variables. It
 	 is assumed that the given set of variables is complete, or at least
@@ -201,7 +204,7 @@ BeDBPlanner >> extractPlanFromVariables: variables [
 	^self makePlan: sources
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBPlanner >> incrementalAdd: c [
 	"Attempt to satisfy the given constraint and, if successful,
 	 incrementally update the dataflow graph.
@@ -224,7 +227,7 @@ BeDBPlanner >> incrementalAdd: c [
 		[overridden := overridden satisfy: mark].
 ]
 
-{ #category : #'add/remove' }
+{ #category : 'add/remove' }
 BeDBPlanner >> incrementalRemove: c [
 	"Entry point for retracting a constraint. Remove the given constraint,
 	 which should be satisfied, and incrementally update the dataflow
@@ -245,14 +248,14 @@ BeDBPlanner >> incrementalRemove: c [
 	unsatisfied do: [: u | self incrementalAdd: u].
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeDBPlanner >> initialize [
 	"BeDBPlanner initialize"
 
 	currentMark := 1.
 ]
 
-{ #category : #'planning/value propagation' }
+{ #category : 'planning/value propagation' }
 BeDBPlanner >> makePlan: sources [
 	"Extract a plan for resatisfaction starting from the given satisfied
 	 source constraints, usually a set of input constraints. This method
@@ -285,7 +288,7 @@ BeDBPlanner >> makePlan: sources [
 	^plan
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> newMark [
 	"Select a previously unused mark value.
 
@@ -298,7 +301,7 @@ BeDBPlanner >> newMark [
 	^currentMark := currentMark + 1
 ]
 
-{ #category : #'planning/value propagation' }
+{ #category : 'planning/value propagation' }
 BeDBPlanner >> propagateFrom: v [
 	"The given variable has changed. Propagate new values downstream."
 
@@ -311,7 +314,7 @@ BeDBPlanner >> propagateFrom: v [
 		 self addConstraintsConsuming: c output to: todo].
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBPlanner >> removePropagateFrom: out [
 	"Update the walkabout strengths and stay flags of all variables
 	 downstream of the given constraint. Answer a collection of unsatisfied

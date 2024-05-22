@@ -1,10 +1,6 @@
-"
-I output BlockClosures
-"
 Class {
-	#name : 'ASLLVMBlockOutput',
-	#superclass : 'ASLLVMOutput',
-	#classTraits : '{} + TraitedClass',
+	#name : 'ASLLBlockOutput',
+	#superclass : 'ASLLMethodOutput',
 	#instVars : [
 		'methodGenerator',
 		'block'
@@ -15,36 +11,36 @@ Class {
 }
 
 { #category : 'accessing' }
-ASLLVMBlockOutput >> block [
+ASLLBlockOutput >> block [
 	^ methodGenerator 	block
 ]
 
 { #category : 'code generation' }
-ASLLVMBlockOutput >> codeGeneratorClass [
+ASLLBlockOutput >> codeGeneratorClass [
 
 	^ ASCodeGeneratorBlock
 ]
 
 { #category : 'compiling' }
-ASLLVMBlockOutput >> methodGenerator [
+ASLLBlockOutput >> methodGenerator [
 
 	^ methodGenerator
 ]
 
 { #category : 'accessing' }
-ASLLVMBlockOutput >> methodGenerator: anOutput block: anInteger [
+ASLLBlockOutput >> methodGenerator: anOutput block: anInteger [
 
 	methodGenerator := anOutput.
 	block := anInteger
 ]
 
 { #category : 'accessing' }
-ASLLVMBlockOutput >> prefix [
+ASLLBlockOutput >> prefix [
 
 	^ 'B'
 ]
 
 { #category : 'visiting' }
-ASLLVMBlockOutput >> visitReturnSelf [
+ASLLBlockOutput >> visitReturnSelf [
 	self nextPutAll: 'RETURNSELF';endStatement 
 ]

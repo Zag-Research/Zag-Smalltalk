@@ -1,6 +1,6 @@
 Class {
-	#name : #BeRiObject,
-	#superclass : #Object,
+	#name : 'BeRiObject',
+	#superclass : 'Object',
 	#classVars : [
 		'DeviceA',
 		'DeviceB',
@@ -11,10 +11,12 @@ Class {
 		'WorkPacketKind',
 		'Worker'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiObject class >> initialize [
     "BeRiObject initialize"
     DeviceA := 5.
@@ -27,7 +29,7 @@ BeRiObject class >> initialize [
     WorkPacketKind := 2
 ]
 
-{ #category : #utilities }
+{ #category : 'utilities' }
 BeRiObject >> append: packet head: queueHead [
     | mouse link |
     packet link: nil.

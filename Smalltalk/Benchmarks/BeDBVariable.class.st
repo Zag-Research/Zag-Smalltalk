@@ -13,8 +13,8 @@ Instance variables:
 	mark			used by the planner to mark constraints <Number>
 "
 Class {
-	#name : #BeDBVariable,
-	#superclass : #Object,
+	#name : 'BeDBVariable',
+	#superclass : 'Object',
 	#instVars : [
 		'value',
 		'constraints',
@@ -23,22 +23,24 @@ Class {
 		'stay',
 		'mark'
 	],
-	#category : #'Benchmarks-DeltaBlue'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBVariable class >> new [
 
 	^super new initialize
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBVariable class >> value: aValue [
 
 	^(super new) initialize; value: aValue
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> addConstraint: aConstraint [
 	"Add the given constraint to the set of all constraints that refer
 	 to me."
@@ -46,14 +48,14 @@ BeDBVariable >> addConstraint: aConstraint [
 	constraints add: aConstraint.
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> constraints [
 	"Answer the set of constraints that refer to me."
 
 	^constraints
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> determinedBy [
 	"Answer the constraint that determines my value in the current
 	 dataflow."
@@ -61,7 +63,7 @@ BeDBVariable >> determinedBy [
 	^determinedBy
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> determinedBy: aConstraint [
 	"Record that the given constraint determines my value in the current
 	 data flow."
@@ -69,7 +71,7 @@ BeDBVariable >> determinedBy: aConstraint [
 	determinedBy := aConstraint.
 ]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 BeDBVariable >> initialize [
 
 	value := 0.
@@ -80,7 +82,7 @@ BeDBVariable >> initialize [
 	mark := 0.
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 BeDBVariable >> longPrintOn: aStream [
 
 	self shortPrintOn: aStream.
@@ -96,27 +98,27 @@ BeDBVariable >> longPrintOn: aStream [
 	aStream cr.
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> mark [
 	"Answer my mark value."
 
 	^mark
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> mark: markValue [
 	"Set my mark value."
 
 	mark := markValue.
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 BeDBVariable >> printOn: aStream [
 
 	self shortPrintOn: aStream
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> removeConstraint: c [
 	"Remove all traces of c from this variable."
 
@@ -124,7 +126,7 @@ BeDBVariable >> removeConstraint: c [
 	(determinedBy == c) ifTrue: [determinedBy := nil].
 ]
 
-{ #category : #changes }
+{ #category : 'changes' }
 BeDBVariable >> setValue: aValue [
 	"Attempt to assign the given value to me using a strength of
 	 #preferred."
@@ -132,7 +134,7 @@ BeDBVariable >> setValue: aValue [
 	self setValue: aValue strength: #preferred.
 ]
 
-{ #category : #changes }
+{ #category : 'changes' }
 BeDBVariable >> setValue: aValue strength: strengthSymbol [
 	"Attempt to assign the given value to me using the given strength."
 
@@ -144,7 +146,7 @@ BeDBVariable >> setValue: aValue strength: strengthSymbol [
 	editConstraint destroyConstraint.
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 BeDBVariable >> shortPrintOn: aStream [
 
 	aStream nextPutAll: 'V(', self asOop printString, ', '.
@@ -156,42 +158,42 @@ BeDBVariable >> shortPrintOn: aStream [
 	aStream cr.
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> stay [
 	"Answer my stay flag."
 
 	^stay
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> stay: aBoolean [
 	"Set my stay flag."
 
 	stay := aBoolean
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> value [
 	"Answer my value."
 
 	^value
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> value: anObject [
 	"Set my value."
 
 	value := anObject.
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> walkStrength [
 	"Answer my walkabout strength in the current dataflow."
 
 	^walkStrength
 ]
 
-{ #category : #access }
+{ #category : 'access' }
 BeDBVariable >> walkStrength: aStrength [
 	"Set my walkabout strength in the current dataflow."
 

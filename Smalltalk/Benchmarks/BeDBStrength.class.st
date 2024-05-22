@@ -12,8 +12,8 @@ Instance variables:
 
 "
 Class {
-	#name : #BeDBStrength,
-	#superclass : #Object,
+	#name : 'BeDBStrength',
+	#superclass : 'Object',
 	#instVars : [
 		'symbolicValue',
 		'arithmeticValue'
@@ -25,22 +25,24 @@ Class {
 		'StrengthConstants',
 		'StrengthTable'
 	],
-	#category : #'Benchmarks-DeltaBlue'
+	#category : 'Benchmarks-DeltaBlue',
+	#package : 'Benchmarks',
+	#tag : 'DeltaBlue'
 }
 
-{ #category : #constants }
+{ #category : 'constants' }
 BeDBStrength class >> absoluteStrongest [
 
 	^AbsoluteStrongest
 ]
 
-{ #category : #constants }
+{ #category : 'constants' }
 BeDBStrength class >> absoluteWeakest [
 
 	^AbsoluteWeakest
 ]
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 BeDBStrength class >> initialize [
 	"Initialize the symbolic strength table. Fix the internally caches
 	 values of all existing instances."
@@ -68,20 +70,20 @@ BeDBStrength class >> initialize [
 	Required := BeDBStrength of: #required.
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeDBStrength class >> of: aSymbol [
 	"Answer an instance with the specified strength."
 
 	^StrengthConstants at: aSymbol
 ]
 
-{ #category : #constants }
+{ #category : 'constants' }
 BeDBStrength class >> required [
 
 	^Required
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBStrength >> arithmeticValue [
 	"Answer my arithmetic value. Used for comparisons. Note that
 	 STRONGER constraints have SMALLER arithmetic values."
@@ -89,7 +91,7 @@ BeDBStrength >> arithmeticValue [
 	^arithmeticValue
 ]
 
-{ #category : #private }
+{ #category : 'private' }
 BeDBStrength >> initializeWith: symVal [
 	"Record my symbolic value and reset my arithmetic value."
 
@@ -97,28 +99,28 @@ BeDBStrength >> initializeWith: symVal [
 	arithmeticValue := StrengthTable at: symbolicValue.
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 BeDBStrength >> printOn: aStream [
 	"Append a string which represents my strength onto aStream."
 
 	aStream nextPutAll: '%', symbolicValue, '%'.
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 BeDBStrength >> sameAs: aStrength [
 	"Answer true if I am the same strength as the given BeDBStrength."
 
 	^arithmeticValue = aStrength arithmeticValue
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 BeDBStrength >> stronger: aStrength [
 	"Answer true if I am stronger than the given BeDBStrength."
 
 	^arithmeticValue < aStrength arithmeticValue
 ]
 
-{ #category : #'max/min' }
+{ #category : 'max/min' }
 BeDBStrength >> strongest: aStrength [
 	"Answer the stronger of myself and aStrength."
 
@@ -127,14 +129,14 @@ BeDBStrength >> strongest: aStrength [
 		ifFalse: [^self].
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 BeDBStrength >> weaker: aStrength [
 	"Answer true if I am weaker than the given BeDBStrength."
 
 	^arithmeticValue > aStrength arithmeticValue
 ]
 
-{ #category : #'max/min' }
+{ #category : 'max/min' }
 BeDBStrength >> weakest: aStrength [
 	"Answer the weaker of myself and aStrength."
 

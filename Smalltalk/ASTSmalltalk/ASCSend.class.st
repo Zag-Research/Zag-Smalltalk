@@ -32,7 +32,7 @@ ASCSend >> inspectZagASTOn: aStream [
 		ifNotNil: [
 			aStream
 				<< ' -> ';
-				print: bb label ]
+				<< bb label ]
 		ifNil: [ aStream << ' ( tailcall )' ]
 ]
 

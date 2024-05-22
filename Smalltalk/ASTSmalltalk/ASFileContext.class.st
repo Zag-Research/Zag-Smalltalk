@@ -41,7 +41,6 @@ ASFileContext >> for: anASNode generatorIs: anASGenerator [
 ASFileContext >> initialize [
 
 	super initialize.
-	symbols := ASZigSymbols new.
 	components := OrderedCollection new.
 	objects := Dictionary new.
 	pendingComponents := OrderedCollection new

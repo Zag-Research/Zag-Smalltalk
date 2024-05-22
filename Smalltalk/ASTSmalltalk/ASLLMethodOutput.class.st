@@ -1,6 +1,6 @@
 Class {
-	#name : 'ASLLVMOutput',
-	#superclass : 'ASZigMethodOutput',
+	#name : 'ASLLMethodOutput',
+	#superclass : 'ASLLOutput',
 	#instVars : [
 		'sequence'
 	],
@@ -9,20 +9,25 @@ Class {
 	#tag : 'Output'
 }
 
+{ #category : 'compiling' }
+ASLLMethodOutput class >> blockClass [
+	^ ASLLBlockOutput
+]
+
 { #category : 'API' }
-ASLLVMOutput >> endMethod [
+ASLLMethodOutput >> endMethod [
 	self label: nil
 ]
 
 { #category : 'as yet unclassified' }
-ASLLVMOutput >> iniitialize [
+ASLLMethodOutput >> iniitialize [
 
 	super initialize.
 	sequence := 0
 ]
 
 { #category : 'as yet unclassified' }
-ASLLVMOutput >> mapLLVMTypeFor: type [
+ASLLMethodOutput >> mapLLVMTypeFor: type [
 	"Maps Pharo datatypes to LLVMs - need to change to dispatch soon" 
    | llvmType |
     
@@ -36,20 +41,25 @@ ASLLVMOutput >> mapLLVMTypeFor: type [
     ^ llvmType
 ]
 
+{ #category : 'compiling' }
+ASLLMethodOutput >> methodGenerator [
+	^ self
+]
+
 { #category : 'as yet unclassified' }
-ASLLVMOutput >> nextVariable [
+ASLLMethodOutput >> nextVariable [
 
 	sequence := sequence + 1.
 	^ '%v' , sequence asString
 ]
 
 { #category : 'code generation' }
-ASLLVMOutput >> outputBasicBlockEnd [
+ASLLMethodOutput >> outputBasicBlockEnd [
 
 ]
 
 { #category : 'code generation' }
-ASLLVMOutput >> outputMethodLabel: bbLabel [
+ASLLMethodOutput >> outputMethodLabel: bbLabel [
 
 	self
 		nextPutAll: ') { ';
@@ -58,7 +68,7 @@ ASLLVMOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASLLVMOutput >> outputMethodStart: bbLabel [ 
+ASLLMethodOutput >> outputMethodStart: bbLabel [ 
 
 	| type llvmType |	
 	"Geting the type of the top element in the stack"
@@ -71,17 +81,7 @@ ASLLVMOutput >> outputMethodStart: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASLLVMOutput >> outputToStream [
-	"Method yet to be implemented"
-	codeGenerator finalAnalysis.
-	"Something--"
-	codeGenerator basicBlocksUnorderedDo: [ :bb |
-		currentBasicBlock := bb.
-		currentBasicBlock outputTo: self. ]
-]
-
-{ #category : 'code generation' }
-ASLLVMOutput >> verifySelector: anObject [
+ASLLMethodOutput >> verifySelector: anObject [
 
 	self 
 		nextPutAll: ' @';
@@ -91,7 +91,7 @@ ASLLVMOutput >> verifySelector: anObject [
 ]
 
 { #category : 'API' }
-ASLLVMOutput >> visitPushContext: unused [
+ASLLMethodOutput >> visitPushContext: unused [
 
 	self
 		nextPutAll: '(';
@@ -99,7 +99,7 @@ ASLLVMOutput >> visitPushContext: unused [
 ]
 
 { #category : 'API' }
-ASLLVMOutput >> visitPushLiteral: aLiteral [
+ASLLMethodOutput >> visitPushLiteral: aLiteral [
 
 	self 
 		nextPutAll: (self mapLLVMTypeFor: aLiteral) asString;  
@@ -108,8 +108,18 @@ ASLLVMOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASLLVMOutput >> visitReturnTop [
+ASLLMethodOutput >> visitReturnTop [
 
 	self 
 		nextPutAll: 'ret '.
+]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeDefinitionOn: aWriteStream [ 
+
+]
+
+{ #category : 'writing' }
+ASLLMethodOutput >> writeInitializationOn: aWriteStream [ 
+
 ]

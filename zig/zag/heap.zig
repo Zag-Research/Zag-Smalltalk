@@ -444,7 +444,7 @@ pub const AllocationInfo = struct {
         };
     }
     pub inline fn initObjectStructure(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age) void {
-        const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 3)) *% object.u32_phi_inverse >> 8));
+        const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 3)) *% inversePhi24 >> 8));
         theHeapObject.setHeader(self.heapHeader(classIndex, age, hash));
         if (self.footerSetup) | setup |
             setup(self,theHeapObject);
@@ -951,12 +951,12 @@ pub fn growSize(obj: anytype, comptime Target: type) !usize {
 test "growSize" {
     try std.testing.expectEqual(growSize(@as([]const u8,"foo"[0..]),u8),16);
 }
+const inversePhi24: u32 = inversePhi(u24);
 fn hash24(str: []const u8) u24 {
-    const phi: u32 = inversePhi(u24);
-    var hash = phi *% @as(u32, @truncate(str.len +% 1));
+    var hash = inversePhi24 *% @as(u32, @truncate(str.len +% 1));
     for (str, 0..) |c, idx| {
         if (idx > 9) break;
-        hash +%= phi *% c;
+        hash +%= inversePhi24 *% c;
     }
     return @truncate(hash);
 }

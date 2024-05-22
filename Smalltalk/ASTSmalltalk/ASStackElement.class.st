@@ -12,7 +12,11 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'top',
-		'rest'
+		'rest',
+		'llvmName'
+	],
+	#classVars : [
+		'LLVMNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -22,6 +26,11 @@ Class {
 { #category : 'instance creation' }
 ASStackElement class >> from: anASStack [
 	^ self basicNew from: anASStack 
+]
+
+{ #category : 'initialization' }
+ASStackElement class >> reset [
+	LLVMNumber := 0
 ]
 
 { #category : 'API' }
@@ -66,6 +75,27 @@ ASStackElement >> from: anASStack [
 ASStackElement >> isEmpty [
 
 	^ false
+]
+
+{ #category : 'accessing' }
+ASStackElement >> llvmName [
+
+	^ llvmName ifNil: [
+		  llvmName := (LLVMNumber := LLVMNumber + 1) asString ]
+]
+
+{ #category : 'accessing' }
+ASStackElement >> llvmNameReset [
+
+	llvmName := nil
+]
+
+{ #category : 'accessing' }
+ASStackElement >> llvmNewName [
+
+	^ self
+		  nameReset;
+		  name
 ]
 
 { #category : 'API' }

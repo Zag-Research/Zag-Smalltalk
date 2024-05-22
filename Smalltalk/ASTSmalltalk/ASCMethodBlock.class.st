@@ -15,15 +15,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'printing' }
-ASCMethodBlock >> inspectZagASTOn: aStream [
-
-	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream print: selector.
-	aStream << $)
-]
-
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
 
@@ -40,10 +31,8 @@ ASCMethodBlock >> makeBlockClosure [
 
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
-
 	output outputMethodStart: label.
 	primitive
-		ifNil: [ output verifySelector: selector ]
 		ifNotNil: [ output primitive: primitive ].
 	stack requiredContextDo: [ output visitPushContext ].
 	output outputMethodLabel: label.
@@ -64,6 +53,7 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> selector: aString [ 
-	selector := aString
+ASCMethodBlock >> selector: aString [
+
+	selector := label := aString
 ]

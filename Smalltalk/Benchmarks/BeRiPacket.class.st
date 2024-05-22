@@ -1,6 +1,6 @@
 Class {
-	#name : #BeRiPacket,
-	#superclass : #BeRiObject,
+	#name : 'BeRiPacket',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'link',
 		'identity',
@@ -8,10 +8,12 @@ Class {
 		'datum',
 		'data'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiPacket class >> create: link identity: identity kind: kind [ 
     ^super new
 	link: link
@@ -19,47 +21,47 @@ BeRiPacket class >> create: link identity: identity kind: kind [
 	kind: kind
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> data [
     ^data
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> datum [
     ^datum
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> datum:    someData [
     datum := someData
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> identity [
     ^identity
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> identity: anIdentity [
     identity := anIdentity
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> kind [
     ^kind
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> link [
     ^link
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiPacket >> link: aWorkQueue [ 
     link := aWorkQueue
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiPacket >> link: aLink identity: anIdentity kind: aKind [ 
     link := aLink.
     identity := anIdentity. 

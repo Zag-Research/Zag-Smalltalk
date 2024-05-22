@@ -103,5 +103,5 @@ ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
 ManifestASTSmalltalkTests class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') #(#(#RGMethodDefinition #(#ASLLVMOutputTest #testLLVM_inlined_fibonacci #false)) #'2024-05-15T08:04:38.018942-04:00') )
 ]

@@ -1,6 +1,6 @@
 Class {
-	#name : #BeRiTaskControlBlock,
-	#superclass : #BeRiTaskState,
+	#name : 'BeRiTaskControlBlock',
+	#superclass : 'BeRiTaskState',
 	#instVars : [
 		'link',
 		'identity',
@@ -10,10 +10,12 @@ Class {
 		'function',
 		'handle'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiTaskControlBlock class >> link: link create: identity priority: priority initialWorkQueue: initialWorkQueue initialState: initialState function: aBlock privateData: privateData [ 
     ^super new
 	link: link
@@ -25,7 +27,7 @@ BeRiTaskControlBlock class >> link: link create: identity priority: priority ini
 	privateData: privateData
 ]
 
-{ #category : #scheduling }
+{ #category : 'scheduling' }
 BeRiTaskControlBlock >> addInput: packet checkPriority: oldTask [
     input isNil
 	ifTrue: 
@@ -37,17 +39,17 @@ BeRiTaskControlBlock >> addInput: packet checkPriority: oldTask [
     ^oldTask
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiTaskControlBlock >> identity [
     ^identity
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiTaskControlBlock >> link [
     ^link
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiTaskControlBlock >> link: aLink identity: anIdentity priority: aPriority initialWorkQueue: anInitialWorkQueue initialState: anInitialState function: aBlock privateData: aPrivateData [ 
     link := aLink.
     identity := anIdentity.
@@ -60,12 +62,12 @@ BeRiTaskControlBlock >> link: aLink identity: anIdentity priority: aPriority ini
     handle := aPrivateData
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiTaskControlBlock >> priority [
     ^priority
 ]
 
-{ #category : #scheduling }
+{ #category : 'scheduling' }
 BeRiTaskControlBlock >> runTask [
     | message |
     self isWaitingWithPacket

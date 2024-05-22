@@ -1,49 +1,51 @@
 Class {
-	#name : #BeRiHandlerTaskDataRecord,
-	#superclass : #BeRiObject,
+	#name : 'BeRiHandlerTaskDataRecord',
+	#superclass : 'BeRiObject',
 	#instVars : [
 		'workIn',
 		'deviceIn'
 	],
-	#category : #'Benchmarks-Richards'
+	#category : 'Benchmarks-Richards',
+	#package : 'Benchmarks',
+	#tag : 'Richards'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 BeRiHandlerTaskDataRecord class >> create [
     ^super new create
 ]
 
-{ #category : #initialize }
+{ #category : 'initialize' }
 BeRiHandlerTaskDataRecord >> create [
     workIn := deviceIn := nil
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> deviceIn [
     ^deviceIn
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> deviceIn: aPacket [
     deviceIn := aPacket
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> deviceInAdd: packet [
     deviceIn := self append: packet head: deviceIn
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> workIn [
     ^workIn
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> workIn: aWorkQueue [ 
     workIn := aWorkQueue
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 BeRiHandlerTaskDataRecord >> workInAdd: packet [
     workIn := self append: packet head: workIn
 ]
