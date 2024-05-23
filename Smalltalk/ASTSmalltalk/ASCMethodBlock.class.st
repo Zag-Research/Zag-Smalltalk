@@ -5,7 +5,7 @@ All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
 "
 Class {
 	#name : 'ASCMethodBlock',
-	#superclass : 'ASCBasicBlock',
+	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
 		'selector'
@@ -27,6 +27,12 @@ ASCMethodBlock >> locals: locals arguments: arguments [
 { #category : 'accessing' }
 ASCMethodBlock >> makeBlockClosure [
 	stack := ASStackBlockClosure from: stack
+]
+
+{ #category : 'as yet unclassified' }
+ASCMethodBlock >> namedMethod [
+
+	^ self
 ]
 
 { #category : 'writing' }
@@ -53,7 +59,14 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 ]
 
 { #category : 'accessing' }
+ASCMethodBlock >> selector [
+	^ selector
+]
+
+{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
-	selector := label := aString
+	selector := aString.
+	label := aString.
+	sequence := 0
 ]

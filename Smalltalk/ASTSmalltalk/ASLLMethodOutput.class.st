@@ -80,6 +80,12 @@ ASLLMethodOutput >> outputMethodStart: bbLabel [
 		nextPutAll: llvmType asString.
 ]
 
+{ #category : 'accessing' }
+ASLLMethodOutput >> prefix [
+
+	^ 'L'
+]
+
 { #category : 'code generation' }
 ASLLMethodOutput >> verifySelector: anObject [
 

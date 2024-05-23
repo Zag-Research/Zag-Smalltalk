@@ -36,7 +36,7 @@ ASCBasicBlock >> blocks [
 ]
 
 { #category : 'abstract interpretation' }
-ASCBasicBlock >> br: anASCInlineBlock [
+ASCBasicBlock >> branch: anASCInlineBlock [
 
 	self put: (ASCBranch with: anASCInlineBlock).
 	^ anASCInlineBlock
@@ -53,13 +53,13 @@ ASCBasicBlock >> children [
 ]
 
 { #category : 'abstract interpretation' }
-ASCBasicBlock >> classCase: aCollection complete: isComplete [
+ASCBasicBlock >> classCase: aCollection [
 
 	| case |
-	case := isComplete ifTrue: [ ASCCase with: ASCInlineBlock new ] ifFalse: [ ASCCase new ].
+	case := ASCCase new.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlineBlock new.
+		next := ASCInlineBlock for: self.
 		case at: class put: next.
 		next stack: stack ].
 	self put: case.
@@ -107,16 +107,11 @@ ASCBasicBlock >> doPush: anObject [
 { #category : 'abstract interpretation' }
 ASCBasicBlock >> embed: aSymbol [
 
-	| next send |
-	next := ASCInlineBlock new.
-	send := ASCEmbed new
-		        selector: aSymbol;
-		        return: next;
-		        target: nil.
+	| send |
+	send := ASCEmbed with: aSymbol.
 	self put: send.
-	next ifNotNil: [
-		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
-	^ next
+	self stack: (stack drop: aSymbol numArgs + 1) pushUnknown.
+	^ nil
 ]
 
 { #category : 'initialization' }
@@ -158,20 +153,14 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream
 		<< $(;
-		<< label;
+		<< self label;
 		<< $)
 ]
 
 { #category : 'initialization' }
 ASCBasicBlock >> label [
-	^ label
-]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> label: aString index: anInteger [
-
-	label := aString .
-	index := anInteger 
+	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -339,7 +328,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock new ].
+	next := tailCall ifFalse: [ ASCReturnBlock for: self ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;

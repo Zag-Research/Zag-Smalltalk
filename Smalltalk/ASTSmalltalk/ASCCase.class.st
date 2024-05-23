@@ -17,6 +17,12 @@ Class {
 }
 
 { #category : 'accessing' }
+ASCCase >> at: key [
+
+	^ map at: key
+]
+
+{ #category : 'accessing' }
 ASCCase >> at: key put: value [
 
 	^ map at: key put: value

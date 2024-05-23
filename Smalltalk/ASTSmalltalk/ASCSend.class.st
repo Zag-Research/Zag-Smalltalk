@@ -3,9 +3,8 @@ I remember the selector for sends
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCEmbed',
 	#instVars : [
-		'selector',
 		'useCall',
 		'bb',
 		'target'
@@ -25,9 +24,6 @@ super initialize .	useCall := false
 ASCSend >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	aStream
-		space;
-		print: selector.
 	bb
 		ifNotNil: [
 			aStream
@@ -86,10 +82,4 @@ ASCSend >> target: aSymbol [
 { #category : 'accessing' }
 ASCSend >> useCall [
 	useCall := true
-]
-
-{ #category : 'instance creation' }
-ASCSend >> with: aSymbol [
-
-	selector := aSymbol
 ]
