@@ -2,7 +2,8 @@ Class {
 	#name : 'ASLLVMOutputTest',
 	#superclass : 'ASLLVMTests',
 	#instVars : [
-		'output'
+		'output',
+		'common'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -84,6 +85,45 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg sendEmbedded: #-.
 	cg send: #fibonacci targetClass: SmallInteger tail: false.
 	cg sendEmbedded: #+.
+	cg returnTop.
+	cg nameBasicBlocks.
+	cg inspect
+]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
+
+	| cg targets |
+	cg := output codeGenerator.
+	cg targetClass: SmallInteger.
+	cg selector: #fibonacci.
+	cg locals: #(  ) arguments: #(  ).
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #<.
+	targets := cg
+		           classCase: {
+				           True.
+				           False }
+		           complete: true.
+	common := cg newInline.
+	cg code: targets first.
+	cg pushLiteral: 1.
+	cg br: common.
+	cg code: targets last.
+	cg pushSelf.
+	cg pushLiteral: 1.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: SmallInteger tail: false.
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: SmallInteger tail: false.
+	cg sendEmbedded: #+.
+	cg br: common.
+	cg code: common.
+	cg returnTop.
+
 	cg returnTop.
 	cg nameBasicBlocks.
 	cg inspect
