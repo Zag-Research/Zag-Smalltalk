@@ -54,7 +54,13 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 	basicBlocks do: aBlock
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
+ASCodeGenerator >> br: anASCInlineBlock [
+
+	code br: anASCInlineBlock
+]
+
+{ #category : 'API' }
 ASCodeGenerator >> classCase: aCollection complete: aBoolean [
 
 	| case |
@@ -235,6 +241,12 @@ ASCodeGenerator >> nameBasicBlocks [
 			index: idx ]
 ]
 
+{ #category : 'instance creation' }
+ASCodeGenerator >> newInline [
+
+	^ basicBlocks add: ASCInlineBlock new.
+]
+
 { #category : 'API' }
 ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
 	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
@@ -372,7 +384,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |

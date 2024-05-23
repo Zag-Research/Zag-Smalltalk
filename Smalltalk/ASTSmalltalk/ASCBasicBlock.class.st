@@ -35,6 +35,13 @@ ASCBasicBlock >> blocks [
 	^ blocks
 ]
 
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> br: anASCInlineBlock [
+
+	self put: (ASCBranch with: anASCInlineBlock).
+	^ anASCInlineBlock
+]
+
 { #category : 'inlining' }
 ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
 	^ false
@@ -46,10 +53,10 @@ ASCBasicBlock >> children [
 ]
 
 { #category : 'abstract interpretation' }
-ASCBasicBlock >> classCase: aCollection complete: aBoolean [
+ASCBasicBlock >> classCase: aCollection complete: isComplete [
 
 	| case |
-	case := ASCCase new complete: aBoolean.
+	case := isComplete ifTrue: [ ASCCase with: ASCInlineBlock new ] ifFalse: [ ASCCase new ].
 	aCollection do: [ :class |
 		| next |
 		next := ASCInlineBlock new.
@@ -101,7 +108,7 @@ ASCBasicBlock >> doPush: anObject [
 ASCBasicBlock >> embed: aSymbol [
 
 	| next send |
-	next := ASCReturnBlock new.
+	next := ASCInlineBlock new.
 	send := ASCEmbed new
 		        selector: aSymbol;
 		        return: next;
