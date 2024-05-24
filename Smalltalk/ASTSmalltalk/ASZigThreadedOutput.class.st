@@ -93,6 +93,14 @@ ASZigThreadedOutput >> verifySelector: anObject [
 ]
 
 { #category : 'API' }
+ASZigThreadedOutput >> visitCase: aClassToBlockMap [
+	
+	self putEmbedded: #case;
+	comma;
+	lf
+]
+
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock

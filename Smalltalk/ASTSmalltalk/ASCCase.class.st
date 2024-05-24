@@ -62,9 +62,9 @@ ASCCase >> next [
 ]
 
 { #category : 'code generation' }
-ASCCase >> outputTo: output [
-
-	^ self shouldBeImplemented 
+ASCCase >> outputTo: anOutput [
+	^ anOutput
+		  visitCase: map
 ]
 
 { #category : 'instance creation' }
