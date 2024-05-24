@@ -40,6 +40,10 @@ ASZigThreadedOutput >> outputBasicBlockEnd [
 ]
 
 { #category : 'code generation' }
+ASZigThreadedOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
+]
+
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 
 	self label: bbLabel

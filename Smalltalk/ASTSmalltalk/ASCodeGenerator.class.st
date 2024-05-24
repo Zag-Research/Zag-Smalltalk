@@ -178,6 +178,7 @@ ASCodeGenerator >> inline: anASCSend [
 	self halt. "inline a self method"
 	ast := ASPharoCompiler new astFor:
 		       anASCSend target >> anASCSend selector.
+	output addComponent: nil.
 	output generateCode: ast for: anASCSend target.
 	"look at pending components, expects a codeGenerator so need to create one and add to components"
 	^ false
@@ -389,6 +390,16 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
+	(inline and: targetClass == aTargetClass) ifTrue: [
+		"we know the target class and the current class being compiled are the same"
+		"rename stack elements to be named values"
+		"self/super/literal don't need a send"
+		stack clone
+		"build ast"
+		self setBasicBlock
+		"walk AST"
+		
+	].
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
