@@ -2,7 +2,7 @@
 I manage the values to go into a zag symbols table. I have predefined symbols and runtime symbols.
 "
 Class {
-	#name : 'ASZigSymbols',
+	#name : 'ASZagSymbols',
 	#superclass : 'Object',
 	#instVars : [
 		'runtimeDefined'
@@ -16,7 +16,7 @@ Class {
 }
 
 { #category : 'compiling' }
-ASZigSymbols class >> initialize [
+ASZagSymbols class >> initialize [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
 
 	Predefined := #( #= value value: cull: yourself doesNotUnderstand: #+ #-#*
@@ -29,25 +29,25 @@ perform:with:with:with: perform:withArguments: perform:withArguments:inSuperclas
 ]
 
 { #category : 'adding' }
-ASZigSymbols >> add: aSymbol [
+ASZagSymbols >> add: aSymbol [
 
 	runtimeDefined add: aSymbol
 ]
 
 { #category : 'initialization' }
-ASZigSymbols >> initialize [ 
+ASZagSymbols >> initialize [ 
 	super initialize .
 	runtimeDefined := Set new
 ]
 
 { #category : 'testing' }
-ASZigSymbols >> predefinedSymbol: aSymbol [
+ASZagSymbols >> predefinedSymbol: aSymbol [
 
 	^ (Predefined includes: aSymbol) ifTrue: [ 'Sym.' , aSymbol zigName ]
 ]
 
 { #category : 'testing' }
-ASZigSymbols >> printable: aSymbol [
+ASZagSymbols >> printable: aSymbol [
 
 	^ (self predefinedSymbol: aSymbol) ifNotNil: [ :s | s ] ifNil: [
 		  self add: aSymbol.
@@ -55,7 +55,12 @@ ASZigSymbols >> printable: aSymbol [
 ]
 
 { #category : 'writing' }
-ASZigSymbols >> writeDefinitionOn: stream [
+ASZagSymbols >> writeDefinitionOn: anASLLFileContext [ 
+
+]
+
+{ #category : 'writing' }
+ASZagSymbols >> writeDefinitionWith: stream [
 
 	| syms n |
 	syms := runtimeDefined "asSortedCollection".
@@ -102,7 +107,12 @@ ASZigSymbols >> writeDefinitionOn: stream [
 ]
 
 { #category : 'writing' }
-ASZigSymbols >> writeInitializationOn: stream [
+ASZagSymbols >> writeInitializationOn: anASLLFileContext [ 
+
+]
+
+{ #category : 'writing' }
+ASZagSymbols >> writeInitializationWith: stream [
 
 	stream nextPutAll: '    sym = Sym.init();
 '

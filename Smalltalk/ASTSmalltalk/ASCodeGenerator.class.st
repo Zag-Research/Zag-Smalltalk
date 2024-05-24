@@ -54,25 +54,24 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 	basicBlocks do: aBlock
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> classCase: aCollection complete: aBoolean [
+{ #category : 'API' }
+ASCodeGenerator >> branch: anASCInlineBlock [
+
+	code branch: anASCInlineBlock
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> classCase: aCollection [
 
 	| case |
-	case := code classCase: aCollection complete: aBoolean.
+	case := code classCase: aCollection.
 	basicBlocks addAll: case blocks.
-	code := nil.
-	^ case blocks
+	^ aCollection collect: [ :class | case at: class ]
 ]
 
 { #category : 'class relationship' }
 ASCodeGenerator >> classOf: aString [ 
 	self shouldBeImplemented.
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> code: anASCBasicBlock [
-
-	code := anASCBasicBlock
 ]
 
 { #category : 'API' }
@@ -148,7 +147,6 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
-	self nameBasicBlocks.
 	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
@@ -242,16 +240,10 @@ ASCodeGenerator >> name [
 	^ name
 ]
 
-{ #category : 'post processing' }
-ASCodeGenerator >> nameBasicBlocks [
-	basicBlocks doWithIndex: [ :bb :idx |
-		bb
-			label: (String streamContents: [ :s |
-					 s
-						 nextPutAll: name;
-						 nextPut: $:;
-						 print: idx ])
-			index: idx ]
+{ #category : 'instance creation' }
+ASCodeGenerator >> newInline [
+
+	^ basicBlocks add: (ASCInlineBlock for: code)
 ]
 
 { #category : 'API' }
@@ -382,6 +374,18 @@ ASCodeGenerator >> selfName [
 ]
 
 { #category : 'API' }
+ASCodeGenerator >> send: aSymbol [
+
+	^ self send: aSymbol targetClass: nil tail: false
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
+
+	^ self send: aSymbol targetClass: aTargetClass tail: false
+]
+
+{ #category : 'API' }
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
@@ -392,7 +396,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |
@@ -400,6 +404,12 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> setBasicBlock: anASCBlock [
+
+	code := anASCBlock
 ]
 
 { #category : 'API' }

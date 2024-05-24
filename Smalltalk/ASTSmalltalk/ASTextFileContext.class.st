@@ -19,6 +19,14 @@ ASTextFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
+{ #category : 'initialization' }
+ASTextFileContext >> initialize [
+
+	super initialize.
+	symbols := ASZagSymbols new.
+
+]
+
 { #category : 'creation' }
 ASTextFileContext >> name: anObject prefix: aPrefix main: aSymbol [
 ^ (self name: anObject prefix: aPrefix main: aSymbol seq: 0)
@@ -50,9 +58,9 @@ ASTextFileContext >> outputTo: stream [
 	self processComponents.
 	self writeHeaderOn: stream.
 	components do: [ :each | each writeDefinitionOn: stream ].
-	symbols writeDefinitionOn: stream.
+	symbols writeDefinitionOn: self.
 	self writeInitSmalltalkPrefixOn: stream.
-	symbols writeInitializationOn: stream.
+	symbols writeInitializationOn: self.
 	components do: [ :each | each writeInitializationOn: stream ].
 	self writeInitSmalltalkSuffixOn: stream.
 	self writeMainPrefixOn: stream.
@@ -102,7 +110,7 @@ ASTextFileContext >> writeMainSuffixOn: aStream [
 	aStream << #writeMainSuffixOn:
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'writing' }
 ASTextFileContext >> writeNewDeclarationFor: aGenerator on: stream [ 
 	^ self subclassResponsibility
 ]

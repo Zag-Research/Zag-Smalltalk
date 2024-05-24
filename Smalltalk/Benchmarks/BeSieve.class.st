@@ -1,5 +1,9 @@
 "
 Classic Sieve of Eratosthenes banchmark
+
+I test integer and array with a doubly-nested loop.
+
+Derived from https://github.com/smarr/are-we-fast-yet/blob/master/benchmarks/Smalltalk/Sieve.som
 "
 Class {
 	#name : 'BeSieve',

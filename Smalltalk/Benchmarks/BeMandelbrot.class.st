@@ -2,6 +2,8 @@
 I implement a Mandelbrot benchmark
 
 I test floating point operations (mostly addition and multiplications, with a few divisions) with a triply-nested loop.
+
+Derived from https://github.com/smarr/are-we-fast-yet/blob/master/benchmarks/Smalltalk/Mandelbrot.som
 "
 Class {
 	#name : 'BeMandelbrot',
@@ -27,7 +29,7 @@ BeMandelbrot >> innerBenchmarkLoop: innerIterations [
 { #category : 'accessing' }
 BeMandelbrot >> iterations [
 
-	^ 2500
+	^ 750
 ]
 
 { #category : 'benchmarking' }
@@ -99,6 +101,7 @@ BeMandelbrot >> verify: result inner: innerIterations [
 
 	innerIterations = 500 ifTrue: [ ^ result = 191 ].
 	innerIterations = 750 ifTrue: [ ^ result = 50 ].
+	innerIterations = 1000 ifTrue: [ ^ result = 101 ].
 	innerIterations = 2500 ifTrue: [ ^ result = 231 ].
 	innerIterations = 1 ifTrue: [ ^ result = 128 ].
 
@@ -109,6 +112,7 @@ BeMandelbrot >> verify: result inner: innerIterations [
 	Transcript
 		crShow: 'Result is: ';
 		crShow: result asString.
+		self halt.
 	^ false
 ]
 

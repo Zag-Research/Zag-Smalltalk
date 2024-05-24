@@ -1,11 +1,11 @@
 "
-I represent an embedded send replacement.
+I represent a return
 "
 Class {
-	#name : 'ASCEmbed',
+	#name : 'ASCBranch',
 	#superclass : 'ASCOperations',
 	#instVars : [
-		'selector'
+		'bb'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -13,22 +13,30 @@ Class {
 }
 
 { #category : 'printing' }
-ASCEmbed >> inspectZagASTOn: aStream [
+ASCBranch >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream
-		space;
-		print: selector.
+		<< ' -> ';
+		<< bb label
+]
+
+{ #category : 'accessing' }
+ASCBranch >> next [
+
+	^ bb
 ]
 
 { #category : 'code generation' }
-ASCEmbed >> outputTo: anOutput [
+ASCBranch >> outputTo: output [
 
-	^ anOutput visitEmbed: selector
+	^ output visitBranch: bb
 ]
 
 { #category : 'instance creation' }
-ASCEmbed >> with: aSymbol [
+ASCBranch >> with: target [
 
-	selector := aSymbol
+	bb := target
+
+	
 ]

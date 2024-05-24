@@ -4,23 +4,43 @@ for inlining
 Class {
 	#name : 'ASCInlineBlock',
 	#superclass : 'ASCBasicBlock',
+	#instVars : [
+		'method'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASCInlineBlock >> locals: locals arguments: arguments [
+{ #category : 'instance creation' }
+ASCInlineBlock class >> for: anASCBlock [ 
+	^ super new method: anASCBlock namedMethod
+]
 
-	stack isEmpty
-		ifTrue: [ self pushParameterNamed: #self ]
-		ifFalse: [ stack := stack names: #( self ) ].
-			arguments reversed do: [ :each | self pushParameterNamed: each ].
-	locals do: [ :each | self pushParameterNamed: each ]
+{ #category : 'instance creation' }
+ASCInlineBlock class >> new [
+
+	self shouldNotImplement
+]
+
+{ #category : 'initialization' }
+ASCInlineBlock >> label [
+
+	^ label ifNil: [ label := method nextSequence asString ]
+]
+
+{ #category : 'accessing' }
+ASCInlineBlock >> method: anASCMethodBlock [ 
+	method := anASCMethodBlock
+]
+
+{ #category : 'as yet unclassified' }
+ASCInlineBlock >> namedMethod [
+	^ method namedMethod
 ]
 
 { #category : 'printing' }
 ASCInlineBlock >> printOn: aStream [
 
-	aStream nextPutAll: label
+	aStream nextPutAll: self label
 ]

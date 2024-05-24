@@ -21,11 +21,6 @@ ASCSimple >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'block handling' }
-ASCSimple >> manifestParameters: anASStackContextPlaceholder [ 
-
-]
-
 { #category : 'accessing' }
 ASCSimple >> next [
 	^ nil

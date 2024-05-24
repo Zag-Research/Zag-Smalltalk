@@ -9,10 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'block handling' }
-ASCReturnSelf >> manifestParameters: stack [
-]
-
 { #category : 'accessing' }
 ASCReturnSelf >> next [
 
