@@ -30,16 +30,6 @@ ASCInlineBlock >> label [
 ]
 
 { #category : 'accessing' }
-ASCInlineBlock >> locals: locals arguments: arguments [
-
-	stack isEmpty
-		ifTrue: [ self pushParameterNamed: #self ]
-		ifFalse: [ stack := stack names: #( self ) ].
-			arguments reversed do: [ :each | self pushParameterNamed: each ].
-	locals do: [ :each | self pushParameterNamed: each ]
-]
-
-{ #category : 'accessing' }
 ASCInlineBlock >> method: anASCMethodBlock [ 
 	method := anASCMethodBlock
 ]

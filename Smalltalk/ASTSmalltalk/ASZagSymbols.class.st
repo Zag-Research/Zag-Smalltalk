@@ -57,6 +57,11 @@ ASZagSymbols >> printable: aSymbol [
 ]
 
 { #category : 'writing' }
+ASZagSymbols >> writeDefinitionOn: anASLLFileContext [ 
+
+]
+
+{ #category : 'writing' }
 ASZagSymbols >> writeDefinitionWith: stream [
 
 	| syms n |
@@ -101,6 +106,11 @@ ASZagSymbols >> writeDefinitionWith: stream [
     }
 };
 '
+]
+
+{ #category : 'writing' }
+ASZagSymbols >> writeInitializationOn: anASLLFileContext [ 
+
 ]
 
 { #category : 'writing' }

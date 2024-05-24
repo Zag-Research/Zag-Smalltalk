@@ -37,9 +37,8 @@ ASCMethodBlock >> namedMethod [
 
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
-	output outputMethodStart: label.
-	primitive
-		ifNotNil: [ output primitive: primitive ].
+
+	output outputMethodDefinition: self label primitive: primitive.
 	stack requiredContextDo: [ output visitPushContext ].
 	output outputMethodLabel: label.
 	^ self outputRestTo: output

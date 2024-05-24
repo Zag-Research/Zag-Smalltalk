@@ -58,6 +58,14 @@ ASCReturnBlock >> nextSequence [
 	^ sequence := sequence +1
 ]
 
+{ #category : 'writing' }
+ASCReturnBlock >> outputTo: output [
+
+	output outputMethodStart: self label.
+	output outputMethodLabel: label.
+	^ self outputRestTo: output
+]
+
 { #category : 'accessing' }
 ASCReturnBlock >> selector [
 

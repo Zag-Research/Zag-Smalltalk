@@ -58,26 +58,85 @@ ASLLMethodOutput >> outputBasicBlockEnd [
 
 ]
 
-{ #category : 'code generation' }
-ASLLMethodOutput >> outputMethodLabel: bbLabel [
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
 
+	| header stackStructure signature verifier methods seperator |
+	header := 0.
+	stackStructure := 0.
+	signature := 0.
+	verifier := aPrimitive ifNil: ['verifyMethod'].
+	methods := #(  ).
+	seperator := ''.
 	self
-		nextPutAll: ') { ';
-		nextPutAll: bbLabel asString;
-		nextPutAll: ': '.
+		nextPutAll: '@';
+		nextPutAll: bbLabel;
+		nextPutAll: '.CM = global %struct.CompiledMethod { i64 ';
+		print: header;
+		nextPutAll: ', %union.Object { i64 ';
+		print: stackStructure;
+		nextPutAll: ' }, %struct.MethodSignature ';
+		print: signature;
+		nextPutAll: ', ptr ';
+		nextPutAll: verifier;
+		nextPutAll: ', [';
+		print: methods size;
+		nextPutAll: ' x %union.Code] ['.
+	methods do: [ :each |
+		self
+			nextPutAll: seperator;
+			nextPutAll: '%union.Code { ptr @';
+			nextPutAll: each;
+			nextPutAll: ' }'.
+		seperator := ', ' ].
+	self nextPutAll: ']}, align 8
+'
 ]
 
 { #category : 'code generation' }
-ASLLMethodOutput >> outputMethodStart: bbLabel [ 
+ASLLMethodOutput >> outputMethodLabel: bbLabel [
 
-	| type llvmType |	
-	"Geting the type of the top element in the stack"
-	type := self codeGenerator returnCode stack top valueClass.
-	llvmType := self mapLLVMTypeFor: type.
-	
-	self 
-		nextPutAll: 'define ';			
-		nextPutAll: llvmType asString.
+	| header stackStructure signature verifier methods seperator |
+	header := 0.
+	stackStructure := 0.
+	signature := 0.
+	verifier := '@verifyMethod'.
+	methods := #(  ).
+	seperator := ''.
+	self
+		nextPutAll: '@';
+		nextPutAll: bbLabel;
+		nextPutAll: '.CM = global %struct.CompiledMethod { i64 ';
+		print: header;
+		nextPutAll: ', %union.Object { i64 ';
+		print: stackStructure;
+		nextPutAll: ' }, %struct.MethodSignature ';
+		print: signature;
+		nextPutAll: ', ptr ';
+		nextPutAll: verifier;
+		nextPutAll: ', [';
+		print: methods size;
+		nextPutAll: ' x %union.Code] ['.
+	methods do: [ :each |
+		self
+			nextPutAll: seperator;
+			nextPutAll: '%union.Code { ptr @';
+			nextPutAll: each;
+			nextPutAll: ' }'.
+		seperator := ', ' ].
+	self
+		nextPutAll: ']}, align 8
+'.
+]
+
+{ #category : 'code generation' }
+ASLLMethodOutput >> outputMethodStart: bbLabel [
+
+	self
+		nextPutAll: 'define ptr @';
+		nextPutAll: bbLabel;
+		nextPutAll:
+			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {'
 ]
 
 { #category : 'accessing' }
@@ -121,8 +180,14 @@ ASLLMethodOutput >> visitReturnTop [
 ]
 
 { #category : 'writing' }
-ASLLMethodOutput >> writeDefinitionOn: aWriteStream [ 
+ASLLMethodOutput >> writeDefinitionOn: aWriteStream [
 
+	self
+		nextPutAll: '@';
+		nextPutAll: 'fib';
+		nextPutAll: '.CM = global %struct.CompiledMethod { i64 0, %union.Object { i64 -1125899906842624 }, %struct.MethodSignature zeroinitializer, ptr @verifyMethod, [3 x %union.Code] [%union.Code { ptr @fib }, %union.Code { ptr @fib1 }, %union.Code { ptr @fib2 }] }, align 8
+@noMS = common local_unnamed_addr global %struct.MethodSignature zeroinitializer, align 4
+'
 ]
 
 { #category : 'writing' }
