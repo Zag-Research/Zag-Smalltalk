@@ -23,6 +23,22 @@ ASPharoCompilerProgramTest class >> testFibIsolated [
 ]
 
 { #category : 'tests' }
+ASPharoCompilerProgramTest class >> testFibWithInlining [
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
+	file := ASZigFileContext new.
+
+	ASZigThreadedOutput withInlining
+		context: file;
+		generateCode: ast for: SmallInteger.
+
+	FileSystem disk workingDirectory / 'zigFibWithInlining.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
+]
+
+{ #category : 'tests' }
 ASPharoCompilerProgramTest class >> testFooBarIsolated [
 
 	<script>
@@ -32,10 +48,26 @@ ASPharoCompilerProgramTest class >> testFooBarIsolated [
 
 	ASZigThreadedOutput new
 		context: file;
-		generateCode: ast.
+		generateCode: ast for: ASCompileTestClass1.
 
 	FileSystem disk workingDirectory / 'zigFooBarCompileMethod.zig'
 		writeStreamDo: [ :stream | file outputTo: stream ] 
+]
+
+{ #category : 'tests' }
+ASPharoCompilerProgramTest class >> testFooWithInlining [
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo.
+	file := ASZigFileContext new.
+
+	ASZigThreadedOutput withInlining
+		context: file;
+		generateCode: ast for: ASCompileTestClass1.
+
+	FileSystem disk workingDirectory / 'zigFooWithInlining.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
 ]
 
 { #category : 'compiling' }

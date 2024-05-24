@@ -43,15 +43,19 @@ ASCBlock >> block [
 	^ block
 ]
 
-{ #category : 'accessing' }
-ASCBlock >> children [
-	^ block body asOrderedCollection 
-]
-
 { #category : 'initialization' }
 ASCBlock >> initialize [ 
 super initialize .
 manifest := false
+]
+
+{ #category : 'instance creation' }
+ASCBlock >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(.
+	aStream print: label.
+	aStream << $)
 ]
 
 { #category : 'accessing' }

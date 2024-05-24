@@ -43,13 +43,21 @@ ASCBasicBlock >> branch: anASCInlineBlock [
 ]
 
 { #category : 'inlining' }
-ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
-	^ false
+ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
+| aSend case |
+	aSend := operations last.
+	aSend isSend ifFalse: [ ^ false ].
+	
+	case := ASCCase new.
+	"case needs to know the relationship between classes and block name!"
+	operations add: case before: operations last.
+	"check if the send can be inlined"
+	^ anASCodeGenerator inline: aSend
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> children [ 
-^operations 
+ASCBasicBlock >> children [
+	^ operations
 ]
 
 { #category : 'abstract interpretation' }

@@ -27,6 +27,13 @@ ASZigThreadedOutput >> endMethod [
 	self label: nil
 ]
 
+{ #category : 'accessing' }
+ASZigThreadedOutput >> methodName [
+	| predefined |
+	predefined := context predefinedSymbol: self selector.
+	predefined ifNotNil: [ ^predefined ] ifNil: [ ^ self name]
+]
+
 { #category : 'code generation' }
 ASZigThreadedOutput >> outputBasicBlockEnd [
 	
@@ -82,6 +89,14 @@ ASZigThreadedOutput >> pushLocal: localNumber [
 ASZigThreadedOutput >> verifySelector: anObject [
 
 	self putEmbedded: #verifySelector;
+	lf
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> visitCase: aClassToBlockMap [
+	
+	self putEmbedded: #case;
+	comma;
 	lf
 ]
 
@@ -236,12 +251,13 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
+
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name zigName;
+		nextPutAll: self methodName;
 		nextPut: $,;
-		print: numLocals;
+		print: numLocals; "Daniel: not doing anything with this, should be easy to fix"
 		nextPut: $,;
 		print: maxDepth;
 		nextPut: $,;

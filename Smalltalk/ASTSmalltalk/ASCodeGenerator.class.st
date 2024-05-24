@@ -170,11 +170,30 @@ ASCodeGenerator >> initialize [
 ]
 
 { #category : 'accessing' }
+ASCodeGenerator >> inline: anASCSend [
+
+	| ast |
+	targetClass == anASCSend target ifFalse: [ ^ false ].
+
+	self halt. "inline a self method"
+	ast := ASPharoCompiler new astFor:
+		       anASCSend target >> anASCSend selector.
+	output generateCode: ast for: anASCSend target.
+	"look at pending components, expects a codeGenerator so need to create one and add to components"
+	^ false
+]
+
+{ #category : 'initialization' }
+ASCodeGenerator >> inlining: aBoolean [
+	inline := aBoolean
+]
+
+{ #category : 'accessing' }
 ASCodeGenerator >> inspectBasicBlocks [
+
 	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
-	
 	^ SpTreeTablePresenter new
-		  roots: basicBlocks;
+		  roots: self zagBlocks;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
@@ -344,7 +363,8 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	name := output name.
+	"label for blocks of code"
+	name := output name zigName.
 	code selector: aSymbol 
 ]
 
@@ -416,9 +436,19 @@ targetClass:= anObject
 
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
-
 	inline ifFalse: [ ^ self ].
-	[
+	[ | bbCopy | 
+		bbCopy := OrderedCollection new.
+		bbCopy addAll: basicBlocks.
 	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self ] ] whileTrue
+		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
+]
+
+{ #category : 'post processing' }
+ASCodeGenerator >> zagBlocks [
+
+	| zagBlocks |
+	zagBlocks := OrderedCollection newFrom: basicBlocks.
+	zagBlocks addAll: (blockClosures collect: [ :bc | InspectBlock from: bc ]).
+	^ zagBlocks
 ]
