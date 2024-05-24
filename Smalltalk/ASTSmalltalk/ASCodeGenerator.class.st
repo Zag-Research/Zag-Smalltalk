@@ -173,14 +173,16 @@ ASCodeGenerator >> initialize [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inline: anASCSend [
-	| ast cg |
-	targetClass == anASCSend target ifFalse: [ ^false ].
-	
-		self halt. "inline a self method"
-		ast := ASPharoCompiler new astFor: anASCSend target >> anASCSend selector.
-		output generateCode: ast for: anASCSend target.
-		
-	^false
+
+	| ast |
+	targetClass == anASCSend target ifFalse: [ ^ false ].
+
+	self halt. "inline a self method"
+	ast := ASPharoCompiler new astFor:
+		       anASCSend target >> anASCSend selector.
+	output generateCode: ast for: anASCSend target.
+	"look at pending components, expects a codeGenerator so need to create one and add to components"
+	^ false
 ]
 
 { #category : 'initialization' }

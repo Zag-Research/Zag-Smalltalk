@@ -20,6 +20,19 @@ ASZigMethodOutput >> codeGenerator [
 			                   enclosingScope: parentCodeGenerator ]
 ]
 
+{ #category : 'API' }
+ASZigMethodOutput >> codeGeneratorInlining: aClass [
+| currentCG | 
+	currentCG := codeGenerator.
+	codeGenerator := self codeGeneratorClass new
+			                   parentCodeGenerator: currentCG;
+			                   output: self;
+			                   inlining: inlining;
+			                   targetClass: aClass;
+			                   enclosingScope: currentCG.
+	^ currentCG
+]
+
 { #category : 'code generation' }
 ASZigMethodOutput >> generateCode [
 

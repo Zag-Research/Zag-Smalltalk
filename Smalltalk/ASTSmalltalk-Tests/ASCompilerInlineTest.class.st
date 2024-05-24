@@ -61,6 +61,64 @@ ASCompilerInlineTest >> testCodeGeneratorInlining [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibonacci [ 
+
+	self
+		assert: Integer >> #fibonacci
+		outputTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
+&e.pushContext,"^",
+":Mfoo:1",
+&e.pushLocal,0,
+&e.setupSend,Sym.i_1,
+&e.dynamicDispatch,
+ });
+const Sym = struct {
+	bar: Object,
+    const ss = heap.compileStrings(.{
+	"bar",
+    });
+    usingnamespace symbol.symbols;
+    fn init() Sym {
+        return .{
+	.bar = symbol.intern(ss[0].asObject()),
+        };
+    }
+};
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+    sym = Sym.init();
+Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo [
 
 	self
