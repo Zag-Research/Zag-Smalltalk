@@ -142,7 +142,7 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg returnTop.
 
 	cg inspect.
-	output outputToStream.
 	self halt.
+	output outputToStream.
 	file asString inspect
 ]
