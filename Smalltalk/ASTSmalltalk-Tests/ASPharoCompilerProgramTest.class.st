@@ -54,6 +54,22 @@ ASPharoCompilerProgramTest class >> testFooBarIsolated [
 		writeStreamDo: [ :stream | file outputTo: stream ] 
 ]
 
+{ #category : 'tests' }
+ASPharoCompilerProgramTest class >> testFooWithInlining [
+
+	<script>
+	| ast file |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #foo.
+	file := ASZigFileContext new.
+
+	ASZigThreadedOutput withInlining
+		context: file;
+		generateCode: ast for: ASCompileTestClass1.
+
+	FileSystem disk workingDirectory / 'zigFooWithInlining.zig'
+		writeStreamDo: [ :stream | file outputTo: stream ]
+]
+
 { #category : 'compiling' }
 ASPharoCompilerProgramTest >> buildFromClass: class selector: method [
 

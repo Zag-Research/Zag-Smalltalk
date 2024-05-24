@@ -173,18 +173,14 @@ ASCodeGenerator >> initialize [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inline: anASCSend [
-	| cg |
+	| ast cg |
 	targetClass == anASCSend target ifFalse: [ ^false ].
 	
 		self halt. "inline a self method"
-		cg := ASCodeGenerator newFrom: self.
-		cg
-			send: anASCSend selector
-			targetClass: anASCSend target
-			tail: false.
-		cg firstBlock.
+		ast := ASPharoCompiler new astFor: anASCSend target >> anASCSend selector.
+		output generateCode: ast for: anASCSend target.
 		
-	^true
+	^false
 ]
 
 { #category : 'initialization' }

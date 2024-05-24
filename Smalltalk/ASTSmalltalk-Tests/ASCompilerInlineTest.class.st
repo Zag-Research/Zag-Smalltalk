@@ -24,7 +24,7 @@ ASCompilerInlineTest >> assert: aCompileMethod outputInlinesTo: code [
 	file := ASZigFileContext new.
 	ASZigThreadedOutput withInlining
 		context: file;
-		generateCode: compiledAST for: SmallInteger.
+		generateCode: compiledAST for: aCompileMethod classBinding value.
 
 	output := ReadWriteStream on: String new.
 	file outputTo: output.
