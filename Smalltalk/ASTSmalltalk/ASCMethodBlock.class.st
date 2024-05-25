@@ -8,12 +8,25 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'selector'
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'adding' }
+ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
+
+	returnBlocks add: anASCReturnBlock
+]
+
+{ #category : 'initialization' }
+ASCMethodBlock >> initialize [
+
+	super initialize.
+	returnBlocks := OrderedCollection new
+]
 
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
@@ -38,9 +51,12 @@ ASCMethodBlock >> namedMethod [
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
-	output outputMethodDefinition: self label primitive: primitive.
+	output
+		outputMethodDefinition: self label
+		primitive: primitive
+		methods: { self } , returnBlocks.
+	output outputMethodStart: label.
 	stack requiredContextDo: [ output visitPushContext ].
-	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]
 
@@ -58,14 +74,8 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> selector [
-	^ selector
-]
-
-{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
 	selector := aString.
-	label := aString.
-	sequence := 0
+	label := aString
 ]

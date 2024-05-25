@@ -15,12 +15,18 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'index'
+		'index',
+		'method'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'instance creation' }
+ASCBasicBlock class >> for: anASCBlock [ 
+	^ super new method: anASCBlock namedMethod
+]
 
 { #category : 'accessing' }
 ASCBasicBlock >> blocks [
@@ -194,6 +200,11 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
+ASCBasicBlock >> method: anASCMethodBlock [ 
+	method := anASCMethodBlock
+]
+
+{ #category : 'accessing' }
 ASCBasicBlock >> next [
 	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
@@ -235,7 +246,7 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	output outputMethodStart: label.
+	output outputMethodStart: self label.
 	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]

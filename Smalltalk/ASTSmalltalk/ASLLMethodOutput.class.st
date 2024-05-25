@@ -2,7 +2,8 @@ Class {
 	#name : 'ASLLMethodOutput',
 	#superclass : 'ASLLOutput',
 	#instVars : [
-		'sequence'
+		'sequence',
+		'stack'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -20,10 +21,11 @@ ASLLMethodOutput >> endMethod [
 ]
 
 { #category : 'as yet unclassified' }
-ASLLMethodOutput >> iniitialize [
+ASLLMethodOutput >> initialize [
 
 	super initialize.
-	sequence := 0
+	sequence := 0.
+	stack := OrderedCollection new
 ]
 
 { #category : 'as yet unclassified' }
@@ -59,14 +61,13 @@ ASLLMethodOutput >> outputBasicBlockEnd [
 ]
 
 { #category : 'as yet unclassified' }
-ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
+ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive methods: methods [
 
-	| header stackStructure signature verifier methods seperator |
+	| header stackStructure signature verifier seperator |
 	header := 0.
 	stackStructure := 0.
 	signature := 0.
-	verifier := aPrimitive ifNil: ['verifyMethod'].
-	methods := #(  ).
+	verifier := aPrimitive ifNil: [ 'verifyMethod' ].
 	seperator := ''.
 	self
 		nextPutAll: '@';
@@ -86,7 +87,7 @@ ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
 		self
 			nextPutAll: seperator;
 			nextPutAll: '%union.Code { ptr @';
-			nextPutAll: each;
+			nextPutAll: each label;
 			nextPutAll: ' }'.
 		seperator := ', ' ].
 	self nextPutAll: ']}, align 8
@@ -136,13 +137,23 @@ ASLLMethodOutput >> outputMethodStart: bbLabel [
 		nextPutAll: 'define ptr @';
 		nextPutAll: bbLabel;
 		nextPutAll:
-			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {'
+			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {
+'
 ]
 
 { #category : 'accessing' }
 ASLLMethodOutput >> prefix [
 
 	^ 'L'
+]
+
+{ #category : 'API - remotes' }
+ASLLMethodOutput >> push [
+
+	| var |
+	var := currentBasicBlock nextSequence.
+	self nextPutAll: '  %';print: var; nextPutAll: ' = '.
+	stack add: var.
 ]
 
 { #category : 'code generation' }
@@ -166,10 +177,12 @@ ASLLMethodOutput >> visitPushContext: unused [
 { #category : 'API' }
 ASLLMethodOutput >> visitPushLiteral: aLiteral [
 
-	self 
+	self
+		push;
 		nextPutAll: (self mapLLVMTypeFor: aLiteral) asString;  
 		nextPut: $ ;
-		nextPutAll: aLiteral asString.
+		nextPutAll: aLiteral asString;
+		lf.
 ]
 
 { #category : 'API' }
@@ -182,12 +195,7 @@ ASLLMethodOutput >> visitReturnTop [
 { #category : 'writing' }
 ASLLMethodOutput >> writeDefinitionOn: aWriteStream [
 
-	self
-		nextPutAll: '@';
-		nextPutAll: 'fib';
-		nextPutAll: '.CM = global %struct.CompiledMethod { i64 0, %union.Object { i64 -1125899906842624 }, %struct.MethodSignature zeroinitializer, ptr @verifyMethod, [3 x %union.Code] [%union.Code { ptr @fib }, %union.Code { ptr @fib1 }, %union.Code { ptr @fib2 }] }, align 8
-@noMS = common local_unnamed_addr global %struct.MethodSignature zeroinitializer, align 4
-'
+	aWriteStream nextPutAll: mainStream contents
 ]
 
 { #category : 'writing' }

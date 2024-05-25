@@ -5,17 +5,18 @@ Class {
 	#name : 'ASCReturnBlock',
 	#superclass : 'ASCBasicBlock',
 	#instVars : [
-		'method',
-		'sequence'
+		'sequence',
+		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASCReturnBlock class >> for: anASCBlock [ 
-	^ super new method: anASCBlock namedMethod
+{ #category : 'adding' }
+ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
+
+	method addReturnBlock: anASCReturnBlock
 ]
 
 { #category : 'writing' }
@@ -33,16 +34,19 @@ ASCReturnBlock >> inspectionZagCode [
 { #category : 'initialization' }
 ASCReturnBlock >> label [
 
-	^ label ifNil: [ label := String streamContents: [ :s |
-					 s
-						 nextPutAll: method selector;
-						 nextPut: $_;
-						 print: method nextSequence ] ]
+	^ label ifNil: [
+		  label := String streamContents: [ :s |
+			           s
+				           nextPutAll: method selector;
+				           nextPut: $.;
+				           print: method nextSequence ] ]
 ]
 
 { #category : 'accessing' }
-ASCReturnBlock >> method: anASCMethodBlock [ 
-	method := anASCMethodBlock
+ASCReturnBlock >> method: anASCMethodBlock [
+
+	super method: anASCMethodBlock.
+	anASCMethodBlock addReturnBlock: self
 ]
 
 { #category : 'accessing' }
@@ -58,16 +62,8 @@ ASCReturnBlock >> nextSequence [
 	^ sequence := sequence +1
 ]
 
-{ #category : 'writing' }
-ASCReturnBlock >> outputTo: output [
-
-	output outputMethodStart: self label.
-	output outputMethodLabel: label.
-	^ self outputRestTo: output
-]
-
 { #category : 'accessing' }
 ASCReturnBlock >> selector [
 
-	^ method selector
+	^ selector ifNil: [ selector := method selector]
 ]

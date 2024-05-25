@@ -34,21 +34,16 @@ ASLLFileContext >> writeHeaderOn: stream [
 { #category : 'writing' }
 ASLLFileContext >> writeInitSmalltalkPrefixOn: stream [
 
-	stream nextPutAll: 'writeInitSmalltalkPrefixOn:
-'
 ]
 
 { #category : 'writing' }
 ASLLFileContext >> writeInitSmalltalkSuffixOn: stream [
 
-	stream nextPutAll: 'writeInitSmalltalkSuffixOn:
-'
 ]
 
 { #category : 'writing' }
 ASLLFileContext >> writeMainPrefixOn: aStream [ 
 
-	aStream << #writeMainPrefixOn:
 ]
 
 { #category : 'writing' }
