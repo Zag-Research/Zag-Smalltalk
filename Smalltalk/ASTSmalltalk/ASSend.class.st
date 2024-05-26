@@ -136,8 +136,10 @@ ASSend >> zigWalk: aGenerator [
 ASSend >> zigWalk: aGenerator tail: tail [
 
 	| myTarget |
-	myTarget := target zigWalkTarget: aGenerator.
+	target zigWalkTarget: aGenerator.
+	myTarget := aGenerator inferType: target.
 	args do: [ :arg | arg zigWalk: aGenerator ].
+	aGenerator resetInlineSelectors.
 	aGenerator send: selector targetClass: myTarget tail: tail.
 	^ tail
 ]
@@ -146,4 +148,11 @@ ASSend >> zigWalk: aGenerator tail: tail [
 ASSend >> zigWalkForReturn: aGenerator [
 
 	^ self zigWalk: aGenerator  tail: true
+]
+
+{ #category : 'compiling' }
+ASSend >> zigWalkTarget: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ nil
 ]

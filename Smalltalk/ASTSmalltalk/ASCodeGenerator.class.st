@@ -25,7 +25,9 @@ Class {
 		'tailCallOptimize',
 		'blockClosures',
 		'parentCodeGenerator',
-		'enclosingScope'
+		'enclosingScope',
+		'embeddings',
+		'inlineSelectors'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -154,6 +156,14 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 	blockClosures := blockClosures select: #manifest.
 	blockClosures do: [ :aBlockClosure |
 		self compileBlock: aBlockClosure ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> inferType: anExpression [
+	self halt.
+	anExpression isASSelf ifTrue: [ ^targetClass ].
+	^nil
+	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
 
 { #category : 'initialization' }
@@ -328,6 +338,11 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 	code put: aSymbol
 ]
 
+{ #category : 'API' }
+ASCodeGenerator >> resetInlineSelectors [
+	inlineSelectors := OrderedCollection new.
+]
+
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> returnCode [ 
 	^ code.
@@ -382,7 +397,6 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
-	
 	"check if this is an embeddable send"
 	(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [ ^ self sendEmbedded: aSymbol ].
 	(inline and: targetClass == aTargetClass) ifTrue: [ "we know the target class and the current class being compiled are the same""rename stack elements to be named values""self/super/literal don't need a send"

@@ -52,7 +52,8 @@ ASExpression >> zigWalkMethodReturn: aGenerator [
 ]
 
 { #category : 'compiling' }
-ASExpression >> zigWalkTarget: aGenerator [ 
+ASExpression >> zigWalkTarget: aGenerator [
+
 	self zigWalk: aGenerator.
-	^ nil
+	^nil
 ]
