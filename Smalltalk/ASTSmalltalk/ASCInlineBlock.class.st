@@ -5,22 +5,29 @@ Class {
 	#name : 'ASCInlineBlock',
 	#superclass : 'ASCBasicBlock',
 	#instVars : [
-		'method'
+		'sourceBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASCInlineBlock class >> for: anASCBlock [ 
-	^ super new method: anASCBlock namedMethod
+{ #category : 'adding' }
+ASCInlineBlock >> addSource: aBasicBlock [
+
+	self namedMethod == aBasicBlock namedMethod ifFalse: [
+		| returnBlock |
+		returnBlock := ASCReturnBlock for: method.
+		returnBlock hash: hash.
+		^ self becomeForward: returnBlock ].
+	sourceBlocks add: aBasicBlock
 ]
 
-{ #category : 'instance creation' }
-ASCInlineBlock class >> new [
+{ #category : 'initialization' }
+ASCInlineBlock >> initialize [
 
-	self shouldNotImplement
+	super initialize.
+	sourceBlocks := Set new
 ]
 
 { #category : 'initialization' }
@@ -29,14 +36,22 @@ ASCInlineBlock >> label [
 	^ label ifNil: [ label := method nextSequence asString ]
 ]
 
-{ #category : 'accessing' }
-ASCInlineBlock >> method: anASCMethodBlock [ 
-	method := anASCMethodBlock
-]
-
 { #category : 'as yet unclassified' }
 ASCInlineBlock >> namedMethod [
 	^ method namedMethod
+]
+
+{ #category : 'successor sequences' }
+ASCInlineBlock >> nextSequence [
+
+	^ method nextSequence
+]
+
+{ #category : 'writing' }
+ASCInlineBlock >> outputTo: output [
+
+	output outputMBlockLabel: self label.
+	^ self outputRestTo: output
 ]
 
 { #category : 'printing' }

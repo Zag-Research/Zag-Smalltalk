@@ -8,12 +8,27 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'selector'
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'adding' }
+ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
+
+	^ returnBlocks
+		  at: anASCReturnBlock
+		  ifAbsentPut: [ returnBlocks size + 1 ]
+]
+
+{ #category : 'initialization' }
+ASCMethodBlock >> initialize [
+
+	super initialize.
+	returnBlocks := Dictionary new
+]
 
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals arguments: arguments [
@@ -29,7 +44,7 @@ ASCMethodBlock >> makeBlockClosure [
 	stack := ASStackBlockClosure from: stack
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 ASCMethodBlock >> namedMethod [
 
 	^ self
@@ -38,9 +53,12 @@ ASCMethodBlock >> namedMethod [
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
-	output outputMethodDefinition: self label primitive: primitive.
+	output
+		outputMethodDefinition: self label
+		primitive: primitive
+		methods: { self } , returnBlocks keys.
+	output outputMethodStart: label.
 	stack requiredContextDo: [ output visitPushContext ].
-	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]
 
@@ -58,14 +76,8 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> selector [
-	^ selector
-]
-
-{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
 	selector := aString.
-	label := aString.
-	sequence := 0
+	label := aString
 ]

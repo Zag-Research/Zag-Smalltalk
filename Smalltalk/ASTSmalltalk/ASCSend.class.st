@@ -58,7 +58,7 @@ ASCSend >> outputTo: anOutput [
 
 	^ anOutput
 		  visitSend: selector
-		  returnIndex: (bb ifNotNil: [ bb index ])
+		  returnIndex: bb
 		  target: target
 ]
 

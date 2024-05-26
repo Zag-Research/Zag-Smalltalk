@@ -55,9 +55,10 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> branch: anASCInlineBlock [
+ASCodeGenerator >> branch: aBasicBlock [
 
-	code branch: anASCInlineBlock
+	code branch: aBasicBlock.
+	aBasicBlock addSource: code
 ]
 
 { #category : 'API' }

@@ -21,12 +21,13 @@ ASLLFileContext >> initialize [
 { #category : 'writing' }
 ASLLFileContext >> writeHeaderOn: stream [
 
-	stream nextPutAll: '%zag.process.Process = type { [909 x i64], [3637 x i64], [3637 x i64], ptr, i64, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
-%zag.context.Context = type { i64, ptr, %zag.execute.PC, ptr, ptr, i64, [1 x i64] }
+	stream nextPutAll:
+		'%zag.process.Process = type { [909 x i64], [3637 x i64], [3637 x i64], ptr, i64, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
+%zag.context.Context = type { i64, ptr, %zag.execute.PC, ptr, ptr, i64, [0 x i64] }
 %zag.execute.PC = type { ptr }
 %zag.execute.Code = type { <{ ptr, [8 x i8] }> }
 %zag.execute.Stack = type { i64, i64, i64, i64 }
-%zag.execute.CompiledMethod = type { i64, i64, %zag.execute.MethodSignature, ptr, [1 x %zag.execute.Code] }
+%zag.execute.CompiledMethod = type { i64, i64, %zag.execute.MethodSignature, ptr, [0 x %zag.execute.Code] }
 %zag.execute.MethodSignature = type { i32, i16, [2 x i8] }
 '
 ]
@@ -34,30 +35,19 @@ ASLLFileContext >> writeHeaderOn: stream [
 { #category : 'writing' }
 ASLLFileContext >> writeInitSmalltalkPrefixOn: stream [
 
-	stream nextPutAll: 'writeInitSmalltalkPrefixOn:
-'
 ]
 
 { #category : 'writing' }
 ASLLFileContext >> writeInitSmalltalkSuffixOn: stream [
 
-	stream nextPutAll: 'writeInitSmalltalkSuffixOn:
-'
 ]
 
 { #category : 'writing' }
 ASLLFileContext >> writeMainPrefixOn: aStream [ 
 
-	aStream << #writeMainPrefixOn:
 ]
 
 { #category : 'writing' }
 ASLLFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
-	| label |
-	label := aGenerator name.
-	stream
-		nextPutAll: 'writeNewDeclarationFor:on: ';
-		nextPutAll: label zigName.
-	^ label
 ]
