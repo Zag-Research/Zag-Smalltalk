@@ -148,7 +148,6 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
-	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
@@ -170,21 +169,6 @@ ASCodeGenerator >> initialize [
 	inline := false.
 	tailCallOptimize := true.
 	embeddings := { Integer >> #-. Integer >> #'<=' }
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> inline: anASCSend [
-
-	| ast |
-	targetClass == anASCSend target ifFalse: [ ^ false ].
-
-	self halt. "inline a self method"
-	ast := ASPharoCompiler new astFor:
-		       anASCSend target >> anASCSend selector.
-	output addComponent: nil.
-	output generateCode: ast for: anASCSend target.
-	"look at pending components, expects a codeGenerator so need to create one and add to components"
-	^ false
 ]
 
 { #category : 'initialization' }
@@ -452,16 +436,6 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
-]
-
-{ #category : 'post processing' }
-ASCodeGenerator >> tryInlining [
-	inline ifFalse: [ ^ self ].
-	[ | bbCopy | 
-		bbCopy := OrderedCollection new.
-		bbCopy addAll: basicBlocks.
-	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
 ]
 
 { #category : 'post processing' }

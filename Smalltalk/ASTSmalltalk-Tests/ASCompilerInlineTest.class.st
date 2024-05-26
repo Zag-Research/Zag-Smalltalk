@@ -59,15 +59,6 @@ ASCompilerInlineTest >> class: aClass selector: aSelector [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testCodeGeneratorInlining [
-
-	| cg |
-	cg := ASCodeGenerator new.
-	cg send: #foo targetClass: ASCompileTestClass1 tail: false.
-	cg tryInlining.
-]
-
-{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci [ 
 
 	self
