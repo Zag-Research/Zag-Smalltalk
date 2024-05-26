@@ -59,7 +59,8 @@ ASCVariable >> name: aSymbol [
 { #category : 'printing' }
 ASCVariable >> printOn: s [
 
-	s << self className << ' ' << name
+	s << self className.
+	name ifNotNil: [ s << ' ' << name ]
 ]
 
 { #category : 'compiling' }

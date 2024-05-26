@@ -18,14 +18,16 @@ Class {
 { #category : 'adding' }
 ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
 
-	returnBlocks add: anASCReturnBlock
+	^ returnBlocks
+		  at: anASCReturnBlock
+		  ifAbsentPut: [ returnBlocks size + 1 ]
 ]
 
 { #category : 'initialization' }
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	returnBlocks := OrderedCollection new
+	returnBlocks := Dictionary new
 ]
 
 { #category : 'accessing' }
@@ -42,7 +44,7 @@ ASCMethodBlock >> makeBlockClosure [
 	stack := ASStackBlockClosure from: stack
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 ASCMethodBlock >> namedMethod [
 
 	^ self
@@ -54,7 +56,7 @@ ASCMethodBlock >> outputTo: output [
 	output
 		outputMethodDefinition: self label
 		primitive: primitive
-		methods: { self } , returnBlocks.
+		methods: { self } , returnBlocks keys.
 	output outputMethodStart: label.
 	stack requiredContextDo: [ output visitPushContext ].
 	^ self outputRestTo: output

@@ -4,10 +4,31 @@ for inlining
 Class {
 	#name : 'ASCInlineBlock',
 	#superclass : 'ASCBasicBlock',
+	#instVars : [
+		'sourceBlocks'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'adding' }
+ASCInlineBlock >> addSource: aBasicBlock [
+
+	self namedMethod == aBasicBlock namedMethod ifFalse: [
+		| returnBlock |
+		returnBlock := ASCReturnBlock for: method.
+		returnBlock hash: hash.
+		^ self becomeForward: returnBlock ].
+	sourceBlocks add: aBasicBlock
+]
+
+{ #category : 'initialization' }
+ASCInlineBlock >> initialize [
+
+	super initialize.
+	sourceBlocks := Set new
+]
 
 { #category : 'initialization' }
 ASCInlineBlock >> label [
@@ -18,6 +39,19 @@ ASCInlineBlock >> label [
 { #category : 'as yet unclassified' }
 ASCInlineBlock >> namedMethod [
 	^ method namedMethod
+]
+
+{ #category : 'successor sequences' }
+ASCInlineBlock >> nextSequence [
+
+	^ method nextSequence
+]
+
+{ #category : 'writing' }
+ASCInlineBlock >> outputTo: output [
+
+	output outputMBlockLabel: self label.
+	^ self outputRestTo: output
 ]
 
 { #category : 'printing' }

@@ -16,7 +16,7 @@ Class {
 { #category : 'adding' }
 ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
 
-	method addReturnBlock: anASCReturnBlock
+	^ method addReturnBlock: anASCReturnBlock
 ]
 
 { #category : 'writing' }
@@ -39,7 +39,7 @@ ASCReturnBlock >> label [
 			           s
 				           nextPutAll: method selector;
 				           nextPut: $.;
-				           print: method nextSequence ] ]
+				           print: (method addReturnBlock: self) ] ]
 ]
 
 { #category : 'accessing' }
@@ -60,6 +60,13 @@ ASCReturnBlock >> nextSequence [
 
 	sequence ifNil: [ ^ sequence := 1 ].
 	^ sequence := sequence +1
+]
+
+{ #category : 'writing' }
+ASCReturnBlock >> outputTo: output [
+
+	output outputMethodStart: label.
+	^ self outputRestTo: output
 ]
 
 { #category : 'accessing' }

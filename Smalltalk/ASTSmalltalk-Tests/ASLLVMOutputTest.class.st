@@ -127,7 +127,9 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	cg setBasicBlock: common.
 	cg returnTop.
 
-	cg inspect
+	cg inspect.
+	output outputToStream.
+	file asString inspect
 ]
 
 { #category : 'tests' }

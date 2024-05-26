@@ -15,8 +15,11 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'index',
-		'method'
+		'method',
+		'hash'
+	],
+	#classVars : [
+		'SequenceNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -24,8 +27,21 @@ Class {
 }
 
 { #category : 'instance creation' }
-ASCBasicBlock class >> for: anASCBlock [ 
-	^ super new method: anASCBlock namedMethod
+ASCBasicBlock class >> for: aBasicBlock [
+
+	^ super new method: aBasicBlock namedMethod
+]
+
+{ #category : 'class initialization' }
+ASCBasicBlock class >> initialize [
+
+	SequenceNumber := 0
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> = other [
+
+	^ hash = other hash and: [ other class = self class ]
 ]
 
 { #category : 'accessing' }
@@ -140,9 +156,16 @@ ASCBasicBlock >> find: aSymbol [
 	^ (stack find: aSymbol) push: aSymbol on: stack
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> index [
-	^ index
+{ #category : 'comparing' }
+ASCBasicBlock >> hash [
+
+	^ hash
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> hash: value [
+
+	hash := value
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -159,6 +182,7 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new.
 	maxDepth := 0.
 	stack := ASEmptyStack new.
+	hash := (SequenceNumber := SequenceNumber + 1)
 ]
 
 { #category : 'printing' }
