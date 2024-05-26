@@ -885,9 +885,9 @@ pub const controlPrimitives = struct {
         return MethodSignature{.selectorHash = selector.hash32(), .class = class };
     }
     pub fn setupSend(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+        const context = tfAsContext(_context);
         const ms = getMethodSignature(pc,sp,null);
         const returnPc = pc.next().returnOffset();
-        const context = tfAsContext(_context);
         context.setReturn(returnPc);
         return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, ms});
     }
@@ -1422,7 +1422,6 @@ pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
 pub const lookupAddress = Dispatch.lookupAddressForClass;
 pub const dump = Dispatch.dump;
-pub const initClass = Dispatch.initClass;
 pub fn init() void {
 //    _ = Dispatch.new();
 }
@@ -1544,9 +1543,6 @@ const Dispatch = extern struct {
     }
     fn dump(index: ClassIndex) void {
         trace("\ndump: {} {}",.{index,dispatches[@intFromEnum(index)]});
-    }
-    fn initClass(index: ClassIndex) void {
-        dispatches[@intFromEnum(index)].init();
     }
     pub fn addMethod(method: *CompiledMethod) void {
         const class = method.signature.class;

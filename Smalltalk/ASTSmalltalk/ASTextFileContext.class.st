@@ -28,9 +28,8 @@ ASTextFileContext >> initialize [
 ]
 
 { #category : 'creation' }
-ASTextFileContext >> name: anObject prefix: aString main: aString2 [
-
-	^ self name: anObject prefix: aString main: aString2 seq: 0
+ASTextFileContext >> name: anObject prefix: aPrefix main: aSymbol [
+^ (self name: anObject prefix: aPrefix main: aSymbol seq: 0)
 ]
 
 { #category : 'creation' }

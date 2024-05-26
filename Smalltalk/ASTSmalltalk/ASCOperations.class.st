@@ -25,6 +25,11 @@ ASCOperations >> children [
 ^ OrderedCollection new:0
 ]
 
+{ #category : 'accessing' }
+ASCOperations >> isSend [
+	^ false
+]
+
 { #category : 'serializing' }
 ASCOperations >> manifest: aGenerator [
 

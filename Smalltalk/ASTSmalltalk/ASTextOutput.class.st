@@ -66,6 +66,7 @@ ASTextOutput >> initialize [
 	super initialize.
 	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
+	numLocals := 0.
 	label := 0.
 	testing := false
 ]
@@ -78,8 +79,7 @@ ASTextOutput >> lf [
 
 { #category : 'accessing' }
 ASTextOutput >> name [
-
-	^ componentName ifNil: [
+^ componentName ifNil: [
 		  componentName := context
 			                   name: self
 			                   prefix: self prefix

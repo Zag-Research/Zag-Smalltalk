@@ -17,6 +17,12 @@ Class {
 }
 
 { #category : 'accessing' }
+ASCCase >> at: key [
+
+	^ map at: key
+]
+
+{ #category : 'accessing' }
 ASCCase >> at: key put: value [
 
 	^ map at: key put: value
@@ -50,9 +56,9 @@ ASCCase >> next [
 ]
 
 { #category : 'code generation' }
-ASCCase >> outputTo: output [
-
-	^ self shouldBeImplemented 
+ASCCase >> outputTo: anOutput [
+	^ anOutput
+		  visitCase: map
 ]
 
 { #category : 'instance creation' }
