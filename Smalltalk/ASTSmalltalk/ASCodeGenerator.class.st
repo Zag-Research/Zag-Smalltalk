@@ -159,6 +159,7 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'initialization' }
 ASCodeGenerator >> initialize [
+
 	super initialize.
 	code := ASCMethodBlock new.
 	code nonlocalNameLookupObject: self.
@@ -167,7 +168,8 @@ ASCodeGenerator >> initialize [
 	blockClosures := OrderedCollection new.
 	maxDepth := 0.
 	inline := false.
-	tailCallOptimize := true
+	tailCallOptimize := true.
+	embeddings := { Integer >> #-. Integer >> #'<=' }
 ]
 
 { #category : 'accessing' }
@@ -200,6 +202,11 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> isEmbedded: aCompileMethod [
+	^ embeddings hasLiteral: aCompileMethod 
 ]
 
 { #category : 'accessing' }
@@ -391,21 +398,22 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
-	(inline and: targetClass == aTargetClass) ifTrue: [
-		"we know the target class and the current class being compiled are the same"
-		"rename stack elements to be named values"
-		"self/super/literal don't need a send"
-		stack clone
+	
+	"check if this is an embeddable send"
+	(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [ ^ self sendEmbedded: aSymbol ].
+	(inline and: targetClass == aTargetClass) ifTrue: [ "we know the target class and the current class being compiled are the same""rename stack elements to be named values""self/super/literal don't need a send"
+		"stack clone self setBasicBlock"
 		"build ast"
-		self setBasicBlock
-		"walk AST"
-		
-	].
+		^ (ASPharoCompiler new astFor:
+		       aTargetClass >> aSymbol) zigWalkMethod: self.
+		"walk AST" ].
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
 		      tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
+	^ bb ifNotNil: [
+		  basicBlocks add: bb.
+		  code := bb ]
 ]
 
 { #category : 'API' }
