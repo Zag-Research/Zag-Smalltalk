@@ -88,7 +88,7 @@ ASBlock >> zigWalkMethod: aGenerator [
 
 	aGenerator
 		locals: locals
-		arguments: arguments.
+		parameters: arguments.
 	aGenerator selector: self selector.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnNil ]

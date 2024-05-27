@@ -34,23 +34,23 @@ ASLLVMOutputTest >> testLLVMOutput [
 ASLLVMOutputTest >> testLLVM_fibonacci [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
+	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
 	output generateCode: ast for: SmallInteger.
 	output codeGenerator inspect.
-	self assert: output name equals: 'Zfibonacci'.
+	self assert: output name equals: 'Lfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
 { #category : 'tests' }
-ASLLVMOutputTest >> testLLVM_fibonacci2 [
+ASLLVMOutputTest >> testLLVM_fibonacci_alt [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
 	output generateCode: ast for: SmallInteger.
 	output codeGenerator inspect.
-	self assert: output name equals: 'Zfibonacci'.
+	self assert: output name equals: 'Lfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
@@ -65,7 +65,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #fibonacci.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -88,7 +88,9 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg send: #fibonacci targetClass: SmallInteger.
 	cg sendEmbedded: #+.
 	cg returnTop.
-	cg inspect
+	cg inspect.
+	output outputToStream.
+	file asString inspect
 ]
 
 { #category : 'tests' }
@@ -100,7 +102,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #fibonacci.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -127,7 +129,9 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	cg setBasicBlock: common.
 	cg returnTop.
 
-	cg inspect
+	cg inspect.
+	output outputToStream.
+	file asString inspect
 ]
 
 { #category : 'tests' }
@@ -137,12 +141,11 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #simple.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
 
 	cg inspect.
-	self halt.
 	output outputToStream.
 	file asString inspect
 ]
