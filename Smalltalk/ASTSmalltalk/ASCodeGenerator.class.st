@@ -160,7 +160,6 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
-	self halt.
 	anExpression isASSelf ifTrue: [ ^targetClass ].
 	^nil
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
@@ -397,6 +396,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
+	aTargetClass ifNotNil: [ 
 	"check if this is an embeddable send"
 	(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [ ^ self sendEmbedded: aSymbol ].
 	(inline and: targetClass == aTargetClass) ifTrue: [ "we know the target class and the current class being compiled are the same""rename stack elements to be named values""self/super/literal don't need a send"
@@ -405,6 +405,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		^ (ASPharoCompiler new astFor:
 		       aTargetClass >> aSymbol) zigWalkMethod: self.
 		"walk AST" ].
+	].
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
