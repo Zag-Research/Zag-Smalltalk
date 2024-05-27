@@ -49,7 +49,7 @@ ASStackBlockClosure >> nonlocalNameLookupObject: anASCodeGenerator [
 ]
 
 { #category : 'API' }
-ASStackBlockClosure >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackBlockClosure >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	| offsetToTheObject offsetToTheMethod |
 	"Offset to the object is a value that will be retrived by the nonlocaNameLookupOjbect.

@@ -38,12 +38,17 @@ ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 ]
 
 { #category : 'API' }
+ASEmptyStack >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+]
+
+{ #category : 'API' }
 ASEmptyStack >> offset: anInteger to: anObject [
 	^anInteger 
 ]
 
 { #category : 'API' }
-ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASEmptyStack >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	^ self error: 'something bad happend'
 ]

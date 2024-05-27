@@ -105,6 +105,15 @@ ASStackElement >> makeContextRequired [
 ]
 
 { #category : 'API' }
+ASStackElement >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	^ rest
+		  offset: anInteger + 1
+		  namedContext: blockLocal
+		  stack: blockStack
+]
+
+{ #category : 'API' }
 ASStackElement >> offset: anInteger to: anObject [
 
 	^ rest
@@ -113,12 +122,12 @@ ASStackElement >> offset: anInteger to: anObject [
 ]
 
 { #category : 'API' }
-ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackElement >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
 		  offset: anInteger + 1
 		  to: anObject
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther
 ]
@@ -128,14 +137,10 @@ ASStackElement >> requiredContextDo: aBlock [
 	^ rest requiredContextDo: aBlock
 ]
 
-{ #category : 'API' }
-ASStackElement >> stackNames: aCollection [
+{ #category : 'initialization' }
+ASStackElement >> reset [
 
-	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new
-		  from: (rest stackNames: aCollection allButFirst);
-		  name: aCollection first;
-		  top: top
+	^ rest reset
 ]
 
 { #category : 'accessing' }
@@ -146,6 +151,6 @@ ASStackElement >> top [
 { #category : 'accessing' }
 ASStackElement >> top: value [
 
-value assertIsValue .
+"value assertIsValue ."
 	top := value
 ]

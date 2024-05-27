@@ -16,12 +16,6 @@ ASStack >> at: aSymbol [
 ]
 
 { #category : 'accessing' }
-ASStack >> atZZZ: aSymbol [
-
-	^ (self find: aSymbol) top
-]
-
-{ #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
@@ -33,18 +27,32 @@ ASStack >> isEmpty [
 ]
 
 { #category : 'API' }
-ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStack >> namedContext: blockLocal stack: blockStack [
+	^ self
+		  offset: 0
+		  namedContext: blockLocal
+		  stack: blockStack
+]
+
+{ #category : 'API' }
+ASStack >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASStack >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 self subclassResponsibility 
 ]
 
 { #category : 'API' }
-ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
+ASStack >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
 
 	^ self
 		  offset: 0
 		  to: aSymbol
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther 
 ]
@@ -64,6 +72,18 @@ ASStack >> push: aSymbol on: aStack [
 ]
 
 { #category : 'API' }
+ASStack >> pushLocalNamed: name [
+
+	^ (ASLocalNamed new from: self) name: name
+]
+
+{ #category : 'API' }
+ASStack >> pushParameterNamed: name [
+
+	^ (ASStackNamed new from: self) name: name
+]
+
+{ #category : 'API' }
 ASStack >> pushPlaceholderContext [ 
 	^ ASStackContextPlaceholder new from: self
 ]
@@ -71,13 +91,4 @@ ASStack >> pushPlaceholderContext [
 { #category : 'API' }
 ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
-]
-
-{ #category : 'API' }
-ASStack >> stackNames: aCollection [
-
-	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new
-		  from: (self stackNames: aCollection allButFirst);
-		  name: aCollection first
 ]

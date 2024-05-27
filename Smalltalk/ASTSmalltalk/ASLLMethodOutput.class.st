@@ -1,9 +1,13 @@
+"
+I am the putput for methods for LLVM
+"
 Class {
 	#name : 'ASLLMethodOutput',
 	#superclass : 'ASLLOutput',
 	#instVars : [
 		'sequence',
-		'stack'
+		'stack',
+		'inMethod'
 	],
 	#classVars : [
 		'TypeMap'
@@ -30,7 +34,11 @@ ASLLMethodOutput class >> initialize [
 
 { #category : 'API' }
 ASLLMethodOutput >> endMethod [
-	self label: nil
+
+	inMethod ifFalse: [ ^ self ].
+	self nextPutAll: '}
+'.
+	inMethod := false
 ]
 
 { #category : 'initialization' }
@@ -58,6 +66,27 @@ ASLLMethodOutput >> nextVariable [
 
 	sequence := sequence + 1.
 	^ sequence asString
+]
+
+{ #category : 'code generation' }
+ASLLMethodOutput >> nextVariableEqualsOffset: offset from: register named: name [
+
+	| label |
+	label := self nextVariable.
+	self
+		nextPutAll: '  %';
+		nextPutAll: label;
+		nextPutAll: ' = getelementptr { [0 x i64] }, ptr %';
+		nextPutAll: register;
+		nextPutAll: ', i64 0, i32 ';
+		print: offset;
+		nextPutAll: '
+  %.';
+		nextPutAll: name;
+		nextPutAll: ' = load i64, ptr %';
+		nextPutAll: label;
+		nextPutAll: ', align 8
+'
 ]
 
 { #category : 'code generation' }
@@ -118,14 +147,22 @@ ASLLMethodOutput >> outputMethodLabel: bbLabel [
 ASLLMethodOutput >> outputMethodStart: bbLabel [
 
 	sequence := 0.
+	self endMethod.
 	self
 		nextPutAll: 'define ptr @';
 		nextPutAll: bbLabel;
 		nextPutAll:
 			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {
 '.
-	currentBasicBlock inspect.
-	self halt
+	inMethod := true.
+	currentBasicBlock
+		namedContext: [ :idx :element |
+			self
+				nextVariableEqualsOffset: idx + 7
+				from: 'context'
+				named: element name ]
+		stack: [ :idx :element |
+			self nextVariableEqualsOffset: idx from: 'sp' named: element name ]
 ]
 
 { #category : 'accessing' }
@@ -143,6 +180,41 @@ ASLLMethodOutput >> push [
 	stack add: var.
 ]
 
+{ #category : 'API' }
+ASLLMethodOutput >> setupForOutput [
+
+	| bbs |
+	inMethod := false.
+	bbs := Set new.
+	codeGenerator basicBlocksUnorderedDo: [ :bb |
+		currentBasicBlock := bb.
+		maxDepth := maxDepth max: bb maxDepth.
+		bb stackOps: self.
+		bbs add: bb ].
+	[ bbs isEmpty ] whileFalse: [
+		| temp |
+		temp := bbs.
+		bbs := Set new.
+		temp do: [ :bb | bb flow ifTrue: [bbs add: bb] ] ]
+]
+
+{ #category : 'flow analysis' }
+ASLLMethodOutput >> stackCase: anASCCase [
+]
+
+{ #category : 'flow analysis' }
+ASLLMethodOutput >> stackEmbed: anASCEmbed [
+]
+
+{ #category : 'flow analysis' }
+ASLLMethodOutput >> stackPush: anASCPushVariable [
+
+]
+
+{ #category : 'flow analysis' }
+ASLLMethodOutput >> stackPushLiteral: anASCLiteral [
+]
+
 { #category : 'code generation' }
 ASLLMethodOutput >> verifySelector: anObject [
 
@@ -158,9 +230,19 @@ ASLLMethodOutput >> visitBranch: anASCInlineBlock [
 	self shouldBeImplemented.
 ]
 
+{ #category : 'API' }
+ASLLMethodOutput >> visitCase: aClassToBlockMap [
+
+
+	^ self nextPutAll: 'visitCase';print: aClassToBlockMap;nextPutAll: '
+'
+]
+
 { #category : 'visiting' }
 ASLLMethodOutput >> visitEmbed: aString [ 
-	self shouldBeImplemented.
+
+	self nextPutAll: 'visitEmbed: ';nextPutAll: aString;nextPutAll: '
+'
 ]
 
 { #category : 'API' }
@@ -176,16 +258,17 @@ ASLLMethodOutput >> visitPushLiteral: aLiteral [
 
 	self
 		push;
-		nextPutAll: (self mapLLVMTypeFor: aLiteral) asString;  
+		nextPutAll: (self mapLLVMTypeFor: aLiteral class) asString;
 		nextPut: $ ;
 		nextPutAll: aLiteral asString;
-		lf.
+		lf
 ]
 
 { #category : 'API' }
 ASLLMethodOutput >> visitPushLocal: anASLocal [
 
-	self shouldBeImplemented 
+	self nextPutAll: 'visitPushLocal:
+' 
 ]
 
 { #category : 'API' }
@@ -195,9 +278,21 @@ ASLLMethodOutput >> visitReturnTop [
 		nextPutAll: 'ret '.
 ]
 
+{ #category : 'API' }
+ASLLMethodOutput >> visitSend: aSelector returnIndex: index target: aClass [
+
+	^ self
+		  nextPutAll: 'visitSend';
+		  print: aSelector;
+		  nextPutAll: '
+'
+]
+
 { #category : 'visiting' }
-ASLLMethodOutput >> visitSimple: aString [ 
-	self shouldBeImplemented.
+ASLLMethodOutput >> visitSimple: aString [
+
+	self nextPutAll: 'visitSimple: ';nextPutAll: aString;nextPutAll: '
+'
 ]
 
 { #category : 'writing' }

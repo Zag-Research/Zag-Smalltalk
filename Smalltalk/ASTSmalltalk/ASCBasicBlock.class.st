@@ -240,11 +240,11 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
+ASCBasicBlock >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
 	^ stack
 		  offset: 0
 		  to: anObject
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther 
 ]
@@ -297,20 +297,19 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 { #category : 'API' }
 ASCBasicBlock >> pushLocalNamed: aSymbol [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCLocal new init: Object;
+	stack := stack pushLocalNamed: aSymbol.
+	^ stack top: (ASCLocal new
+			   init: Object;
 			   name: aSymbol)
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> pushParameterNamed: aSymbol [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCParameter new init: Object; name: aSymbol)
+	stack := stack pushParameterNamed: aSymbol.
+	^ stack top: (ASCParameter new
+			   init: Object;
+			   name: aSymbol)
 ]
 
 { #category : 'API' }
@@ -392,6 +391,15 @@ ASCBasicBlock >> stack: anASStack [
 
 	stack := anASStack.
 	maxDepth := stack depth
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> stackOps: output [ 
+
+	stack := stack reset.
+	operations do: [ :operation |
+		operation stackOp: output
+	]
 ]
 
 { #category : 'stackAccessHelpers' }

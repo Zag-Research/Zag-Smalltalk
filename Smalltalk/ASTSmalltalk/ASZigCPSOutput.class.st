@@ -243,7 +243,7 @@ ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 		nextPutAll: '.push('.
 	currentBasicBlock
 		offsetOf: anObject
-		local: [ :local |
+		context: [ :local |
 			self
 				nextPutAll: 'context.getLocal(';
 				print: local;
@@ -335,7 +335,7 @@ ASZigCPSOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				nextPutAll: 'context.setLocal(';
 				print: local ]

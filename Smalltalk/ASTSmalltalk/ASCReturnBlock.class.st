@@ -49,6 +49,12 @@ ASCReturnBlock >> method: anASCMethodBlock [
 	anASCMethodBlock addReturnBlock: self
 ]
 
+{ #category : 'API' }
+ASCReturnBlock >> namedContext: blockLocal stack: blockStack [ 
+
+	stack namedContext: blockLocal stack: blockStack
+]
+
 { #category : 'accessing' }
 ASCReturnBlock >> namedMethod [
 

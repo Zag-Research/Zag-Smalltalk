@@ -26,6 +26,12 @@ ASCLiteral >> outputTo: output [
 	^ output visitPushLiteral: literal
 ]
 
+{ #category : 'stack analysis' }
+ASCLiteral >> stackOp: output [
+
+	^ output stackPushLiteral: self
+]
+
 { #category : 'instance creation' }
 ASCLiteral >> with: anObject [
 

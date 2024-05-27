@@ -1,3 +1,6 @@
+"
+I am the output for Blocks for LLVM
+"
 Class {
 	#name : 'ASLLBlockOutput',
 	#superclass : 'ASLLMethodOutput',

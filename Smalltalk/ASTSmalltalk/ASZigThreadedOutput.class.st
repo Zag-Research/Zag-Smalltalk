@@ -105,7 +105,7 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #popLocal;
 				print: local;
@@ -173,7 +173,7 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
 				print: local;
@@ -234,7 +234,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #storeLocal;
 				print: local;

@@ -61,6 +61,12 @@ ASCCase >> outputTo: anOutput [
 		  visitCase: map
 ]
 
+{ #category : 'stack analysis' }
+ASCCase >> stackOp: output [
+
+	^ output stackCase: self
+]
+
 { #category : 'instance creation' }
 ASCCase >> with: ignored [
 
