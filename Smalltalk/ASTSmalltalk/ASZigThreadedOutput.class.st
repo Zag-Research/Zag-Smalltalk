@@ -104,6 +104,13 @@ ASZigThreadedOutput >> visitCase: aClassToBlockMap [
 	lf
 ]
 
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitEmbed: aSelector [
+	self
+		putEmbedded: aSelector;
+		lf
+]
+
 { #category : 'API' }
 ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
