@@ -16,7 +16,9 @@ Class {
 		'operations',
 		'label',
 		'method',
-		'hash'
+		'hash',
+		'requires',
+		'provides'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -61,6 +63,7 @@ ASCBasicBlock >> blocks [
 ASCBasicBlock >> branch: anASCInlineBlock [
 
 	self put: (ASCBranch with: anASCInlineBlock).
+	anASCInlineBlock setStack: stack.
 	^ anASCInlineBlock
 ]
 
@@ -91,7 +94,7 @@ ASCBasicBlock >> classCase: aCollection [
 		| next |
 		next := ASCInlineBlock for: self.
 		case at: class put: next.
-		next stack: stack ].
+		next setStack: stack ].
 	self put: case.
 	^ case
 ]
@@ -116,7 +119,10 @@ ASCBasicBlock >> doDrop: n [
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDup [
-	stack := stack from: stack top 
+
+	self needs: stack top source.
+	stack := stack from: stack top.
+	self error: 'incorrect implementation'
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -153,7 +159,13 @@ ASCBasicBlock >> endWithReturnTop [
 { #category : 'accessing' }
 ASCBasicBlock >> find: aSymbol [
 
-	^ (stack find: aSymbol) push: aSymbol on: stack
+	^ stack find: aSymbol
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> flow [
+
+	^ false
 ]
 
 { #category : 'comparing' }
@@ -182,7 +194,9 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new.
 	maxDepth := 0.
 	stack := ASEmptyStack new.
-	hash := (SequenceNumber := SequenceNumber + 1)
+	hash := SequenceNumber := SequenceNumber + 1.
+	provides := Set new.
+	requires := Set new
 ]
 
 { #category : 'printing' }
@@ -226,6 +240,18 @@ ASCBasicBlock >> maxDepth [
 { #category : 'accessing' }
 ASCBasicBlock >> method: anASCMethodBlock [ 
 	method := anASCMethodBlock
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> modifies: aSymbol [
+
+	provides add: aSymbol
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> needs: aSymbol [
+
+	requires add: aSymbol
 ]
 
 { #category : 'accessing' }
@@ -377,8 +403,15 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 		        target: target.
 	self put: send.
 	next ifNotNil: [
-		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
+		next setStack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
 	^ next
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> setStack: anASStack [
+
+	stack := anASStack.
+	^ stack setSource: 0
 ]
 
 { #category : 'accessing' }

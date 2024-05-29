@@ -28,15 +28,15 @@ ASImageThreadedOutput >> branch: command to: target [
 			target ifNotNil: [ self labelRef: target label ] ]
 ]
 
-{ #category : 'API' }
-ASImageThreadedOutput >> endMethod [
-
-
-]
-
 { #category : 'code generation' }
 ASImageThreadedOutput >> outputBasicBlockEnd [
 	
+]
+
+{ #category : 'API' }
+ASImageThreadedOutput >> outputMethodEnd [
+
+
 ]
 
 { #category : 'code generation' }

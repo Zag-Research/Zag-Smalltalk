@@ -1,11 +1,11 @@
 "
-I remember literal values to output.
+I create an array and push the address on the stack
 "
 Class {
-	#name : 'ASCLiteral',
+	#name : 'ASCArray',
 	#superclass : 'ASCOperations',
 	#instVars : [
-		'literal'
+		'size'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -13,21 +13,22 @@ Class {
 }
 
 { #category : 'printing' }
-ASCLiteral >> inspectZagASTOn: aStream [
+ASCArray >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(.
-	aStream print: literal.
+	aStream print: size.
 	aStream << $)
 ]
 
 { #category : 'code generation' }
-ASCLiteral >> outputTo: output [ 
-	^ output visitPushLiteral: literal
+ASCArray >> outputTo: output [
+
+	^ output visitPushArray: size
 ]
 
 { #category : 'instance creation' }
-ASCLiteral >> with: anObject [
+ASCArray >> with: anInteger [
 
-	literal := anObject 
+	size := anInteger
 ]

@@ -4,10 +4,19 @@ I reperesent an empty stack of values within a method.
 Class {
 	#name : 'ASStack',
 	#superclass : 'Object',
+	#instVars : [
+		'rest'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'instance creation' }
+ASStack class >> fromStack: anASStack [
+
+	^ self new fromStack: anASStack
+]
 
 { #category : 'accessing' }
 ASStack >> at: aSymbol [
@@ -18,6 +27,12 @@ ASStack >> at: aSymbol [
 { #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
+]
+
+{ #category : 'instance creation' }
+ASStack >> fromStack: anASStack [
+
+	rest := anASStack
 ]
 
 { #category : 'testing' }
@@ -61,7 +76,7 @@ ASStack >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockO
 ASStack >> push: anObject [
 
 	| newStack |
-	newStack := ASStackElement from: self.
+	newStack := ASStackElement fromStack: self.
 	newStack top: anObject. " (ASCClassValue new init: anObject class)."
 	^ newStack
 ]
@@ -69,18 +84,19 @@ ASStack >> push: anObject [
 { #category : 'adding' }
 ASStack >> push: aSymbol on: aStack [
 
+	^ self shouldBeImplemented
 ]
 
 { #category : 'API' }
 ASStack >> pushLocalNamed: name [
 
-	^ (ASLocalNamed new from: self) name: name
+	^ (ASLocalNamed new fromStack: self) name: name
 ]
 
 { #category : 'API' }
 ASStack >> pushParameterNamed: name [
 
-	^ (ASStackNamed new from: self) name: name
+	^ (ASStackNamed fromStack: self) name: name
 ]
 
 { #category : 'API' }

@@ -22,7 +22,7 @@ ASLLFileContext >> initialize [
 ASLLFileContext >> writeHeaderOn: stream [
 
 	stream nextPutAll:
-		'%zag.process.Process = type { [909 x i64], [3637 x i64], [3637 x i64], ptr, i64, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
+		'%zag.process.Process = type { [909 x i64], ptr, i64, ptr, ptr, ptr, ptr, ptr, ptr, i64, [3637 x i64], [3637 x i64] }
 %zag.context.Context = type { i64, ptr, %zag.execute.PC, ptr, ptr, i64, [0 x i64] }
 %zag.execute.PC = type { ptr }
 %zag.execute.Code = type { <{ ptr, [8 x i8] }> }

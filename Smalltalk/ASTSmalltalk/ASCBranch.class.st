@@ -24,7 +24,7 @@ ASCBranch >> inspectZagASTOn: aStream [
 { #category : 'accessing' }
 ASCBranch >> next [
 
-	^ bb
+	^ bb nextInline
 ]
 
 { #category : 'code generation' }

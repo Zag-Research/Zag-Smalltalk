@@ -6,18 +6,10 @@ I may,  or may not be reified in a particular method
 Class {
 	#name : 'ASStackContextPlaceholder',
 	#superclass : 'ASStack',
-	#instVars : [
-		'rest'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASStackContextPlaceholder class >> from: anASStack [
-	^ self basicNew from: anASStack 
-]
 
 { #category : 'accessing' }
 ASStackContextPlaceholder >> depth [
@@ -36,10 +28,10 @@ ASStackContextPlaceholder >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : 'instance creation' }
-ASStackContextPlaceholder >> from: anASStack [
+{ #category : 'adding' }
+ASStackContextPlaceholder >> importedSource: anInteger [
 
-	rest := anASStack
+	^ self class fromStack: (rest importedSource: anInteger)
 ]
 
 { #category : 'API' }

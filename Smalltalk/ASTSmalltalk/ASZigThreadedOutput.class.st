@@ -21,12 +21,6 @@ ASZigThreadedOutput >> branch: command to: target [
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
-{ #category : 'API' }
-ASZigThreadedOutput >> endMethod [
-
-	self label: nil
-]
-
 { #category : 'accessing' }
 ASZigThreadedOutput >> methodName [
 	| predefined |
@@ -37,6 +31,12 @@ ASZigThreadedOutput >> methodName [
 { #category : 'code generation' }
 ASZigThreadedOutput >> outputBasicBlockEnd [
 	
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> outputMethodEnd [
+
+	self label: nil
 ]
 
 { #category : 'code generation' }

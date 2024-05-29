@@ -27,12 +27,6 @@ ASCEmbed >> outputTo: anOutput [
 	^ anOutput visitEmbed: selector
 ]
 
-{ #category : 'stack analysis' }
-ASCEmbed >> stackOp: output [
-
-	^ output stackEmbed: self
-]
-
 { #category : 'instance creation' }
 ASCEmbed >> with: aSymbol [
 

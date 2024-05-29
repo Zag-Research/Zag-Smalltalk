@@ -277,7 +277,9 @@ aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
 { #category : 'API' }
 ASCodeGenerator >> popVariable: aSymbol [
 
-	^ code popVariable: aSymbol
+	^ code
+		modifies: aSymbol;
+		popVariable: aSymbol
 ]
 
 { #category : 'API' }
@@ -288,8 +290,8 @@ ASCodeGenerator >> primitive: primitiveNumber [
 
 { #category : 'API' }
 ASCodeGenerator >> pushArray: arraySize [
-	"What do I do here?"
-	"code doPush: (ASCValue ) put: (ASCSimple )"
+
+	^ code doPush: (ASCArray with: arraySize )
 
 	
 ]
@@ -320,6 +322,7 @@ ASCodeGenerator >> pushSelf [
 	| value |
 	value := ASCClassValue new init: targetClass.
 	code
+		needs: #self;
 		doPush: value;
 		put: (ASCPushVariable with: (code find: #self) top)
 ]
@@ -327,7 +330,9 @@ ASCodeGenerator >> pushSelf [
 { #category : 'API' }
 ASCodeGenerator >> pushVariable: variable [
 
-	^ code pushVariable: variable
+	^ code
+		needs: variable;
+		pushVariable: variable
 ]
 
 { #category : 'API' }
@@ -390,11 +395,14 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
+	self manifest: code.
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
 		      tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
+	^ bb ifNotNil: [
+		  basicBlocks add: bb.
+		  code := bb ]
 ]
 
 { #category : 'API' }
