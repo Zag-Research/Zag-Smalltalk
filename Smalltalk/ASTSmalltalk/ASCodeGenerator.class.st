@@ -160,8 +160,9 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
-	anExpression isASSelf ifTrue: [ ^targetClass ].
-	^nil
+	anExpression isASSelf ifTrue: [ ^ targetClass ].
+	anExpression isASLiteral ifTrue: [ ^ anExpression literal class ].
+	^ nil
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
 
@@ -401,10 +402,9 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		(inline and: targetClass == aTargetClass) ifTrue: [ "we know the target class and the current class being compiled are the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast"
-			^ (ASPharoCompiler new astFor: aTargetClass >> aSymbol)
-				  zigWalkMethod: self
-			"walk AST" ] ].
+		inline ifTrue: [ 	self resetInlineSelectors.
+				^ self sendInline: aSymbol targetClass: aTargetClass ]
+		].
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
@@ -422,6 +422,23 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [ 
+
+
+		"check if this is a self call"
+		 | result |
+targetClass == aTargetClass ifFalse: [ "we know the target class and the current class being compiled are not the same"
+			"rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast"
+		self halt
+			] .
+		"walk the sends method AST" 
+		result := (ASPharoCompiler new astFor: aTargetClass >> aSymbol)
+				 zigWalkMethod: self.
+		result isReturn ifTrue: [ ^ result expression zigWalk: self ].
+				^ result
 ]
 
 { #category : 'accessing' }

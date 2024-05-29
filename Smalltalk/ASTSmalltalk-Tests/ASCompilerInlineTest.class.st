@@ -59,6 +59,56 @@ ASCompilerInlineTest >> class: aClass selector: aSelector [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockReturnInline [
+"
+blockReturn: p1
+	true ifTrue: [ ^ p1 ]
+"
+	self
+		assert: (self class: ASCompileTestClass1 selector: #blockReturn:)
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var @"MblockReturn:" = compileMethod(Sym.@"ifTrue:",0,9,.ASCompileTestClass1,.{
+&e.pushLiteral,Object.from(true),
+&e.pushNil,,
+&e.pushStack,0,
+&e.setupSend,Sym.value,
+&e.dynamicDispatch,
+&e.drop,
+&e.returnSelf,
+ });
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+MblockReturn:.setLiterals(&[_]Object{},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
 
 	self

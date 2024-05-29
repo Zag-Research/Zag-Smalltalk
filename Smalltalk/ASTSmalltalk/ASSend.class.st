@@ -139,7 +139,7 @@ ASSend >> zigWalk: aGenerator tail: tail [
 	target zigWalkTarget: aGenerator.
 	myTarget := aGenerator inferType: target.
 	args do: [ :arg | arg zigWalk: aGenerator ].
-	aGenerator resetInlineSelectors.
+	
 	aGenerator send: selector targetClass: myTarget tail: tail.
 	^ tail
 ]

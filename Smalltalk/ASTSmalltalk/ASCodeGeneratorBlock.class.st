@@ -21,7 +21,8 @@ ASCodeGeneratorBlock >> find: aSymbol [
 
 { #category : 'accessing' }
 ASCodeGeneratorBlock >> inferType: anExpression [
- ^ parentCodeGenerator inferType: anExpression
+self halt.
+	^ parentCodeGenerator inferType: anExpression
 ]
 
 { #category : 'initialization' }
