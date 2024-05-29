@@ -41,6 +41,11 @@ ASStack >> isEmpty [
 	^ true
 ]
 
+{ #category : 'adding' }
+ASStack >> nameStack: aCollection [ 
+
+]
+
 { #category : 'API' }
 ASStack >> namedContext: blockLocal stack: blockStack [
 	^ self
@@ -101,7 +106,7 @@ ASStack >> pushParameterNamed: name [
 
 { #category : 'API' }
 ASStack >> pushPlaceholderContext [ 
-	^ ASStackContextPlaceholder new from: self
+	^ ASStackContextPlaceholder new fromStack: self
 ]
 
 { #category : 'API' }

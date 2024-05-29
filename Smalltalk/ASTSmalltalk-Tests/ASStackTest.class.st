@@ -11,7 +11,7 @@ ASStackTest >> testLookupBlocks [
 
 	| stack result cg output |
 	stack := ASEmptyStack new.
-	stack := ASStackBlockClosure from: stack.
+	stack := ASStackBlockClosure fromStack: stack.
 
 	output := ASZigThreadedOutput new.
 	output context: ASZigFileContext new.
@@ -22,12 +22,12 @@ ASStackTest >> testLookupBlocks [
 	cg locals: { #mb1 } parameters: { #aSample }.
 
 	stack nonlocalNameLookupObject: cg.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p1.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p2.
-	stack := ASStackContext from: stack.
-	stack := ASStackElement from: stack.
+	stack := ASStackContext fromStack: stack.
+	stack := ASStackElement fromStack: stack.
 	stack top: (ASCClassValue new init: SmallInteger class).
 
 
@@ -60,86 +60,136 @@ ASStackTest >> testLookupBlocks [
 
 { #category : 'tests' }
 ASStackTest >> testLookupContext [
+
 	| stack result |
 	stack := ASEmptyStack new.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p1.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p2.
-	stack := ASStackContext from: stack.
-	stack := ASStackElement from: stack.
+	stack := ASStackContext fromStack: stack.
+	stack := ASStackElement fromStack: stack.
 	stack top: (ASCClassValue new init: SmallInteger class).
-	
-	result := (stack offset: 0 to: #p1  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p1
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #A1.
-	
-	result := (stack offset: 0 to: #p2 context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
-	self assert: result equals: #A0.
-	
+
+	result := stack
+		          offset: 0
+		          to: #p2
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
+	self assert: result equals: #A0
 ]
 
 { #category : 'tests' }
 ASStackTest >> testLookupContextPlacehoder [
+
 	| stack result |
 	stack := ASEmptyStack new.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p1.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p2.
-	stack := ASStackContextPlaceholder from: stack.
-	stack := ASStackElement from: stack.
+	stack := ASStackContextPlaceholder fromStack: stack.
+	stack := ASStackElement fromStack: stack.
 	stack top: (ASCClassValue new init: SmallInteger class).
-	
-	result := (stack offset: 0 to: #p1  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p1
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B2.
-	
-	result := (stack offset: 0 to: #p2 context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
-	self assert: result equals: #B1.
-	
+
+	result := stack
+		          offset: 0
+		          to: #p2
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
+	self assert: result equals: #B1
 ]
 
 { #category : 'tests' }
 ASStackTest >> testLookupJob [
+
 	| stack result |
 	stack := ASEmptyStack new.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p1.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p2.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p3.
-	
-	result := (stack offset: 0 to: #p1  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p1
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B2.
-	
-	result := (stack offset: 0 to: #p2 context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p2
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B1.
-	
-		result := (stack offset: 0 to: #p3  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p3
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B0
-	
 ]
 
 { #category : 'tests' }
 ASStackTest >> testLookupParameters [
+
 	| stack result |
 	stack := ASEmptyStack new.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p1.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p2.
-	stack := ASStackNamed from: stack.
+	stack := ASStackNamed fromStack: stack.
 	stack name: #p3.
-	
-	result := (stack offset: 0 to: #p1  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p1
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B2.
-	
-	result := (stack offset: 0 to: #p2 context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p2
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B1.
-	
-		result := (stack offset: 0 to: #p3  context: [ :offest | #A, offest asString] stack: [ :offest | #B, offest asString] other: [ :offest | #C, offest asString]).
+
+	result := stack
+		          offset: 0
+		          to: #p3
+		          context: [ :offest | #A , offest asString ]
+		          stack: [ :offest | #B , offest asString ]
+		          other: [ :offest | #C , offest asString ].
 	self assert: result equals: #B0
-	
 ]
 
 { #category : 'tests' }

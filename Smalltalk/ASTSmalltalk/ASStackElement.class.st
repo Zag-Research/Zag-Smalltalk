@@ -99,6 +99,16 @@ ASStackElement >> makeContextRequired [
 	^ self
 ]
 
+{ #category : 'adding' }
+ASStackElement >> nameStack: parameterNamesLeftToRight [
+
+	| name |
+	name := parameterNamesLeftToRight removeLast.
+	^ (ASStackNamed fromStack: (rest nameStack: parameterNamesLeftToRight))
+		  top: top;
+		  name: name
+]
+
 { #category : 'API' }
 ASStackElement >> offset: anInteger namedContext: blockLocal stack: blockStack [
 
