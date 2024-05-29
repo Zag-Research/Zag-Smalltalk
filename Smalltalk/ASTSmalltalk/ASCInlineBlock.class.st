@@ -36,6 +36,15 @@ ASCInlineBlock >> label [
 	^ label ifNil: [ label := method nextSequence asString ]
 ]
 
+{ #category : 'printing' }
+ASCInlineBlock >> locals: locals arguments: arguments [
+
+	arguments reversed do: [ :each | self pushParameterNamed: each ].
+	locals do: [ :each | self pushLocalNamed: each ].
+	stack := stack pushPlaceholderContext.
+	maxDepth := 0
+]
+
 { #category : 'as yet unclassified' }
 ASCInlineBlock >> namedMethod [
 	^ method namedMethod
