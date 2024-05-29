@@ -12,8 +12,8 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'top',
-		'rest',
-		'llvmName'
+		'llvmName',
+		'source'
 	],
 	#classVars : [
 		'LLVMNumber'
@@ -22,11 +22,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASStackElement class >> from: anASStack [
-	^ self basicNew from: anASStack 
-]
 
 { #category : 'initialization' }
 ASStackElement class >> reset [
@@ -65,10 +60,10 @@ ASStackElement >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : 'instance creation' }
-ASStackElement >> from: anASStack [
+{ #category : 'adding' }
+ASStackElement >> importedSource: anInteger [
 
-	rest := anASStack 
+	^ (self class fromStack: (rest importedSource: anInteger + 1)) top: top; source: anInteger
 ]
 
 { #category : 'testing' }
@@ -141,6 +136,18 @@ ASStackElement >> requiredContextDo: aBlock [
 ASStackElement >> reset [
 
 	^ rest reset
+]
+
+{ #category : 'accessing' }
+ASStackElement >> source [
+
+	^ source
+]
+
+{ #category : 'accessing' }
+ASStackElement >> source: anObject [
+
+	source := anObject
 ]
 
 { #category : 'accessing' }

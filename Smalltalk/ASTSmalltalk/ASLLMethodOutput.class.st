@@ -32,15 +32,6 @@ ASLLMethodOutput class >> initialize [
 			           (String -> 'i8*') }
 ]
 
-{ #category : 'API' }
-ASLLMethodOutput >> endMethod [
-
-	inMethod ifFalse: [ ^ self ].
-	self nextPutAll: '}
-'.
-	inMethod := false
-]
-
 { #category : 'initialization' }
 ASLLMethodOutput >> initialize [
 
@@ -98,7 +89,6 @@ ASLLMethodOutput >> outputBasicBlockEnd [
 ASLLMethodOutput >> outputMBlockLabel: bbLabel [
 
 	self
-		nextPut: $@;
 		nextPutAll: bbLabel;
 		nextPut: $:;
 		lf
@@ -138,6 +128,15 @@ ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive method
 '
 ]
 
+{ #category : 'API' }
+ASLLMethodOutput >> outputMethodEnd [
+
+	inMethod ifFalse: [ ^ self ].
+	self nextPutAll: '}
+'.
+	inMethod := false
+]
+
 { #category : 'code generation' }
 ASLLMethodOutput >> outputMethodLabel: bbLabel [
 
@@ -147,7 +146,7 @@ ASLLMethodOutput >> outputMethodLabel: bbLabel [
 ASLLMethodOutput >> outputMethodStart: bbLabel [
 
 	sequence := 0.
-	self endMethod.
+	self outputMethodEnd.
 	self
 		nextPutAll: 'define ptr @';
 		nextPutAll: bbLabel;
@@ -198,23 +197,6 @@ ASLLMethodOutput >> setupForOutput [
 		temp do: [ :bb | bb flow ifTrue: [bbs add: bb] ] ]
 ]
 
-{ #category : 'flow analysis' }
-ASLLMethodOutput >> stackCase: anASCCase [
-]
-
-{ #category : 'flow analysis' }
-ASLLMethodOutput >> stackEmbed: anASCEmbed [
-]
-
-{ #category : 'flow analysis' }
-ASLLMethodOutput >> stackPush: anASCPushVariable [
-
-]
-
-{ #category : 'flow analysis' }
-ASLLMethodOutput >> stackPushLiteral: anASCLiteral [
-]
-
 { #category : 'code generation' }
 ASLLMethodOutput >> verifySelector: anObject [
 
@@ -227,7 +209,11 @@ ASLLMethodOutput >> verifySelector: anObject [
 
 { #category : 'visiting' }
 ASLLMethodOutput >> visitBranch: anASCInlineBlock [ 
-	self shouldBeImplemented.
+
+	^ self nextPutAll: '  br label %';
+		nextPutAll: anASCInlineBlock label;
+		nextPutAll: '
+'
 ]
 
 { #category : 'API' }
@@ -243,6 +229,11 @@ ASLLMethodOutput >> visitEmbed: aString [
 
 	self nextPutAll: 'visitEmbed: ';nextPutAll: aString;nextPutAll: '
 '
+]
+
+{ #category : 'API' }
+ASLLMethodOutput >> visitPushContext [
+
 ]
 
 { #category : 'API' }

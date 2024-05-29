@@ -31,6 +31,12 @@ ASEmptyStack >> find: aSymbol [
 	^ nonlocalNameLookupObject find: aSymbol"
 ]
 
+{ #category : 'API' }
+ASEmptyStack >> makeContextRequired [
+
+	^ ASStackContext fromStack: self
+]
+
 { #category : 'instance initialization' }
 ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 
@@ -55,4 +61,10 @@ ASEmptyStack >> offset: anInteger to: anObject context: blockLocal stack: blockS
 
 { #category : 'initialization' }
 ASEmptyStack >> requiredContextDo: x [
+]
+
+{ #category : 'initialization' }
+ASEmptyStack >> reset [
+
+	^ self
 ]

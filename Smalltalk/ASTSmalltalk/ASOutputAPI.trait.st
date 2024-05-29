@@ -26,18 +26,18 @@ ASOutputAPI >> context: file [
 ]
 
 { #category : 'API' }
-ASOutputAPI >> endMethod [
-
-	^ self explicitRequirement
-]
-
-{ #category : 'API' }
 ASOutputAPI >> generateCode [
 	^ self explicitRequirement
 ]
 
 { #category : 'API' }
 ASOutputAPI >> generateCode: unused [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'API' }
+ASOutputAPI >> outputMethodEnd [
 
 	^ self explicitRequirement
 ]

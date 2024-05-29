@@ -27,6 +27,11 @@ ASStackNamed >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
+{ #category : 'adding' }
+ASStackNamed >> importedSource: anInteger [
+
+]
+
 { #category : 'accessing' }
 ASStackNamed >> llvmName [
 

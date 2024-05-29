@@ -13,9 +13,3 @@ Class {
 ASCPushVariable >> outputTo: anOutput [
 	^ variable push: anOutput
 ]
-
-{ #category : 'stack analysis' }
-ASCPushVariable >> stackOp: output [ 
-
-	^ output stackPush: self
-]

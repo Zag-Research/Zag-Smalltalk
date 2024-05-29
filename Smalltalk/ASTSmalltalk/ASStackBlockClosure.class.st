@@ -5,7 +5,6 @@ Class {
 	#name : 'ASStackBlockClosure',
 	#superclass : 'ASStack',
 	#instVars : [
-		'rest',
 		'nonlocalNameLookupObject',
 		'blockClosure'
 	],
@@ -13,12 +12,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASStackBlockClosure class >> from: anASStack [
-
-	^ self basicNew from: anASStack
-]
 
 { #category : 'accessing' }
 ASStackBlockClosure >> depth [
@@ -31,9 +24,10 @@ ASStackBlockClosure >> find: aSymbol [
 ]
 
 { #category : 'instance creation' }
-ASStackBlockClosure >> from: anASStack [
-	blockClosure := OrderedCollection new.
-	rest := anASStack
+ASStackBlockClosure >> initialize [
+
+	super initialize.
+	blockClosure := OrderedCollection new
 ]
 
 { #category : 'accessing' }

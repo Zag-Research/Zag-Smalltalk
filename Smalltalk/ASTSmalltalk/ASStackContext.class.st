@@ -9,12 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASStackContext >> from: anASStack [
-
-	rest := anASStack
-]
-
 { #category : 'API' }
 ASStackContext >> makeContextRequired [
 ^ self
