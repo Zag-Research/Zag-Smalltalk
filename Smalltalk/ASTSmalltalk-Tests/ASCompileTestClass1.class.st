@@ -37,6 +37,12 @@ ASCompileTestClass1 >> addTwoNumbers [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> bar [
+
+	^ 42
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> block [
 
 	^ { 
@@ -99,8 +105,13 @@ ASCompileTestClass1 >> fib: anInt [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> fibonacci [
 
-	self < 2 ifTrue: [ ^ 1 ].
-	^ (self - 1) fibonacci + (self - 2) fibonacci
+	^ self < 2 ifTrue: [ 1 ] ifFalse: [(self - 1) fibonacci + (self - 2) fibonacci]
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo [
+
+	^ self bar
 ]
 
 { #category : 'testing - examples' }

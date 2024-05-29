@@ -19,10 +19,17 @@ ASTextFileContext >> asString [
 ^ String streamContents: [ :s | self outputTo: s ]
 ]
 
-{ #category : 'creation' }
-ASTextFileContext >> name: anObject prefix: aString main: aString2 [
+{ #category : 'initialization' }
+ASTextFileContext >> initialize [
 
-	^ self name: anObject prefix: aString main: aString2 seq: 0
+	super initialize.
+	symbols := ASZagSymbols new.
+
+]
+
+{ #category : 'creation' }
+ASTextFileContext >> name: anObject prefix: aPrefix main: aSymbol [
+^ (self name: anObject prefix: aPrefix main: aSymbol seq: 0)
 ]
 
 { #category : 'creation' }
@@ -100,7 +107,6 @@ ASTextFileContext >> writeMainPrefixOn: stream [
 { #category : 'writing' }
 ASTextFileContext >> writeMainSuffixOn: aStream [
 
-	aStream << #writeMainSuffixOn:
 ]
 
 { #category : 'writing' }

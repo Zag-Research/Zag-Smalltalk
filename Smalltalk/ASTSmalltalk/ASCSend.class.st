@@ -3,9 +3,8 @@ I remember the selector for sends
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCEmbed',
 	#instVars : [
-		'selector',
 		'useCall',
 		'bb',
 		'target'
@@ -25,15 +24,17 @@ super initialize .	useCall := false
 ASCSend >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	aStream
-		space;
-		print: selector.
 	bb
 		ifNotNil: [
 			aStream
 				<< ' -> ';
 				<< bb label ]
 		ifNil: [ aStream << ' ( tailcall )' ]
+]
+
+{ #category : 'accessing' }
+ASCSend >> isSend [
+	^ true
 ]
 
 { #category : 'block handling' }
@@ -57,7 +58,7 @@ ASCSend >> outputTo: anOutput [
 
 	^ anOutput
 		  visitSend: selector
-		  returnIndex: (bb ifNotNil: [ bb index ])
+		  returnIndex: bb
 		  target: target
 ]
 
@@ -73,23 +74,27 @@ ASCSend >> return: aBasicBlock [
 ]
 
 { #category : 'accessing' }
+ASCSend >> selector [
+	^ selector 
+]
+
+{ #category : 'accessing' }
 ASCSend >> selector: aString [ 
 	selector := aString
 ]
 
 { #category : 'accessing' }
-ASCSend >> target: aSymbol [
+ASCSend >> target [
 
+	^ target
+]
+
+{ #category : 'accessing' }
+ASCSend >> target: aSymbol [
 	target := aSymbol
 ]
 
 { #category : 'accessing' }
 ASCSend >> useCall [
 	useCall := true
-]
-
-{ #category : 'instance creation' }
-ASCSend >> with: aSymbol [
-
-	selector := aSymbol
 ]

@@ -483,6 +483,14 @@ const ObjectFunctions = struct {
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
     }
+    pub inline fn setField(self: Object,field: usize, value: Object) void {
+        if (self.asObjectArray()) |ptr| ptr[field] = value;
+    }
+    pub inline fn getField(self: Object,field: usize) Object {
+        if (self.asObjectArray()) |ptr|
+            return ptr[field];
+        return Nil;
+    }
     pub inline fn tagbits(self: Object) u16 {
         return @intFromEnum(self.tag);
     }
@@ -571,6 +579,10 @@ const ObjectFunctions = struct {
     }
     pub inline fn asMemoryObject(self: Object) ?HeapObjectPtr {
         if (self.isMemoryAllocated()) return @ptrFromInt(@as(u48, @truncate(self.rawU())));
+        return null;
+    }
+    pub inline fn asObjectArray(self: Object) ?[*]Object {
+        if (self.isHeapObject()) return @ptrCast(self.to(HeapObjectPtr));
         return null;
     }
     pub fn header(self: Object) HeapObject {

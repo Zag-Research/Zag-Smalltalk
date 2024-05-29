@@ -15,7 +15,6 @@ Class {
 ASZigFileContext >> initialize [
 
 	super initialize.
-	symbols := ASZagSymbols new.
 	names := Dictionary new
 ]
 
@@ -86,6 +85,7 @@ ASZigFileContext >> writeMainSuffixOn: stream [
 ASZigFileContext >> writeNewDeclarationFor: aGenerator on: stream [
 
 	| label |
+	"setting the var name needs to be unique and relative to parent method"
 	label := aGenerator name.
 	stream
 		nextPutAll: 'var ';

@@ -9,7 +9,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'block handling' }
+{ #category : 'as yet unclassified' }
 ASCReturnTop >> manifestParameters: stack [
 
 	^ stack top makeManifest

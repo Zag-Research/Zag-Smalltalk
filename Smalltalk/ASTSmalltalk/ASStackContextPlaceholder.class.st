@@ -48,6 +48,15 @@ ASStackContextPlaceholder >> makeContextRequired [
 ]
 
 { #category : 'API' }
+ASStackContextPlaceholder >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	^ rest
+		  offset: anInteger
+		  namedContext: blockLocal
+		  stack: blockStack
+]
+
+{ #category : 'API' }
 ASStackContextPlaceholder >> offset: anInteger to: anObject [ 
 
 	^ rest
@@ -56,12 +65,12 @@ ASStackContextPlaceholder >> offset: anInteger to: anObject [
 ]
 
 { #category : 'API' }
-ASStackContextPlaceholder >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackContextPlaceholder >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
 		  offset: anInteger
 		  to: anObject
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther
 ]
@@ -73,6 +82,12 @@ self shouldNotImplement
 
 { #category : 'enumerating' }
 ASStackContextPlaceholder >> requiredContextDo: aBlock [
+
+	^ self
+]
+
+{ #category : 'initialization' }
+ASStackContextPlaceholder >> reset [
 
 	^ self
 ]

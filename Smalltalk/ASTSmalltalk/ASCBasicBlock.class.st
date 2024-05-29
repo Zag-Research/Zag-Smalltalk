@@ -15,12 +15,34 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'index'
+		'method',
+		'hash'
+	],
+	#classVars : [
+		'SequenceNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'instance creation' }
+ASCBasicBlock class >> for: aBasicBlock [
+
+	^ super new method: aBasicBlock namedMethod
+]
+
+{ #category : 'class initialization' }
+ASCBasicBlock class >> initialize [
+
+	SequenceNumber := 0
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> = other [
+
+	^ hash = other hash and: [ other class = self class ]
+]
 
 { #category : 'accessing' }
 ASCBasicBlock >> blocks [
@@ -35,24 +57,39 @@ ASCBasicBlock >> blocks [
 	^ blocks
 ]
 
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> branch: anASCInlineBlock [
+
+	self put: (ASCBranch with: anASCInlineBlock).
+	^ anASCInlineBlock
+]
+
 { #category : 'inlining' }
-ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [ 
-	^ false
+ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
+| aSend case |
+	aSend := operations last.
+	aSend isSend ifFalse: [ ^ false ].
+	
+	case := ASCCase new.
+	"case needs to know the relationship between classes and block name!"
+	operations add: case before: operations last.
+	"check if the send can be inlined"
+	^ anASCodeGenerator inline: aSend
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> children [ 
-^operations 
+ASCBasicBlock >> children [
+	^ operations
 ]
 
 { #category : 'abstract interpretation' }
-ASCBasicBlock >> classCase: aCollection complete: aBoolean [
+ASCBasicBlock >> classCase: aCollection [
 
 	| case |
-	case := ASCCase new complete: aBoolean.
+	case := ASCCase new.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlineBlock new.
+		next := ASCInlineBlock for: self.
 		case at: class put: next.
 		next stack: stack ].
 	self put: case.
@@ -100,16 +137,11 @@ ASCBasicBlock >> doPush: anObject [
 { #category : 'abstract interpretation' }
 ASCBasicBlock >> embed: aSymbol [
 
-	| next send |
-	next := ASCReturnBlock new.
-	send := ASCEmbed new
-		        selector: aSymbol;
-		        return: next;
-		        target: nil.
+	| send |
+	send := ASCEmbed with: aSymbol.
 	self put: send.
-	next ifNotNil: [
-		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
-	^ next
+	self stack: (stack drop: aSymbol numArgs + 1) pushUnknown.
+	^ nil
 ]
 
 { #category : 'initialization' }
@@ -124,9 +156,16 @@ ASCBasicBlock >> find: aSymbol [
 	^ (stack find: aSymbol) push: aSymbol on: stack
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> index [
-	^ index
+{ #category : 'comparing' }
+ASCBasicBlock >> hash [
+
+	^ hash
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> hash: value [
+
+	hash := value
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -143,6 +182,7 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new.
 	maxDepth := 0.
 	stack := ASEmptyStack new.
+	hash := (SequenceNumber := SequenceNumber + 1)
 ]
 
 { #category : 'printing' }
@@ -151,20 +191,14 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream
 		<< $(;
-		<< label;
+		<< self label;
 		<< $)
 ]
 
 { #category : 'initialization' }
 ASCBasicBlock >> label [
-	^ label
-]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> label: aString index: anInteger [
-
-	label := aString .
-	index := anInteger 
+	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -190,6 +224,11 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
+ASCBasicBlock >> method: anASCMethodBlock [ 
+	method := anASCMethodBlock
+]
+
+{ #category : 'accessing' }
 ASCBasicBlock >> next [
 	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
@@ -201,11 +240,11 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
+ASCBasicBlock >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
 	^ stack
 		  offset: 0
 		  to: anObject
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther 
 ]
@@ -231,7 +270,7 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	output outputMethodStart: label.
+	output outputMethodStart: self label.
 	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]
@@ -258,20 +297,19 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 { #category : 'API' }
 ASCBasicBlock >> pushLocalNamed: aSymbol [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCLocal new init: Object;
+	stack := stack pushLocalNamed: aSymbol.
+	^ stack top: (ASCLocal new
+			   init: Object;
 			   name: aSymbol)
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> pushParameterNamed: aSymbol [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCParameter new init: Object; name: aSymbol)
+	stack := stack pushParameterNamed: aSymbol.
+	^ stack top: (ASCParameter new
+			   init: Object;
+			   name: aSymbol)
 ]
 
 { #category : 'API' }
@@ -332,7 +370,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock new ].
+	next := tailCall ifFalse: [ ASCReturnBlock for: self ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
@@ -353,6 +391,15 @@ ASCBasicBlock >> stack: anASStack [
 
 	stack := anASStack.
 	maxDepth := stack depth
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> stackOps: output [ 
+
+	stack := stack reset.
+	operations do: [ :operation |
+		operation stackOp: output
+	]
 ]
 
 { #category : 'stackAccessHelpers' }

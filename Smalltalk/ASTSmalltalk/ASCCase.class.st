@@ -9,14 +9,18 @@ Class {
 	#name : 'ASCCase',
 	#superclass : 'ASCOperations',
 	#instVars : [
-		'next',
-		'map',
-		'complete'
+		'map'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'accessing' }
+ASCCase >> at: key [
+
+	^ map at: key
+]
 
 { #category : 'accessing' }
 ASCCase >> at: key put: value [
@@ -30,17 +34,11 @@ ASCCase >> blocks [
 	^ map values
 ]
 
-{ #category : 'accessing' }
-ASCCase >> complete: aBoolean [ 
-	complete := aBoolean
-]
-
 { #category : 'initialization' }
 ASCCase >> initialize [
 
 	super initialize.
-	map := Dictionary new.
-	complete := false
+	map := Dictionary new
 ]
 
 { #category : 'printing' }
@@ -51,20 +49,22 @@ ASCCase >> inspectZagASTOn: aStream [
 	map printElementsOn: aStream
 ]
 
-{ #category : 'block handling' }
-ASCCase >> manifestParameters: stack [
-]
-
 { #category : 'accessing' }
 ASCCase >> next [
 
-	^ next
+	^ self blocks first
 ]
 
 { #category : 'code generation' }
-ASCCase >> outputTo: output [
+ASCCase >> outputTo: anOutput [
+	^ anOutput
+		  visitCase: map
+]
 
-	^ self shouldBeImplemented 
+{ #category : 'stack analysis' }
+ASCCase >> stackOp: output [
+
+	^ output stackCase: self
 ]
 
 { #category : 'instance creation' }

@@ -19,15 +19,13 @@ Class {
 ASZagSymbols class >> initialize [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
 
-	Predefined := #( yourself doesNotUnderstand: #= #+ #- #* size at: at:put: #'~='
-	   #'==' #'~~' value value: value:value: negated new new: cull: value:value:value:
-	   value:value:value:value: valueWithArguments: cull:cull: cull:cull:cull:
-	   cull:cull:cull:cull: self name #< #'<=' #'>=' #> class Class Behavior
-	   ClassDescription Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:perform:withArguments:
-	   perform:withArguments:inSuperclass:
-	   #'\\' whileTrue: Object ) asSet
+	Predefined := #( #= value value: cull: yourself doesNotUnderstand: #+ #-#*
+size at: at:put: #~= #== #~~ value:value: negated new new: value:value:value: 
+value:value:value:value: valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+self name #< #<= #>= #> class Class Behavior ClassDescription Metaclass
+SmallInteger noFallback ifTrue: ifTrue:ifFalse ifFalse: ifFalse:ifTrue: ifNil: 
+ifNil:ifNotNil ifNotNil: ifNotNil:ifNil: perform: perform:with: perform:with:with: 
+perform:with:with:with: perform:withArguments: perform:withArguments:inSuperclass: fibonacci ) asSet
 ]
 
 { #category : 'adding' }
@@ -54,6 +52,11 @@ ASZagSymbols >> printable: aSymbol [
 	^ (self predefinedSymbol: aSymbol) ifNotNil: [ :s | s ] ifNil: [
 		  self add: aSymbol.
 		  'sym.' , aSymbol zigName ]
+]
+
+{ #category : 'writing' }
+ASZagSymbols >> writeDefinitionOn: anASLLFileContext [ 
+
 ]
 
 { #category : 'writing' }
@@ -101,6 +104,11 @@ ASZagSymbols >> writeDefinitionWith: stream [
     }
 };
 '
+]
+
+{ #category : 'writing' }
+ASZagSymbols >> writeInitializationOn: anASLLFileContext [ 
+
 ]
 
 { #category : 'writing' }

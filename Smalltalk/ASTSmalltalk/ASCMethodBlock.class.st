@@ -5,18 +5,33 @@ All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
 "
 Class {
 	#name : 'ASCMethodBlock',
-	#superclass : 'ASCBasicBlock',
+	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'selector'
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'adding' }
+ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
+
+	^ returnBlocks
+		  at: anASCReturnBlock
+		  ifAbsentPut: [ returnBlocks size + 1 ]
+]
+
+{ #category : 'initialization' }
+ASCMethodBlock >> initialize [
+
+	super initialize.
+	returnBlocks := Dictionary new
+]
+
 { #category : 'accessing' }
-ASCMethodBlock >> locals: locals arguments: arguments [
+ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
 	locals do: [ :each | self pushLocalNamed: each ].
@@ -29,13 +44,21 @@ ASCMethodBlock >> makeBlockClosure [
 	stack := ASStackBlockClosure from: stack
 ]
 
+{ #category : 'accessing' }
+ASCMethodBlock >> namedMethod [
+
+	^ self
+]
+
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
+
+	output
+		outputMethodDefinition: self label
+		primitive: primitive
+		methods: { self } , returnBlocks keys.
 	output outputMethodStart: label.
-	primitive
-		ifNotNil: [ output primitive: primitive ].
 	stack requiredContextDo: [ output visitPushContext ].
-	output outputMethodLabel: label.
 	^ self outputRestTo: output
 ]
 
@@ -55,5 +78,6 @@ ASCMethodBlock >> pushSelfNamed: selfName [
 { #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
-	selector := label := aString
+	selector := aString.
+	label := aString
 ]

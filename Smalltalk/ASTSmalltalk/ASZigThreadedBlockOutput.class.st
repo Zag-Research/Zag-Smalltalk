@@ -34,7 +34,7 @@ ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 
 	currentBasicBlock
 		offsetOf: aASCIndirectVariable name
-		local: nil
+		context: nil
 		stack: [ :offset |
 			self
 				putEmbedded: #popFromContaxt; "or popStack?"
@@ -62,7 +62,7 @@ ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 ASZigThreadedBlockOutput >> visitPushLocalData: aASCIndirectVariable [
 	currentBasicBlock
 		offsetOf: aASCIndirectVariable name
-		local: nil
+		context: nil
 		stack: [ :offset |
 			self
 				putEmbedded: #pushFromContext;
@@ -95,7 +95,7 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 	see Execution.md for more details."
 	currentBasicBlock
 		offsetOf: anASVariable name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
 				print: local;

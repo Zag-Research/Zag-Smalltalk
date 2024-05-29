@@ -27,6 +27,13 @@ ASZigThreadedOutput >> endMethod [
 	self label: nil
 ]
 
+{ #category : 'accessing' }
+ASZigThreadedOutput >> methodName [
+	| predefined |
+	predefined := context predefinedSymbol: self selector.
+	predefined ifNotNil: [ ^predefined ] ifNil: [ ^ self name]
+]
+
 { #category : 'code generation' }
 ASZigThreadedOutput >> outputBasicBlockEnd [
 	
@@ -86,11 +93,19 @@ ASZigThreadedOutput >> verifySelector: anObject [
 ]
 
 { #category : 'API' }
+ASZigThreadedOutput >> visitCase: aClassToBlockMap [
+	
+	self putEmbedded: #case;
+	comma;
+	lf
+]
+
+{ #category : 'API' }
 ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #popLocal;
 				print: local;
@@ -158,7 +173,7 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
 				print: local;
@@ -219,7 +234,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #storeLocal;
 				print: local;
@@ -236,12 +251,13 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 { #category : 'writing' }
 ASZigThreadedOutput >> writeDefinitionOn: stream [
+
 	context writeNewDeclarationFor: self on: stream.
 	stream
 		nextPutAll: 'compileMethod(';
-		nextPutAll: self name zigName;
+		nextPutAll: self methodName;
 		nextPut: $,;
-		print: numLocals;
+		print: numLocals; "Daniel: not doing anything with this, should be easy to fix"
 		nextPut: $,;
 		print: maxDepth;
 		nextPut: $,;

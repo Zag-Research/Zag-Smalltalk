@@ -54,25 +54,25 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 	basicBlocks do: aBlock
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> classCase: aCollection complete: aBoolean [
+{ #category : 'API' }
+ASCodeGenerator >> branch: aBasicBlock [
+
+	code branch: aBasicBlock.
+	aBasicBlock addSource: code
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> classCase: aCollection [
 
 	| case |
-	case := code classCase: aCollection complete: aBoolean.
+	case := code classCase: aCollection.
 	basicBlocks addAll: case blocks.
-	code := nil.
-	^ case blocks
+	^ aCollection collect: [ :class | case at: class ]
 ]
 
 { #category : 'class relationship' }
 ASCodeGenerator >> classOf: aString [ 
 	self shouldBeImplemented.
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> code: anASCBasicBlock [
-
-	code := anASCBasicBlock
 ]
 
 { #category : 'API' }
@@ -148,7 +148,6 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
-	self nameBasicBlocks.
 	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
@@ -172,11 +171,30 @@ ASCodeGenerator >> initialize [
 ]
 
 { #category : 'accessing' }
+ASCodeGenerator >> inline: anASCSend [
+
+	| ast |
+	targetClass == anASCSend target ifFalse: [ ^ false ].
+
+	self halt. "inline a self method"
+	ast := ASPharoCompiler new astFor:
+		       anASCSend target >> anASCSend selector.
+	output generateCode: ast for: anASCSend target.
+	"look at pending components, expects a codeGenerator so need to create one and add to components"
+	^ false
+]
+
+{ #category : 'initialization' }
+ASCodeGenerator >> inlining: aBoolean [
+	inline := aBoolean
+]
+
+{ #category : 'accessing' }
 ASCodeGenerator >> inspectBasicBlocks [
+
 	<inspectorPresentationOrder: 0 title: 'ZagBlocks'>
-	
 	^ SpTreeTablePresenter new
-		  roots: basicBlocks;
+		  roots: self zagBlocks;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
@@ -184,12 +202,12 @@ ASCodeGenerator >> inspectBasicBlocks [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> locals: locals arguments: arguments [
+ASCodeGenerator >> locals: locals parameters: arguments [
 
 	output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
 	code pushSelfNamed: self selfName.
-	code locals: locals arguments: arguments
+	code locals: locals parameters: arguments
 ]
 
 { #category : 'compiling' }
@@ -223,26 +241,20 @@ ASCodeGenerator >> name [
 	^ name
 ]
 
-{ #category : 'post processing' }
-ASCodeGenerator >> nameBasicBlocks [
-	basicBlocks doWithIndex: [ :bb :idx |
-		bb
-			label: (String streamContents: [ :s |
-					 s
-						 nextPutAll: name;
-						 nextPut: $:;
-						 print: idx ])
-			index: idx ]
+{ #category : 'instance creation' }
+ASCodeGenerator >> newInline [
+
+	^ basicBlocks add: (ASCInlineBlock for: code)
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
@@ -352,13 +364,26 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	name := output name.
+	"label for blocks of code"
+	name := output name zigName.
 	code selector: aSymbol 
 ]
 
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> selfName [
 	^ #self
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> send: aSymbol [
+
+	^ self send: aSymbol targetClass: nil tail: false
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
+
+	^ self send: aSymbol targetClass: aTargetClass tail: false
 ]
 
 { #category : 'API' }
@@ -372,7 +397,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |
@@ -380,6 +405,12 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> setBasicBlock: anASCBlock [
+
+	code := anASCBlock
 ]
 
 { #category : 'API' }
@@ -406,9 +437,19 @@ targetClass:= anObject
 
 { #category : 'post processing' }
 ASCodeGenerator >> tryInlining [
-
 	inline ifFalse: [ ^ self ].
-	[
+	[ | bbCopy | 
+		bbCopy := OrderedCollection new.
+		bbCopy addAll: basicBlocks.
 	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self ] ] whileTrue
+		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
+]
+
+{ #category : 'post processing' }
+ASCodeGenerator >> zagBlocks [
+
+	| zagBlocks |
+	zagBlocks := OrderedCollection newFrom: basicBlocks.
+	zagBlocks addAll: (blockClosures collect: [ :bc | InspectBlock from: bc ]).
+	^ zagBlocks
 ]

@@ -9,7 +9,7 @@ To run the benchmark, execute the expression `BeDBPlanner standardBenchmark'.
 "
 Class {
 	#name : 'BeDBPlanner',
-	#superclass : 'Object',
+	#superclass : 'Benchmark',
 	#instVars : [
 		'currentMark'
 	],
@@ -53,7 +53,8 @@ BeDBPlanner class >> current [
 
 { #category : 'instance creation' }
 BeDBPlanner class >> new [
-	^currentPlanner := super new initialize
+
+	^ currentPlanner := super new
 ]
 
 { #category : 'benchmarks' }
