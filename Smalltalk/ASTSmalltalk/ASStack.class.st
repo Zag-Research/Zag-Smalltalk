@@ -4,19 +4,22 @@ I reperesent an empty stack of values within a method.
 Class {
 	#name : 'ASStack',
 	#superclass : 'Object',
+	#instVars : [
+		'rest'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASStack >> at: aSymbol [
+{ #category : 'instance creation' }
+ASStack class >> fromStack: anASStack [
 
-	^ (self find: aSymbol) top
+	^ self new fromStack: anASStack
 ]
 
 { #category : 'accessing' }
-ASStack >> atZZZ: aSymbol [
+ASStack >> at: aSymbol [
 
 	^ (self find: aSymbol) top
 ]
@@ -26,25 +29,50 @@ ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
 
+{ #category : 'instance creation' }
+ASStack >> fromStack: anASStack [
+
+	rest := anASStack
+]
+
 { #category : 'testing' }
 ASStack >> isEmpty [
 
 	^ true
 ]
 
+{ #category : 'adding' }
+ASStack >> nameStack: aCollection [ 
+
+]
+
 { #category : 'API' }
-ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStack >> namedContext: blockLocal stack: blockStack [
+	^ self
+		  offset: 0
+		  namedContext: blockLocal
+		  stack: blockStack
+]
+
+{ #category : 'API' }
+ASStack >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASStack >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 self subclassResponsibility 
 ]
 
 { #category : 'API' }
-ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
+ASStack >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
 
 	^ self
 		  offset: 0
 		  to: aSymbol
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther 
 ]
@@ -53,7 +81,7 @@ ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOth
 ASStack >> push: anObject [
 
 	| newStack |
-	newStack := ASStackElement from: self.
+	newStack := ASStackElement fromStack: self.
 	newStack top: anObject. " (ASCClassValue new init: anObject class)."
 	^ newStack
 ]
@@ -61,23 +89,27 @@ ASStack >> push: anObject [
 { #category : 'adding' }
 ASStack >> push: aSymbol on: aStack [
 
+	^ self shouldBeImplemented
+]
+
+{ #category : 'API' }
+ASStack >> pushLocalNamed: name [
+
+	^ (ASLocalNamed new fromStack: self) name: name
+]
+
+{ #category : 'API' }
+ASStack >> pushParameterNamed: name [
+
+	^ (ASStackNamed fromStack: self) name: name
 ]
 
 { #category : 'API' }
 ASStack >> pushPlaceholderContext [ 
-	^ ASStackContextPlaceholder new from: self
+	^ ASStackContextPlaceholder new fromStack: self
 ]
 
 { #category : 'API' }
 ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
-]
-
-{ #category : 'API' }
-ASStack >> stackNames: aCollection [
-
-	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new
-		  from: (self stackNames: aCollection allButFirst);
-		  name: aCollection first
 ]

@@ -5,7 +5,6 @@ Class {
 	#name : 'ASStackBlockClosure',
 	#superclass : 'ASStack',
 	#instVars : [
-		'rest',
 		'nonlocalNameLookupObject',
 		'blockClosure'
 	],
@@ -13,12 +12,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASStackBlockClosure class >> from: anASStack [
-
-	^ self basicNew from: anASStack
-]
 
 { #category : 'accessing' }
 ASStackBlockClosure >> depth [
@@ -31,9 +24,10 @@ ASStackBlockClosure >> find: aSymbol [
 ]
 
 { #category : 'instance creation' }
-ASStackBlockClosure >> from: anASStack [
-	blockClosure := OrderedCollection new.
-	rest := anASStack
+ASStackBlockClosure >> initialize [
+
+	super initialize.
+	blockClosure := OrderedCollection new
 ]
 
 { #category : 'accessing' }
@@ -49,7 +43,7 @@ ASStackBlockClosure >> nonlocalNameLookupObject: anASCodeGenerator [
 ]
 
 { #category : 'API' }
-ASStackBlockClosure >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackBlockClosure >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	| offsetToTheObject offsetToTheMethod |
 	"Offset to the object is a value that will be retrived by the nonlocaNameLookupOjbect.

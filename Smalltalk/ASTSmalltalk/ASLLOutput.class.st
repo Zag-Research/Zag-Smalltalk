@@ -1,3 +1,6 @@
+"
+I am the generic text outputter for LLVM
+"
 Class {
 	#name : 'ASLLOutput',
 	#superclass : 'ASTextOutput',

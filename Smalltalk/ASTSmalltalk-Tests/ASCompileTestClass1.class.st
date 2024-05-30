@@ -105,8 +105,7 @@ ASCompileTestClass1 >> fib: anInt [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> fibonacci [
 
-	self < 2 ifTrue: [ ^ 1 ].
-	^ (self - 1) fibonacci + (self - 2) fibonacci
+	^ self < 2 ifTrue: [ 1 ] ifFalse: [(self - 1) fibonacci + (self - 2) fibonacci]
 ]
 
 { #category : 'testing - examples' }

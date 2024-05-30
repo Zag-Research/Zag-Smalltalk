@@ -208,21 +208,21 @@ ASCodeGenerator >> isEmbedded: aCompileMethod [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> locals: locals arguments: arguments [
-
-	output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed: self selfName.
-	code locals: locals arguments: arguments
-]
-
-{ #category : 'accessing' }
 ASCodeGenerator >> locals: locals indirectArguments: arguments [
 
 	"output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
 	code pushSelfNamed: self selfName."
 	code locals: locals arguments: arguments
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals parameters: arguments [
+
+	output forClass ifNotNil: [ :theClass |
+		code doPush: (ASCClassValue new init: theClass) ].
+	code pushSelfNamed: self selfName.
+	code locals: locals parameters: arguments
 ]
 
 { #category : 'compiling' }
@@ -263,13 +263,13 @@ ASCodeGenerator >> newInline [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
@@ -292,7 +292,9 @@ aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
 { #category : 'API' }
 ASCodeGenerator >> popVariable: aSymbol [
 
-	^ code popVariable: aSymbol
+	^ code
+		modifies: aSymbol;
+		popVariable: aSymbol
 ]
 
 { #category : 'API' }
@@ -303,8 +305,8 @@ ASCodeGenerator >> primitive: primitiveNumber [
 
 { #category : 'API' }
 ASCodeGenerator >> pushArray: arraySize [
-	"What do I do here?"
-	"code doPush: (ASCValue ) put: (ASCSimple )"
+
+	^ code doPush: (ASCArray with: arraySize )
 
 	
 ]
@@ -335,6 +337,7 @@ ASCodeGenerator >> pushSelf [
 	| value |
 	value := ASCClassValue new init: targetClass.
 	code
+		needs: #self;
 		doPush: value;
 		put: (ASCPushVariable with: (code find: #self) top)
 ]
@@ -342,7 +345,9 @@ ASCodeGenerator >> pushSelf [
 { #category : 'API' }
 ASCodeGenerator >> pushVariable: variable [
 
-	^ code pushVariable: variable
+	^ code
+		needs: variable;
+		pushVariable: variable
 ]
 
 { #category : 'API' }

@@ -9,15 +9,18 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASStackContext >> from: anASStack [
-
-	rest := anASStack
-]
-
 { #category : 'API' }
 ASStackContext >> makeContextRequired [
 ^ self
+]
+
+{ #category : 'API' }
+ASStackContext >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	^ rest
+		  offset: 0
+		  namedContext: nil
+		  stack: blockLocal
 ]
 
 { #category : 'API' }
@@ -29,13 +32,13 @@ ASStackContext >> offset: anInteger to: anObject [
 ]
 
 { #category : 'API' }
-ASStackContext >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackContext >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 
 	^ rest
 		  offset: 0
 		  to: anObject
-		  local: nil
+		  context: nil
 		  stack: blockLocal
 		  other: blockOther
 ]

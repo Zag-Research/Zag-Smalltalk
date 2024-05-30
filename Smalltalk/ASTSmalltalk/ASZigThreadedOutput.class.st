@@ -21,12 +21,6 @@ ASZigThreadedOutput >> branch: command to: target [
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
-{ #category : 'API' }
-ASZigThreadedOutput >> endMethod [
-
-	self label: nil
-]
-
 { #category : 'accessing' }
 ASZigThreadedOutput >> methodName [
 	| predefined |
@@ -41,6 +35,12 @@ ASZigThreadedOutput >> outputBasicBlockEnd [
 
 { #category : 'code generation' }
 ASZigThreadedOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> outputMethodEnd [
+
+	self label: nil
 ]
 
 { #category : 'code generation' }
@@ -116,7 +116,7 @@ ASZigThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #popLocal;
 				print: local;
@@ -184,7 +184,7 @@ ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
 				print: local;
@@ -245,7 +245,7 @@ ASZigThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #storeLocal;
 				print: local;

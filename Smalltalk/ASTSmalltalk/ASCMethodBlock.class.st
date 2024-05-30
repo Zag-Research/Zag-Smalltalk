@@ -31,11 +31,10 @@ ASCMethodBlock >> initialize [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> locals: locals arguments: arguments [
+ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
 	locals do: [ :each | self pushLocalNamed: each ].
-	stack := stack pushPlaceholderContext.
 	maxDepth := 0
 ]
 

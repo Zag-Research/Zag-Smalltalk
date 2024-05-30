@@ -28,15 +28,15 @@ ASImageThreadedOutput >> branch: command to: target [
 			target ifNotNil: [ self labelRef: target label ] ]
 ]
 
-{ #category : 'API' }
-ASImageThreadedOutput >> endMethod [
-
-
-]
-
 { #category : 'code generation' }
 ASImageThreadedOutput >> outputBasicBlockEnd [
 	
+]
+
+{ #category : 'API' }
+ASImageThreadedOutput >> outputMethodEnd [
+
+
 ]
 
 { #category : 'code generation' }
@@ -93,7 +93,7 @@ ASImageThreadedOutput >> visitPopLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #popLocal;
 				print: local;
@@ -151,7 +151,7 @@ ASImageThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
 				print: local;
@@ -209,7 +209,7 @@ ASImageThreadedOutput >> visitStoreLocal: anASLocal [
 
 	currentBasicBlock
 		offsetOf: anASLocal name
-		local: [ :local |
+		context: [ :local |
 			self
 				putEmbedded: #storeLocal;
 				print: local;

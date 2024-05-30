@@ -16,7 +16,8 @@ ASLLVMOutputTest >> setUp [
 	super setUp.
 
 	"Create new instance of generator and set testing inst. var"
-	output := ASLLMethodOutput testing context: file
+	output := ASLLMethodOutput new "testing"
+	 context: file
 ]
 
 { #category : 'tests' }
@@ -34,26 +35,48 @@ ASLLVMOutputTest >> testLLVMOutput [
 ASLLVMOutputTest >> testLLVM_fibonacci [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
+	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
 	output generateCode: ast for: SmallInteger.
 	output codeGenerator inspect.
-	self assert: output name equals: 'Zfibonacci'.
+	self assert: output name equals: 'Lfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
 ]
 
 { #category : 'tests' }
-ASLLVMOutputTest >> testLLVM_fibonacci2 [
+ASLLVMOutputTest >> testLLVM_fibonacci_alt [
 
 	| ast |
-	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
 	output generateCode: ast for: SmallInteger.
 	output codeGenerator inspect.
-	self assert: output name equals: 'Zfibonacci'.
+	self assert: output name equals: 'Lfibonacci'.
 	self
 		assert: output asString
 		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_inlined [
+	" self <= 2 ifTrue: [ ^ 1 ]
+ ^ (self - 1) fibonacci + (self - 2) fibonacci "
+
+	| cg |
+	cg := output codeGenerator.
+	cg targetClass: SmallInteger.
+	cg selector: #foo:arg: .
+	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg popVariable: #l1.
+	cg pushVariable: #p1.
+	cg pushVariable: #l1.
+	cg sendEmbedded: #'*'.
+	cg sendEmbedded: #'+'.
+	cg returnTop.
+	cg inspect.
+
 ]
 
 { #category : 'tests' }
@@ -65,7 +88,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #fibonacci.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -88,7 +111,9 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg send: #fibonacci targetClass: SmallInteger.
 	cg sendEmbedded: #+.
 	cg returnTop.
-	cg inspect
+	cg inspect.
+	output outputToStream.
+	file asString inspect
 ]
 
 { #category : 'tests' }
@@ -100,7 +125,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #fibonacci.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -139,12 +164,11 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #simple.
-	cg locals: #(  ) arguments: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
 
 	cg inspect.
-	self halt.
 	output outputToStream.
 	file asString inspect
 ]

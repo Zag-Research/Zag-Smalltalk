@@ -74,11 +74,6 @@ ASOutput >> context: anASContext [
 ]
 
 { #category : 'API' }
-ASOutput >> endMethod [
-
-]
-
-{ #category : 'API' }
 ASOutput >> forClass [
 
 	^ forClass
@@ -131,6 +126,11 @@ ASOutput >> name [
 ]
 
 { #category : 'API' }
+ASOutput >> outputMethodEnd [
+
+]
+
+{ #category : 'API' }
 ASOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
@@ -139,7 +139,7 @@ ASOutput >> outputToStream [
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: currentBasicBlock maxDepth.
 		currentBasicBlock outputTo: self ].
-	self endMethod
+	self outputMethodEnd
 ]
 
 { #category : 'API' }

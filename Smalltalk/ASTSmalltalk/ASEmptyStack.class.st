@@ -31,10 +31,21 @@ ASEmptyStack >> find: aSymbol [
 	^ nonlocalNameLookupObject find: aSymbol"
 ]
 
+{ #category : 'API' }
+ASEmptyStack >> makeContextRequired [
+
+	^ ASStackContext fromStack: self
+]
+
 { #category : 'instance initialization' }
 ASEmptyStack >> nonlocalNameLookupObject: anASCodeGenerator [
 
 	nonlocalNameLookupObject := anASCodeGenerator
+]
+
+{ #category : 'API' }
+ASEmptyStack >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
 ]
 
 { #category : 'API' }
@@ -43,11 +54,17 @@ ASEmptyStack >> offset: anInteger to: anObject [
 ]
 
 { #category : 'API' }
-ASEmptyStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASEmptyStack >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	^ self error: 'something bad happend'
 ]
 
 { #category : 'initialization' }
 ASEmptyStack >> requiredContextDo: x [
+]
+
+{ #category : 'initialization' }
+ASEmptyStack >> reset [
+
+	^ self
 ]

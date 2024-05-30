@@ -45,6 +45,15 @@ ASCInlineBlock >> locals: locals arguments: arguments [
 	maxDepth := 0
 ]
 
+{ #category : 'adding' }
+ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
+
+	| names |
+	names := OrderedCollection with: #self.
+	names addAll: parameterNamesLeftToRight.
+	stack := stack nameStack: names
+]
+
 { #category : 'as yet unclassified' }
 ASCInlineBlock >> namedMethod [
 	^ method namedMethod

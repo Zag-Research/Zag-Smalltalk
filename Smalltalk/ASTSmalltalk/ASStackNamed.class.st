@@ -27,6 +27,11 @@ ASStackNamed >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
+{ #category : 'adding' }
+ASStackNamed >> importedSource: anInteger [
+
+]
+
 { #category : 'accessing' }
 ASStackNamed >> llvmName [
 
@@ -35,8 +40,23 @@ ASStackNamed >> llvmName [
 ]
 
 { #category : 'accessing' }
+ASStackNamed >> name [
+	^ name
+]
+
+{ #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
 	name := aSymbol
+]
+
+{ #category : 'API' }
+ASStackNamed >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	blockStack cull: anInteger cull: self.
+	^ rest
+		  offset: anInteger + 1
+		  namedContext: blockLocal
+		  stack: blockStack
 ]
 
 { #category : 'API' }
@@ -49,13 +69,13 @@ ASStackNamed >> offset: anInteger to: aName [
 ]
 
 { #category : 'API' }
-ASStackNamed >> offset: anInteger to: aName local: blockLocal stack: blockStack other: blockOther [
+ASStackNamed >> offset: anInteger to: aName context: blockLocal stack: blockStack other: blockOther [
 
 	aName = name ifTrue: [ ^ blockStack cull: anInteger cull: self ].
 	^ rest
 		  offset: anInteger + 1
 		  to: aName
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther
 ]

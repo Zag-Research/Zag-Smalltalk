@@ -12,8 +12,8 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'top',
-		'rest',
-		'llvmName'
+		'llvmName',
+		'source'
 	],
 	#classVars : [
 		'LLVMNumber'
@@ -22,11 +22,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASStackElement class >> from: anASStack [
-	^ self basicNew from: anASStack 
-]
 
 { #category : 'initialization' }
 ASStackElement class >> reset [
@@ -65,10 +60,10 @@ ASStackElement >> find: aSymbol [
 	^ rest find: aSymbol
 ]
 
-{ #category : 'instance creation' }
-ASStackElement >> from: anASStack [
+{ #category : 'adding' }
+ASStackElement >> importedSource: anInteger [
 
-	rest := anASStack 
+	^ (self class fromStack: (rest importedSource: anInteger + 1)) top: top; source: anInteger
 ]
 
 { #category : 'testing' }
@@ -104,6 +99,25 @@ ASStackElement >> makeContextRequired [
 	^ self
 ]
 
+{ #category : 'adding' }
+ASStackElement >> nameStack: parameterNamesLeftToRight [
+
+	| name |
+	name := parameterNamesLeftToRight removeLast.
+	^ (ASStackNamed fromStack: (rest nameStack: parameterNamesLeftToRight))
+		  top: top;
+		  name: name
+]
+
+{ #category : 'API' }
+ASStackElement >> offset: anInteger namedContext: blockLocal stack: blockStack [
+
+	^ rest
+		  offset: anInteger + 1
+		  namedContext: blockLocal
+		  stack: blockStack
+]
+
 { #category : 'API' }
 ASStackElement >> offset: anInteger to: anObject [
 
@@ -113,12 +127,12 @@ ASStackElement >> offset: anInteger to: anObject [
 ]
 
 { #category : 'API' }
-ASStackElement >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
+ASStackElement >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
 
 	^ rest
 		  offset: anInteger + 1
 		  to: anObject
-		  local: blockLocal
+		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther
 ]
@@ -128,14 +142,22 @@ ASStackElement >> requiredContextDo: aBlock [
 	^ rest requiredContextDo: aBlock
 ]
 
-{ #category : 'API' }
-ASStackElement >> stackNames: aCollection [
+{ #category : 'initialization' }
+ASStackElement >> reset [
 
-	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new
-		  from: (rest stackNames: aCollection allButFirst);
-		  name: aCollection first;
-		  top: top
+	^ rest reset
+]
+
+{ #category : 'accessing' }
+ASStackElement >> source [
+
+	^ source
+]
+
+{ #category : 'accessing' }
+ASStackElement >> source: anObject [
+
+	source := anObject
 ]
 
 { #category : 'accessing' }
@@ -146,6 +168,6 @@ ASStackElement >> top [
 { #category : 'accessing' }
 ASStackElement >> top: value [
 
-value assertIsValue .
+"value assertIsValue ."
 	top := value
 ]
