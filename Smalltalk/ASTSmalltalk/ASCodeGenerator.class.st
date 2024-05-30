@@ -417,6 +417,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		inline & (self sendInline: aSymbol targetClass: aTargetClass) ifTrue: [
 			^ true"return something?" ].
 		].
+	self manifest: code.
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
