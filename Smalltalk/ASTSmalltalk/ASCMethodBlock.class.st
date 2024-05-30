@@ -40,7 +40,7 @@ ASCMethodBlock >> locals: locals parameters: arguments [
 
 { #category : 'accessing' }
 ASCMethodBlock >> makeBlockClosure [
-	stack := ASStackBlockClosure from: stack
+	stack := ASStackBlockClosure fromStack: stack
 ]
 
 { #category : 'accessing' }

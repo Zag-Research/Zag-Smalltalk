@@ -414,15 +414,14 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		inline & (self sendInline: aSymbol targetClass: aTargetClass) ifTrue: [
-			^ true"return something?" ].
-		].
+		(self sendInline: aSymbol targetClass: aTargetClass)
+			ifTrue: [ ^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
 		      tail: tail & tailCallOptimize.
-	^bb ifNotNil: [
+	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
 ]
@@ -440,38 +439,37 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 { #category : 'API' }
 ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
 	"check if we're recursive"
-	(inlineSelectors contains: aSymbol) ifTrue: [ ^false ].
+	inline ifFalse: [ ^ false ].
+	(inlineSelectors contains: aSymbol) ifTrue: [ ^ false ].
 	inlineSelectors addLast: aSymbol.
-	
+
 	"check if this is a self call"
-	targetClass == aTargetClass ifTrue: [ "we know the target class and the current class being compiled are not the same" "rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast"
-		
-		"walk the sends method AST"
-		(ASPharoCompiler new astFor: aTargetClass >> aSymbol)
-		          zigWalkMethod: self
-		 ]
-	"lets check number of implmentors"
-	"Daniel just use a short list of compile methods for now"
-	ifFalse: [ | implementors common targets |
-		"extract system nav and for now base if off a list"
-		implementors := SystemNavigation default allImplementorsOf: aSymbol.
-		"move to 'ensure' to remove last"
-		implementors size < 10 ifFalse: [ inlineSelectors removeLast. ^ false  ].
-		
-		common := self newInline.
-		targets := self classCase: (implementors collect: [ :compileMethod | compileMethod methodClass]).
-		targets with: implementors do: [ :target :compileMethod |
-			self setBasicBlock: target.
-			
-			"walk the sends method AST"
-			(ASPharoCompiler new astFor: compileMethod)
-		          zigWalkInline: self.
-			self branch: common
-		].
-		self setBasicBlock: common
-		"result isReturn ifTrue: [ ^ result expression zigWalk: self ]."
-	].
- 	inlineSelectors removeLast.
+	targetClass == aTargetClass
+		ifTrue: [ "we know the target class and the current class being compiled are not the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast""walk the sends method AST""lets check number of implmentors""Daniel just use a short list of compile methods for now"
+			(ASPharoCompiler new astFor: aTargetClass >> aSymbol)
+				zigWalkMethod: self ]
+		ifFalse: [
+			| implementors common targets |
+			"extract system nav and for now base if off a list"
+			implementors := SystemNavigation default allImplementorsOf: aSymbol.
+			"move to 'ensure' to remove last"
+			implementors size < 10 ifFalse: [
+				inlineSelectors removeLast.
+				^ false ].
+
+			common := self newInline.
+			targets := self classCase:
+				           (implementors collect: [ :compileMethod |
+					            compileMethod methodClass ]).
+			targets with: implementors do: [ :target :compileMethod |
+				self setBasicBlock: target.
+
+				"walk the sends method AST"
+				(ASPharoCompiler new astFor: compileMethod) zigWalkInline: self.
+				self branch: common ].
+			self setBasicBlock: common
+			"result isReturn ifTrue: [ ^ result expression zigWalk: self ]." ].
+	inlineSelectors removeLast.
 	^ true
 ]
 

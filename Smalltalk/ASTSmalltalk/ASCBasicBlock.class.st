@@ -301,8 +301,7 @@ ASCBasicBlock >> popVariable: aSymbol [
 { #category : 'API' }
 ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
-	stack := ASStackNamed new
-		         from: stack;
+	stack := (ASStackNamed fromStack: stack)
 		         name: aBlockClosure name.
 	^ stack top: aBlockClosure
 ]
@@ -398,7 +397,7 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 ASCBasicBlock >> setStack: anASStack [
 
 	stack := anASStack.
-	^ stack setSource: 0
+	^ stack source: 0
 ]
 
 { #category : 'accessing' }

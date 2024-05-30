@@ -250,33 +250,39 @@ const TFContext = execute.TFContext;
 const tfAsContext = execute.tfAsContext;
 const MethodSignature = execute.MethodSignature;
 const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
+var Mfibonacci = compileMethod(Sym.fibonacci,0,4,.Integer,.{
 &e.pushContext,"^",
-":Mfoo:1",
-&e.pushLocal,0,
-&e.case,,
-&e.setupSend,Sym.i_1,
+&e.pushStack,2,
+&e.pushLiteral,Object.from(2),
+&e.<=,
+&e.BlockClosure.fullClosure,"1mref",
+&e.setupSend,Sym.@"ifTrue:",
+&e.dynamicDispatch,
+&e.drop,
+&e.pushStack,1,
+&e.pushLiteral,Object.from(1),
+&e.-,
+&e.setupSend,Sym.fibonacci,
+&e.dynamicDispatch,
+&e.pushStack,2,
+&e.pushLiteral,Object.from(2),
+&e.-,
+&e.setupSend,Sym.fibonacci,
+&e.dynamicDispatch,
+&e.setupSend,Sym.@"+",
 &e.dynamicDispatch,
  });
-const Sym = struct {
-	bar: Object,
-    const ss = heap.compileStrings(.{
-	"bar",
-    });
-    usingnamespace symbol.symbols;
-    fn init() Sym {
-        return .{
-	.bar = symbol.intern(ss[0].asObject()),
-        };
-    }
-};
+var Mvalue = compileMethod(Sym.value,0,3,.BlockClosure,.{
+&e.pushLiteral,Object.from(1),
+&e.returnNonLocal,
+ });
 var sym: Sym = undefined;
 const e = primitives.embedded;
 const p = primitives.primitives;
 fn initSmalltalk() void {
     primitives.init();
-    sym = Sym.init();
-Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
+Mfibonacci.setLiterals(&[_]Object{},&[_]Object{},null);
+Mvalue.setLiterals(&[_]Object{},&[_]Object{},null);
 }
 pub fn main() !void {
     initSmalltalk();
