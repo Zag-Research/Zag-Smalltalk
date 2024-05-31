@@ -36,6 +36,12 @@ ASCInlineBlock >> label [
 	^ label ifNil: [ label := method nextSequence asString ]
 ]
 
+{ #category : 'initialization' }
+ASCInlineBlock >> llvmLabel [
+
+	^ self label
+]
+
 { #category : 'adding' }
 ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 
@@ -67,4 +73,18 @@ ASCInlineBlock >> outputTo: output [
 ASCInlineBlock >> printOn: aStream [
 
 	aStream nextPutAll: self label
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> updateDependencies [
+
+	| result |
+	super updateDependencies.
+	result := OrderedCollection new.
+	requires do: [ :requirement |
+		(sourceBlocks anySatisfy: [ :block | block provides: requirement ])
+			ifTrue: [
+				result addAll:
+					(sourceBlocks select: [ :block | block addRequirement: requirement ]) ] ].
+	^ result
 ]

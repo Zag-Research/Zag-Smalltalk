@@ -139,7 +139,7 @@ ASCodeGenerator >> findTargetClass: aTarget [
 				ifFalse: [ nil ] ]
 ]
 
-{ #category : 'accessing' }
+{ #category : 'private - testing' }
 ASCodeGenerator >> firstBlock [
 	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
 ]
@@ -206,7 +206,7 @@ ASCodeGenerator >> locals: locals parameters: arguments [
 
 	output forClass ifNotNil: [ :theClass |
 		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed: self selfName.
+	code pushSelfNamed.
 	code locals: locals parameters: arguments
 ]
 
@@ -241,7 +241,7 @@ ASCodeGenerator >> name [
 	^ name
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
 	^ basicBlocks add: (ASCInlineBlock for: code)
@@ -341,9 +341,17 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 	code put: aSymbol
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> returnCode [ 
-	^ code.
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> resolveFlowDependencies [
+
+	| blocksToProcess |
+	blocksToProcess := basicBlocks.
+	[ blocksToProcess isEmpty ] whileFalse: [
+		| temp |
+		temp := blocksToProcess.
+		blocksToProcess := Set new.
+		temp do: [ :block |
+			blocksToProcess addAll: block updateDependencies ] ]
 ]
 
 { #category : 'API' }

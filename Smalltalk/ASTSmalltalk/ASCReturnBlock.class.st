@@ -42,6 +42,12 @@ ASCReturnBlock >> label [
 				           print: (method addReturnBlock: self) ] ]
 ]
 
+{ #category : 'initialization' }
+ASCReturnBlock >> llvmLabel [
+
+	^ '0'
+]
+
 { #category : 'accessing' }
 ASCReturnBlock >> method: anASCMethodBlock [
 
