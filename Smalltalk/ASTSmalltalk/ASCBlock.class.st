@@ -44,9 +44,9 @@ ASCBlock >> block [
 ]
 
 { #category : 'initialization' }
-ASCBlock >> initialize [ 
-super initialize .
-manifest := false
+ASCBlock >> initialize [
+	super initialize.
+	manifest := false
 ]
 
 { #category : 'instance creation' }

@@ -42,6 +42,16 @@ ASCInlineBlock >> llvmLabel [
 	^ self label
 ]
 
+{ #category : 'printing' }
+ASCInlineBlock >> locals: locals arguments: arguments [
+
+	stack := stack pushPlaceholderContext.
+	"what about self?"
+	stack := stack nameStack: arguments.
+	locals do: [ :each | self pushLocalNamed: each ].
+	maxDepth := 0
+]
+
 { #category : 'adding' }
 ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 
@@ -65,7 +75,7 @@ ASCInlineBlock >> nextSequence [
 { #category : 'writing' }
 ASCInlineBlock >> outputTo: output [
 
-	output outputMBlockLabel: self label.
+	output outputMethodLabel: self label.
 	^ self outputRestTo: output
 ]
 
@@ -73,6 +83,18 @@ ASCInlineBlock >> outputTo: output [
 ASCInlineBlock >> printOn: aStream [
 
 	aStream nextPutAll: self label
+]
+
+{ #category : 'printing' }
+ASCInlineBlock >> returnBranch: bb [
+
+	^ self put: (ASCBranch new with: bb)
+]
+
+{ #category : 'printing' }
+ASCInlineBlock >> returnTop [
+
+	^ self put: ASCBranch new
 ]
 
 { #category : 'data flow instructions' }
@@ -87,4 +109,9 @@ ASCInlineBlock >> updateDependencies [
 				result addAll:
 					(sourceBlocks select: [ :block | block addRequirement: requirement ]) ] ].
 	^ result
+]
+
+{ #category : 'printing' }
+ASCInlineBlock >> updateStack: aSymbol [
+	^ nil
 ]

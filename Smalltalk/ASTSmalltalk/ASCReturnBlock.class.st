@@ -67,12 +67,6 @@ ASCReturnBlock >> namedMethod [
 	^ self
 ]
 
-{ #category : 'as yet unclassified' }
-ASCReturnBlock >> nextInline [
-
-	^ nil
-]
-
 { #category : 'successor sequences' }
 ASCReturnBlock >> nextSequence [
 

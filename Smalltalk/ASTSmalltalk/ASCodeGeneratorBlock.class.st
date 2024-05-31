@@ -19,6 +19,12 @@ ASCodeGeneratorBlock >> find: aSymbol [
 	^ indirect variable: (parentCodeGenerator find: aSymbol)
 ]
 
+{ #category : 'accessing' }
+ASCodeGeneratorBlock >> inferType: anExpression [
+self halt.
+	^ parentCodeGenerator inferType: anExpression
+]
+
 { #category : 'initialization' }
 ASCodeGeneratorBlock >> initialize [ 
 	super initialize.

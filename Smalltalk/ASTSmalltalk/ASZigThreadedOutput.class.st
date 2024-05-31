@@ -33,6 +33,10 @@ ASZigThreadedOutput >> outputBasicBlockEnd [
 	
 ]
 
+{ #category : 'code generation' }
+ASZigThreadedOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
+]
+
 { #category : 'API' }
 ASZigThreadedOutput >> outputMethodEnd [
 
@@ -92,12 +96,27 @@ ASZigThreadedOutput >> verifySelector: anObject [
 	lf
 ]
 
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitBranch: anASCInlineBlock [ 
+"NEEDS TO BE IMPLMENTED ask Dave"
+	"^ self nextPutAll: '  br label %';
+		nextPutAll: anASCInlineBlock label;
+		nextPutAll: '"
+]
+
 { #category : 'API' }
 ASZigThreadedOutput >> visitCase: aClassToBlockMap [
 	
 	self putEmbedded: #case;
 	comma;
 	lf
+]
+
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitEmbed: aSelector [
+	self
+		putEmbedded: aSelector;
+		lf
 ]
 
 { #category : 'API' }

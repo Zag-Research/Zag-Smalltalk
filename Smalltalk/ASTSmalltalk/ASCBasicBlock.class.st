@@ -75,19 +75,6 @@ ASCBasicBlock >> branch: anASCInlineBlock [
 	^ anASCInlineBlock
 ]
 
-{ #category : 'inlining' }
-ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
-| aSend case |
-	aSend := operations last.
-	aSend isSend ifFalse: [ ^ false ].
-	
-	case := ASCCase new.
-	"case needs to know the relationship between classes and block name!"
-	operations add: case before: operations last.
-	"check if the send can be inlined"
-	^ anASCodeGenerator inline: aSend
-]
-
 { #category : 'accessing' }
 ASCBasicBlock >> children [
 	^ operations
@@ -268,6 +255,12 @@ ASCBasicBlock >> next [
 	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> nextInline [
+
+	^ nil
+]
+
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 
@@ -334,8 +327,7 @@ ASCBasicBlock >> provides: aSymbol [
 { #category : 'API' }
 ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
-	stack := ASStackNamed new
-		         from: stack;
+	stack := (ASStackNamed fromStack: stack)
 		         name: aBlockClosure name.
 	^ stack top: aBlockClosure
 ]
@@ -436,7 +428,7 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 ASCBasicBlock >> setStack: anASStack [
 
 	stack := anASStack.
-	^ stack setSource: 0
+	^ stack source: 0
 ]
 
 { #category : 'accessing' }

@@ -25,7 +25,11 @@ Class {
 		'tailCallOptimize',
 		'blockClosures',
 		'parentCodeGenerator',
-		'enclosingScope'
+		'enclosingScope',
+		'embeddings',
+		'inlineSelectors',
+		'implementors',
+		'returnBlock'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -126,6 +130,8 @@ ASCodeGenerator >> finalAnalysis [
 { #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
 	^ code find: aSymbol 
+	"enclosingScope ifNil: [ self halt ].
+	^ enclosingScope find: aSymbol"
 ]
 
 { #category : 'API' }
@@ -148,7 +154,6 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
-	self tryInlining.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
@@ -158,7 +163,21 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 ]
 
 { #category : 'initialization' }
+ASCodeGenerator >> implementors: aSelector [
+self halt.
+	"^ SystemNavigation default allImplementorsOf: aSymbol"
+	^implementors at: aSelector
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> inferType: anExpression [
+	^ anExpression inferType: self
+	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
+]
+
+{ #category : 'initialization' }
 ASCodeGenerator >> initialize [
+
 	super initialize.
 	code := ASCMethodBlock new.
 	code nonlocalNameLookupObject: self.
@@ -167,21 +186,33 @@ ASCodeGenerator >> initialize [
 	blockClosures := OrderedCollection new.
 	maxDepth := 0.
 	inline := false.
-	tailCallOptimize := true
+	tailCallOptimize := true.
+	inlineSelectors := OrderedCollection new.
+	embeddings := {
+		              (Integer >> #-).
+		              (Integer >> #'<=') }.
+	implementors := Dictionary new.
+	implementors at: #ifTrue: put: { True>>#ifTrue:. False>>#ifTrue:. }.
+	implementors at: #ifFalse: put: { True>>#ifFalse:.. False>>#ifFalse:. }.
+	implementors at: #ifTrue:ifFalse: put: { True>>#ifTrue:ifFalse:. False>>#ifTrue:ifFalse: }.
+	implementors at: #ifFalse:ifTrue: put: { True>>#ifFalse:ifTrue:. False>>#ifFalse:ifTrue: }.
+	implementors at: #negated put: { Number>>#negated }.
+	implementors at: #abs put: { Number>>#abs }
+	
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> inline: anASCSend [
-
-	| ast |
-	targetClass == anASCSend target ifFalse: [ ^ false ].
-
-	self halt. "inline a self method"
-	ast := ASPharoCompiler new astFor:
-		       anASCSend target >> anASCSend selector.
-	output generateCode: ast for: anASCSend target.
-	"look at pending components, expects a codeGenerator so need to create one and add to components"
-	^ false
+ASCodeGenerator >> inlineMethod: aCompileMethod [
+	| inlineBlock |
+inlineBlock := self newInline.
+			returnBlock := self newInline.
+			self branch: inlineBlock.
+			code := inlineBlock.
+			(ASPharoCompiler new astFor: aCompileMethod)
+				zigWalkInlineMethod: self.
+			self branch: returnBlock 
+			"when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock"
+			"self can hold the return block"
 ]
 
 { #category : 'initialization' }
@@ -199,6 +230,20 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> isEmbedded: aCompileMethod [
+ 	"better to just check if this method contains a primitive and not in the list"
+	^ embeddings hasLiteral: aCompileMethod 
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals indirectParameters: parameters [
+	"output forClass ifNotNil: [ :theClass |
+		code doPush: (ASCClassValue new init: theClass) ].
+	code pushSelfNamed: self selfName."
+	code locals: locals arguments: parameters
 ]
 
 { #category : 'accessing' }
@@ -354,6 +399,11 @@ ASCodeGenerator >> resolveFlowDependencies [
 			blocksToProcess addAll: block updateDependencies ] ]
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> returnBlock [
+	code returnBranch: returnBlock 
+]
+
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
@@ -365,6 +415,12 @@ ASCodeGenerator >> returnTop [
 
 	code
 		returnTop
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> scopeFind: aSymbol [
+
+	^ enclosingScope find: aSymbol 
 ]
 
 { #category : 'accessing' }
@@ -403,6 +459,12 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
+	aTargetClass ifNotNil: [ "check if this is an embeddable send"
+		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
+			^ self sendEmbedded: aSymbol ].
+		"check if this is a self call"
+		(self sendInline: aSymbol targetClass: aTargetClass)
+			ifTrue: [ ^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
 		      send: aSymbol
@@ -421,6 +483,43 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
+	"check if we're recursive"
+	inline ifFalse: [ ^ false ].
+	(inlineSelectors contains: aSymbol) ifTrue: [ ^ false ].
+	inlineSelectors addLast: aSymbol.
+
+	"check if this is a self call"
+	targetClass == aTargetClass
+		ifTrue: [ "we know the target class and the current class being compiled are not the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast""walk the sends method AST""lets check number of implmentors""Daniel just use a short list of compile methods for now"
+			self inlineMethod: aTargetClass >> aSymbol.
+			
+			]
+		ifFalse: [
+			| symbolImplementors common targets |
+			"extract system nav and for now base if off a list"
+			symbolImplementors := self implementors: aSymbol.
+			"move to 'ensure' to remove last"
+			symbolImplementors size < 10 ifFalse: [
+				inlineSelectors removeLast.
+				^ false ].
+
+			common := self newInline.
+			targets := self classCase:
+				           (symbolImplementors collect: [ :compileMethod |
+					            compileMethod methodClass ]).
+			targets with: symbolImplementors do: [ :target :compileMethod |
+				self setBasicBlock: target.
+				"walk the sends method AST"
+				self inlineMethod: aTargetClass >> aSymbol.
+				self branch: common ].
+			self setBasicBlock: common
+			"result isReturn ifTrue: [ ^ result expression zigWalk: self ]." ].
+	inlineSelectors removeLast.
+	^ true
 ]
 
 { #category : 'accessing' }
@@ -449,16 +548,6 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
-]
-
-{ #category : 'post processing' }
-ASCodeGenerator >> tryInlining [
-	inline ifFalse: [ ^ self ].
-	[ | bbCopy | 
-		bbCopy := OrderedCollection new.
-		bbCopy addAll: basicBlocks.
-	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
 ]
 
 { #category : 'post processing' }

@@ -36,6 +36,11 @@ ASStatement >> children [
 	^ {  }
 ]
 
+{ #category : 'testing' }
+ASStatement >> inferType: aGenerator [
+	^ nil
+]
+
 { #category : 'compiling' }
 ASStatement >> invalidAST [
 

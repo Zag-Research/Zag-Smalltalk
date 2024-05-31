@@ -21,7 +21,6 @@ Class {
 
 { #category : 'components' }
 ASFileContext >> addComponent: aGenerator [
-
 	pendingComponents add: aGenerator.
 	components add: aGenerator
 ]
