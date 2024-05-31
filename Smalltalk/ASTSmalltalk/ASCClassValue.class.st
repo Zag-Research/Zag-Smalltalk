@@ -19,8 +19,6 @@ ASCClassValue >> assertIsValue [
 
 { #category : 'common' }
 ASCClassValue >> init: aClass [
-
-	
 		valueClass := aClass.
 		^ self
 ]

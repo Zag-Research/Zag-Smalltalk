@@ -36,7 +36,7 @@ ASStackContextPlaceholder >> importedSource: anInteger [
 
 { #category : 'API' }
 ASStackContextPlaceholder >> makeContextRequired [
-	^ ASStackContext from: rest
+	^ ASStackContext fromStack: rest
 ]
 
 { #category : 'API' }

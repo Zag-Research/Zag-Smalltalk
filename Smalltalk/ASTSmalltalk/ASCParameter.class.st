@@ -24,6 +24,11 @@ ASCParameter >> inBasicBlock: anASCBasicBlock [
 	stack := anASCBasicBlock stack
 ]
 
+{ #category : 'instance initialization' }
+ASCParameter >> initialize [ 
+	^ super initialize 
+]
+
 { #category : 'testing' }
 ASCParameter >> isImmediateThunk [
 ^ true

@@ -149,8 +149,7 @@ ASMethodNode >> stackSize [
 ]
 
 { #category : 'codegen' }
-ASMethodNode >> zigWalkInline: aGenerator [
-	self halt.
+ASMethodNode >> zigWalkInlineMethod: aGenerator [
 	"aGenerator selector: selector.
 	
 	pragmas do: [ :pragma |
@@ -158,11 +157,11 @@ ASMethodNode >> zigWalkInline: aGenerator [
 			aGenerator primitive: (pragma arguments at: 1) value ] ]."
 
 	"Daniel Good oportunity to rename things on stack!"
-	aGenerator locals: locals indirectArguments: arguments.
+	aGenerator locals: locals indirectParameters: arguments.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnSelf ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-		  last: [ :exp | exp zigWalkMethodReturn: aGenerator ]
+		  last: [ :exp | exp zigWalkInlineMethodReturn: aGenerator ]
 ]
 
 { #category : 'codegen' }

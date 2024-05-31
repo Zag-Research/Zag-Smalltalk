@@ -60,3 +60,8 @@ ASStackBlockClosure >> offset: anInteger to: anObject context: blockLocal stack:
 		  value: offsetToTheMethod
 		  value: offsetToTheObject
 ]
+
+{ #category : 'accessing' }
+ASStackBlockClosure >> requiredContextDo: aBlock [ 
+	^ rest requiredContextDo: aBlock
+]
