@@ -27,7 +27,8 @@ Class {
 		'parentCodeGenerator',
 		'enclosingScope',
 		'embeddings',
-		'inlineSelectors'
+		'inlineSelectors',
+		'implementors'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -159,6 +160,12 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 		self compileBlock: aBlockClosure ]
 ]
 
+{ #category : 'initialization' }
+ASCodeGenerator >> implementors: aSelector [
+	"^ SystemNavigation default allImplementorsOf: aSymbol"
+	^implementors at: aSelector
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
 	anExpression isASSelf ifTrue: [ ^ targetClass ].
@@ -182,7 +189,13 @@ ASCodeGenerator >> initialize [
 	inlineSelectors := OrderedCollection new.
 	embeddings := {
 		              (Integer >> #-).
-		              (Integer >> #'<=') }
+		              (Integer >> #'<=') }.
+	implementors := Dictionary new.
+	implementors at: #ifTrue: put: { True>>#ifTrue:. False>>#ifTrue:. }.
+	implementors at: #ifFalse: put: { True>>#ifFalse:.. False>>#ifFalse:. }.
+	implementors at: #ifTrue:ifFalse: put: { True>>#ifTrue:ifFalse:. False>>#ifTrue:ifFalse: }.
+	implementors at: #ifFalse:ifTrue: put: { True>>#ifFalse:ifTrue:. False>>#ifFalse:ifTrue: }
+	
 ]
 
 { #category : 'initialization' }
@@ -451,7 +464,7 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
 		ifFalse: [
 			| implementors common targets |
 			"extract system nav and for now base if off a list"
-			implementors := SystemNavigation default allImplementorsOf: aSymbol.
+			implementors := self implementors: aSymbol.
 			"move to 'ensure' to remove last"
 			implementors size < 10 ifFalse: [
 				inlineSelectors removeLast.

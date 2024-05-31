@@ -68,7 +68,7 @@ ASCInlineBlock >> nextSequence [
 { #category : 'writing' }
 ASCInlineBlock >> outputTo: output [
 
-	output outputMBlockLabel: self label.
+	output outputMethodLabel: self label.
 	^ self outputRestTo: output
 ]
 
