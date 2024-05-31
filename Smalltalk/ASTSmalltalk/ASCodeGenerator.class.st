@@ -128,8 +128,9 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
-	enclosingScope ifNil: [ self halt ]. 
-	^ enclosingScope find: aSymbol 
+	^ code find: aSymbol 
+	"enclosingScope ifNil: [ self halt ].
+	^ enclosingScope find: aSymbol"
 ]
 
 { #category : 'API' }
@@ -385,6 +386,12 @@ ASCodeGenerator >> returnTop [
 
 	code
 		returnTop
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> scopeFind: aSymbol [
+
+	^ enclosingScope find: aSymbol 
 ]
 
 { #category : 'accessing' }

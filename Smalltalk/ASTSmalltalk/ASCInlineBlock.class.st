@@ -77,3 +77,8 @@ ASCInlineBlock >> printOn: aStream [
 
 	aStream nextPutAll: self label
 ]
+
+{ #category : 'printing' }
+ASCInlineBlock >> updateStack: aSymbol [
+	^ nil
+]
