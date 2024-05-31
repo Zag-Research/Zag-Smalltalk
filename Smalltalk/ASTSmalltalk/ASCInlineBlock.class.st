@@ -36,6 +36,12 @@ ASCInlineBlock >> label [
 	^ label ifNil: [ label := method nextSequence asString ]
 ]
 
+{ #category : 'initialization' }
+ASCInlineBlock >> llvmLabel [
+
+	^ self label
+]
+
 { #category : 'printing' }
 ASCInlineBlock >> locals: locals arguments: arguments [
 
@@ -89,6 +95,20 @@ ASCInlineBlock >> returnBranch: bb [
 ASCInlineBlock >> returnTop [
 
 	^ self put: ASCBranch new
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> updateDependencies [
+
+	| result |
+	super updateDependencies.
+	result := OrderedCollection new.
+	requires do: [ :requirement |
+		(sourceBlocks anySatisfy: [ :block | block provides: requirement ])
+			ifTrue: [
+				result addAll:
+					(sourceBlocks select: [ :block | block addRequirement: requirement ]) ] ].
+	^ result
 ]
 
 { #category : 'printing' }

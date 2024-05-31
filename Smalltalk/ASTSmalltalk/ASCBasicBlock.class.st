@@ -46,6 +46,14 @@ ASCBasicBlock >> = other [
 	^ hash = other hash and: [ other class = self class ]
 ]
 
+{ #category : 'adding' }
+ASCBasicBlock >> addRequirement: aSymbol [
+
+	(provides includes: aSymbol) ifTrue: [ ^ false ].
+	provides add: aSymbol.
+	^ true
+]
+
 { #category : 'accessing' }
 ASCBasicBlock >> blocks [
 
@@ -81,6 +89,7 @@ ASCBasicBlock >> classCase: aCollection [
 		| next |
 		next := ASCInlineBlock for: self.
 		case at: class put: next.
+		next addSource: self.
 		next setStack: stack ].
 	self put: case.
 	^ case
@@ -304,6 +313,17 @@ ASCBasicBlock >> popVariable: aSymbol [
 	self doDrop
 ]
 
+{ #category : 'accessing' }
+ASCBasicBlock >> provides [
+	^ provides
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> provides: aSymbol [
+
+	^ (provides includes: aSymbol) or: [ method provides: aSymbol ]
+]
+
 { #category : 'API' }
 ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
@@ -353,6 +373,11 @@ ASCBasicBlock >> putSimple: aSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 stack requiredContextDo: aBlock 
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> requires [
+	^ requires
 ]
 
 { #category : 'initialization' }
@@ -442,4 +467,11 @@ ASCBasicBlock >> storeVariable: aSymbol [
 { #category : 'accessing' }
 ASCBasicBlock >> top [
 	^ stack top
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> updateDependencies [
+
+	requires addAll: provides.
+	^ #(  )
 ]
