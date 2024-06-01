@@ -104,11 +104,11 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg pushSelf.
 	cg pushLiteral: 1.
 	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: SmallInteger.
+	cg send: #fibonacci targetClass: nil.
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: SmallInteger.
+	cg send: #fibonacci targetClass: nil.
 	cg sendEmbedded: #+.
 	cg returnTop.
 	cg inspect.
@@ -142,16 +142,15 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	cg pushSelf.
 	cg pushLiteral: 1.
 	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: SmallInteger.
+	cg send: #fibonacci targetClass: nil.
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: SmallInteger.
+	cg send: #fibonacci targetClass: nil.
 	cg sendEmbedded: #+.
 	cg branch: common.
 	cg setBasicBlock: common.
 	cg returnTop.
-
 	cg inspect.
 	output outputToStream.
 	file asString inspect

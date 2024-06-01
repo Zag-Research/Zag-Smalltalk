@@ -60,7 +60,7 @@ ASCBlock >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(.
-	aStream print: label.
+	aStream << block body printString.
 	aStream << $)
 ]
 

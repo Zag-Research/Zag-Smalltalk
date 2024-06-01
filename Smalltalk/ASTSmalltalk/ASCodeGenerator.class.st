@@ -187,9 +187,9 @@ ASCodeGenerator >> initialize [
 	inlineSelectors := OrderedCollection new.
 	embeddings := {
 		              (Integer >> #-).
-		              (Integer >> #'<=').
+		              (Integer >> #'<=')".
 		              (ASTBlockClosure >> #value).
-		              (BlockClosure >> #value) }.
+		              (BlockClosure >> #value)" }.
 	implementors := Dictionary new.
 	implementors at: #not put: {
 			(True >> #not).
@@ -212,7 +212,24 @@ ASCodeGenerator >> initialize [
 	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }
 ]
 
-{ #category : 'accessing' }
+{ #category : 'translating' }
+ASCodeGenerator >> inlineBlock: aString next: common [
+
+	| inlineBlock savedReturn savedTargetClass |
+	savedTargetClass := targetClass.
+	inlineBlock := self newInline.
+	savedReturn := returnBlock.
+	[
+		returnBlock := self newInline.
+		self branch: inlineBlock.
+		code := inlineBlock.
+		code stack top block zigWalkInlineMethod: self.
+		code := returnBlock ] ensure: [
+			returnBlock := savedReturn.
+			targetClass := savedTargetClass ]
+]
+
+{ #category : 'translating' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	| inlineBlock savedReturn savedTargetClass |
@@ -515,34 +532,28 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 	inline ifFalse: [ ^ false ].
 	(inlineSelectors includes: aSymbol) ifTrue: [ ^ false ].
 	inlineSelectors addLast: aSymbol.
-
+	[
+	| symbolImplementors common targets |
 	"check if this is a self call"
-	targetClass == aTargetClass
-		ifTrue: [ "we know the target class and the current class being compiled are not the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast""walk the sends method AST""lets check number of implmentors""Daniel just use a short list of compile methods for now"
-			self inlineMethod: aTargetClass >> aSymbol ]
-		ifFalse: [
-			| symbolImplementors common targets |
-			"extract system nav and for now base if off a list"
-			symbolImplementors := self implementors: aSymbol.
-			"move to 'ensure' to remove last"
-			symbolImplementors size < 10 ifFalse: [
-				inlineSelectors removeLast.
-				^ false ].
-			common := self newInline.
-			tail ifTrue: [common returnTop].
-			[
-			targets := self classCase:
-				           (symbolImplementors collect: [ :compileMethod |
-					            compileMethod methodClass ]).
-			targets with: symbolImplementors do: [ :target :compileMethod |
-				self setBasicBlock: target.
-				"walk the sends method AST"
-				self inlineMethod: aTargetClass >> aSymbol.
-				self branch: common ] ] ensure: [
-				self setBasicBlock: common ] ].
-
-	inlineSelectors removeLast.
-	^ true
+	targetClass == aTargetClass ifTrue: [
+		self inlineMethod: aTargetClass >> aSymbol.
+		^ true ].
+	"extract system nav and for now base if off a list"
+	symbolImplementors := self implementors: aSymbol.
+	"move to 'ensure' to remove last"
+	(symbolImplementors size between: 1 and: 4) ifFalse: [ ^ false ].
+	common := self newInline.
+	tail ifTrue: [ common returnTop ].
+	ASTBlockClosure == aTargetClass ifTrue: [
+		^ self inlineBlock: aSymbol next: common].
+	[
+	targets := self classCase: (symbolImplementors collect: #methodClass).
+	targets with: symbolImplementors do: [ :target :compileMethod |
+		self setBasicBlock: target.
+		"walk the sends method AST"
+		self inlineMethod: aTargetClass >> aSymbol.
+		self branch: common ] ] ensure: [ self setBasicBlock: common ].
+	^ true ] ensure: [ inlineSelectors removeLast ]
 ]
 
 { #category : 'accessing' }

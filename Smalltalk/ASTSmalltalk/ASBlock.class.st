@@ -73,6 +73,16 @@ ASBlock >> zigWalk: aGenerator [
 	^ aGenerator pushBlock: self
 ]
 
+{ #category : 'as yet unclassified' }
+ASBlock >> zigWalkInlineMethod: aGenerator [
+
+	aGenerator locals: locals indirectParameters: arguments.
+	^ body
+		  zigWalkEmpty: [ aGenerator returnNil]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkInlineBlockReturn: aGenerator ]
+]
+
 { #category : 'codegen' }
 ASBlock >> zigWalkMethod: aGenerator [
 
