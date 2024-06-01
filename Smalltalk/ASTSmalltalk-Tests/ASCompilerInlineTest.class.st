@@ -109,6 +109,51 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockValueInlined [
+	"blockValue
+
+	^ [ 4 ] value "
+	self
+		assert: ASCompileTestClass1 >> #blockValue 
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
+&e.pushStack,1,
+&e.pushLiteral,Object.from(42),
+&e.returnTop,
+ });
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
 
 	self
@@ -468,6 +513,55 @@ const p = primitives.primitives;
 fn initSmalltalk() void {
     primitives.init();
 MinlinePlus1.setLiterals(&[_]Object{},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testWhileTrueInlined [
+	"whileTrue
+
+	| dirty |
+	[
+	dirty := false.
+	dirty ] whileTrue"
+
+	self
+		assert: ASCompileTestClass1 >> #whileTrue
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
+&e.pushStack,1,
+&e.pushLiteral,Object.from(42),
+&e.returnTop,
+ });
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
 }
 pub fn main() !void {
     initSmalltalk();
