@@ -160,7 +160,7 @@ ASCodeGenerator >> implementors: aSelector [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
-self halt.
+
 	^ anExpression inferType: self
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]

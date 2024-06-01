@@ -120,7 +120,7 @@ ASOutput >> inlining: aBoolean [
 	inlining := aBoolean
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 ASOutput >> name [
 	^ self subclassResponsibility
 ]
