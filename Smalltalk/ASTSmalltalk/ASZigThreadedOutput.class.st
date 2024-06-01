@@ -96,6 +96,14 @@ ASZigThreadedOutput >> verifySelector: anObject [
 	lf
 ]
 
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitBranch: anASCInlineBlock [ 
+"NEEDS TO BE IMPLMENTED ask Dave"
+	"^ self nextPutAll: '  br label %';
+		nextPutAll: anASCInlineBlock label;
+		nextPutAll: '"
+]
+
 { #category : 'API' }
 ASZigThreadedOutput >> visitCase: aClassToBlockMap [
 	

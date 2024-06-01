@@ -24,6 +24,12 @@ ASRef >> = other [
 ]
 
 { #category : 'printing' }
+ASRef >> inferType: aGenerator [
+self halt.
+	^ (aGenerator find: variable) top valueClass.
+]
+
+{ #category : 'printing' }
 ASRef >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream << $( << variable << $)
@@ -55,7 +61,6 @@ ASRef >> variable [
 
 { #category : 'comparing' }
 ASRef >> variable: aSymbol [
-
 	aSymbol isSymbol ifFalse: [ self halt ].
 	variable := aSymbol 
 ]

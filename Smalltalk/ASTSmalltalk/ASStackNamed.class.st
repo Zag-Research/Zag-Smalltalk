@@ -79,3 +79,10 @@ ASStackNamed >> offset: anInteger to: aName context: blockLocal stack: blockStac
 		  stack: blockStack
 		  other: blockOther
 ]
+
+{ #category : 'as yet unclassified' }
+ASStackNamed >> offsetToSelf: anInteger [ 
+
+	#self = name ifTrue: [ ^ anInteger ].
+	^ rest offsetToSelf: anInteger + 1
+]

@@ -25,6 +25,17 @@ ASStack >> at: aSymbol [
 ]
 
 { #category : 'accessing' }
+ASStack >> drop [
+	^ rest
+]
+
+{ #category : 'removing' }
+ASStack >> drop: count [ 
+	count = 0 ifTrue: [ ^self ].
+	^ rest drop: count-1
+]
+
+{ #category : 'accessing' }
 ASStack >> find: aSymbol [
 self subclassResponsibility 
 ]
@@ -77,6 +88,12 @@ ASStack >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockO
 		  other: blockOther 
 ]
 
+{ #category : 'as yet unclassified' }
+ASStack >> offsetToSelf: anInteger [ 
+
+	^ rest offsetToSelf: anInteger + 1
+]
+
 { #category : 'adding' }
 ASStack >> push: anObject [
 
@@ -101,7 +118,9 @@ ASStack >> pushLocalNamed: name [
 { #category : 'API' }
 ASStack >> pushParameterNamed: name [
 
-	^ (ASStackNamed fromStack: self) name: name
+	^ ((#self = name
+		    ifTrue: [ ASStackSelf ]
+		    ifFalse: [ ASStackNamed ]) fromStack: self) name: name
 ]
 
 { #category : 'API' }

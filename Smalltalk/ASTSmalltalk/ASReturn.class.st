@@ -98,6 +98,18 @@ ASReturn >> zigWalkDiscard: aGenerator [
 ]
 
 { #category : 'compiling' }
+ASReturn >> zigWalkInlineDiscard: aGenerator [
+
+	^ (expression zigWalkForReturn: aGenerator) ifFalse: [
+		aGenerator returnTopInline]
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkInlineMethodReturn: aGenerator [ 
+	^ self zigWalkInlineDiscard: aGenerator
+]
+
+{ #category : 'compiling' }
 ASReturn >> zigWalkMethodReturn: aGenerator [ 
 	^ self zigWalkDiscard: aGenerator
 ]

@@ -42,6 +42,12 @@ ASCReturnBlock >> label [
 				           print: (method addReturnBlock: self) ] ]
 ]
 
+{ #category : 'initialization' }
+ASCReturnBlock >> llvmLabel [
+
+	^ '0'
+]
+
 { #category : 'accessing' }
 ASCReturnBlock >> method: anASCMethodBlock [
 
@@ -59,12 +65,6 @@ ASCReturnBlock >> namedContext: blockLocal stack: blockStack [
 ASCReturnBlock >> namedMethod [
 
 	^ self
-]
-
-{ #category : 'as yet unclassified' }
-ASCReturnBlock >> nextInline [
-
-	^ nil
 ]
 
 { #category : 'successor sequences' }

@@ -197,7 +197,7 @@ ASStackTest >> testNames [
 
 	| stack |
 	stack := ASStack new.
-	stack := stack pushParameterNamed: #self.
+	stack := stack pushSelf.
 	stack := stack pushParameterNamed: #p1.
 	stack := stack pushParameterNamed: #p2.
 	stack := stack pushLocalNamed: #l1.

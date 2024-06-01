@@ -23,6 +23,12 @@ ASLiteral >> = other [
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
+{ #category : 'accessing' }
+ASLiteral >> inferType: aClass [
+
+	^ literal class
+]
+
 { #category : 'printing' }
 ASLiteral >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.

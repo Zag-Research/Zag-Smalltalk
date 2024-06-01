@@ -8,7 +8,8 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'returnBlocks'
+		'returnBlocks',
+		'parameters'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -27,13 +28,16 @@ ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
 ASCMethodBlock >> initialize [
 
 	super initialize.
-	returnBlocks := Dictionary new
+	returnBlocks := Dictionary new.
+	method := self.
+	parameters := Set with: #self
 ]
 
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
+	parameters addAll: arguments.
 	locals do: [ :each | self pushLocalNamed: each ].
 	maxDepth := 0
 ]
@@ -69,9 +73,9 @@ ASCMethodBlock >> primitive: anInteger [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> pushSelfNamed: selfName [
+ASCMethodBlock >> provides: aSymbol [
 
-	stack := self pushParameterNamed: selfName
+	^ (provides includes: aSymbol) or: [ parameters includes: aSymbol ]
 ]
 
 { #category : 'accessing' }

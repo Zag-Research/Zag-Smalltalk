@@ -61,6 +61,12 @@ ASStackBlockClosure >> offset: anInteger to: anObject context: blockLocal stack:
 		  value: offsetToTheObject
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackBlockClosure >> offsetToSelf: anInteger [ 
+self halt.
+	^ rest offsetToSelf: anInteger + 1
+]
+
 { #category : 'accessing' }
 ASStackBlockClosure >> requiredContextDo: aBlock [ 
 	^ rest requiredContextDo: aBlock

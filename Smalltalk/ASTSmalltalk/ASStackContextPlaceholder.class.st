@@ -39,6 +39,12 @@ ASStackContextPlaceholder >> makeContextRequired [
 	^ ASStackContext fromStack: rest
 ]
 
+{ #category : 'adding' }
+ASStackContextPlaceholder >> nameStack: aCollection [
+
+	^ self class new fromStack: (rest nameStack: aCollection)
+]
+
 { #category : 'API' }
 ASStackContextPlaceholder >> offset: anInteger namedContext: blockLocal stack: blockStack [
 
@@ -65,6 +71,12 @@ ASStackContextPlaceholder >> offset: anInteger to: anObject context: blockLocal 
 		  context: blockLocal
 		  stack: blockStack
 		  other: blockOther
+]
+
+{ #category : 'as yet unclassified' }
+ASStackContextPlaceholder >> offsetToSelf: anInteger [ 
+
+	^ rest offsetToSelf: anInteger
 ]
 
 { #category : 'API' }

@@ -46,6 +46,14 @@ ASCBasicBlock >> = other [
 	^ hash = other hash and: [ other class = self class ]
 ]
 
+{ #category : 'adding' }
+ASCBasicBlock >> addRequirement: aSymbol [
+
+	(provides includes: aSymbol) ifTrue: [ ^ false ].
+	provides add: aSymbol.
+	^ true
+]
+
 { #category : 'accessing' }
 ASCBasicBlock >> blocks [
 
@@ -81,6 +89,7 @@ ASCBasicBlock >> classCase: aCollection [
 		| next |
 		next := ASCInlineBlock for: self.
 		case at: class put: next.
+		next addSource: self.
 		next setStack: stack ].
 	self put: case.
 	^ case
@@ -246,6 +255,12 @@ ASCBasicBlock >> next [
 	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> nextInline [
+
+	^ nil
+]
+
 { #category : 'instance initialization' }
 ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 
@@ -288,6 +303,17 @@ ASCBasicBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> popAndCopyTopToSelf [
+	" This is tricky code because we need to save all the properties of the top of stack and over-write the `self` that was part of the inlining. So we throw away everything on the stack up to and including that `self` value, and then return a stack with the original top element linking to whatever was below. "
+
+	| count top |
+	count := stack offsetToSelf: 0.
+	self put: (ASCPopAndCopyTop with: count).
+	top := stack.
+	stack := top fromStack: (stack drop: count + 1)
+]
+
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
@@ -296,6 +322,17 @@ ASCBasicBlock >> popVariable: aSymbol [
 	stack top makeManifest.
 	self put: (ASCPopVariable with: target top).
 	self doDrop
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> provides [
+	^ provides
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> provides: aSymbol [
+
+	^ (provides includes: aSymbol) or: [ method provides: aSymbol ]
 ]
 
 { #category : 'API' }
@@ -319,9 +356,16 @@ ASCBasicBlock >> pushLocalNamed: aSymbol [
 ASCBasicBlock >> pushParameterNamed: aSymbol [
 
 	stack := stack pushParameterNamed: aSymbol.
-	^ stack top: (ASCParameter new
-			   init: Object;
-			   name: aSymbol)
+	^ stack top init: Object
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushSelf: targetClass [
+
+	stack := stack pushParameterNamed: #self.
+	^ stack top: (ASCSelf new
+			   init: targetClass;
+			   name: #self)
 ]
 
 { #category : 'API' }
@@ -347,6 +391,11 @@ ASCBasicBlock >> putSimple: aSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 stack requiredContextDo: aBlock 
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> requires [
+	^ requires
 ]
 
 { #category : 'initialization' }
@@ -436,4 +485,11 @@ ASCBasicBlock >> storeVariable: aSymbol [
 { #category : 'accessing' }
 ASCBasicBlock >> top [
 	^ stack top
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> updateDependencies [
+
+	requires addAll: provides.
+	^ #(  )
 ]

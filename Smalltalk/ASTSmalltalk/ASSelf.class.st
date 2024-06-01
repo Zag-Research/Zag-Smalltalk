@@ -34,6 +34,11 @@ ASSelf >> = other [
 ]
 
 { #category : 'accessing' }
+ASSelf >> inferType: aGenerator [
+	^ aGenerator targetClass 
+]
+
+{ #category : 'accessing' }
 ASSelf >> isASSelf [
 	^true
 ]

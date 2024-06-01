@@ -111,7 +111,7 @@ ASCompileTestClass1 >> fibonacci [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
-	^ self bar
+	^ self bar isLarge "not"
 ]
 
 { #category : 'testing - examples' }
@@ -132,6 +132,11 @@ ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
 	^ self plus1: (forty2 - 4)
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> inlinePlus1 [
+	^ self plus1: 30
 ]
 
 { #category : 'testing - examples' }
