@@ -61,6 +61,12 @@ ASCompileTestClass1 >> blockReturnSelf [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockValue [
+
+	^ [ 4 ] value 
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> bracketSend [ 
 
 	5 + (self fib: 2)
@@ -111,7 +117,8 @@ ASCompileTestClass1 >> fibonacci [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
-	^ self bar isLarge "not"
+	self bar isLarge. "not"
+	^ 42
 ]
 
 { #category : 'testing - examples' }
@@ -228,6 +235,15 @@ ASCompileTestClass1 >> unariesPlus [
 
 	42 negated. 
 	^ 23 negated abs max: 42
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> whileTrue [
+
+	| dirty |
+	[
+	dirty := false.
+	dirty ] whileTrue
 ]
 
 { #category : 'testing - examples' }

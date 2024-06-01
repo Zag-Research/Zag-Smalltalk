@@ -151,6 +151,12 @@ ASSend >> zigWalkForReturn: aGenerator [
 ]
 
 { #category : 'compiling' }
+ASSend >> zigWalkInlineMethodReturn: aGenerator [
+
+	^ self zigWalk: aGenerator tail: true
+]
+
+{ #category : 'compiling' }
 ASSend >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.

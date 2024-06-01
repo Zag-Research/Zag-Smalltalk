@@ -86,7 +86,7 @@ ASCInlineBlock >> printOn: aStream [
 { #category : 'printing' }
 ASCInlineBlock >> returnTop [
 
-	^ self put: ASCBranch new
+	^ self put: ASCReturnTop new
 ]
 
 { #category : 'data flow instructions' }

@@ -43,6 +43,12 @@ ASCBlock >> block [
 	^ block
 ]
 
+{ #category : 'accessing' }
+ASCBlock >> inferType: anASCodeGenerator [
+
+	^ ASTBlockClosure "anASCodeGenerator targetClass"
+]
+
 { #category : 'initialization' }
 ASCBlock >> initialize [
 	super initialize.

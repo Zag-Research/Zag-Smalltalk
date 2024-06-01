@@ -21,6 +21,11 @@ ASCEmbed >> inspectZagASTOn: aStream [
 		print: selector.
 ]
 
+{ #category : 'instance creation' }
+ASCEmbed >> next [
+	^nil
+]
+
 { #category : 'code generation' }
 ASCEmbed >> outputTo: anOutput [
 

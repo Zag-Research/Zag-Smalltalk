@@ -151,6 +151,13 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 		self compileBlock: aBlockClosure ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> globalFind: aString [
+	"aString asSymbol isGlobalVariable ifTrue: [ ^ ASStackNamed new name: aString ]"
+self halt.
+	^ nil
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> implementors: aSelector [
 
@@ -160,7 +167,7 @@ ASCodeGenerator >> implementors: aSelector [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
-
+	anExpression ifNil: [ ^ nil ].
 	^ anExpression inferType: self
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
@@ -180,7 +187,9 @@ ASCodeGenerator >> initialize [
 	inlineSelectors := OrderedCollection new.
 	embeddings := {
 		              (Integer >> #-).
-		              (Integer >> #'<=') }.
+		              (Integer >> #'<=').
+		              (ASTBlockClosure >> #value).
+		              (BlockClosure >> #value) }.
 	implementors := Dictionary new.
 	implementors at: #not put: {
 			(True >> #not).
@@ -198,23 +207,28 @@ ASCodeGenerator >> initialize [
 			(True >> #ifFalse:ifTrue:).
 			(False >> #ifFalse:ifTrue:) }.
 	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
-	implementors at: #not put: { (Number >> #abs) }
+	implementors at: #not put: { (Number >> #abs) }.
+	implementors at: #value put: { (ASTBlockClosure >> #value) }.
+	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }
 ]
 
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
-	| inlineBlock savedReturn |
+	| inlineBlock savedReturn savedTargetClass |
+	savedTargetClass := targetClass.
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
+	targetClass :=  aCompileMethod classBinding value.
 	returnBlock := self newInline.
 	self branch: inlineBlock.
 	code := inlineBlock.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
 		self.
 	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock" "self can hold the return block"
-		returnBlock := savedReturn ]
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
 ]
 
 { #category : 'initialization' }
@@ -238,6 +252,15 @@ ASCodeGenerator >> inspectBasicBlocks [
 ASCodeGenerator >> isEmbedded: aCompileMethod [
  	"better to just check if this method contains a primitive and not in the list"
 	^ embeddings hasLiteral: aCompileMethod 
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals indirectArguments: arguments [
+
+	"output forClass ifNotNil: [ :theClass |
+		code doPush: (ASCClassValue new init: theClass) ].
+	code pushSelfNamed: self selfName."
+	code locals: locals arguments: arguments
 ]
 
 { #category : 'accessing' }
@@ -424,7 +447,7 @@ ASCodeGenerator >> returnTopInline [
 
 { #category : 'accessing' }
 ASCodeGenerator >> scopeFind: aSymbol [
-
+	enclosingScope ifNil: [ ^self globalFind: aSymbol ].
 	^ enclosingScope find: aSymbol 
 ]
 
@@ -463,7 +486,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		(self sendInline: aSymbol targetClass: aTargetClass) ifTrue: [
+		(self sendInline: aSymbol targetClass: aTargetClass tail:tail) ifTrue: [
 			^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
@@ -486,7 +509,7 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
+ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 	"check if we're recursive"
 
 	inline ifFalse: [ ^ false ].
@@ -505,8 +528,9 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
 			symbolImplementors size < 10 ifFalse: [
 				inlineSelectors removeLast.
 				^ false ].
-
 			common := self newInline.
+			tail ifTrue: [common returnTop].
+			[
 			targets := self classCase:
 				           (symbolImplementors collect: [ :compileMethod |
 					            compileMethod methodClass ]).
@@ -514,9 +538,9 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
 				self setBasicBlock: target.
 				"walk the sends method AST"
 				self inlineMethod: aTargetClass >> aSymbol.
-				self branch: common ].
-			self setBasicBlock: common
-			"result isReturn ifTrue: [ ^ result expression zigWalk: self ]." ].
+				self branch: common ] ] ensure: [
+				self setBasicBlock: common ] ].
+
 	inlineSelectors removeLast.
 	^ true
 ]
