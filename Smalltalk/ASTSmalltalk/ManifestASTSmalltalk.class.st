@@ -10,6 +10,13 @@ Class {
 }
 
 { #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleAssignmentInBlockRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:54.198851-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleBadMessageRule2V1FalsePositive [
 
 	^ #( #( #( #RGPackageDefinition #( #ASTSmalltalk ) )
@@ -133,6 +140,13 @@ ManifestASTSmalltalk class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePo
 
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#ASStackElement #nameReset #false)) #'2024-05-13T08:20:53.254599-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleUnwindBlocksRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:59.00025-04:00') )
 ]
 
 { #category : 'code-critics' }

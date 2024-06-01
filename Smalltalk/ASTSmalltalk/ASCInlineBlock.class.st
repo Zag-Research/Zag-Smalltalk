@@ -45,9 +45,7 @@ ASCInlineBlock >> llvmLabel [
 { #category : 'printing' }
 ASCInlineBlock >> locals: locals arguments: arguments [
 
-	stack := stack pushPlaceholderContext.
-	"what about self?"
-	stack := stack nameStack: arguments.
+	self nameStack: arguments.
 	locals do: [ :each | self pushLocalNamed: each ].
 	maxDepth := 0
 ]
@@ -83,12 +81,6 @@ ASCInlineBlock >> outputTo: output [
 ASCInlineBlock >> printOn: aStream [
 
 	aStream nextPutAll: self label
-]
-
-{ #category : 'printing' }
-ASCInlineBlock >> returnBranch: bb [
-
-	^ self put: (ASCBranch new with: bb)
 ]
 
 { #category : 'printing' }

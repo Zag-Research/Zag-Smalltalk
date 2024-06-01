@@ -137,7 +137,7 @@ ASSend >> zigWalk: aGenerator tail: tail [
 
 	| myTarget |
 	target zigWalkTarget: aGenerator.
-	myTarget := aGenerator inferType: target.
+	myTarget := aGenerator topOfStackType.
 	args do: [ :arg | arg zigWalk: aGenerator ].
 	
 	aGenerator send: selector targetClass: myTarget tail: tail.

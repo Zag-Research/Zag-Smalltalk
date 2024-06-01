@@ -17,6 +17,12 @@ Class {
 ASCClassValue >> assertIsValue [
 ]
 
+{ #category : 'accessing' }
+ASCClassValue >> inferType: anASCodeGenerator [ 
+
+	^ valueClass
+]
+
 { #category : 'common' }
 ASCClassValue >> init: aClass [
 		valueClass := aClass.

@@ -45,17 +45,6 @@ ASStackElement >> depth [
 ]
 
 { #category : 'accessing' }
-ASStackElement >> drop [
-	^ rest
-]
-
-{ #category : 'removing' }
-ASStackElement >> drop: count [ 
-	count = 0 ifTrue: [ ^self ].
-	^ rest drop: count-1
-]
-
-{ #category : 'accessing' }
 ASStackElement >> find: aSymbol [
 	^ rest find: aSymbol
 ]
@@ -103,8 +92,10 @@ ASStackElement >> makeContextRequired [
 ASStackElement >> nameStack: parameterNamesLeftToRight [
 
 	| name |
+	parameterNamesLeftToRight ifEmpty: [ ^ self ].
 	name := parameterNamesLeftToRight removeLast.
-	^ (ASStackNamed fromStack: (rest nameStack: parameterNamesLeftToRight))
+	^ ((#self = name ifTrue: [ ASStackSelf ] ifFalse: [ASStackNamed] )fromStack:
+			   (rest nameStack: parameterNamesLeftToRight))
 		  top: top;
 		  name: name
 ]

@@ -20,16 +20,6 @@ ASBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : 'accessing' }
-ASBlock >> buildStack [
-	| stackVariables |
-	stackVariables := OrderedCollection new.
-	stackVariables add: #self.
-	stackVariables addAll: arguments.
-	stackVariables addAll: locals.
-	^ stackVariables reverse.
-]
-
 { #category : 'testing' }
 ASBlock >> isASBlock [
 	^true

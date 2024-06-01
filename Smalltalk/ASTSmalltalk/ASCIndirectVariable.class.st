@@ -40,13 +40,6 @@ ASCIndirectVariable >> push: output [
 ]
 
 { #category : 'accessing' }
-ASCIndirectVariable >> push: aSymbol on: aStack [
-	^ ASStackNamed new
-		         from: aStack;
-		         name: aSymbol 
-]
-
-{ #category : 'accessing' }
 ASCIndirectVariable >> variable: aVariable [
 
 	variable := aVariable

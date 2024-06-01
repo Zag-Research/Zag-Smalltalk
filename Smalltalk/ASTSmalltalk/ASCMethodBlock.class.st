@@ -79,12 +79,6 @@ ASCMethodBlock >> provides: aSymbol [
 ]
 
 { #category : 'accessing' }
-ASCMethodBlock >> pushSelfNamed: selfName [
-
-	stack := self pushParameterNamed: selfName
-]
-
-{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
 	selector := aString.

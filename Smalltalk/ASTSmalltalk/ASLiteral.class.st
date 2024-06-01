@@ -25,6 +25,7 @@ ASLiteral >> = other [
 
 { #category : 'accessing' }
 ASLiteral >> inferType: aClass [
+
 	^ literal class
 ]
 

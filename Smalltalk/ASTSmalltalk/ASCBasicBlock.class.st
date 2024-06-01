@@ -303,6 +303,17 @@ ASCBasicBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> popAndCopyTopToSelf [
+	" This is tricky code because we need to save all the properties of the top of stack and over-write the `self` that was part of the inlining. So we throw away everything on the stack up to and including that `self` value, and then return a stack with the original top element linking to whatever was below. "
+
+	| count top |
+	count := stack offsetToSelf: 0.
+	self put: (ASCPopAndCopyTop with: count).
+	top := stack.
+	stack := top fromStack: (stack drop: count + 1)
+]
+
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
@@ -345,9 +356,16 @@ ASCBasicBlock >> pushLocalNamed: aSymbol [
 ASCBasicBlock >> pushParameterNamed: aSymbol [
 
 	stack := stack pushParameterNamed: aSymbol.
-	^ stack top: (ASCParameter new
-			   init: Object;
-			   name: aSymbol)
+	^ stack top init: Object
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> pushSelf: targetClass [
+
+	stack := stack pushParameterNamed: #self.
+	^ stack top: (ASCSelf new
+			   init: targetClass;
+			   name: #self)
 ]
 
 { #category : 'API' }

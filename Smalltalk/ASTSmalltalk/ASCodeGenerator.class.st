@@ -134,17 +134,6 @@ ASCodeGenerator >> find: aSymbol [
 	^ enclosingScope find: aSymbol"
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> findTargetClass: aTarget [
-
-^	aTarget = #self
-		ifTrue: [ targetClass ]
-		ifFalse: [
-			aTarget = #super
-				ifTrue: [ targetClass superclass ]
-				ifFalse: [ nil ] ]
-]
-
 { #category : 'private - testing' }
 ASCodeGenerator >> firstBlock [
 	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
@@ -164,13 +153,14 @@ ASCodeGenerator >> generate: aMethodOrBlockNode [
 
 { #category : 'initialization' }
 ASCodeGenerator >> implementors: aSelector [
-self halt.
+
 	"^ SystemNavigation default allImplementorsOf: aSymbol"
 	^implementors at: aSelector
 ]
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
+self halt.
 	^ anExpression inferType: self
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
@@ -192,27 +182,39 @@ ASCodeGenerator >> initialize [
 		              (Integer >> #-).
 		              (Integer >> #'<=') }.
 	implementors := Dictionary new.
-	implementors at: #ifTrue: put: { True>>#ifTrue:. False>>#ifTrue:. }.
-	implementors at: #ifFalse: put: { True>>#ifFalse:.. False>>#ifFalse:. }.
-	implementors at: #ifTrue:ifFalse: put: { True>>#ifTrue:ifFalse:. False>>#ifTrue:ifFalse: }.
-	implementors at: #ifFalse:ifTrue: put: { True>>#ifFalse:ifTrue:. False>>#ifFalse:ifTrue: }.
-	implementors at: #negated put: { Number>>#negated }.
-	implementors at: #abs put: { Number>>#abs }
-	
+	implementors at: #not put: {
+			(True >> #not).
+			(False >> #not) }.
+	implementors at: #ifTrue: put: {
+			(True >> #ifTrue:).
+			(False >> #ifTrue:) }.
+	implementors at: #ifFalse: put: {
+			(True >> #ifFalse:).
+			(False >> #ifFalse:) }.
+	implementors at: #ifTrue:ifFalse: put: {
+			(True >> #ifTrue:ifFalse:).
+			(False >> #ifTrue:ifFalse:) }.
+	implementors at: #ifFalse:ifTrue: put: {
+			(True >> #ifFalse:ifTrue:).
+			(False >> #ifFalse:ifTrue:) }.
+	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
+	implementors at: #not put: { (Number >> #abs) }
 ]
 
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
-	| inlineBlock |
-inlineBlock := self newInline.
-			returnBlock := self newInline.
-			self branch: inlineBlock.
-			code := inlineBlock.
-			(ASPharoCompiler new astFor: aCompileMethod)
-				zigWalkInlineMethod: self.
-			self branch: returnBlock 
-			"when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock"
-			"self can hold the return block"
+
+	| inlineBlock savedReturn |
+	inlineBlock := self newInline.
+	savedReturn := returnBlock.
+	[
+	returnBlock := self newInline.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
+		self.
+	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock" "self can hold the return block"
+		returnBlock := savedReturn ]
 ]
 
 { #category : 'initialization' }
@@ -249,9 +251,9 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 { #category : 'accessing' }
 ASCodeGenerator >> locals: locals parameters: arguments [
 
-	output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed.
+	"output forClass ifNotNil: [ :theClass |
+		code doPush: (ASCClassValue new init: theClass) ]."
+	code pushSelf: targetClass.
 	code locals: locals parameters: arguments
 ]
 
@@ -368,7 +370,8 @@ ASCodeGenerator >> pushSelf [
 	value := ASCClassValue new init: targetClass.
 	code
 		needs: #self;
-		doPush: value;
+		"doPush: value;"
+		pushSelf: targetClass;
 		put: (ASCPushVariable with: (code find: #self) top)
 ]
 
@@ -399,11 +402,6 @@ ASCodeGenerator >> resolveFlowDependencies [
 			blocksToProcess addAll: block updateDependencies ] ]
 ]
 
-{ #category : 'accessing' }
-ASCodeGenerator >> returnBlock [
-	code returnBranch: returnBlock 
-]
-
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
@@ -415,6 +413,13 @@ ASCodeGenerator >> returnTop [
 
 	code
 		returnTop
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> returnTopInline [
+
+	code popAndCopyTopToSelf.
+	self branch: returnBlock
 ]
 
 { #category : 'accessing' }
@@ -438,11 +443,6 @@ ASCodeGenerator >> selector: aSymbol [
 	code selector: aSymbol 
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> selfName [
-	^ #self
-]
-
 { #category : 'API' }
 ASCodeGenerator >> send: aSymbol [
 
@@ -463,8 +463,8 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		(self sendInline: aSymbol targetClass: aTargetClass)
-			ifTrue: [ ^ true "return something?" ] ].
+		(self sendInline: aSymbol targetClass: aTargetClass) ifTrue: [
+			^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
 		      send: aSymbol
@@ -488,16 +488,15 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 { #category : 'API' }
 ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass [
 	"check if we're recursive"
+
 	inline ifFalse: [ ^ false ].
-	(inlineSelectors contains: aSymbol) ifTrue: [ ^ false ].
+	(inlineSelectors includes: aSymbol) ifTrue: [ ^ false ].
 	inlineSelectors addLast: aSymbol.
 
 	"check if this is a self call"
 	targetClass == aTargetClass
 		ifTrue: [ "we know the target class and the current class being compiled are not the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast""walk the sends method AST""lets check number of implmentors""Daniel just use a short list of compile methods for now"
-			self inlineMethod: aTargetClass >> aSymbol.
-			
-			]
+			self inlineMethod: aTargetClass >> aSymbol ]
 		ifFalse: [
 			| symbolImplementors common targets |
 			"extract system nav and for now base if off a list"
@@ -548,6 +547,12 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> topOfStackType [
+
+	^ self inferType: code stack top
 ]
 
 { #category : 'post processing' }

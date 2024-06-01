@@ -111,7 +111,7 @@ ASCompileTestClass1 >> fibonacci [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
-	^ self bar negated
+	^ self bar isLarge "not"
 ]
 
 { #category : 'testing - examples' }
