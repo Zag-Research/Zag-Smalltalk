@@ -401,10 +401,14 @@ pub fn main() !void {
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFooInlined [
-"foo
+	"foo
 	^ self bar"
-"bar
+
+	"bar
 	^ 42"
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #foo) inspect.
+	self halt.
 	self
 		assert: ASCompileTestClass1 >> #foo
 		outputInlinesTo: 'const std = @import("std");
