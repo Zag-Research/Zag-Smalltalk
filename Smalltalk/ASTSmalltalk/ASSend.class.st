@@ -135,7 +135,7 @@ ASSend >> zigWalk: aGenerator [
 { #category : 'compiling' }
 ASSend >> zigWalk: aGenerator tail: tail [
 
-	| myTarget |
+	| myTarget stack |
 	target zigWalkTarget: aGenerator.
 	myTarget := aGenerator topOfStackType.
 	args do: [ :arg | arg zigWalk: aGenerator ].

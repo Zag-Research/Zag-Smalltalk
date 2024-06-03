@@ -99,7 +99,7 @@ ASStack >> push: anObject [
 
 	| newStack |
 	newStack := ASStackElement fromStack: self.
-	newStack top: anObject. " (ASCClassValue new init: anObject class)."
+	newStack top: anObject. 
 	^ newStack
 ]
 

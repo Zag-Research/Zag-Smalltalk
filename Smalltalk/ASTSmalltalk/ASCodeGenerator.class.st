@@ -29,7 +29,8 @@ Class {
 		'embeddings',
 		'inlineSelectors',
 		'implementors',
-		'returnBlock'
+		'returnBlock',
+		'embeddingReturnTypes'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -86,6 +87,13 @@ ASCodeGenerator >> compileBlock: aBlockClosure [
 	aBlockClosure manifest ifFalse: [ ^self].
 		code pushBlockNamed: aBlockClosure.
 		output compileBlock: aBlockClosure
+]
+
+{ #category : 'compiling' }
+ASCodeGenerator >> compileMethodFor: aSelector for: aClass [ 
+	aClass methodDictionary at: aSelector ifPresent: [ ^aClass >> aSelector ].
+	aClass superclass ifNil: [ ^nil ].
+	^ self compileMethodFor: aSelector for: aClass superclass 
 ]
 
 { #category : 'API' }
@@ -188,8 +196,15 @@ ASCodeGenerator >> initialize [
 	embeddings := {
 		              (Integer >> #-).
 		              (Integer >> #'<=').
-		              (ASTBlockClosure >> #value).
-		              (BlockClosure >> #value) }.
+		              (SmallInteger >> #<).
+		              (SmallInteger >> #+).
+	}.
+	embeddingReturnTypes := Dictionary new.
+	embeddingReturnTypes at: #- put: SmallInteger.
+	embeddingReturnTypes at: #<= put: Boolean.
+	embeddingReturnTypes at: #< put: Boolean.
+	embeddingReturnTypes at: #+ put: SmallInteger.
+	
 	implementors := Dictionary new.
 	implementors at: #not put: {
 			(True >> #not).
@@ -483,7 +498,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
-		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
+		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass)) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
 		(self sendInline: aSymbol targetClass: aTargetClass tail:tail) ifTrue: [
@@ -502,7 +517,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |
-	bb := code embed: aSymbol.
+	bb := code embed: aSymbol return: (embeddingReturnTypes at: aSymbol).
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
@@ -537,7 +552,7 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 			targets with: symbolImplementors do: [ :target :compileMethod |
 				self setBasicBlock: target.
 				"walk the sends method AST"
-				self inlineMethod: aTargetClass >> aSymbol.
+				self inlineMethod: compileMethod.
 				self branch: common ] ] ensure: [
 				self setBasicBlock: common ] ].
 

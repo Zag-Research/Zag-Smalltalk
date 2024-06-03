@@ -137,12 +137,15 @@ ASCBasicBlock >> doPush: anObject [
 ]
 
 { #category : 'abstract interpretation' }
-ASCBasicBlock >> embed: aSymbol [
+ASCBasicBlock >> embed: aSymbol return: aClass [
 
-	| send |
-	send := ASCEmbed with: aSymbol.
-	self put: send.
-	self stack: (stack drop: aSymbol numArgs + 1) pushUnknown.
+	| sendEmbed |
+	sendEmbed := ASCEmbed with: aSymbol.
+	self put: sendEmbed.
+	"we should know the type! can push something more than unknown here"
+	self
+		stack: ((stack drop: aSymbol numArgs + 1)
+		push: (ASCClassValue new init: aClass)).
 	^ nil
 ]
 
