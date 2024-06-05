@@ -27,7 +27,6 @@ Class {
 		'parentCodeGenerator',
 		'enclosingScope',
 		'embeddings',
-		'inlineSelectors',
 		'implementors',
 		'returnBlock',
 		'embeddingReturnTypes'
@@ -192,19 +191,17 @@ ASCodeGenerator >> initialize [
 	maxDepth := 0.
 	inline := false.
 	tailCallOptimize := true.
-	inlineSelectors := OrderedCollection new.
 	embeddings := {
 		              (Integer >> #-).
 		              (Integer >> #'<=').
 		              (SmallInteger >> #<).
-		              (SmallInteger >> #+).
-	}.
+		              (SmallInteger >> #+) }.
 	embeddingReturnTypes := Dictionary new.
 	embeddingReturnTypes at: #- put: SmallInteger.
-	embeddingReturnTypes at: #<= put: Boolean.
+	embeddingReturnTypes at: #'<=' put: Boolean.
 	embeddingReturnTypes at: #< put: Boolean.
 	embeddingReturnTypes at: #+ put: SmallInteger.
-	
+
 	implementors := Dictionary new.
 	implementors at: #not put: {
 			(True >> #not).
@@ -232,16 +229,17 @@ ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	| inlineBlock savedReturn savedTargetClass |
 	savedTargetClass := targetClass.
+	"create a new block "
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
-	targetClass :=  aCompileMethod classBinding value.
+	targetClass := aCompileMethod classBinding value.
 	returnBlock := self newInline.
 	self branch: inlineBlock.
 	code := inlineBlock.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
 		self.
-	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock" "self can hold the return block"
+	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
 ]
@@ -525,11 +523,9 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 
 { #category : 'API' }
 ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
-	"check if we're recursive"
+	"return false if inline flag isn't set"
 
 	inline ifFalse: [ ^ false ].
-	(inlineSelectors includes: aSymbol) ifTrue: [ ^ false ].
-	inlineSelectors addLast: aSymbol.
 
 	"check if this is a self call"
 	targetClass == aTargetClass
@@ -541,10 +537,9 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 			symbolImplementors := self implementors: aSymbol.
 			"move to 'ensure' to remove last"
 			symbolImplementors size < 10 ifFalse: [
-				inlineSelectors removeLast.
 				^ false ].
 			common := self newInline.
-			tail ifTrue: [common returnTop].
+			tail ifTrue: [ common returnTop ].
 			[
 			targets := self classCase:
 				           (symbolImplementors collect: [ :compileMethod |
@@ -553,10 +548,7 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 				self setBasicBlock: target.
 				"walk the sends method AST"
 				self inlineMethod: compileMethod.
-				self branch: common ] ] ensure: [
-				self setBasicBlock: common ] ].
-
-	inlineSelectors removeLast.
+				self branch: common ] ] ensure: [ self setBasicBlock: common ] ].
 	^ true
 ]
 
