@@ -97,6 +97,12 @@ ASReturn >> zigWalkDiscard: aGenerator [
 	^ aGenerator returnTop]
 ]
 
+{ #category : 'as yet unclassified' }
+ASReturn >> zigWalkInlineBlockReturn: anASCodeGenerator [
+
+	self shouldBeImplemented 
+]
+
 { #category : 'compiling' }
 ASReturn >> zigWalkInlineDiscard: aGenerator [
 

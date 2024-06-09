@@ -22,7 +22,8 @@ ASEmptyStack >> depth [
 ASEmptyStack >> find: aSymbol [
 
 	| stack |
-	stack := (ASStackNamedIndirect fromStack: self)
+	stack := ASStackNamedIndirect new
+		         from: self;
 		         name: aSymbol.
 	stack top: (nonlocalNameLookupObject scopeFind: aSymbol).
 	^ stack

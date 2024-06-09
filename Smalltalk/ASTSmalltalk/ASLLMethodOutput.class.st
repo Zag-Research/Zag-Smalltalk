@@ -188,13 +188,12 @@ ASLLMethodOutput >> setupForOutput [
 	codeGenerator basicBlocksUnorderedDo: [ :bb |
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: bb maxDepth.
-		bb stackOps: self.
 		bbs add: bb ].
 	[ bbs isEmpty ] whileFalse: [
 		| temp |
 		temp := bbs.
 		bbs := Set new.
-		temp do: [ :bb | bb flow ifTrue: [bbs add: bb] ] ]
+		temp do: [ :bb | bb flow ifTrue: [ bbs add: bb ] ] ]
 ]
 
 { #category : 'code generation' }

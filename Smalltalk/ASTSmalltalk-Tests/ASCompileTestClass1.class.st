@@ -56,6 +56,12 @@ ASCompileTestClass1 >> blockReturn: p1 [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockReturnEasy [
+
+	true ifTrue: [ ^ 42 ]
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockReturnSelf [
 	true ifTrue: [ ^self ]
 ]
@@ -239,6 +245,12 @@ ASCompileTestClass1 >> unariesPlus [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> whileTrue [
+
+	[ false ] whileTrue
+]
+
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> whileTrueHarder [
 
 	| dirty |
 	[

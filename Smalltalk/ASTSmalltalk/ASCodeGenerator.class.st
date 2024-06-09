@@ -224,6 +224,23 @@ ASCodeGenerator >> initialize [
 	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }
 ]
 
+{ #category : 'translating' }
+ASCodeGenerator >> inlineBlock: aString next: common [
+
+	| inlineBlock savedReturn savedTargetClass |
+	savedTargetClass := targetClass.
+	inlineBlock := self newInline.
+	savedReturn := returnBlock.
+	[
+		returnBlock := self newInline.
+		self branch: inlineBlock.
+		code := inlineBlock.
+		code stack top block zigWalkInlineMethod: self.
+		code := returnBlock ] ensure: [
+			returnBlock := savedReturn.
+			targetClass := savedTargetClass ]
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 

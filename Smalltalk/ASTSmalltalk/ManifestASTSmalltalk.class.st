@@ -13,7 +13,7 @@ Class {
 ManifestASTSmalltalk class >> ruleAssignmentInBlockRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:54.198851-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:54.198851-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #inlineBlock:next: #false)) #'2024-06-01T00:14:10.797886-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -146,7 +146,7 @@ ManifestASTSmalltalk class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePo
 ManifestASTSmalltalk class >> ruleUnwindBlocksRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:59.00025-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMethod: #false)) #'2024-05-31T16:43:59.00025-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #inlineBlock:next: #false)) #'2024-06-01T00:13:55.45785-04:00') )
 ]
 
 { #category : 'code-critics' }

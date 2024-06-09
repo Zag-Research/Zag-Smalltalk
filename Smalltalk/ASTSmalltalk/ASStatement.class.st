@@ -121,3 +121,9 @@ ASStatement >> zigWalkDiscard: aGenerator [
 
 	self subclassResponsibility
 ]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkInlineBlockReturn: anASCodeGenerator [
+
+	self subclassResponsibility
+]

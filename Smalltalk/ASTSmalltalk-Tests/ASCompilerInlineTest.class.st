@@ -59,53 +59,25 @@ ASCompilerInlineTest >> class: aClass selector: aSelector [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testBlockReturnInline [
+ASCompilerInlineTest >> testBlockReturnEasyInline [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ 42 ]
 "
+
+	(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #blockReturnEasy) inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockReturnInline [
+	"
 blockReturn: p1
 	true ifTrue: [ ^ p1 ]
 "
-	self
-		assert: (self class: ASCompileTestClass1 selector: #blockReturn:)
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var @"MblockReturn:" = compileMethod(Sym.@"ifTrue:",0,9,.ASCompileTestClass1,.{
-&e.pushLiteral,Object.from(true),
-&e.pushNil,,
-&e.pushStack,0,
-&e.setupSend,Sym.value,
-&e.dynamicDispatch,
-&e.drop,
-&e.returnSelf,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-MblockReturn:.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #blockReturn)
+		inspect	
 ]
 
 { #category : 'tests' }
@@ -113,44 +85,9 @@ ASCompilerInlineTest >> testBlockValueInlined [
 	"blockValue
 
 	^ [ 4 ] value "
-	self
-		assert: ASCompileTestClass1 >> #blockValue 
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
-&e.pushStack,1,
-&e.pushLiteral,Object.from(42),
-&e.returnTop,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #blockValue)
+		inspect.
 ]
 
 { #category : 'tests' }
@@ -274,70 +211,12 @@ pub fn main() !void {
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFibonacciInline [
-"fibonacci
+	"fibonacci
 
 	self <= 2 ifTrue: [ ^ 1 ].
 	^ (self - 1) fibonacci + (self - 2) fibonacci"
-	self
-		assert: (self class: SmallInteger selector: #fibonacci)
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfibonacci = compileMethod(Sym.fibonacci,0,4,.Integer,.{
-&e.pushContext,"^",
-&e.pushStack,2,
-&e.pushLiteral,Object.from(2),
-&e.<=,
-&e.BlockClosure.fullClosure,"1mref",
-&e.setupSend,Sym.@"ifTrue:",
-&e.dynamicDispatch,
-&e.drop,
-&e.pushStack,1,
-&e.pushLiteral,Object.from(1),
-&e.-,
-&e.setupSend,Sym.fibonacci,
-&e.dynamicDispatch,
-&e.pushStack,2,
-&e.pushLiteral,Object.from(2),
-&e.-,
-&e.setupSend,Sym.fibonacci,
-&e.dynamicDispatch,
-&e.setupSend,Sym.@"+",
-&e.dynamicDispatch,
- });
-var Mvalue = compileMethod(Sym.value,0,3,.BlockClosure,.{
-&e.pushLiteral,Object.from(1),
-&e.returnNonLocal,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-Mfibonacci.setLiterals(&[_]Object{},&[_]Object{},null);
-Mvalue.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+
+	(ASNoOutput withInlining compileMethod: SmallInteger >> #fibonacci) inspect
 ]
 
 { #category : 'tests' }
@@ -477,52 +356,13 @@ ASCompilerInlineTest >> testGives43 [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testInlinePlus1Inlined [
-"inlinePlus1
+	"inlinePlus1
 	^ self plus1: 30"
-"plus1: aNumber
+
+	"plus1: aNumber
 	^ aNumber + 1"
-	self
-		assert: ASCompileTestClass1 >> #inlinePlus1 
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var MinlinePlus1 = compileMethod(MinlinePlus1,0,9,.ASCompileTestClass1,.{
-&e.pushContext,"^",
-&e.pushStack,3,
-&e.pushLiteral,Object.from(30),
-&e.pushStack,2,
-&e.pushLiteral,Object.from(1),
-&e.setupSend,Sym.@"+",
-&e.dynamicDispatch,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-MinlinePlus1.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #inlinePlus1) inspect
 ]
 
 { #category : 'tests' }
@@ -534,42 +374,5 @@ ASCompilerInlineTest >> testWhileTrueInlined [
 	dirty := false.
 	dirty ] whileTrue"
 
-	self
-		assert: ASCompileTestClass1 >> #whileTrue
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
-&e.pushStack,1,
-&e.pushLiteral,Object.from(42),
-&e.returnTop,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #whileTrue) inspect
 ]
