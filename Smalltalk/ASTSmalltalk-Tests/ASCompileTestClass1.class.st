@@ -187,6 +187,12 @@ ASCompileTestClass1 >> prim [
 	^ false
 ]
 
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> recursiveMethod [
+	^self recursiveMethod
+
+]
+
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> simple1 [
 	..

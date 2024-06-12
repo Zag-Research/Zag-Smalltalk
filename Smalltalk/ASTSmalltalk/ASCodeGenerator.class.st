@@ -245,6 +245,8 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	| inlineBlock savedReturn savedTargetClass |
+	self halt.
+	(code isRecursive: aCompileMethod) ifTrue: [ ^false ].
 	savedTargetClass := targetClass.
 	"create a new block "
 	inlineBlock := self newInline.
@@ -255,8 +257,9 @@ ASCodeGenerator >> inlineMethod: aCompileMethod [
 	self branch: inlineBlock.
 	code := inlineBlock.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
-		self.
-	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		self
+	 ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		code := returnBlock.
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
 ]
@@ -539,22 +542,22 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
+ASCodeGenerator >> sendInline: aSelector targetClass: aTargetClass tail: tail [
 	"return false if inline flag isn't set"
 
 	inline ifFalse: [ ^ false ].
 
+
 	"check if this is a self call"
 	targetClass == aTargetClass
 		ifTrue: [ "we know the target class and the current class being compiled are not the same""rename stack elements to be named values""self/super/literal don't need a send""stack clone self setBasicBlock""build ast""walk the sends method AST""lets check number of implmentors""Daniel just use a short list of compile methods for now"
-			self inlineMethod: aTargetClass >> aSymbol ]
+			^ self inlineMethod: aTargetClass >> aSelector ]
 		ifFalse: [
 			| symbolImplementors common targets |
-			"extract system nav and for now base if off a list"
-			symbolImplementors := self implementors: aSymbol.
+			"find the classes that implement the given selector"
+			symbolImplementors := self implementors: aSelector.
 			"move to 'ensure' to remove last"
-			symbolImplementors size < 10 ifFalse: [
-				^ false ].
+			symbolImplementors size < 10 ifFalse: [ ^ false ].
 			common := self newInline.
 			tail ifTrue: [ common returnTop ].
 			[

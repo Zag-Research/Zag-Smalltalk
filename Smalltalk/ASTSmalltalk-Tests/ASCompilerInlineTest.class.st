@@ -366,6 +366,15 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testRecursiveMethod [
+	"recursiveMethod
+	^ recursiveMethod"
+
+		(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #recursiveMethod) inspect
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testWhileTrueInlined [
 	"whileTrue
 

@@ -208,6 +208,11 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 		<< $)
 ]
 
+{ #category : 'testing' }
+ASCBasicBlock >> isRecursive: aCollection [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
