@@ -120,10 +120,10 @@ ASZigThreadedOutput >> visitEmbed: aSelector [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPopLocal: anASLocal [
+ASZigThreadedOutput >> visitPopLocal: anASCLocal [
 
 	currentBasicBlock
-		offsetOf: anASLocal name
+		offsetOf: anASCLocal name
 		context: [ :local |
 			self
 				putEmbedded: #popLocal;
@@ -182,9 +182,9 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLocal: anASLocal [
+ASZigThreadedOutput >> visitPushLocal: anASCLocal [
 
-^	self visitPushLocalOrBlock: anASLocal
+	^ self visitPushLocalOrBlock: anASCLocal
 ]
 
 { #category : 'API' }

@@ -103,12 +103,6 @@ ASZigMethodOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigMethodOutput >> visitPushLocal: localNumber [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
 ASZigMethodOutput >> visitReturnTop [
 	^ self subclassResponsibility
 ]

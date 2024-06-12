@@ -20,7 +20,8 @@ ASCInlineBlock >> addSource: aBasicBlock [
 		returnBlock := ASCReturnBlock for: method.
 		returnBlock hash: hash.
 		^ self becomeForward: returnBlock ].
-	sourceBlocks add: aBasicBlock
+	sourceBlocks add: aBasicBlock.
+	stack := aBasicBlock stack sourceFor: self
 ]
 
 { #category : 'initialization' }
@@ -56,10 +57,10 @@ ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 	| names |
 	names := OrderedCollection with: #self.
 	names addAll: parameterNamesLeftToRight.
-	stack := stack nameStack: names
+	stack := stack nameStack: names offset: 0 forBlock: self
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASCInlineBlock >> namedMethod [
 	^ method namedMethod
 ]
@@ -95,11 +96,12 @@ ASCInlineBlock >> updateDependencies [
 	| result |
 	super updateDependencies.
 	result := OrderedCollection new.
-	requires do: [ :requirement |
-		(sourceBlocks anySatisfy: [ :block | block provides: requirement ])
+	sources do: [ :requirement |
+		(sourceBlocks anySatisfy: [ :block | block providesNonNil: requirement ])
 			ifTrue: [
 				result addAll:
-					(sourceBlocks select: [ :block | block addRequirement: requirement ]) ] ].
+					(sourceBlocks select: [ :block |
+						 block reference: requirement ]) ] ].
 	^ result
 ]
 

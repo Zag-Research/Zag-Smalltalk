@@ -84,33 +84,8 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	" self <= 2 ifTrue: [ ^ 1 ]
  ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
-	| cg targets |
-	cg := output codeGenerator.
-	cg targetClass: SmallInteger.
-	cg selector: #fibonacci.
-	cg locals: #(  ) parameters: #(  ).
-	cg pushSelf.
-	cg pushLiteral: 2.
-	cg sendEmbedded: #'<='.
-	targets := cg classCase: {
-			           True.
-			           False }.
-	cg setBasicBlock: targets first.
-	cg drop.
-	cg pushLiteral: 1.
-	cg returnTop.
-	cg setBasicBlock: targets last.
-	cg drop.
-	cg pushSelf.
-	cg pushLiteral: 1.
-	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: nil.
-	cg pushSelf.
-	cg pushLiteral: 2.
-	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: nil.
-	cg sendEmbedded: #+.
-	cg returnTop.
+	| cg |
+	cg := output codeGenerator: ASCompilerInlineTest inlined_fibonacci.
 	cg inspect.
 	output outputToStream.
 	file asString inspect
@@ -121,36 +96,8 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 	" ^ self <= 2 ifTrue: [ 1 ]
     ifFalse: [ (self - 1) fibonacci + (self - 2) fibonacci ]"
 
-	| cg targets |
-	cg := output codeGenerator.
-	cg targetClass: SmallInteger.
-	cg selector: #fibonacci.
-	cg locals: #(  ) parameters: #(  ).
-	cg pushSelf.
-	cg pushLiteral: 2.
-	cg sendEmbedded: #'<='.
-	common := cg newInline.
-	targets := cg classCase: {
-			           True.
-			           False }.
-	cg setBasicBlock: targets first.
-	cg drop.
-	cg pushLiteral: 1.
-	cg branch: common.
-	cg setBasicBlock: targets last.
-	cg drop.
-	cg pushSelf.
-	cg pushLiteral: 1.
-	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: nil.
-	cg pushSelf.
-	cg pushLiteral: 2.
-	cg sendEmbedded: #-.
-	cg send: #fibonacci targetClass: nil.
-	cg sendEmbedded: #+.
-	cg branch: common.
-	cg setBasicBlock: common.
-	cg returnTop.
+	| cg |
+	cg := output codeGenerator: ASCompilerInlineTest inlined_fibonacci_alt.
 	cg inspect.
 	output outputToStream.
 	file asString inspect

@@ -307,8 +307,6 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 { #category : 'accessing' }
 ASCodeGenerator >> locals: locals parameters: arguments [
 
-	"output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ]."
 	code pushSelf: targetClass.
 	code locals: locals parameters: arguments
 ]
@@ -331,6 +329,12 @@ ASCodeGenerator >> lookupName: aString block: anUndefinedObject [
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ output lookupObject: anObject
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> makeContextRequired [
+
+	^ code makeContextRequired
 ]
 
 { #category : 'serializing' }
@@ -420,23 +424,21 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
+ASCodeGenerator >> pushParameterNamed: aString [
+
+	^ code pushParameterNamed: aString
+]
+
+{ #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
-	| value |
-	value := ASCClassValue new init: targetClass.
-	code
-		needs: #self;
-		"doPush: value;"
-		pushSelf: targetClass;
-		put: (ASCPushVariable with: (code find: #self) top)
+	code put: (ASCPushVariable with: (code at: #self))
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> pushVariable: variable [
 
-	^ code
-		needs: variable;
-		pushVariable: variable
+	^ code pushVariable: variable
 ]
 
 { #category : 'API' }
@@ -494,8 +496,6 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	"label for blocks of code"
-	name := output name zigName.
 	code selector: aSymbol 
 ]
 

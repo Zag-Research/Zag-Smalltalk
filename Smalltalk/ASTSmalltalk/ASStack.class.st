@@ -4,57 +4,22 @@ I reperesent an empty stack of values within a method.
 Class {
 	#name : 'ASStack',
 	#superclass : 'Object',
-	#instVars : [
-		'rest'
-	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
-{ #category : 'instance creation' }
-ASStack class >> fromStack: anASStack [
-
-	^ self new fromStack: anASStack
-]
-
-{ #category : 'accessing' }
-ASStack >> at: aSymbol [
-
-	^ (self find: aSymbol) top
-]
-
-{ #category : 'accessing' }
-ASStack >> drop [
-	^ rest
-]
-
 { #category : 'removing' }
-ASStack >> drop: count [ 
-	count = 0 ifTrue: [ ^self ].
-	^ rest drop: count-1
-]
+ASStack >> drop: count [
 
-{ #category : 'accessing' }
-ASStack >> find: aSymbol [
-self subclassResponsibility 
-]
-
-{ #category : 'instance creation' }
-ASStack >> fromStack: anASStack [
-
-	rest := anASStack
+	count = 0 ifTrue: [ ^ self ].
+	self error
 ]
 
 { #category : 'testing' }
 ASStack >> isEmpty [
 
 	^ true
-]
-
-{ #category : 'adding' }
-ASStack >> nameStack: aCollection [ 
-
 ]
 
 { #category : 'API' }
@@ -65,33 +30,10 @@ ASStack >> namedContext: blockLocal stack: blockStack [
 		  stack: blockStack
 ]
 
-{ #category : 'API' }
-ASStack >> offset: anInteger namedContext: blockLocal stack: blockStack [
+{ #category : 'accessing' }
+ASStack >> offset [
 
-	self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASStack >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
-
-self subclassResponsibility 
-]
-
-{ #category : 'API' }
-ASStack >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
-
-	^ self
-		  offset: 0
-		  to: aSymbol
-		  context: blockLocal
-		  stack: blockStack
-		  other: blockOther 
-]
-
-{ #category : 'as yet unclassified' }
-ASStack >> offsetToSelf: anInteger [ 
-
-	^ rest offsetToSelf: anInteger + 1
+	^ 0
 ]
 
 { #category : 'adding' }
@@ -103,12 +45,6 @@ ASStack >> push: anObject [
 	^ newStack
 ]
 
-{ #category : 'adding' }
-ASStack >> push: aSymbol on: aStack [
-
-	^ self shouldBeImplemented
-]
-
 { #category : 'API' }
 ASStack >> pushLocalNamed: name [
 
@@ -118,14 +54,13 @@ ASStack >> pushLocalNamed: name [
 { #category : 'API' }
 ASStack >> pushParameterNamed: name [
 
-	^ ((#self = name
-		    ifTrue: [ ASStackSelf ]
-		    ifFalse: [ ASStackNamed ]) fromStack: self) name: name
+	^ (ASStackNamed fromStack: self) name: name
 ]
 
 { #category : 'API' }
-ASStack >> pushPlaceholderContext [ 
-	^ ASStackContextPlaceholder new fromStack: self
+ASStack >> pushSelf [
+
+	^ ASStackSelf new fromStack: self
 ]
 
 { #category : 'API' }

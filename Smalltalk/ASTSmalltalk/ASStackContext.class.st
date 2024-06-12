@@ -1,49 +1,25 @@
 "
-I am an actual context... I only exist if a context is required for this method
+I rempresent a stack context.
+
+I may,  or may not be reified in a particular method
 "
 Class {
 	#name : 'ASStackContext',
-	#superclass : 'ASStackContextPlaceholder',
-	#category : 'ASTSmalltalk-CodeGen',
+	#superclass : 'ASStackNonEmpty',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
-{ #category : 'API' }
-ASStackContext >> makeContextRequired [
-^ self
+{ #category : 'removing' }
+ASStackContext >> drop: count [
+
+	count = 0 ifTrue: [ ^ self ].
+	^ self error: 'stack underflow'
 ]
 
-{ #category : 'API' }
-ASStackContext >> offset: anInteger namedContext: blockLocal stack: blockStack [
+{ #category : 'initialization' }
+ASStackContext >> reset [
 
-	^ rest
-		  offset: 0
-		  namedContext: nil
-		  stack: blockLocal
-]
-
-{ #category : 'API' }
-ASStackContext >> offset: anInteger to: anObject [
-
-	^ rest
-		  offset: anInteger 
-		  to: anObject
-]
-
-{ #category : 'API' }
-ASStackContext >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
-
-
-	^ rest
-		  offset: 0
-		  to: anObject
-		  context: nil
-		  stack: blockLocal
-		  other: blockOther
-]
-
-{ #category : 'enumerating' }
-ASStackContext >> requiredContextDo: aBlock [
-^ aBlock value
+	^ self
 ]

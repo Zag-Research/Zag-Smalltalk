@@ -18,7 +18,21 @@ ASStackSelf >> codeBlock: aBlock [
 ]
 
 { #category : 'as yet unclassified' }
-ASStackSelf >> offsetToSelf: anInteger [
+ASStackSelf >> findSelf [
 
-	^ anInteger
+	^ self
+]
+
+{ #category : 'initialization' }
+ASStackSelf >> initialize [
+
+	super initialize.
+	name := #self
+]
+
+{ #category : 'API' }
+ASStackSelf >> intoContext: anInteger [
+
+	isInContext := true.
+	offset := anInteger
 ]

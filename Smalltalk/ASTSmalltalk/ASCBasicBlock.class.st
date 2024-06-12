@@ -17,8 +17,9 @@ Class {
 		'label',
 		'method',
 		'hash',
-		'requires',
-		'provides'
+		'stackDepth',
+		'context',
+		'sources'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -46,12 +47,10 @@ ASCBasicBlock >> = other [
 	^ hash = other hash and: [ other class = self class ]
 ]
 
-{ #category : 'adding' }
-ASCBasicBlock >> addRequirement: aSymbol [
+{ #category : 'accessing' }
+ASCBasicBlock >> at: nameOrOffset [
 
-	(provides includes: aSymbol) ifTrue: [ ^ false ].
-	provides add: aSymbol.
-	^ true
+	^ stack at: nameOrOffset
 ]
 
 { #category : 'accessing' }
@@ -98,19 +97,20 @@ ASCBasicBlock >> classCase: aCollection [
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
-	stack := stack drop: aSymbol numArgs
+	^ self doDrop: aSymbol numArgs
 ]
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDrop [
-	stack := stack drop
+
+	^ self doDrop: 1
 ]
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDrop: n [
 
 	stack := stack drop: n.
-
+	stackDepth := stackDepth - n
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -132,8 +132,9 @@ ASCBasicBlock >> doPop [
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
+
 	stack := stack push: anObject.
-	maxDepth := maxDepth max: stack depth
+	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
 { #category : 'abstract interpretation' }
@@ -191,11 +192,10 @@ ASCBasicBlock >> initialize [
 
 	super initialize.
 	operations := OrderedCollection new.
-	maxDepth := 0.
-	stack := ASEmptyStack new.
+	stackDepth := maxDepth := 0.
+	stack := ASStack new.
 	hash := SequenceNumber := SequenceNumber + 1.
-	provides := Set new.
-	requires := Set new
+	sources := OrderedCollection new
 ]
 
 { #category : 'printing' }
@@ -221,7 +221,9 @@ ASCBasicBlock >> label [
 
 { #category : 'API' }
 ASCBasicBlock >> makeContextRequired [
-	stack := stack makeContextRequired 
+
+	context ifNil: [
+		stack := stack makeContextRequired: [ :c | context := c ] ]
 ]
 
 { #category : 'inlining' }
@@ -230,7 +232,7 @@ ASCBasicBlock >> markBlockClosuresToManifest [
 	| last |
 	operations ifNotEmpty: [ 
 	last := operations last.
-	last requiresContext ifTrue: [ stack := stack makeContextRequired.
+	last requiresContext ifTrue: [ self makeContextRequired.
  ].
 	last manifestParameters: stack
 	]
@@ -244,18 +246,6 @@ ASCBasicBlock >> maxDepth [
 { #category : 'accessing' }
 ASCBasicBlock >> method: anASCMethodBlock [ 
 	method := anASCMethodBlock
-]
-
-{ #category : 'as yet unclassified' }
-ASCBasicBlock >> modifies: aSymbol [
-
-	provides add: aSymbol
-]
-
-{ #category : 'testing' }
-ASCBasicBlock >> needs: aSymbol [
-
-	requires add: aSymbol
 ]
 
 { #category : 'accessing' }
@@ -276,13 +266,14 @@ ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
+ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
+
 	^ stack
 		  offset: 0
-		  to: anObject
+		  to: aSymbol
 		  context: blockLocal
 		  stack: blockStack
-		  other: blockOther 
+		  other: blockOther
 ]
 
 { #category : 'initialization' }
@@ -332,17 +323,6 @@ ASCBasicBlock >> popVariable: aSymbol [
 	self doDrop
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> provides [
-	^ provides
-]
-
-{ #category : 'accessing' }
-ASCBasicBlock >> provides: aSymbol [
-
-	^ (provides includes: aSymbol) or: [ method provides: aSymbol ]
-]
-
 { #category : 'API' }
 ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
@@ -355,25 +335,23 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 ASCBasicBlock >> pushLocalNamed: aSymbol [
 
 	stack := stack pushLocalNamed: aSymbol.
-	^ stack top: (ASCLocal new
+	^ stack value: (ASCLocal new
 			   init: Object;
-			   name: aSymbol)
+			   name: aSymbol);
+			source: ASFlowNil new
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> pushParameterNamed: aSymbol [
 
+	| source |
 	stack := stack pushParameterNamed: aSymbol.
-	^ stack top: ( ASCParameter new init: Object; name: aSymbol)
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> pushSelf: targetClass [
-
-	stack := stack pushParameterNamed: #self.
-	^ stack top: (ASCSelf new
-			   init: targetClass;
-			   name: #self)
+	source := ASFlowDefine new id: aSymbol.
+	sources add: source.
+	^ stack value: (ASCParameter new
+			   init: Object;
+			   name: aSymbol);
+			source: source
 ]
 
 { #category : 'API' }
@@ -396,14 +374,16 @@ ASCBasicBlock >> putSimple: aSymbol [
 	^ self put: (ASCSimple with: aSymbol)
 ]
 
-{ #category : 'enumerating' }
-ASCBasicBlock >> requiredContextDo: aBlock [
-stack requiredContextDo: aBlock 
+{ #category : 'accessing' }
+ASCBasicBlock >> reference: anIntegerOrSymbol [
+
+	(stack at: anIntegerOrSymbol) source markReferenced
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> requires [
-	^ requires
+{ #category : 'enumerating' }
+ASCBasicBlock >> requiredContextDo: aBlock [
+
+	context ifNotNil: [ : c | aBlock value: c ]
 ]
 
 { #category : 'initialization' }
@@ -469,18 +449,19 @@ ASCBasicBlock >> stack: anASStack [
 	maxDepth := stack depth
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> stackOps: output [ 
-
-	stack := stack reset.
-	operations do: [ :operation |
-		operation stackOp: output
-	]
-]
-
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> stackTop [
 	^ stack top
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> storeInto: offsetOrName [
+
+	| target source |
+	target := stack at: offsetOrName.
+	source := ASFlowNew new basicBlock: self.
+	target source: source.
+	^ source
 ]
 
 { #category : 'API' }
@@ -495,9 +476,9 @@ ASCBasicBlock >> top [
 	^ stack top
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASCBasicBlock >> updateDependencies [
 
-	requires addAll: provides.
-	^ #(  )
+	^ #()
+	
 ]
