@@ -6,6 +6,125 @@ Class {
 	#tag : 'Tests'
 }
 
+{ #category : 'hand compiled' }
+ASCompilerInlineTest class >> inlined_fibonacci [
+	" self <= 2 ifTrue: [ ^ 1 ]
+ ^ (self - 1) fibonacci + (self - 2) fibonacci "
+
+	| cg targets |
+	cg := ASCodeGenerator new.
+	cg targetClass: SmallInteger.
+	cg selector: #fibonacci.
+	cg locals: #(  ) parameters: #(  ).
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #'<='.
+	targets := cg classCase: {
+			           True.
+			           False }.
+	cg setBasicBlock: targets first.
+	cg drop.
+	cg pushLiteral: 1.
+	cg returnTop.
+	cg setBasicBlock: targets last.
+	cg drop.
+	cg pushSelf.
+	cg pushLiteral: 1.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: nil.
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: nil.
+	cg sendEmbedded: #+.
+	cg returnTop.
+	^ cg
+]
+
+{ #category : 'hand compiled' }
+ASCompilerInlineTest class >> inlined_fibonacci_alt [
+	" ^ self <= 2 ifTrue: [ 1 ]
+    ifFalse: [ (self - 1) fibonacci + (self - 2) fibonacci ]"
+
+	| cg targets common |
+	cg := ASCodeGenerator new.
+	cg targetClass: SmallInteger.
+	cg selector: #fibonacci.
+	cg locals: #(  ) parameters: #(  ).
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #'<='.
+	common := cg newInline.
+	targets := cg classCase: {
+			           True.
+			           False }.
+	cg setBasicBlock: targets first.
+	cg drop.
+	cg pushLiteral: 1.
+	cg branch: common.
+	cg setBasicBlock: targets last.
+	cg drop.
+	cg pushSelf.
+	cg pushLiteral: 1.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: nil.
+	cg pushSelf.
+	cg pushLiteral: 2.
+	cg sendEmbedded: #-.
+	cg send: #fibonacci targetClass: nil.
+	cg sendEmbedded: #+.
+	cg branch: common.
+	cg setBasicBlock: common.
+	cg returnTop.
+	^ cg
+]
+
+{ #category : 'hand compiled' }
+ASCompilerInlineTest class >> inlined_insertionSorted [
+" Array>>#size, Array>>at:, Array>>at:put: and BlockClosure>>#value are primitive
+
+defined in SequencableCollection	
+	insertionSorted
+	2 to: self size do: [ :i | self insertElementAt: i ]
+	
+	insertElementAt: i
+	| new |
+	new := self at: i.
+	i to: 2 by: -1 do: [ :j |
+		| old |
+		old := self at: j - 1.
+		new >= old ifTrue: [
+			self at: j put: new.
+			^ self ].
+		self at: j put: old ].
+	self at: 1 put: new
+	
+defined in Number
+	to: stop do: aBlock
+	| nextValue |
+	nextValue := self.
+	[ nextValue <= stop ] whileTrue: [
+		aBlock value: nextValue.
+		nextValue := nextValue + 1 ]
+
+defined in BlockClosure
+	whileTrue: aBlock
+	self value ifFalse: [ ^ nil ].
+	aBlock value.
+	^ self whileTrue: aBlock
+	"
+
+	| cg |
+	cg := ASCodeGenerator new.
+	cg targetClass: Array.
+	cg selector: #insertionSorted.
+	cg locals: #(  ) parameters: #(  ).
+	cg pushLiteral: 2.
+	cg pushSelf.
+
+	^ cg
+]
+
 { #category : 'asserting' }
 ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 
@@ -274,6 +393,17 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testInsertionSort [
+
+	self
+		assert: #( 1 2 3 4 5 6 ) copy insertionSorted
+		equals: #( 1 2 3 4 5 6 ).
+	self
+		assert: #( 6 2 4 3 5 1 ) copy insertionSorted
+		equals: #( 1 2 3 4 5 6 )
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testWhileTrueInlined [
 	"whileTrue
 
@@ -283,4 +413,12 @@ ASCompilerInlineTest >> testWhileTrueInlined [
 	dirty ] whileTrue"
 
 	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #whileTrue) inspect
+]
+
+{ #category : 'hand compiled' }
+ASCompilerInlineTest >> test_inlined_insertionSorted [
+
+	| cg |
+	cg := self class inlined_insertionSorted.
+	cg inspect
 ]

@@ -3,28 +3,21 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackElement',
+	#superclass : 'ASStackPlain',
 	#instVars : [
-		'name'
+		'name',
+		'isInContext'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
 { #category : 'accessing' }
-ASStackNamed >> at: aSymbol put: anObject [
-
-	aSymbol = name ifFalse: [ ^
-	rest at: aSymbol put: anObject].
-	^ self top: anObject
-]
-
-{ #category : 'accessing' }
-ASStackNamed >> find: aSymbol [
+ASStackNamed >> at: aSymbol [
 
 	aSymbol = name ifTrue: [ ^ self ].
-	^ rest find: aSymbol
+	^ rest at: aSymbol
 ]
 
 { #category : 'adding' }
@@ -32,11 +25,34 @@ ASStackNamed >> importedSource: anInteger [
 
 ]
 
-{ #category : 'accessing' }
-ASStackNamed >> llvmName [
+{ #category : 'initialization' }
+ASStackNamed >> initialize [
 
-	^ llvmName ifNil: [
-		  llvmName := super llvmName, name ]
+	super initialize.
+	isInContext := false
+]
+
+{ #category : 'API' }
+ASStackNamed >> intoContext: anInteger [
+
+	isInContext := true.
+	offset := anInteger.
+	rest intoContext: anInteger + 1
+]
+
+{ #category : 'testing' }
+ASStackNamed >> isInContext [
+
+	^ isInContext
+]
+
+{ #category : 'API' }
+ASStackNamed >> makeContextRequired: aBlock [
+
+	| context |
+	context := ASStackContext fromStack: (self intoContext: 0).
+	aBlock cull: context.
+	^ context
 ]
 
 { #category : 'accessing' }
@@ -49,40 +65,7 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : 'API' }
-ASStackNamed >> offset: anInteger namedContext: blockLocal stack: blockStack [
-
-	blockStack cull: anInteger cull: self.
-	^ rest
-		  offset: anInteger + 1
-		  namedContext: blockLocal
-		  stack: blockStack
-]
-
-{ #category : 'API' }
-ASStackNamed >> offset: anInteger to: aName [
-
-	aName = name ifTrue: [ ^ anInteger ].
-	^ rest
-		  offset: anInteger + 1
-		  to: aName
-]
-
-{ #category : 'API' }
-ASStackNamed >> offset: anInteger to: aName context: blockLocal stack: blockStack other: blockOther [
-
-	aName = name ifTrue: [ ^ blockStack cull: anInteger cull: self ].
-	^ rest
-		  offset: anInteger + 1
-		  to: aName
-		  context: blockLocal
-		  stack: blockStack
-		  other: blockOther
-]
-
 { #category : 'as yet unclassified' }
-ASStackNamed >> offsetToSelf: anInteger [ 
-
-	#self = name ifTrue: [ ^ anInteger ].
-	^ rest offsetToSelf: anInteger + 1
+ASStackNamed >> sourceFor: anASCInlineBlock [ 
+	"nothing to do - use the global named source"
 ]

@@ -96,7 +96,7 @@ ASOutputAPI >> visitPushLiteral: anUndefinedObject [
 ]
 
 { #category : 'API' }
-ASOutputAPI >> visitPushLocal: anUndefinedObject [
+ASOutputAPI >> visitPushLocal: anASCLocal [
 
 	^ self explicitRequirement
 ]

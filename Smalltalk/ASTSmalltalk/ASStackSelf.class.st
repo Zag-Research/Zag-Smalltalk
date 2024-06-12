@@ -3,14 +3,28 @@ I am a stack element for the `self` position on the stack. This let's code be si
 "
 Class {
 	#name : 'ASStackSelf',
-	#superclass : 'ASStackNamed',
-	#category : 'ASTSmalltalk-CodeGen',
+	#superclass : 'ASParameterNamed',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
 { #category : 'as yet unclassified' }
-ASStackSelf >> offsetToSelf: anInteger [
+ASStackSelf >> findSelf [
 
-	^ anInteger
+	^ self
+]
+
+{ #category : 'initialization' }
+ASStackSelf >> initialize [
+
+	super initialize.
+	name := #self
+]
+
+{ #category : 'API' }
+ASStackSelf >> intoContext: anInteger [
+
+	isInContext := true.
+	offset := anInteger
 ]

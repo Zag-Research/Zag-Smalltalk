@@ -19,6 +19,12 @@ ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
 	^ method addReturnBlock: anASCReturnBlock
 ]
 
+{ #category : 'accessing' }
+ASCReturnBlock >> context: anASStackContext [ 
+
+	context := anASStackContext
+]
+
 { #category : 'writing' }
 ASCReturnBlock >> inspectionZagCode [
 

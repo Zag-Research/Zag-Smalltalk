@@ -171,7 +171,8 @@ ASCompileTestClass1 >> plus1: aNumber [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
-	^ n1 + n2 + n3
+
+	^ n1 + (n2 + n3)
 ]
 
 { #category : 'testing - examples' }

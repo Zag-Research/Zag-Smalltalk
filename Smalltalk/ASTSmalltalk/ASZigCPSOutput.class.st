@@ -228,10 +228,9 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigCPSOutput >> visitPushLocal: anASLocal [
-^
-	self
-		visitPushLocalOrBlock: anASLocal name
+ASZigCPSOutput >> visitPushLocal: anASCLocal [
+
+	^ self visitPushLocalOrBlock: anASCLocal name
 ]
 
 { #category : 'API' }

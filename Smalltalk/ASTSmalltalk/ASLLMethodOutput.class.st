@@ -255,10 +255,10 @@ ASLLMethodOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASLLMethodOutput >> visitPushLocal: anASLocal [
+ASLLMethodOutput >> visitPushLocal: anASCLocal [
 
 	self nextPutAll: 'visitPushLocal:
-' 
+'
 ]
 
 { #category : 'API' }

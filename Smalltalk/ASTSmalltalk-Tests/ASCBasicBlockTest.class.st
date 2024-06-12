@@ -19,10 +19,28 @@ ASCBasicBlockTest >> setUp [
 ]
 
 { #category : 'tests' }
+ASCBasicBlockTest >> testNameStack [
+
+	| bb |
+	bb := ASCInlineBlock new.
+	bb doPush: 42.
+	bb doPush: 27.
+	bb doPush: 98.
+	bb nameStack: #( p1 p2 ).
+	bb doPush: 17.
+	bb doPush: 127.
+	self assert: (bb at: #p1) value equals: 27.
+	self assert: (bb at: #p2) value equals: 98.
+	self assert: (bb at: #self) value equals: 42.
+	self assert: (bb at: 0) value equals: 127.
+	self assert: (bb at: 1) value equals: 17
+]
+
+{ #category : 'tests' }
 ASCBasicBlockTest >> testStackFlow [
 
 	| bb1 bb2 bb3 bb4 cg |
-	cg := output codeGenerator.
+	cg := ASCodeGenerator new.
 	cg targetClass: SmallInteger.
 	cg selector: #foo:bar:.
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
@@ -35,11 +53,12 @@ ASCBasicBlockTest >> testStackFlow [
 	bb3 addSource: bb1.
 	bb4 addSource: bb2.
 	bb4 addSource: bb3.
-	bb3 modifies: #l1.
-	bb2 needs: #p1.
-	bb4 needs: #p1.
-	bb4 needs: #self.
-	bb4 needs: #l1.
+	bb3 storeInto: #l1.
+	bb2 reference: #l1.
+	bb2 reference: #p1.
+	bb4 reference: #p1.
+	bb4 reference: #self.
+	bb4 reference: #l1.
 	cg resolveFlowDependencies.
 	self assert: (bb2 provides includes: #p1).
 	self assert: (bb3 provides includes: #p1).
@@ -51,15 +70,22 @@ ASCBasicBlockTest >> testStackFlow [
 ]
 
 { #category : 'tests' }
-ASCBasicBlockTest >> testStackNames [
+ASCBasicBlockTest >> test_plus_and_and [
+	"plus: n1 and: n2 and: n3
 
-	| bb |
-	bb := ASCInlineBlock new.
-	bb doPush: 42.
-	bb doPush: 27.
-	bb doPush: 98.
-	bb nameStack: #( p1 p2 ).
-	self assert: (bb stack at: #p1) equals: 27.
-	self assert: (bb stack at: #p2) equals: 98.
-	self assert: (bb stack at: #self) equals: 42
+	^ n1 + (n2 * n3)"
+
+	| cg |
+	cg := ASCodeGenerator new.
+	cg targetClass: ASCompileTestClass1.
+	cg selector: #plus:and:and:.
+	cg locals: #(  ) parameters: #( n1 n2 n3 ).
+	cg makeContextRequired.
+	cg pushParameterNamed: #n1.
+	cg pushParameterNamed: #n2.
+	cg pushParameterNamed: #n3.
+	cg send: #*. " and create new RetutnBlock"
+	cg send: #+. " and create new RetutnBlock"
+	cg returnTop.
+	cg inspect
 ]

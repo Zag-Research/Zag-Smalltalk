@@ -8,8 +8,7 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'returnBlocks',
-		'parameters'
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -19,9 +18,16 @@ Class {
 { #category : 'adding' }
 ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
 
+	anASCReturnBlock context: context.
 	^ returnBlocks
 		  at: anASCReturnBlock
 		  ifAbsentPut: [ returnBlocks size + 1 ]
+]
+
+{ #category : 'accessing' }
+ASCMethodBlock >> context [
+
+	^ context
 ]
 
 { #category : 'initialization' }
@@ -29,22 +35,15 @@ ASCMethodBlock >> initialize [
 
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self.
-	parameters := Set with: #self
+	method := self
 ]
 
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
-	parameters addAll: arguments.
 	locals do: [ :each | self pushLocalNamed: each ].
 	maxDepth := 0
-]
-
-{ #category : 'accessing' }
-ASCMethodBlock >> makeBlockClosure [
-	stack := ASStackBlockClosure fromStack: stack
 ]
 
 { #category : 'accessing' }
@@ -72,10 +71,18 @@ ASCMethodBlock >> primitive: anInteger [
 
 ]
 
-{ #category : 'accessing' }
-ASCMethodBlock >> provides: aSymbol [
+{ #category : 'API' }
+ASCMethodBlock >> pushSelf: targetClass [
 
-	^ (provides includes: aSymbol) or: [ parameters includes: aSymbol ]
+	| source |
+	stack := stack pushSelf.
+	source := ASFlowDefine new id: #self.
+	sources add: source.
+	^ stack
+		  value: (ASCSelf new
+			   init: targetClass;
+			   name: #self);
+		  source: source
 ]
 
 { #category : 'accessing' }
