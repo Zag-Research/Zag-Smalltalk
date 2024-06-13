@@ -94,6 +94,18 @@ ASCBasicBlock >> classCase: aCollection [
 	^ case
 ]
 
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> classForLocals [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> classForTemporaries [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
@@ -211,6 +223,11 @@ ASCBasicBlock >> label [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'output' }
+ASCBasicBlock >> llvmLabel [
+	^ self subclassResponsibility
+]
+
 { #category : 'API' }
 ASCBasicBlock >> makeContextRequired [
 
@@ -236,8 +253,14 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> method: anASCMethodBlock [ 
-	method := anASCMethodBlock
+ASCBasicBlock >> method: ignored [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> namedMethod [
+	^ self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -249,6 +272,11 @@ ASCBasicBlock >> next [
 ASCBasicBlock >> nextInline [
 
 	^ nil
+]
+
+{ #category : 'successor sequences' }
+ASCBasicBlock >> nextSequence [
+	^ self subclassResponsibility
 ]
 
 { #category : 'instance initialization' }
@@ -294,7 +322,7 @@ ASCBasicBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCBasicBlock >> popAndCopyTopToSelf [
 	" This is tricky code because we need to save all the properties of the top of stack and over-write the `self` that was part of the inlining. So we throw away everything on the stack up to and including that `self` value, and then return a stack with the original top element linking to whatever was below. "
 
@@ -324,13 +352,14 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> pushLocalNamed: aSymbol [
+ASCBasicBlock >> pushLocalNamed: aSymbol basicBlock: basicBlock [
 
-	stack := stack pushLocalNamed: aSymbol.
-	^ stack value: (ASCLocal new
-			   init: Object;
-			   name: aSymbol);
-			source: ASFlowNil new
+	stack := stack pushLocalNamed: aSymbol basicBlock: self.
+	^ stack
+		  value: (ASCLocal new
+				   init: Object;
+				   name: aSymbol);
+		  source: basicBlock classForLocals new
 ]
 
 { #category : 'API' }
@@ -350,9 +379,9 @@ ASCBasicBlock >> pushParameterNamed: aSymbol [
 ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
-	target := stack find: aSymbol .
-	self put: (ASCPushVariable with: target top).
-	self doPush: target top
+	target := stack at: aSymbol .
+	self put: (ASCPushVariable with: target value).
+	self doPush: target value
 ]
 
 { #category : 'initialization' }
@@ -446,7 +475,7 @@ ASCBasicBlock >> stackTop [
 	^ stack top
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASCBasicBlock >> storeInto: offsetOrName [
 
 	| target source |

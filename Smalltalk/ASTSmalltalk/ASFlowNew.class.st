@@ -9,9 +9,3 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
-
-{ #category : 'as yet unclassified' }
-ASFlowNew >> basicBlock: anASCInlineBlock [ 
-
-		id := anASCInlineBlock nextSequence asString
-]

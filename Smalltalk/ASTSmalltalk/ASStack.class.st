@@ -39,11 +39,11 @@ ASStack >> offset [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	^ (ASStackPlain fromStack: self) value: anObject
+	^ (ASStackTemporary fromStack: self) value: anObject
 ]
 
 { #category : 'API' }
-ASStack >> pushLocalNamed: name [
+ASStack >> pushLocalNamed: name basicBlock: anObject [
 
 	^ (ASLocalNamed new fromStack: self) name: name
 ]

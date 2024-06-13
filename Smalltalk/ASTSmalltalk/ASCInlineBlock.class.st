@@ -24,6 +24,18 @@ ASCInlineBlock >> addSource: aBasicBlock [
 	stack := aBasicBlock stack sourceFor: self
 ]
 
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> classForLocals [
+
+	^ ASFlowPhi
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> classForTemporaries [
+
+	^ ASFlowPhi
+]
+
 { #category : 'initialization' }
 ASCInlineBlock >> initialize [
 
@@ -47,8 +59,13 @@ ASCInlineBlock >> llvmLabel [
 ASCInlineBlock >> locals: locals arguments: arguments [
 
 	self nameStack: arguments.
-	locals do: [ :each | self pushLocalNamed: each ].
+	locals do: [ :each | self pushLocalNamed: each basicBlock: self ].
 	maxDepth := 0
+]
+
+{ #category : 'accessing' }
+ASCInlineBlock >> method: anASCMethodBlock [ 
+	method := anASCMethodBlock
 ]
 
 { #category : 'adding' }

@@ -9,12 +9,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'as yet unclassified' }
-ASStackSelf >> findSelf [
-
-	^ self
-]
-
 { #category : 'initialization' }
 ASStackSelf >> initialize [
 
