@@ -8,46 +8,38 @@ Eventually it will implement Phi nodes for SSA evaluation, supporting some level
 Code generators can inquire as to values and types
 "
 Class {
-	#name : 'ASStackPlain',
+	#name : 'ASStackTemporary',
 	#superclass : 'ASStackNonEmpty',
 	#instVars : [
 		'source',
 		'value'
-	],
-	#classVars : [
-		'LLVMNumber'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
-{ #category : 'initialization' }
-ASStackPlain class >> reset [
-	LLVMNumber := 0
-]
-
 { #category : 'accessing' }
-ASStackPlain >> at: nameOrIndex [
+ASStackTemporary >> at: nameOrIndex [
 	0 = nameOrIndex ifTrue: [ ^ self ].
 	nameOrIndex isInteger ifTrue: [ ^ rest at: nameOrIndex - 1 ].
 	^ rest at: nameOrIndex
 ]
 
 { #category : 'accessing' }
-ASStackPlain >> drop [
+ASStackTemporary >> drop [
 
 	^ rest
 ]
 
 { #category : 'removing' }
-ASStackPlain >> drop: count [ 
+ASStackTemporary >> drop: count [ 
 	count = 0 ifTrue: [ ^self ].
 	^ rest drop: count-1
 ]
 
 { #category : 'API' }
-ASStackPlain >> makeContextRequired: aBlock [
+ASStackTemporary >> makeContextRequired: aBlock [
 
 	^ (self class fromStack: (rest makeContextRequired: aBlock))
 		  value: value;
@@ -55,7 +47,7 @@ ASStackPlain >> makeContextRequired: aBlock [
 ]
 
 { #category : 'adding' }
-ASStackPlain >> nameStack: parameterNamesLeftToRight offset: anInteger forBlock: basicBlock [
+ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBlock: basicBlock [
 
 	| name |
 	name := parameterNamesLeftToRight removeLast.
@@ -71,37 +63,37 @@ ASStackPlain >> nameStack: parameterNamesLeftToRight offset: anInteger forBlock:
 ]
 
 { #category : 'accessing' }
-ASStackPlain >> offset [
+ASStackTemporary >> offset [
 
 	^ offset
 ]
 
 { #category : 'initialization' }
-ASStackPlain >> reset [
+ASStackTemporary >> reset [
 
 	^ rest reset
 ]
 
 { #category : 'accessing' }
-ASStackPlain >> source [
+ASStackTemporary >> source [
 
 	^ source
 ]
 
 { #category : 'accessing' }
-ASStackPlain >> source: anObject [
+ASStackTemporary >> source: anObject [
 
 	source := anObject
 ]
 
-{ #category : 'accessing' }
-ASStackPlain >> value [
+{ #category : 'evaluating' }
+ASStackTemporary >> value [
 
 	^ value
 ]
 
 { #category : 'accessing' }
-ASStackPlain >> value: v [
+ASStackTemporary >> value: v [
 
 	value := v
 ]

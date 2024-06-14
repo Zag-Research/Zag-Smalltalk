@@ -14,12 +14,18 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'initialization' }
+ASFlowDefine >> basicBlock: anASCInlineBlock [ 
+
+		id := anASCInlineBlock nextSequence asString
+]
+
 { #category : 'accessing' }
 ASFlowDefine >> id: aString [ 
 	id := aString
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASFlowDefine >> markReferenced [
 
 	referenced := true

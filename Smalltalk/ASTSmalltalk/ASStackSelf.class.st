@@ -17,12 +17,6 @@ ASStackSelf >> codeBlock: aBlock [
 	codeBlock := aBlock
 ]
 
-{ #category : 'as yet unclassified' }
-ASStackSelf >> findSelf [
-
-	^ self
-]
-
 { #category : 'initialization' }
 ASStackSelf >> initialize [
 
