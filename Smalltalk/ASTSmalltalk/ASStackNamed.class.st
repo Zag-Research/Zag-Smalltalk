@@ -3,7 +3,7 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackPlain',
+	#superclass : 'ASStackTemporary',
 	#instVars : [
 		'name',
 		'isInContext'
@@ -65,7 +65,7 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASStackNamed >> sourceFor: anASCInlineBlock [ 
 	"nothing to do - use the global named source"
 ]

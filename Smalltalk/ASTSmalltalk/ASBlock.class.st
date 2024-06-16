@@ -86,10 +86,8 @@ ASBlock >> zigWalkInlineMethod: aGenerator [
 { #category : 'codegen' }
 ASBlock >> zigWalkMethod: aGenerator [
 
-	aGenerator
-		locals: locals
-		parameters: arguments.
 	aGenerator selector: self selector.
+	aGenerator locals: locals parameters: arguments.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnNil ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]

@@ -424,12 +424,6 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> pushParameterNamed: aString [
-
-	^ code pushParameterNamed: aString
-]
-
-{ #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
 	code put: (ASCPushVariable with: (code at: #self))
@@ -473,7 +467,7 @@ ASCodeGenerator >> returnTop [
 		returnTop
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCodeGenerator >> returnTopInline [
 
 	code popAndCopyTopToSelf.

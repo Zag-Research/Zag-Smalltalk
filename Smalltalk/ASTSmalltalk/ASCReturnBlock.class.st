@@ -19,6 +19,18 @@ ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
 	^ method addReturnBlock: anASCReturnBlock
 ]
 
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> classForLocals [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> classForTemporaries [
+
+	^ ASFlowOnDemand
+]
+
 { #category : 'accessing' }
 ASCReturnBlock >> context: anASStackContext [ 
 
@@ -57,7 +69,7 @@ ASCReturnBlock >> llvmLabel [
 { #category : 'accessing' }
 ASCReturnBlock >> method: anASCMethodBlock [
 
-	super method: anASCMethodBlock.
+	method := anASCMethodBlock.
 	anASCMethodBlock addReturnBlock: self
 ]
 

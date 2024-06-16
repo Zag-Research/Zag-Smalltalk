@@ -10,6 +10,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASFlowNil >> markReferenced [
 ]

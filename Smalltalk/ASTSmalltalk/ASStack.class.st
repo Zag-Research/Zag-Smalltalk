@@ -46,7 +46,7 @@ ASStack >> push: anObject [
 ]
 
 { #category : 'API' }
-ASStack >> pushLocalNamed: name [
+ASStack >> pushLocalNamed: name basicBlock: anObject [
 
 	^ (ASLocalNamed new fromStack: self) name: name
 ]

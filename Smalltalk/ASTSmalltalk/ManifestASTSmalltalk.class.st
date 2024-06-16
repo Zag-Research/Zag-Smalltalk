@@ -44,6 +44,13 @@ ManifestASTSmalltalk class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleExcessiveMethodsRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASCBasicBlock)) #'2024-06-12T20:22:50.927097-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleExcessiveVariablesRuleV1FalsePositive [
 
 	<ignoreForCoverage>
@@ -139,7 +146,7 @@ ManifestASTSmalltalk class >> ruleToDoCollectRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStackPlain #nameReset #false)) #'2024-05-13T08:20:53.254599-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASStackTemporary #nameReset #false)) #'2024-05-13T08:20:53.254599-04:00') )
 ]
 
 { #category : 'code-critics' }

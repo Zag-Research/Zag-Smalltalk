@@ -24,6 +24,18 @@ ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
 		  ifAbsentPut: [ returnBlocks size + 1 ]
 ]
 
+{ #category : 'data flow instructions' }
+ASCMethodBlock >> classForLocals [
+
+	^ ASFlowNil
+]
+
+{ #category : 'data flow instructions' }
+ASCMethodBlock >> classForTemporaries [
+
+	^ self shouldNotImplement
+]
+
 { #category : 'accessing' }
 ASCMethodBlock >> context [
 
@@ -42,7 +54,7 @@ ASCMethodBlock >> initialize [
 ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments reversed do: [ :each | self pushParameterNamed: each ].
-	locals do: [ :each | self pushLocalNamed: each ].
+	locals do: [ :each | self pushLocalNamed: each basicBlock: self ].
 	maxDepth := 0
 ]
 

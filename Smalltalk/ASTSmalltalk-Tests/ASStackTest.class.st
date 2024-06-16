@@ -14,7 +14,7 @@ ASStackTest >> testLookupContext [
 	stack := stack pushParameterNamed: #p1.
 	stack := stack pushParameterNamed: #p2.
 	stack := ASStackContext fromStack: stack.
-	stack := ASStackPlain fromStack: stack.
+	stack := ASStackTemporary fromStack: stack.
 	stack top: (ASCClassValue new init: SmallInteger class).
 
 	result := stack
@@ -42,20 +42,20 @@ ASStackTest >> testNames [
 	stack := stack pushSelf.
 	stack := stack pushParameterNamed: #p1.
 	stack := stack pushParameterNamed: #p2.
-	stack := stack pushLocalNamed: #l1.
+	stack := stack pushLocalNamed: #l1 basicBlock: self.
 	stack at: #p1 put: 17.
 	stack at: #l1 put: 42.
 	stack := stack push: 99.
 	self assert: stack drop drop drop value equals: 17.
 	self assert: (stack at: #p1) offset equals: -2.
 	self deny: (stack at: #p1) isInContext.
-	stack := stack makeContextRequired: [].
+	stack := stack makeContextRequired: [  ].
 	self assert: (stack at: #p1) offset equals: 2.
 	self assert: (stack at: #p1) isInContext.
 	stack := stack push: 12.
 	stack := stack push: 27.
 	self assert: (stack at: 2) value equals: 99.
-	stack := stack pushLocalNamed: #b1.
+	stack := stack pushLocalNamed: #b1 basicBlock: self.
 	stack := stack push: 98.
 	self assert: (stack at: #b1) offset equals: -4.
 	self deny: (stack at: #b1) isInContext.

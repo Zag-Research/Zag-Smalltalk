@@ -60,9 +60,9 @@ ASCBasicBlockTest >> testStackFlow [
 	bb4 reference: #self.
 	bb4 reference: #l1.
 	cg resolveFlowDependencies.
-	self assert: (bb2 provides includes: #p1).
-	self assert: (bb3 provides includes: #p1).
-	self deny: (bb1 provides includes: #l1).
+	self assert: (bb2 provides: #p1).
+	self assert: (bb3 provides: #p1).
+	self deny: (bb1 provides: #l1).
 	self assert: (bb3 provides: #l1).
 	self assert: (bb2 provides: #l1).
 	self assert: (bb4 requires includes: #p1).
@@ -81,9 +81,9 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg selector: #plus:and:and:.
 	cg locals: #(  ) parameters: #( n1 n2 n3 ).
 	cg makeContextRequired.
-	cg pushParameterNamed: #n1.
-	cg pushParameterNamed: #n2.
-	cg pushParameterNamed: #n3.
+	cg pushVariable: #n1.
+	cg pushVariable: #n2.
+	cg pushVariable: #n3.
 	cg send: #*. " and create new RetutnBlock"
 	cg send: #+. " and create new RetutnBlock"
 	cg returnTop.
