@@ -184,7 +184,6 @@ ASCodeGenerator >> initialize [
 
 	super initialize.
 	code := ASCMethodBlock new.
-	code nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -239,6 +238,14 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 		code := returnBlock ] ensure: [
 			returnBlock := savedReturn.
 			targetClass := savedTargetClass ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> inlineBlock: aString tail: aBoolean [ 
+"do we need to test for recursion?"
+	code stack value block zigWalkInlineMethod: self
+
+	
 ]
 
 { #category : 'accessing' }
@@ -377,8 +384,9 @@ ASCodeGenerator >> output: anASFileContext [
 
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
-aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
-	code nonlocalNameLookupObject: aCodeGenerator]
+
+	aCodeGenerator ifNotNil: [
+		parentCodeGenerator := aCodeGenerator ]
 ]
 
 { #category : 'API' }
@@ -510,6 +518,12 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
+		self halt.
+		aTargetClass isClosure ifTrue: [ 
+			"sepectial case of inlining a block closure"	
+			(self inlineBlock: aSymbol tail: tail) ifTrue: [
+			^ true "return something?" ]
+		].
 		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass)) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
@@ -597,7 +611,7 @@ targetClass:= anObject
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> topOfStackType [
 
-	^ self inferType: code stack top
+	^ self inferType: code stack value
 ]
 
 { #category : 'post processing' }

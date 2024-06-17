@@ -39,10 +39,7 @@ ASStack >> offset [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	| newStack |
-	newStack := ASStackElement fromStack: self.
-	newStack top: anObject. 
-	^ newStack
+	^ (ASStackTemporary fromStack: self) value: anObject
 ]
 
 { #category : 'API' }

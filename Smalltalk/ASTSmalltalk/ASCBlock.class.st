@@ -46,7 +46,7 @@ ASCBlock >> block [
 { #category : 'accessing' }
 ASCBlock >> inferType: anASCodeGenerator [
 
-	^ ASTBlockClosure "anASCodeGenerator targetClass"
+	^ BlockClosure new "anASCodeGenerator targetClass"
 ]
 
 { #category : 'initialization' }
