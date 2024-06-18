@@ -241,6 +241,14 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 			targetClass := savedTargetClass ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> inlineBlock: aString tail: aBoolean [ 
+"do we need to test for recursion?"
+	code stack value block zigWalkInlineMethod: self
+
+	
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
@@ -377,8 +385,9 @@ ASCodeGenerator >> output: anASFileContext [
 
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
-aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
-	code nonlocalNameLookupObject: aCodeGenerator]
+
+	aCodeGenerator ifNotNil: [
+		parentCodeGenerator := aCodeGenerator ]
 ]
 
 { #category : 'API' }
@@ -597,7 +606,7 @@ targetClass:= anObject
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> topOfStackType [
 
-	^ self inferType: code stack top
+	^ self inferType: code stack value
 ]
 
 { #category : 'post processing' }

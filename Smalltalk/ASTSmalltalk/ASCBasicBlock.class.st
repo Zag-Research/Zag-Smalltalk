@@ -287,12 +287,6 @@ ASCBasicBlock >> nextSequence [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'instance initialization' }
-ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
-
-	stack nonlocalNameLookupObject: aGenerator
-]
-
 { #category : 'API' }
 ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
 
