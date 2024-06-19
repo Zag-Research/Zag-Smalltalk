@@ -40,8 +40,8 @@ ASStack >> offset [
 ASStack >> push: anObject [
 
 	| newStack |
-	newStack := ASStackElement fromStack: self.
-	newStack top: anObject. 
+	newStack := ASStackNamed fromStack: self.
+	newStack value: anObject.
 	^ newStack
 ]
 

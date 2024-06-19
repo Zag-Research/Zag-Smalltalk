@@ -184,7 +184,6 @@ ASCodeGenerator >> initialize [
 
 	super initialize.
 	code := ASCMethodBlock new.
-	code nonlocalNameLookupObject: self.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -235,7 +234,7 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 		returnBlock := self newInline.
 		self branch: inlineBlock.
 		code := inlineBlock.
-		code stack top block zigWalkInlineMethod: self.
+		code stack value block zigWalkInlineMethod: self.
 		code := returnBlock ] ensure: [
 			returnBlock := savedReturn.
 			targetClass := savedTargetClass ]
@@ -519,6 +518,9 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
+		aTargetClass isBlock ifTrue: [ 
+			self inlineBlock: aSymbol next: nil
+		 ].
 		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass)) ifTrue: [
 			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"

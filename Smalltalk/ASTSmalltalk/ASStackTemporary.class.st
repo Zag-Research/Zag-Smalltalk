@@ -52,7 +52,7 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 	| name |
 	name := parameterNamesLeftToRight removeLast.
 	^ (parameterNamesLeftToRight isEmpty
-		   ifTrue: [ ASStackSelf fromStack: rest ]
+		   ifTrue: [ (ASStackNamed fromStack: rest) name: #self]
 		   ifFalse: [
 			   (ASStackNamed fromStack: (rest
 						     nameStack: parameterNamesLeftToRight
