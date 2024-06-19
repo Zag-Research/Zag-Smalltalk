@@ -54,10 +54,16 @@ ASCReturnBlock >> label [
 
 	^ label ifNil: [
 		  label := String streamContents: [ :s |
-			           s
-				           nextPutAll: method selector;
-				           nextPut: $.;
-				           print: (method addReturnBlock: self) ] ]
+			           s nextPutAll: method selector.
+			           self labelExtra: s ] ]
+]
+
+{ #category : 'initialization' }
+ASCReturnBlock >> labelExtra: s [
+
+	^ s
+		nextPut: $.;
+		print: (method addReturnBlock: self)
 ]
 
 { #category : 'initialization' }

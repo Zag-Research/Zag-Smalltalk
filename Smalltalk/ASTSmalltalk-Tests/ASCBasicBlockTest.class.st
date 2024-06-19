@@ -39,33 +39,45 @@ ASCBasicBlockTest >> testNameStack [
 { #category : 'tests' }
 ASCBasicBlockTest >> testStackFlow [
 
-	| bb1 bb2 bb3 bb4 cg |
+	| bb1 bb2 bb3 bb4 cg bb3Rl1 bb3Sl1 |
 	cg := ASCodeGenerator new.
 	cg targetClass: SmallInteger.
 	cg selector: #foo:bar:.
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
 	bb1 := cg firstBlock.
+	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) offset > (bb1 at: #l2) offset.
+	self assert: (bb1 at: #p1) offset > (bb1 at: #p2) offset.
 	bb2 := cg newInline.
 	bb3 := cg newInline.
 	bb4 := cg newInline.
 	self assert: bb4 namedMethod equals: bb1.
-	bb2 addSource: bb1.
-	bb3 addSource: bb1.
-	bb4 addSource: bb2.
-	bb4 addSource: bb3.
-	bb3 storeInto: #l1.
-	bb2 reference: #l1.
-	bb2 reference: #p1.
+	bb2 addSourceBlock: bb1.
+	bb3 addSourceBlock: bb1.
+	bb4 addSourceBlock: bb2.
+	self assert: (bb1 at: #l1) source isNilReference.
+	self deny: (bb2 at: #l1) equals: (bb1 at: #l1).
+	bb4 addSourceBlock: bb3.
+	self assert: (bb1 at: #l1) source isNilReference.
+	bb3Rl1 := bb3 reference: #l1.
+	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) source isNilReference.
+	bb3Sl1 := bb3 storeInto: #l1.
+	self assert: (bb1 at: #l1) source isNilReference.
 	bb4 reference: #p1.
 	bb4 reference: #self.
+	self assert: (bb1 at: #l1) source isNilReference.
 	bb4 reference: #l1.
+	self assert: (bb1 at: #l1) source isNilReference.
 	cg resolveFlowDependencies.
-	self assert: (bb2 provides: #p1).
-	self assert: (bb3 provides: #p1).
-	self deny: (bb1 provides: #l1).
-	self assert: (bb3 provides: #l1).
-	self assert: (bb2 provides: #l1).
-	self assert: (bb4 requires includes: #p1).
+	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb2 at: #p1) equals: (bb3 at: #p1).
+	self assert: (bb1 at: #p1) source isReferenced.
+	self deny: (bb1 at: #p2) source isReferenced.
+	self assert: (bb4 at: #l1) source isPhiReference.
+	self assert: (bb1 at: #l2) source isNilReference.
+	self assert: (bb2 at: #l2) source isNilReference.
+	self assert: (bb4 at: #l2) source isNilReference.
 	cg inspect
 ]
 

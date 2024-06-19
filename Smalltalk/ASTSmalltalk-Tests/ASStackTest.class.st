@@ -11,8 +11,8 @@ ASStackTest >> testLookupContext [
 
 	| stack result |
 	stack := ASStack new.
-	stack := stack pushParameterNamed: #p1.
-	stack := stack pushParameterNamed: #p2.
+	stack := stack initParameterNamed: #p1.
+	stack := stack initParameterNamed: #p2.
 	stack := ASStackContext fromStack: stack.
 	stack := ASStackTemporary fromStack: stack.
 	stack top: (ASCClassValue new init: SmallInteger class).
@@ -40,9 +40,9 @@ ASStackTest >> testNames [
 	| stack |
 	stack := ASStack new.
 	stack := stack pushSelf.
-	stack := stack pushParameterNamed: #p1.
-	stack := stack pushParameterNamed: #p2.
-	stack := stack pushLocalNamed: #l1 basicBlock: self.
+	stack := stack initParameterNamed: #p1.
+	stack := stack initParameterNamed: #p2.
+	stack := stack initLocalNamed: #l1.
 	stack at: #p1 put: 17.
 	stack at: #l1 put: 42.
 	stack := stack push: 99.
@@ -55,7 +55,7 @@ ASStackTest >> testNames [
 	stack := stack push: 12.
 	stack := stack push: 27.
 	self assert: (stack at: 2) value equals: 99.
-	stack := stack pushLocalNamed: #b1 basicBlock: self.
+	stack := stack initLocalNamed: #b1.
 	stack := stack push: 98.
 	self assert: (stack at: #b1) offset equals: -4.
 	self deny: (stack at: #b1) isInContext.

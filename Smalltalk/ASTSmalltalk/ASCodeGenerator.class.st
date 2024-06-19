@@ -62,7 +62,7 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 ASCodeGenerator >> branch: aBasicBlock [
 
 	code branch: aBasicBlock.
-	aBasicBlock addSource: code
+	aBasicBlock addSourceBlock: code
 ]
 
 { #category : 'API' }
@@ -219,13 +219,13 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
-		returnBlock := self newInline.
-		self branch: inlineBlock.
-		code := inlineBlock.
-		code stack top block zigWalkInlineMethod: self.
-		code := returnBlock ] ensure: [
-			returnBlock := savedReturn.
-			targetClass := savedTargetClass ]
+	returnBlock := common.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	code stack top block zigWalkInlineMethod: self.
+	code := returnBlock ] ensure: [
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
 ]
 
 { #category : 'translating' }
@@ -290,7 +290,7 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 { #category : 'accessing' }
 ASCodeGenerator >> locals: locals parameters: arguments [
 
-	code pushSelf: targetClass.
+	code initSelf: targetClass.
 	code locals: locals parameters: arguments
 ]
 

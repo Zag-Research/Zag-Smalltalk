@@ -8,3 +8,15 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'data flow instructions' }
+ASLocalNamed >> newElementFor: aBasicBlock [
+
+	| new |
+	new := aBasicBlock classForLocals new id: name.
+	aBasicBlock addSource: new.
+	^ (self class fromStack: (rest newElementFor: aBasicBlock))
+		  name: name;
+		  value: value;
+		  source: new
+]

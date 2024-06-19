@@ -16,6 +16,18 @@ ASStack >> drop: count [
 	self error
 ]
 
+{ #category : 'API' }
+ASStack >> initLocalNamed: name [
+
+	^ (ASLocalNamed new fromStack: self) name: name
+]
+
+{ #category : 'API' }
+ASStack >> initParameterNamed: name [
+
+	^ (ASParameterNamed fromStack: self) name: name
+]
+
 { #category : 'testing' }
 ASStack >> isEmpty [
 
@@ -39,25 +51,13 @@ ASStack >> offset [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	^ (ASStackTemporary fromStack: self) value: anObject
-]
-
-{ #category : 'API' }
-ASStack >> pushLocalNamed: name basicBlock: anObject [
-
-	^ (ASLocalNamed new fromStack: self) name: name
-]
-
-{ #category : 'API' }
-ASStack >> pushParameterNamed: name [
-
-	^ (ASStackNamed fromStack: self) name: name
+	^ (ASStackTemporary fromStack: self) value: anObject; source: ASFlowNew new
 ]
 
 { #category : 'API' }
 ASStack >> pushSelf [
 
-	^ ASStackSelf new fromStack: self
+	^ ASStackSelf fromStack: self
 ]
 
 { #category : 'API' }

@@ -47,6 +47,12 @@ ASCBasicBlock >> = other [
 	^ hash = other hash and: [ other class = self class ]
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> addSource: source [
+
+	sources add: source
+]
+
 { #category : 'accessing' }
 ASCBasicBlock >> at: nameOrOffset [
 
@@ -88,7 +94,7 @@ ASCBasicBlock >> classCase: aCollection [
 		| next |
 		next := ASCInlineBlock for: self.
 		case at: class put: next.
-		next addSource: self.
+		next addSourceBlock: self.
 		next setStack: stack ].
 	self put: case.
 	^ case
@@ -109,7 +115,10 @@ ASCBasicBlock >> classForTemporaries [
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
-	^ self doDrop: aSymbol numArgs
+	| numArgs |
+	numArgs := aSymbol numArgs.
+	stack markReferenced: numArgs.
+	^ self doDrop: numArgs
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -128,7 +137,6 @@ ASCBasicBlock >> doDrop: n [
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDup [
 
-	self needs: stack top source.
 	stack := stack from: stack top.
 	self error: 'incorrect implementation'
 ]
@@ -194,6 +202,34 @@ ASCBasicBlock >> indexOf: anObject [
 "delegate to stack?"
 	^ stack offset: 0 to: anObject 
 
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> initLocalNamed: aSymbol [
+
+	| source |
+	stack := stack initLocalNamed: aSymbol.
+	source := self classForLocals new id: aSymbol.
+	self addSource: source.
+	^ stack
+		  value: (ASCLocal new
+				   init: Object;
+				   name: aSymbol);
+		  source: source
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> initParameterNamed: aSymbol [
+
+	| source |
+	stack := stack initParameterNamed: aSymbol.
+	source := ASFlowDefine new id: aSymbol.
+	self addSource: source.
+	^ stack
+		  value: (ASCParameter new
+				   init: Object;
+				   name: aSymbol);
+		  source: source
 ]
 
 { #category : 'initialization' }
@@ -268,7 +304,7 @@ ASCBasicBlock >> next [
 	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'inlining' }
 ASCBasicBlock >> nextInline [
 
 	^ nil
@@ -343,6 +379,12 @@ ASCBasicBlock >> popVariable: aSymbol [
 	self doDrop
 ]
 
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> providesNonNil: anId [
+
+	^ (self at: anId) source isNilReference not
+]
+
 { #category : 'API' }
 ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
@@ -352,35 +394,11 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> pushLocalNamed: aSymbol basicBlock: basicBlock [
-
-	stack := stack pushLocalNamed: aSymbol basicBlock: self.
-	^ stack
-		  value: (ASCLocal new
-				   init: Object;
-				   name: aSymbol);
-		  source: basicBlock classForLocals new
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> pushParameterNamed: aSymbol [
-
-	| source |
-	stack := stack pushParameterNamed: aSymbol.
-	source := ASFlowDefine new id: aSymbol.
-	sources add: source.
-	^ stack value: (ASCParameter new
-			   init: Object;
-			   name: aSymbol);
-			source: source
-]
-
-{ #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
-	target := stack at: aSymbol .
-	self put: (ASCPushVariable with: target value).
+	target := stack at: aSymbol.
+	self put: (ASCPushVariable with: target).
 	self doPush: target value
 ]
 
