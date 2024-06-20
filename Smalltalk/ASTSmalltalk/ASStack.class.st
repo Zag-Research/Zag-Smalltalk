@@ -51,10 +51,7 @@ ASStack >> offset [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	| newStack |
-	newStack := ASStackNamed fromStack: self.
-	newStack value: anObject.
-	^ newStack
+	^ (ASStackTemporary fromStack: self) value: anObject; source: ASFlowNew new
 ]
 
 { #category : 'API' }

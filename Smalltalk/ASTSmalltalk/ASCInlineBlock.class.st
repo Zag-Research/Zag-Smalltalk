@@ -57,9 +57,9 @@ ASCInlineBlock >> llvmLabel [
 
 { #category : 'printing' }
 ASCInlineBlock >> locals: locals arguments: arguments [
+
 	self nameStack: arguments.
-	(stack at: #self) source: self.
-	locals do: [ :each | self pushLocalNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
 	maxDepth := 0
 ]
 

@@ -231,10 +231,10 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
-	returnBlock := self newInline.
+	returnBlock := common.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	code stack value block zigWalkInlineMethod: self.
+	code stack top block zigWalkInlineMethod: self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
@@ -516,7 +516,6 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
-		self halt.
 		aTargetClass isBlock ifTrue: [
 			^ self inlineBlock: aSymbol next: nil ].
 		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass))
