@@ -231,29 +231,28 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
-		returnBlock := self newInline.
-		self branch: inlineBlock.
-		code := inlineBlock.
-		code stack value block zigWalkInlineMethod: self.
-		code := returnBlock ] ensure: [
-			returnBlock := savedReturn.
-			targetClass := savedTargetClass ]
+	returnBlock := self newInline.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	code stack value block zigWalkInlineMethod: self.
+	code := returnBlock ] ensure: [
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
 ]
 
 { #category : 'as yet unclassified' }
-ASCodeGenerator >> inlineBlock: aString tail: aBoolean [ 
-"do we need to test for recursion?"
-	code stack value block zigWalkInlineMethod: self
-
+ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
+	"do we need to test for recursion?"
 	
+	"find the block on the stack"
+	code stack value block zigWalkInlineMethod: self
 ]
 
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	| inlineBlock savedReturn savedTargetClass |
-	self halt.
-	(code isRecursive: aCompileMethod) ifTrue: [ ^false ].
+	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
 	savedTargetClass := targetClass.
 	"create a new block "
 	inlineBlock := self newInline.
@@ -264,8 +263,7 @@ ASCodeGenerator >> inlineMethod: aCompileMethod [
 	self branch: inlineBlock.
 	code := inlineBlock.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
-		self
-	 ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		code := returnBlock.
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
@@ -518,14 +516,14 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
-		aTargetClass isBlock ifTrue: [ 
-			self inlineBlock: aSymbol next: nil
-		 ].
-		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass)) ifTrue: [
-			^ self sendEmbedded: aSymbol ].
+		self halt.
+		aTargetClass isBlock ifTrue: [
+			^ self inlineBlock: aSymbol next: nil ].
+		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass))
+			ifTrue: [ ^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		(self sendInline: aSymbol targetClass: aTargetClass tail:tail) ifTrue: [
-			^ true "return something?" ] ].
+		(self sendInline: aSymbol targetClass: aTargetClass tail: tail)
+			ifTrue: [ ^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
 		      send: aSymbol
