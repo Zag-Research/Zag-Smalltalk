@@ -20,6 +20,12 @@ ASStackNamed >> at: aSymbol [
 	^ rest at: aSymbol
 ]
 
+{ #category : 'accessing' }
+ASStackNamed >> id [
+
+	^ name
+]
+
 { #category : 'adding' }
 ASStackNamed >> importedSource: anInteger [
 
@@ -63,9 +69,4 @@ ASStackNamed >> name [
 { #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
 	name := aSymbol
-]
-
-{ #category : 'data flow instructions' }
-ASStackNamed >> sourceFor: anASCInlineBlock [ 
-	"nothing to do - use the global named source"
 ]

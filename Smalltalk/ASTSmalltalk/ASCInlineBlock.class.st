@@ -13,7 +13,7 @@ Class {
 }
 
 { #category : 'adding' }
-ASCInlineBlock >> addSource: aBasicBlock [
+ASCInlineBlock >> addSourceBlock: aBasicBlock [
 
 	self namedMethod == aBasicBlock namedMethod ifFalse: [
 		| returnBlock |
@@ -21,7 +21,7 @@ ASCInlineBlock >> addSource: aBasicBlock [
 		returnBlock hash: hash.
 		^ self becomeForward: returnBlock ].
 	sourceBlocks add: aBasicBlock.
-	stack := aBasicBlock stack sourceFor: self
+	stack := aBasicBlock stack newElementFor: self
 ]
 
 { #category : 'data flow instructions' }
@@ -98,7 +98,7 @@ ASCInlineBlock >> outputTo: output [
 { #category : 'printing' }
 ASCInlineBlock >> printOn: aStream [
 
-	aStream nextPutAll: self label
+	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
 { #category : 'printing' }
@@ -112,13 +112,13 @@ ASCInlineBlock >> updateDependencies [
 
 	| result |
 	super updateDependencies.
+	self halt.
 	result := OrderedCollection new.
 	sources do: [ :requirement |
-		(sourceBlocks anySatisfy: [ :block | block providesNonNil: requirement ])
-			ifTrue: [
-				result addAll:
-					(sourceBlocks select: [ :block |
-						 block reference: requirement ]) ] ].
+		(sourceBlocks anySatisfy: [ :block |
+			 block providesNonNil: requirement id]) ifTrue: [
+			result addAll:
+				(sourceBlocks select: [ :block | block reference: requirement ]) ] ].
 	^ result
 ]
 

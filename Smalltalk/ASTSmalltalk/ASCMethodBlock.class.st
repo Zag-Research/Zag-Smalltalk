@@ -42,6 +42,20 @@ ASCMethodBlock >> context [
 	^ context
 ]
 
+{ #category : 'API' }
+ASCMethodBlock >> initSelf: targetClass [
+
+	| source |
+	stack := stack pushSelf.
+	source := ASFlowDefine new id: #self.
+	self addSource: source.
+	^ stack
+		  value: (ASCSelf new
+				   init: targetClass;
+				   name: #self);
+		  source: source
+]
+
 { #category : 'initialization' }
 ASCMethodBlock >> initialize [
 
@@ -50,11 +64,16 @@ ASCMethodBlock >> initialize [
 	method := self
 ]
 
+{ #category : 'initialization' }
+ASCMethodBlock >> labelExtra: s [
+
+]
+
 { #category : 'accessing' }
 ASCMethodBlock >> locals: locals parameters: arguments [
 
-	arguments reversed do: [ :each | self pushParameterNamed: each ].
-	locals do: [ :each | self pushLocalNamed: each basicBlock: self ].
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
 	maxDepth := 0
 ]
 
@@ -83,18 +102,10 @@ ASCMethodBlock >> primitive: anInteger [
 
 ]
 
-{ #category : 'API' }
-ASCMethodBlock >> pushSelf: targetClass [
+{ #category : 'printing' }
+ASCMethodBlock >> printOn: aStream [
 
-	| source |
-	stack := stack pushSelf.
-	source := ASFlowDefine new id: #self.
-	sources add: source.
-	^ stack
-		  value: (ASCSelf new
-			   init: targetClass;
-			   name: #self);
-		  source: source
+	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
 { #category : 'accessing' }

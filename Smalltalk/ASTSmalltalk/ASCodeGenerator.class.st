@@ -62,7 +62,7 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 ASCodeGenerator >> branch: aBasicBlock [
 
 	code branch: aBasicBlock.
-	aBasicBlock addSource: code
+	aBasicBlock addSourceBlock: code
 ]
 
 { #category : 'API' }
@@ -312,7 +312,7 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 { #category : 'accessing' }
 ASCodeGenerator >> locals: locals parameters: arguments [
 
-	code pushSelf: targetClass.
+	code initSelf: targetClass.
 	code locals: locals parameters: arguments
 ]
 

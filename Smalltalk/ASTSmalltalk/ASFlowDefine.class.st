@@ -6,7 +6,6 @@ Class {
 	#name : 'ASFlowDefine',
 	#superclass : 'ASFlowNil',
 	#instVars : [
-		'id',
 		'referenced'
 	],
 	#category : 'ASTSmalltalk-Stack',
@@ -20,9 +19,23 @@ ASFlowDefine >> basicBlock: anASCInlineBlock [
 		id := anASCInlineBlock nextSequence asString
 ]
 
-{ #category : 'accessing' }
-ASFlowDefine >> id: aString [ 
-	id := aString
+{ #category : 'initialization' }
+ASFlowDefine >> initialize [
+
+	super initialize.
+	referenced := false
+]
+
+{ #category : 'testing' }
+ASFlowDefine >> isNilReference [
+
+	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASFlowDefine >> isReferenced [
+
+	^ referenced
 ]
 
 { #category : 'data flow instructions' }

@@ -10,3 +10,15 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'testing' }
+ASFlowPhi >> isNilReference [
+
+	^ false
+]
+
+{ #category : 'testing' }
+ASFlowPhi >> isPhiReference [
+
+	^ true
+]

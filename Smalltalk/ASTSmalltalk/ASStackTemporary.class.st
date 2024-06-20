@@ -38,12 +38,26 @@ ASStackTemporary >> drop: count [
 	^ rest drop: count-1
 ]
 
+{ #category : 'accessing' }
+ASStackTemporary >> id [
+
+	^ offset
+]
+
 { #category : 'API' }
 ASStackTemporary >> makeContextRequired: aBlock [
 
 	^ (self class fromStack: (rest makeContextRequired: aBlock))
 		  value: value;
 		  source: source
+]
+
+{ #category : 'data flow instructions' }
+ASStackTemporary >> markReferenced: n [
+
+	n == 0 ifTrue: [ ^ self ].
+	source markReferenced.
+	^ rest markReferenced: n - 1
 ]
 
 { #category : 'adding' }
@@ -60,6 +74,17 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 						     forBlock: basicBlock)) name: name ])
 		  value: value;
 		  source: source
+]
+
+{ #category : 'data flow instructions' }
+ASStackTemporary >> newElementFor: aBasicBlock [
+
+	| new |
+	new := aBasicBlock classForTemporaries new id: self id.
+	aBasicBlock addSource: new.
+	^ (self class fromStack: (rest newElementFor: aBasicBlock))
+		  value: value;
+		  source: new
 ]
 
 { #category : 'accessing' }

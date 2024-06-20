@@ -339,6 +339,16 @@ ASCompilerInlineTest >> testFibonacciInline [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibonacci_fast_forCorrectness [
+
+	self assert: 0 fibonacci_fast equals: 0 fibonacci.
+	self assert: 1 fibonacci_fast equals: 1 fibonacci.
+	self assert: 2 fibonacci_fast equals: 2 fibonacci.
+	self assert: 3 fibonacci_fast equals: 3 fibonacci.
+	self assert: 4 fibonacci_fast equals: 4 fibonacci
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo [
 "foo
 	^ self bar"
