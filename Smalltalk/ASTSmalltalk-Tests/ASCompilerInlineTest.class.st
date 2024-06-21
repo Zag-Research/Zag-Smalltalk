@@ -329,6 +329,17 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciFastInline [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ p1 ]
+"
+
+	(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #fibonacci_fast) inspect
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacciInline [
 	"fibonacci
 

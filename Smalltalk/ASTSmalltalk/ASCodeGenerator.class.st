@@ -220,7 +220,8 @@ ASCodeGenerator >> initialize [
 	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
 	implementors at: #not put: { (Number >> #abs) }.
 	implementors at: #value put: { (ASTBlockClosure >> #value) }.
-	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }
+	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }.
+	implementors at: #fibonacci_fast put: { (Integer >> #fibonacci_fast) }
 ]
 
 { #category : 'translating' }
