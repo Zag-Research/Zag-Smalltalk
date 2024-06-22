@@ -54,7 +54,7 @@ ManifestASTSmalltalk class >> ruleExcessiveMethodsRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleExcessiveVariablesRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGClassDefinition #(#ASCodeGenerator)) #'2023-10-08T10:43:40.424497-04:00') )
+	^ #(#(#(#RGClassDefinition #(#ASCodeGenerator)) #'2023-10-08T10:43:40.424497-04:00') #(#(#RGClassDefinition #(#ASCBasicBlock)) #'2024-06-22T13:01:37.160642-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -68,22 +68,7 @@ ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #sequenceTo:then:withReturn:
-	              #false ) )
-	        #'2021-10-04T23:01:49.526703-04:00' )
-	     #( #( #RGMethodDefinition #( #ASScanner #token #false ) )
-	        #'2021-10-09T08:06:50.250593-04:00' )
-	     #( #( #RGMethodDefinition #( #ASCValue #value: #false ) )
-	        #'2023-10-06T17:33:21.190789-04:00' )
-	     #( #( #RGMethodDefinition #( #'ASImage class' #initialize
-	              #true ) )
-	        #'2024-04-12T11:41:16.943424-04:00' )
-	     #( #( #RGMethodDefinition #( #ASImage #initialize #false ) )
-	        #'2024-04-13T09:00:24.594294-04:00' )
-	     #( #( #RGMethodDefinition #( #'ASAllocationInfo class'
-	              #headerIVars:indexed:element:weak:
-	              #true ) )
-	        #'2024-04-13T20:36:41.511805-04:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #sendInline:targetClass:tail: #false)) #'2024-06-20T17:11:21.850715-04:00') )
 ]
 
 { #category : 'code-critics' }

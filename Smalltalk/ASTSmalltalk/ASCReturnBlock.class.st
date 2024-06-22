@@ -4,19 +4,14 @@ I am a BasicBlock that is the return target for a send or call
 Class {
 	#name : 'ASCReturnBlock',
 	#superclass : 'ASCBasicBlock',
-	#instVars : [
-		'sequence',
-		'selector'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'adding' }
-ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> checkForCalls [
 
-	^ method addReturnBlock: anASCReturnBlock
 ]
 
 { #category : 'data flow instructions' }
@@ -54,35 +49,16 @@ ASCReturnBlock >> label [
 
 	^ label ifNil: [
 		  label := String streamContents: [ :s |
-			           s nextPutAll: method selector.
-			           self labelExtra: s ] ]
-]
-
-{ #category : 'initialization' }
-ASCReturnBlock >> labelExtra: s [
-
-	^ s
-		nextPut: $.;
-		print: (method addReturnBlock: self)
+			           s
+				           nextPutAll: ($_ join: ($: split: self selector));
+				           nextPut: $.;
+				           print: (self method addBlock: self) ] ]
 ]
 
 { #category : 'initialization' }
 ASCReturnBlock >> llvmLabel [
 
 	^ '0'
-]
-
-{ #category : 'accessing' }
-ASCReturnBlock >> method: anASCMethodBlock [
-
-	method := anASCMethodBlock.
-	anASCMethodBlock addReturnBlock: self
-]
-
-{ #category : 'API' }
-ASCReturnBlock >> namedContext: blockLocal stack: blockStack [ 
-
-	stack namedContext: blockLocal stack: blockStack
 ]
 
 { #category : 'accessing' }
@@ -108,5 +84,5 @@ ASCReturnBlock >> outputTo: output [
 { #category : 'accessing' }
 ASCReturnBlock >> selector [
 
-	^ selector ifNil: [ selector := method selector]
+	^self  method selector
 ]

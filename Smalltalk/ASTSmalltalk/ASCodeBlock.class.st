@@ -49,10 +49,7 @@ ASCodeBlock >> body: aCollection [
 { #category : 'accessing' }
 ASCodeBlock >> children [
 
-	| c |
-	c := OrderedCollection new.
-	c addAll: body.
-	^ c
+	^ OrderedCollection newFrom: body
 ]
 
 { #category : 'initialization' }

@@ -4,9 +4,6 @@ for inlining
 Class {
 	#name : 'ASCInlineBlock',
 	#superclass : 'ASCBasicBlock',
-	#instVars : [
-		'sourceBlocks'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -15,13 +12,16 @@ Class {
 { #category : 'adding' }
 ASCInlineBlock >> addSourceBlock: aBasicBlock [
 
-	self namedMethod == aBasicBlock namedMethod ifFalse: [
-		| returnBlock |
-		returnBlock := ASCReturnBlock for: method.
-		returnBlock hash: hash.
-		^ self becomeForward: returnBlock ].
 	sourceBlocks add: aBasicBlock.
-	stack := aBasicBlock stack newElementFor: self
+	sourceBlocks size = 1 ifTrue: [
+		sources := stack := aBasicBlock copyOfStackFor: self ]
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> checkForCalls [
+
+	(sourceBlocks anySatisfy: #endsWithCall) ifTrue: [
+		self primitiveChangeClassTo: ASCReturnBlock basicNew ]
 ]
 
 { #category : 'data flow instructions' }
@@ -46,7 +46,7 @@ ASCInlineBlock >> initialize [
 { #category : 'initialization' }
 ASCInlineBlock >> label [
 
-	^ label ifNil: [ label := method nextSequence asString ]
+	^ label ifNil: [ label := self method nextSequence asString ]
 ]
 
 { #category : 'initialization' }
@@ -56,16 +56,11 @@ ASCInlineBlock >> llvmLabel [
 ]
 
 { #category : 'printing' }
-ASCInlineBlock >> locals: locals arguments: arguments [
+ASCInlineBlock >> locals: locals parameters: arguments [
 
 	self nameStack: arguments.
 	locals do: [ :each | self initLocalNamed: each ].
 	maxDepth := 0
-]
-
-{ #category : 'accessing' }
-ASCInlineBlock >> method: anASCMethodBlock [ 
-	method := anASCMethodBlock
 ]
 
 { #category : 'adding' }
@@ -79,13 +74,14 @@ ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 
 { #category : 'data flow instructions' }
 ASCInlineBlock >> namedMethod [
-	^ method namedMethod
+
+	^ self method namedMethod
 ]
 
 { #category : 'successor sequences' }
 ASCInlineBlock >> nextSequence [
 
-	^ method nextSequence
+	^self  method nextSequence
 ]
 
 { #category : 'writing' }
@@ -105,21 +101,6 @@ ASCInlineBlock >> printOn: aStream [
 ASCInlineBlock >> returnTop [
 
 	^ self put: ASCReturnTop new
-]
-
-{ #category : 'data flow instructions' }
-ASCInlineBlock >> updateDependencies [
-
-	| result |
-	super updateDependencies.
-	self halt.
-	result := OrderedCollection new.
-	sources do: [ :requirement |
-		(sourceBlocks anySatisfy: [ :block |
-			 block providesNonNil: requirement id]) ifTrue: [
-			result addAll:
-				(sourceBlocks select: [ :block | block reference: requirement ]) ] ].
-	^ result
 ]
 
 { #category : 'printing' }

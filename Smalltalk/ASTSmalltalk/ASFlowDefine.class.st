@@ -4,7 +4,7 @@ I am common to all `ASCInlineBlock`s for a given `ASCReturnBlock` or `ASCMethodB
 "
 Class {
 	#name : 'ASFlowDefine',
-	#superclass : 'ASFlowNil',
+	#superclass : 'ASFlowNonNil',
 	#instVars : [
 		'referenced'
 	],
@@ -14,22 +14,10 @@ Class {
 }
 
 { #category : 'initialization' }
-ASFlowDefine >> basicBlock: anASCInlineBlock [ 
-
-		id := anASCInlineBlock nextSequence asString
-]
-
-{ #category : 'initialization' }
 ASFlowDefine >> initialize [
 
 	super initialize.
 	referenced := false
-]
-
-{ #category : 'testing' }
-ASFlowDefine >> isNilReference [
-
-	^ false
 ]
 
 { #category : 'data flow instructions' }

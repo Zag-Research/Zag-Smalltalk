@@ -70,3 +70,12 @@ ASStackNamed >> name [
 ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
+
+{ #category : 'API' }
+ASStackNamed >> replicate: aStack [
+
+	^ (self class fromStack: aStack)
+		  name: name;
+		  value: value;
+		  source: source
+]

@@ -32,6 +32,12 @@ ASCSend >> inspectZagASTOn: aStream [
 		ifNil: [ aStream << ' ( tailcall )' ]
 ]
 
+{ #category : 'testing' }
+ASCSend >> isCallOperation [
+
+	^ true
+]
+
 { #category : 'accessing' }
 ASCSend >> isSend [
 	^ true

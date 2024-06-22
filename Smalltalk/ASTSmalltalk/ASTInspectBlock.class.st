@@ -2,7 +2,7 @@
 I display information about a block closure in an inspect window. I show the operations in the block operations, the name, arguments and locals of a block.
 "
 Class {
-	#name : 'InspectBlock',
+	#name : 'ASTInspectBlock',
 	#superclass : 'Object',
 	#instVars : [
 		'ascBlock'
@@ -13,22 +13,22 @@ Class {
 }
 
 { #category : 'instance creation' }
-InspectBlock class >> from: anASCBlock [
+ASTInspectBlock class >> from: anASCBlock [
 	^ self new from: anASCBlock 
 ]
 
 { #category : 'instance creation' }
-InspectBlock >> children [ 
+ASTInspectBlock >> children [ 
 	^ ascBlock block body
 ]
 
 { #category : 'instance creation' }
-InspectBlock >> from: anASCBlock [
+ASTInspectBlock >> from: anASCBlock [
 	ascBlock := anASCBlock 
 ]
 
 { #category : 'instance creation' }
-InspectBlock >> inspectZagASTOn: aStream [
+ASTInspectBlock >> inspectZagASTOn: aStream [
 
 	ascBlock inspectZagASTOn: aStream.
 	"Daniel output the args and locals here"

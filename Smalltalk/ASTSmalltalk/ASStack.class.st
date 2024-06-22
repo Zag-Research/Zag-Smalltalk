@@ -9,6 +9,10 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'enumerating' }
+ASStack >> do: ignored [
+]
+
 { #category : 'removing' }
 ASStack >> drop: count [
 
@@ -28,18 +32,21 @@ ASStack >> initParameterNamed: name [
 	^ (ASParameterNamed fromStack: self) name: name
 ]
 
+{ #category : 'API' }
+ASStack >> initSelf [
+
+	^ ASStackSelf fromStack: self
+]
+
+{ #category : 'API' }
+ASStack >> intoContext: anInteger [ 
+
+]
+
 { #category : 'testing' }
 ASStack >> isEmpty [
 
 	^ true
-]
-
-{ #category : 'API' }
-ASStack >> namedContext: blockLocal stack: blockStack [
-	^ self
-		  offset: 0
-		  namedContext: blockLocal
-		  stack: blockStack
 ]
 
 { #category : 'accessing' }
@@ -55,12 +62,11 @@ ASStack >> push: anObject [
 ]
 
 { #category : 'API' }
-ASStack >> pushSelf [
-
-	^ ASStackSelf fromStack: self
-]
-
-{ #category : 'API' }
 ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
+]
+
+{ #category : 'data flow instructions' }
+ASStack >> simplifyDependenciesFor: anASCMethodBlock [
+
 ]

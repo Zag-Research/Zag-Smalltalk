@@ -19,7 +19,9 @@ Class {
 		'hash',
 		'stackDepth',
 		'context',
-		'sources'
+		'sources',
+		'sourceBlocks',
+		'sequence'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -28,12 +30,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'instance creation' }
-ASCBasicBlock class >> for: aBasicBlock [
-
-	^ super new method: aBasicBlock namedMethod
-]
 
 { #category : 'class initialization' }
 ASCBasicBlock class >> initialize [
@@ -47,10 +43,16 @@ ASCBasicBlock >> = other [
 	^ hash = other hash and: [ other class = self class ]
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> addSource: source [
+{ #category : 'adding' }
+ASCBasicBlock >> addBlock: aBasicBlock [
 
-	sources add: source
+	^ self method addBlock: aBasicBlock
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> anySourcesNonNilFor: id [
+
+	^ sourceBlocks anySatisfy: [ :block | block providesNonNil: id ]
 ]
 
 { #category : 'accessing' }
@@ -80,9 +82,15 @@ ASCBasicBlock >> branch: anASCInlineBlock [
 	^ anASCInlineBlock
 ]
 
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> checkForCalls [
+	^ self subclassResponsibility
+]
+
 { #category : 'accessing' }
 ASCBasicBlock >> children [
-	^ operations
+
+	^ operations ifNil: [ {  } ]
 ]
 
 { #category : 'abstract interpretation' }
@@ -92,7 +100,7 @@ ASCBasicBlock >> classCase: aCollection [
 	case := ASCCase new.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlineBlock for: self.
+		next := ASCInlineBlock new.
 		case at: class put: next.
 		next addSourceBlock: self.
 		next setStack: stack ].
@@ -112,12 +120,18 @@ ASCBasicBlock >> classForTemporaries [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'copying' }
+ASCBasicBlock >> copyOfStackFor: anASCInlineBlock [ 
+
+	^ stack newElementFor: anASCInlineBlock
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doCall: aSymbol [
 
 	| numArgs |
 	numArgs := aSymbol numArgs.
-	stack markReferenced: numArgs.
+	stack markReferenced: numArgs + 1.
 	^ self doDrop: numArgs
 ]
 
@@ -135,10 +149,17 @@ ASCBasicBlock >> doDrop: n [
 ]
 
 { #category : 'stackAccessHelpers' }
+ASCBasicBlock >> doDropUnder: n [
+
+	stack := stack dropUnder: n.
+	stackDepth := stackDepth - n
+]
+
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDup [
 
-	stack := stack from: stack top.
-	self error: 'incorrect implementation'
+	stack := stack replicate: stack.
+	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -163,7 +184,7 @@ ASCBasicBlock >> embed: aSymbol [
 	| send |
 	send := ASCEmbed with: aSymbol.
 	self put: send.
-	self stack: (stack drop: aSymbol numArgs + 1) pushUnknown.
+	stack := (stack drop: aSymbol numArgs + 1) pushUnknown.
 	^ nil
 ]
 
@@ -173,16 +194,26 @@ ASCBasicBlock >> endWithReturnTop [
 	^ self put: ASCReturnTop new
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> find: aSymbol [
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> endsWithCall [
 
-	^ stack find: aSymbol
+	operations ifNil: [ ^ false ].
+	operations ifEmpty: [ ^ false ].
+	^ operations last isCallOperation
 ]
 
 { #category : 'accessing' }
 ASCBasicBlock >> flow [
 
 	^ false
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> getContext [
+
+	context ifNil: [
+		stack := stack makeContextRequired: [ :c | context := c ] ].
+	^ context
 ]
 
 { #category : 'comparing' }
@@ -210,23 +241,8 @@ ASCBasicBlock >> initLocalNamed: aSymbol [
 	| source |
 	stack := stack initLocalNamed: aSymbol.
 	source := self classForLocals new id: aSymbol.
-	self addSource: source.
 	^ stack
 		  value: (ASCLocal new
-				   init: Object;
-				   name: aSymbol);
-		  source: source
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> initParameterNamed: aSymbol [
-
-	| source |
-	stack := stack initParameterNamed: aSymbol.
-	source := ASFlowDefine new id: aSymbol.
-	self addSource: source.
-	^ stack
-		  value: (ASCParameter new
 				   init: Object;
 				   name: aSymbol);
 		  source: source
@@ -236,11 +252,10 @@ ASCBasicBlock >> initParameterNamed: aSymbol [
 ASCBasicBlock >> initialize [
 
 	super initialize.
-	operations := OrderedCollection new.
 	stackDepth := maxDepth := 0.
 	stack := ASStack new.
 	hash := SequenceNumber := SequenceNumber + 1.
-	sources := OrderedCollection new
+	operations := OrderedCollection new " should be able to leave this nil, but get error in display "
 ]
 
 { #category : 'printing' }
@@ -264,23 +279,14 @@ ASCBasicBlock >> llvmLabel [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> makeContextRequired [
-
-	context ifNil: [
-		stack := stack makeContextRequired: [ :c | context := c ] ]
-]
-
 { #category : 'inlining' }
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
-	operations ifNotEmpty: [ 
-	last := operations last.
-	last requiresContext ifTrue: [ self makeContextRequired.
- ].
-	last manifestParameters: stack
-	]
+	operations ifNotNil: [
+		last := operations last.
+		last requiresContext ifTrue: [ self getContext ].
+		last manifestParameters: stack ]
 ]
 
 { #category : 'accessing' }
@@ -289,9 +295,9 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> method: ignored [
+ASCBasicBlock >> method [
 
-	^ self subclassResponsibility
+	^ method ifNil: [ method := sourceBlocks atRandom method ]
 ]
 
 { #category : 'data flow instructions' }
@@ -301,7 +307,8 @@ ASCBasicBlock >> namedMethod [
 
 { #category : 'accessing' }
 ASCBasicBlock >> next [
-	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
+
+	^ operations ifNotNil: [ operations last next ]
 ]
 
 { #category : 'inlining' }
@@ -346,7 +353,8 @@ ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
 
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
-	operations do: [ :operation | operation outputTo: output ].
+
+	operations ifNotNil: [ operations do: [ :operation | operation outputTo: output ]].
 	^ output outputBasicBlockEnd
 ]
 
@@ -362,20 +370,19 @@ ASCBasicBlock >> outputTo: output [
 ASCBasicBlock >> popAndCopyTopToSelf [
 	" This is tricky code because we need to save all the properties of the top of stack and over-write the `self` that was part of the inlining. So we throw away everything on the stack up to and including that `self` value, and then return a stack with the original top element linking to whatever was below. "
 
-	| count top |
+	| count |
 	count := stack offsetToSelf: 0.
 	self put: (ASCPopAndCopyTop with: count).
-	top := stack.
-	stack := top fromStack: (stack drop: count + 1)
+	self doDropUnder: count
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
 	| target |
-	target := stack find: aSymbol.
+	target := stack at: aSymbol.
 	stack top makeManifest.
-	self put: (ASCPopVariable with: target top).
+	self put: (ASCPopVariable with: target).
 	self doDrop
 ]
 
@@ -405,6 +412,7 @@ ASCBasicBlock >> pushVariable: aSymbol [
 { #category : 'initialization' }
 ASCBasicBlock >> put: anObject [
 
+	operations ifNil: [ operations := OrderedCollection new ].
 	^ operations add: anObject
 ]
 
@@ -422,7 +430,7 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 
-	context ifNotNil: [ : c | aBlock value: c ]
+	^ context ifNotNil: [ :c | aBlock value: c ]
 ]
 
 { #category : 'initialization' }
@@ -458,13 +466,14 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock for: self ].
+	next := tailCall ifFalse: [ ASCInlineBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
 		        target: target.
 	self put: send.
 	next ifNotNil: [
+		next addSourceBlock: self.
 		next setStack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
 	^ next
 ]
@@ -476,16 +485,10 @@ ASCBasicBlock >> setStack: anASStack [
 	^ stack source: 0
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> stack [
-	^ stack
-]
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> simplifyDependencies [
 
-{ #category : 'accessing' }
-ASCBasicBlock >> stack: anASStack [
-
-	stack := anASStack.
-	maxDepth := stack depth
+	^ stack simplifyDependenciesFor: self
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -498,7 +501,7 @@ ASCBasicBlock >> storeInto: offsetOrName [
 
 	| target source |
 	target := stack at: offsetOrName.
-	source := ASFlowNew new basicBlock: self.
+	source := ASFlowNew new.
 	target source: source.
 	^ source
 ]
@@ -507,7 +510,7 @@ ASCBasicBlock >> storeInto: offsetOrName [
 ASCBasicBlock >> storeVariable: aSymbol [
 
 	stack top makeManifest.
-	self put: (ASCStoreVariable with: (stack find: aSymbol) top)
+	self put: (ASCStoreVariable with: (stack at: aSymbol))
 ]
 
 { #category : 'accessing' }
@@ -518,6 +521,8 @@ ASCBasicBlock >> top [
 { #category : 'data flow instructions' }
 ASCBasicBlock >> updateDependencies [
 
-	^ #()
-	
+	sources do: [ :source |
+		(source source isReferenced and: [self anySourcesNonNilFor: source id]) ifTrue: [
+			sourceBlocks do: [ :block | block reference: source id ] ] ].
+	^ sourceBlocks
 ]

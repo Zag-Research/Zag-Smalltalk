@@ -9,29 +9,18 @@ Class {
 { #category : 'tests' }
 ASStackTest >> testLookupContext [
 
-	| stack result |
+	| stack |
 	stack := ASStack new.
 	stack := stack initParameterNamed: #p1.
 	stack := stack initParameterNamed: #p2.
-	stack := ASStackContext fromStack: stack.
-	stack := ASStackTemporary fromStack: stack.
-	stack top: (ASCClassValue new init: SmallInteger class).
+	stack := stack makeContextRequired: [  ].
+	stack := stack push: (ASCClassValue new init: SmallInteger class).
 
-	result := stack
-		          offset: 0
-		          to: #p1
-		          context: [ :offest | #A , offest asString ]
-		          stack: [ :offest | #B , offest asString ]
-		          other: [ :offest | #C , offest asString ].
-	self assert: result equals: #A1.
-
-	result := stack
-		          offset: 0
-		          to: #p2
-		          context: [ :offest | #A , offest asString ]
-		          stack: [ :offest | #B , offest asString ]
-		          other: [ :offest | #C , offest asString ].
-	self assert: result equals: #A0
+	self deny: (stack at: 0) isInContext.
+	self assert: (stack at: #p1) isInContext.
+	self assert: (stack at: #p1) offset equals: 1.
+	self assert: (stack at: #p2) isInContext.
+	self assert: (stack at: #p2) offset equals: 0
 ]
 
 { #category : 'tests' }
@@ -39,7 +28,7 @@ ASStackTest >> testNames [
 
 	| stack |
 	stack := ASStack new.
-	stack := stack pushSelf.
+	stack := stack initSelf.
 	stack := stack initParameterNamed: #p1.
 	stack := stack initParameterNamed: #p2.
 	stack := stack initLocalNamed: #l1.
@@ -76,5 +65,7 @@ ASStackTest >> testSimple [
 	stack3 := stack2 push: 99.
 	self assert: stack2 drop drop isEmpty.
 	self deny: stack3 drop drop isEmpty.
-	self assert: (stack3 drop: 2) value equals: 42
+	self assert: (stack3 drop: 2) value equals: 42.
+	self assert: (stack3 dropUnder: 1) value equals: 99.
+	self assert: (stack3 dropUnder: 1) drop value equals: 42
 ]
