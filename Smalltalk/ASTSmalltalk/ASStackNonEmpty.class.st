@@ -31,6 +31,13 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 	^ (self at: aSymbol) value: anObject
 ]
 
+{ #category : 'enumerating' }
+ASStackNonEmpty >> do: aBlock [
+
+	aBlock value: self.
+	^ rest do: aBlock
+]
+
 { #category : 'instance creation' }
 ASStackNonEmpty >> fromStack: anASStack [
 
@@ -42,4 +49,15 @@ ASStackNonEmpty >> fromStack: anASStack [
 ASStackNonEmpty >> isEmpty [
 
 	^ false
+]
+
+{ #category : 'testing' }
+ASStackNonEmpty >> isInContext [
+
+	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASStackNonEmpty >> newElementFor: aBasicBlock [ 
+	^ self subclassResponsibility
 ]

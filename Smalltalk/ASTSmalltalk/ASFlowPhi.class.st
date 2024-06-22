@@ -5,17 +5,11 @@ If any are different, then I will generate a Phi node for LLVM to allocate.
 "
 Class {
 	#name : 'ASFlowPhi',
-	#superclass : 'ASFlowNil',
+	#superclass : 'ASFlowNonNil',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
-
-{ #category : 'testing' }
-ASFlowPhi >> isNilReference [
-
-	^ false
-]
 
 { #category : 'testing' }
 ASFlowPhi >> isPhiReference [

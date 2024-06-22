@@ -30,10 +30,8 @@ ASReturn >> blocks [
 
 { #category : 'accessing' }
 ASReturn >> children [
-| exp |
-	exp := OrderedCollection new.
-	exp add: expression.
-	^ exp
+
+	^ OrderedCollection with: expression
 ]
 
 { #category : 'accessing' }

@@ -14,9 +14,14 @@ ASLocalNamed >> newElementFor: aBasicBlock [
 
 	| new |
 	new := aBasicBlock classForLocals new id: name.
-	aBasicBlock addSource: new.
-	^ (self class fromStack: (rest newElementFor: aBasicBlock))
-		  name: name;
-		  value: value;
-		  source: new
+	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
+]
+
+{ #category : 'data flow instructions' }
+ASLocalNamed >> simplifyDependenciesFor: aBlock [
+
+	rest simplifyDependenciesFor: aBlock.
+	source isPhiReference ifTrue: [
+		(aBlock anySourcesNonNilFor: self id) ifFalse: [
+			source := ASFlowNil new id: self id ] ]
 ]

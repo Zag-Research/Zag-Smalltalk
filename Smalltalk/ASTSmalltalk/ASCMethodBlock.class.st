@@ -8,7 +8,8 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#instVars : [
 		'primitive',
-		'returnBlocks'
+		'returnBlocks',
+		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -16,7 +17,7 @@ Class {
 }
 
 { #category : 'adding' }
-ASCMethodBlock >> addReturnBlock: anASCReturnBlock [
+ASCMethodBlock >> addBlock: anASCReturnBlock [
 
 	anASCReturnBlock context: context.
 	^ returnBlocks
@@ -43,12 +44,24 @@ ASCMethodBlock >> context [
 ]
 
 { #category : 'API' }
+ASCMethodBlock >> initParameterNamed: aSymbol [
+
+	| source |
+	stack := stack initParameterNamed: aSymbol.
+	source := ASFlowOnDemand new id: aSymbol.
+	^ stack
+		  value: (ASCParameter new
+				   init: Object;
+				   name: aSymbol);
+		  source: source
+]
+
+{ #category : 'API' }
 ASCMethodBlock >> initSelf: targetClass [
 
 	| source |
-	stack := stack pushSelf.
-	source := ASFlowDefine new id: #self.
-	self addSource: source.
+	stack := stack initSelf.
+	source := ASFlowOnDemand new id: #self.
 	^ stack
 		  value: (ASCSelf new
 				   init: targetClass;
@@ -74,6 +87,7 @@ ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
+	sources := stack.
 	maxDepth := 0
 ]
 
@@ -91,7 +105,7 @@ ASCMethodBlock >> outputTo: output [
 		primitive: primitive
 		methods: { self } , returnBlocks keys.
 	output outputMethodStart: label.
-	stack requiredContextDo: [ output visitPushContext ].
+	self requiredContextDo: [ output visitPushContext ].
 	^ self outputRestTo: output
 ]
 
@@ -109,8 +123,21 @@ ASCMethodBlock >> printOn: aStream [
 ]
 
 { #category : 'accessing' }
+ASCMethodBlock >> selector [
+
+	^ selector
+]
+
+{ #category : 'accessing' }
 ASCMethodBlock >> selector: aString [
 
 	selector := aString.
 	label := aString
+]
+
+{ #category : 'data flow instructions' }
+ASCMethodBlock >> updateDependencies [
+	" a MethodBlock has no dependencies "
+
+	^ #( )
 ]

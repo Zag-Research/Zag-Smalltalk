@@ -5,23 +5,13 @@ I am the initial source for a local variable.
 Class {
 	#name : 'ASFlowNil',
 	#superclass : 'Object',
-	#instVars : [
-		'id'
-	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
 { #category : 'accessing' }
-ASFlowNil >> id [
-
-	^ id
-]
-
-{ #category : 'accessing' }
-ASFlowNil >> id: aString [ 
-	id := aString
+ASFlowNil >> id: aString [
 ]
 
 { #category : 'testing' }

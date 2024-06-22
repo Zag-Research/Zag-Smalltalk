@@ -136,7 +136,8 @@ ASCodeGenerator >> finalAnalysis [
 
 { #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
-	^ code find: aSymbol 
+
+	^ code at: aSymbol
 	"enclosingScope ifNil: [ self halt ].
 	^ enclosingScope find: aSymbol"
 ]
@@ -225,7 +226,7 @@ ASCodeGenerator >> initialize [
 ]
 
 { #category : 'translating' }
-ASCodeGenerator >> inlineBlock: aString next: common [
+ASCodeGenerator >> inlineBlock: aSymbol next: common [
 
 	| inlineBlock savedReturn savedTargetClass |
 	savedTargetClass := targetClass.
@@ -235,7 +236,8 @@ ASCodeGenerator >> inlineBlock: aString next: common [
 	returnBlock := common.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	code stack top block zigWalkInlineMethod: self.
+	(code stackBelow: aSymbol numArgs) top block zigWalkInlineMethod:
+		self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
@@ -294,20 +296,9 @@ ASCodeGenerator >> isEmbedded: aCompileMethod [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> locals: locals indirectArguments: arguments [
-
-	"output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed: self selfName."
-	code locals: locals arguments: arguments
-]
-
-{ #category : 'accessing' }
 ASCodeGenerator >> locals: locals indirectParameters: parameters [
-	"output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed: self selfName."
-	code locals: locals arguments: parameters
+
+	code locals: locals parameters: parameters
 ]
 
 { #category : 'accessing' }
@@ -324,29 +315,16 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 		aSymbol = variable name ]
 ]
 
-{ #category : 'compiling' }
-ASCodeGenerator >> lookupName: aString block: anUndefinedObject [
-	"self shouldBeImplemented."
-
-	^code find: aString
-]
-
 { #category : 'accessing' }
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ output lookupObject: anObject
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> makeContextRequired [
-
-	^ code makeContextRequired
-]
-
 { #category : 'serializing' }
 ASCodeGenerator >> manifest: anASCBlock [
 
-	code makeContextRequired
+	self requireContext
 ]
 
 { #category : 'accessing' }
@@ -357,7 +335,7 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: (ASCInlineBlock for: code)
+	^ basicBlocks add: (ASCInlineBlock new)
 ]
 
 { #category : 'API' }
@@ -448,17 +426,25 @@ ASCodeGenerator >> putEmbedded: aSymbol [
 	code put: aSymbol
 ]
 
+{ #category : 'API' }
+ASCodeGenerator >> requireContext [
+
+	^ code getContext
+]
+
 { #category : 'data flow instructions' }
 ASCodeGenerator >> resolveFlowDependencies [
 
 	| blocksToProcess |
+	basicBlocks do: #checkForCalls.
 	blocksToProcess := basicBlocks.
 	[ blocksToProcess isEmpty ] whileFalse: [
 		| temp |
 		temp := blocksToProcess.
 		blocksToProcess := Set new.
 		temp do: [ :block |
-			blocksToProcess addAll: block updateDependencies ] ]
+			blocksToProcess addAll: block updateDependencies ] ].
+	basicBlocks do: #simplifyDependencies
 ]
 
 { #category : 'API' }
@@ -614,6 +600,6 @@ ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures collect: [ :bc | InspectBlock from: bc ]).
+	zagBlocks addAll: (blockClosures collect: [ :bc | ASTInspectBlock from: bc ]).
 	^ zagBlocks
 ]

@@ -31,10 +31,8 @@ ASAssign >> blocks [
 
 { #category : 'accessing' }
 ASAssign >> children [
-	| c |
-	c := OrderedCollection new.
-	c add: expression.
-	^ c
+
+	^ OrderedCollection with: expression
 ]
 
 { #category : 'comparing' }

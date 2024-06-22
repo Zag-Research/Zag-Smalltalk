@@ -11,11 +11,28 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'enumerating' }
+ASStackContext >> do: aBlock [
+
+	^ rest do: aBlock
+]
+
 { #category : 'removing' }
 ASStackContext >> drop: count [
 
 	count = 0 ifTrue: [ ^ self ].
 	^ self error: 'stack underflow'
+]
+
+{ #category : 'API' }
+ASStackContext >> makeContextRequired: aFullBlockClosure [ 
+
+]
+
+{ #category : 'data flow instructions' }
+ASStackContext >> newElementFor: aBasicBlock [ 
+
+	^ self class new fromStack: (rest newElementFor: aBasicBlock)
 ]
 
 { #category : 'initialization' }

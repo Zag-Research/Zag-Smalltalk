@@ -38,6 +38,12 @@ ASStackTemporary >> drop: count [
 	^ rest drop: count-1
 ]
 
+{ #category : 'rewriting' }
+ASStackTemporary >> dropUnder: n [
+
+	^ self replicate: (rest drop: n)
+]
+
 { #category : 'accessing' }
 ASStackTemporary >> id [
 
@@ -47,9 +53,7 @@ ASStackTemporary >> id [
 { #category : 'API' }
 ASStackTemporary >> makeContextRequired: aBlock [
 
-	^ (self class fromStack: (rest makeContextRequired: aBlock))
-		  value: value;
-		  source: source
+	^ self replicate: (rest makeContextRequired: aBlock)
 ]
 
 { #category : 'data flow instructions' }
@@ -81,16 +85,21 @@ ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
 	new := aBasicBlock classForTemporaries new id: self id.
-	aBasicBlock addSource: new.
-	^ (self class fromStack: (rest newElementFor: aBasicBlock))
-		  value: value;
-		  source: new
+	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
 ]
 
 { #category : 'accessing' }
 ASStackTemporary >> offset [
 
 	^ offset
+]
+
+{ #category : 'API' }
+ASStackTemporary >> replicate: aStack [
+
+	^ (self class fromStack: aStack)
+		  value: value;
+		  source: source
 ]
 
 { #category : 'initialization' }

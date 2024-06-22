@@ -51,7 +51,6 @@ ASCBasicBlockTest >> testStackFlow [
 	bb2 := cg newInline.
 	bb3 := cg newInline.
 	bb4 := cg newInline.
-	self assert: bb4 namedMethod equals: bb1.
 	bb2 addSourceBlock: bb1.
 	bb3 addSourceBlock: bb1.
 	bb4 addSourceBlock: bb2.
@@ -70,6 +69,7 @@ ASCBasicBlockTest >> testStackFlow [
 	bb4 reference: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
 	cg resolveFlowDependencies.
+	self assert: bb4 namedMethod equals: bb1.
 	self assert: (bb1 at: #l1) source isNilReference.
 	self assert: (bb2 at: #p1) equals: (bb3 at: #p1).
 	self assert: (bb1 at: #p1) source isReferenced.
@@ -92,12 +92,13 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
 	cg locals: #(  ) parameters: #( n1 n2 n3 ).
-	cg makeContextRequired.
+	cg requireContext.
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.
-	cg send: #*. " and create new RetutnBlock"
-	cg send: #+. " and create new RetutnBlock"
+	cg send: #*. " and create new ReturnBlock"
+	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
+	cg resolveFlowDependencies.
 	cg inspect
 ]
