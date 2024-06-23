@@ -57,6 +57,12 @@ ASStackTemporary >> makeContextRequired: aBlock [
 ]
 
 { #category : 'data flow instructions' }
+ASStackTemporary >> makeStackTheSource [
+
+	source := source makeStackTheSource
+]
+
+{ #category : 'data flow instructions' }
 ASStackTemporary >> markReferenced: n [
 
 	n == 0 ifTrue: [ ^ self ].
@@ -117,6 +123,7 @@ ASStackTemporary >> source [
 { #category : 'accessing' }
 ASStackTemporary >> source: anObject [
 
+	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
 	source := anObject
 ]
 

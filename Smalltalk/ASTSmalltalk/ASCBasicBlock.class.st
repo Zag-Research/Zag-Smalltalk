@@ -19,9 +19,9 @@ Class {
 		'hash',
 		'stackDepth',
 		'context',
-		'sources',
 		'sourceBlocks',
-		'sequence'
+		'sequence',
+		'sourceElements'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -240,7 +240,7 @@ ASCBasicBlock >> initLocalNamed: aSymbol [
 
 	| source |
 	stack := stack initLocalNamed: aSymbol.
-	source := self classForLocals new id: aSymbol.
+	source := self classForLocals new .
 	^ stack
 		  value: (ASCLocal new
 				   init: Object;
@@ -424,7 +424,7 @@ ASCBasicBlock >> putSimple: aSymbol [
 { #category : 'accessing' }
 ASCBasicBlock >> reference: anIntegerOrSymbol [
 
-	(stack at: anIntegerOrSymbol) source markReferenced
+	^ (stack at: anIntegerOrSymbol) source markReferenced
 ]
 
 { #category : 'enumerating' }
@@ -481,8 +481,7 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 { #category : 'accessing' }
 ASCBasicBlock >> setStack: anASStack [
 
-	stack := anASStack.
-	^ stack source: 0
+	stack := anASStack
 ]
 
 { #category : 'data flow instructions' }
@@ -527,8 +526,20 @@ ASCBasicBlock >> top [
 { #category : 'data flow instructions' }
 ASCBasicBlock >> updateDependencies [
 
-	sources do: [ :source |
-		(source source isReferenced and: [self anySourcesNonNilFor: source id]) ifTrue: [
-			sourceBlocks do: [ :block | block reference: source id ] ] ].
+	sourceElements do: [ :sourceElement |
+		(sourceElement source isReferenced and: [
+			 self anySourcesNonNilFor: sourceElement id ]) ifTrue: [
+			sourceBlocks do: [ :block | block reference: sourceElement id ] ] ].
 	^ sourceBlocks
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> updateDependencies: blocksToProcess [
+
+	sourceElements do: [ :sourceElement |
+		(sourceElement source isReferenced and: [
+			 self anySourcesNonNilFor: sourceElement id ]) ifTrue: [
+			sourceBlocks do: [ :block |
+				(block reference: sourceElement id) ifTrue: [
+					blocksToProcess add: block ] ] ] ]
 ]

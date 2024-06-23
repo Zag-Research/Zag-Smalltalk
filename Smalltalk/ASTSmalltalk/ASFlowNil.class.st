@@ -11,7 +11,15 @@ Class {
 }
 
 { #category : 'accessing' }
-ASFlowNil >> id: aString [
+ASFlowNil >> id [
+
+	^ '@.nil'
+]
+
+{ #category : 'testing' }
+ASFlowNil >> isFlowSource [
+
+	^ true
 ]
 
 { #category : 'testing' }
@@ -34,4 +42,6 @@ ASFlowNil >> isReferenced [
 
 { #category : 'data flow instructions' }
 ASFlowNil >> markReferenced [
+
+	^ false
 ]

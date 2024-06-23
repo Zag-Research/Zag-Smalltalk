@@ -23,5 +23,5 @@ ASLocalNamed >> simplifyDependenciesFor: aBlock [
 	rest simplifyDependenciesFor: aBlock.
 	source isPhiReference ifTrue: [
 		(aBlock anySourcesNonNilFor: self id) ifFalse: [
-			source := ASFlowNil new id: self id ] ]
+			source := ASFlowNil new ] ]
 ]

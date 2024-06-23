@@ -9,3 +9,8 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'data flow instructions' }
+ASFlowNew >> makeStackTheSource [
+
+]

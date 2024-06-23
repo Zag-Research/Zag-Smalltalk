@@ -14,14 +14,15 @@ ASCInlineBlock >> addSourceBlock: aBasicBlock [
 
 	sourceBlocks add: aBasicBlock.
 	sourceBlocks size = 1 ifTrue: [
-		sources := stack := aBasicBlock copyOfStackFor: self ]
+		sourceElements := stack := aBasicBlock copyOfStackFor: self ]
 ]
 
 { #category : 'data flow instructions' }
 ASCInlineBlock >> checkForCalls [
 
-	(sourceBlocks anySatisfy: #endsWithCall) ifTrue: [
-		self primitiveChangeClassTo: ASCReturnBlock basicNew ]
+	(sourceBlocks anySatisfy: #endsWithCall) ifFalse: [ ^ self ].
+	self primitiveChangeClassTo: ASCReturnBlock basicNew.
+	stack makeStackTheSource
 ]
 
 { #category : 'data flow instructions' }
