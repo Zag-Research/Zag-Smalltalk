@@ -103,6 +103,12 @@ ASCInlineBlock >> returnTop [
 	^ self put: ASCReturnTop new
 ]
 
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> selfElementClass [
+
+	^ ASStackSelf
+]
+
 { #category : 'printing' }
 ASCInlineBlock >> updateStack: aSymbol [
 	^ nil

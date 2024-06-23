@@ -492,6 +492,12 @@ ASCBasicBlock >> simplifyDependencies [
 ]
 
 { #category : 'stackAccessHelpers' }
+ASCBasicBlock >> stackBelow: n [
+
+	^ stack drop: n
+]
+
+{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> stackTop [
 	^ stack top
 ]

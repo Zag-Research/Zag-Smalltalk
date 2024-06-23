@@ -70,7 +70,7 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 	| name |
 	name := parameterNamesLeftToRight removeLast.
 	^ (parameterNamesLeftToRight isEmpty
-		   ifTrue: [ ASStackSelf fromStack: rest ]
+		   ifTrue: [ basicBlock selfElementClass fromStack: rest ]
 		   ifFalse: [
 			   (ASParameterNamed fromStack: (rest
 						     nameStack: parameterNamesLeftToRight
