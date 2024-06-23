@@ -28,6 +28,8 @@ ASFlowDefine >> isReferenced [
 
 { #category : 'data flow instructions' }
 ASFlowDefine >> markReferenced [
+	" return true if we just made it true "
 
-	referenced := true
+	referenced ifTrue: [ ^ false ].
+	^ referenced := true
 ]

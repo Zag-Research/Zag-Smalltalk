@@ -230,13 +230,13 @@ ASCodeGenerator >> inlineBlock: aSymbol next: common [
 
 	| inlineBlock savedReturn savedTargetClass |
 	savedTargetClass := targetClass.
-	inlineBlock := self newInline.
+	inlineBlock := self newInlineBlockClosure.
 	savedReturn := returnBlock.
 	[
 	returnBlock := common.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	(code stackBelow: aSymbol numArgs) top block zigWalkInlineMethod:
+	(code stackBelow: aSymbol numArgs) value block zigWalkInlineMethod:
 		self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
@@ -336,6 +336,12 @@ ASCodeGenerator >> name [
 ASCodeGenerator >> newInline [
 
 	^ basicBlocks add: (ASCInlineBlock new)
+]
+
+{ #category : 'private - testing' }
+ASCodeGenerator >> newInlineBlockClosure [
+
+	^ basicBlocks add: ASCBlockClosureBlock new
 ]
 
 { #category : 'API' }
@@ -443,7 +449,7 @@ ASCodeGenerator >> resolveFlowDependencies [
 		temp := blocksToProcess.
 		blocksToProcess := Set new.
 		temp do: [ :block |
-			blocksToProcess addAll: block updateDependencies ] ].
+			block updateDependencies: blocksToProcess ] ].
 	basicBlocks do: #simplifyDependencies
 ]
 

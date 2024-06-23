@@ -113,7 +113,7 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
-
+	cg resolveFlowDependencies.
 	cg inspect.
 	output outputToStream.
 	file asString inspect

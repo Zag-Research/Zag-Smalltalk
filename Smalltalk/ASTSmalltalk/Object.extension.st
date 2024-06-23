@@ -85,6 +85,12 @@ Object >> inspectZagASTOn: aStream [
 ]
 
 { #category : '*ASTSmalltalk' }
+Object >> isFlowSource [
+
+	^ false
+]
+
+{ #category : '*ASTSmalltalk' }
 Object >> zigCompileObject: aGenerator [
 
 	| slots label |

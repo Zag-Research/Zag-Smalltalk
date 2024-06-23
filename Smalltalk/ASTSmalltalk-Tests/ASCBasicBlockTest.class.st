@@ -1,22 +1,10 @@
 Class {
 	#name : 'ASCBasicBlockTest',
-	#superclass : 'ASLLVMTests',
-	#instVars : [
-		'output'
-	],
+	#superclass : 'TestCase',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
-
-{ #category : 'running' }
-ASCBasicBlockTest >> setUp [
-
-	super setUp.
-
-	"Create new instance of generator and set testing inst. var"
-	output := ASLLMethodOutput new context: file "testing"
-]
 
 { #category : 'tests' }
 ASCBasicBlockTest >> testNameStack [

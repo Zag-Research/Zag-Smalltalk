@@ -74,7 +74,8 @@ ASCMethodBlock >> initialize [
 
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self
+	method := self.
+	sourceBlocks := #(  )
 ]
 
 { #category : 'initialization' }
@@ -87,7 +88,7 @@ ASCMethodBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
-	sources := stack.
+	sourceElements := stack.
 	maxDepth := 0
 ]
 

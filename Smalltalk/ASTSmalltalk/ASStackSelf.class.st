@@ -17,6 +17,13 @@ ASStackSelf >> codeBlock: aBlock [
 	codeBlock := aBlock
 ]
 
+{ #category : 'enumerating' }
+ASStackSelf >> do: ignored [
+	" never go deeper than this "
+
+	
+]
+
 { #category : 'initialization' }
 ASStackSelf >> initialize [
 
