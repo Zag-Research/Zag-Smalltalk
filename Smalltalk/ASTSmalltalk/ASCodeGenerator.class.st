@@ -452,7 +452,7 @@ ASCodeGenerator >> resolveFlowDependencies [
 		temp := blocksToProcess.
 		blocksToProcess := Set new.
 		temp do: [ :block |
-			block updateDependencies: blocksToProcess ] ].
+			block updateDataDependencies: blocksToProcess ] ].
 	basicBlocks do: #simplifyDependencies
 ]
 

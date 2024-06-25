@@ -35,7 +35,7 @@ ManifestASTSmalltalk class >> ruleBooleanPrecedenceRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleCollectionProtocolRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #compileMethodInClass: #false)) #'2021-10-09T09:13:12.016388-04:00') #(#(#RGMethodDefinition #(#ASArray #baseValue #false)) #'2023-10-19T10:44:08.600293-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-12T09:43:28.817134-04:00') #(#(#RGMethodDefinition #(#ASLLMethodOutput #setupForOutput #false)) #'2024-05-26T22:42:46.085628-07:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #updateDependencies: #false)) #'2024-06-23T11:58:14.956741-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #compileMethodInClass: #false)) #'2021-10-09T09:13:12.016388-04:00') #(#(#RGMethodDefinition #(#ASArray #baseValue #false)) #'2023-10-19T10:44:08.600293-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-12T09:43:28.817134-04:00') #(#(#RGMethodDefinition #(#ASLLMethodOutput #setupForOutput #false)) #'2024-05-26T22:42:46.085628-07:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #updateDataDependencies: #false)) #'2024-06-23T11:58:14.956741-04:00') )
 ]
 
 { #category : 'code-critics' }

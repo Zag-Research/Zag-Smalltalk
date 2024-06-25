@@ -567,7 +567,7 @@ ASCBasicBlock >> top [
 ]
 
 { #category : 'data flow instructions' }
-ASCBasicBlock >> updateDependencies: blocksToProcess [
+ASCBasicBlock >> updateDataDependencies: blocksToProcess [
 
 	sourceElements do: [ :sourceElement |
 		(sourceElement source isReferenced and: [
