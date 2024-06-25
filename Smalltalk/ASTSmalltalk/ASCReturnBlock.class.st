@@ -32,18 +32,6 @@ ASCReturnBlock >> context: anASStackContext [
 	context := anASStackContext
 ]
 
-{ #category : 'writing' }
-ASCReturnBlock >> inspectionZagCode [
-
-	<inspectorPresentationOrder: 0 title: 'ZagCode'>
-	^ SpTreeTablePresenter new
-		  roots: operations;
-		  children: [ :aNode | aNode children ];
-		  addColumn:
-			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
-		  yourself
-]
-
 { #category : 'initialization' }
 ASCReturnBlock >> label [
 

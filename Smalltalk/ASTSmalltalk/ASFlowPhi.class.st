@@ -16,3 +16,9 @@ ASFlowPhi >> isPhiReference [
 
 	^ true
 ]
+
+{ #category : 'printing' }
+ASFlowPhi >> printOn: aStream [
+
+	^ aStream nextPutAll: 'phi'
+]

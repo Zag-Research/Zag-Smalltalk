@@ -47,7 +47,7 @@ ManifestASTSmalltalk class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleExcessiveMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGClassDefinition #(#ASCBasicBlock)) #'2024-06-12T20:22:50.927097-04:00') )
+	^ #(#(#(#RGClassDefinition #(#ASCBasicBlock)) #'2024-06-12T20:22:50.927097-04:00') #(#(#RGClassDefinition #(#ASCodeGenerator)) #'2024-06-25T09:46:18.241926-04:00') )
 ]
 
 { #category : 'code-critics' }

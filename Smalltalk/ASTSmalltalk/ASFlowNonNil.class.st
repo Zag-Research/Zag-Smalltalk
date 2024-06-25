@@ -28,3 +28,9 @@ ASFlowNonNil >> isNilReference [
 
 	^ false
 ]
+
+{ #category : 'printing' }
+ASFlowNonNil >> printOn: aStream [
+
+	^ aStream nextPutAll: '???'
+]

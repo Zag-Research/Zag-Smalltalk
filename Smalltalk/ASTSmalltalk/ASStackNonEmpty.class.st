@@ -61,3 +61,9 @@ ASStackNonEmpty >> isInContext [
 ASStackNonEmpty >> newElementFor: aBasicBlock [ 
 	^ self subclassResponsibility
 ]
+
+{ #category : 'accessing' }
+ASStackNonEmpty >> offset [
+
+	^ offset
+]

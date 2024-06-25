@@ -35,6 +35,12 @@ ASStackContext >> newElementFor: aBasicBlock [
 	^ self class new fromStack: (rest newElementFor: aBasicBlock)
 ]
 
+{ #category : 'accessing' }
+ASStackContext >> offset [
+
+	^ 0
+]
+
 { #category : 'initialization' }
 ASStackContext >> reset [
 

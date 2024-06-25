@@ -8,3 +8,9 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'printing' }
+ASFlowOnDemand >> printOn: aStream [
+
+	^ aStream nextPutAll: 'on demand'
+]

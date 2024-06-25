@@ -44,26 +44,24 @@ ASOutput >> blockNumber [
 
 { #category : 'API' }
 ASOutput >> codeGenerator [
-	^ codeGenerator ifNil: [
+
+	^ self shouldNotImplement 
+"	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
-			                   output: self;
 			                   targetClass: forClass;
-			                   inlining: inlining ]
+			                   inlining: inlining ]"
+]
+
+{ #category : 'accessing' }
+ASOutput >> codeGenerator: anASCodeGenerator [ 
+
+	codeGenerator := anASCodeGenerator.
+	^ anASCodeGenerator
 ]
 
 { #category : 'API' }
 ASOutput >> codeGeneratorClass [ ^ ASCodeGenerator
-]
-
-{ #category : 'API' }
-ASOutput >> compileBlock: anASCBlock [
-	self assert: anASCBlock block ~= ourObject.
-	(self blockClass new testing: testing)
-		context: context;
-		parentCodeGenerator: codeGenerator;
-		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block for: BlockClosure
 ]
 
 { #category : 'API' }

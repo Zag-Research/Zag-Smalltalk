@@ -12,9 +12,8 @@ ASCompilerInlineTest class >> inlined_fibonacci [
  ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
 	| cg targets |
-	cg := ASCodeGenerator new.
-	cg targetClass: SmallInteger.
-	cg selector: #fibonacci.
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
+	self halt.
 	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
@@ -47,9 +46,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
     ifFalse: [ (self - 1) fibonacci + (self - 2) fibonacci ]"
 
 	| cg targets common |
-	cg := ASCodeGenerator new.
-	cg targetClass: SmallInteger.
-	cg selector: #fibonacci.
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
 	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.

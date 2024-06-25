@@ -21,20 +21,25 @@ Class {
 		'targetClass',
 		'maxDepth',
 		'inline',
-		'output',
 		'tailCallOptimize',
 		'blockClosures',
 		'parentCodeGenerator',
 		'enclosingScope',
 		'embeddings',
+		'inlineSelectors',
 		'implementors',
-		'returnBlock',
-		'embeddingReturnTypes'
+		'returnBlock'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'instance creation' }
+ASCodeGenerator class >> targetClass: aClass selector: aString [
+
+	^ self new targetClass: aClass; selector: aString
+]
 
 { #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
@@ -83,9 +88,15 @@ ASCodeGenerator >> classOf: aString [
 ASCodeGenerator >> compileBlock: aBlockClosure [
 	"compiling of blocks doesn't work right now"
 
-	aBlockClosure manifest ifFalse: [ ^self].
-		code pushBlockNamed: aBlockClosure.
-		output compileBlock: aBlockClosure
+	aBlockClosure manifest ifFalse: [ ^ self ].
+	code pushBlockNamed: aBlockClosure.
+	self incompleteImplementation
+	"self assert: aBlockClosure block ~= ourObject.
+	(self blockClass new testing: testing)
+		context: context;
+		parentCodeGenerator: codeGenerator;
+		methodGenerator: self methodGenerator block: self blockNumber;
+		generateCode: aBlockClosure block for: BlockClosure"
 ]
 
 { #category : 'compiling' }
@@ -339,7 +350,7 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 { #category : 'accessing' }
 ASCodeGenerator >> lookupObject: anObject [
 
-	^ output lookupObject: anObject
+	^ self incompleteImplementation
 ]
 
 { #category : 'serializing' }
@@ -378,12 +389,6 @@ ASCodeGenerator >> offsetOf: anObject context: blockLocal stack: blockStack othe
 { #category : 'API' }
 ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 	^ code offsetTo: anObject methodBlock: aBlock 
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> output: anASFileContext [
-
-	output := anASFileContext
 ]
 
 { #category : 'accessing' }
@@ -438,7 +443,7 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 { #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
-	code put: (ASCPushVariable with: (code at: #self))
+	^ self pushVariable: #self
 ]
 
 { #category : 'API' }
