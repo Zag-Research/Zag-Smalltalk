@@ -272,6 +272,27 @@ ASCodeGenerator >> inlineMethod: aCompileMethod [
 		targetClass := savedTargetClass ]
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [ 
+
+	| inlineBlock savedReturn savedTargetClass |
+	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
+	savedTargetClass := targetClass.
+	"create a new block "
+	inlineBlock := self newInline.
+	savedReturn := returnBlock.
+	[
+	targetClass := inlinedTargetClass.
+	returnBlock := self newInline.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
+		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		code := returnBlock.
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> inlining: aBoolean [
 	inline := aBoolean
@@ -542,7 +563,6 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 	
 	"check if we're recursive"
 	inline ifFalse: [ ^ false ].
-self halt.
 	
 	"check if this is a self call"
 	targetClass == aTargetClass ifTrue: [
@@ -561,7 +581,7 @@ self halt.
 	targets with: symbolImplementors do: [ :target :compileMethod |
 		self setBasicBlock: target.
 		"walk the sends method AST"
-		self inlineMethod: aTargetClass >> aSymbol.
+		self inlineMethod: compileMethod for: target.
 		self branch: common ] ] ensure: [ self setBasicBlock: common ].
 	^ true
 ]

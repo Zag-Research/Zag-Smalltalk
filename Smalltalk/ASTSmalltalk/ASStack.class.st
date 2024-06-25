@@ -49,6 +49,10 @@ ASStack >> isEmpty [
 	^ true
 ]
 
+{ #category : 'adding' }
+ASStack >> newElementFor: notNeeded [
+]
+
 { #category : 'accessing' }
 ASStack >> offset [
 

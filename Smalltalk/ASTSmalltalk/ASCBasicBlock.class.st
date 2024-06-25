@@ -282,8 +282,9 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'testing' }
-ASCBasicBlock >> isRecursive: aCollection [ 
-	self shouldBeImplemented.
+ASCBasicBlock >> isRecursive: aCompileMethod [ 
+	"test if the given compile method has already been visited"
+	^ false
 ]
 
 { #category : 'initialization' }
