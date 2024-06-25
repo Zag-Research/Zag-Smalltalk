@@ -1,5 +1,8 @@
 "
 I am a BasicBlock that is the return target for a send or call
+
+Note that `ASCInlineBlock`s often get their class changed to me, so my objects must be the same size.
+Among other things that means that some slots end up in `ASCBasicBlock` rather than their more logical place of here
 "
 Class {
 	#name : 'ASCReturnBlock',
@@ -32,6 +35,12 @@ ASCReturnBlock >> context: anASStackContext [
 	context := anASStackContext
 ]
 
+{ #category : 'testing' }
+ASCReturnBlock >> hasContextOnEntry [
+
+	^ true
+]
+
 { #category : 'initialization' }
 ASCReturnBlock >> label [
 
@@ -40,7 +49,7 @@ ASCReturnBlock >> label [
 			           s
 				           nextPutAll: ($_ join: ($: split: self selector));
 				           nextPut: $.;
-				           print: (self method addBlock: self) ] ]
+				           print: (self methodBlock addBlock: self) ] ]
 ]
 
 { #category : 'initialization' }
@@ -49,8 +58,8 @@ ASCReturnBlock >> llvmLabel [
 	^ '0'
 ]
 
-{ #category : 'accessing' }
-ASCReturnBlock >> namedMethod [
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> namedBlock [
 
 	^ self
 ]
@@ -59,7 +68,7 @@ ASCReturnBlock >> namedMethod [
 ASCReturnBlock >> nextSequence [
 
 	sequence ifNil: [ ^ sequence := 1 ].
-	^ sequence := sequence +1
+	^ sequence := sequence + 1
 ]
 
 { #category : 'writing' }
@@ -72,5 +81,5 @@ ASCReturnBlock >> outputTo: output [
 { #category : 'accessing' }
 ASCReturnBlock >> selector [
 
-	^self  method selector
+	^self  methodBlock selector
 ]

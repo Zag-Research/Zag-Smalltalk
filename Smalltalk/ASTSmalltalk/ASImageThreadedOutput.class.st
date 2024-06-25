@@ -46,9 +46,9 @@ ASImageThreadedOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASImageThreadedOutput >> outputMethodStart: bbLabel [
+ASImageThreadedOutput >> outputMethodStart: bb [
 
-
+	
 ]
 
 { #category : 'API' }

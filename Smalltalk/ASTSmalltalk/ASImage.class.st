@@ -77,6 +77,12 @@ ASImage class >> convertNumber: aNumber [
 ]
 
 { #category : 'converting' }
+ASImage class >> convertToZag: anObject [
+
+	^ anObject convertToZag: self
+]
+
+{ #category : 'converting' }
 ASImage class >> double: aNumber [
 
 	^ self subclassResponsibility

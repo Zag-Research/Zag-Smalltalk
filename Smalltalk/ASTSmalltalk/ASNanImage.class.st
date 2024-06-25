@@ -45,3 +45,21 @@ ASNanImage class >> smallInteger: n [
 
 	^ GroupSmallInt0 + n
 ]
+
+{ #category : 'converting' }
+ASNanImage class >> zagFalse [
+	
+	^ self literal: 0 class: 4
+]
+
+{ #category : 'converting' }
+ASNanImage class >> zagNil [
+
+	^ self literal: 16rffffffff class: 3
+]
+
+{ #category : 'converting' }
+ASNanImage class >> zagTrue [
+
+	^ self literal: 1 class: 5
+]

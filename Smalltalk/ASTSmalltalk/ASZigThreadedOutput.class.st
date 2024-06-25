@@ -50,9 +50,9 @@ ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputMethodStart: bbLabel [
+ASZigThreadedOutput >> outputMethodStart: bb [
 
-
+	
 ]
 
 { #category : 'API' }

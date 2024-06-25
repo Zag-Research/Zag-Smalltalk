@@ -3,9 +3,6 @@ I represent a Basic Block for ASCodeGenerator.
 
 Every Method or block is made up of a graph of these.
 
-I have a `then` field which is the block I will go to if the named test is true.
-
-If there is no test, or if the test is false, then I will continue with the `else` block.
 "
 Class {
 	#name : 'ASCBasicBlock',
@@ -20,8 +17,8 @@ Class {
 		'stackDepth',
 		'context',
 		'sourceBlocks',
-		'sequence',
-		'sourceElements'
+		'sourceElements',
+		'sequence'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -46,7 +43,7 @@ ASCBasicBlock >> = other [
 { #category : 'adding' }
 ASCBasicBlock >> addBlock: aBasicBlock [
 
-	^ self method addBlock: aBasicBlock
+	^ self methodBlock addBlock: aBasicBlock
 ]
 
 { #category : 'data flow instructions' }
@@ -229,6 +226,18 @@ ASCBasicBlock >> getContext [
 	^ context
 ]
 
+{ #category : 'testing' }
+ASCBasicBlock >> hasContext [
+
+	^ sourceElements hasContext
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> hasContextOnEntry [
+
+	^ sourceElements hasContext
+]
+
 { #category : 'comparing' }
 ASCBasicBlock >> hash [
 
@@ -268,6 +277,7 @@ ASCBasicBlock >> initialize [
 	stackDepth := maxDepth := 0.
 	stack := ASStack new.
 	hash := SequenceNumber := SequenceNumber + 1.
+	sourceBlocks := Set new.
 	operations := OrderedCollection new " should be able to leave this nil, but get error in display "
 ]
 
@@ -342,9 +352,14 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> method [
+ASCBasicBlock >> methodBlock [
 
-	^ method ifNil: [ method := sourceBlocks atRandom method ]
+	^ method ifNil: [ method := sourceBlocks anyOne methodBlock ]
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> namedBlock [
+	^ self subclassResponsibility
 ]
 
 { #category : 'as yet unclassified' }
@@ -352,11 +367,6 @@ ASCBasicBlock >> namedContext: namedBlock stack: stackBlock other: otherBlock [
 
 	^ stack do: [ :element |
 		  element namedContext: namedBlock stack: stackBlock other: otherBlock ]
-]
-
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> namedMethod [
-	^ self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -409,9 +419,7 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	output outputMethodStart: self label.
-	output outputMethodLabel: label.
-	^ self outputRestTo: output
+	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
