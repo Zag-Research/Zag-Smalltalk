@@ -179,6 +179,16 @@ ASCBasicBlock >> doPush: anObject [
 ]
 
 { #category : 'abstract interpretation' }
+ASCBasicBlock >> embed: aSymbol [
+
+	| send |
+	send := ASCEmbed with: aSymbol.
+	self put: send.
+	stack := (stack drop: aSymbol numArgs + 1) pushUnknown.
+	^ nil
+]
+
+{ #category : 'abstract interpretation' }
 ASCBasicBlock >> embed: aSymbol return: aClass [
 
 	| sendEmbed |
