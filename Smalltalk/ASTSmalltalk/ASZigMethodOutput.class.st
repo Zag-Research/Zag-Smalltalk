@@ -66,9 +66,9 @@ ASZigMethodOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigMethodOutput >> outputMethodStart: bbLabel [
+ASZigMethodOutput >> outputMethodStart: bb [
 
-self subclassResponsibility 
+	self subclassResponsibility
 ]
 
 { #category : 'accessing' }

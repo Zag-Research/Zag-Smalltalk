@@ -1,10 +1,11 @@
 Class {
-	#name : #ASTCollection,
-	#superclass : #ASTObject,
-	#category : #'ASTKernel-Collections-Abstract'
+	#name : 'ASTCollection',
+	#superclass : 'ASTObject',
+	#category : 'ASTKernel-Collections-Abstract',
+	#package : 'ASTKernel-Collections-Abstract'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection class >> with: anObject [
 	"Answer an instance of me containing anObject."
 
@@ -14,7 +15,7 @@ ASTCollection class >> with: anObject [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection class >> with: firstObject with: secondObject [
 	"Answer an instance of me containing the two arguments as elements."
 
@@ -25,7 +26,7 @@ ASTCollection class >> with: firstObject with: secondObject [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection class >> with: firstObject with: secondObject with: thirdObject [
 	"Answer an instance of me containing the three arguments as elements."
 
@@ -37,14 +38,32 @@ ASTCollection class >> with: firstObject with: secondObject with: thirdObject [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> add: newObject [
 	"Include newObject as one of my elements. Answer newObject. ArrayedCollections cannot respond to this message."
 
 	self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'accessing' }
+ASTCollection >> anyOne [
+	"Answer a representative sample of the receiver. It raises an error when the collection is empty. This method can be helpful when needing to preinfer the nature of the contents of semi-homogeneous collections."
+
+	"#(10 20 30) anyOne >>> 10"
+
+	"'hello' anyOne >>> $h"
+
+	"(50 to: 10 by: -5) anyOne >>> 50"
+
+	"
+	([#() anyOne] on: SubscriptOutOfBounds do: [ :ex | 'whatever' ]) >>> 'whatever'
+	"
+
+	self emptyCheck.
+	self do: [ :each | ^ each ]
+]
+
+{ #category : 'as yet unclassified' }
 ASTCollection >> asArray [
 	"Answer an Array whose elements are the elements of this collection. The order in which elements are added depends on the order in which this collection enumerates its elements. In the case of unordered collections, the ordering is not necessarily the same for multiple requests for the conversion."
 
@@ -55,7 +74,7 @@ ASTCollection >> asArray [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> asByteArray [
 	"Answer a ByteArray containing my elements."
 
@@ -66,7 +85,7 @@ ASTCollection >> asByteArray [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> asSet [
 	"Answer a Set whose elements are the unique elements of the receiver."
 
@@ -76,7 +95,7 @@ ASTCollection >> asSet [
 	^ aSet
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> collect: aBlock [
 	"Evaluate aBlock with each of the receiver's elements as the argument. 
 	Collect the resulting values into a collection like the receiver. Answer 
@@ -88,7 +107,7 @@ ASTCollection >> collect: aBlock [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> detect: aBlock ifNone: exceptionBlock [
 	"Evaluate aBlock with each of the receiver's elements as the argument. 
 	Answer the first element for which aBlock evaluates to true. If none 
@@ -101,30 +120,30 @@ ASTCollection >> detect: aBlock ifNone: exceptionBlock [
 	^ exceptionBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> do: aBlock [
 	"Evaluate aBlock with each of the receiver's elements as the argument."
 
 	self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> emptyCheck [
 	self isEmpty
 		ifTrue: [ self errorEmptyCollection ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> errorEmptyCollection [
 	self error: 'this collection is empty'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> errorNotFound [
 	self error: 'Object is not in the collection.'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> includes: anObject [
 	"Answer whether anObject is one of the receiver's elements."
 
@@ -135,14 +154,14 @@ ASTCollection >> includes: anObject [
 	^ false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> isEmpty [
 	"Answer whether the receiver contains any elements."
 
 	^ self size = 0
 ]
 
-{ #category : #printing }
+{ #category : 'printing' }
 ASTCollection >> printOn: aStream [
 	"Refer to the comment in Object|printOn:."
 
@@ -154,7 +173,7 @@ ASTCollection >> printOn: aStream [
 	aStream nextPut: $)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> remove: oldObject [
 	"Remove oldObject as one of the receiver's elements. Answer oldObject 
 	unless no element is equal to oldObject, in which case, create an error 
@@ -163,7 +182,7 @@ ASTCollection >> remove: oldObject [
 	^ self remove: oldObject ifAbsent: [ self errorNotFound ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> remove: oldObject ifAbsent: anExceptionBlock [
 	"Remove oldObject as one of the receiver's elements. If several of the 
 	elements are equal to oldObject, only one is removed. If no element is 
@@ -174,7 +193,7 @@ ASTCollection >> remove: oldObject ifAbsent: anExceptionBlock [
 	self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> select: aBlock [
 	"Evaluate aBlock with each of the receiver's elements as the argument. 
 	Collect into a new collection like the receiver, only those elements for 
@@ -189,7 +208,7 @@ ASTCollection >> select: aBlock [
 	^ newCollection
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTCollection >> size [
 	"Answer how many elements the receiver contains."
 
@@ -199,7 +218,7 @@ ASTCollection >> size [
 	^ count
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTCollection >> sum [
 	"Answer the sum of the elements of this collection. If the collection is empty, answer zero."
 

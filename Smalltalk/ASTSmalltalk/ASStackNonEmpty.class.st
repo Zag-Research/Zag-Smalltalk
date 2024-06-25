@@ -46,6 +46,12 @@ ASStackNonEmpty >> fromStack: anASStack [
 ]
 
 { #category : 'testing' }
+ASStackNonEmpty >> hasContext [
+
+	^ rest hasContext
+]
+
+{ #category : 'testing' }
 ASStackNonEmpty >> isEmpty [
 
 	^ false

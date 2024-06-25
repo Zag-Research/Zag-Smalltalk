@@ -24,6 +24,12 @@ ASStackContext >> drop: count [
 	^ self error: 'stack underflow'
 ]
 
+{ #category : 'testing' }
+ASStackContext >> hasContext [
+
+	^ true
+]
+
 { #category : 'API' }
 ASStackContext >> makeContextRequired: aFullBlockClosure [ 
 

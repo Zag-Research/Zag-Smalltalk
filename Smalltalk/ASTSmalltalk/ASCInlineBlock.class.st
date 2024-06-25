@@ -38,16 +38,9 @@ ASCInlineBlock >> classForTemporaries [
 ]
 
 { #category : 'initialization' }
-ASCInlineBlock >> initialize [
-
-	super initialize.
-	sourceBlocks := Set new
-]
-
-{ #category : 'initialization' }
 ASCInlineBlock >> label [
 
-	^ label ifNil: [ label := self method nextSequence asString ]
+	^ label ifNil: [ label := self nextSequence asString ]
 ]
 
 { #category : 'initialization' }
@@ -74,21 +67,21 @@ ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> namedMethod [
+ASCInlineBlock >> namedBlock [
 
-	^ self method namedMethod
+	^ sourceBlocks anyOne namedBlock
 ]
 
 { #category : 'successor sequences' }
 ASCInlineBlock >> nextSequence [
 
-	^self  method nextSequence
+	^self  methodBlock nextSequence
 ]
 
 { #category : 'writing' }
 ASCInlineBlock >> outputTo: output [
 
-	output outputMethodLabel: self label.
+	output outputInlineBlockStart: self.
 	^ self outputRestTo: output
 ]
 

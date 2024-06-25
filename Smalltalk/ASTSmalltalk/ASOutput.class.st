@@ -19,7 +19,8 @@ Class {
 		'numLocals',
 		'componentName',
 		'blockNumber',
-		'inlining'
+		'inlining',
+		'converter'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -68,7 +69,8 @@ ASOutput >> codeGeneratorClass [ ^ ASCodeGenerator
 ASOutput >> context: anASContext [
 
 	context := anASContext.
-	anASContext addComponent: self
+	anASContext addComponent: self.
+	converter := anASContext converter
 ]
 
 { #category : 'API' }
@@ -133,7 +135,7 @@ ASOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
 	self setupForOutput.
-	codeGenerator basicBlocksLinearizeDo: [ :bb |
+	codeGenerator basicBlocksLocalizeDo: [ :bb |
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: currentBasicBlock maxDepth.
 		currentBasicBlock outputTo: self ].

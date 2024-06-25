@@ -43,6 +43,12 @@ ASCMethodBlock >> context [
 	^ context
 ]
 
+{ #category : 'testing' }
+ASCMethodBlock >> hasContextOnEntry [
+
+	^ sourceElements hasContext
+]
+
 { #category : 'API' }
 ASCMethodBlock >> initParameterNamed: aSymbol [
 
@@ -74,8 +80,7 @@ ASCMethodBlock >> initialize [
 
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self.
-	sourceBlocks := #(  )
+	method := self
 ]
 
 { #category : 'initialization' }
@@ -92,12 +97,6 @@ ASCMethodBlock >> locals: locals parameters: arguments [
 	maxDepth := 0
 ]
 
-{ #category : 'accessing' }
-ASCMethodBlock >> namedMethod [
-
-	^ self
-]
-
 { #category : 'writing' }
 ASCMethodBlock >> outputTo: output [
 
@@ -105,7 +104,7 @@ ASCMethodBlock >> outputTo: output [
 		outputMethodDefinition: self label
 		primitive: primitive
 		methods: { self } , returnBlocks keys.
-	output outputMethodStart: label.
+	output outputMethodStart: self.
 	self requiredContextDo: [ output visitPushContext ].
 	^ self outputRestTo: output
 ]

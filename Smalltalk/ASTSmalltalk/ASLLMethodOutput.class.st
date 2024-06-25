@@ -36,7 +36,6 @@ ASLLMethodOutput class >> initialize [
 ASLLMethodOutput >> initialize [
 
 	super initialize.
-	sequence := 0.
 	stack := OrderedCollection new
 ]
 
@@ -55,8 +54,7 @@ ASLLMethodOutput >> methodGenerator [
 { #category : 'accessing' }
 ASLLMethodOutput >> nextVariable [
 
-	sequence := sequence + 1.
-	^ sequence asString
+	^ currentBasicBlock nextSequence asString
 ]
 
 { #category : 'code generation' }
@@ -72,7 +70,7 @@ ASLLMethodOutput >> nextVariableEqualsOffset: offset from: register named: name 
 		nextPutAll: ', i64 0, i32 ';
 		print: offset;
 		nextPutAll: '
-  %.';
+  %';
 		nextPutAll: name;
 		nextPutAll: ' = load i64, ptr %';
 		nextPutAll: label;
@@ -81,8 +79,32 @@ ASLLMethodOutput >> nextVariableEqualsOffset: offset from: register named: name 
 ]
 
 { #category : 'code generation' }
+ASLLMethodOutput >> outputAddressFromContext: offset named: name [
+
+	self
+		nextPutAll: '  %';
+		nextPutAll: name;
+		nextPutAll: '.address = getelementptr { [0 x i64] }, ptr %context, i64 0, i32 ';
+		print: offset + 7;
+		nextPutAll: ''
+
+]
+
+{ #category : 'code generation' }
 ASLLMethodOutput >> outputBasicBlockEnd [
 
+]
+
+{ #category : 'code generation' }
+ASLLMethodOutput >> outputDefineFromContext: idx named: name [
+
+	^ self nextVariableEqualsOffset: idx + 7 from: 'context' named: name
+]
+
+{ #category : 'code generation' }
+ASLLMethodOutput >> outputDefineFromStack: idx named: name [
+
+	^ self nextVariableEqualsOffset: idx from: 'sp' named: name
 ]
 
 { #category : 'code generation' }
@@ -143,27 +165,16 @@ ASLLMethodOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASLLMethodOutput >> outputMethodStart: bbLabel [
+ASLLMethodOutput >> outputMethodStart: bb [
 
-	sequence := 0.
 	self outputMethodEnd.
 	self
 		nextPutAll: 'define ptr @';
-		nextPutAll: bbLabel;
+		nextPutAll: bb label;
 		nextPutAll:
 			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {
 '.
-	inMethod := true.
-	currentBasicBlock
-		namedContext: [ :idx :name |
-			self
-				nextVariableEqualsOffset: idx + 7
-				from: 'context'
-				named: name ]
-		stack: [ :idx :name |
-			self nextVariableEqualsOffset: idx from: 'sp' named: name ]
-		other: [ :idx :name :source |
-			self nextVariableOtherOffset: idx named: name source: source]
+	inMethod := true
 ]
 
 { #category : 'accessing' }

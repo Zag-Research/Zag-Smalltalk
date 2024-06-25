@@ -25,6 +25,12 @@ ASStack >> drop: count [
 	self error
 ]
 
+{ #category : 'testing' }
+ASStack >> hasContext [
+
+	^ false
+]
+
 { #category : 'API' }
 ASStack >> initLocalNamed: name [
 

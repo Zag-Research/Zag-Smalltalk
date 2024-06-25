@@ -53,8 +53,30 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 		current next
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
-				current := rest atRandom ifNil: [ ^ self ] ]
+				current := rest anyOne ifNil: [ ^ self ] ]
 			ifNotNil: [ :next | current := next ].
+		rest remove: current ]
+]
+
+{ #category : 'enumerating' }
+ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
+
+	| rest current namedBlock |
+	ASCBlock resetLabelIndex.
+	namedBlock := current := basicBlocks first.
+	rest := basicBlocks allButFirst asSet.
+	[ true ] whileNotNil: [
+		aBlock value: current.
+		current next ifNotNil: [ :next | current := next ] ifNil: [
+			rest isEmpty ifTrue: [ ^ self ].
+			current := rest
+				           detect: [ :each | each namedBlock = namedBlock ]
+				           ifFound: #yourself
+				           ifNone: [
+				           rest
+					           detect: #isNamedBlock
+					           ifFound: #yourself
+					           ifNone: [ ^ self ] ] ].
 		rest remove: current ]
 ]
 

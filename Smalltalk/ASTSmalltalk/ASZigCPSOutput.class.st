@@ -108,12 +108,11 @@ ASZigCPSOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigCPSOutput >> outputMethodStart: bbLabel [
-
+ASZigCPSOutput >> outputMethodStart: bb [
 
 	self
 		nextPutAll: 'fn ';
-		id: bbLabel;
+		id: bb label;
 		nextPutAll:
 			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
 '.
