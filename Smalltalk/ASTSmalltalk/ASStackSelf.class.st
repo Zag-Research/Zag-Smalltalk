@@ -10,10 +10,11 @@ Class {
 }
 
 { #category : 'enumerating' }
-ASStackSelf >> do: ignored [
+ASStackSelf >> do: aBlock [
 	" never go deeper than this "
 
-	
+	aBlock value: self.
+
 ]
 
 { #category : 'initialization' }
@@ -28,4 +29,11 @@ ASStackSelf >> intoContext: anInteger [
 
 	isInContext := true.
 	offset := anInteger
+]
+
+{ #category : 'data flow instructions' }
+ASStackSelf >> makeStackTheSource [
+
+	source := source makeStackTheSource.
+
 ]

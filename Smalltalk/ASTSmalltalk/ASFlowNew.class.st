@@ -14,3 +14,9 @@ Class {
 ASFlowNew >> makeStackTheSource [
 
 ]
+
+{ #category : 'printing' }
+ASFlowNew >> printOn: aStream [
+
+	^ aStream nextPutAll: 'new'
+]

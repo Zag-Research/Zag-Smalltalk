@@ -35,10 +35,10 @@ ASStackTest >> testNames [
 	stack at: #p1 put: 17.
 	stack at: #l1 put: 42.
 	stack := stack push: 99.
-	self assert: stack drop drop drop value equals: 17.
 	self assert: (stack at: #p1) offset equals: -2.
 	self deny: (stack at: #p1) isInContext.
 	stack := stack makeContextRequired: [  ].
+	self assert: stack offset equals: -1.
 	self assert: (stack at: #p1) offset equals: 2.
 	self assert: (stack at: #p1) isInContext.
 	stack := stack push: 12.

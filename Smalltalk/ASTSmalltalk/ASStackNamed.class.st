@@ -3,10 +3,12 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackTemporary',
+	#superclass : 'ASStackNonEmpty',
 	#instVars : [
 		'name',
-		'isInContext'
+		'isInContext',
+		'value',
+		'source'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -18,6 +20,25 @@ ASStackNamed >> at: aSymbol [
 
 	aSymbol = name ifTrue: [ ^ self ].
 	^ rest at: aSymbol
+]
+
+{ #category : 'displaying' }
+ASStackNamed >> displayStringOn: stream [
+
+	self printNameOn: stream.
+	stream
+		nextPut: Character space;
+		nextPutAll: name;
+		nextPutAll: ' (';
+		print: offset;
+		nextPutAll: (isInContext
+				 ifTrue: [ 'C' ]
+				 ifFalse: [ '' ]);
+		nextPut: $);
+		nextPutAll: '= ';
+		print: value;
+		nextPutAll: ' >';
+		print: source
 ]
 
 { #category : 'accessing' }
@@ -43,7 +64,7 @@ ASStackNamed >> intoContext: anInteger [
 
 	isInContext := true.
 	offset := anInteger.
-	rest intoContext: anInteger + 1
+	^ rest intoContext: anInteger + 1
 ]
 
 { #category : 'testing' }
@@ -56,7 +77,8 @@ ASStackNamed >> isInContext [
 ASStackNamed >> makeContextRequired: aBlock [
 
 	| context |
-	context := ASStackContext fromStack: (self intoContext: 0).
+	self intoContext: 0.
+	context := ASStackContext fromStack: self.
 	aBlock cull: context.
 	^ context
 ]
@@ -71,6 +93,22 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackNamed >> namedContext: contextBlock stack: stackBlock other: otherBlock [
+
+	isInContext
+		ifTrue: [ source use: contextBlock offset: offset name: name ]
+		ifFalse: [ source use: stackBlock offset: offset name: name ]
+]
+
+{ #category : 'data flow instructions' }
+ASStackNamed >> newElementFor: aBasicBlock [
+
+	| new |
+	new := aBasicBlock classForTemporaries new id: self id.
+	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
+]
+
 { #category : 'API' }
 ASStackNamed >> replicate: aStack [
 
@@ -78,4 +116,25 @@ ASStackNamed >> replicate: aStack [
 		  name: name;
 		  value: value;
 		  source: source
+]
+
+{ #category : 'accessing' }
+ASStackNamed >> source [
+	^ source
+]
+
+{ #category : 'accessing' }
+ASStackNamed >> source: anASFlowNew [ 
+	source := anASFlowNew
+]
+
+{ #category : 'evaluating' }
+ASStackNamed >> value [
+
+	^ value
+]
+
+{ #category : 'accessing' }
+ASStackNamed >> value: anInteger [ 
+	value := anInteger
 ]

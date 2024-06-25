@@ -137,8 +137,7 @@ ASCMethodBlock >> selector: aString [
 ]
 
 { #category : 'data flow instructions' }
-ASCMethodBlock >> updateDependencies [
+ASCMethodBlock >> updateDependencies: ignored [
 	" a MethodBlock has no dependencies "
 
-	^ #( )
 ]

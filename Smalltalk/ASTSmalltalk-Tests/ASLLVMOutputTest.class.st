@@ -107,14 +107,14 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci_alt [
 ASLLVMOutputTest >> testLLVM_inlined_simple [
 
 	| cg |
-	cg := output codeGenerator.
-	cg targetClass: SmallInteger.
-	cg selector: #simple.
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #simple.
 	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
 	cg resolveFlowDependencies.
 	cg inspect.
-	output outputToStream.
+	output
+		codeGenerator: cg;
+		outputToStream.
 	file asString inspect
 ]

@@ -155,13 +155,15 @@ ASLLMethodOutput >> outputMethodStart: bbLabel [
 '.
 	inMethod := true.
 	currentBasicBlock
-		namedContext: [ :idx :element |
+		namedContext: [ :idx :name |
 			self
 				nextVariableEqualsOffset: idx + 7
 				from: 'context'
-				named: element name ]
-		stack: [ :idx :element |
-			self nextVariableEqualsOffset: idx from: 'sp' named: element name ]
+				named: name ]
+		stack: [ :idx :name |
+			self nextVariableEqualsOffset: idx from: 'sp' named: name ]
+		other: [ :idx :name :source |
+			self nextVariableOtherOffset: idx named: name source: source]
 ]
 
 { #category : 'accessing' }

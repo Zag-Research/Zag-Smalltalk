@@ -26,6 +26,19 @@ ASStackTemporary >> at: nameOrIndex [
 	^ rest at: nameOrIndex
 ]
 
+{ #category : 'displaying' }
+ASStackTemporary >> displayStringOn: stream [
+
+	self printNameOn: stream.
+	stream
+		nextPutAll: ' (';
+		print: offset;
+		nextPutAll: ') = ';
+		print: value;
+		nextPutAll: ' >';
+		print: source
+]
+
 { #category : 'accessing' }
 ASStackTemporary >> drop [
 
@@ -59,7 +72,8 @@ ASStackTemporary >> makeContextRequired: aBlock [
 { #category : 'data flow instructions' }
 ASStackTemporary >> makeStackTheSource [
 
-	source := source makeStackTheSource
+	source := source makeStackTheSource.
+	^ rest makeStackTheSource
 ]
 
 { #category : 'data flow instructions' }
@@ -86,18 +100,18 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 		  source: source
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackTemporary >> namedContext: contextBlock stack: stackBlock other: otherBlock [
+
+	source use: stackBlock offset: offset name: 'temporary'
+]
+
 { #category : 'data flow instructions' }
 ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
 	new := aBasicBlock classForTemporaries new id: self id.
 	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
-]
-
-{ #category : 'accessing' }
-ASStackTemporary >> offset [
-
-	^ offset
 ]
 
 { #category : 'API' }

@@ -268,6 +268,34 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 		<< $)
 ]
 
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionStack: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'Stack'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: stack asOrderedCollection;
+		  yourself
+
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionZagCode [
+
+	<inspectorPresentationOrder: 0 title: 'ZagCode'>
+	^ SpTreeTablePresenter new
+		  roots: operations;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Operations' evaluated: #contents);
+		  yourself
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
@@ -298,6 +326,13 @@ ASCBasicBlock >> maxDepth [
 ASCBasicBlock >> method [
 
 	^ method ifNil: [ method := sourceBlocks atRandom method ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> namedContext: namedBlock stack: stackBlock other: otherBlock [
+
+	^ stack do: [ :element |
+		  element namedContext: namedBlock stack: stackBlock other: otherBlock ]
 ]
 
 { #category : 'data flow instructions' }
@@ -521,16 +556,6 @@ ASCBasicBlock >> storeVariable: aSymbol [
 { #category : 'accessing' }
 ASCBasicBlock >> top [
 	^ stack top
-]
-
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> updateDependencies [
-
-	sourceElements do: [ :sourceElement |
-		(sourceElement source isReferenced and: [
-			 self anySourcesNonNilFor: sourceElement id ]) ifTrue: [
-			sourceBlocks do: [ :block | block reference: sourceElement id ] ] ].
-	^ sourceBlocks
 ]
 
 { #category : 'data flow instructions' }

@@ -357,7 +357,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 	context writeNewDeclarationFor: self on: self.
 	self
 		nextPutAll: 'compileMethod(';
-		putSymbol: codeGenerator selector;
+		putSymbol: self selector;
 		nextPut: $,;
 		print: numLocals;
 		nextPut: $,;

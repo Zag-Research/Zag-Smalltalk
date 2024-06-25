@@ -3,11 +3,16 @@ I reperesent an empty stack of values within a method.
 "
 Class {
 	#name : 'ASStack',
-	#superclass : 'Object',
+	#superclass : 'Collection',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'displaying' }
+ASStack >> displayStringOn: stream [
+	self printNameOn: stream.
+]
 
 { #category : 'enumerating' }
 ASStack >> do: ignored [
@@ -38,6 +43,21 @@ ASStack >> initSelf [
 	^ ASStackSelf fromStack: self
 ]
 
+{ #category : 'inspecting' }
+ASStack >> inspectionItems: aBuilder [
+
+	<inspectorPresentationOrder: 0 title: 'Stack'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: self asOrderedCollection;
+		  yourself
+]
+
 { #category : 'API' }
 ASStack >> intoContext: anInteger [ 
 
@@ -49,10 +69,25 @@ ASStack >> isEmpty [
 	^ true
 ]
 
+{ #category : 'data flow instructions' }
+ASStack >> makeStackTheSource [
+]
+
+{ #category : 'instance creation' }
+ASStack >> newElementFor: anASCInlineBlock [ 
+
+]
+
 { #category : 'accessing' }
 ASStack >> offset [
 
 	^ 0
+]
+
+{ #category : 'printing' }
+ASStack >> printOn: aStream [
+
+	^ aStream nextPutAll: self className
 ]
 
 { #category : 'adding' }

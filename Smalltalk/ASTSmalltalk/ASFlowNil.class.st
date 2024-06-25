@@ -45,3 +45,9 @@ ASFlowNil >> markReferenced [
 
 	^ false
 ]
+
+{ #category : 'printing' }
+ASFlowNil >> printOn: aStream [
+
+	^ aStream nextPutAll: 'nil'
+]
