@@ -70,7 +70,7 @@ ASOutput >> context: anASContext [
 
 	context := anASContext.
 	anASContext addComponent: self.
-	converter := anASContext converter
+	converter := nil "anASContext converter"
 ]
 
 { #category : 'API' }

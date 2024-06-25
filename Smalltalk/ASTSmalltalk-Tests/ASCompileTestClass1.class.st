@@ -101,6 +101,13 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> collectionAnyOne [
+| someArray |
+	someArray = #(5 6 2 10 88).
+	^ someArray anyOne
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].

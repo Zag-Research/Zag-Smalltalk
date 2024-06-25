@@ -268,6 +268,16 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testCollectionAnyOne [
+	"blockValue
+
+	^ [ 4 ] value "
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #collectionAnyOne)
+		inspect.
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci [ 
 
 	self

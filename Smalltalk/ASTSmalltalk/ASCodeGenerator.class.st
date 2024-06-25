@@ -28,7 +28,8 @@ Class {
 		'embeddings',
 		'inlineSelectors',
 		'implementors',
-		'returnBlock'
+		'returnBlock',
+		'embeddingReturnTypes'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -324,6 +325,8 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 	returnBlock := self newInline.
 	self branch: inlineBlock.
 	code := inlineBlock.
+	"need to add self args and parameters"
+	self halt.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
 		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		code := returnBlock.
@@ -454,6 +457,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 	block := ASCBlock with: anASBlock.
 	"block name: name asSymbol."
 	blockClosures add: block.
+	code setStackForBlock: block.
 	code
 		doPush: block;
 		put: block
