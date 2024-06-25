@@ -36,8 +36,7 @@ ASStackContext >> makeContextRequired: aFullBlockClosure [
 ]
 
 { #category : 'data flow instructions' }
-ASStackContext >> newElementFor: aBasicBlock [ 
-
+ASStackContext >> newElementFor: aBasicBlock [
 	^ self class new fromStack: (rest newElementFor: aBasicBlock)
 ]
 

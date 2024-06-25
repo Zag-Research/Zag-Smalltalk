@@ -193,7 +193,7 @@ ASCBasicBlock >> embed: aSymbol return: aClass [
 	self put: sendEmbed.
 	"we should know the type! can push something more than unknown here"
 	self
-		stack: ((stack drop: aSymbol numArgs + 1)
+		setStack: ((stack drop: aSymbol numArgs + 1)
 		push: (ASCClassValue new init: aClass)).
 	^ nil
 ]

@@ -37,6 +37,12 @@ ASBlock >> printOn: s [
 	super printOn: s
 ]
 
+{ #category : 'compiling' }
+ASBlock >> scope [
+"what are we returning here?"
+^nil
+]
+
 { #category : 'accessing' }
 ASBlock >> selector [
 

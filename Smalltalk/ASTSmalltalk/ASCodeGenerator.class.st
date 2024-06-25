@@ -203,7 +203,7 @@ self halt.
 ASCodeGenerator >> implementors: aSelector [
 
 	"^ SystemNavigation default allImplementorsOf: aSymbol"
-	^implementors at: aSelector
+	(implementors includesKey: aSelector) ifTrue: [ ^implementors at: aSelector ] ifFalse: [ ^ {} ]
 ]
 
 { #category : 'accessing' }
@@ -255,7 +255,12 @@ ASCodeGenerator >> initialize [
 	implementors at: #not put: { (Number >> #abs) }.
 	implementors at: #value put: { (ASTBlockClosure >> #value) }.
 	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }.
-	implementors at: #fibonacci_fast put: { (Integer >> #fibonacci_fast) }
+	implementors
+		at: #fibonacci_fast
+		put: { (Integer >> #fibonacci_fast) }.
+	implementors
+		at: #fibonacci_accumulator:prev:
+		put: { (Integer >> #fibonacci_accumulator:prev:) }	
 ]
 
 { #category : 'translating' }

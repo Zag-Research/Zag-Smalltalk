@@ -13,6 +13,7 @@ Class {
 ASLocalNamed >> newElementFor: aBasicBlock [
 
 	| new |
+	self halt.
 	new := aBasicBlock classForLocals new id: name.
 	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
 ]

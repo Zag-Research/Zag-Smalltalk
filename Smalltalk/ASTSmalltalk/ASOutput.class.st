@@ -46,12 +46,12 @@ ASOutput >> blockNumber [
 { #category : 'API' }
 ASOutput >> codeGenerator [
 
-	^ self shouldNotImplement 
+"	^ self shouldNotImplement 
 "	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   targetClass: forClass;
-			                   inlining: inlining ]"
+			                   inlining: inlining ]
 ]
 
 { #category : 'accessing' }
