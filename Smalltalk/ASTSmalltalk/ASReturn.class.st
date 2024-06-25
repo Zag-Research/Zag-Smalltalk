@@ -90,9 +90,8 @@ ASReturn >> zigWalkBlockReturn: anASCodeGenerator [
 
 { #category : 'compiling' }
 ASReturn >> zigWalkDiscard: aGenerator [
-
 	(expression zigWalkForReturn: aGenerator) ifFalse: [
-	^ aGenerator returnTop]
+		^ aGenerator returnTop ]
 ]
 
 { #category : 'as yet unclassified' }

@@ -46,8 +46,8 @@ ASExpression >> zigWalkForReturn: aGenerator [
 
 { #category : 'as yet unclassified' }
 ASExpression >> zigWalkInlineBlockReturn: anASCodeGenerator [
-
-	self shouldBeImplemented
+	"we're not a return so just walk self"
+	self zigWalk: anASCodeGenerator 
 ]
 
 { #category : 'compiling' }

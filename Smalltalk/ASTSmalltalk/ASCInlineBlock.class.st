@@ -103,6 +103,11 @@ ASCInlineBlock >> selfElementClass [
 	^ ASStackSelf
 ]
 
+{ #category : 'initialization' }
+ASCInlineBlock >> setStackForBlock: anASCBlock [ 
+	anASCBlock scope: stack.
+]
+
 { #category : 'printing' }
 ASCInlineBlock >> updateStack: aSymbol [
 	^ nil

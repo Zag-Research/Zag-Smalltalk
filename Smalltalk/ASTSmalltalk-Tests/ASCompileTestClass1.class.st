@@ -101,6 +101,13 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> collectionAnyOne [
+| someArray |
+	someArray = #(5 6 2 10 88).
+	^ someArray anyOne
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].
@@ -118,6 +125,12 @@ ASCompileTestClass1 >> fib: anInt [
 ASCompileTestClass1 >> fibonacci [
 
 	^ self < 2 ifTrue: [ 1 ] ifFalse: [(self - 1) fibonacci + (self - 2) fibonacci]
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> fibonacci_fast [
+
+	^ 23 fibonacci_fast
 ]
 
 { #category : 'testing - examples' }
@@ -186,6 +199,12 @@ ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
 ASCompileTestClass1 >> prim [
 	<primitive: 1>
 	^ false
+]
+
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> recursiveMethod [
+	^self recursiveMethod
+
 ]
 
 { #category : 'testing - examples' }

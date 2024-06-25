@@ -46,12 +46,12 @@ ASOutput >> blockNumber [
 { #category : 'API' }
 ASOutput >> codeGenerator [
 
-	^ self shouldNotImplement 
+"	^ self shouldNotImplement 
 "	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
 			                   targetClass: forClass;
-			                   inlining: inlining ]"
+			                   inlining: inlining ]
 ]
 
 { #category : 'accessing' }
@@ -70,7 +70,7 @@ ASOutput >> context: anASContext [
 
 	context := anASContext.
 	anASContext addComponent: self.
-	converter := anASContext converter
+	converter := nil "anASContext converter"
 ]
 
 { #category : 'API' }

@@ -3,11 +3,19 @@ I am a stack element for the `self` position on the stack. This let's code be si
 "
 Class {
 	#name : 'ASStackSelf',
-	#superclass : 'ASParameterNamed',
-	#category : 'ASTSmalltalk-Stack',
+	#superclass : 'ASStackNamed',
+	#instVars : [
+		'codeBlock'
+	],
+	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
-	#tag : 'Stack'
+	#tag : 'CodeGen'
 }
+
+{ #category : 'as yet unclassified' }
+ASStackSelf >> codeBlock: aBlock [
+	codeBlock := aBlock
+]
 
 { #category : 'enumerating' }
 ASStackSelf >> do: aBlock [

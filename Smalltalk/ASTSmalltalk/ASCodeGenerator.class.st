@@ -28,7 +28,8 @@ Class {
 		'embeddings',
 		'inlineSelectors',
 		'implementors',
-		'returnBlock'
+		'returnBlock',
+		'embeddingReturnTypes'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -121,6 +122,13 @@ ASCodeGenerator >> compileBlock: aBlockClosure [
 		generateCode: aBlockClosure block for: BlockClosure"
 ]
 
+{ #category : 'compiling' }
+ASCodeGenerator >> compileMethodFor: aSelector for: aClass [ 
+	aClass methodDictionary at: aSelector ifPresent: [ ^aClass >> aSelector ].
+	aClass superclass ifNil: [ ^nil ].
+	^ self compileMethodFor: aSelector for: aClass superclass 
+]
+
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
@@ -196,7 +204,7 @@ self halt.
 ASCodeGenerator >> implementors: aSelector [
 
 	"^ SystemNavigation default allImplementorsOf: aSymbol"
-	^implementors at: aSelector
+	(implementors includesKey: aSelector) ifTrue: [ ^implementors at: aSelector ] ifFalse: [ ^ {} ]
 ]
 
 { #category : 'accessing' }
@@ -217,12 +225,17 @@ ASCodeGenerator >> initialize [
 	maxDepth := 0.
 	inline := false.
 	tailCallOptimize := true.
-	inlineSelectors := OrderedCollection new.
 	embeddings := {
 		              (Integer >> #-).
-		              (Integer >> #'<=')".
-		              (ASTBlockClosure >> #value).
-		              (BlockClosure >> #value)" }.
+		              (Integer >> #'<=').
+		              (SmallInteger >> #<).
+		              (SmallInteger >> #+) }.
+	embeddingReturnTypes := Dictionary new.
+	embeddingReturnTypes at: #- put: SmallInteger.
+	embeddingReturnTypes at: #'<=' put: Boolean.
+	embeddingReturnTypes at: #< put: Boolean.
+	embeddingReturnTypes at: #+ put: SmallInteger.
+
 	implementors := Dictionary new.
 	implementors at: #not put: {
 			(True >> #not).
@@ -242,7 +255,13 @@ ASCodeGenerator >> initialize [
 	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
 	implementors at: #not put: { (Number >> #abs) }.
 	implementors at: #value put: { (ASTBlockClosure >> #value) }.
-	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }
+	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }.
+	implementors
+		at: #fibonacci_fast
+		put: { (Integer >> #fibonacci_fast) }.
+	implementors
+		at: #fibonacci_accumulator:prev:
+		put: { (Integer >> #fibonacci_accumulator:prev:) }	
 ]
 
 { #category : 'translating' }
@@ -263,21 +282,54 @@ ASCodeGenerator >> inlineBlock: aSymbol next: common [
 		targetClass := savedTargetClass ]
 ]
 
-{ #category : 'translating' }
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
+	"do we need to test for recursion?"
+	
+	"find the block on the stack"
+	code stack value block zigWalkInlineMethod: self
+]
+
+{ #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	| inlineBlock savedReturn savedTargetClass |
+	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
 	savedTargetClass := targetClass.
+	"create a new block "
 	inlineBlock := self newInline.
 	savedReturn := returnBlock.
 	[
-	targetClass :=  aCompileMethod classBinding value.
+	targetClass := aCompileMethod classBinding value.
 	returnBlock := self newInline.
 	self branch: inlineBlock.
 	code := inlineBlock.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
-		self.
-	code := returnBlock ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock" "self can hold the return block"
+		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		code := returnBlock.
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [ 
+
+	| inlineBlock savedReturn savedTargetClass |
+	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
+	savedTargetClass := targetClass.
+	"create a new block "
+	inlineBlock := self newInline.
+	savedReturn := returnBlock.
+	[
+	targetClass := inlinedTargetClass.
+	returnBlock := self newInline.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	"need to add self args and parameters"
+	self halt.
+	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
+		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		code := returnBlock.
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
 ]
@@ -371,8 +423,9 @@ ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
-aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
-	code nonlocalNameLookupObject: aCodeGenerator]
+
+	aCodeGenerator ifNotNil: [
+		parentCodeGenerator := aCodeGenerator ]
 ]
 
 { #category : 'API' }
@@ -404,6 +457,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 	block := ASCBlock with: anASBlock.
 	"block name: name asSymbol."
 	blockClosures add: block.
+	code setStackForBlock: block.
 	code
 		doPush: block;
 		put: block
@@ -512,11 +566,13 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
-		(self isEmbedded: aTargetClass >> aSymbol) ifTrue: [
-			^ self sendEmbedded: aSymbol ].
+		aTargetClass isBlock ifTrue: [
+			^ self inlineBlock: aSymbol next: nil ].
+		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass))
+			ifTrue: [ ^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
-		(self sendInline: aSymbol targetClass: aTargetClass tail:tail) ifTrue: [
-			^ true "return something?" ] ].
+		(self sendInline: aSymbol targetClass: aTargetClass tail: tail)
+			ifTrue: [ ^ true "return something?" ] ].
 	self manifest: code.
 	bb := code
 		      send: aSymbol
@@ -531,7 +587,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |
-	bb := code embed: aSymbol.
+	bb := code embed: aSymbol return: (embeddingReturnTypes at: aSymbol).
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
@@ -539,13 +595,11 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 
 { #category : 'API' }
 ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
-	"check if we're recursive"
-
-	inline ifFalse: [ ^ false ].
-	(inlineSelectors includes: aSymbol) ifTrue: [ ^ false ].
-	inlineSelectors addLast: aSymbol.
-	[
 	| symbolImplementors common targets |
+	
+	"check if we're recursive"
+	inline ifFalse: [ ^ false ].
+	
 	"check if this is a self call"
 	targetClass == aTargetClass ifTrue: [
 		self inlineMethod: aTargetClass >> aSymbol.
@@ -563,9 +617,8 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 	targets with: symbolImplementors do: [ :target :compileMethod |
 		self setBasicBlock: target.
 		"walk the sends method AST"
-		self inlineMethod: aTargetClass >> aSymbol.
-		self branch: common ] ] ensure: [ self setBasicBlock: common ] ]
-		ensure: [ inlineSelectors removeLast ].
+		self inlineMethod: compileMethod for: target.
+		self branch: common ] ] ensure: [ self setBasicBlock: common ].
 	^ true
 ]
 
@@ -600,7 +653,7 @@ targetClass:= anObject
 { #category : 'accessing' }
 ASCodeGenerator >> topOfStackType [
 
-	^ self inferType: (code at: 0) top
+	^ self inferType: (code at: 0) value
 ]
 
 { #category : 'post processing' }

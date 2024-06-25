@@ -8,7 +8,8 @@ Class {
 		'block',
 		'manifest',
 		'name',
-		'label'
+		'label',
+		'scope'
 	],
 	#classInstVars : [
 		'index'
@@ -46,7 +47,7 @@ ASCBlock >> block [
 { #category : 'accessing' }
 ASCBlock >> inferType: anASCodeGenerator [
 
-	^ ASTBlockClosure "anASCodeGenerator targetClass"
+	^ BlockClosure new "anASCodeGenerator targetClass"
 ]
 
 { #category : 'initialization' }
@@ -102,6 +103,16 @@ ASCBlock >> outputTo: output [
 
 manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self
+]
+
+{ #category : 'accessing' }
+ASCBlock >> scope [
+^scope
+]
+
+{ #category : 'accessing' }
+ASCBlock >> scope: aScope [
+scope := aScope 
 ]
 
 { #category : 'instance creation' }

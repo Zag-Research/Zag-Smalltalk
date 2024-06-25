@@ -185,6 +185,19 @@ ASCBasicBlock >> embed: aSymbol [
 	^ nil
 ]
 
+{ #category : 'abstract interpretation' }
+ASCBasicBlock >> embed: aSymbol return: aClass [
+
+	| sendEmbed |
+	sendEmbed := ASCEmbed with: aSymbol.
+	self put: sendEmbed.
+	"we should know the type! can push something more than unknown here"
+	self
+		setStack: ((stack drop: aSymbol numArgs + 1)
+		push: (ASCClassValue new init: aClass)).
+	^ nil
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> endWithReturnTop [
 
@@ -306,6 +319,12 @@ ASCBasicBlock >> inspectionZagCode [
 		  yourself
 ]
 
+{ #category : 'testing' }
+ASCBasicBlock >> isRecursive: aCompileMethod [ 
+	"test if the given compile method has already been visited"
+	^ false
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
@@ -365,12 +384,6 @@ ASCBasicBlock >> nextInline [
 { #category : 'successor sequences' }
 ASCBasicBlock >> nextSequence [
 	^ self subclassResponsibility
-]
-
-{ #category : 'instance initialization' }
-ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
-
-	stack nonlocalNameLookupObject: aGenerator
 ]
 
 { #category : 'API' }
@@ -509,7 +522,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCInlineBlock new ].
+	next := tailCall ifFalse: [ self halt. ASCInlineBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;

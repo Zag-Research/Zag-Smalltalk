@@ -208,9 +208,73 @@ ASCompilerInlineTest >> testBlockValueInlined [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
+"bracketSend
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #bracketSend)
-		inspect
+	5 + (self fib: 2)"
+	self
+		assert: ASCompileTestClass1 >> #bracketSend
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
+&e.pushContext,"^",
+":Mfoo:1",
+&e.pushLocal,0,
+&e.case,,
+&e.setupSend,Sym.i_1,
+&e.dynamicDispatch,
+ });
+const Sym = struct {
+	bar: Object,
+    const ss = heap.compileStrings(.{
+	"bar",
+    });
+    usingnamespace symbol.symbols;
+    fn init() Sym {
+        return .{
+	.bar = symbol.intern(ss[0].asObject()),
+        };
+    }
+};
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+    sym = Sym.init();
+Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testCollectionAnyOne [
+	"blockValue
+
+	^ [ 4 ] value "
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #collectionAnyOne)
+		inspect.
 ]
 
 { #category : 'tests' }
@@ -269,6 +333,17 @@ pub fn main() !void {
     initSmalltalk();
 }
 '
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciFastInline [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ p1 ]
+"
+
+	(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #fibonacci_fast) inspect
 ]
 
 { #category : 'tests' }
@@ -360,7 +435,45 @@ ASCompilerInlineTest >> testFooInlined [
 	"bar
 	^ 42"
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #foo) inspect
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #foo) inspect.
+	self
+		assert: ASCompileTestClass1 >> #foo
+		outputInlinesTo: 'const std = @import("std");
+const config = @import("zag/config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const heap = @import("zag/heap.zig");
+const symbol = @import("zag/symbol.zig");
+const primitives = @import("zag/primitives.zig");
+const object = @import("zag/zobject.zig");
+const Object = object.Object;
+const Context = @import("zag/context.zig").Context;
+const execute = @import("zag/execute.zig");
+const PC = execute.PC;
+const SP = execute.SP;
+const TFProcess = execute.TFProcess;
+const tfAsProcess = execute.tfAsProcess;
+const TFContext = execute.TFContext;
+const tfAsContext = execute.tfAsContext;
+const MethodSignature = execute.MethodSignature;
+const compileMethod = execute.compileMethod;
+var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
+&e.pushStack,1,
+&e.pushLiteral,Object.from(42),
+&e.returnTop,
+ });
+var sym: Sym = undefined;
+const e = primitives.embedded;
+const p = primitives.primitives;
+fn initSmalltalk() void {
+    primitives.init();
+Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
+}
+pub fn main() !void {
+    initSmalltalk();
+}
+'
 ]
 
 { #category : 'tests' }
@@ -408,6 +521,15 @@ ASCompilerInlineTest >> testInsertionSort [
 	self
 		assert: #( 6 2 4 3 5 1 ) copy insertionSorted
 		equals: #( 1 2 3 4 5 6 )
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testRecursiveMethod [
+	"recursiveMethod
+	^ recursiveMethod"
+
+		(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #recursiveMethod) inspect
 ]
 
 { #category : 'tests' }
