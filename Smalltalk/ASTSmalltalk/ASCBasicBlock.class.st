@@ -453,7 +453,7 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
 	stack := (ASStackNamed fromStack: stack)
 		         name: aBlockClosure name.
-	^ stack top: aBlockClosure
+	^ stack value: aBlockClosure
 ]
 
 { #category : 'API' }
@@ -486,7 +486,7 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 
-	^ context ifNotNil: [ :c | aBlock value: c ]
+	^ context ifNotNil: [ :c | aBlock cull: c ]
 ]
 
 { #category : 'initialization' }
@@ -522,7 +522,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ self halt. ASCInlineBlock new ].
+	next := tailCall ifFalse: [ ASCInlineBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
@@ -538,6 +538,12 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 ASCBasicBlock >> setStack: anASStack [
 
 	stack := anASStack
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> setStackForBlock: anASCBlock [
+
+	^ anASCBlock scope: stack
 ]
 
 { #category : 'data flow instructions' }

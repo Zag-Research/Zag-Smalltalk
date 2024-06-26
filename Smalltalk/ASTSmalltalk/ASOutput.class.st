@@ -37,6 +37,15 @@ ASOutput >> blockClass [
 	^ self class blockClass
 ]
 
+{ #category : 'as yet unclassified' }
+ASOutput >> blockGenerator [
+
+	^ self blockClass new
+		  testing: testing;
+		  context: context;
+		  methodGenerator: self methodGenerator block: self blockNumber
+]
+
 { #category : 'API' }
 ASOutput >> blockNumber [
 
@@ -85,7 +94,7 @@ ASOutput >> generateCode [
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
 	ourObject ifNotNil: [
-	self codeGenerator generate: ourObject]
+	self codeGenerator generateFrom: ourObject]
 ]
 
 { #category : 'API' }
@@ -118,6 +127,12 @@ ASOutput >> initialize [
 { #category : 'API' }
 ASOutput >> inlining: aBoolean [
 	inlining := aBoolean
+]
+
+{ #category : 'as yet unclassified' }
+ASOutput >> methodGenerator [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'accessing' }

@@ -27,7 +27,7 @@ ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	self codeGenerator generate: ourObject.
+	self codeGenerator generateFrom: ourObject.
 	self outputToStream
 ]
 
