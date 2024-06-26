@@ -107,6 +107,14 @@ ASLLMethodOutput >> outputDefineFromStack: idx named: name [
 	^ self nextVariableEqualsOffset: idx from: 'sp' named: name
 ]
 
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> outputInlineBlockStart: anASCInlineBlock [
+
+	self print: anASCInlineBlock label;
+		nextPut: $:;
+		cr
+]
+
 { #category : 'code generation' }
 ASLLMethodOutput >> outputMBlockLabel: bbLabel [
 
@@ -180,7 +188,7 @@ ASLLMethodOutput >> outputMethodStart: bb [
 { #category : 'accessing' }
 ASLLMethodOutput >> prefix [
 
-	^ 'L'
+	^ ''
 ]
 
 { #category : 'API - remotes' }
@@ -241,6 +249,15 @@ ASLLMethodOutput >> visitEmbed: aString [
 
 	self nextPutAll: 'visitEmbed: ';nextPutAll: aString;nextPutAll: '
 '
+]
+
+{ #category : 'API' }
+ASLLMethodOutput >> visitPushBlock: aBlockClosure [
+
+	self
+		nextPutAll: 'pushblock';
+		print: aBlockClosure;
+		cr
 ]
 
 { #category : 'API' }

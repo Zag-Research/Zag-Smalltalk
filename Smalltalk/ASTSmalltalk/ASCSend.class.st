@@ -49,7 +49,7 @@ ASCSend >> manifestParameters: aStack [
 	| tStack |
 	tStack := aStack.
 	selector numArgs + 1 timesRepeat: [
-		tStack top makeManifest.
+		tStack value makeManifest.
 		tStack := tStack drop ]
 ]
 

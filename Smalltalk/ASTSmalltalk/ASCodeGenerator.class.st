@@ -36,6 +36,14 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator class >> targetClass: aClass ast: anAST [
+
+	^ self new
+		  targetClass: aClass;
+		  generateFrom: anAST
+]
+
 { #category : 'instance creation' }
 ASCodeGenerator class >> targetClass: aClass selector: aString [
 
@@ -108,18 +116,13 @@ ASCodeGenerator >> classOf: aString [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> compileBlock: aBlockClosure [
-	"compiling of blocks doesn't work right now"
+ASCodeGenerator >> compileBlocks: outputter [
+	"compiling of blocks probably doesn't work right now"
 
-	aBlockClosure manifest ifFalse: [ ^ self ].
-	code pushBlockNamed: aBlockClosure.
-	self incompleteImplementation
-	"self assert: aBlockClosure block ~= ourObject.
-	(self blockClass new testing: testing)
-		context: context;
-		parentCodeGenerator: codeGenerator;
-		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: aBlockClosure block for: BlockClosure"
+	(blockClosures reject: #manifest) do: [ :aBlockClosure |
+		outputter blockGenerator
+			parentCodeGenerator: self;
+			generateCode: aBlockClosure block for: BlockClosure ]
 ]
 
 { #category : 'compiling' }
@@ -182,15 +185,12 @@ ASCodeGenerator >> firstBlock [
 ]
 
 { #category : 'translating' }
-ASCodeGenerator >> generate: aMethodOrBlockNode [
+ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
 	aMethodOrBlockNode zigWalkMethod: self.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth ].
-	blockClosures := blockClosures select: #manifest.
-	blockClosures do: [ :aBlockClosure |
-		self compileBlock: aBlockClosure ]
+		maxDepth := maxDepth max: aBasicBlock maxDepth ]
 ]
 
 { #category : 'as yet unclassified' }
@@ -506,7 +506,7 @@ ASCodeGenerator >> resolveFlowDependencies [
 		temp := blocksToProcess.
 		blocksToProcess := Set new.
 		temp do: [ :block |
-			block updateDependencies: blocksToProcess ] ].
+			block updateDataDependencies: blocksToProcess ] ].
 	basicBlocks do: #simplifyDependencies
 ]
 

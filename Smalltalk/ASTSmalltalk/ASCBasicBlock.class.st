@@ -453,7 +453,7 @@ ASCBasicBlock >> pushBlockNamed: aBlockClosure [
 
 	stack := (ASStackNamed fromStack: stack)
 		         name: aBlockClosure name.
-	^ stack top: aBlockClosure
+	^ stack value: aBlockClosure
 ]
 
 { #category : 'API' }
@@ -486,7 +486,7 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 { #category : 'enumerating' }
 ASCBasicBlock >> requiredContextDo: aBlock [
 
-	^ context ifNotNil: [ :c | aBlock value: c ]
+	^ context ifNotNil: [ :c | aBlock cull: c ]
 ]
 
 { #category : 'initialization' }
@@ -540,6 +540,12 @@ ASCBasicBlock >> setStack: anASStack [
 	stack := anASStack
 ]
 
+{ #category : 'initialization' }
+ASCBasicBlock >> setStackForBlock: anASCBlock [
+
+	^ anASCBlock scope: stack
+]
+
 { #category : 'data flow instructions' }
 ASCBasicBlock >> simplifyDependencies [
 
@@ -580,7 +586,7 @@ ASCBasicBlock >> top [
 ]
 
 { #category : 'data flow instructions' }
-ASCBasicBlock >> updateDependencies: blocksToProcess [
+ASCBasicBlock >> updateDataDependencies: blocksToProcess [
 
 	sourceElements do: [ :sourceElement |
 		(sourceElement source isReferenced and: [

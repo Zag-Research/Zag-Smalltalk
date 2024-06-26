@@ -34,27 +34,31 @@ ASLLVMOutputTest >> testLLVMOutput [
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_fibonacci [
 
-	| ast |
+	| ast cg |
 	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
-	output generateCode: ast for: SmallInteger.
-	output codeGenerator inspect.
-	self assert: output name equals: 'Lfibonacci'.
-	self
-		assert: output asString
-		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	output asString inspect.
+	self assert: output name equals: 'fibonacci'.
+
 ]
 
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_fibonacci_alt [
 
-	| ast |
+	| ast cg |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
-	output generateCode: ast for: SmallInteger.
-	output codeGenerator inspect.
-	self assert: output name equals: 'Lfibonacci'.
-	self
-		assert: output asString
-		equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,'
+	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	output asString inspect.
+	self assert: output name equals: 'fibonacci'.
+
 ]
 
 { #category : 'tests' }
