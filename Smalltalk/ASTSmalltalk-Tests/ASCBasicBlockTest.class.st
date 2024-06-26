@@ -70,6 +70,13 @@ ASCBasicBlockTest >> testStackFlow [
 ]
 
 { #category : 'tests' }
+ASCBasicBlockTest >> test_extend [
+
+	"1. push temp values and convert to named values"
+	"2. test for scope"
+]
+
+{ #category : 'tests' }
 ASCBasicBlockTest >> test_plus_and_and [
 	"plus: n1 and: n2 and: n3
 
