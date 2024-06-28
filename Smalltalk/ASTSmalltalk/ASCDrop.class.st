@@ -1,8 +1,8 @@
 "
-Clean up stack and return nil
+I implement very simple operations described by a symbol
 "
 Class {
-	#name : 'ASCReturnNil',
+	#name : 'ASCDrop',
 	#superclass : 'ASCNonStackReferencingOperations',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -10,25 +10,22 @@ Class {
 }
 
 { #category : 'accessing' }
-ASCReturnNil >> next [
-
+ASCDrop >> next [
 	^ nil
 ]
 
 { #category : 'code generation' }
-ASCReturnNil >> outputTo: output [
+ASCDrop >> outputTo: aCodeEmitter [
 
-	^ output visitReturnNil
+	^ aCodeEmitter visitDrop
 ]
 
 { #category : 'stack' }
-ASCReturnNil >> resultStack: anASStack [
+ASCDrop >> resultStack: anASStack [
 
-	^ (anASStack at: #self) drop pushClass: UndefinedClass
+	^ anASStack drop
 ]
 
 { #category : 'instance creation' }
-ASCReturnNil >> with: ignored [
-
-
+ASCDrop >> with: ignored [
 ]

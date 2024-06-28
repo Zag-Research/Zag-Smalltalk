@@ -3,7 +3,7 @@ Clean up stack and return self
 "
 Class {
 	#name : 'ASCReturnSelf',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -19,6 +19,12 @@ ASCReturnSelf >> next [
 ASCReturnSelf >> outputTo: output [
 
 	^ output visitReturnSelf
+]
+
+{ #category : 'stack' }
+ASCReturnSelf >> resultStack: anASStack [
+
+	^ anASStack at: #self
 ]
 
 { #category : 'instance creation' }

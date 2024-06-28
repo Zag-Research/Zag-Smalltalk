@@ -7,9 +7,10 @@ Originally there was an ASCSend here but the compiler recognized that there were
 "
 Class {
 	#name : 'ASCCase',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
-		'map'
+		'map',
+		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -49,6 +50,12 @@ ASCCase >> inspectZagASTOn: aStream [
 	map printElementsOn: aStream
 ]
 
+{ #category : 'data flow instructions' }
+ASCCase >> markReferences [
+
+	(stack at: selector numArgs) markReferenced
+]
+
 { #category : 'accessing' }
 ASCCase >> next [
 
@@ -61,8 +68,17 @@ ASCCase >> outputTo: anOutput [
 		  visitCase: map
 ]
 
+{ #category : 'stack' }
+ASCCase >> resultStack: anASStack [
+
+	stack := anASStack.
+	^ anASStack
+]
+
 { #category : 'instance creation' }
-ASCCase >> with: ignored [
+ASCCase >> with: aSymbol [
 
+	selector := aSymbol
 
+	
 ]

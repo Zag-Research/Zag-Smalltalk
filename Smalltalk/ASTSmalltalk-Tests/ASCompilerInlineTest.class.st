@@ -17,10 +17,12 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
-	cg sendEmbedded: #'<='.
-	targets := cg classCase: {
-			           True.
-			           False }.
+	cg sendEmbedded: #<=.
+	targets := cg
+		           classCase: {
+				           True.
+				           False }
+		           selector: #ifTrue:.
 	cg setBasicBlock: targets first.
 	cg drop.
 	cg pushLiteral: 1.
@@ -52,9 +54,11 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
 	common := cg newInline.
-	targets := cg classCase: {
-			           True.
-			           False }.
+	targets := cg
+		           classCase: {
+				           True.
+				           False }
+		           selector: #ifTrue:.
 	cg setBasicBlock: targets first.
 	cg drop.
 	cg pushLiteral: 1.

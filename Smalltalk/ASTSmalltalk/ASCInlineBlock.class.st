@@ -91,12 +91,6 @@ ASCInlineBlock >> printOn: aStream [
 	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
-{ #category : 'printing' }
-ASCInlineBlock >> returnTop [
-
-	^ self put: ASCReturnTop new
-]
-
 { #category : 'data flow instructions' }
 ASCInlineBlock >> selfElementClass [
 

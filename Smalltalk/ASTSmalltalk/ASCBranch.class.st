@@ -3,7 +3,7 @@ I represent a return
 "
 Class {
 	#name : 'ASCBranch',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'bb'
 	],
@@ -31,6 +31,12 @@ ASCBranch >> next [
 ASCBranch >> outputTo: output [
 
 	^ output visitBranch: bb
+]
+
+{ #category : 'stack' }
+ASCBranch >> resultStack: anASStack [
+
+	^ anASStack
 ]
 
 { #category : 'instance creation' }

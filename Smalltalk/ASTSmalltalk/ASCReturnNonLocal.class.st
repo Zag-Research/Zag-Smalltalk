@@ -3,7 +3,7 @@ I represent a nonLocal return usually from a block. I must clean up stack and re
 "
 Class {
 	#name : 'ASCReturnNonLocal',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

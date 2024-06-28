@@ -2,7 +2,7 @@
 I am a value that tracks literal BlockClosures
 "
 Class {
-	#name : 'ASCBlockValue',
+	#name : 'ASCBlockClosureValue',
 	#superclass : 'ASCClassValue',
 	#instVars : [
 		'blocks'
@@ -13,6 +13,6 @@ Class {
 }
 
 { #category : 'accessing' }
-ASCBlockValue >> blocks [
+ASCBlockClosureValue >> blocks [
 	^ blocks ifNil: [ blocks := OrderedCollection new ]
 ]

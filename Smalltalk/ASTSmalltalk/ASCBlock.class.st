@@ -3,7 +3,7 @@ I hold a ASBlock AST, to prepare for analysis
 "
 Class {
 	#name : 'ASCBlock',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'block',
 		'manifest',
@@ -18,20 +18,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'label' }
-ASCBlock class >> labelIndex [
-
-	index ifNil: [ index := 0 ].
-	index := index + 1.
-	^ index
-]
-
-{ #category : 'label' }
-ASCBlock class >> resetLabelIndex [
-
- index := 0
-]
 
 { #category : 'asserting' }
 ASCBlock >> assertIsValue [
@@ -103,6 +89,12 @@ ASCBlock >> outputTo: output [
 
 manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self
+]
+
+{ #category : 'stack' }
+ASCBlock >> resultStack: anASStack [
+
+	^ anASStack push: block
 ]
 
 { #category : 'accessing' }

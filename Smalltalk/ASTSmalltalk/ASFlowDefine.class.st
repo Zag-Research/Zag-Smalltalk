@@ -5,31 +5,7 @@ I am common to all `ASCInlineBlock`s for a given `ASCReturnBlock` or `ASCMethodB
 Class {
 	#name : 'ASFlowDefine',
 	#superclass : 'ASFlowNonNil',
-	#instVars : [
-		'referenced'
-	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
-
-{ #category : 'initialization' }
-ASFlowDefine >> initialize [
-
-	super initialize.
-	referenced := false
-]
-
-{ #category : 'data flow instructions' }
-ASFlowDefine >> isReferenced [
-
-	^ referenced
-]
-
-{ #category : 'data flow instructions' }
-ASFlowDefine >> markReferenced [
-	" return true if we just made it true "
-
-	referenced ifTrue: [ ^ false ].
-	^ referenced := true
-]

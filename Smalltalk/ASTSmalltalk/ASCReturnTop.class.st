@@ -3,7 +3,7 @@ I represent a return
 "
 Class {
 	#name : 'ASCReturnTop',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -13,6 +13,12 @@ Class {
 ASCReturnTop >> manifestParameters: stack [
 
 	^ stack top makeManifest
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnTop >> markReferences [
+
+	stack markReferenced
 ]
 
 { #category : 'accessing' }
@@ -27,7 +33,7 @@ ASCReturnTop >> outputTo: output [
 ]
 
 { #category : 'instance creation' }
-ASCReturnTop >> with: ignored [
+ASCReturnTop >> with: aStack [
 
-
+	stack := aStack
 ]
