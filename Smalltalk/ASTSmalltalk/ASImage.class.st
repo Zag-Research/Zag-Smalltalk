@@ -588,7 +588,7 @@ ASImage >> rawIntAt: position [
 
 { #category : 'adding' }
 ASImage >> selector: aSymbol [
-	^ selectors addIfNotPresent: aSymbol andDo:  [ newSelectors add: aSymbol ].
+	^ selectors add: aSymbol andIfNewDo:  [ newSelectors add: aSymbol ].
 
 ]
 

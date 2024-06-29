@@ -12,9 +12,13 @@ Class {
 { #category : 'adding' }
 ASCInlineBlock >> addSourceBlock: aBasicBlock [
 
-	sourceBlocks add: aBasicBlock.
-	sourceBlocks size = 1 ifTrue: [
+	sourceBlocks
+		add: aBasicBlock
+		andIfNewDo: [
 		sourceElements := stack := aBasicBlock copyOfStackFor: self ]
+		orIfExistedDo: [
+			sourceElements do: [ :stackElement |
+				stackElement mergeWith: aBasicBlock ] ]
 ]
 
 { #category : 'data flow instructions' }

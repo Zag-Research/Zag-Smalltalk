@@ -54,7 +54,7 @@ ASStackTest >> testNames [
 { #category : 'tests' }
 ASStackTest >> testSelf [
 
-	| stack2 stack3 stack4 |
+	| stack2 stack3 |
 	self assert: ASStack new isEmpty.
 	self assert: (ASStack new push: 42) drop isEmpty.
 	self assert: (ASStack new push: 42) value equals: 42.
@@ -66,8 +66,6 @@ ASStackTest >> testSelf [
 	self assert: stack2 drop drop isEmpty.
 	self deny: stack3 drop drop isEmpty.
 	self assert: (stack3 drop: 2) value equals: 42.
-	
-	stack4 := stack3 push.
 	self assert: stack2 drop drop isEmpty.
 	self deny: stack3 drop drop isEmpty.
 	self assert: (stack3 drop: 2) value equals: 42

@@ -49,7 +49,6 @@ ASCBasicBlock >> addBlock: aBasicBlock [
 { #category : 'initialization' }
 ASCBasicBlock >> addOperation: anOperation [
 
-	operations ifNil: [ operations := OrderedCollection new ].
 	operations add: anOperation.
 	stack := anOperation resultStack: stack
 ]
@@ -83,7 +82,7 @@ ASCBasicBlock >> blocks [
 ASCBasicBlock >> branch: anASCInlineBlock [
 
 	self addOperation: (ASCBranch with: anASCInlineBlock).
-	anASCInlineBlock setStack: stack.
+	anASCInlineBlock addSourceBlock: self.
 	^ anASCInlineBlock
 ]
 
@@ -95,7 +94,7 @@ ASCBasicBlock >> checkForCalls [
 { #category : 'accessing' }
 ASCBasicBlock >> children [
 
-	^ operations ifNil: [ {  } ]
+	^ operations
 ]
 
 { #category : 'API' }
@@ -107,8 +106,7 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 		| next |
 		next := ASCInlineBlock new.
 		case at: class put: next.
-		next addSourceBlock: self.
-		next setStack: stack ].
+		next addSourceBlock: self ].
 	self addOperation: case.
 	^ case
 ]
@@ -132,44 +130,6 @@ ASCBasicBlock >> copyOfStackFor: anASCInlineBlock [
 ]
 
 { #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doCall: aSymbol [
-
-	| numArgs |
-	numArgs := aSymbol numArgs.
-	stack markReferenced: numArgs + 1.
-	^ self doDrop: numArgs
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDrop [
-
-	^ self doDrop: 1
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDrop: n [
-
-	stack := stack drop: n.
-	stackDepth := stackDepth - n
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDup [
-
-	stack := stack replicate: stack.
-	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doPop [
-
-	| result |
-	result := stack value.
-	stack := stack drop.
-	^ result
-]
-
-{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
 
 	stack := stack push: anObject.
@@ -179,16 +139,13 @@ ASCBasicBlock >> doPush: anObject [
 { #category : 'API' }
 ASCBasicBlock >> embed: aSymbol [
 
-	| send |
-	send := ASCEmbed with: aSymbol.
-	self addOperation: send.
+	self addOperation: (ASCEmbed with: aSymbol).
 	^ nil
 ]
 
 { #category : 'data flow instructions' }
 ASCBasicBlock >> endsWithCall [
 
-	operations ifNil: [ ^ false ].
 	operations ifEmpty: [ ^ false ].
 	^ operations last isCallOperation
 ]
@@ -259,7 +216,7 @@ ASCBasicBlock >> initialize [
 	stack := ASStack new.
 	hash := SequenceNumber := SequenceNumber + 1.
 	sourceBlocks := Set new.
-	operations := OrderedCollection new " should be able to leave this nil, but get error in display "
+	operations := OrderedCollection new
 ]
 
 { #category : 'printing' }
@@ -321,10 +278,9 @@ ASCBasicBlock >> llvmLabel [
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
-	operations ifNotNil: [
-		last := operations last.
-		last requiresContext ifTrue: [ self getContext ].
-		last manifestParameters: stack ]
+	last := operations last.
+	last requiresContext ifTrue: [ self getContext ].
+	last manifestParameters: stack
 ]
 
 { #category : 'data flow instructions' }
@@ -359,7 +315,7 @@ ASCBasicBlock >> namedContext: namedBlock stack: stackBlock other: otherBlock [
 { #category : 'accessing' }
 ASCBasicBlock >> next [
 
-	^ operations ifNotNil: [ operations last next ]
+	^ operations last next
 ]
 
 { #category : 'inlining' }
@@ -399,7 +355,7 @@ ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
 
-	operations ifNotNil: [ operations do: [ :operation | operation outputTo: output ]].
+	operations do: [ :operation | operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]
 
@@ -411,19 +367,14 @@ ASCBasicBlock >> outputTo: output [
 
 { #category : 'API' }
 ASCBasicBlock >> popAndCopyTopToSelf [
-	" This is tricky code because we need to save all the properties of the top of stack and over-write the `self` that was part of the inlining. So we throw away everything on the stack up to and including that `self` value, and then return a stack with the original top element linking to whatever was below. "
 
-	| count |
-	count := stack offsetToSelf: 0.
-	self addOperation: (ASCPopAndCopyTop with: count)
+	self addOperation: (ASCPopAndCopyTop new)
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
-	| target |
-	target := stack at: aSymbol.
-	self addOperation: (ASCPopVariable with: target)
+	self addOperation: (ASCPopVariable with: (stack at: aSymbol))
 ]
 
 { #category : 'data flow instructions' }
@@ -433,19 +384,15 @@ ASCBasicBlock >> providesNonNil: anId [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> pushBlockNamed: aBlockClosure [
+ASCBasicBlock >> pushArray: arraySize [
 
-	stack := (ASStackNamed fromStack: stack)
-		         name: aBlockClosure name.
-	^ stack value: aBlockClosure
+	self addOperation: (ASCArray with: arraySize)
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
-	| target |
-	target := stack at: aSymbol.
-	self addOperation: (ASCPushVariable with: target)
+	self addOperation: (ASCPushVariable with: (stack at: aSymbol))
 ]
 
 { #category : 'accessing' }
@@ -503,12 +450,6 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 		next addSourceBlock: self.
 		next setStack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
 	^ next
-]
-
-{ #category : 'accessing' }
-ASCBasicBlock >> setStack: anASStack [
-
-	stack := anASStack
 ]
 
 { #category : 'initialization' }
