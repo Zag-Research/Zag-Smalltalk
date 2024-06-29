@@ -4,9 +4,6 @@ I drop n elements from below the top of stack
 Class {
 	#name : 'ASCPopAndCopyTop',
 	#superclass : 'ASCStackReferencingOperations',
-	#instVars : [
-		'objectsToPop'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -22,11 +19,9 @@ ASCPopAndCopyTop >> markReferences [
 ASCPopAndCopyTop >> resultStack: anASStack [
 
 	stack := anASStack.
-	^ anASStack dropUnder: objectsToPop
+	^ anASStack dropUnder: (stack offsetToSelf: 0)
 ]
 
 { #category : 'instance creation' }
-ASCPopAndCopyTop >> with: anInteger [ 
-
-	objectsToPop := anInteger
+ASCPopAndCopyTop >> with: ignored [
 ]

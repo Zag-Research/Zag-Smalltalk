@@ -93,8 +93,7 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 { #category : 'API' }
 ASCodeGenerator >> branch: aBasicBlock [
 
-	code branch: aBasicBlock.
-	aBasicBlock addSourceBlock: code
+	^ code branch: aBasicBlock
 ]
 
 { #category : 'API' }
@@ -276,40 +275,25 @@ ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
-	| inlineBlock savedReturn savedTargetClass |
-	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
-	savedTargetClass := targetClass.
-	"create a new block "
-	inlineBlock := self newInline.
-	savedReturn := returnBlock.
-	[
-	targetClass := aCompileMethod classBinding value.
-	returnBlock := self newInline.
-	self branch: inlineBlock.
-	code := inlineBlock.
-	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
-		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
-		code := returnBlock.
-		returnBlock := savedReturn.
-		targetClass := savedTargetClass ]
+	^ self
+		  inlineMethod: aCompileMethod
+		  for: aCompileMethod classBinding value
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [ 
+ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 
 	| inlineBlock savedReturn savedTargetClass |
 	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
 	savedTargetClass := targetClass.
 	"create a new block "
-	inlineBlock := self newInline.
+	inlineBlock := self newInlineMethodClosure.
 	savedReturn := returnBlock.
 	[
 	targetClass := inlinedTargetClass.
 	returnBlock := self newInline.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	"need to add self args and parameters"
-	self halt.
 	(ASPharoCompiler new astFor: aCompileMethod) zigWalkInlineMethod:
 		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		code := returnBlock.
@@ -391,7 +375,13 @@ ASCodeGenerator >> newInline [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInlineBlockClosure [
 
-	^ basicBlocks add: ASCBlockClosureBlock new
+	^ basicBlocks add: ASCInlinedClosureBlock new
+]
+
+{ #category : 'private - testing' }
+ASCodeGenerator >> newInlineMethodClosure [
+
+	^ basicBlocks add: ASCInlinedMethodBlock new
 ]
 
 { #category : 'API' }
@@ -433,9 +423,7 @@ ASCodeGenerator >> primitive: primitiveNumber [
 { #category : 'API' }
 ASCodeGenerator >> pushArray: arraySize [
 
-	^ code doPush: (ASCArray with: arraySize )
-
-	
+	^ code pushArray: arraySize
 ]
 
 { #category : 'API' }
