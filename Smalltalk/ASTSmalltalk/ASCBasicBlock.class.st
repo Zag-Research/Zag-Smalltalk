@@ -46,6 +46,14 @@ ASCBasicBlock >> addBlock: aBasicBlock [
 	^ self methodBlock addBlock: aBasicBlock
 ]
 
+{ #category : 'initialization' }
+ASCBasicBlock >> addOperation: anOperation [
+
+	operations ifNil: [ operations := OrderedCollection new ].
+	operations add: anOperation.
+	stack := anOperation resultStack: stack
+]
+
 { #category : 'data flow instructions' }
 ASCBasicBlock >> anySourcesNonNilFor: id [
 
@@ -71,10 +79,10 @@ ASCBasicBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : 'abstract interpretation' }
+{ #category : 'API' }
 ASCBasicBlock >> branch: anASCInlineBlock [
 
-	self put: (ASCBranch with: anASCInlineBlock).
+	self addOperation: (ASCBranch with: anASCInlineBlock).
 	anASCInlineBlock setStack: stack.
 	^ anASCInlineBlock
 ]
@@ -90,18 +98,18 @@ ASCBasicBlock >> children [
 	^ operations ifNil: [ {  } ]
 ]
 
-{ #category : 'abstract interpretation' }
-ASCBasicBlock >> classCase: aCollection [
+{ #category : 'API' }
+ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 
 	| case |
-	case := ASCCase new.
+	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
 		next := ASCInlineBlock new.
 		case at: class put: next.
 		next addSourceBlock: self.
 		next setStack: stack ].
-	self put: case.
+	self addOperation: case.
 	^ case
 ]
 
@@ -146,13 +154,6 @@ ASCBasicBlock >> doDrop: n [
 ]
 
 { #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDropUnder: n [
-
-	stack := stack dropUnder: n.
-	stackDepth := stackDepth - n
-]
-
-{ #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doDup [
 
 	stack := stack replicate: stack.
@@ -175,33 +176,13 @@ ASCBasicBlock >> doPush: anObject [
 	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
-{ #category : 'abstract interpretation' }
+{ #category : 'API' }
 ASCBasicBlock >> embed: aSymbol [
 
 	| send |
 	send := ASCEmbed with: aSymbol.
-	self put: send.
-	stack := (stack drop: aSymbol numArgs + 1) pushUnknown.
+	self addOperation: send.
 	^ nil
-]
-
-{ #category : 'abstract interpretation' }
-ASCBasicBlock >> embed: aSymbol return: aClass [
-
-	| sendEmbed |
-	sendEmbed := ASCEmbed with: aSymbol.
-	self put: sendEmbed.
-	"we should know the type! can push something more than unknown here"
-	self
-		setStack: ((stack drop: aSymbol numArgs + 1)
-		push: (ASCClassValue new init: aClass)).
-	^ nil
-]
-
-{ #category : 'initialization' }
-ASCBasicBlock >> endWithReturnTop [
-
-	^ self put: ASCReturnTop new
 ]
 
 { #category : 'data flow instructions' }
@@ -346,6 +327,12 @@ ASCBasicBlock >> markBlockClosuresToManifest [
 		last manifestParameters: stack ]
 ]
 
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> markReferences [
+
+	operations do: #markReferences
+]
+
 { #category : 'accessing' }
 ASCBasicBlock >> maxDepth [
 	^ maxDepth
@@ -428,8 +415,7 @@ ASCBasicBlock >> popAndCopyTopToSelf [
 
 	| count |
 	count := stack offsetToSelf: 0.
-	self put: (ASCPopAndCopyTop with: count).
-	self doDropUnder: count
+	self addOperation: (ASCPopAndCopyTop with: count)
 ]
 
 { #category : 'API' }
@@ -437,9 +423,7 @@ ASCBasicBlock >> popVariable: aSymbol [
 
 	| target |
 	target := stack at: aSymbol.
-	stack top makeManifest.
-	self put: (ASCPopVariable with: target).
-	self doDrop
+	self addOperation: (ASCPopVariable with: target)
 ]
 
 { #category : 'data flow instructions' }
@@ -461,20 +445,7 @@ ASCBasicBlock >> pushVariable: aSymbol [
 
 	| target |
 	target := stack at: aSymbol.
-	self put: (ASCPushVariable with: target).
-	self doPush: target value
-]
-
-{ #category : 'initialization' }
-ASCBasicBlock >> put: anObject [
-
-	operations ifNil: [ operations := OrderedCollection new ].
-	^ operations add: anObject
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> putSimple: aSymbol [ 
-	^ self put: (ASCSimple with: aSymbol)
+	self addOperation: (ASCPushVariable with: target)
 ]
 
 { #category : 'accessing' }
@@ -489,22 +460,22 @@ ASCBasicBlock >> requiredContextDo: aBlock [
 	^ context ifNotNil: [ :c | aBlock cull: c ]
 ]
 
-{ #category : 'initialization' }
+{ #category : 'API' }
 ASCBasicBlock >> returnNonLocal [
 
-	^ self put: ASCReturnNonLocal new
+	^ self addOperation: ASCReturnNonLocal new
 ]
 
-{ #category : 'initialization' }
+{ #category : 'API' }
 ASCBasicBlock >> returnSelf [
 
-	^ self put: ASCReturnSelf new
+	^ self addOperation: ASCReturnSelf new
 ]
 
-{ #category : 'initialization' }
+{ #category : 'API' }
 ASCBasicBlock >> returnTop [
 
-	^ self put: ASCReturnTop new
+	^ self addOperation: (ASCReturnTop new)
 ]
 
 { #category : 'initialization' }
@@ -576,8 +547,7 @@ ASCBasicBlock >> storeInto: offsetOrName [
 { #category : 'API' }
 ASCBasicBlock >> storeVariable: aSymbol [
 
-	stack top makeManifest.
-	self put: (ASCStoreVariable with: (stack at: aSymbol))
+	self addOperation: (ASCStoreVariable with: (stack at: aSymbol))
 ]
 
 { #category : 'accessing' }

@@ -3,7 +3,7 @@ I create an array and push the address on the stack
 "
 Class {
 	#name : 'ASCArray',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'size'
 	],
@@ -25,6 +25,12 @@ ASCArray >> inspectZagASTOn: aStream [
 ASCArray >> outputTo: output [
 
 	^ output visitPushArray: size
+]
+
+{ #category : 'stack' }
+ASCArray >> resultStack: anASStack [
+
+	^ anASStack pushClass: Array
 ]
 
 { #category : 'instance creation' }

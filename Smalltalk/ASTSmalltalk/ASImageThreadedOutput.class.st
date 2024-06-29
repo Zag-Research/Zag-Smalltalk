@@ -137,7 +137,7 @@ ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 
 	image
 		putRawInt: ZfPushLiteral;
-		put: aLiteral
+		addOperation: aLiteral
 ]
 
 { #category : 'API' }

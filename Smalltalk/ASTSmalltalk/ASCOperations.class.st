@@ -25,6 +25,12 @@ ASCOperations >> children [
 ^ OrderedCollection new:0
 ]
 
+{ #category : 'testing' }
+ASCOperations >> isCallOperation [
+
+	^ false
+]
+
 { #category : 'accessing' }
 ASCOperations >> isSend [
 	^ false

@@ -5,7 +5,8 @@ Class {
 	#name : 'ASFlowNonNil',
 	#superclass : 'ASFlowNil',
 	#instVars : [
-		'id'
+		'id',
+		'referenced'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -23,10 +24,31 @@ ASFlowNonNil >> id: aString [
 	id := aString
 ]
 
+{ #category : 'initialization' }
+ASFlowNonNil >> initialize [
+
+	super initialize.
+	referenced := false
+]
+
 { #category : 'testing' }
 ASFlowNonNil >> isNilReference [
 
 	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASFlowNonNil >> isReferenced [
+
+	^ referenced
+]
+
+{ #category : 'data flow instructions' }
+ASFlowNonNil >> markReferenced [
+	" return true if we just made it true "
+
+	referenced ifTrue: [ ^ false ].
+	^ referenced := true
 ]
 
 { #category : 'printing' }

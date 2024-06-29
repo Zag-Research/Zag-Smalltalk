@@ -25,11 +25,9 @@ Class {
 		'blockClosures',
 		'parentCodeGenerator',
 		'enclosingScope',
-		'embeddings',
-		'inlineSelectors',
 		'implementors',
 		'returnBlock',
-		'embeddingReturnTypes'
+		'blocksWithCalls'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -54,7 +52,6 @@ ASCodeGenerator class >> targetClass: aClass selector: aString [
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
-	ASCBlock resetLabelIndex.
 	current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
@@ -71,7 +68,6 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
 
 	| rest current namedBlock |
-	ASCBlock resetLabelIndex.
 	namedBlock := current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
@@ -102,10 +98,10 @@ ASCodeGenerator >> branch: aBasicBlock [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> classCase: aCollection [
+ASCodeGenerator >> classCase: aCollection selector: aSymbol [
 
 	| case |
-	case := code classCase: aCollection.
+	case := code classCase: aCollection selector: aSymbol.
 	basicBlocks addAll: case blocks.
 	^ aCollection collect: [ :class | case at: class ]
 ]
@@ -126,26 +122,22 @@ ASCodeGenerator >> compileBlocks: outputter [
 ]
 
 { #category : 'compiling' }
-ASCodeGenerator >> compileMethodFor: aSelector for: aClass [ 
+ASCodeGenerator >> compiledMethodFor: aSelector for: aClass [ 
 	aClass methodDictionary at: aSelector ifPresent: [ ^aClass >> aSelector ].
 	aClass superclass ifNil: [ ^nil ].
-	^ self compileMethodFor: aSelector for: aClass superclass 
+	^ self compiledMethodFor: aSelector for: aClass superclass 
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
-	code
-		doDrop;
-		putSimple: #drop
+	code addOperation: ASCDrop new
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> dup [
 
-	code
-		doDup;
-		putSimple: #dup
+	code addOperation: (ASCDup new)
 ]
 
 { #category : 'initialization' }
@@ -222,19 +214,10 @@ ASCodeGenerator >> initialize [
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
+	blocksWithCalls := Set new.
 	maxDepth := 0.
 	inline := false.
 	tailCallOptimize := true.
-	embeddings := {
-		              (Integer >> #-).
-		              (Integer >> #'<=').
-		              (SmallInteger >> #<).
-		              (SmallInteger >> #+) }.
-	embeddingReturnTypes := Dictionary new.
-	embeddingReturnTypes at: #- put: SmallInteger.
-	embeddingReturnTypes at: #'<=' put: Boolean.
-	embeddingReturnTypes at: #< put: Boolean.
-	embeddingReturnTypes at: #+ put: SmallInteger.
 
 	implementors := Dictionary new.
 	implementors at: #not put: {
@@ -261,7 +244,7 @@ ASCodeGenerator >> initialize [
 		put: { (Integer >> #fibonacci_fast) }.
 	implementors
 		at: #fibonacci_accumulator:prev:
-		put: { (Integer >> #fibonacci_accumulator:prev:) }	
+		put: { (Integer >> #fibonacci_accumulator:prev:) }
 ]
 
 { #category : 'translating' }
@@ -334,6 +317,17 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 		targetClass := savedTargetClass ]
 ]
 
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> inlineWherePossible [
+
+	| keepLooking |
+	keepLooking := true.
+	[ keepLooking ] whileTrue: [
+		keepLooking := false.
+		blocksWithCalls do: [ :block |
+			(block inlineableIn: self) ifTrue: [ keepLooking := true ] ] ]
+]
+
 { #category : 'initialization' }
 ASCodeGenerator >> inlining: aBoolean [
 	inline := aBoolean
@@ -349,12 +343,6 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> isEmbedded: aCompileMethod [
- 	"better to just check if this method contains a primitive and not in the list"
-	^ embeddings hasLiteral: aCompileMethod 
 ]
 
 { #category : 'accessing' }
@@ -454,21 +442,17 @@ ASCodeGenerator >> pushArray: arraySize [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	block := ASCBlock with: anASBlock.
+	block := ASCBlockClosureValue with: anASBlock.
 	"block name: name asSymbol."
 	blockClosures add: block.
 	code setStackForBlock: block.
-	code
-		doPush: block;
-		put: block
+	code addOperation: (ASCBlock with: block)
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
-	code
-		doPush: (ASCLiteralValue new init: aLiteral);
-		put: (ASCLiteral with: aLiteral)
+	code addOperation: (ASCLiteral with: aLiteral)
 ]
 
 { #category : 'API' }
@@ -484,12 +468,6 @@ ASCodeGenerator >> pushVariable: variable [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> putEmbedded: aSymbol [
-
-	code put: aSymbol
-]
-
-{ #category : 'API' }
 ASCodeGenerator >> requireContext [
 
 	^ code getContext
@@ -498,16 +476,10 @@ ASCodeGenerator >> requireContext [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> resolveFlowDependencies [
 
-	| blocksToProcess |
+	self inlineWherePossible.
 	basicBlocks do: #checkForCalls.
-	blocksToProcess := basicBlocks.
-	[ blocksToProcess isEmpty ] whileFalse: [
-		| temp |
-		temp := blocksToProcess.
-		blocksToProcess := Set new.
-		temp do: [ :block |
-			block updateDataDependencies: blocksToProcess ] ].
-	basicBlocks do: #simplifyDependencies
+	basicBlocks do: #markReferences.
+
 ]
 
 { #category : 'API' }
@@ -568,12 +540,14 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 	aTargetClass ifNotNil: [ "check if this is an embeddable send"
 		aTargetClass isBlock ifTrue: [
 			^ self inlineBlock: aSymbol next: nil ].
-		(self isEmbedded: (self compileMethodFor: aSymbol for: aTargetClass))
-			ifTrue: [ ^ self sendEmbedded: aSymbol ].
+		(ASCEmbed isEmbedded:
+			 (self compiledMethodFor: aSymbol for: aTargetClass)) ifTrue: [
+			^ self sendEmbedded: aSymbol ].
 		"check if this is a self call"
 		(self sendInline: aSymbol targetClass: aTargetClass tail: tail)
 			ifTrue: [ ^ true "return something?" ] ].
 	self manifest: code.
+	blocksWithCalls add: code.
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
@@ -587,7 +561,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 ASCodeGenerator >> sendEmbedded: aSymbol [
 
 	| bb |
-	bb := code embed: aSymbol return: (embeddingReturnTypes at: aSymbol).
+	bb := code embed: aSymbol.
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
@@ -595,11 +569,11 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 
 { #category : 'API' }
 ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
+
 	| symbolImplementors common targets |
-	
 	"check if we're recursive"
 	inline ifFalse: [ ^ false ].
-	
+
 	"check if this is a self call"
 	targetClass == aTargetClass ifTrue: [
 		self inlineMethod: aTargetClass >> aSymbol.
@@ -613,7 +587,9 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 	ASTBlockClosure == aTargetClass ifTrue: [
 		^ self inlineBlock: aSymbol next: common ].
 	[
-	targets := self classCase: (symbolImplementors collect: #methodClass).
+	targets := self
+		           classCase: (symbolImplementors collect: #methodClass)
+		           selector: aSymbol.
 	targets with: symbolImplementors do: [ :target :compileMethod |
 		self setBasicBlock: target.
 		"walk the sends method AST"

@@ -68,7 +68,7 @@ ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #sendInline:targetClass:tail: #false)) #'2024-06-20T17:11:21.850715-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #sendInline:targetClass:tail: #false)) #'2024-06-20T17:11:21.850715-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:23.111016-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -90,13 +90,6 @@ ManifestASTSmalltalk class >> ruleRefersToClassRuleV1FalsePositive [
 
 	<ignoreForCoverage>
 	^ #(  )
-]
-
-{ #category : 'code-critics' }
-ManifestASTSmalltalk class >> ruleReturnsIfTrueRuleV1FalsePositive [
-
-	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCBlock #manifest: #false)) #'2023-10-19T09:26:04.573515-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -145,14 +138,14 @@ ManifestASTSmalltalk class >> ruleUnwindBlocksRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleUsesAddRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #send:targetClass:tail: #false)) #'2023-11-11T11:51:23.341686-05:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #put: #false)) #'2023-11-11T18:07:39.377391-05:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInline #false)) #'2024-06-18T13:33:21.771718-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineBlockClosure #false)) #'2024-06-23T11:10:01.368119-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #send:targetClass:tail: #false)) #'2023-11-11T11:51:23.341686-05:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #addOperation: #false)) #'2023-11-11T18:07:39.377391-05:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInline #false)) #'2024-06-18T13:33:21.771718-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineBlockClosure #false)) #'2024-06-23T11:10:01.368119-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:20.538627-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:20.538627-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:18.549021-04:00') )
 ]
 
 { #category : 'code-critics' }
