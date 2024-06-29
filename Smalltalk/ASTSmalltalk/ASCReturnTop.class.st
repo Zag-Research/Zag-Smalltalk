@@ -32,6 +32,13 @@ ASCReturnTop >> outputTo: output [
 	^ output visitReturnTop
 ]
 
+{ #category : 'stack' }
+ASCReturnTop >> resultStack: anASStack [
+
+	stack := anASStack.
+	^ anASStack drop
+]
+
 { #category : 'instance creation' }
 ASCReturnTop >> with: aStack [
 

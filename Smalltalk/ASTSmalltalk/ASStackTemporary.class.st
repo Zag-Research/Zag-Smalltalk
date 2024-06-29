@@ -77,6 +77,12 @@ ASStackTemporary >> makeStackTheSource [
 ]
 
 { #category : 'data flow instructions' }
+ASStackTemporary >> markReferenced [
+
+	^ source markReferenced
+]
+
+{ #category : 'data flow instructions' }
 ASStackTemporary >> markReferenced: n [
 
 	n == 0 ifTrue: [ ^ self ].

@@ -83,6 +83,12 @@ ASStackNamed >> makeContextRequired: aBlock [
 	^ context
 ]
 
+{ #category : 'data flow instructions' }
+ASStackNamed >> markReferenced [
+
+	^ source markReferenced
+]
+
 { #category : 'accessing' }
 ASStackNamed >> name [
 	^ name
