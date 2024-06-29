@@ -284,7 +284,7 @@ ASCodeGenerator >> inlineMethod: aCompileMethod [
 ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 
 	| inlineBlock savedReturn savedTargetClass |
-	(code isRecursive: aCompileMethod) ifTrue: [ ^ false ].
+	(code isRecursive: aCompileMethod) ifTrue: [ ^ self ].
 	savedTargetClass := targetClass.
 	"create a new block "
 	inlineBlock := self newInlineMethodClosure.
