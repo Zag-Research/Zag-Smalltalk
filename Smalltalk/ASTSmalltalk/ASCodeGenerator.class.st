@@ -200,8 +200,10 @@ ASCodeGenerator >> implementors: aSelector [
 
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
-	anExpression ifNil: [ ^ nil ].
-	^ anExpression inferType: self
+
+	^ nil
+	"anExpression ifNil: [ ^ nil ].
+	^ anExpression inferType: self"
 	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
 
@@ -430,7 +432,8 @@ ASCodeGenerator >> pushArray: arraySize [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	block := ASCBlockClosureValue with: anASBlock.
+	self flag: 'block closure should have a reference to anASBlock'.
+	block := ASCBlockClosureValue new "with: anASBlock".
 	"block name: name asSymbol."
 	blockClosures add: block.
 	code setStackForBlock: block.
