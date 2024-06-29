@@ -71,9 +71,17 @@ ASCBasicBlockTest >> testStackFlow [
 
 { #category : 'tests' }
 ASCBasicBlockTest >> test_extend [
-
 	"1. push temp values and convert to named values"
+	| bb |
+	bb := ASCInlineBlock new.
+	bb doPush: 42.
+	bb doPush: 27.
+	bb doPush: 98.
+	bb nameStack: #( p1 p2 ).
+	self halt
 	"2. test for scope"
+
+	
 ]
 
 { #category : 'tests' }
