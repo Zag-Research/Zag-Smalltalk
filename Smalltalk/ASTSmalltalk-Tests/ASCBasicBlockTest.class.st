@@ -83,14 +83,18 @@ ASCBasicBlockTest >> testStackFlow [
 ASCBasicBlockTest >> test_extend [
 	"1. push temp values and convert to named values"
 
-	| bb |
+	| bb block ascBlock |
 	bb := ASCInlineBlock new.
 	bb doPush: 42.
 	bb doPush: 27.
 	bb doPush: 98.
 	bb nameStack: #( p1 p2 ).
-	"2. test for scope"
-	
+	"2. test for scope, ASCBlocks have a scope attribute which points to a stack"
+	"who references ASCBlocks?"
+	block := ASCBlockClosureValue new.
+	ascBlock := ASCBlock with: block.
+	bb setStackForBlock: ascBlock.
+	self assert: (ascBlock scope at: #p1) id equals: (bb at: #p1) id
 ]
 
 { #category : 'tests' }
