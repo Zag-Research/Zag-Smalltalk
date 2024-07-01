@@ -440,7 +440,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ self halt. ASCInlineBlock new ].
+	next := tailCall ifFalse: [ ASCInlineBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;

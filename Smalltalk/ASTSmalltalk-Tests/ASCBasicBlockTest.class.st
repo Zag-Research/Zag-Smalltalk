@@ -32,32 +32,42 @@ ASCBasicBlockTest >> testStackFlow [
 	cg targetClass: SmallInteger.
 	cg selector: #foo:bar:.
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
+	
 	bb1 := cg firstBlock.
 	self assert: (bb1 at: #l1) source isNilReference.
 	self assert: (bb1 at: #l1) offset > (bb1 at: #l2) offset.
 	self assert: (bb1 at: #p1) offset > (bb1 at: #p2) offset.
+	
 	bb2 := cg newInline.
 	bb3 := cg newInline.
 	bb4 := cg newInline.
 	bb2 addSourceBlock: bb1.
 	bb3 addSourceBlock: bb1.
 	bb4 addSourceBlock: bb2.
+	
 	self assert: (bb1 at: #l1) source isNilReference.
 	self deny: (bb2 at: #l1) equals: (bb1 at: #l1).
+	
 	bb4 addSourceBlock: bb3.
 	self assert: (bb1 at: #l1) source isNilReference.
+	
 	bb3Rl1 := bb3 reference: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
 	self assert: (bb1 at: #l1) source isNilReference.
+	
 	bb3Sl1 := bb3 storeInto: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
+	
 	bb4 reference: #p1.
 	bb4 reference: #self.
 	self assert: (bb1 at: #l1) source isNilReference.
+	
 	bb4 reference: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
+	
 	cg resolveFlowDependencies.
 	self assert: bb4 namedBlock equals: bb1.
+	
 	self assert: (bb1 at: #l1) source isNilReference.
 	self assert: (bb2 at: #p1) equals: (bb3 at: #p1).
 	self assert: (bb1 at: #p1) source isReferenced.
@@ -72,15 +82,14 @@ ASCBasicBlockTest >> testStackFlow [
 { #category : 'tests' }
 ASCBasicBlockTest >> test_extend [
 	"1. push temp values and convert to named values"
+
 	| bb |
 	bb := ASCInlineBlock new.
 	bb doPush: 42.
 	bb doPush: 27.
 	bb doPush: 98.
 	bb nameStack: #( p1 p2 ).
-	self halt
 	"2. test for scope"
-
 	
 ]
 
