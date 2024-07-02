@@ -444,7 +444,7 @@ ASCBasicBlock >> roots [
 	^ roots
 ]
 
-{ #category : 'abstract interpretation' }
+{ #category : 'API' }
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
@@ -453,10 +453,8 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 		        selector: aSymbol;
 		        return: next;
 		        target: target.
-	self put: send.
-	next ifNotNil: [
-		next addSourceBlock: self.
-		next setStack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
+	self addOperation: send.
+	next ifNotNil: [ next addSourceBlock: self ].
 	^ next
 ]
 
