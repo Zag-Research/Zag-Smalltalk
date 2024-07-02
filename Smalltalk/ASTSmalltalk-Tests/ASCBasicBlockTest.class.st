@@ -56,7 +56,7 @@ ASCBasicBlockTest >> testStackFlow [
 	self assert: (bb1 at: #l1) source isNilReference.
 	bb4 reference: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
-	cg resolveFlowDependencies.
+	cg finalAnalysis.
 	self assert: bb4 namedBlock equals: bb1.
 	self assert: (bb1 at: #l1) source isNilReference.
 	self assert: (bb2 at: #p1) equals: (bb3 at: #p1).
@@ -87,6 +87,6 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg send: #*. " and create new ReturnBlock"
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
-	cg resolveFlowDependencies.
+	cg finalAnalysis.
 	cg inspect
 ]

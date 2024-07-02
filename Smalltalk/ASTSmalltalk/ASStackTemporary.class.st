@@ -69,6 +69,14 @@ ASStackTemporary >> makeContextRequired: aBlock [
 	^ self replicate: (rest makeContextRequired: aBlock)
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackTemporary >> makeManifestFor: anInteger [
+
+	source markReferenced.
+	anInteger <= 1 ifTrue: [ ^ self ].
+	^ rest makeManifestFor: anInteger - 1
+]
+
 { #category : 'data flow instructions' }
 ASStackTemporary >> makeStackTheSource [
 

@@ -13,7 +13,6 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 
 	| cg targets |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
-	self halt.
 	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.

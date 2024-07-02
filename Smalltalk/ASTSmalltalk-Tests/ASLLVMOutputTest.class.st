@@ -38,12 +38,12 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
 	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
 	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
 	cg inspect.
+	self halt.
 	output
 		codeGenerator: cg;
 		outputToStream.
-	output asString inspect.
-	self assert: output name equals: 'fibonacci'.
-
+	file asString inspect.
+	self assert: output name equals: 'fibonacci'
 ]
 
 { #category : 'tests' }
@@ -115,7 +115,7 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
-	cg resolveFlowDependencies.
+	cg finalAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;

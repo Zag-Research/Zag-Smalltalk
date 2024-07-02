@@ -44,13 +44,9 @@ ASCSend >> isSend [
 ]
 
 { #category : 'block handling' }
-ASCSend >> manifestParameters: aStack [
+ASCSend >> manifestParameters [
 
-	| tStack |
-	tStack := aStack.
-	selector numArgs + 1 timesRepeat: [
-		tStack value makeManifest.
-		tStack := tStack drop ]
+	^ stack makeManifestFor: selector numArgs + 1
 ]
 
 { #category : 'accessing' }

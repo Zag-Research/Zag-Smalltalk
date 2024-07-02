@@ -36,14 +36,8 @@ ASCOperations >> isSend [
 	^ false
 ]
 
-{ #category : 'serializing' }
-ASCOperations >> manifest: aGenerator [
-
-
-]
-
 { #category : 'block handling' }
-ASCOperations >> manifestParameters: stack [
+ASCOperations >> manifestParameters [
 
 ]
 

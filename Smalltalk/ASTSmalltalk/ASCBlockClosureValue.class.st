@@ -5,7 +5,8 @@ Class {
 	#name : 'ASCBlockClosureValue',
 	#superclass : 'ASCClassValue',
 	#instVars : [
-		'blocks'
+		'blocks',
+		'scope'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -15,4 +16,15 @@ Class {
 { #category : 'accessing' }
 ASCBlockClosureValue >> blocks [
 	^ blocks ifNil: [ blocks := OrderedCollection new ]
+]
+
+{ #category : 'accessing' }
+ASCBlockClosureValue >> scope [
+	^ scope
+]
+
+{ #category : 'accessing' }
+ASCBlockClosureValue >> scope: aCollection [
+
+	scope := aCollection
 ]
