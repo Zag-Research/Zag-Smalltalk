@@ -117,3 +117,9 @@ ASStack >> species [
 
 	^ OrderedCollection
 ]
+
+{ #category : 'enumerating' }
+ASStack >> with: ignored1 do: ignored2 [
+
+	
+]

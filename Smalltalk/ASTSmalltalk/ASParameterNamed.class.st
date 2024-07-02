@@ -14,9 +14,3 @@ ASParameterNamed >> dependentValuesDo: ignored [
 
 	"No more dependent values"
 ]
-
-{ #category : 'data flow instructions' }
-ASParameterNamed >> newElementFor: aBasicBlock [
-	"nothing to do - use the global named source"
-
-]

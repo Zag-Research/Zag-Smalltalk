@@ -53,7 +53,7 @@ ASCEmbed >> inspectZagASTOn: aStream [
 { #category : 'data flow instructions' }
 ASCEmbed >> markReferences [
 
-	stack markReferenced: selector numArgs + 1
+	stack markReferenced: selector numArgs
 ]
 
 { #category : 'instance creation' }

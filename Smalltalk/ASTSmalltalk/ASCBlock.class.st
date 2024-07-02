@@ -8,8 +8,7 @@ Class {
 		'block',
 		'manifest',
 		'name',
-		'label',
-		'scope'
+		'label'
 	],
 	#classInstVars : [
 		'index'
@@ -95,16 +94,6 @@ manifest ifFalse: [ ^ output visitPushNil ].
 ASCBlock >> resultStack: anASStack [
 
 	^ anASStack push: block
-]
-
-{ #category : 'accessing' }
-ASCBlock >> scope [
-^scope
-]
-
-{ #category : 'accessing' }
-ASCBlock >> scope: aScope [
-scope := aScope 
 ]
 
 { #category : 'instance creation' }

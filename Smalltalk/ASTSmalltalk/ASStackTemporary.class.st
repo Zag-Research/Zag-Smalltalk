@@ -22,8 +22,8 @@ Class {
 { #category : 'accessing' }
 ASStackTemporary >> at: nameOrIndex [
 	0 = nameOrIndex ifTrue: [ ^ self ].
-	nameOrIndex isInteger ifTrue: [ ^ rest at: nameOrIndex - 1 ].
-	^ rest at: nameOrIndex
+	nameOrIndex isInteger ifTrue: [ ^ next at: nameOrIndex - 1 ].
+	^ next at: nameOrIndex
 ]
 
 { #category : 'displaying' }
@@ -42,19 +42,19 @@ ASStackTemporary >> displayStringOn: stream [
 { #category : 'accessing' }
 ASStackTemporary >> drop [
 
-	^ rest
+	^ next
 ]
 
 { #category : 'removing' }
 ASStackTemporary >> drop: count [ 
 	count = 0 ifTrue: [ ^self ].
-	^ rest drop: count-1
+	^ next drop: count-1
 ]
 
 { #category : 'rewriting' }
 ASStackTemporary >> dropUnder: n [
 
-	^ self replicate: (rest drop: n)
+	^ self replicate: (next drop: n)
 ]
 
 { #category : 'accessing' }
@@ -66,7 +66,7 @@ ASStackTemporary >> id [
 { #category : 'API' }
 ASStackTemporary >> makeContextRequired: aBlock [
 
-	^ self replicate: (rest makeContextRequired: aBlock)
+	^ self replicate: (next makeContextRequired: aBlock)
 ]
 
 { #category : 'as yet unclassified' }
@@ -74,14 +74,14 @@ ASStackTemporary >> makeManifestFor: anInteger [
 
 	source markReferenced.
 	anInteger <= 1 ifTrue: [ ^ self ].
-	^ rest makeManifestFor: anInteger - 1
+	^ next makeManifestFor: anInteger - 1
 ]
 
 { #category : 'data flow instructions' }
 ASStackTemporary >> makeStackTheSource [
 
 	source := source makeStackTheSource.
-	^ rest makeStackTheSource
+	^ next makeStackTheSource
 ]
 
 { #category : 'data flow instructions' }
@@ -95,7 +95,13 @@ ASStackTemporary >> markReferenced: n [
 
 	n == 0 ifTrue: [ ^ self ].
 	source markReferenced.
-	^ rest markReferenced: n - 1
+	^ next markReferenced: n - 1
+]
+
+{ #category : 'operations' }
+ASStackTemporary >> mergeWith: aCollection [
+
+	source := source mergeWith: aCollection source
 ]
 
 { #category : 'adding' }
@@ -104,9 +110,9 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 	| name |
 	name := parameterNamesLeftToRight removeLast.
 	^ (parameterNamesLeftToRight isEmpty
-		   ifTrue: [ basicBlock selfElementClass fromStack: rest ]
+		   ifTrue: [ basicBlock selfElementClass fromStack: next ]
 		   ifFalse: [
-			   (ASParameterNamed fromStack: (rest
+			   (ASParameterNamed fromStack: (next
 						     nameStack: parameterNamesLeftToRight
 						     offset: anInteger + 1
 						     forBlock: basicBlock)) name: name ])
@@ -125,7 +131,7 @@ ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
 	new := aBasicBlock classForTemporaries new id: self id.
-	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
+	^ (self replicate: (next newElementFor: aBasicBlock)) source: new
 ]
 
 { #category : 'API' }
@@ -139,7 +145,7 @@ ASStackTemporary >> replicate: aStack [
 { #category : 'initialization' }
 ASStackTemporary >> reset [
 
-	^ rest reset
+	^ next reset
 ]
 
 { #category : 'accessing' }

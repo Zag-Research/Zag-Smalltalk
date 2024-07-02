@@ -6,16 +6,36 @@ Class {
 	#superclass : 'ASCClassValue',
 	#instVars : [
 		'blocks',
-		'scope'
+		'scope',
+		'asBlock',
+		'codeGenerator',
+		'parent'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'converting' }
+ASCBlockClosureValue >> asBlock: anASBlock [
+
+	asBlock := anASBlock
+]
+
 { #category : 'accessing' }
 ASCBlockClosureValue >> blocks [
 	^ blocks ifNil: [ blocks := OrderedCollection new ]
+]
+
+{ #category : 'API' }
+ASCBlockClosureValue >> codeGenerator [
+
+	^ codeGenerator ifNil: [ codeGenerator := ASCodeGeneratorBlock new parent: parent ast: asBlock ]
+]
+
+{ #category : 'accessing' }
+ASCBlockClosureValue >> parent: anASCodeGenerator [ 
+	parent := anASCodeGenerator
 ]
 
 { #category : 'accessing' }

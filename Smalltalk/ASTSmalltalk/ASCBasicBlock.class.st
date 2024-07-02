@@ -222,6 +222,11 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [ 
+
+]
+
 { #category : 'printing' }
 ASCBasicBlock >> inspectZagASTOn: aStream [
 
@@ -463,6 +468,11 @@ ASCBasicBlock >> setStackForBlock: anASCBlock [
 ASCBasicBlock >> simplifyDependencies [
 
 	^ stack simplifyDependenciesFor: self
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> stack [
+	^ stack
 ]
 
 { #category : 'stackAccessHelpers' }

@@ -44,7 +44,7 @@ ASStackTest >> testNames [
 	stack := stack push: 12.
 	stack := stack push: 27.
 	self assert: (stack at: 2) value equals: 99.
-	stack := stack initLocalNamed: #b1.
+	stack := stack initLocalNamed: #b1 source: nil.
 	stack := stack push: 98.
 	self assert: (stack at: #b1) offset equals: -4.
 	self deny: (stack at: #b1) isInContext.

@@ -7,9 +7,9 @@ Class {
 	#instVars : [
 		'codeBlock'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
 { #category : 'as yet unclassified' }
@@ -44,4 +44,11 @@ ASStackSelf >> makeStackTheSource [
 
 	source := source makeStackTheSource.
 
+]
+
+{ #category : 'enumerating' }
+ASStackSelf >> with: other do: aBlock [
+	" never go deeper than this "
+
+	^ aBlock value: self value: other
 ]

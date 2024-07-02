@@ -5,8 +5,8 @@ Class {
 	#name : 'ASStackNonEmpty',
 	#superclass : 'ASStack',
 	#instVars : [
-		'rest',
-		'offset'
+		'offset',
+		'next'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -22,7 +22,7 @@ ASStackNonEmpty class >> fromStack: anASStack [
 { #category : 'accessing' }
 ASStackNonEmpty >> at: aSymbol [
 
-	^ rest at: aSymbol
+	^ next at: aSymbol
 ]
 
 { #category : 'accessing' }
@@ -35,20 +35,20 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 ASStackNonEmpty >> do: aBlock [
 
 	aBlock value: self.
-	^ rest do: aBlock
+	^ next do: aBlock
 ]
 
 { #category : 'instance creation' }
 ASStackNonEmpty >> fromStack: anASStack [
 
-	rest := anASStack.
+	next := anASStack.
 	offset := anASStack offset - 1
 ]
 
 { #category : 'testing' }
 ASStackNonEmpty >> hasContext [
 
-	^ rest hasContext
+	^ next hasContext
 ]
 
 { #category : 'testing' }
@@ -69,7 +69,19 @@ ASStackNonEmpty >> newElementFor: aBasicBlock [
 ]
 
 { #category : 'accessing' }
+ASStackNonEmpty >> next [
+	^ next
+]
+
+{ #category : 'accessing' }
 ASStackNonEmpty >> offset [
 
 	^ offset
+]
+
+{ #category : 'enumerating' }
+ASStackNonEmpty >> with: other do: aBlock [
+
+	aBlock value: self value: other.
+	^ next with: other next do: aBlock
 ]
