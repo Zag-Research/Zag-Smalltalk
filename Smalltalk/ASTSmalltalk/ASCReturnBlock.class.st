@@ -13,11 +13,6 @@ Class {
 }
 
 { #category : 'data flow instructions' }
-ASCReturnBlock >> checkForCalls [
-
-]
-
-{ #category : 'data flow instructions' }
 ASCReturnBlock >> classForLocals [
 
 	^ ASFlowOnDemand

@@ -19,7 +19,7 @@ ASTInspectBlock class >> from: anASCBlock [
 
 { #category : 'instance creation' }
 ASTInspectBlock >> children [ 
-	^ ascBlock block body
+	^ ascBlock scope
 ]
 
 { #category : 'instance creation' }

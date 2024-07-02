@@ -115,6 +115,6 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg send: #*. " and create new ReturnBlock"
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
-	cg resolveFlowDependencies.
+	cg finalAnalysis.
 	cg inspect
 ]

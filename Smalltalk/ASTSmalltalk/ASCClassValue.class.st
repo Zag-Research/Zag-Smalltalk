@@ -51,10 +51,6 @@ ASCClassValue >> kind [
 ASCClassValue >> makeManifest [
 ]
 
-{ #category : 'serializing' }
-ASCClassValue >> manifest: aGenerator [
-]
-
 { #category : 'accessing' }
 ASCClassValue >> max [
 

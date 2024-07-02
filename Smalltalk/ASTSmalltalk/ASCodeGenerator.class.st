@@ -156,9 +156,12 @@ ASCodeGenerator >> eval: aString params: aCollection [
 	^ ASCLiteralValue new init: Object new
 ]
 
-{ #category : 'post processing' }
+{ #category : 'data flow instructions' }
 ASCodeGenerator >> finalAnalysis [
 
+	self inlineWherePossible.
+	basicBlocks do: #checkForCalls.
+	basicBlocks do: #markReferences.
 
 ]
 
@@ -306,11 +309,14 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> inlineWherePossible [
 
-	| keepLooking |
-	keepLooking := true.
+	| keepLooking temp |
+	self flag: 'change to true, when inlineableIn: is implemented'.
+	keepLooking := false.
 	[ keepLooking ] whileTrue: [
 		keepLooking := false.
-		blocksWithCalls do: [ :block |
+		temp := blocksWithCalls.
+		blocksWithCalls := Set new.
+		temp do: [ :block |
 			(block inlineableIn: self) ifTrue: [ keepLooking := true ] ] ]
 ]
 
@@ -355,12 +361,6 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ self incompleteImplementation
-]
-
-{ #category : 'serializing' }
-ASCodeGenerator >> manifest: anASCBlock [
-
-	self requireContext
 ]
 
 { #category : 'accessing' }
@@ -411,9 +411,7 @@ ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
 { #category : 'API' }
 ASCodeGenerator >> popVariable: aSymbol [
 
-	^ code
-		modifies: aSymbol;
-		popVariable: aSymbol
+	^ code popVariable: aSymbol
 ]
 
 { #category : 'API' }
@@ -456,21 +454,6 @@ ASCodeGenerator >> pushSelf [
 ASCodeGenerator >> pushVariable: variable [
 
 	^ code pushVariable: variable
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> requireContext [
-
-	^ code getContext
-]
-
-{ #category : 'data flow instructions' }
-ASCodeGenerator >> resolveFlowDependencies [
-
-	self inlineWherePossible.
-	basicBlocks do: #checkForCalls.
-	basicBlocks do: #markReferences.
-
 ]
 
 { #category : 'API' }
@@ -537,7 +520,6 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 		"check if this is a self call"
 		(self sendInline: aSymbol targetClass: aTargetClass tail: tail)
 			ifTrue: [ ^ true "return something?" ] ].
-	self manifest: code.
 	blocksWithCalls add: code.
 	bb := code
 		      send: aSymbol

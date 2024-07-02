@@ -22,14 +22,6 @@ ASCInlineBlock >> addSourceBlock: aBasicBlock [
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> checkForCalls [
-
-	(sourceBlocks anySatisfy: #endsWithCall) ifFalse: [ ^ self ].
-	self primitiveChangeClassTo: ASCReturnBlock basicNew.
-	stack makeStackTheSource
-]
-
-{ #category : 'data flow instructions' }
 ASCInlineBlock >> classForLocals [
 
 	^ ASFlowPhi

@@ -203,18 +203,8 @@ ASLLMethodOutput >> push [
 { #category : 'API' }
 ASLLMethodOutput >> setupForOutput [
 
-	| bbs |
 	inMethod := false.
-	bbs := Set new.
-	codeGenerator basicBlocksUnorderedDo: [ :bb |
-		currentBasicBlock := bb.
-		maxDepth := maxDepth max: bb maxDepth.
-		bbs add: bb ].
-	[ bbs isEmpty ] whileFalse: [
-		| temp |
-		temp := bbs.
-		bbs := Set new.
-		temp do: [ :bb | bb flow ifTrue: [ bbs add: bb ] ] ]
+
 ]
 
 { #category : 'code generation' }
@@ -242,6 +232,11 @@ ASLLMethodOutput >> visitCase: aClassToBlockMap [
 
 	^ self nextPutAll: 'visitCase';print: aClassToBlockMap;nextPutAll: '
 '
+]
+
+{ #category : 'visiting' }
+ASLLMethodOutput >> visitDrop [
+	self nextPutAll: 'visitDrop'; cr
 ]
 
 { #category : 'visiting' }
@@ -289,6 +284,11 @@ ASLLMethodOutput >> visitPushLocal: anASCLocal [
 
 	self nextPutAll: 'visitPushLocal:
 '
+]
+
+{ #category : 'visiting' }
+ASLLMethodOutput >> visitPushNil [
+	self nextPutAll: 'visitPushNil';cr
 ]
 
 { #category : 'API' }

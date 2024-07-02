@@ -88,7 +88,10 @@ ASCBasicBlock >> branch: anASCInlineBlock [
 
 { #category : 'data flow instructions' }
 ASCBasicBlock >> checkForCalls [
-	^ self subclassResponsibility
+
+	(sourceBlocks anySatisfy: #endsWithCall) ifFalse: [ ^ self ].
+	self primitiveChangeClassTo: ASCReturnBlock basicNew.
+	stack makeStackTheSource
 ]
 
 { #category : 'accessing' }
@@ -280,7 +283,7 @@ ASCBasicBlock >> markBlockClosuresToManifest [
 	| last |
 	last := operations last.
 	last requiresContext ifTrue: [ self getContext ].
-	last manifestParameters: stack
+	last manifestParameters
 ]
 
 { #category : 'data flow instructions' }

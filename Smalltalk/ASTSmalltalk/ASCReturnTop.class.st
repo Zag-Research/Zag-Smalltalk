@@ -9,10 +9,10 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
-ASCReturnTop >> manifestParameters: stack [
+{ #category : 'block handling' }
+ASCReturnTop >> manifestParameters [
 
-	^ stack top makeManifest
+	^ stack makeManifestFor: 1
 ]
 
 { #category : 'data flow instructions' }

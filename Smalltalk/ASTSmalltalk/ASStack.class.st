@@ -111,3 +111,9 @@ ASStack >> pushUnknown [
 ASStack >> simplifyDependenciesFor: anASCMethodBlock [
 
 ]
+
+{ #category : 'private' }
+ASStack >> species [
+
+	^ OrderedCollection
+]
