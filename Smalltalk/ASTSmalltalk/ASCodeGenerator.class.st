@@ -211,10 +211,16 @@ ASCodeGenerator >> inferType: anExpression [
 ]
 
 { #category : 'initialization' }
+ASCodeGenerator >> initCode [
+
+	code := ASCMethodBlock new
+]
+
+{ #category : 'initialization' }
 ASCodeGenerator >> initialize [
 
 	super initialize.
-	code := ASCMethodBlock new.
+	self initCode.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
 	blockClosures := OrderedCollection new.
@@ -277,7 +283,7 @@ ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
 	code stack value block zigWalkInlineMethod: self
 ]
 
-{ #category : 'accessing' }
+{ #category : 'API' }
 ASCodeGenerator >> inlineMethod: aCompileMethod [
 
 	^ self
@@ -309,15 +315,12 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> inlineWherePossible [
 
-	| keepLooking temp |
-	self flag: 'change to true, when inlineableIn: is implemented'.
-	keepLooking := false.
-	[ keepLooking ] whileTrue: [
-		keepLooking := false.
+	| temp |
+	[ blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.
 		temp do: [ :block |
-			(block inlineableIn: self) ifTrue: [ keepLooking := true ] ] ]
+			block inlineIfPossible: self ] ]
 ]
 
 { #category : 'initialization' }
@@ -430,11 +433,12 @@ ASCodeGenerator >> pushArray: arraySize [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	self flag: 'block closure should have a reference to anASBlock'.
-	block := ASCBlockClosureValue new "with: anASBlock".
+	block := ASCBlockClosureValue new. "with: anASBlock"
 	"block name: name asSymbol."
 	blockClosures add: block.
 	code setStackForBlock: block.
+	block asBlock: anASBlock.
+	block parent: self.
 	code addOperation: (ASCBlock with: block)
 ]
 
@@ -454,6 +458,12 @@ ASCodeGenerator >> pushSelf [
 ASCodeGenerator >> pushVariable: variable [
 
 	^ code pushVariable: variable
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> requireContext [
+
+	code getContext
 ]
 
 { #category : 'API' }
@@ -610,6 +620,7 @@ ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures collect: [ :bc | ASTInspectBlock from: bc ]).
+	zagBlocks addAll:
+		(blockClosures collect: [ :bc | bc codeGenerator zagBlocks]).
 	^ zagBlocks
 ]

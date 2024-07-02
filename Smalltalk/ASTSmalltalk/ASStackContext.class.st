@@ -14,7 +14,7 @@ Class {
 { #category : 'enumerating' }
 ASStackContext >> do: aBlock [
 
-	^ rest do: aBlock
+	^ next do: aBlock
 ]
 
 { #category : 'removing' }
@@ -37,7 +37,7 @@ ASStackContext >> makeContextRequired: aFullBlockClosure [
 
 { #category : 'data flow instructions' }
 ASStackContext >> newElementFor: aBasicBlock [
-	^ self class new fromStack: (rest newElementFor: aBasicBlock)
+	^ self class new fromStack: (next newElementFor: aBasicBlock)
 ]
 
 { #category : 'accessing' }
@@ -50,4 +50,10 @@ ASStackContext >> offset [
 ASStackContext >> reset [
 
 	^ self
+]
+
+{ #category : 'enumerating' }
+ASStackContext >> with: other do: aBlock [
+
+	^ next with: other next do: aBlock
 ]

@@ -12,13 +12,14 @@ Class {
 { #category : 'adding' }
 ASCInlineBlock >> addSourceBlock: aBasicBlock [
 
-	sourceBlocks
-		add: aBasicBlock
-		andIfNewDo: [
-		sourceElements := stack := aBasicBlock copyOfStackFor: self ]
-		orIfExistedDo: [
-			sourceElements do: [ :stackElement |
-				stackElement mergeWith: aBasicBlock ] ]
+	sourceBlocks add: aBasicBlock andIfNewDo: [
+		sourceElements
+			ifNil: [
+			sourceElements := stack := aBasicBlock copyOfStackFor: self ]
+			ifNotNil: [
+				sourceElements
+					with: aBasicBlock stack
+					do: [ :stackElement :other | stackElement mergeWith: other ] ] ]
 ]
 
 { #category : 'data flow instructions' }
@@ -91,11 +92,6 @@ ASCInlineBlock >> printOn: aStream [
 ASCInlineBlock >> selfElementClass [
 
 	^ ASStackSelf
-]
-
-{ #category : 'initialization' }
-ASCInlineBlock >> setStackForBlock: anASCBlock [ 
-	anASCBlock scope: stack.
 ]
 
 { #category : 'printing' }

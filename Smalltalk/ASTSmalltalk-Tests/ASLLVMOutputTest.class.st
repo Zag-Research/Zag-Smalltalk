@@ -63,24 +63,21 @@ ASLLVMOutputTest >> testLLVM_fibonacci_alt [
 
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_inlined [
-	" self <= 2 ifTrue: [ ^ 1 ]
- ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
 	| cg |
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
-	cg selector: #foo:arg: .
+	cg selector: #foo:arg:.
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg popVariable: #l1.
 	cg pushVariable: #p1.
 	cg pushVariable: #l1.
-	cg sendEmbedded: #'*'.
-	cg sendEmbedded: #'+'.
+	cg sendEmbedded: #*.
+	cg sendEmbedded: #+.
 	cg returnTop.
-	cg inspect.
-
+	cg inspect
 ]
 
 { #category : 'tests' }

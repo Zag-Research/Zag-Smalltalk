@@ -6,15 +6,48 @@ If any are different, then I will generate a Phi node for LLVM to allocate.
 Class {
 	#name : 'ASFlowPhi',
 	#superclass : 'ASFlowNonNil',
+	#instVars : [
+		'sources'
+	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
+{ #category : 'instance creation' }
+ASFlowPhi >> from: anASFlow [
+
+	sources add: anASFlow
+]
+
+{ #category : 'initialization' }
+ASFlowPhi >> initialize [
+
+	super initialize.
+	sources := OrderedCollection new
+]
+
+{ #category : 'testing' }
+ASFlowPhi >> isNilReference [
+
+	^ sources allSatisfy: [ :each | each isNilReference ]
+]
+
 { #category : 'testing' }
 ASFlowPhi >> isPhiReference [
 
 	^ true
+]
+
+{ #category : 'data flow instructions' }
+ASFlowPhi >> makeStackTheSource [
+
+]
+
+{ #category : 'operations' }
+ASFlowPhi >> mergeWith: anASFlow [
+
+	sources add: anASFlow
 ]
 
 { #category : 'printing' }

@@ -21,6 +21,13 @@ ASCReturnNonLocal >> outputTo: output [
 	^ output visitReturnNonLocalTop
 ]
 
+{ #category : 'stack' }
+ASCReturnNonLocal >> resultStack: aStack [
+
+	self flag: 'needs to know where self is and cleanup stack to that point'.
+	^ aStack drop
+]
+
 { #category : 'instance creation' }
 ASCReturnNonLocal >> with: ignored [
 

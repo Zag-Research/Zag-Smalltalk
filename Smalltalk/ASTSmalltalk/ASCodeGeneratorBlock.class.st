@@ -4,6 +4,9 @@ I am a code generator for blocks... very minor but important differences from me
 Class {
 	#name : 'ASCodeGeneratorBlock',
 	#superclass : 'ASCodeGenerator',
+	#instVars : [
+		'parent'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -26,9 +29,23 @@ self halt.
 ]
 
 { #category : 'initialization' }
+ASCodeGeneratorBlock >> initCode [
+
+	code := ASCBlockClosureBlock new
+]
+
+{ #category : 'initialization' }
 ASCodeGeneratorBlock >> initialize [ 
 	super initialize.
-	code makeBlockClosure
+"	code makeBlockClosure"
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGeneratorBlock >> parent: anASCodeGenerator ast: anASBlock [
+
+	self flag: 'todo'.
+	parent := anASCodeGenerator.
+	self generateFrom: anASBlock
 ]
 
 { #category : 'API' }

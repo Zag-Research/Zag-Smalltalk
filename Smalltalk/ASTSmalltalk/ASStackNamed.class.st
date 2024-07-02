@@ -19,7 +19,7 @@ Class {
 ASStackNamed >> at: aSymbol [
 
 	aSymbol = name ifTrue: [ ^ self ].
-	^ rest at: aSymbol
+	^ next at: aSymbol
 ]
 
 { #category : 'displaying' }
@@ -64,7 +64,7 @@ ASStackNamed >> intoContext: anInteger [
 
 	isInContext := true.
 	offset := anInteger.
-	^ rest intoContext: anInteger + 1
+	^ next intoContext: anInteger + 1
 ]
 
 { #category : 'testing' }
@@ -89,6 +89,10 @@ ASStackNamed >> markReferenced [
 	^ source markReferenced
 ]
 
+{ #category : 'operations' }
+ASStackNamed >> mergeWith: aCollection [
+]
+
 { #category : 'accessing' }
 ASStackNamed >> name [
 	^ name
@@ -109,10 +113,8 @@ ASStackNamed >> namedContext: contextBlock stack: stackBlock other: otherBlock [
 
 { #category : 'data flow instructions' }
 ASStackNamed >> newElementFor: aBasicBlock [
+	"nothing to do - use the global named source"
 
-	| new |
-	new := aBasicBlock classForTemporaries new id: self id.
-	^ (self replicate: (rest newElementFor: aBasicBlock)) source: new
 ]
 
 { #category : 'API' }
