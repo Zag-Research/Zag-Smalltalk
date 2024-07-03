@@ -619,8 +619,7 @@ ASCodeGenerator >> topOfStackType [
 ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
-	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll:
-		(blockClosures collect: [ :bc | bc codeGenerator zagBlocks]).
+	zagBlocks := OrderedCollection newFrom: basicBlocks .
+	zagBlocks addAll: (blockClosures collect: [ :bc | bc codeGenerator ]).
 	^ zagBlocks
 ]
