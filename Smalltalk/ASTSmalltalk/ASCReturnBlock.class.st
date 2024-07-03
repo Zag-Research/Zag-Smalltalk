@@ -69,7 +69,7 @@ ASCReturnBlock >> nextSequence [
 { #category : 'writing' }
 ASCReturnBlock >> outputTo: output [
 
-	output outputMethodStart: label.
+	output outputMethodStart: self.
 	^ self outputRestTo: output
 ]
 

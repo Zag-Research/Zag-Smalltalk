@@ -10,6 +10,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'instance creation' }
+ASFlowNil >> from [
+
+	^ self
+]
+
 { #category : 'accessing' }
 ASFlowNil >> id [
 
@@ -38,6 +44,12 @@ ASFlowNil >> isPhiReference [
 ASFlowNil >> isReferenced [
 
 	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASFlowNil >> makeStackTheSource [
+
+	^ ASFlowFromStack new from: self from
 ]
 
 { #category : 'data flow instructions' }
