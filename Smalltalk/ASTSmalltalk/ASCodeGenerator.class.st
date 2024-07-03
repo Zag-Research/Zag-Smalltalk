@@ -159,6 +159,7 @@ ASCodeGenerator >> eval: aString params: aCollection [
 ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
+	blockClosures do: #finalAnalysis. 
 	basicBlocks do: #checkForCalls.
 	basicBlocks do: #markReferences
 ]

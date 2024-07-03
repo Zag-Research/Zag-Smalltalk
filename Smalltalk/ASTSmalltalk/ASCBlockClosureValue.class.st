@@ -39,6 +39,11 @@ ASCBlockClosureValue >> codeGenerator [
 	^ codeGenerator ifNil: [ codeGenerator := ASCodeGeneratorBlock new parent: parent ast: asBlock ]
 ]
 
+{ #category : 'data flow instructions' }
+ASCBlockClosureValue >> finalAnalysis [
+	codeGenerator finalAnalysis
+]
+
 { #category : 'accessing' }
 ASCBlockClosureValue >> parent: anASCodeGenerator [ 
 	parent := anASCodeGenerator
