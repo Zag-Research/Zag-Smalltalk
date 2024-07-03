@@ -34,6 +34,12 @@ ASCInlineBlock >> classForTemporaries [
 	^ ASFlowPhi
 ]
 
+{ #category : 'testing' }
+ASCInlineBlock >> isNamedBlock [
+
+	^ false
+]
+
 { #category : 'initialization' }
 ASCInlineBlock >> label [
 

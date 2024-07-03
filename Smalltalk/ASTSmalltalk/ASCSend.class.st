@@ -20,6 +20,15 @@ ASCSend >> initialize [
 super initialize .	useCall := false
 ]
 
+{ #category : 'inlining' }
+ASCSend >> inlineIfPossible: anASCodeGenerator block: anASCMethodBlock [
+
+	| inliner |
+	inliner := ASInliner soleInstance lookup: selector stack: stack.
+	inliner ifNil: [ ^ self ].
+	self halt
+]
+
 { #category : 'printing' }
 ASCSend >> inspectZagASTOn: aStream [
 

@@ -65,7 +65,7 @@ ASCBasicBlockTest >> testStackFlow [
 	bb4 reference: #l1.
 	self assert: (bb1 at: #l1) source isNilReference.
 	
-	cg resolveFlowDependencies.
+	cg finalAnalysis.
 	self assert: bb4 namedBlock equals: bb1.
 	
 	self assert: (bb1 at: #l1) source isNilReference.

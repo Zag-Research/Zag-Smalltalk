@@ -16,7 +16,8 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
-	cg sendEmbedded: #<=.
+	cg sendEmbedded: #'<='.
+	cg pushNil.
 	targets := cg
 		           classCase: {
 				           True.
@@ -38,6 +39,7 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 	cg send: #fibonacci targetClass: nil.
 	cg sendEmbedded: #+.
 	cg returnTop.
+	cg finalAnalysis.
 	^ cg
 ]
 
@@ -52,6 +54,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
+	cg pushNil.
 	common := cg newInline.
 	targets := cg
 		           classCase: {
@@ -76,6 +79,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 	cg branch: common.
 	cg setBasicBlock: common.
 	cg returnTop.
+	cg finalAnalysis.
 	^ cg
 ]
 

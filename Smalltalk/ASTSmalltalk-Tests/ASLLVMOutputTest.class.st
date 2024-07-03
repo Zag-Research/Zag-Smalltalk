@@ -37,8 +37,9 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
 	| ast cg |
 	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
 	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
+	cg inline: true.
+	cg finalAnalysis.
 	cg inspect.
-	self halt.
 	output
 		codeGenerator: cg;
 		outputToStream.
@@ -87,6 +88,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 
 	| cg |
 	cg := output codeGenerator: ASCompilerInlineTest inlined_fibonacci.
+	cg inline: true; finalAnalysis.
 	cg inspect.
 	output outputToStream.
 	file asString inspect

@@ -222,9 +222,11 @@ ASCBasicBlock >> initialize [
 	operations := OrderedCollection new
 ]
 
-{ #category : 'as yet unclassified' }
-ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [ 
+{ #category : 'inlining' }
+ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
 
+	operations ifEmpty: [ ^ self ].
+	^ operations last inlineIfPossible: anASCodeGenerator block: self
 ]
 
 { #category : 'printing' }
@@ -395,6 +397,12 @@ ASCBasicBlock >> providesNonNil: anId [
 ASCBasicBlock >> pushArray: arraySize [
 
 	self addOperation: (ASCArray with: arraySize)
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> pushNil [
+
+	stack := stack push: nil
 ]
 
 { #category : 'API' }

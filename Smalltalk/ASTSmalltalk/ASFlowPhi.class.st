@@ -39,11 +39,6 @@ ASFlowPhi >> isPhiReference [
 	^ true
 ]
 
-{ #category : 'data flow instructions' }
-ASFlowPhi >> makeStackTheSource [
-
-]
-
 { #category : 'operations' }
 ASFlowPhi >> mergeWith: anASFlow [
 

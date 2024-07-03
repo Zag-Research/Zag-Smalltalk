@@ -25,7 +25,6 @@ Class {
 		'blockClosures',
 		'parentCodeGenerator',
 		'enclosingScope',
-		'implementors',
 		'returnBlock',
 		'blocksWithCalls'
 	],
@@ -161,8 +160,7 @@ ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
 	basicBlocks do: #checkForCalls.
-	basicBlocks do: #markReferences.
-
+	basicBlocks do: #markReferences
 ]
 
 { #category : 'API' }
@@ -194,13 +192,6 @@ self halt.
 	^ nil
 ]
 
-{ #category : 'initialization' }
-ASCodeGenerator >> implementors: aSelector [
-
-	"^ SystemNavigation default allImplementorsOf: aSymbol"
-	(implementors includesKey: aSelector) ifTrue: [ ^implementors at: aSelector ] ifFalse: [ ^ {} ]
-]
-
 { #category : 'accessing' }
 ASCodeGenerator >> inferType: anExpression [
 
@@ -227,34 +218,12 @@ ASCodeGenerator >> initialize [
 	blocksWithCalls := Set new.
 	maxDepth := 0.
 	inline := false.
-	tailCallOptimize := true.
+	tailCallOptimize := true
+]
 
-	implementors := Dictionary new.
-	implementors at: #not put: {
-			(True >> #not).
-			(False >> #not) }.
-	implementors at: #ifTrue: put: {
-			(True >> #ifTrue:).
-			(False >> #ifTrue:) }.
-	implementors at: #ifFalse: put: {
-			(True >> #ifFalse:).
-			(False >> #ifFalse:) }.
-	implementors at: #ifTrue:ifFalse: put: {
-			(True >> #ifTrue:ifFalse:).
-			(False >> #ifTrue:ifFalse:) }.
-	implementors at: #ifFalse:ifTrue: put: {
-			(True >> #ifFalse:ifTrue:).
-			(False >> #ifFalse:ifTrue:) }.
-	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
-	implementors at: #not put: { (Number >> #abs) }.
-	implementors at: #value put: { (ASTBlockClosure >> #value) }.
-	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }.
-	implementors
-		at: #fibonacci_fast
-		put: { (Integer >> #fibonacci_fast) }.
-	implementors
-		at: #fibonacci_accumulator:prev:
-		put: { (Integer >> #fibonacci_accumulator:prev:) }
+{ #category : 'accessing' }
+ASCodeGenerator >> inline: aBoolean [ 
+	inline := aBoolean
 ]
 
 { #category : 'translating' }
@@ -316,11 +285,11 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 ASCodeGenerator >> inlineWherePossible [
 
 	| temp |
+	inline ifFalse: [ ^ self ].
 	[ blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.
-		temp do: [ :block |
-			block inlineIfPossible: self ] ]
+		temp do: [ :block | block inlineIfPossible: self ] ]
 ]
 
 { #category : 'initialization' }
@@ -448,6 +417,12 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 	code addOperation: (ASCLiteral with: aLiteral)
 ]
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> pushNil [
+
+	^ code pushNil
+]
+
 { #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
@@ -562,7 +537,7 @@ ASCodeGenerator >> sendInline: aSymbol targetClass: aTargetClass tail: tail [
 		self inlineMethod: aTargetClass >> aSymbol.
 		^ true ].
 	"extract system nav and for now base if off a list"
-	symbolImplementors := self implementors: aSymbol.
+	symbolImplementors := #()"self implementors: aSymbol".
 	"move to 'ensure' to remove last"
 	(symbolImplementors size between: 1 and: 4) ifFalse: [ ^ false ].
 	common := self newInline.

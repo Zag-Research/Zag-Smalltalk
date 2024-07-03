@@ -145,7 +145,7 @@ ManifestASTSmalltalk class >> ruleUsesAddRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:20.538627-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:18.549021-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2021-03-27T10:08:23.326943-04:00') #(#(#RGMethodDefinition #(#ASCompiler #initialize #false)) #'2022-05-18T13:44:20.149973-03:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:20.538627-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:18.549021-04:00') #(#(#RGMethodDefinition #(#ASInliner #initialize #false)) #'2024-07-03T08:54:00.244969-04:00') )
 ]
 
 { #category : 'code-critics' }

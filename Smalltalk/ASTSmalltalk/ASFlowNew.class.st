@@ -10,11 +10,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'data flow instructions' }
-ASFlowNew >> makeStackTheSource [
-
-]
-
 { #category : 'printing' }
 ASFlowNew >> printOn: aStream [
 
