@@ -17,6 +17,12 @@ Class {
 }
 
 { #category : 'converting' }
+ASCBlockClosureValue >> asBlock [
+
+	^ asBlock
+]
+
+{ #category : 'converting' }
 ASCBlockClosureValue >> asBlock: anASBlock [
 
 	asBlock := anASBlock
