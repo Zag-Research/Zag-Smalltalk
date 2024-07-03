@@ -6,9 +6,7 @@ Class {
 	#superclass : 'ASMethodOrBlock',
 	#instVars : [
 		'selector',
-		'pragmas',
-		'classContext',
-		'args'
+		'pragmas'
 	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
@@ -55,11 +53,6 @@ ASMethodNode >> = other [
 ]
 
 { #category : 'accessing' }
-ASMethodNode >> add: anArg [
-	args add: anArg
-]
-
-{ #category : 'accessing' }
 ASMethodNode >> children [
 
 	| c |
@@ -67,16 +60,6 @@ ASMethodNode >> children [
 	c addAll: pragmas.
 	c addAll: super  children.
 	^ c
-]
-
-{ #category : 'accessing' }
-ASMethodNode >> classContext [
-	^classContext
-]
-
-{ #category : 'accessing' }
-ASMethodNode >> classContext: aClassContext [
-	classContext := aClassContext 
 ]
 
 { #category : 'accessing' }
@@ -94,8 +77,7 @@ ASMethodNode >> hash [
 ASMethodNode >> initialize [
 
 	super initialize.
-	pragmas := OrderedCollection new.
-	args := OrderedCollection new
+	pragmas := OrderedCollection new
 ]
 
 { #category : 'accessing' }
