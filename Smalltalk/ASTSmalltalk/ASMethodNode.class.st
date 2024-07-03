@@ -75,8 +75,7 @@ ASMethodNode >> hash [
 
 { #category : 'initialization' }
 ASMethodNode >> initialize [
-
-	super initialize.
+	super initialize .
 	pragmas := OrderedCollection new
 ]
 
