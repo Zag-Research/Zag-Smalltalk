@@ -45,9 +45,7 @@ ASCBlock >> initialize [
 ASCBlock >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream << block body printString.
-	aStream << $)
+	aStream << block asBlock body printString.
 ]
 
 { #category : 'accessing' }
