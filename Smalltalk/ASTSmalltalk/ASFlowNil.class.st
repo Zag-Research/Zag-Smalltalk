@@ -16,6 +16,18 @@ ASFlowNil >> from [
 	^ self
 ]
 
+{ #category : 'as yet unclassified' }
+ASFlowNil >> getNameFor: aCollection on: anASLLMethodOutput [
+
+	^ anASLLMethodOutput generateNil
+]
+
+{ #category : 'as yet unclassified' }
+ASFlowNil >> getTempNameFor: aCollection on: anASLLMethodOutput [
+
+	^ anASLLMethodOutput generateNil
+]
+
 { #category : 'accessing' }
 ASFlowNil >> id [
 

@@ -13,6 +13,18 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'as yet unclassified' }
+ASFlowNonNil >> getNameFor: aCollection on: anASLLMethodOutput [
+
+	^ anASLLMethodOutput generateTemp
+]
+
+{ #category : 'output' }
+ASFlowNonNil >> getTempNameFor: aCollection on: anASLLMethodOutput [
+
+	^ anASLLMethodOutput generateTemp
+]
+
 { #category : 'accessing' }
 ASFlowNonNil >> id [
 

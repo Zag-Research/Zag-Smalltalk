@@ -186,6 +186,12 @@ ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 ]
 
 { #category : 'as yet unclassified' }
+ASCodeGenerator >> generateTemp [
+
+	^ code nextSequence
+]
+
+{ #category : 'as yet unclassified' }
 ASCodeGenerator >> globalFind: aString [
 	"aString asSymbol isGlobalVariable ifTrue: [ ^ ASStackNamed new name: aString ]"
 self halt.
@@ -289,7 +295,9 @@ ASCodeGenerator >> inlineWherePossible [
 	[ blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.
-		temp do: [ :block | block inlineIfPossible: self ] ]
+		temp do: [ :block |
+			code := block.
+			block inlineIfPossible: self ] ]
 ]
 
 { #category : 'initialization' }
@@ -496,15 +504,6 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
-	aTargetClass ifNotNil: [ "check if this is an embeddable send"
-		aTargetClass isBlock ifTrue: [
-			^ self inlineBlock: aSymbol next: nil ].
-		(ASCEmbed isEmbedded:
-			 (self compiledMethodFor: aSymbol for: aTargetClass)) ifTrue: [
-			^ self sendEmbedded: aSymbol ].
-		"check if this is a self call"
-		(self sendInline: aSymbol targetClass: aTargetClass tail: tail)
-			ifTrue: [ ^ true "return something?" ] ].
 	blocksWithCalls add: code.
 	bb := code
 		      send: aSymbol
@@ -595,7 +594,6 @@ ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll:
-		(blockClosures collect: [ :bc | bc codeGenerator zagBlocks]).
+	zagBlocks addAll: (blockClosures collect: #codeGenerator).
 	^ zagBlocks
 ]

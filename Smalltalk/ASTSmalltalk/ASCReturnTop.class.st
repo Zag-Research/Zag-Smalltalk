@@ -9,6 +9,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'output' }
+ASCReturnTop >> getTop: anASLLMethodOutput [
+
+	^ stack getNameOn: anASLLMethodOutput 
+]
+
 { #category : 'block handling' }
 ASCReturnTop >> manifestParameters [
 
@@ -29,7 +35,7 @@ ASCReturnTop >> next [
 { #category : 'code generation' }
 ASCReturnTop >> outputTo: output [
 
-	^ output visitReturnTop
+	^ output visitReturnTop: self
 ]
 
 { #category : 'stack' }

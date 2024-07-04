@@ -21,12 +21,12 @@ super initialize .	useCall := false
 ]
 
 { #category : 'inlining' }
-ASCSend >> inlineIfPossible: anASCodeGenerator block: anASCMethodBlock [
+ASCSend >> inlineIfPossible: anASCodeGenerator [
 
 	| inliner |
-	inliner := ASInliner soleInstance lookup: selector stack: stack.
+	inliner := ASInliner lookup: selector stack: stack.
 	inliner ifNil: [ ^ self ].
-	self halt
+	^ inliner 
 ]
 
 { #category : 'printing' }

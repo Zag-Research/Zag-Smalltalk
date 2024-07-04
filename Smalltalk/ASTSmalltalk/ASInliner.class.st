@@ -1,3 +1,6 @@
+"
+I keep track of potential inlining opportunities
+"
 Class {
 	#name : 'ASInliner',
 	#superclass : 'Object',
@@ -5,17 +8,37 @@ Class {
 		'implementors'
 	],
 	#classInstVars : [
-		'soleInstance'
+		'map'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASInliner class >> soleInstance [
+{ #category : 'compiling' }
+ASInliner class >> lookup: aString [
 
-	^ soleInstance ifNil: [ soleInstance := self new ]
+	^ self lookup: aString stack: nil
+]
+
+{ #category : 'inlining' }
+ASInliner class >> lookup: aSymbol class: aClass [
+
+	^ map at: aSymbol->aClass ifAbsentPut: [
+	(aClass whichClassIncludesSelector: aSymbol) ifNotNil: [ :class | class >> aSymbol ]]
+]
+
+{ #category : 'inlining' }
+ASInliner class >> lookup: aString stack: aCollection [
+	"	self halt."
+	aString = #ifTrue:ifFalse: ifTrue: [ ^ { True>>#ifTrue:ifFalse: . False >>#ifTrue:ifFalse:}].
+	^ nil
+]
+
+{ #category : 'class initialization' }
+ASInliner class >> reset [
+
+	(map := LRUCache new) maximumWeight: 100
 ]
 
 { #category : 'initialization' }
@@ -48,10 +71,4 @@ ASInliner >> initialize [
 	implementors
 		at: #fibonacci_accumulator:prev:
 		put: { (Integer >> #fibonacci_accumulator:prev:) }
-]
-
-{ #category : 'inlining' }
-ASInliner >> lookup: aString stack: aCollection [
-
-	^ nil
 ]

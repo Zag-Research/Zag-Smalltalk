@@ -107,7 +107,7 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlineBlock new.
+		next := ASCInlinedMethodBlock new.
 		case at: class put: next.
 		next addSourceBlock: self ].
 	self addOperation: case.
@@ -226,7 +226,7 @@ ASCBasicBlock >> initialize [
 ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
 
 	operations ifEmpty: [ ^ self ].
-	^ operations last inlineIfPossible: anASCodeGenerator block: self
+	^ operations last inlineIfPossible: anASCodeGenerator
 ]
 
 { #category : 'printing' }
@@ -253,6 +253,21 @@ ASCBasicBlock >> inspectionStack: aBuilder [
 		  items: stack asOrderedCollection;
 		  yourself
 
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionStart: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'Source'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: sourceElements asOrderedCollection;
+		  yourself
 ]
 
 { #category : 'writing' }

@@ -6,7 +6,8 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'offset',
-		'next'
+		'next',
+		'outputName'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -61,6 +62,11 @@ ASStackNonEmpty >> isEmpty [
 ASStackNonEmpty >> isInContext [
 
 	^ false
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> makeContextRequired: aFullBlockClosure [ 
+	^ self subclassResponsibility
 ]
 
 { #category : 'data flow instructions' }
