@@ -32,13 +32,33 @@ ASLLVMOutputTest >> testLLVMOutput [
 ]
 
 { #category : 'tests' }
-ASLLVMOutputTest >> testLLVM_fibonacci [
+ASLLVMOutputTest >> testLLVM_blockReturnEasy [
 
 	| ast cg |
-	ast := ASPharoCompiler new astFor: Integer >> #fibonacci.
+	ast := ASPharoCompiler new astFor:
+		       ASCompileTestClass1 >> #blockReturnEasy.
 	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
-	cg inline: true.
-	cg finalAnalysis.
+	cg
+		inline: true;
+		finalAnalysis.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	output asString inspect.
+	self assert: output name equals: 'blockReturnEasy'
+]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_fibonacci [
+	" self <= 2 ifTrue: [ ^ 1 ]
+ ^ (self - 1) fibonacci + (self - 2) fibonacci "
+
+	| cg |
+	cg := ASCodeGenerator targetClass: SmallInteger ast: (ASPharoCompiler new astFor: Integer >> #fibonacci).
+	cg
+		inline: true;
+		finalAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -87,10 +107,14 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
  ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
 	| cg |
-	cg := output codeGenerator: ASCompilerInlineTest inlined_fibonacci.
-	cg inline: true; finalAnalysis.
+	cg := ASCompilerInlineTest inlined_fibonacci.
+	cg
+		inline: true;
+		finalAnalysis.
 	cg inspect.
-	output outputToStream.
+	output
+		codeGenerator: cg;
+		outputToStream.
 	file asString inspect
 ]
 
@@ -115,6 +139,62 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg pushLiteral: 42.
 	cg returnTop.
 	cg finalAnalysis.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	file asString inspect
+]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> test_plus_and [
+	"plus: n1 and: n2 and: n3
+
+	^ n1 + (n2 * n3)"
+
+	| cg |
+	cg := ASCodeGenerator new.
+	cg targetClass: ASCompileTestClass1.
+	cg selector: #plus:and:.
+	cg locals: #(  ) parameters: #( n1 n2 ).
+	cg requireContext.
+	cg pushVariable: #n1.
+	cg pushLiteral: 42.
+	cg pushVariable: #n2.
+	cg send: #*. " and create new ReturnBlock"
+	cg send: #+. " and create new ReturnBlock"
+	cg returnTop.
+	cg
+		inline: true;
+		finalAnalysis.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	file asString inspect
+]
+
+{ #category : 'tests' }
+ASLLVMOutputTest >> test_plus_and_and [
+	"plus: n1 and: n2 and: n3
+
+	^ n1 + (n2 * n3)"
+
+	| cg |
+	cg := ASCodeGenerator new.
+	cg targetClass: ASCompileTestClass1.
+	cg selector: #plus:and:and:.
+	cg locals: #(  ) parameters: #( n1 n2 n3 ).
+	cg requireContext.
+	cg pushVariable: #n1.
+	cg pushVariable: #n2.
+	cg pushVariable: #n3.
+	cg send: #*. " and create new ReturnBlock"
+	cg send: #+. " and create new ReturnBlock"
+	cg returnTop.
+	cg
+		inline: true;
+		finalAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;

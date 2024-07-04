@@ -142,7 +142,7 @@ ASZigThreadedOutputTest >> testZig_pushLiteral [
 { #category : 'tests' }
 ASZigThreadedOutputTest >> testZig_pushReturn [
 
-	output visitReturnTop.
+	output visitReturnTop: nil.
 
 	self assert: output asString equals: '&e.returnTop,'
 ]

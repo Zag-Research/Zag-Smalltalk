@@ -41,6 +41,12 @@ ASStackNamed >> displayStringOn: stream [
 		print: source
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackNamed >> getNameOn: anASLLMethodOutput [
+
+	^ source getNameFor: self on: anASLLMethodOutput
+]
+
 { #category : 'accessing' }
 ASStackNamed >> id [
 

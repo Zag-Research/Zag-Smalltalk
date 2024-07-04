@@ -18,6 +18,12 @@ ASCStackReferencingOperations >> markReferences [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'output' }
+ASCStackReferencingOperations >> offsetToSelf [
+
+	^ (stack at: #self) offset - stack offset
+]
+
 { #category : 'stack' }
 ASCStackReferencingOperations >> resultStack: anASStack [
 

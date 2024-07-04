@@ -58,7 +58,7 @@ ASCompileTestClass1 >> blockReturn: p1 [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> blockReturnEasy [
 
-	true ifTrue: [ ^ 42 ]
+	true ifTrue: [ ^ 42 ] ifFalse: [ ^ self ]
 ]
 
 { #category : 'testing - examples' }
@@ -180,6 +180,12 @@ ASCompileTestClass1 >> object [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> plus1: aNumber [
 	^ aNumber + 1
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> plus: n1 and: n2 [
+
+	^ n1 + (42 + n2)
 ]
 
 { #category : 'testing - examples' }

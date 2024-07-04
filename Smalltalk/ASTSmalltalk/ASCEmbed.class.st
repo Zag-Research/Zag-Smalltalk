@@ -26,13 +26,14 @@ ASCEmbed class >> initialize [
 	EmbeddingReturnTypes at: #'<=' put: Boolean.
 	EmbeddingReturnTypes at: #< put: Boolean.
 	EmbeddingReturnTypes at: #+ put: SmallInteger.
-	
+
 	embeddings := {
 		              (Integer >> #-).
 		              (Integer >> #'<=').
+		              (SmallInteger >> #'<=').
 		              (SmallInteger >> #<).
-		              (SmallInteger >> #+) }.
-
+		              (SmallInteger >> #+).
+		              (SmallInteger >> #-) }
 ]
 
 { #category : 'API' }

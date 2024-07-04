@@ -25,9 +25,11 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 		           selector: #ifTrue:.
 	cg setBasicBlock: targets first.
 	cg drop.
+	cg drop.
 	cg pushLiteral: 1.
 	cg returnTop.
 	cg setBasicBlock: targets last.
+	cg drop.
 	cg drop.
 	cg pushSelf.
 	cg pushLiteral: 1.

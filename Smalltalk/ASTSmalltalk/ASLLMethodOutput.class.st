@@ -5,9 +5,11 @@ Class {
 	#name : 'ASLLMethodOutput',
 	#superclass : 'ASLLOutput',
 	#instVars : [
-		'sequence',
 		'stack',
-		'inMethod'
+		'inMethod',
+		'currentStackName',
+		'currentPcName',
+		'currentContextName'
 	],
 	#classVars : [
 		'TypeMap'
@@ -30,6 +32,33 @@ ASLLMethodOutput class >> initialize [
 			           (Float -> 'double').
 			           (Boolean -> 'i1').
 			           (String -> 'i8*') }
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> adjustStack: anInteger [
+
+	| newSp |
+	newSp := self generateTemp: 'sp'.
+	self nextPutAll: newSp; nextPutAll: ' =  getelementptr inbounds %zag.execute.Stack, ptr '; nextPutAll: currentStackName;nextPutAll: ', i64 0, i32 ';print: anInteger.
+	currentStackName := newSp.
+	^ newSp
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> generateTemp [
+
+	^ String streamContents: [:s| s nextPut: $%; print: codeGenerator generateTemp ]
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> generateTemp: prefix [
+
+	^ String streamContents: [ :s |
+		  s
+			  nextPut: $%;
+			  nextPutAll: prefix;
+			  nextPut: $.;
+			  print: codeGenerator generateTemp ]
 ]
 
 { #category : 'initialization' }
@@ -110,7 +139,8 @@ ASLLMethodOutput >> outputDefineFromStack: idx named: name [
 { #category : 'as yet unclassified' }
 ASLLMethodOutput >> outputInlineBlockStart: anASCInlineBlock [
 
-	self print: anASCInlineBlock label;
+	self
+		nextPutAll: anASCInlineBlock label;
 		nextPut: $:;
 		cr
 ]
@@ -182,7 +212,10 @@ ASLLMethodOutput >> outputMethodStart: bb [
 		nextPutAll:
 			'(ptr noundef %pc, ptr noundef %sp, ptr noundef %process, ptr noundef %context, i64 %signature) #1 {
 '.
-	inMethod := true
+	inMethod := true.
+	currentStackName := '%sp'.
+	currentPcName := '%pc'.
+	currentContextName := '%context'
 ]
 
 { #category : 'accessing' }
@@ -205,6 +238,12 @@ ASLLMethodOutput >> setupForOutput [
 
 	inMethod := false.
 
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> store: source atPointer: target [
+
+	self nextPutAll: '  store i64 ';nextPutAll: source; nextPutAll: ', ptr ';nextPutAll: target;nextPutAll: ', align 8';cr
 ]
 
 { #category : 'code generation' }
@@ -261,14 +300,6 @@ ASLLMethodOutput >> visitPushContext [
 ]
 
 { #category : 'API' }
-ASLLMethodOutput >> visitPushContext: unused [
-
-	self
-		nextPutAll: '(';
-		"Insert LLVM arguments here"nextPutAll: ')'
-]
-
-{ #category : 'API' }
 ASLLMethodOutput >> visitPushLiteral: aLiteral [
 
 	self
@@ -291,11 +322,26 @@ ASLLMethodOutput >> visitPushNil [
 	self nextPutAll: 'visitPushNil';cr
 ]
 
+{ #category : 'visiting' }
+ASLLMethodOutput >> visitReturnSelf [
+
+]
+
 { #category : 'API' }
 ASLLMethodOutput >> visitReturnTop [
 
 	self 
 		nextPutAll: 'ret '.
+]
+
+{ #category : 'visiting' }
+ASLLMethodOutput >> visitReturnTop: anASCReturnTop [
+
+	| name newSp |
+	name := anASCReturnTop getTop: self.
+	newSp := self adjustStack: anASCReturnTop offsetToSelf.
+	self store: name atPointer: newSp.
+	self returnSp: newSp context: (self getContext: anASCReturnTop)
 ]
 
 { #category : 'API' }
