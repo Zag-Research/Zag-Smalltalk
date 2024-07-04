@@ -12,6 +12,11 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'accessing' }
+ASCodeGeneratorBlock >> children [ 
+	^ code children 
+]
+
 { #category : 'API' }
 ASCodeGeneratorBlock >> find: aSymbol [
 
@@ -38,6 +43,13 @@ ASCodeGeneratorBlock >> initCode [
 ASCodeGeneratorBlock >> initialize [ 
 	super initialize.
 "	code makeBlockClosure"
+]
+
+{ #category : 'accessing' }
+ASCodeGeneratorBlock >> inspectZagASTOn: stream [
+
+	"super inspectZagASTOn: stream."
+	code inspectZagASTOn: stream
 ]
 
 { #category : 'as yet unclassified' }
