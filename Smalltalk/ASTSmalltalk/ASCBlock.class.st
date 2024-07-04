@@ -44,8 +44,9 @@ ASCBlock >> initialize [
 { #category : 'instance creation' }
 ASCBlock >> inspectZagASTOn: aStream [
 
-	super inspectZagASTOn: aStream.
-	aStream << block asBlock body printString.
+	"super inspectZagASTOn: aStream."
+	block inspectZagASTOn: aStream
+	"aStream << block asBlock body printString"
 ]
 
 { #category : 'accessing' }
