@@ -55,7 +55,11 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
  ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
 	| cg |
-	cg := ASCodeGenerator targetClass: SmallInteger ast: (ASPharoCompiler new astFor: Integer >> #fibonacci).
+	cg := ASCodeGenerator
+		      targetClass: SmallInteger
+		      ast: (ASPharoCompiler new astFor: Integer >> #fibonacci).
+	cg inspect.
+	self halt.
 	cg
 		inline: true;
 		finalAnalysis.

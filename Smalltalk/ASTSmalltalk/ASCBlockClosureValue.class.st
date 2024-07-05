@@ -41,7 +41,7 @@ ASCBlockClosureValue >> codeGenerator [
 
 { #category : 'data flow instructions' }
 ASCBlockClosureValue >> finalAnalysis [
-	codeGenerator finalAnalysis
+	self codeGenerator finalAnalysis
 ]
 
 { #category : 'accessing' }

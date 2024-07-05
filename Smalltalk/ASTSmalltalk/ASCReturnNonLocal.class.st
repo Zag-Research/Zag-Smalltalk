@@ -22,10 +22,12 @@ ASCReturnNonLocal >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnNonLocal >> resultStack: aStack [
+ASCReturnNonLocal >> resultStack: anASStack [
 
-	self flag: 'needs to know where self is and cleanup stack to that point'.
-	^ aStack drop
+	self flag:
+		'needs to know where self is and cleanup stack to that point'.
+	stack := anASStack.
+	^ anASStack drop
 ]
 
 { #category : 'instance creation' }

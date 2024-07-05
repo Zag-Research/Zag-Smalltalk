@@ -29,9 +29,9 @@ ASInliner class >> lookup: aSymbol class: aClass [
 ]
 
 { #category : 'inlining' }
-ASInliner class >> lookup: aString stack: aCollection [
-	"	self halt."
-	aString = #ifTrue:ifFalse: ifTrue: [ ^ { True>>#ifTrue:ifFalse: . False >>#ifTrue:ifFalse:}].
+ASInliner class >> lookup: selector stack: aStack [
+	(self lookup: selector class: (aStack at: selector numArgs) value) ifNotNil: [ :v| ^ v ].
+self halt.
 	^ nil
 ]
 

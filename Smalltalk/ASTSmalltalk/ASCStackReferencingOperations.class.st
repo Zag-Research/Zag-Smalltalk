@@ -15,7 +15,7 @@ Class {
 { #category : 'data flow instructions' }
 ASCStackReferencingOperations >> markReferences [
 
-	^ self subclassResponsibility
+	^ stack markReferenced
 ]
 
 { #category : 'output' }
