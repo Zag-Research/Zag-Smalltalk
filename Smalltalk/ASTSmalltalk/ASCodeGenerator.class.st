@@ -27,7 +27,7 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'blockIndex'
+		'blockClosureIndex'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -227,7 +227,7 @@ ASCodeGenerator >> initialize [
 	maxDepth := 0.
 	inline := false.
 	tailCallOptimize := true.
-	blockIndex := 0
+	blockClosureIndex := 0
 ]
 
 { #category : 'accessing' }
@@ -354,8 +354,8 @@ ASCodeGenerator >> name [
 { #category : 'instance creation' }
 ASCodeGenerator >> newBlockName [
 
-	blockIndex := blockIndex + 1.
-	^ selector asString , #_b , blockIndex asString
+	blockClosureIndex := blockClosureIndex + 1.
+	^ selector asString , #_b , blockClosureIndex asString
 ]
 
 { #category : 'private - testing' }
