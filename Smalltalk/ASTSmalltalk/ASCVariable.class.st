@@ -29,7 +29,7 @@ ASCVariable >> inspectStringOn: s [
 ASCVariable >> inspectZagASTOn: s [
 
 	s << self className << $(.
-	s print: name.
+	s << name.
 	s << $)
 ]
 

@@ -26,7 +26,8 @@ Class {
 		'parentCodeGenerator',
 		'enclosingScope',
 		'returnBlock',
-		'blocksWithCalls'
+		'blocksWithCalls',
+		'blockIndex'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -225,7 +226,8 @@ ASCodeGenerator >> initialize [
 	blocksWithCalls := Set new.
 	maxDepth := 0.
 	inline := false.
-	tailCallOptimize := true
+	tailCallOptimize := true.
+	blockIndex := 0
 ]
 
 { #category : 'accessing' }
@@ -349,6 +351,13 @@ ASCodeGenerator >> name [
 	^ name
 ]
 
+{ #category : 'instance creation' }
+ASCodeGenerator >> newBlockName [
+
+	blockIndex := blockIndex + 1.
+	^ selector asString , #_b , blockIndex asString
+]
+
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
@@ -411,8 +420,8 @@ ASCodeGenerator >> pushArray: arraySize [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	block := ASCBlockClosureValue new. "with: anASBlock"
-	"block name: name asSymbol."
+	block := ASCBlockClosureValue new.
+	block name: self newBlockName.
 	blockClosures add: block.
 	code setStackForBlock: block.
 	block asBlock: anASBlock.

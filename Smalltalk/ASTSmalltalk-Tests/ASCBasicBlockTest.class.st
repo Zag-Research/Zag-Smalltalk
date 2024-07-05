@@ -92,6 +92,7 @@ ASCBasicBlockTest >> test_extend [
 	"2. test for scope, ASCBlocks have a scope attribute which points to a stack"
 	"who references ASCBlocks?"
 	block := ASCBlockClosureValue new.
+	block name: #testBlock.
 	ascBlock := ASCBlock with: block.
 	bb setStackForBlock: ascBlock.
 	self assert: (ascBlock scope at: #p1) id equals: (bb at: #p1) id
