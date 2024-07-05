@@ -273,7 +273,7 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 { #category : 'writing' }
 ASCBasicBlock >> inspectionZagCode [
 
-	<inspectorPresentationOrder: 0 title: 'ZagCode'>
+	<inspectorPresentationOrder: 0 title: 'ZCode'>
 	^ SpTreeTablePresenter new
 		  roots: operations;
 		  children: [ :aNode | aNode children ];

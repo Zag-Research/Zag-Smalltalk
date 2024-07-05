@@ -5,7 +5,8 @@ Class {
 	#name : 'ASCodeGeneratorBlock',
 	#superclass : 'ASCodeGenerator',
 	#instVars : [
-		'parent'
+		'parent',
+		'source'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -47,16 +48,15 @@ ASCodeGeneratorBlock >> initialize [
 
 { #category : 'accessing' }
 ASCodeGeneratorBlock >> inspectZagASTOn: stream [
-
-	"super inspectZagASTOn: stream."
-	code inspectZagASTOn: stream
+	source inspectZagASTOn: stream
 ]
 
 { #category : 'as yet unclassified' }
-ASCodeGeneratorBlock >> parent: anASCodeGenerator ast: anASBlock [
+ASCodeGeneratorBlock >> parent: anASCodeGenerator source: aBlockClosureValue ast: anASBlock [
 
 	self flag: 'todo'.
 	parent := anASCodeGenerator.
+	source := aBlockClosureValue.
 	self generateFrom: anASBlock
 ]
 

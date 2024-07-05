@@ -36,7 +36,11 @@ ASCBlockClosureValue >> blocks [
 { #category : 'API' }
 ASCBlockClosureValue >> codeGenerator [
 
-	^ codeGenerator ifNil: [ codeGenerator := ASCodeGeneratorBlock new parent: parent ast: asBlock ]
+	^ codeGenerator ifNil: [
+		  codeGenerator := ASCodeGeneratorBlock new
+			                   parent: parent
+									source: self
+			                   ast: asBlock ]
 ]
 
 { #category : 'data flow instructions' }
