@@ -19,7 +19,7 @@ ASCPopAndCopyTop >> markReferences [
 ASCPopAndCopyTop >> resultStack: anASStack [
 
 	stack := anASStack.
-	^ anASStack dropUnder: (stack offsetToSelf: 0)
+	^ anASStack dropUnder: (stack offsetToSelf: 0) - 1
 ]
 
 { #category : 'instance creation' }

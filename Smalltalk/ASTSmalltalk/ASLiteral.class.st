@@ -89,3 +89,11 @@ ASLiteral >> zigWalk: aGenerator [
 
 	^ aGenerator pushLiteral: literal
 ]
+
+{ #category : 'compiling' }
+ASLiteral >> zigWalkForReturn: aGenerator [
+
+	(#( true false 0 1 -1 nil ) includes: literal) ifTrue: [
+		^ aGenerator returnLiteral: literal ].
+	^ super zigWalkForReturn: aGenerator
+]

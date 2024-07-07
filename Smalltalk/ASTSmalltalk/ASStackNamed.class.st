@@ -3,12 +3,10 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackNonEmpty',
+	#superclass : 'ASStackNonContext',
 	#instVars : [
 		'name',
-		'isInContext',
-		'value',
-		'source'
+		'isInContext'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -35,8 +33,6 @@ ASStackNamed >> displayStringOn: stream [
 				 ifTrue: [ 'C' ]
 				 ifFalse: [ '' ]);
 		nextPut: $);
-		nextPutAll: '= ';
-		print: value;
 		nextPutAll: ' >';
 		print: source
 ]
@@ -90,6 +86,13 @@ ASStackNamed >> makeContextRequired: aBlock [
 ]
 
 { #category : 'data flow instructions' }
+ASStackNamed >> makeStackTheSource [
+
+	source := ASFlowOnDemand new.
+	^ next makeStackTheSource
+]
+
+{ #category : 'data flow instructions' }
 ASStackNamed >> markReferenced [
 
 	^ source markReferenced
@@ -128,7 +131,6 @@ ASStackNamed >> replicate: aStack [
 
 	^ (self class fromStack: aStack)
 		  name: name;
-		  value: value;
 		  source: source
 ]
 
@@ -140,15 +142,4 @@ ASStackNamed >> source [
 { #category : 'accessing' }
 ASStackNamed >> source: anASFlowNew [ 
 	source := anASFlowNew
-]
-
-{ #category : 'evaluating' }
-ASStackNamed >> value [
-
-	^ value
-]
-
-{ #category : 'accessing' }
-ASStackNamed >> value: anInteger [ 
-	value := anInteger
 ]

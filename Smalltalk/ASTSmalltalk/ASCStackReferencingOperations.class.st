@@ -19,7 +19,7 @@ ASCStackReferencingOperations >> markReferences [
 ]
 
 { #category : 'output' }
-ASCStackReferencingOperations >> offsetToSelf [
+ASCStackReferencingOperations >> offsetOfSelf [
 
 	^ (stack at: #self) offset - stack offset
 ]
@@ -28,4 +28,15 @@ ASCStackReferencingOperations >> offsetToSelf [
 ASCStackReferencingOperations >> resultStack: anASStack [
 
 	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ASCStackReferencingOperations >> stack [
+	^ stack
+]
+
+{ #category : 'as yet unclassified' }
+ASCStackReferencingOperations >> theSelf [
+
+	^ stack at: #self
 ]

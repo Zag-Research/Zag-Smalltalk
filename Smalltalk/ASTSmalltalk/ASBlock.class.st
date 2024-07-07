@@ -84,7 +84,7 @@ ASBlock >> zigWalkInlineMethod: aGenerator [
 
 	aGenerator locals: locals indirectParameters: arguments.
 	^ body
-		  zigWalkEmpty: [ aGenerator returnNil]
+		  zigWalkEmpty: [ aGenerator returnLiteral: nil]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
 		  last: [ :exp | exp zigWalkInlineBlockReturn: aGenerator ]
 ]
@@ -95,7 +95,7 @@ ASBlock >> zigWalkMethod: aGenerator [
 	aGenerator selector: self selector.
 	aGenerator locals: locals parameters: arguments.
 	^ body
-		  zigWalkEmpty: [ aGenerator returnNil ]
+		  zigWalkEmpty: [ aGenerator returnLiteral: nil ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
 		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
 ]

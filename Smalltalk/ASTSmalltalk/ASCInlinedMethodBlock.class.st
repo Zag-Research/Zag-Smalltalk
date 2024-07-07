@@ -8,3 +8,15 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'accessing' }
+ASCInlinedMethodBlock >> className: aString [
+
+	label := self label,'_',aString
+]
+
+{ #category : 'printing' }
+ASCInlinedMethodBlock >> inspectExtra [
+
+	^ className ifNil: [ '' ]
+]

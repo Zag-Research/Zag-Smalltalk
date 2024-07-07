@@ -9,6 +9,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'adding' }
+ASStack >> add: newObject [
+
+	^ self shouldNotImplement
+]
+
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.
@@ -34,13 +40,13 @@ ASStack >> hasContext [
 { #category : 'API' }
 ASStack >> initLocalNamed: name [
 
-	^ (ASLocalNamed new fromStack: self) name: name
+	^ (ASLocalNamed new fromStack: self) name: name; source: ASFlowNil new
 ]
 
 { #category : 'API' }
 ASStack >> initParameterNamed: name [
 
-	^ (ASParameterNamed fromStack: self) name: name
+	^ (ASParameterNamed fromStack: self) name: name; source: ASFlowParameter new
 ]
 
 { #category : 'API' }
@@ -99,12 +105,24 @@ ASStack >> printOn: aStream [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	^ (ASStackTemporary fromStack: self) value: anObject; source: ASFlowNew new
+	^ (ASStackTemporary fromStack: self) source: (ASFlowNew value: anObject)
 ]
 
 { #category : 'API' }
 ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
+]
+
+{ #category : 'as yet unclassified' }
+ASStack >> pushValue: anObject [
+
+	^ (ASStackTemporary fromStack: self) source: (ASFlowNew new value: anObject )
+]
+
+{ #category : 'removing' }
+ASStack >> remove: oldObject ifAbsent: anExceptionBlock [
+
+	^ self shouldNotImplement
 ]
 
 { #category : 'data flow instructions' }

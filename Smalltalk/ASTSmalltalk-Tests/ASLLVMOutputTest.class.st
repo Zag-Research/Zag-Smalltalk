@@ -151,6 +151,22 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 ]
 
 { #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_yourself [
+
+	| cg |
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #yourself.
+	cg inspect.
+	cg
+		inline: true;
+		finalAnalysis.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	file asString inspect.
+	self assert: output name equals: 'yourself'
+]
+
+{ #category : 'tests' }
 ASLLVMOutputTest >> test_plus_and [
 	"plus: n1 and: n2 and: n3
 
@@ -161,7 +177,6 @@ ASLLVMOutputTest >> test_plus_and [
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:.
 	cg locals: #(  ) parameters: #( n1 n2 ).
-	cg requireContext.
 	cg pushVariable: #n1.
 	cg pushLiteral: 42.
 	cg pushVariable: #n2.
@@ -189,7 +204,6 @@ ASLLVMOutputTest >> test_plus_and_and [
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
 	cg locals: #(  ) parameters: #( n1 n2 n3 ).
-	cg requireContext.
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.

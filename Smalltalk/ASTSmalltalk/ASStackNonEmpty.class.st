@@ -29,7 +29,9 @@ ASStackNonEmpty >> at: aSymbol [
 { #category : 'accessing' }
 ASStackNonEmpty >> at: aSymbol put: anObject [
 
-	^ (self at: aSymbol) value: anObject
+	| element |
+	element := self at: aSymbol.
+	element source: (element source value: anObject)
 ]
 
 { #category : 'enumerating' }
@@ -64,7 +66,7 @@ ASStackNonEmpty >> isInContext [
 	^ false
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASStackNonEmpty >> makeContextRequired: aFullBlockClosure [ 
 	^ self subclassResponsibility
 ]
@@ -83,6 +85,12 @@ ASStackNonEmpty >> next [
 ASStackNonEmpty >> offset [
 
 	^ offset
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> offsetToSelf: anInteger [
+
+	^ next offsetToSelf: anInteger + 1
 ]
 
 { #category : 'enumerating' }

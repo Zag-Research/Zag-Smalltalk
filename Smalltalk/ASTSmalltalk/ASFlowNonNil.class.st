@@ -5,35 +5,30 @@ Class {
 	#name : 'ASFlowNonNil',
 	#superclass : 'ASFlowNil',
 	#instVars : [
-		'id',
-		'referenced'
+		'referenced',
+		'value',
+		'class'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
-{ #category : 'as yet unclassified' }
-ASFlowNonNil >> getNameFor: aCollection on: anASLLMethodOutput [
+{ #category : 'accessing' }
+ASFlowNonNil class >> value: anObject [
 
-	^ anASLLMethodOutput generateTemp
+	^ self new value: anObject
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> class: aClass [ 
+	class := aClass
 ]
 
 { #category : 'output' }
-ASFlowNonNil >> getTempNameFor: aCollection on: anASLLMethodOutput [
+ASFlowNonNil >> getNameFor: aCollection on: anOutput [
 
-	^ anASLLMethodOutput generateTemp
-]
-
-{ #category : 'accessing' }
-ASFlowNonNil >> id [
-
-	^ id
-]
-
-{ #category : 'accessing' }
-ASFlowNonNil >> id: aString [ 
-	id := aString
+	^ self subclassResponsibility
 ]
 
 { #category : 'initialization' }
@@ -63,8 +58,33 @@ ASFlowNonNil >> markReferenced [
 	^ referenced := true
 ]
 
+{ #category : 'testing' }
+ASFlowNonNil >> needsToBeSpilled [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'printing' }
 ASFlowNonNil >> printOn: aStream [
 
-	^ aStream nextPutAll: '???'
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> value [
+
+	^ value
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> value: anObject [
+
+	value := anObject.
+	class := anObject class
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> valueClass [
+
+	^ value ifNotNil: [value valueClass]
 ]

@@ -3,7 +3,7 @@ I am a stack element for the `self` position on the stack. This let's code be si
 "
 Class {
 	#name : 'ASStackSelf',
-	#superclass : 'ASStackNamed',
+	#superclass : 'ASParameterNamed',
 	#instVars : [
 		'codeBlock'
 	],
@@ -42,8 +42,13 @@ ASStackSelf >> intoContext: anInteger [
 { #category : 'data flow instructions' }
 ASStackSelf >> makeStackTheSource [
 
-	source := source makeStackTheSource.
+	source := ASFlowParameter new
+]
 
+{ #category : 'as yet unclassified' }
+ASStackSelf >> offsetToSelf: anInteger [
+
+	^ anInteger
 ]
 
 { #category : 'enumerating' }

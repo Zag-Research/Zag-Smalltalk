@@ -183,6 +183,14 @@ ASCompilerInlineTest >> class: aClass selector: aSelector [
 	^ self class: aClass superclass selector: aSelector
 ]
 
+{ #category : 'running' }
+ASCompilerInlineTest >> setUp [
+
+	super setUp.
+
+	ASInliner reset
+]
+
 { #category : 'tests' }
 ASCompilerInlineTest >> testBlockReturnEasyInline [
 	"
@@ -437,6 +445,65 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFoo1Inlined [
+	"foo
+	^ self bar"
+
+	"bar
+	^ 42"
+
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo1.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFoo2Inlined [
+	"foo
+	^ self bar"
+
+	"bar
+	^ 42"
+
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo2.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFoo3Inlined [
+	"foo3
+	self bar"
+
+	"bar
+	^ 42"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #foo3.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFooInlined [
 	"foo
 	^ self bar"
@@ -444,45 +511,13 @@ ASCompilerInlineTest >> testFooInlined [
 	"bar
 	^ 42"
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #foo) inspect.
-	self
-		assert: ASCompileTestClass1 >> #foo
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,6,.ASCompileTestClass1,.{
-&e.pushStack,1,
-&e.pushLiteral,Object.from(42),
-&e.returnTop,
- });
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-Mfoo.setLiterals(&[_]Object{},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo.
+	cg inspect;halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }

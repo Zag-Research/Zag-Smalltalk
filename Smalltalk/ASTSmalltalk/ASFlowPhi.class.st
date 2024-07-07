@@ -5,7 +5,7 @@ If any are different, then I will generate a Phi node for LLVM to allocate.
 "
 Class {
 	#name : 'ASFlowPhi',
-	#superclass : 'ASFlowNonNil',
+	#superclass : 'ASFlowNew',
 	#instVars : [
 		'sources'
 	],
@@ -43,6 +43,12 @@ ASFlowPhi >> isPhiReference [
 ASFlowPhi >> mergeWith: anASFlow [
 
 	sources add: anASFlow
+]
+
+{ #category : 'testing' }
+ASFlowPhi >> needsToBeSpilled [
+
+	^ true
 ]
 
 { #category : 'printing' }

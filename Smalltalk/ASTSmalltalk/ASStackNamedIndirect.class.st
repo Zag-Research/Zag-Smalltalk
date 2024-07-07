@@ -18,6 +18,12 @@ ASStackNamedIndirect >> at: aSymbol [
 	^ myScope at: aSymbol
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackNamedIndirect >> offsetToSelf: anInteger [
+
+	self halt
+]
+
 { #category : 'accessing' }
 ASStackNamedIndirect >> value: anObject [
 

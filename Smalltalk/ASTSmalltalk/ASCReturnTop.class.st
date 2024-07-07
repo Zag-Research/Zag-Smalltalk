@@ -3,7 +3,7 @@ I represent a return
 "
 Class {
 	#name : 'ASCReturnTop',
-	#superclass : 'ASCStackReferencingOperations',
+	#superclass : 'ASCReturn',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -27,11 +27,6 @@ ASCReturnTop >> markReferences [
 	stack markReferenced
 ]
 
-{ #category : 'accessing' }
-ASCReturnTop >> next [
-	^ nil
-]
-
 { #category : 'code generation' }
 ASCReturnTop >> outputTo: output [
 
@@ -43,10 +38,4 @@ ASCReturnTop >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ anASStack drop
-]
-
-{ #category : 'instance creation' }
-ASCReturnTop >> with: aStack [
-
-	stack := aStack
 ]

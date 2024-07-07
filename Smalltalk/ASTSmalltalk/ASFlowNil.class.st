@@ -5,33 +5,49 @@ I am the initial source for a local variable.
 Class {
 	#name : 'ASFlowNil',
 	#superclass : 'Object',
+	#instVars : [
+		'id'
+	],
+	#classInstVars : [
+		'singleton'
+	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
 { #category : 'instance creation' }
-ASFlowNil >> from [
+ASFlowNil class >> singleton [
 
-	^ self
+	^ singleton ifNil: [ singleton := self new ]
 ]
 
-{ #category : 'as yet unclassified' }
-ASFlowNil >> getNameFor: aCollection on: anASLLMethodOutput [
+{ #category : 'accessing' }
+ASFlowNil class >> value: ignored [
 
-	^ anASLLMethodOutput generateNil
+	^ self new
 ]
 
-{ #category : 'as yet unclassified' }
-ASFlowNil >> getTempNameFor: aCollection on: anASLLMethodOutput [
+{ #category : 'instance creation' }
+ASFlowNil >> class: ignored [
+]
 
-	^ anASLLMethodOutput generateNil
+{ #category : 'output' }
+ASFlowNil >> getNameFor: aCollection on: anOutput [
+
+	^ anOutput generateNil
 ]
 
 { #category : 'accessing' }
 ASFlowNil >> id [
 
-	^ '@.nil'
+	^ id
+]
+
+{ #category : 'output' }
+ASFlowNil >> idFor: aCollection on: anASLLMethodOutput [
+
+	^ id ifNil: [ id := self getNameFor: aCollection on: anASLLMethodOutput ]
 ]
 
 { #category : 'testing' }
@@ -59,13 +75,13 @@ ASFlowNil >> isReferenced [
 ]
 
 { #category : 'data flow instructions' }
-ASFlowNil >> makeStackTheSource [
+ASFlowNil >> markReferenced [
 
-	^ ASFlowFromStack new from: self from
+	^ false
 ]
 
-{ #category : 'data flow instructions' }
-ASFlowNil >> markReferenced [
+{ #category : 'testing' }
+ASFlowNil >> needsToBeSpilled [
 
 	^ false
 ]
@@ -74,4 +90,10 @@ ASFlowNil >> markReferenced [
 ASFlowNil >> printOn: aStream [
 
 	^ aStream nextPutAll: 'nil'
+]
+
+{ #category : 'accessing' }
+ASFlowNil >> value: anObject [
+
+	^ ASFlowNew value: anObject
 ]

@@ -23,10 +23,8 @@ super initialize .	useCall := false
 { #category : 'inlining' }
 ASCSend >> inlineIfPossible: anASCodeGenerator [
 
-	| inliner |
-	inliner := ASInliner lookup: selector stack: stack.
-	inliner ifNil: [ ^ self ].
-	^ inliner 
+	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ].
+	self halt
 ]
 
 { #category : 'printing' }

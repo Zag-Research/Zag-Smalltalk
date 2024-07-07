@@ -141,6 +141,24 @@ ASCompileTestClass1 >> foo [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> foo1 [
+
+	^ self bar isLarge
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo2 [
+
+	^ self bar
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo3 [
+
+	self bar
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> foo: p1 bar: p2 [
     | l1 l2 l3 |
     p1 < p2 ifTrue: [ ^ self ].

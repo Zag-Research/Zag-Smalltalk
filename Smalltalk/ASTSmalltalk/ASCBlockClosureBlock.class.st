@@ -19,7 +19,7 @@ Class {
 { #category : 'adding' }
 ASCBlockClosureBlock >> addBlock: anASCReturnBlock [
 
-	anASCReturnBlock context: context.
+	anASCReturnBlock context: self getContext.
 	^ returnBlocks
 		  at: anASCReturnBlock
 		  ifAbsentPut: [ returnBlocks size + 1 ]
@@ -54,11 +54,11 @@ ASCBlockClosureBlock >> initParameterNamed: aSymbol [
 
 	| source |
 	stack := stack initParameterNamed: aSymbol.
-	source := ASFlowOnDemand new id: aSymbol.
-	^ stack
-		  value: (ASCParameter new
+	source := (ASFlowParameter value: (ASCParameter new
 				   init: Object;
-				   name: aSymbol);
+				   name: aSymbol)) class: nil.
+	^ stack
+		  
 		  source: source
 ]
 
@@ -67,12 +67,10 @@ ASCBlockClosureBlock >> initSelf: targetClass [
 
 	| source |
 	stack := stack initSelf.
-	source := ASFlowOnDemand new id: #self.
-	^ stack
-		  value: (ASCSelf new
+	source := (ASFlowParameter value: (ASCSelf new
 				   init: targetClass;
-				   name: #self);
-		  source: source
+				   name: #self)) class: targetClass.
+	^ stack		  source: source
 ]
 
 { #category : 'initialization' }
@@ -105,7 +103,6 @@ ASCBlockClosureBlock >> outputTo: output [
 		primitive: primitive
 		methods: { self } , returnBlocks keys.
 	output outputMethodStart: self.
-	self requiredContextDo: [ output visitPushContext ].
 	^ self outputRestTo: output
 ]
 
@@ -133,6 +130,12 @@ ASCBlockClosureBlock >> selector: aString [
 
 	selector := aString.
 	label := aString
+]
+
+{ #category : 'accessing' }
+ASCBlockClosureBlock >> stackDepth [
+
+	^ sourceElements offset
 ]
 
 { #category : 'data flow instructions' }

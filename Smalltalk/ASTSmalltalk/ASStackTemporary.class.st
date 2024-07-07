@@ -9,11 +9,7 @@ Code generators can inquire as to values and types
 "
 Class {
 	#name : 'ASStackTemporary',
-	#superclass : 'ASStackNonEmpty',
-	#instVars : [
-		'source',
-		'value'
-	],
+	#superclass : 'ASStackNonContext',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
@@ -33,8 +29,6 @@ ASStackTemporary >> displayStringOn: stream [
 	stream
 		nextPutAll: ' (';
 		print: offset;
-		nextPutAll: ') = ';
-		print: value;
 		nextPutAll: ' >';
 		print: source
 ]
@@ -60,7 +54,7 @@ ASStackTemporary >> dropUnder: n [
 { #category : 'as yet unclassified' }
 ASStackTemporary >> getNameOn: anASLLMethodOutput [
 
-	^ outputName ifNil: [ outputName := source getTempNameFor: self on: anASLLMethodOutput ]
+	^ source idFor: self on: anASLLMethodOutput
 ]
 
 { #category : 'accessing' }
@@ -86,7 +80,7 @@ ASStackTemporary >> makeManifestFor: anInteger [
 { #category : 'data flow instructions' }
 ASStackTemporary >> makeStackTheSource [
 
-	source := source makeStackTheSource.
+	source := ASFlowOnDemand new.
 	^ next makeStackTheSource
 ]
 
@@ -122,7 +116,6 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 						     nameStack: parameterNamesLeftToRight
 						     offset: anInteger + 1
 						     forBlock: basicBlock)) name: name ])
-		  value: value;
 		  source: source
 ]
 
@@ -136,16 +129,14 @@ ASStackTemporary >> namedContext: contextBlock stack: stackBlock other: otherBlo
 ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
-	new := aBasicBlock classForTemporaries new id: self id.
+	new := aBasicBlock classForTemporaries new.
 	^ (self replicate: (next newElementFor: aBasicBlock)) source: new
 ]
 
 { #category : 'API' }
 ASStackTemporary >> replicate: aStack [
 
-	^ (self class fromStack: aStack)
-		  value: value;
-		  source: source
+	^ (self class fromStack: aStack) source: source
 ]
 
 { #category : 'initialization' }
@@ -165,16 +156,4 @@ ASStackTemporary >> source: anObject [
 
 	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
 	source := anObject
-]
-
-{ #category : 'evaluating' }
-ASStackTemporary >> value [
-
-	^ value
-]
-
-{ #category : 'accessing' }
-ASStackTemporary >> value: v [
-
-	value := v
 ]

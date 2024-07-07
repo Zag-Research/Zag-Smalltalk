@@ -50,7 +50,8 @@ ASCBasicBlock >> addBlock: aBasicBlock [
 ASCBasicBlock >> addOperation: anOperation [
 
 	operations add: anOperation.
-	stack := anOperation resultStack: stack
+	stack := anOperation resultStack: stack.
+	^ false
 ]
 
 { #category : 'data flow instructions' }
@@ -107,9 +108,10 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlinedMethodBlock new.
+		next := (ASCInlinedMethodBlock new).
 		case at: class put: next.
-		next addSourceBlock: self ].
+		next addSourceBlock: self.
+		next className: class name ].
 	self addOperation: case.
 	^ case
 ]
@@ -203,11 +205,11 @@ ASCBasicBlock >> initLocalNamed: aSymbol [
 
 	| source |
 	stack := stack initLocalNamed: aSymbol.
-	source := self classForLocals new .
-	^ stack
-		  value: (ASCLocal new
+	source := (self classForLocals value: (ASCLocal new
 				   init: Object;
-				   name: aSymbol);
+				   name: aSymbol)) class: nil.
+	^ stack
+		  
 		  source: source
 ]
 
@@ -227,6 +229,12 @@ ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
 
 	operations ifEmpty: [ ^ self ].
 	^ operations last inlineIfPossible: anASCodeGenerator
+]
+
+{ #category : 'printing' }
+ASCBasicBlock >> inspectExtra [
+
+	^ ''
 ]
 
 { #category : 'printing' }
@@ -371,12 +379,6 @@ ASCBasicBlock >> offsetTo: anObject [
 	^ stack offset: 0 to: anObject
 ]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
-	aBlock value: label.
-	 ^ stack offset: 0 to: anObject
-]
-
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
 
@@ -432,10 +434,10 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 	^ (stack at: anIntegerOrSymbol) source markReferenced
 ]
 
-{ #category : 'enumerating' }
-ASCBasicBlock >> requiredContextDo: aBlock [
+{ #category : 'examples' }
+ASCBasicBlock >> returnLiteral: literal [
 
-	^ context ifNotNil: [ :c | aBlock cull: c ]
+	^ self addOperation: (ASCReturnLiteral literal: literal)
 ]
 
 { #category : 'API' }
@@ -523,6 +525,16 @@ ASCBasicBlock >> storeInto: offsetOrName [
 ASCBasicBlock >> storeVariable: aSymbol [
 
 	self addOperation: (ASCStoreVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> swapLastOperations [
+
+	| size temp |
+	size := operations size.
+	temp := operations at: size.
+	operations at: size put: (operations at: size - 1).
+	operations at: size - 1 put: temp
 ]
 
 { #category : 'accessing' }

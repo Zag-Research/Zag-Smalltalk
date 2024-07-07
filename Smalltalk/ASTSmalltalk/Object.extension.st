@@ -39,6 +39,14 @@ Object >> asASSyntax [
 ]
 
 { #category : '*ASTSmalltalk' }
+Object class >> astClass [
+
+	^ (name beginsWith: 'AST')
+		ifTrue: [ self ]
+		ifFalse: [ Smalltalk at: ('AST' , name) asSymbol ifAbsent: [ self ] ]
+]
+
+{ #category : '*ASTSmalltalk' }
 Object >> astFields [
 	| nVars fields |
 	nVars := self class instSize.

@@ -109,7 +109,6 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
 	cg locals: #(  ) parameters: #( n1 n2 n3 ).
-	cg requireContext.
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.

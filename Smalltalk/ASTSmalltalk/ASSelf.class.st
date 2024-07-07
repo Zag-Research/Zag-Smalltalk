@@ -78,6 +78,13 @@ ASSelf >> zigWalk: anASCodeGenerator [
 ]
 
 { #category : 'compiling' }
+ASSelf >> zigWalkForReturn: aGenerator [
+
+	aGenerator returnSelf.
+	^ true
+]
+
+{ #category : 'compiling' }
 ASSelf >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.

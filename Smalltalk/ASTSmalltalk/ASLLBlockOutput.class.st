@@ -42,8 +42,3 @@ ASLLBlockOutput >> prefix [
 
 	^ 'B'
 ]
-
-{ #category : 'visiting' }
-ASLLBlockOutput >> visitReturnSelf [
-	self nextPutAll: 'RETURNSELF';endStatement 
-]

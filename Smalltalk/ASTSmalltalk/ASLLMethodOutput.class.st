@@ -5,13 +5,14 @@ Class {
 	#name : 'ASLLMethodOutput',
 	#superclass : 'ASLLOutput',
 	#instVars : [
-		'stack',
 		'inMethod',
 		'currentStackName',
 		'currentPcName',
-		'currentContextName'
+		'currentContextName',
+		'currentStackOffset'
 	],
 	#classVars : [
+		'NilName',
 		'TypeMap'
 	],
 	#category : 'ASTSmalltalk-Output',
@@ -31,23 +32,24 @@ ASLLMethodOutput class >> initialize [
 			           (SmallInteger -> 'i64').
 			           (Float -> 'double').
 			           (Boolean -> 'i1').
-			           (String -> 'i8*') }
+			           (String -> 'i8*') }.
+	NilName := '%nil'
 ]
 
 { #category : 'as yet unclassified' }
-ASLLMethodOutput >> adjustStack: anInteger [
+ASLLMethodOutput >> adjustStackTo: anInteger [
 
-	| newSp |
-	newSp := self generateTemp: 'sp'.
-	self nextPutAll: newSp; nextPutAll: ' =  getelementptr inbounds %zag.execute.Stack, ptr '; nextPutAll: currentStackName;nextPutAll: ', i64 0, i32 ';print: anInteger.
-	currentStackName := newSp.
-	^ newSp
+	currentStackOffset := anInteger + currentStackOffset.
+	^ currentStackName := self offset: currentStackName by: anInteger + currentStackOffset
 ]
 
 { #category : 'as yet unclassified' }
 ASLLMethodOutput >> generateTemp [
 
-	^ String streamContents: [:s| s nextPut: $%; print: codeGenerator generateTemp ]
+	^ String streamContents: [ :s |
+		  s
+			  nextPut: $%;
+			  print: codeGenerator generateTemp ]
 ]
 
 { #category : 'as yet unclassified' }
@@ -61,11 +63,59 @@ ASLLMethodOutput >> generateTemp: prefix [
 			  print: codeGenerator generateTemp ]
 ]
 
-{ #category : 'initialization' }
-ASLLMethodOutput >> initialize [
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> load: target offset: offset [
 
-	super initialize.
-	stack := OrderedCollection new
+	| name newTarget |
+	newTarget := self offset: target by: offset.
+	name := self generateTemp.
+	self
+		nextPutAll: name;
+		nextPutAll: ' = load i64, ptr ';
+		nextPutAll: newTarget;
+		nextPutAll: ', align 8';
+		cr.
+	^ name
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> loadNPC [
+
+	| temp result |
+	temp := self generateTemp.
+	result := self generateTemp.
+	self
+		nextPutAll: temp;
+		nextPutAll: ' = getelementptr inbounds @zag.context.Context, ptr ';
+		nextPutAll: currentContextName;
+		nextPutAll: ', i64 0, i32 3';
+		cr;
+		nextPutAll: result;
+		nextPutAll: ' = load ptr, ptr ';
+		nextPutAll: temp;
+		nextPutAll: ', align 8';
+		cr.
+	^ result
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> loadTPC [
+
+	| temp result |
+	temp := self generateTemp.
+	result := self generateTemp.
+	self
+		nextPutAll: temp;
+		nextPutAll: ' = getelementptr inbounds @zag.context.Context, ptr ';
+		nextPutAll: currentContextName;
+		nextPutAll: ', i64 0, i32 2';
+		cr;
+		nextPutAll: result;
+		nextPutAll: ' = load i64, ptr ';
+		nextPutAll: temp;
+		nextPutAll: ', align 8';
+		cr.
+	^ result
 ]
 
 { #category : 'code generation' }
@@ -107,6 +157,23 @@ ASLLMethodOutput >> nextVariableEqualsOffset: offset from: register named: name 
 '
 ]
 
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> offset: name by: anInteger [
+
+	| newName |
+	newName := (name at: 2) = $s
+		           ifTrue: [ self generateTemp: 'sp' ]
+		           ifFalse: [ self generateTemp ].
+	self
+		nextPutAll: newName;
+		nextPutAll: ' =  getelementptr inbounds @zag.execute.Stack, ptr ';
+		nextPutAll: name;
+		nextPutAll: ', i64 0, i32 ';
+		print: anInteger;
+		cr.
+	^ newName
+]
+
 { #category : 'code generation' }
 ASLLMethodOutput >> outputAddressFromContext: offset named: name [
 
@@ -139,19 +206,12 @@ ASLLMethodOutput >> outputDefineFromStack: idx named: name [
 { #category : 'as yet unclassified' }
 ASLLMethodOutput >> outputInlineBlockStart: anASCInlineBlock [
 
+	currentStackName := '%sp'.
+	currentStackOffset := anASCInlineBlock methodBlock stackDepth.
 	self
 		nextPutAll: anASCInlineBlock label;
 		nextPut: $:;
 		cr
-]
-
-{ #category : 'code generation' }
-ASLLMethodOutput >> outputMBlockLabel: bbLabel [
-
-	self
-		nextPutAll: bbLabel;
-		nextPut: $:;
-		lf
 ]
 
 { #category : 'code generation' }
@@ -166,11 +226,11 @@ ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive method
 	self
 		nextPutAll: '@';
 		nextPutAll: bbLabel;
-		nextPutAll: '.CM = global %struct.CompiledMethod { i64 ';
+		nextPutAll: '.CM = global @zag.execute.CompiledMethod { i64 ';
 		print: header;
 		nextPutAll: ', %union.Object { i64 ';
 		print: stackStructure;
-		nextPutAll: ' }, %struct.MethodSignature ';
+		nextPutAll: ' }, @zag.execute.MethodSignature ';
 		print: signature;
 		nextPutAll: ', ptr ';
 		nextPutAll: verifier;
@@ -214,6 +274,7 @@ ASLLMethodOutput >> outputMethodStart: bb [
 '.
 	inMethod := true.
 	currentStackName := '%sp'.
+	currentStackOffset := bb methodBlock stackDepth.
 	currentPcName := '%pc'.
 	currentContextName := '%context'
 ]
@@ -229,8 +290,24 @@ ASLLMethodOutput >> push [
 
 	| var |
 	var := currentBasicBlock nextSequence.
-	self nextPutAll: '  %';print: var; nextPutAll: ' = '.
-	stack add: var.
+	self
+		nextPutAll: '  %';
+		print: var;
+		nextPutAll: ' = '.
+self halt
+]
+
+{ #category : 'visiting' }
+ASLLMethodOutput >> return: anOperation do: aBlock [
+
+	| theSelf tpc npc |
+	theSelf := anOperation theSelf.
+	theSelf isInContext ifTrue: [ self halt ].
+	self adjustStackTo: theSelf offset.
+	aBlock value.
+	tpc := self loadTPC.
+	npc := self loadNPC.
+	self tailcall: npc tpc: tpc signature: nil
 ]
 
 { #category : 'API' }
@@ -244,6 +321,35 @@ ASLLMethodOutput >> setupForOutput [
 ASLLMethodOutput >> store: source atPointer: target [
 
 	self nextPutAll: '  store i64 ';nextPutAll: source; nextPutAll: ', ptr ';nextPutAll: target;nextPutAll: ', align 8';cr
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> store: source atPointer: target offset: anInteger [
+
+	^ self store: source atPointer: (self offset: target by: anInteger)
+]
+
+{ #category : 'as yet unclassified' }
+ASLLMethodOutput >> tailcall: npc tpc: tpc signature: signature [
+
+	| temp |
+	temp := self generateTemp.
+	self
+		nextPutAll: temp;
+		nextPutAll: ' = musttail call ptr ';
+		nextPutAll: npc;
+		nextPutAll: '(i64 ';
+		nextPutAll: tpc;
+		nextPutAll: ', ptr nonnull align 8 ';
+		nextPutAll: currentStackName;
+		nextPutAll: ', ptr nonnull align 8 %process, ptr nonnull align 8 ';
+		nextPutAll: currentContextName;
+		nextPutAll: ', i64 ';
+		nextPutAll: (signature ifNil: [ 'undef' ]);
+		nextPutAll: ')
+  ret ptr ';
+		nextPutAll: temp;
+		cr
 ]
 
 { #category : 'code generation' }
@@ -322,9 +428,18 @@ ASLLMethodOutput >> visitPushNil [
 	self nextPutAll: 'visitPushNil';cr
 ]
 
-{ #category : 'visiting' }
-ASLLMethodOutput >> visitReturnSelf [
+{ #category : 'API' }
+ASLLMethodOutput >> visitReturnNil: anASCReturnTop [
 
+	^ self
+		  return: anASCReturnTop
+		  do: [ self store: NilName atPointer: currentStackName ]
+]
+
+{ #category : 'API' }
+ASLLMethodOutput >> visitReturnSelf: anASCReturnSelf [
+
+	^ self return: anASCReturnSelf do: [ ]
 ]
 
 { #category : 'API' }
@@ -334,14 +449,12 @@ ASLLMethodOutput >> visitReturnTop [
 		nextPutAll: 'ret '.
 ]
 
-{ #category : 'visiting' }
+{ #category : 'API' }
 ASLLMethodOutput >> visitReturnTop: anASCReturnTop [
 
-	| name newSp |
+	| name |
 	name := anASCReturnTop getTop: self.
-	newSp := self adjustStack: anASCReturnTop offsetToSelf.
-	self store: name atPointer: newSp.
-	self returnSp: newSp context: (self getContext: anASCReturnTop)
+	^ self return: anASCReturnTop do: [self store: name atPointer: currentStackName ]
 ]
 
 { #category : 'API' }

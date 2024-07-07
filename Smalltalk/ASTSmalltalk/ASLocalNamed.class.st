@@ -18,9 +18,7 @@ ASLocalNamed >> mergeWith: aCollection [
 { #category : 'data flow instructions' }
 ASLocalNamed >> newElementFor: aBasicBlock [
 
-	| new |
-	new := aBasicBlock classForLocals new id: name; from: source.
-	^ (self replicate: (next newElementFor: aBasicBlock)) source: new
+	^ (self replicate: (next newElementFor: aBasicBlock)) source: aBasicBlock classForLocals new
 ]
 
 { #category : 'data flow instructions' }
@@ -29,5 +27,5 @@ ASLocalNamed >> simplifyDependenciesFor: aBlock [
 	next simplifyDependenciesFor: aBlock.
 	source isPhiReference ifTrue: [
 		(aBlock anySourcesNonNilFor: self id) ifFalse: [
-			source := ASFlowNil new ] ]
+			source := ASFlowNil singleton ] ]
 ]

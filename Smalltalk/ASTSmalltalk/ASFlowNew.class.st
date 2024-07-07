@@ -4,14 +4,26 @@ That value will have to either be passed along to the next block through a phi n
 "
 Class {
 	#name : 'ASFlowNew',
-	#superclass : 'ASFlowDefine',
+	#superclass : 'ASFlowNonNil',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
+{ #category : 'output' }
+ASFlowNew >> getNameFor: aCollection on: anOutput [
+
+	^ anOutput generateTemp
+]
+
+{ #category : 'testing' }
+ASFlowNew >> needsToBeSpilled [
+
+	^ true
+]
+
 { #category : 'printing' }
 ASFlowNew >> printOn: aStream [
 
-	^ aStream nextPutAll: 'new'
+	^ aStream nextPutAll: 'new ';print: value
 ]

@@ -3,7 +3,7 @@ I am a flow source placeholder. If referenced, I will be loaded from the stack o
 "
 Class {
 	#name : 'ASFlowOnDemand',
-	#superclass : 'ASFlowDefine',
+	#superclass : 'ASFlowNew',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'

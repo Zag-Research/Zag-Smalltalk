@@ -42,10 +42,12 @@ ASCodeGenerator class >> targetClass: aClass ast: anAST [
 		  generateFrom: anAST
 ]
 
-{ #category : 'instance creation' }
-ASCodeGenerator class >> targetClass: aClass selector: aString [
+{ #category : 'as yet unclassified' }
+ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
 
-	^ self new targetClass: aClass; selector: aString
+	^ self new
+		  targetClass: aClass;
+		  generateFrom: (ASPharoCompiler new astFor: (ASInliner lookup: aSymbol class: aClass) method)
 ]
 
 { #category : 'enumerating' }
@@ -93,7 +95,7 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 { #category : 'API' }
 ASCodeGenerator >> branch: aBasicBlock [
 
-	^ code branch: aBasicBlock
+	^ aBasicBlock ifNotNil: [ code branch: aBasicBlock ]
 ]
 
 { #category : 'API' }
@@ -290,6 +292,22 @@ ASCodeGenerator >> inlineMethod: aCompileMethod for: inlinedTargetClass [
 		targetClass := savedTargetClass ]
 ]
 
+{ #category : 'inlining' }
+ASCodeGenerator >> inlineMultiple: aCollection from: anASCSend exhaustive: isExhaustive [
+
+	| case |
+	case := code classCase: (aCollection collect: #methodClass) selector: aCollection first selector.
+	isExhaustive ifTrue: [ code removeLastOperation ] ifFalse: [ code swapLastOperations ].
+	^ aCollection do: [ :compiledMethod | | targetBlock |
+		targetBlock := case at: compiledMethod methodClass.
+		basicBlocks add: targetBlock.
+		self setBasicBlock: targetBlock.
+		"walk the sends method AST"
+		self inlineMethod: compiledMethod for: targetBlock.
+		self branch: anASCSend next
+ ]
+]
+
 { #category : 'data flow instructions' }
 ASCodeGenerator >> inlineWherePossible [
 
@@ -453,30 +471,31 @@ ASCodeGenerator >> pushVariable: variable [
 	^ code pushVariable: variable
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> requireContext [
+{ #category : 'examples' }
+ASCodeGenerator >> returnLiteral: literal [
 
-	code getContext
+	code returnLiteral: literal.
+	self branch: returnBlock.
+	^ true
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
-	code returnSelf
+	^ code returnSelf
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	code
-		returnTop
+	^ code returnTop
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTopInline [
 
 	code popAndCopyTopToSelf.
-	self branch: returnBlock
+	^ self branch: returnBlock
 ]
 
 { #category : 'accessing' }

@@ -14,3 +14,10 @@ ASParameterNamed >> dependentValuesDo: ignored [
 
 	"No more dependent values"
 ]
+
+{ #category : 'data flow instructions' }
+ASParameterNamed >> makeStackTheSource [
+
+	source := ASFlowParameter new.
+	^ next makeStackTheSource
+]

@@ -21,7 +21,7 @@ ASCBranch >> inspectZagASTOn: aStream [
 		<< bb label
 ]
 
-{ #category : 'accessing' }
+{ #category : 'as yet unclassified' }
 ASCBranch >> next [
 
 	^ bb nextInline
@@ -39,7 +39,7 @@ ASCBranch >> resultStack: anASStack [
 	^ anASStack
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'as yet unclassified' }
 ASCBranch >> with: target [
 
 	bb := target
