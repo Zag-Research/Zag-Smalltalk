@@ -10,13 +10,7 @@ Class {
 }
 
 { #category : 'accessing' }
-ASCInlinedMethodBlock >> className: aString [
+ASCInlinedMethodBlock >> method: aCompiledMethod [
 
-	label := self label,'_',aString
-]
-
-{ #category : 'printing' }
-ASCInlinedMethodBlock >> inspectExtra [
-
-	^ className ifNil: [ '' ]
+	label := String streamContents: [ :s| s  nextPutAll: label; nextPut: $_;print: aCompiledMethod ]
 ]

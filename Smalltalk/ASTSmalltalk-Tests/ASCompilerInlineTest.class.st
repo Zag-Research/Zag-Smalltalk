@@ -447,13 +447,15 @@ pub fn main() !void {
 { #category : 'tests' }
 ASCompilerInlineTest >> testFoo1Inlined [
 	"foo
-	^ self bar"
+	^ self bar isLarge"
 
 	"bar
 	^ 42"
 
 	| cg |
-	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo1.
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #foo1.
 	cg
 		inspect;
 		halt.
@@ -506,14 +508,17 @@ ASCompilerInlineTest >> testFoo3Inlined [
 { #category : 'tests' }
 ASCompilerInlineTest >> testFooInlined [
 	"foo
-	^ self bar"
+	self bar isLarge.
+	^ 42"
 
 	"bar
 	^ 42"
 
 	| cg |
 	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo.
-	cg inspect;halt.
+	cg
+		inspect;
+		halt.
 	cg
 		inline: true;
 		finalAnalysis;

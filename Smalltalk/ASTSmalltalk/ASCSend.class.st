@@ -5,7 +5,6 @@ Class {
 	#name : 'ASCSend',
 	#superclass : 'ASCEmbed',
 	#instVars : [
-		'useCall',
 		'bb',
 		'target'
 	],
@@ -13,12 +12,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'initialization' }
-ASCSend >> initialize [ 
-
-super initialize .	useCall := false
-]
 
 { #category : 'inlining' }
 ASCSend >> inlineIfPossible: anASCodeGenerator [
@@ -48,6 +41,12 @@ ASCSend >> isCallOperation [
 { #category : 'accessing' }
 ASCSend >> isSend [
 	^ true
+]
+
+{ #category : 'testing' }
+ASCSend >> isTailcall [
+
+	^ bb isNil
 ]
 
 { #category : 'block handling' }
@@ -101,9 +100,4 @@ ASCSend >> target [
 { #category : 'accessing' }
 ASCSend >> target: aSymbol [
 	target := aSymbol
-]
-
-{ #category : 'accessing' }
-ASCSend >> useCall [
-	useCall := true
 ]

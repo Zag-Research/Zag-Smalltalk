@@ -108,10 +108,9 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := (ASCInlinedMethodBlock new).
+		next := ASCInlinedMethodBlock new.
 		case at: class put: next.
-		next addSourceBlock: self.
-		next className: class name ].
+		next addSourceBlock: self ].
 	self addOperation: case.
 	^ case
 ]
@@ -232,12 +231,6 @@ ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
 ]
 
 { #category : 'printing' }
-ASCBasicBlock >> inspectExtra [
-
-	^ ''
-]
-
-{ #category : 'printing' }
 ASCBasicBlock >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
@@ -348,7 +341,7 @@ ASCBasicBlock >> namedContext: namedBlock stack: stackBlock other: otherBlock [
 { #category : 'accessing' }
 ASCBasicBlock >> next [
 
-	^ operations last next
+	^ operations ifEmpty: [ nil ] ifNotEmpty: [ operations last next ]
 ]
 
 { #category : 'inlining' }
@@ -434,6 +427,12 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 	^ (stack at: anIntegerOrSymbol) source markReferenced
 ]
 
+{ #category : 'removing' }
+ASCBasicBlock >> removeLastOperation [
+
+	operations removeLast
+]
+
 { #category : 'examples' }
 ASCBasicBlock >> returnLiteral: literal [
 
@@ -487,12 +486,6 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 ASCBasicBlock >> setStackForBlock: anASCBlock [
 
 	^ anASCBlock scope: stack
-]
-
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> simplifyDependencies [
-
-	^ stack simplifyDependenciesFor: self
 ]
 
 { #category : 'accessing' }

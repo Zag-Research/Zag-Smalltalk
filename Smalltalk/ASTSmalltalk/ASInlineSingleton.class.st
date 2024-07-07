@@ -17,7 +17,10 @@ Class {
 { #category : 'inlining' }
 ASInlineSingleton >> inline: anASCSend with: anASCodeGenerator [
 
-	^ anASCodeGenerator inlineMethod: method for: targetClass
+	^ anASCodeGenerator
+		  inlineMethod: method
+		  for: targetClass
+		  from: anASCSend
 ]
 
 { #category : 'accessing' }

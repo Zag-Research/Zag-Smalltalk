@@ -12,7 +12,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'code generation' }
+{ #category : 'printing' }
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.

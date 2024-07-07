@@ -12,9 +12,24 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'printing' }
+ASCPushVariable >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(;
+		<< variable name;
+		<< $)
+]
+
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
 	^ variable push: anOutput
+]
+
+{ #category : 'printing' }
+ASCPushVariable >> printOn: aStream [
+
+	aStream nextPutAll: ' - ';nextPutAll: variable name
 ]
 
 { #category : 'stack' }

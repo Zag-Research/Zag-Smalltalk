@@ -78,12 +78,8 @@ Object >> children [
 
 { #category : '*ASTSmalltalk' }
 Object >> contents [
-"create a stream to write the AST on and return it as a String"
-	| stream |
-	stream := WriteStream on: String new.
-	self inspectZagASTOn: stream.
 
-	^ stream contents
+	^ String streamContents: [ :stream | self inspectZagASTOn: stream ]
 ]
 
 { #category : '*ASTSmalltalk' }

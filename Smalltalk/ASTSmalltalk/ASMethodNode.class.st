@@ -191,7 +191,6 @@ ASMethodNode >> zigWalkInlineMethod: aGenerator [
 			aGenerator primitive: (pragma arguments at: 1) value ] ]."
 
 	"Daniel Good oportunity to rename things on stack!"
-	aGenerator pushSelf.
 	aGenerator locals: locals indirectParameters: arguments.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnSelf ]

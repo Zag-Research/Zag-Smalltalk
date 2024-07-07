@@ -12,7 +12,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'printing' }
 ASCDup >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.

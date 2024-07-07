@@ -46,7 +46,7 @@ ASCodeGeneratorBlock >> initialize [
 "	code makeBlockClosure"
 ]
 
-{ #category : 'accessing' }
+{ #category : 'printing' }
 ASCodeGeneratorBlock >> inspectZagASTOn: stream [
 	source inspectZagASTOn: stream
 ]

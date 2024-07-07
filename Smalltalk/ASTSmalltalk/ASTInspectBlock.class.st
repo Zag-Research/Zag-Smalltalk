@@ -27,7 +27,7 @@ ASTInspectBlock >> from: anASCBlock [
 	ascBlock := anASCBlock 
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'printing' }
 ASTInspectBlock >> inspectZagASTOn: aStream [
 
 	ascBlock inspectZagASTOn: aStream.

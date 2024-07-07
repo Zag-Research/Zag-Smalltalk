@@ -41,7 +41,7 @@ ASCBlock >> initialize [
 	manifest := false
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'printing' }
 ASCBlock >> inspectZagASTOn: aStream [
 
 	"super inspectZagASTOn: aStream."
