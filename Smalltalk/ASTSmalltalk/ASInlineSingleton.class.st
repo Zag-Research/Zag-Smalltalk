@@ -40,3 +40,9 @@ ASInlineSingleton >> method: aCompiledMethod class: aClass [
 	method := aCompiledMethod.
 	targetClass := aClass
 ]
+
+{ #category : 'testing' }
+ASInlineSingleton >> validate: aStackElement [
+
+	^ self
+]

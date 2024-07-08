@@ -133,6 +133,12 @@ ASCBasicBlock >> copyOfStackFor: anASCInlineBlock [
 	^ stack newElementFor: anASCInlineBlock
 ]
 
+{ #category : 'adding' }
+ASCBasicBlock >> copyStackFrom: aBasicBlock [
+
+	^ stack := aBasicBlock copyOfStackFor: self
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
 
@@ -323,7 +329,7 @@ ASCBasicBlock >> maxDepth [
 { #category : 'accessing' }
 ASCBasicBlock >> methodBlock [
 
-	^ method ifNil: [ method := sourceBlocks anyOne methodBlock ]
+	^ method ifNil: [ method := sourceBlocks size > 0 ifTrue: [sourceBlocks anyOne methodBlock] ]
 ]
 
 { #category : 'data flow instructions' }
@@ -384,6 +390,18 @@ ASCBasicBlock >> popAndCopyTopToSelf [
 	self addOperation: (ASCPopAndCopyTop new)
 ]
 
+{ #category : 'stack' }
+ASCBasicBlock >> popStackTo: anASCMethodBlock [
+
+	| sources |
+	sources := anASCMethodBlock sourceElements.
+	sources with: stack do: [ :target :source |
+		target data == source data ifFalse: [
+			self addOperation:
+				(ASCCopyVariable new target: target source: source) ] ].
+	self drop: (self offsetTo: sources)
+]
+
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
@@ -429,7 +447,9 @@ ASCBasicBlock >> removeLastOperation [
 { #category : 'as yet unclassified' }
 ASCBasicBlock >> replaceOperation: anOperation [
 
-	operations at: operations size put: (anOperation stack: (operations at: operations size) stack)
+	operations
+		at: operations size
+		put: (anOperation fromOperation: (operations at: operations size))
 ]
 
 { #category : 'examples' }
@@ -485,6 +505,12 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 ASCBasicBlock >> setStackForBlock: anASCBlock [
 
 	^ anASCBlock scope: stack
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> sourceElements [
+
+	^ sourceElements
 ]
 
 { #category : 'accessing' }

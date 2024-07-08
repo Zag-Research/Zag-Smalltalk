@@ -15,7 +15,7 @@ ASCInlineBlock >> addSourceBlock: aBasicBlock [
 	sourceBlocks add: aBasicBlock andIfNewDo: [
 		sourceElements
 			ifNil: [
-			sourceElements := stack := aBasicBlock copyOfStackFor: self ]
+			sourceElements := self copyStackFrom: aBasicBlock ]
 			ifNotNil: [
 				sourceElements
 					with: aBasicBlock stack

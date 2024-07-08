@@ -457,9 +457,6 @@ ASCompilerInlineTest >> testFoo1Inlined [
 		      targetClass: ASCompileTestClass1
 		      selector: #foo1.
 	cg
-		inspect;
-		halt.
-	cg
 		inline: true;
 		finalAnalysis;
 		inspect
@@ -477,9 +474,6 @@ ASCompilerInlineTest >> testFoo2Inlined [
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
 		      selector: #foo2.
-	cg
-		inspect;
-		halt.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -499,9 +493,6 @@ ASCompilerInlineTest >> testFoo3Inlined [
 		      targetClass: ASCompileTestClass1
 		      selector: #foo3.
 	cg
-		inspect;
-		halt.
-	cg
 		inline: true;
 		finalAnalysis;
 		inspect
@@ -518,9 +509,6 @@ ASCompilerInlineTest >> testFooInlined [
 
 	| cg |
 	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo.
-	cg
-		inspect;
-		halt.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -564,14 +552,11 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
 		      selector: #inlinePlus1.
-	cg
-		inspect;
-		halt.
+	cg inspect;halt.
 	cg
 		inline: true;
 		finalAnalysis;
 		inspect
-	
 ]
 
 { #category : 'tests' }
@@ -594,12 +579,7 @@ ASCompilerInlineTest >> testNegatedInlined [
 	^ aNumber + 1"
 
 	| cg |
-	cg := ASCodeGenerator
-		      targetClass: SmallInteger
-		      selector: #negated.
-	cg
-		inspect;
-		halt.
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #negated.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -611,8 +591,13 @@ ASCompilerInlineTest >> testRecursiveMethod [
 	"recursiveMethod
 	^ recursiveMethod"
 
-		(ASNoOutput withInlining compileMethod:
-		 ASCompileTestClass1 >> #recursiveMethod) inspect
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #recursiveMethod.
+	cg inspect;halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }

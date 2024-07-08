@@ -5,3 +5,9 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'adding' }
+ASCMethodBlock >> addSourceBlock: aBasicBlock [
+
+	" nothing to do, because this can only happen with tail recursive calls "
+]

@@ -15,6 +15,14 @@ Integer >> fibonacci_accumulator: accumulator prev: prev [
 ]
 
 { #category : '*ASTSmalltalk-Tests' }
+Integer >> fibonacci_alt [
+
+	^ self <= 2
+		  ifTrue: [ 1 ]
+		  ifFalse: [ (self - 1) fibonacci + (self - 2) fibonacci ]
+]
+
+{ #category : '*ASTSmalltalk-Tests' }
 Integer >> fibonacci_fast [
 
 	^ self fibonacci_accumulator: 1 prev: 0

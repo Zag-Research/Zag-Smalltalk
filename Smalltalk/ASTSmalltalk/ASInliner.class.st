@@ -151,11 +151,11 @@ ASInliner class >> reset [
 	self bothMatch: SmallInteger >> #> returns: Boolean.
 	self alwaysValid: Object selector: #'==' returns: Boolean.
 	self alwaysValid: Object selector: #'~~' returns: Boolean.
-	self selfMatch: BlockClosure >> #value.
-	self selfMatch: BlockClosure >> #value:.
-	self selfMatch: BlockClosure >> #value:value:.
-	self selfMatch: BlockClosure >> #value:value:value:.
-	self selfMatch: BlockClosure >> #value:value:value:value:
+	self selfMatch: ASTBlockClosure >> #value.
+	self selfMatch: ASTBlockClosure >> #value:.
+	self selfMatch: ASTBlockClosure >> #value:value:.
+	self selfMatch: ASTBlockClosure >> #value:value:value:.
+	self selfMatch: ASTBlockClosure >> #value:value:value:value:
 ]
 
 { #category : 'inlining' }

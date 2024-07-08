@@ -8,7 +8,8 @@ Class {
 		'selector',
 		'pragmas',
 		'classContext',
-		'args'
+		'args',
+		'compiledMethod'
 	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
@@ -82,6 +83,17 @@ ASMethodNode >> classContext: aClassContext [
 { #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> compiledMethod [
+	^ compiledMethod
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> compiledMethod: aCompileMethod [
+
+	compiledMethod := aCompileMethod
 ]
 
 { #category : 'comparing' }

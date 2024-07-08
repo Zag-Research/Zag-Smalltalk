@@ -4,13 +4,34 @@ I am an inline block, but I'm used to inline a BlockClosure
 Class {
 	#name : 'ASCInlinedMethodBlock',
 	#superclass : 'ASCInlineBlock',
+	#instVars : [
+		'theMethod'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASCInlinedMethodBlock >> method: aCompiledMethod [
+{ #category : 'adding' }
+ASCInlinedMethodBlock >> copyStackFrom: aBasicBlock [
 
-	label := String streamContents: [ :s| s  nextPutAll: self label; nextPut: $_;print: aCompiledMethod ]
+	^ stack := aBasicBlock stack.
+	self nameStack: compiledMethod argumentNames
+]
+
+{ #category : 'initialization' }
+ASCInlinedMethodBlock >> label [
+
+	^ label ifNil: [
+		  label := String streamContents: [ :s |
+			           s
+				           nextPutAll: super label;
+				           nextPut: $_;
+				           print: theMethod ] ]
+]
+
+{ #category : 'accessing' }
+ASCInlinedMethodBlock >> theMethod: aCompiledMethod [
+
+	theMethod := aCompiledMethod
 ]

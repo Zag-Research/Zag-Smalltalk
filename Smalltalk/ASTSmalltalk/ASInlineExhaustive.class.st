@@ -23,3 +23,9 @@ ASInlineExhaustive >> methods [
 ASInlineExhaustive >> methods: aCollection [ 
 	methods := aCollection
 ]
+
+{ #category : 'testing' }
+ASInlineExhaustive >> validate: aStackElement [
+
+	^ self
+]

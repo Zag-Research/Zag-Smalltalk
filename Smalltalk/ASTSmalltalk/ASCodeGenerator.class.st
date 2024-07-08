@@ -27,20 +27,13 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'blockClosureIndex'
+		'blockClosureIndex',
+		'methodBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'as yet unclassified' }
-ASCodeGenerator class >> targetClass: aClass ast: anAST [
-
-	^ self new
-		  targetClass: aClass;
-		  generateFrom: anAST
-]
 
 { #category : 'as yet unclassified' }
 ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
@@ -122,13 +115,6 @@ ASCodeGenerator >> compileBlocks: outputter [
 			generateCode: aBlockClosure block for: BlockClosure ]
 ]
 
-{ #category : 'compiling' }
-ASCodeGenerator >> compiledMethodFor: aSelector for: aClass [ 
-	aClass methodDictionary at: aSelector ifPresent: [ ^aClass >> aSelector ].
-	aClass superclass ifNil: [ ^nil ].
-	^ self compiledMethodFor: aSelector for: aClass superclass 
-]
-
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
@@ -183,6 +169,7 @@ ASCodeGenerator >> firstBlock [
 { #category : 'translating' }
 ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
+	methodBlocks at: aMethodOrBlockNode compiledMethod put: code.
 	aMethodOrBlockNode zigWalkMethod: self.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
@@ -235,6 +222,7 @@ ASCodeGenerator >> initialize [
 	self initCode.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
+	methodBlocks := IdentityDictionary new.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
 	maxDepth := 0.
@@ -278,17 +266,16 @@ ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
 ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
 
 	| inlineBlock savedTargetClass |
-	(code isRecursive: aCompiledMethod) ifTrue: [ ^ self ].
+	(self isRecursive: aCompiledMethod) ifNotNil: [ : block | ^ self inlineRecursiveMethod: aCompiledMethod block: block from: anASCSend ].
+	self halt.
 	savedTargetClass := targetClass.
-	inlineBlock := self newInlineMethod.
+	inlineBlock := self newInlineMethod: aCompiledMethod.
 	[
 	targetClass := inlinedTargetClass.
 	returnBlock := self getOrMakeReturnBlock.
 	code removeLastOperation.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	code method: aCompiledMethod.
-	self halt.
 	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkInlineMethod:
 		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		code := returnBlock.
@@ -320,8 +307,20 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 	| primitive |
 	primitive := aCompiledMethod primitive.
 	returnBlock := self getOrMakeReturnBlock.
-	code replaceOperation: (ASCEmbed new selector: aCompiledMethod selector; primitive: primitive).
+	self halt.
+	code replaceOperation: (ASCEmbed new
+			 selector: aCompiledMethod selector;
+			 primitive: primitive).
 	self branch: returnBlock
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlineRecursiveMethod: aCompileMethod block: anASCInlinedMethodBlock from: anASCSend [
+
+	anASCSend isTailcall ifFalse: [ ^ self ].
+	code removeLastOperation.
+	code popStackTo: anASCInlinedMethodBlock.
+	self branch: anASCInlinedMethodBlock
 ]
 
 { #category : 'data flow instructions' }
@@ -352,6 +351,12 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
+]
+
+{ #category : 'testing' }
+ASCodeGenerator >> isRecursive: aCompiledMethod [
+
+	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }
@@ -404,10 +409,13 @@ ASCodeGenerator >> newInlineBlockClosure [
 	^ basicBlocks add: ASCInlinedClosureBlock new
 ]
 
-{ #category : 'private - testing' }
-ASCodeGenerator >> newInlineMethod [
+{ #category : 'instance creation' }
+ASCodeGenerator >> newInlineMethod: aCompileMethod [
 
-	^ basicBlocks add: ASCInlinedMethodBlock new
+	| newBlock |
+	newBlock := ASCInlinedMethodBlock new theMethod: aCompileMethod.
+	methodBlocks at: aCompileMethod put: newBlock.
+	^ basicBlocks add: newBlock
 ]
 
 { #category : 'API' }

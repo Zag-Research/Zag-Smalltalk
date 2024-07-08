@@ -34,8 +34,8 @@ ASCReturnTop >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnTop >> resultStack: anASStack [
+ASCReturnTop >> resultStack: aStack [
 
-	stack := anASStack.
-	^ anASStack drop
+	stack := aStack.
+	^ aStack drop
 ]

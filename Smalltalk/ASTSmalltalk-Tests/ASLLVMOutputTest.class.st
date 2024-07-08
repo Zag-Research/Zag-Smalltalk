@@ -34,10 +34,8 @@ ASLLVMOutputTest >> testLLVMOutput [
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_blockReturnEasy [
 
-	| ast cg |
-	ast := ASPharoCompiler new astFor:
-		       ASCompileTestClass1 >> #blockReturnEasy.
-	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #blockReturnEasy.
 	cg
 		inline: true;
 		finalAnalysis.
@@ -55,9 +53,7 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
  ^ (self - 1) fibonacci + (self - 2) fibonacci "
 
 	| cg |
-	cg := ASCodeGenerator
-		      targetClass: SmallInteger
-		      ast: (ASPharoCompiler new astFor: Integer >> #fibonacci).
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
 	cg inspect.
 	self halt.
 	cg
@@ -73,17 +69,16 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
 
 { #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_fibonacci_alt [
-
-	| ast cg |
-	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fibonacci.
-	cg := ASCodeGenerator targetClass: SmallInteger ast: ast.
+"^ self <= 2 ifTrue: [ 1 ]
+    ifFalse: [ (self - 1) fibonacci + (self - 2) fibonacci ]"
+	| cg |
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci_alt.
 	cg inspect.
 	output
 		codeGenerator: cg;
 		outputToStream.
 	output asString inspect.
-	self assert: output name equals: 'fibonacci'.
-
+	self assert: output name equals: 'fibonacci'
 ]
 
 { #category : 'tests' }

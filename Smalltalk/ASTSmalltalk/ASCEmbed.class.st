@@ -43,6 +43,12 @@ ASCEmbed class >> isEmbedded: aCompileMethod [
 	^ embeddings hasLiteral: aCompileMethod 
 ]
 
+{ #category : 'instance creation' }
+ASCEmbed >> fromOperation: anASCSend [
+
+	stack := anASCSend stack
+]
+
 { #category : 'printing' }
 ASCEmbed >> inspectZagASTOn: aStream [
 
@@ -88,12 +94,6 @@ ASCEmbed >> resultStack: anASStack [
 { #category : 'accessing' }
 ASCEmbed >> selector: aString [ 
 	selector := aString
-]
-
-{ #category : 'accessing' }
-ASCEmbed >> stack: aStack [
-
-	stack := aStack
 ]
 
 { #category : 'instance creation' }
