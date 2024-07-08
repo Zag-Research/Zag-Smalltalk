@@ -54,5 +54,5 @@ ASFlowPhi >> needsToBeSpilled [
 { #category : 'printing' }
 ASFlowPhi >> printOn: aStream [
 
-	^ aStream nextPutAll: 'phi'
+	^ sources size = 1 ifTrue: [ sources first printOn: aStream ] ifFalse: [ aStream nextPutAll: 'phi']
 ]

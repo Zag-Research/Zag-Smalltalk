@@ -616,6 +616,6 @@ ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures "collect: #codeGenerator").
+	zagBlocks addAll: (blockClosures collect: #codeGenerator).
 	^ zagBlocks
 ]
