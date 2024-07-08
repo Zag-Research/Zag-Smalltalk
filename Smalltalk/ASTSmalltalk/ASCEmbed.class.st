@@ -84,11 +84,7 @@ ASCEmbed >> primitive: anInteger [
 { #category : 'stack' }
 ASCEmbed >> resultStack: anASStack [
 
-	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) push: (ASFlowNew new class:
-		  (EmbeddingReturnTypes
-			   at: selector
-			   ifAbsent: [ nil ]))
+	self halt
 ]
 
 { #category : 'accessing' }

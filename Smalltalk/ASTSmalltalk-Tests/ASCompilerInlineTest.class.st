@@ -359,8 +359,33 @@ blockReturn: p1
 	true ifTrue: [ ^ p1 ]
 "
 
-	(ASNoOutput withInlining compileMethod:
-		 ASCompileTestClass1 >> #fibonacci_fast) inspect
+	| cg |
+	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci_fast.
+	cg inspect;halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciFastInline_prev [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ p1 ]
+"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: SmallInteger
+		      selector: #fibonacci_accumulator:prev: .
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }

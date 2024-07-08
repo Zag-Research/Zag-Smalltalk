@@ -468,7 +468,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 	code setStackForBlock: block.
 	block asBlock: anASBlock.
 	block parent: self.
-	code addOperation: (ASCBlock with: block)
+	code addOperation: (ASCBlock with: ((ASFlowNew value: block)))
 ]
 
 { #category : 'API' }
@@ -616,6 +616,6 @@ ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures collect: #codeGenerator).
+	zagBlocks addAll: (blockClosures "collect: #codeGenerator").
 	^ zagBlocks
 ]

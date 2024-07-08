@@ -25,6 +25,9 @@ ASCSend >> inlineIfPossible: anASCodeGenerator [
 ASCSend >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
+	aStream
+		space;
+		print: selector.
 	bb
 		ifNotNil: [
 			aStream
