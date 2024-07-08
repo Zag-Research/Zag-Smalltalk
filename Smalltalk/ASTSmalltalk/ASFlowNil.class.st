@@ -16,6 +16,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'printing' }
+ASFlowNil class >> canonicalArgumentName [
+
+	^ 'aFlow'
+]
+
 { #category : 'instance creation' }
 ASFlowNil class >> singleton [
 
@@ -45,9 +51,10 @@ ASFlowNil >> id [
 ]
 
 { #category : 'output' }
-ASFlowNil >> idFor: aCollection on: anASLLMethodOutput [
+ASFlowNil >> idFor: aStackElement on: anASLLMethodOutput [
 
-	^ id ifNil: [ id := self getNameFor: aCollection on: anASLLMethodOutput ]
+	^ id ifNil: [
+		  id := self getNameFor: aStackElement on: anASLLMethodOutput ]
 ]
 
 { #category : 'testing' }

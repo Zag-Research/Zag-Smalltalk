@@ -32,7 +32,7 @@ ASCValue >> max [
 ASCValue >> store: anObject [
 
 	| aClass |
-	aClass := anObject valueClass.
+	aClass := anObject dataClass.
 	valueClass ifNil: [
 		valueClass := aClass.
 		min := anObject min.

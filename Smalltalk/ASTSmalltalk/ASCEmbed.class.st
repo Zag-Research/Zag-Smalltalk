@@ -5,7 +5,8 @@ Class {
 	#name : 'ASCEmbed',
 	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
-		'selector'
+		'selector',
+		'primitive'
 	],
 	#classVars : [
 		'EmbeddingReturnTypes'
@@ -68,14 +69,31 @@ ASCEmbed >> outputTo: anOutput [
 	^ anOutput visitEmbed: selector
 ]
 
+{ #category : 'writing' }
+ASCEmbed >> primitive: anInteger [
+
+	primitive := anInteger
+]
+
 { #category : 'stack' }
 ASCEmbed >> resultStack: anASStack [
 
 	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) push:
+	^ (anASStack drop: selector numArgs + 1) push: (ASFlowNew new class:
 		  (EmbeddingReturnTypes
 			   at: selector
-			   ifAbsent: [ ASCUnknownValue new ])
+			   ifAbsent: [ nil ]))
+]
+
+{ #category : 'accessing' }
+ASCEmbed >> selector: aString [ 
+	selector := aString
+]
+
+{ #category : 'accessing' }
+ASCEmbed >> stack: aStack [
+
+	stack := aStack
 ]
 
 { #category : 'instance creation' }

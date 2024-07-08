@@ -15,14 +15,35 @@ Class {
 }
 
 { #category : 'accessing' }
+ASFlowNonNil class >> from: aFlow [
+
+	^ self new from: aFlow
+]
+
+{ #category : 'accessing' }
 ASFlowNonNil class >> value: anObject [
 
 	^ self new value: anObject
 ]
 
-{ #category : 'accessing' }
-ASFlowNonNil >> class: aClass [ 
+{ #category : 'instance creation' }
+ASFlowNonNil >> class: aClass [
+
+	aClass = ASStackSelf ifTrue: [ self halt ].
 	class := aClass
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> dataClass [
+
+	^ class
+]
+
+{ #category : 'accessing' }
+ASFlowNonNil >> from: aFlow [
+
+	value := aFlow.
+	self class: aFlow dataClass
 ]
 
 { #category : 'output' }
@@ -80,11 +101,5 @@ ASFlowNonNil >> value [
 ASFlowNonNil >> value: anObject [
 
 	value := anObject.
-	class := anObject class
-]
-
-{ #category : 'accessing' }
-ASFlowNonNil >> valueClass [
-
-	^ value ifNotNil: [value valueClass]
+	self class: anObject class
 ]

@@ -3,10 +3,11 @@ I remember the selector for sends
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCEmbed',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
 		'bb',
-		'target'
+		'target',
+		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -55,6 +56,12 @@ ASCSend >> manifestParameters [
 	^ stack makeManifestFor: selector numArgs + 1
 ]
 
+{ #category : 'data flow instructions' }
+ASCSend >> markReferences [
+
+	stack markReferenced: selector numArgs
+]
+
 { #category : 'accessing' }
 ASCSend >> next [
 
@@ -75,6 +82,13 @@ ASCSend >> requiresContext [
 	^ true
 ]
 
+{ #category : 'stack' }
+ASCSend >> resultStack: anASStack [
+
+	stack := anASStack.
+	^ (anASStack drop: selector numArgs + 1) push: (ASFlowNew new)
+]
+
 { #category : 'handling' }
 ASCSend >> return: aBasicBlock [
 
@@ -87,7 +101,8 @@ ASCSend >> selector [
 ]
 
 { #category : 'accessing' }
-ASCSend >> selector: aString [ 
+ASCSend >> selector: aString [
+
 	selector := aString
 ]
 
@@ -100,4 +115,10 @@ ASCSend >> target [
 { #category : 'accessing' }
 ASCSend >> target: aSymbol [
 	target := aSymbol
+]
+
+{ #category : 'instance creation' }
+ASCSend >> with: aSymbol [
+
+	selector := aSymbol
 ]

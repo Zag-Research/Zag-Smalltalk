@@ -30,7 +30,7 @@ ASStackTemporary >> displayStringOn: stream [
 		nextPutAll: ' (';
 		print: offset;
 		nextPutAll: ' >';
-		print: source
+		print: data
 ]
 
 { #category : 'accessing' }
@@ -54,7 +54,7 @@ ASStackTemporary >> dropUnder: n [
 { #category : 'as yet unclassified' }
 ASStackTemporary >> getNameOn: anASLLMethodOutput [
 
-	^ source idFor: self on: anASLLMethodOutput
+	^ outputName ifNil: [outputName := data idFor: self on: anASLLMethodOutput]
 ]
 
 { #category : 'accessing' }
@@ -72,36 +72,29 @@ ASStackTemporary >> makeContextRequired: aBlock [
 { #category : 'as yet unclassified' }
 ASStackTemporary >> makeManifestFor: anInteger [
 
-	source markReferenced.
+	data markReferenced.
 	anInteger <= 1 ifTrue: [ ^ self ].
 	^ next makeManifestFor: anInteger - 1
 ]
 
 { #category : 'data flow instructions' }
-ASStackTemporary >> makeStackTheSource [
-
-	source := ASFlowOnDemand new.
-	^ next makeStackTheSource
-]
-
-{ #category : 'data flow instructions' }
 ASStackTemporary >> markReferenced [
 
-	^ source markReferenced
+	^ data markReferenced
 ]
 
 { #category : 'data flow instructions' }
 ASStackTemporary >> markReferenced: n [
 
 	n == 0 ifTrue: [ ^ self ].
-	source markReferenced.
+	data markReferenced.
 	^ next markReferenced: n - 1
 ]
 
 { #category : 'operations' }
-ASStackTemporary >> mergeWith: aCollection [
+ASStackTemporary >> mergeWith: aStackElement [
 
-	source := source mergeWith: aCollection source
+	data := data mergeWith: aStackElement data
 ]
 
 { #category : 'adding' }
@@ -113,16 +106,9 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 		   ifTrue: [ basicBlock selfElementClass fromStack: next ]
 		   ifFalse: [
 			   (ASParameterNamed fromStack: (next
-						     nameStack: parameterNamesLeftToRight
-						     offset: anInteger + 1
-						     forBlock: basicBlock)) name: name ])
-		  source: source
-]
-
-{ #category : 'as yet unclassified' }
-ASStackTemporary >> namedContext: contextBlock stack: stackBlock other: otherBlock [
-
-	source use: stackBlock offset: offset name: 'temporary'
+					     nameStack: parameterNamesLeftToRight
+					     offset: anInteger + 1
+					     forBlock: basicBlock)) name: name ]) data: data
 ]
 
 { #category : 'data flow instructions' }
@@ -130,30 +116,11 @@ ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
 	new := aBasicBlock classForTemporaries new.
-	^ (self replicate: (next newElementFor: aBasicBlock)) source: new
-]
-
-{ #category : 'API' }
-ASStackTemporary >> replicate: aStack [
-
-	^ (self class fromStack: aStack) source: source
+	^ (self replicate: (next newElementFor: aBasicBlock)) data: new
 ]
 
 { #category : 'initialization' }
 ASStackTemporary >> reset [
 
 	^ next reset
-]
-
-{ #category : 'accessing' }
-ASStackTemporary >> source [
-
-	^ source
-]
-
-{ #category : 'accessing' }
-ASStackTemporary >> source: anObject [
-
-	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
-	source := anObject
 ]

@@ -42,7 +42,7 @@ ASStackSelf >> intoContext: anInteger [
 { #category : 'data flow instructions' }
 ASStackSelf >> makeStackTheSource [
 
-	source := ASFlowParameter new
+	data := ASFlowParameter from: data
 ]
 
 { #category : 'as yet unclassified' }

@@ -195,6 +195,17 @@ ASCodeGenerator >> generateTemp [
 	^ code nextSequence
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> getOrMakeReturnBlock [
+
+	^ code next ifNil: [
+		  | tempBlock |
+		  tempBlock := self newInline.
+		  tempBlock addSourceBlock: code.
+		  tempBlock returnTop.
+		  tempBlock ]
+]
+
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> globalFind: aString [
 	"aString asSymbol isGlobalVariable ifTrue: [ ^ ASStackNamed new name: aString ]"
@@ -272,16 +283,11 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 	inlineBlock := self newInlineMethod.
 	[
 	targetClass := inlinedTargetClass.
-	returnBlock := code next ifNil: [
-		               | tempBlock |
-		               tempBlock := self newInline.
-		               tempBlock addSourceBlock: code.
-		               tempBlock returnTop.
-		               tempBlock ].
+	returnBlock := self getOrMakeReturnBlock.
 	code removeLastOperation.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	code method: aCompiledMethod. 
+	code method: aCompiledMethod.
 	self halt.
 	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkInlineMethod:
 		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
@@ -306,6 +312,16 @@ ASCodeGenerator >> inlineMultiple: aCollection from: anASCSend exhaustive: isExh
 		  "walk the sends method AST"
 		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend.
 		  self branch: anASCSend next ]
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend [
+
+	| primitive |
+	primitive := aCompiledMethod primitive.
+	returnBlock := self getOrMakeReturnBlock.
+	code replaceOperation: (ASCEmbed new selector: aCompiledMethod selector; primitive: primitive).
+	self branch: returnBlock
 ]
 
 { #category : 'data flow instructions' }
@@ -462,7 +478,7 @@ ASCodeGenerator >> pushNil [
 { #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
-	^ self pushVariable: #self
+	^ code pushVariable: #self
 ]
 
 { #category : 'API' }

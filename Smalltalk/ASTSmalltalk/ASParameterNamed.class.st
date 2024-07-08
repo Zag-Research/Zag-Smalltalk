@@ -18,6 +18,6 @@ ASParameterNamed >> dependentValuesDo: ignored [
 { #category : 'data flow instructions' }
 ASParameterNamed >> makeStackTheSource [
 
-	source := ASFlowParameter new.
+	data := ASFlowParameter from: data.
 	^ next makeStackTheSource
 ]

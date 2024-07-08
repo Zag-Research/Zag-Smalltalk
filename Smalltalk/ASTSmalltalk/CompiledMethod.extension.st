@@ -22,6 +22,12 @@ CompiledMethod >> astWith: anASPharoCompiler [
 ]
 
 { #category : '*ASTSmalltalk' }
+CompiledMethod class >> canonicalArgumentName [
+
+	^ 'aCompileMethod'
+]
+
+{ #category : '*ASTSmalltalk' }
 CompiledMethod >> inspectionZagCode [
 
 	<inspectorPresentationOrder: 60 title: 'ZCode'>

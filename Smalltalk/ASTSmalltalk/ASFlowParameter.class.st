@@ -10,9 +10,9 @@ Class {
 }
 
 { #category : 'output' }
-ASFlowParameter >> getNameFor: aStack on: anOutput [
+ASFlowParameter >> getNameFor: aStackElement on: anOutput [
 
-	^ anOutput methodScopeName: aStack name
+	^ anOutput methodScopeName: aStackElement name
 ]
 
 { #category : 'testing' }

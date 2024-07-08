@@ -29,7 +29,7 @@ ASCLiteral >> outputTo: output [
 { #category : 'stack' }
 ASCLiteral >> resultStack: anASStack [
 
-	^ anASStack push: (ASCLiteralValue new init: literal)
+	^ anASStack push: (ASFlowNew value: literal)
 ]
 
 { #category : 'instance creation' }

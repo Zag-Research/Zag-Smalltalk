@@ -8,12 +8,42 @@ Class {
 		'implementors'
 	],
 	#classInstVars : [
-		'map'
+		'map',
+		'primitiveChecker',
+		'primitiveReturn'
 	],
 	#category : 'ASTSmalltalk-Inlining',
 	#package : 'ASTSmalltalk',
 	#tag : 'Inlining'
 }
+
+{ #category : 'inlining' }
+ASInliner class >> alwaysValid: aCompiledMethod returns: returnClass [
+
+	self
+		prim: aCompiledMethod primitive
+		valid: [ :stack | true ]
+		returns: returnClass
+]
+
+{ #category : 'inlining' }
+ASInliner class >> alwaysValid: aClass selector: selector returns: resultClass [
+
+	self alwaysValid:
+		(aClass whichClassIncludesSelector: selector) >> selector returns: resultClass
+]
+
+{ #category : 'class initialization' }
+ASInliner class >> bothMatch: aCompiledMethod returns: returnClass [
+
+	| class |
+	class := aCompiledMethod methodClass.
+	self
+		prim: aCompiledMethod primitive
+		class: class
+		parameterClass: class
+		returns: returnClass
+]
 
 { #category : 'as yet unclassified' }
 ASInliner class >> filterMethods: aCollection [
@@ -49,8 +79,14 @@ ASInliner class >> findImplementations: aSymbol class: aClass stack: aStack [
 		| astClass |
 		astClass := class astClass.
 		(astClass includesSelector: aSymbol) ifFalse: [ astClass := class ].
-		^ ASInlineSingleton new method: (astClass >> aSymbol) class: aClass ].
+		^ ASInlineSingleton method: (astClass >> aSymbol) class: aClass ].
 	^ nil
+]
+
+{ #category : 'class initialization' }
+ASInliner class >> initialize [
+
+	self reset
 ]
 
 { #category : 'compiling' }
@@ -70,15 +106,101 @@ ASInliner class >> lookup: aSymbol class: aClass [
 
 { #category : 'inlining' }
 ASInliner class >> lookup: selector stack: aStack [
-	(self lookup: selector class: (aStack at: selector numArgs) valueClass) ifNotNil: [ :v| ^ v ].
-self halt.
+
+	((self
+		  lookup: selector
+		  class: (aStack at: selector numArgs) dataClass) validate: aStack)
+		ifNotNil: [ :v | ^ v ].
+	self halt.
 	^ nil
+]
+
+{ #category : 'inlining' }
+ASInliner class >> prim: anInteger class: selfClass parameterClass: parameterClass returns: returnClass [
+
+	self
+		prim: anInteger
+		valid: [ :stack |
+			stack dataClass = parameterClass and: [
+				stack next dataClass = selfClass ] ]
+		returns: returnClass
+]
+
+{ #category : 'class initialization' }
+ASInliner class >> prim: primitive valid: aBlock returns: returnClass [
+
+	[ primitive > primitiveChecker size ] whileTrue: [
+		primitiveChecker add: [ :stack | false ].
+		primitiveReturn add: nil ].
+	primitiveChecker at: primitive put: aBlock.
+	primitiveReturn at: primitive put: returnClass
 ]
 
 { #category : 'class initialization' }
 ASInliner class >> reset [
 
-	(map := LRUCache new) maximumWeight: 100
+	(map := LRUCache new) maximumWeight: 100.
+	primitiveChecker := OrderedCollection new.
+	primitiveReturn := OrderedCollection new.
+	self bothMatch: SmallInteger >> #+ returns: SmallInteger.
+	self bothMatch: SmallInteger >> #- returns: SmallInteger.
+	self bothMatch: SmallInteger >> #< returns: Boolean.
+	self bothMatch: SmallInteger >> #'<=' returns: Boolean.
+	self bothMatch: SmallInteger >> #= returns: Boolean.
+	self bothMatch: SmallInteger >> #'>=' returns: Boolean.
+	self bothMatch: SmallInteger >> #> returns: Boolean.
+	self alwaysValid: Object selector: #'==' returns: Boolean.
+	self alwaysValid: Object selector: #'~~' returns: Boolean.
+	self selfMatch: BlockClosure >> #value.
+	self selfMatch: BlockClosure >> #value:.
+	self selfMatch: BlockClosure >> #value:value:.
+	self selfMatch: BlockClosure >> #value:value:value:.
+	self selfMatch: BlockClosure >> #value:value:value:value:
+]
+
+{ #category : 'inlining' }
+ASInliner class >> selfMatch: aCompiledMethod [
+
+	self
+		selfMatch: aCompiledMethod primitive
+		class: aCompiledMethod methodClass
+		numArgs: aCompiledMethod numArgs
+]
+
+{ #category : 'inlining' }
+ASInliner class >> selfMatch: anInteger class: aClass numArgs: numArgs [
+
+	numArgs = 0 ifTrue: [
+		self
+			prim: anInteger
+			valid: [ :stack | stack dataClass = aClass ]
+			returns: nil ].
+	numArgs = 1 ifTrue: [
+		self
+			prim: anInteger
+			valid: [ :stack | stack next dataClass = aClass ]
+			returns: nil ].
+	numArgs = 2 ifTrue: [
+		self
+			prim: anInteger
+			valid: [ :stack | stack next next dataClass = aClass ]
+			returns: nil ].
+	numArgs = 3 ifTrue: [
+		self
+			prim: anInteger
+			valid: [ :stack | stack next next next dataClass = aClass ]
+			returns: nil ].
+	numArgs = 4 ifTrue: [
+		self
+			prim: anInteger
+			valid: [ :stack | stack next next next next dataClass = aClass ]
+			returns: nil ]
+]
+
+{ #category : 'inlining' }
+ASInliner class >> validatorFor: anInteger [
+
+	^ primitiveChecker at: anInteger 
 ]
 
 { #category : 'initialization' }

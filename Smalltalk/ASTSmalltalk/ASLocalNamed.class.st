@@ -10,22 +10,13 @@ Class {
 }
 
 { #category : 'operations' }
-ASLocalNamed >> mergeWith: aCollection [
+ASLocalNamed >> mergeWith: aStackElement [
 
-	source := source mergeWith: aCollection source
+	data := data mergeWith: aStackElement data
 ]
 
 { #category : 'data flow instructions' }
 ASLocalNamed >> newElementFor: aBasicBlock [
 
-	^ (self replicate: (next newElementFor: aBasicBlock)) source: aBasicBlock classForLocals new
-]
-
-{ #category : 'data flow instructions' }
-ASLocalNamed >> simplifyDependenciesFor: aBlock [
-
-	next simplifyDependenciesFor: aBlock.
-	source isPhiReference ifTrue: [
-		(aBlock anySourcesNonNilFor: self id) ifFalse: [
-			source := ASFlowNil singleton ] ]
+	^ (self replicate: (next newElementFor: aBasicBlock)) data: aBasicBlock classForLocals new
 ]

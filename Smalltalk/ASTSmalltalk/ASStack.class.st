@@ -9,6 +9,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'printing' }
+ASStack class >> canonicalArgumentName [
+
+	^ 'aStackElement'
+]
+
 { #category : 'adding' }
 ASStack >> add: newObject [
 
@@ -40,13 +46,13 @@ ASStack >> hasContext [
 { #category : 'API' }
 ASStack >> initLocalNamed: name [
 
-	^ (ASLocalNamed new fromStack: self) name: name; source: ASFlowNil new
+	^ (ASLocalNamed new fromStack: self) name: name; data: ASFlowNil new
 ]
 
 { #category : 'API' }
 ASStack >> initParameterNamed: name [
 
-	^ (ASParameterNamed fromStack: self) name: name; source: ASFlowParameter new
+	^ (ASParameterNamed fromStack: self) name: name; data: ASFlowParameter new
 ]
 
 { #category : 'API' }
@@ -105,7 +111,7 @@ ASStack >> printOn: aStream [
 { #category : 'adding' }
 ASStack >> push: anObject [
 
-	^ (ASStackTemporary fromStack: self) source: (ASFlowNew value: anObject)
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew from: anObject)
 ]
 
 { #category : 'API' }
@@ -116,7 +122,7 @@ ASStack >> pushUnknown [
 { #category : 'as yet unclassified' }
 ASStack >> pushValue: anObject [
 
-	^ (ASStackTemporary fromStack: self) source: (ASFlowNew new value: anObject )
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew new value: anObject )
 ]
 
 { #category : 'removing' }

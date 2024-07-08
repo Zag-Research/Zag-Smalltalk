@@ -209,7 +209,7 @@ ASCBasicBlock >> initLocalNamed: aSymbol [
 				   name: aSymbol)) class: nil.
 	^ stack
 		  
-		  source: source
+		  data: source
 ]
 
 { #category : 'initialization' }
@@ -331,13 +331,6 @@ ASCBasicBlock >> namedBlock [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'as yet unclassified' }
-ASCBasicBlock >> namedContext: namedBlock stack: stackBlock other: otherBlock [
-
-	^ stack do: [ :element |
-		  element namedContext: namedBlock stack: stackBlock other: otherBlock ]
-]
-
 { #category : 'accessing' }
 ASCBasicBlock >> next [
 
@@ -400,7 +393,7 @@ ASCBasicBlock >> popVariable: aSymbol [
 { #category : 'data flow instructions' }
 ASCBasicBlock >> providesNonNil: anId [
 
-	^ (self at: anId) source isNilReference not
+	^ (self at: anId) data isNilReference not
 ]
 
 { #category : 'API' }
@@ -424,13 +417,19 @@ ASCBasicBlock >> pushVariable: aSymbol [
 { #category : 'accessing' }
 ASCBasicBlock >> reference: anIntegerOrSymbol [
 
-	^ (stack at: anIntegerOrSymbol) source markReferenced
+	^ (stack at: anIntegerOrSymbol) data markReferenced
 ]
 
 { #category : 'removing' }
 ASCBasicBlock >> removeLastOperation [
 
 	operations removeLast
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> replaceOperation: anOperation [
+
+	operations at: operations size put: (anOperation stack: (operations at: operations size) stack)
 ]
 
 { #category : 'examples' }
@@ -510,7 +509,7 @@ ASCBasicBlock >> storeInto: offsetOrName [
 	| target source |
 	target := stack at: offsetOrName.
 	source := ASFlowNew new.
-	target source: source.
+	target data: source.
 	^ source
 ]
 
@@ -539,7 +538,7 @@ ASCBasicBlock >> top [
 ASCBasicBlock >> updateDataDependencies: blocksToProcess [
 
 	sourceElements do: [ :sourceElement |
-		(sourceElement source isReferenced and: [
+		(sourceElement data isReferenced and: [
 			 self anySourcesNonNilFor: sourceElement id ]) ifTrue: [
 			sourceBlocks do: [ :block |
 				(block reference: sourceElement id) ifTrue: [

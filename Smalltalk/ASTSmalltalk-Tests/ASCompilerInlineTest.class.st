@@ -474,7 +474,9 @@ ASCompilerInlineTest >> testFoo2Inlined [
 	^ 42"
 
 	| cg |
-	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #foo2.
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #foo2.
 	cg
 		inspect;
 		halt.
@@ -558,7 +560,18 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	"plus1: aNumber
 	^ aNumber + 1"
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #inlinePlus1) inspect
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #inlinePlus1.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+	
 ]
 
 { #category : 'tests' }
@@ -570,6 +583,27 @@ ASCompilerInlineTest >> testInsertionSort [
 	self
 		assert: #( 6 2 4 3 5 1 ) copy insertionSorted
 		equals: #( 1 2 3 4 5 6 )
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testNegatedInlined [
+	"inlinePlus1
+	^ self plus1: 30"
+
+	"plus1: aNumber
+	^ aNumber + 1"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: SmallInteger
+		      selector: #negated.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }

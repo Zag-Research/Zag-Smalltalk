@@ -17,15 +17,18 @@ ASInlinerTest >> setUp [
 ASInlinerTest >> testInitial [
 
 	self assert: (ASInliner lookup: #printOn:) equals: nil.
-	self
-		assert: (ASInliner lookup: #'<=' class: SmallInteger) methods
-		equals: { (ASTSmallInteger >> #'<=') }.
+	self deny: (ASInliner lookup: #ifTrue:ifFalse:) isPrimitive.
 	self
 		assert: (ASInliner lookup: #ifTrue:ifFalse:) methods asSet
 		equals: {
 				(ASTFalse >> #ifTrue:ifFalse:).
 				(ASTTrue >> #ifTrue:ifFalse:) } asSet.
 	self
-		assert: (ASInliner lookup: #yourself class: SmallInteger) methods
-		equals: { (ASTObject >> #yourself) }
+		assert: (ASInliner lookup: #yourself class: SmallInteger) method
+		equals: ASTObject >> #yourself.
+	self assert:
+		(ASInliner lookup: #'<=' class: SmallInteger) isPrimitive.
+	self
+		assert: (ASInliner lookup: #'<=' class: SmallInteger) method
+		equals: ASTSmallInteger >> #'<='
 ]

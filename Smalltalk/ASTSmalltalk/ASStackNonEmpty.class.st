@@ -6,8 +6,7 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'offset',
-		'next',
-		'outputName'
+		'next'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -31,7 +30,7 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 
 	| element |
 	element := self at: aSymbol.
-	element source: (element source value: anObject)
+	element data: (element data value: anObject)
 ]
 
 { #category : 'enumerating' }

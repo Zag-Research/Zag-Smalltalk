@@ -34,7 +34,7 @@ ASCBasicBlockTest >> testStackFlow [
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
 	
 	bb1 := cg firstBlock.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	self assert: (bb1 at: #l1) offset > (bb1 at: #l2) offset.
 	self assert: (bb1 at: #p1) offset > (bb1 at: #p2) offset.
 	
@@ -45,37 +45,37 @@ ASCBasicBlockTest >> testStackFlow [
 	bb3 addSourceBlock: bb1.
 	bb4 addSourceBlock: bb2.
 	
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	self deny: (bb2 at: #l1) equals: (bb1 at: #l1).
 	
 	bb4 addSourceBlock: bb3.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	
 	bb3Rl1 := bb3 reference: #l1.
-	self assert: (bb1 at: #l1) source isNilReference.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	
 	bb3Sl1 := bb3 storeInto: #l1.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	
 	bb4 reference: #p1.
 	bb4 reference: #self.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	
 	bb4 reference: #l1.
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	
 	cg finalAnalysis.
 	self assert: bb4 namedBlock equals: bb1.
 	
-	self assert: (bb1 at: #l1) source isNilReference.
+	self assert: (bb1 at: #l1) data isNilReference.
 	self assert: (bb2 at: #p1) equals: (bb3 at: #p1).
-	self assert: (bb1 at: #p1) source isReferenced.
-	self deny: (bb1 at: #p2) source isReferenced.
-	self assert: (bb4 at: #l1) source isPhiReference.
-	self assert: (bb1 at: #l2) source isNilReference.
-	self assert: (bb2 at: #l2) source isNilReference.
-	self assert: (bb4 at: #l2) source isNilReference.
+	self assert: (bb1 at: #p1) data isReferenced.
+	self deny: (bb1 at: #p2) data isReferenced.
+	self assert: (bb4 at: #l1) data isPhiReference.
+	self assert: (bb1 at: #l2) data isNilReference.
+	self assert: (bb2 at: #l2) data isNilReference.
+	self assert: (bb4 at: #l2) data isNilReference.
 	cg inspect
 ]
 

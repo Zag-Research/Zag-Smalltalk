@@ -63,8 +63,3 @@ ASCClassValue >> max [
 ASCClassValue >> min [
 ^ nil
 ]
-
-{ #category : 'accessing' }
-ASCClassValue >> valueClass [
-	^ valueClass
-]

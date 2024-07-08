@@ -14,3 +14,9 @@ ASInline >> inline: anASCSend with: anASCodeGenerator [
 
 	^ self subclassResponsibility
 ]
+
+{ #category : 'testing' }
+ASInline >> isPrimitive [
+
+	^ false
+]

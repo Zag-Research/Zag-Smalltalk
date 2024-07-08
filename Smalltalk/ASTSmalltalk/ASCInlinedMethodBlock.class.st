@@ -12,5 +12,5 @@ Class {
 { #category : 'accessing' }
 ASCInlinedMethodBlock >> method: aCompiledMethod [
 
-	label := String streamContents: [ :s| s  nextPutAll: label; nextPut: $_;print: aCompiledMethod ]
+	label := String streamContents: [ :s| s  nextPutAll: self label; nextPut: $_;print: aCompiledMethod ]
 ]

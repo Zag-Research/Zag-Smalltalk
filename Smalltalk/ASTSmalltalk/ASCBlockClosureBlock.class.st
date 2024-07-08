@@ -59,7 +59,7 @@ ASCBlockClosureBlock >> initParameterNamed: aSymbol [
 				   name: aSymbol)) class: nil.
 	^ stack
 		  
-		  source: source
+		  data: source
 ]
 
 { #category : 'API' }
@@ -68,9 +68,9 @@ ASCBlockClosureBlock >> initSelf: targetClass [
 	| source |
 	stack := stack initSelf.
 	source := (ASFlowParameter value: (ASCSelf new
-				   init: targetClass;
-				   name: #self)) class: targetClass.
-	^ stack		  source: source
+			            init: targetClass;
+			            name: #self)) class: targetClass.
+	^ stack data: source
 ]
 
 { #category : 'initialization' }
