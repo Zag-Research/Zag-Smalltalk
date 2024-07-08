@@ -36,6 +36,8 @@ ASCReturnTop >> outputTo: output [
 { #category : 'stack' }
 ASCReturnTop >> resultStack: aStack [
 
+	| stackElement |
 	stack := aStack.
-	^ aStack drop
+	stackElement := aStack at: #self.
+	^ (ASStackTemporary fromStack: stackElement next) data: (ASFlowNew from: aStack data)
 ]

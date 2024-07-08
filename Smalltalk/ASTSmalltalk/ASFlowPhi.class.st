@@ -14,6 +14,17 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'accessing' }
+ASFlowPhi >> dataClass [
+
+	| aClass |
+	sources do: [ :each |
+		aClass
+			ifNil: [ aClass := each dataClass ]
+			ifNotNil: [ aClass = each dataClass ifFalse: [ ^ nil ] ] ].
+	^ aClass
+]
+
 { #category : 'instance creation' }
 ASFlowPhi >> from: anASFlow [
 

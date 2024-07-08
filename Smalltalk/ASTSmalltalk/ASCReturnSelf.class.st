@@ -16,8 +16,10 @@ ASCReturnSelf >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnSelf >> resultStack: anASStack [
+ASCReturnSelf >> resultStack: aStack [
 
-	stack := anASStack.
-	^ anASStack at: #self
+	| stackElement |
+	stack := aStack.
+	stackElement := aStack at: #self.
+	^ (ASStackTemporary fromStack: stackElement next) data: (ASFlowNew from: stackElement data)
 ]

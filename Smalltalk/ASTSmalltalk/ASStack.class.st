@@ -119,10 +119,10 @@ ASStack >> pushUnknown [
 	^ self push: ASCUnknownValue new
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'adding' }
 ASStack >> pushValue: anObject [
 
-	^ (ASStackTemporary fromStack: self) data: (ASFlowNew new value: anObject )
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew new value: anObject)
 ]
 
 { #category : 'removing' }

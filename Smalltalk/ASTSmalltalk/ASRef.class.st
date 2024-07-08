@@ -24,12 +24,6 @@ ASRef >> = other [
 ]
 
 { #category : 'printing' }
-ASRef >> inferType: aGenerator [
-self halt.
-	^ (aGenerator find: variable) top dataClass.
-]
-
-{ #category : 'printing' }
 ASRef >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream << $( << variable << $)

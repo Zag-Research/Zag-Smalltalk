@@ -128,11 +128,7 @@ ManifestASTSmalltalk class >> ruleStringConcatenationRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(  #( #( #RGMethodDefinition #( #ASMethodNode #zigWalk: #false ) )
-	        #'2023-10-09T20:35:17.831877-04:00' )
-	     #( #( #RGMethodDefinition #( #ASMethodNode #startMethod:
-	              #false ) )
-	        #'2023-11-09T11:28:26.132134-05:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#ASMethodNode #zigWalk: #false)) #'2023-10-09T20:35:17.831877-04:00') #(#(#RGMethodDefinition #(#ASMethodNode #startMethod: #false)) #'2023-11-09T11:28:26.132134-05:00') #(#(#RGMethodDefinition #(#ASFlowPhi #dataClass #false)) #'2024-07-08T22:55:17.389871+02:00') )
 ]
 
 { #category : 'code-critics' }

@@ -18,22 +18,6 @@ ASCodeGeneratorBlock >> children [
 	^ code children 
 ]
 
-{ #category : 'API' }
-ASCodeGeneratorBlock >> find: aSymbol [
-
-	| indirect |
-
-	indirect := ASCIndirectVariable new.
-	indirect name: aSymbol.
-	^ indirect variable: (parentCodeGenerator find: aSymbol)
-]
-
-{ #category : 'accessing' }
-ASCodeGeneratorBlock >> inferType: anExpression [
-self halt.
-	^ parentCodeGenerator inferType: anExpression
-]
-
 { #category : 'initialization' }
 ASCodeGeneratorBlock >> initCode [
 

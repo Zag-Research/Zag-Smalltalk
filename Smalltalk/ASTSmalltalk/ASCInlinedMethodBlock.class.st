@@ -15,8 +15,9 @@ Class {
 { #category : 'adding' }
 ASCInlinedMethodBlock >> copyStackFrom: aBasicBlock [
 
-	^ stack := aBasicBlock stack.
-	self nameStack: compiledMethod argumentNames
+	stack := aBasicBlock stack.
+	self nameStack: theMethod argumentNames.
+	^ stack
 ]
 
 { #category : 'initialization' }

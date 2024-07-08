@@ -3,25 +3,14 @@ I drop n elements from below the top of stack
 "
 Class {
 	#name : 'ASCPopAndCopyTop',
-	#superclass : 'ASCStackReferencingOperations',
+	#superclass : 'ASCReturnTop',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'data flow instructions' }
-ASCPopAndCopyTop >> markReferences [
+{ #category : 'code generation' }
+ASCPopAndCopyTop >> outputTo: output [
 
-	stack markReferenced
-]
-
-{ #category : 'stack' }
-ASCPopAndCopyTop >> resultStack: anASStack [
-
-	stack := anASStack.
-	^ anASStack dropUnder: (stack offsetToSelf: 0) - 1
-]
-
-{ #category : 'instance creation' }
-ASCPopAndCopyTop >> with: ignored [
+	^ output visitPopAndCopyTop: self
 ]

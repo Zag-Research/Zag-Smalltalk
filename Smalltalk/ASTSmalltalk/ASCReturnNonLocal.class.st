@@ -15,7 +15,7 @@ ASCReturnNonLocal >> outputTo: output [
 	^ output visitReturnNonLocalTop
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'stack' }
 ASCReturnNonLocal >> resultStack: anASStack [
 
 	self flag:

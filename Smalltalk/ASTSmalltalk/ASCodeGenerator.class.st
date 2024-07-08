@@ -266,10 +266,15 @@ ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
 ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
 
 	| inlineBlock savedTargetClass |
-	(self isRecursive: aCompiledMethod) ifNotNil: [ : block | ^ self inlineRecursiveMethod: aCompiledMethod block: block from: anASCSend ].
+	(self isRecursive: aCompiledMethod) ifNotNil: [ :block |
+		^ self
+			  inlineRecursiveMethod: aCompiledMethod
+			  block: block
+			  from: anASCSend ].
 	self halt.
 	savedTargetClass := targetClass.
 	inlineBlock := self newInlineMethod: aCompiledMethod.
+	inlineBlock copyStackFrom: code.
 	[
 	targetClass := inlinedTargetClass.
 	returnBlock := self getOrMakeReturnBlock.
@@ -498,8 +503,8 @@ ASCodeGenerator >> pushVariable: variable [
 { #category : 'examples' }
 ASCodeGenerator >> returnLiteral: literal [
 
-	code returnLiteral: literal.
-	self branch: returnBlock.
+	self pushLiteral: literal.
+	self returnTop.
 	^ true
 ]
 
@@ -512,7 +517,8 @@ ASCodeGenerator >> returnSelf [
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	^ code returnTop
+	returnBlock ifNil: [ ^ code returnTop ].
+	^ self returnTopInline
 ]
 
 { #category : 'API' }
@@ -520,12 +526,6 @@ ASCodeGenerator >> returnTopInline [
 
 	code popAndCopyTopToSelf.
 	^ self branch: returnBlock
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> scopeFind: aSymbol [
-	enclosingScope ifNil: [ ^self globalFind: aSymbol ].
-	^ enclosingScope find: aSymbol 
 ]
 
 { #category : 'accessing' }
@@ -603,12 +603,6 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> topOfStackType [
-
-	^ self inferType: (code at: 0) value
 ]
 
 { #category : 'post processing' }

@@ -17,7 +17,9 @@ Class {
 { #category : 'initialization' }
 ASInlineSingleton class >> method: aCompiledMethod class: aClass [
 
-	^ (aCompiledMethod isPrimitive ifTrue: [ ASInlinePrimitive ] ifFalse: [ self ]) new method: aCompiledMethod class: aClass
+	^ (aCompiledMethod isRealPrimitive
+		   ifTrue: [ ASInlinePrimitive ]
+		   ifFalse: [ self ]) new method: aCompiledMethod class: aClass
 ]
 
 { #category : 'inlining' }

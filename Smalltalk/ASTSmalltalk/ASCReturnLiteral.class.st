@@ -30,9 +30,9 @@ ASCReturnLiteral >> outputTo: output [
 	^ output visitReturnLiteral: literal
 ]
 
-{ #category : 'as yet unclassified' }
-ASCReturnLiteral >> resultStack: anASStack [
+{ #category : 'stack' }
+ASCReturnLiteral >> resultStack: aStack [
 
-	stack := anASStack.
-	^ (super resultStack: anASStack) next pushValue: literal
+	stack := aStack.
+	^ (aStack at: #self) next pushValue: literal
 ]
