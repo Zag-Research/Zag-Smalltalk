@@ -79,6 +79,7 @@ ASStackNamed >> isInContext [
 ASStackNamed >> makeContextRequired: aBlock [
 
 	| context |
+	self halt.
 	self intoContext: 0.
 	context := ASStackContext fromStack: self.
 	aBlock cull: context.

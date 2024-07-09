@@ -148,7 +148,10 @@ ASCodeGenerator >> eval: aString params: aCollection [
 ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
-	blockClosures do: #finalAnalysis. 
+	basicBlocks do: [ :aBasicBlock |
+		aBasicBlock markBlockClosuresToManifest.
+		maxDepth := maxDepth max: aBasicBlock maxDepth ].
+	blockClosures do: #finalAnalysis.
 	basicBlocks do: #checkForCalls.
 	basicBlocks do: #markReferences
 ]
@@ -170,10 +173,7 @@ ASCodeGenerator >> firstBlock [
 ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
 	methodBlocks at: aMethodOrBlockNode compiledMethod put: code.
-	aMethodOrBlockNode zigWalkMethod: self.
-	basicBlocks do: [ :aBasicBlock |
-		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth ]
+	aMethodOrBlockNode zigWalkMethod: self
 ]
 
 { #category : 'as yet unclassified' }

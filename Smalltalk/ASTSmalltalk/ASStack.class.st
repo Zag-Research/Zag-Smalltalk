@@ -122,7 +122,7 @@ ASStack >> pushUnknown [
 { #category : 'adding' }
 ASStack >> pushValue: anObject [
 
-	^ (ASStackTemporary fromStack: self) data: (ASFlowNew new value: anObject)
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew value: anObject)
 ]
 
 { #category : 'removing' }

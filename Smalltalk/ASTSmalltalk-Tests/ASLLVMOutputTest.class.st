@@ -16,8 +16,8 @@ ASLLVMOutputTest >> setUp [
 	super setUp.
 
 	"Create new instance of generator and set testing inst. var"
-	output := ASLLMethodOutput new "testing"
-	 context: file
+	output := ASLLMethodOutput new context: file "testing".
+	ASInliner reset
 ]
 
 { #category : 'tests' }

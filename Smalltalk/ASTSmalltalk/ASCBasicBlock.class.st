@@ -393,13 +393,9 @@ ASCBasicBlock >> popAndCopyTopToSelf [
 { #category : 'stack' }
 ASCBasicBlock >> popStackTo: anASCMethodBlock [
 
-	| sources |
-	sources := anASCMethodBlock sourceElements.
-	sources with: stack do: [ :target :source |
-		target data == source data ifFalse: [
-			self addOperation:
-				(ASCCopyVariable new target: target source: source) ] ].
-	self drop: (self offsetTo: sources)
+	self addOperation: (ASCCopyVariablesCleanStack new
+			 target: anASCMethodBlock sourceElements
+			 source: stack)
 ]
 
 { #category : 'API' }

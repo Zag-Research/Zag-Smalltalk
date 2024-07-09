@@ -23,7 +23,7 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
-	^ variable push: anOutput
+	^ variable pushTheVariable: anOutput
 ]
 
 { #category : 'printing' }

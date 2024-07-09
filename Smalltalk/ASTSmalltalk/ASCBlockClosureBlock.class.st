@@ -19,6 +19,7 @@ Class {
 { #category : 'adding' }
 ASCBlockClosureBlock >> addBlock: anASCReturnBlock [
 
+self halt.
 	anASCReturnBlock context: self getContext.
 	^ returnBlocks
 		  at: anASCReturnBlock

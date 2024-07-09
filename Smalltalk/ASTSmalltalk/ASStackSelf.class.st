@@ -45,6 +45,18 @@ ASStackSelf >> makeStackTheSource [
 	data := ASFlowParameter from: data
 ]
 
+{ #category : 'adding' }
+ASStackSelf >> nameStack: aCollection offset: anInteger forBlock: aBasicBlock [
+
+	self assert: #self = aCollection first description: 'can''t rename self'
+]
+
+{ #category : 'stack' }
+ASStackSelf >> offsetToSelf [
+
+	^ 0
+]
+
 { #category : 'as yet unclassified' }
 ASStackSelf >> offsetToSelf: anInteger [
 

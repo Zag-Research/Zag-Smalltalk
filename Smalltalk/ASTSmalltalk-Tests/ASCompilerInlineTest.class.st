@@ -209,8 +209,17 @@ blockReturn: p1
 	true ifTrue: [ ^ p1 ]
 "
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #blockReturn)
-		inspect	
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #blockReturn:.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }
@@ -295,90 +304,23 @@ ASCompilerInlineTest >> testCollectionAnyOne [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testFibonacci [ 
-
-	self
-		assert: Integer >> #fibonacci
-		outputTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
-&e.pushContext,"^",
-":Mfoo:1",
-&e.pushLocal,0,
-&e.setupSend,Sym.i_1,
-&e.dynamicDispatch,
- });
-const Sym = struct {
-	bar: Object,
-    const ss = heap.compileStrings(.{
-	"bar",
-    });
-    usingnamespace symbol.symbols;
-    fn init() Sym {
-        return .{
-	.bar = symbol.intern(ss[0].asObject()),
-        };
-    }
-};
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-    sym = Sym.init();
-Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testFibonacciFastInline [
+ASCompilerInlineTest >> testFibonacci [
 	"
-blockReturn: p1
-	true ifTrue: [ ^ p1 ]
-"
+fibonacci_fast
 
-	| cg |
-	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci_fast.
-	cg inspect;halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
-]
+	^ self fibonacci_accumulator: 1 prev: 0
+	
+fibonacci_accumulator: accumulator prev: prev
 
-{ #category : 'tests' }
-ASCompilerInlineTest >> testFibonacciFastInline_prev [
-	"
-blockReturn: p1
-	true ifTrue: [ ^ p1 ]
-"
+	self = 0 ifTrue: [ ^ prev ].
+	^ self - 1
+		  fibonacci_accumulator: prev + accumulator
+		  prev: accumulator"
 
 	| cg |
 	cg := ASCodeGenerator
 		      targetClass: SmallInteger
-		      selector: #fibonacci_accumulator:prev: .
+		      selector: #fibonacci.
 	cg
 		inspect;
 		halt.
@@ -389,13 +331,53 @@ blockReturn: p1
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testFibonacciInline [
-	"fibonacci
+ASCompilerInlineTest >> testFibonacciFastInline [
+	"
+fibonacci_fast
 
-	self <= 2 ifTrue: [ ^ 1 ].
-	^ (self - 1) fibonacci + (self - 2) fibonacci"
+	^ self fibonacci_accumulator: 1 prev: 0
+	
+fibonacci_accumulator: accumulator prev: prev
 
-	(ASNoOutput withInlining compileMethod: SmallInteger >> #fibonacci) inspect
+	self = 0 ifTrue: [ ^ prev ].
+	^ self - 1
+		  fibonacci_accumulator: prev + accumulator
+		  prev: accumulator"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: SmallInteger
+		      selector: #fibonacci_fast.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciFastInline_prev [
+	"
+fibonacci_accumulator: accumulator prev: prev
+
+	self = 0 ifTrue: [ ^ prev ].
+	^ self - 1
+		  fibonacci_accumulator: prev + accumulator
+		  prev: accumulator"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: SmallInteger
+		      selector: #fibonacci_accumulator:prev:.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
 ]
 
 { #category : 'tests' }
@@ -614,11 +596,15 @@ ASCompilerInlineTest >> testNegatedInlined [
 { #category : 'tests' }
 ASCompilerInlineTest >> testRecursiveMethod [
 	"recursiveMethod
-	^ recursiveMethod"
+	^ self recursiveMethod"
 
 	| cg |
-	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #recursiveMethod.
-	cg inspect;halt.
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #recursiveMethod.
+	cg
+		inspect;
+		halt.
 	cg
 		inline: true;
 		finalAnalysis;

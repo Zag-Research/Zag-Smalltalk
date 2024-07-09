@@ -144,6 +144,7 @@ ASInliner class >> reset [
 	primitiveReturn := OrderedCollection new.
 	self bothMatch: SmallInteger >> #+ returns: SmallInteger.
 	self bothMatch: SmallInteger >> #- returns: SmallInteger.
+	self bothMatch: SmallInteger >> #+ returns: SmallInteger.
 	self bothMatch: SmallInteger >> #< returns: Boolean.
 	self bothMatch: SmallInteger >> #'<=' returns: Boolean.
 	self bothMatch: SmallInteger >> #= returns: Boolean.

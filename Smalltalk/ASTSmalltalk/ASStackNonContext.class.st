@@ -60,6 +60,13 @@ ASStackNonContext >> mergeWith: aStackElement [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'stack' }
+ASStackNonContext >> offset: anInteger to: aStackElement [
+
+	self == aStackElement ifTrue: [ ^ anInteger ].
+	^ next offset: anInteger+1 to: aStackElement
+]
+
 { #category : 'API' }
 ASStackNonContext >> replicate: aStack [
 
