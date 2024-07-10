@@ -69,7 +69,7 @@ ASCCase >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCCase >> resultStack: anASStack [
+ASCCase >> resultStack: anASStack basicBlock: anObject [
 
 	stack := anASStack.
 	^ anASStack

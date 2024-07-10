@@ -25,7 +25,7 @@ ASCStackReferencingOperations >> offsetOfSelf [
 ]
 
 { #category : 'stack' }
-ASCStackReferencingOperations >> resultStack: anASStack [
+ASCStackReferencingOperations >> resultStack: anASStack basicBlock: anObject [
 
 	^ self subclassResponsibility
 ]

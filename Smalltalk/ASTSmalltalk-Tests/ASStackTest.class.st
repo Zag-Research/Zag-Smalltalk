@@ -14,7 +14,7 @@ ASStackTest >> testLookupContext [
 	stack := stack initParameterNamed: #p1.
 	stack := stack initParameterNamed: #p2.
 	stack := stack makeContextRequired: [  ].
-	stack := stack push: (ASCClassValue new init: SmallInteger class).
+	stack := stack pushForTests: (ASCClassValue new init: SmallInteger class).
 
 	self deny: (stack at: 0) isInContext.
 	self assert: (stack at: #p1) isInContext.
@@ -34,7 +34,7 @@ ASStackTest >> testNames [
 	stack := stack initLocalNamed: #l1.
 	stack at: #p1 put: 17.
 	stack at: #l1 put: 42.
-	stack := stack push: 99.
+	stack := stack pushForTests: 99.
 	self assert: (stack at: 0) value equals: 99.
 	self assert: (stack at: #p1) offset equals: -2.
 	self deny: (stack at: #p1) isInContext.
@@ -42,11 +42,11 @@ ASStackTest >> testNames [
 	self assert: stack offset equals: -1.
 	self assert: (stack at: #p1) offset equals: 2.
 	self assert: (stack at: #p1) isInContext.
-	stack := stack push: 12.
-	stack := stack push: 27.
+	stack := stack pushForTests: 12.
+	stack := stack pushForTests: 27.
 	self assert: (stack at: 2) value equals: 99.
 	stack := stack initLocalNamed: #b1.
-	stack := stack push: 98.
+	stack := stack pushForTests: 98.
 	self assert: (stack at: #b1) offset equals: -4.
 	self deny: (stack at: #b1) isInContext.
 	self assert: (stack at: #l1) value equals: 42
@@ -57,13 +57,13 @@ ASStackTest >> testSelf [
 
 	| stack2 stack3 |
 	self assert: ASStack new isEmpty.
-	self assert: (ASStack new push: 42) drop isEmpty.
-	self assert: (ASStack new push: 42) value equals: 42.
-	stack2 := (ASStack new push: 42) push: 17.
+	self assert: (ASStack new pushForTests: 42) drop isEmpty.
+	self assert: (ASStack new pushForTests: 42) value equals: 42.
+	stack2 := (ASStack new pushForTests: 42) pushForTests: 17.
 	self assert: stack2 value equals: 17.
 	self assert: stack2 drop value equals: 42.
 	self assert: stack2 drop drop isEmpty.
-	stack3 := stack2 push: 99.
+	stack3 := stack2 pushForTests: 99.
 	self assert: stack2 drop drop isEmpty.
 	self deny: stack3 drop drop isEmpty.
 	self assert: (stack3 drop: 2) value equals: 42.
@@ -77,13 +77,13 @@ ASStackTest >> testSimple [
 
 	| stack2 stack3 |
 	self assert: ASStack new isEmpty.
-	self assert: (ASStack new push: 42) drop isEmpty.
-	self assert: (ASStack new push: 42) value equals: 42.
-	stack2 := (ASStack new push: 42) push: 17.
+	self assert: (ASStack new pushForTests: 42) drop isEmpty.
+	self assert: (ASStack new pushForTests: 42) value equals: 42.
+	stack2 := (ASStack new pushForTests: 42) pushForTests: 17.
 	self assert: stack2 value equals: 17.
 	self assert: stack2 drop value equals: 42.
 	self assert: stack2 drop drop isEmpty.
-	stack3 := stack2 push: 99.
+	stack3 := stack2 pushForTests: 99.
 	self assert: stack2 drop drop isEmpty.
 	self deny: stack3 drop drop isEmpty.
 	self assert: (stack3 drop: 2) value equals: 42.

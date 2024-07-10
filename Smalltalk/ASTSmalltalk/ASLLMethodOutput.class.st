@@ -43,6 +43,11 @@ ASLLMethodOutput >> adjustStackTo: anInteger [
 	^ currentStackName := self offset: currentStackName by: anInteger + currentStackOffset
 ]
 
+{ #category : 'output' }
+ASLLMethodOutput >> emitPushFromContext: anInteger [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'as yet unclassified' }
 ASLLMethodOutput >> generateTemp [
 

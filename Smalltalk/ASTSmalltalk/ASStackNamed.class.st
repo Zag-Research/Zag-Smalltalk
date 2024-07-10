@@ -37,12 +37,6 @@ ASStackNamed >> displayStringOn: stream [
 		print: data
 ]
 
-{ #category : 'as yet unclassified' }
-ASStackNamed >> getNameOn: anASLLMethodOutput [
-
-	^ outputName ifNil: [outputName := data getNameFor: self on: anASLLMethodOutput]
-]
-
 { #category : 'accessing' }
 ASStackNamed >> id [
 
@@ -110,6 +104,13 @@ ASStackNamed >> name: aSymbol [
 ASStackNamed >> newElementFor: aBasicBlock [
 	"nothing to do - use the global named source"
 
+]
+
+{ #category : 'output' }
+ASStackNamed >> pushTheVariable: anASLLMethodOutput [
+
+	isInContext ifTrue: [^ data pushFromContext: offset with: anASLLMethodOutput].
+	^ data pushFromStack: offset with: anASLLMethodOutput
 ]
 
 { #category : 'API' }

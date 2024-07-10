@@ -34,7 +34,7 @@ ASCBranch >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCBranch >> resultStack: anASStack [
+ASCBranch >> resultStack: anASStack basicBlock: anObject [
 
 	^ anASStack
 ]

@@ -82,7 +82,7 @@ ASCEmbed >> primitive: anInteger [
 ]
 
 { #category : 'stack' }
-ASCEmbed >> resultStack: anASStack [
+ASCEmbed >> resultStack: anASStack basicBlock: anObject [
 
 	self halt
 ]

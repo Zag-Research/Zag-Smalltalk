@@ -15,7 +15,7 @@ ASCNonStackReferencingOperations >> markReferences [
 ]
 
 { #category : 'stack' }
-ASCNonStackReferencingOperations >> resultStack: anASStack [
+ASCNonStackReferencingOperations >> resultStack: anASStack basicBlock: anObject [
 
 	^ self subclassResponsibility
 ]

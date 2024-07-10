@@ -51,12 +51,6 @@ ASStackTemporary >> dropUnder: n [
 	^ self replicate: (next drop: n)
 ]
 
-{ #category : 'as yet unclassified' }
-ASStackTemporary >> getNameOn: anASLLMethodOutput [
-
-	^ outputName ifNil: [outputName := data idFor: self on: anASLLMethodOutput]
-]
-
 { #category : 'accessing' }
 ASStackTemporary >> id [
 

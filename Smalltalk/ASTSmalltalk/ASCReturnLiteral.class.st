@@ -31,8 +31,8 @@ ASCReturnLiteral >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnLiteral >> resultStack: aStack [
+ASCReturnLiteral >> resultStack: aStack basicBlock: aBasicBlock [
 
 	stack := aStack.
-	^ (aStack at: #self) next pushValue: literal
+	^ (aStack at: #self) next pushFlowAsTemporary: ((ASFlowNew value: literal) basicBlock: aBasicBlock)
 ]

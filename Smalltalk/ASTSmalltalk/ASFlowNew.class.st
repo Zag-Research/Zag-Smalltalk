@@ -5,15 +5,23 @@ That value will have to either be passed along to the next block through a phi n
 Class {
 	#name : 'ASFlowNew',
 	#superclass : 'ASFlowNonNil',
+	#instVars : [
+		'basicBlock'
+	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
-{ #category : 'output' }
-ASFlowNew >> getNameFor: aCollection on: anOutput [
+{ #category : 'accessing' }
+ASFlowNew >> basicBlock: aBasicBlock [ 
+	basicBlock := aBasicBlock
+]
 
-	^ anOutput generateTemp
+{ #category : 'output' }
+ASFlowNew >> getNameFor: aStackElement on: anOutput [
+
+	^ outputName ifNil: [ outputName := anOutput generateTemp ]
 ]
 
 { #category : 'testing' }
@@ -25,5 +33,5 @@ ASFlowNew >> needsToBeSpilled [
 { #category : 'printing' }
 ASFlowNew >> printOn: aStream [
 
-	^ aStream nextPutAll: 'new ';print: value
+	^ aStream nextPutAll: 'new ';nextPutAll: (outputName ifNil: ['???']);space;print: value
 ]

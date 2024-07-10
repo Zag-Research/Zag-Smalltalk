@@ -28,6 +28,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'printing' }
+ASCBasicBlock class >> canonicalArgumentName [
+
+	^ 'aBasicBlock'
+]
+
 { #category : 'class initialization' }
 ASCBasicBlock class >> initialize [
 
@@ -50,7 +56,7 @@ ASCBasicBlock >> addBlock: aBasicBlock [
 ASCBasicBlock >> addOperation: anOperation [
 
 	operations add: anOperation.
-	stack := anOperation resultStack: stack.
+	stack := anOperation resultStack: stack basicBlock: self.
 	^ false
 ]
 
@@ -142,7 +148,7 @@ ASCBasicBlock >> copyStackFrom: aBasicBlock [
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
 
-	stack := stack push: anObject.
+	stack := stack pushFlowAsTemporary: ((ASFlowNew value: anObject) basicBlock: self).
 	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
@@ -419,7 +425,7 @@ ASCBasicBlock >> pushArray: arraySize [
 { #category : 'as yet unclassified' }
 ASCBasicBlock >> pushNil [
 
-	stack := stack push: nil
+	stack := stack pushFlowAsTemporary: ASFlowNil singleton
 ]
 
 { #category : 'API' }
@@ -530,7 +536,7 @@ ASCBasicBlock >> storeInto: offsetOrName [
 
 	| target source |
 	target := stack at: offsetOrName.
-	source := ASFlowNew new.
+	source := ASFlowNew new basicBlock: self.
 	target data: source.
 	^ source
 ]
@@ -554,15 +560,4 @@ ASCBasicBlock >> swapLastOperations [
 { #category : 'accessing' }
 ASCBasicBlock >> top [
 	^ stack top
-]
-
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> updateDataDependencies: blocksToProcess [
-
-	sourceElements do: [ :sourceElement |
-		(sourceElement data isReferenced and: [
-			 self anySourcesNonNilFor: sourceElement id ]) ifTrue: [
-			sourceBlocks do: [ :block |
-				(block reference: sourceElement id) ifTrue: [
-					blocksToProcess add: block ] ] ] ]
 ]

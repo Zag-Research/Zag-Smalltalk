@@ -3,7 +3,7 @@ I am a flow source in a ASReturnBlock or a ASMethodBlock so will be loaded from 
 "
 Class {
 	#name : 'ASFlowParameter',
-	#superclass : 'ASFlowNonNil',
+	#superclass : 'ASFlowOnDemand',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
@@ -12,17 +12,16 @@ Class {
 { #category : 'output' }
 ASFlowParameter >> getNameFor: aStackElement on: anOutput [
 
-	^ anOutput methodScopeName: aStackElement name
-]
-
-{ #category : 'testing' }
-ASFlowParameter >> needsToBeSpilled [
-
-	^ false
+	^ outputName ifNil: [ outputName := anOutput methodScopeName: aStackElement name ]
 ]
 
 { #category : 'printing' }
 ASFlowParameter >> printOn: aStream [
 
-	aStream nextPutAll: (id ifNil: ['???'])
+	aStream nextPutAll: (outputName ifNil: ['???']);space;print: value
+]
+
+{ #category : 'output' }
+ASFlowParameter >> pushTheVariable: aStackElement with: anASLLMethodOutput [ 
+	self halt.
 ]

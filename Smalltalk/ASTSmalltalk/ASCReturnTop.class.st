@@ -34,10 +34,10 @@ ASCReturnTop >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnTop >> resultStack: aStack [
+ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
 
 	| stackElement |
 	stack := aStack.
 	stackElement := aStack at: #self.
-	^ (ASStackTemporary fromStack: stackElement next) data: (ASFlowNew from: aStack data)
+	^ (ASStackTemporary fromStack: stackElement next) data: ((ASFlowNew from: stackElement data) basicBlock: aBasicBlock)
 ]

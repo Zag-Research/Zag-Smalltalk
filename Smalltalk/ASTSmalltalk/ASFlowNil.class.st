@@ -6,7 +6,7 @@ Class {
 	#name : 'ASFlowNil',
 	#superclass : 'Object',
 	#instVars : [
-		'id'
+		'outputName'
 	],
 	#classInstVars : [
 		'singleton'
@@ -41,20 +41,7 @@ ASFlowNil >> class: ignored [
 { #category : 'output' }
 ASFlowNil >> getNameFor: aCollection on: anOutput [
 
-	^ anOutput generateNil
-]
-
-{ #category : 'accessing' }
-ASFlowNil >> id [
-
-	^ id
-]
-
-{ #category : 'output' }
-ASFlowNil >> idFor: aStackElement on: anASLLMethodOutput [
-
-	^ id ifNil: [
-		  id := self getNameFor: aStackElement on: anASLLMethodOutput ]
+	^ outputName ifNil: [ outputName := anOutput generateNil ]
 ]
 
 { #category : 'testing' }
@@ -102,5 +89,6 @@ ASFlowNil >> printOn: aStream [
 { #category : 'accessing' }
 ASFlowNil >> value: anObject [
 
+self halt.
 	^ ASFlowNew value: anObject
 ]

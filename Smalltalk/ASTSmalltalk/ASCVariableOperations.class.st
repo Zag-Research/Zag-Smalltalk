@@ -32,7 +32,7 @@ self subclassResponsibility
 ]
 
 { #category : 'stack' }
-ASCVariableOperations >> resultStack: anASStack [
+ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
 
 	stack := anASStack.
 	^ anASStack drop

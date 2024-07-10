@@ -31,6 +31,12 @@ ASFlowPhi >> from: anASFlow [
 	sources add: anASFlow
 ]
 
+{ #category : 'output' }
+ASFlowPhi >> getNameFor: aStackElement on: anOutput [
+
+	^ outputName ifNil: [ outputName := anOutput generatePhi: aStackElement ]
+]
+
 { #category : 'initialization' }
 ASFlowPhi >> initialize [
 
@@ -56,14 +62,8 @@ ASFlowPhi >> mergeWith: anASFlow [
 	sources add: anASFlow
 ]
 
-{ #category : 'testing' }
-ASFlowPhi >> needsToBeSpilled [
-
-	^ true
-]
-
 { #category : 'printing' }
 ASFlowPhi >> printOn: aStream [
 
-	^ sources size = 1 ifTrue: [ sources first printOn: aStream ] ifFalse: [ aStream nextPutAll: 'phi']
+	^ sources size = 1 ifTrue: [ aStream nextPut: $?;print: sources first ] ifFalse: [ aStream nextPutAll: '?('.sources do: [ :source| source printOn: aStream ] separatedBy: [ aStream space ].aStream nextPut: $) ]
 ]

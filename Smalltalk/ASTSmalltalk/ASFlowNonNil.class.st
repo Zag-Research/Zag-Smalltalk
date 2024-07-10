@@ -29,7 +29,6 @@ ASFlowNonNil class >> value: anObject [
 { #category : 'instance creation' }
 ASFlowNonNil >> class: aClass [
 
-	aClass = ASStackSelf ifTrue: [ self halt ].
 	class := aClass
 ]
 
@@ -89,6 +88,12 @@ ASFlowNonNil >> needsToBeSpilled [
 ASFlowNonNil >> printOn: aStream [
 
 	^ self subclassResponsibility
+]
+
+{ #category : 'output' }
+ASFlowNonNil >> pushFromContext: anInteger with: anASLLMethodOutput [ 
+
+	^ anASLLMethodOutput emitPushFromContext: anInteger
 ]
 
 { #category : 'accessing' }

@@ -32,9 +32,10 @@ ASStackNonContext >> dataClass [
 	^ data dataClass
 ]
 
-{ #category : 'as yet unclassified' }
-ASStackNonContext >> getNameOn: anASLLMethodOutput [ 
-	^ self subclassResponsibility
+{ #category : 'output' }
+ASStackNonContext >> getNameOn: anASLLMethodOutput [
+
+	^ data getNameFor: self on: anASLLMethodOutput
 ]
 
 { #category : 'as yet unclassified' }

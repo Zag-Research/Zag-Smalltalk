@@ -109,20 +109,15 @@ ASStack >> printOn: aStream [
 ]
 
 { #category : 'adding' }
-ASStack >> push: anObject [
+ASStack >> pushFlowAsTemporary: aFlow [
 
-	^ (ASStackTemporary fromStack: self) data: (ASFlowNew from: anObject)
-]
-
-{ #category : 'API' }
-ASStack >> pushUnknown [
-	^ self push: ASCUnknownValue new
+	^ (ASStackTemporary fromStack: self) data: aFlow 
 ]
 
 { #category : 'adding' }
-ASStack >> pushValue: anObject [
+ASStack >> pushForTests: anObject [
 
-	^ (ASStackTemporary fromStack: self) data: (ASFlowNew value: anObject)
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew from: anObject)
 ]
 
 { #category : 'removing' }

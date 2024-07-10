@@ -39,7 +39,7 @@ ASCDup >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCDup >> resultStack: anASStack [
+ASCDup >> resultStack: anASStack basicBlock: anObject [
 
 	stack := anASStack.
 	^ anASStack replicate: anASStack

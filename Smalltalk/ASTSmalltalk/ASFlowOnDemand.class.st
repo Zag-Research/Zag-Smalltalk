@@ -1,13 +1,19 @@
 "
-I am a flow source placeholder. If referenced, I will be loaded from the stack or context.
+I am a flow source placeholder. I am the flow value of everything at the start of an ASCReturnBlock. If referenced, I will be loaded from the stack or context.
 "
 Class {
 	#name : 'ASFlowOnDemand',
-	#superclass : 'ASFlowNew',
+	#superclass : 'ASFlowNonNil',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'output' }
+ASFlowOnDemand >> getNameFor: aStackElement on: anOutput [
+
+	^ outputName ifNil: [ outputName := anOutput loadFromStack: aStackElement ]
+]
 
 { #category : 'printing' }
 ASFlowOnDemand >> printOn: aStream [

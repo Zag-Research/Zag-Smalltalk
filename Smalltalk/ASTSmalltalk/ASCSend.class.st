@@ -86,10 +86,10 @@ ASCSend >> requiresContext [
 ]
 
 { #category : 'stack' }
-ASCSend >> resultStack: anASStack [
+ASCSend >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) push: (ASFlowNew new)
+	^ (anASStack drop: selector numArgs + 1) pushFlowAsTemporary: (ASFlowNew new basicBlock: aBasicBlock)
 ]
 
 { #category : 'handling' }

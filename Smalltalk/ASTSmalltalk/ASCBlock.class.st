@@ -90,9 +90,9 @@ manifest ifFalse: [ ^ output visitPushNil ].
 ]
 
 { #category : 'stack' }
-ASCBlock >> resultStack: anASStack [
+ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack push: block
+	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: block) basicBlock: aBasicBlock)
 ]
 
 { #category : 'instance creation' }
