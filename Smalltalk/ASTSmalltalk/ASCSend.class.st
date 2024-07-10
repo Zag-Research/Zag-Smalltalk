@@ -17,8 +17,7 @@ Class {
 { #category : 'inlining' }
 ASCSend >> inlineIfPossible: anASCodeGenerator [
 
-	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ].
-	self halt
+	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ]
 ]
 
 { #category : 'printing' }

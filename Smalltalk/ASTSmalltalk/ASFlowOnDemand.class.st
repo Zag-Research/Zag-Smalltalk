@@ -18,5 +18,6 @@ ASFlowOnDemand >> getNameFor: aStackElement on: anOutput [
 { #category : 'printing' }
 ASFlowOnDemand >> printOn: aStream [
 
-	^ aStream nextPutAll: 'on demand'
+	aStream nextPutAll: 'on demand'.
+	^ self printClassOn: aStream
 ]

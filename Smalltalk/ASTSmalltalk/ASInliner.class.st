@@ -111,7 +111,6 @@ ASInliner class >> lookup: selector stack: aStack [
 		  lookup: selector
 		  class: (aStack at: selector numArgs) dataClass) validate: aStack)
 		ifNotNil: [ :v | ^ v ].
-	self halt.
 	^ nil
 ]
 

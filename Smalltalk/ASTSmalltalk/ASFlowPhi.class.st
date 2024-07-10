@@ -65,5 +65,16 @@ ASFlowPhi >> mergeWith: anASFlow [
 { #category : 'printing' }
 ASFlowPhi >> printOn: aStream [
 
-	^ sources size = 1 ifTrue: [ aStream nextPut: $?;print: sources first ] ifFalse: [ aStream nextPutAll: '?('.sources do: [ :source| source printOn: aStream ] separatedBy: [ aStream space ].aStream nextPut: $) ]
+	sources size = 1
+		ifTrue: [
+			aStream
+				nextPut: $?;
+				print: sources first ]
+		ifFalse: [
+			aStream nextPutAll: '?('.
+			sources
+				do: [ :source | source printOn: aStream ]
+				separatedBy: [ aStream space ].
+			aStream nextPut: $) ].
+	^ self printClassOn: aStream
 ]

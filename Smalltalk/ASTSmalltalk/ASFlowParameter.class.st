@@ -18,7 +18,13 @@ ASFlowParameter >> getNameFor: aStackElement on: anOutput [
 { #category : 'printing' }
 ASFlowParameter >> printOn: aStream [
 
-	aStream nextPutAll: (outputName ifNil: ['???']);space;print: value
+	aStream nextPutAll: 'on demand';
+		nextPutAll: (outputName ifNil: [ '' ]).
+	value ifNotNil: [
+		aStream
+			space;
+			print: value ].
+	^ self printClassOn: aStream
 ]
 
 { #category : 'output' }

@@ -35,7 +35,8 @@ ASCPushVariable >> printOn: aStream [
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: variable) basicBlock: aBasicBlock)
+	^ anASStack pushFlowAsTemporary:
+		  ((ASFlowNew from: variable data) basicBlock: aBasicBlock)
 ]
 
 { #category : 'instance creation' }

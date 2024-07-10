@@ -214,14 +214,10 @@ ASCBasicBlock >> indexOf: anObject [
 { #category : 'API' }
 ASCBasicBlock >> initLocalNamed: aSymbol [
 
-	| source |
 	stack := stack initLocalNamed: aSymbol.
-	source := (self classForLocals value: (ASCLocal new
-				   init: Object;
-				   name: aSymbol)) class: nil.
-	^ stack
-		  
-		  data: source
+	^ stack data: (self classForLocals new
+			   basicBlock: self;
+			   class: nil)
 ]
 
 { #category : 'initialization' }

@@ -109,7 +109,7 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 ASStackTemporary >> newElementFor: aBasicBlock [
 
 	| new |
-	new := aBasicBlock classForTemporaries new.
+	new := aBasicBlock classForTemporaries new basicBlock: aBasicBlock.
 	^ (self replicate: (next newElementFor: aBasicBlock)) data: new
 ]
 

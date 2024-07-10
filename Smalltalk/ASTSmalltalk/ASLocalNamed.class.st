@@ -18,5 +18,6 @@ ASLocalNamed >> mergeWith: aStackElement [
 { #category : 'data flow instructions' }
 ASLocalNamed >> newElementFor: aBasicBlock [
 
-	^ (self replicate: (next newElementFor: aBasicBlock)) data: aBasicBlock classForLocals new
+	^ (self replicate: (next newElementFor: aBasicBlock)) data:
+		  (aBasicBlock classForLocals new basicBlock: self)
 ]

@@ -33,5 +33,12 @@ ASFlowNew >> needsToBeSpilled [
 { #category : 'printing' }
 ASFlowNew >> printOn: aStream [
 
-	^ aStream nextPutAll: 'new ';nextPutAll: (outputName ifNil: ['???']);space;print: value
+	aStream
+		nextPutAll: 'new ';
+		nextPutAll: (outputName ifNil: [ '' ]).
+	value ifNotNil: [
+		aStream
+			space;
+			print: value ].
+	^ self printClassOn: aStream
 ]

@@ -205,7 +205,7 @@ ASLLVMOutputTest >> test_plus_and_and [
 	cg send: #*. " and create new ReturnBlock"
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
-	cg
+	cg halt;
 		inline: true;
 		finalAnalysis.
 	cg inspect.

@@ -41,7 +41,7 @@ ASFlowNonNil >> dataClass [
 { #category : 'accessing' }
 ASFlowNonNil >> from: aFlow [
 
-	value := aFlow.
+	value := aFlow value.
 	self class: aFlow dataClass
 ]
 
@@ -82,6 +82,17 @@ ASFlowNonNil >> markReferenced [
 ASFlowNonNil >> needsToBeSpilled [
 
 	^ self subclassResponsibility
+]
+
+{ #category : 'printing' }
+ASFlowNonNil >> printClassOn: aStream [
+
+	class ifNotNil: [
+		aStream
+		space;
+		nextPut: $(;
+		print: class;
+		nextPut: $) ]
 ]
 
 { #category : 'printing' }

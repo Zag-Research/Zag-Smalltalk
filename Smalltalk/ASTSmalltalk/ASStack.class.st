@@ -46,7 +46,7 @@ ASStack >> hasContext [
 { #category : 'API' }
 ASStack >> initLocalNamed: name [
 
-	^ (ASLocalNamed new fromStack: self) name: name; data: ASFlowNil new
+	^ (ASLocalNamed new fromStack: self) name: name
 ]
 
 { #category : 'API' }
