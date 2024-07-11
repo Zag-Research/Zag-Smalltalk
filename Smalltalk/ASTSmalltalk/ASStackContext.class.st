@@ -11,6 +11,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'displaying' }
+ASStackContext >> displayStringOn: stream [
+
+	self printNameOn: stream
+]
+
 { #category : 'enumerating' }
 ASStackContext >> do: aBlock [
 

@@ -306,16 +306,10 @@ ASCompilerInlineTest >> testCollectionAnyOne [
 { #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci [
 	"
-fibonacci_fast
+fibonacci
 
-	^ self fibonacci_accumulator: 1 prev: 0
-	
-fibonacci_accumulator: accumulator prev: prev
-
-	self = 0 ifTrue: [ ^ prev ].
-	^ self - 1
-		  fibonacci_accumulator: prev + accumulator
-		  prev: accumulator"
+	self < 2 ifTrue: [ ^ self ].
+	^ (self - 1) fibonacci + (self - 2) fibonaccis"
 
 	| cg |
 	cg := ASCodeGenerator
