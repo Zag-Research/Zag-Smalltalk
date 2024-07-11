@@ -26,22 +26,22 @@ self halt.
 		  ifAbsentPut: [ returnBlocks size + 1 ]
 ]
 
+{ #category : 'accessing' }
+ASCBlockClosureBlock >> context [
+
+	^ context
+]
+
 { #category : 'data flow instructions' }
-ASCBlockClosureBlock >> classForLocals [
+ASCBlockClosureBlock >> flowForLocals [
 
 	^ ASFlowNil
 ]
 
 { #category : 'data flow instructions' }
-ASCBlockClosureBlock >> classForTemporaries [
+ASCBlockClosureBlock >> flowForTemporaries [
 
 	^ self shouldNotImplement
-]
-
-{ #category : 'accessing' }
-ASCBlockClosureBlock >> context [
-
-	^ context
 ]
 
 { #category : 'testing' }

@@ -12,22 +12,34 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'data flow instructions' }
-ASCReturnBlock >> classForLocals [
-
-	^ ASFlowOnDemand
-]
-
-{ #category : 'data flow instructions' }
-ASCReturnBlock >> classForTemporaries [
-
-	^ ASFlowOnDemand
-]
-
 { #category : 'accessing' }
 ASCReturnBlock >> context: anASStackContext [ 
 
 	context := anASStackContext
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForLocals [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForParameters [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForSelf [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForTemporaries [
+
+	^ ASFlowOnDemand
 ]
 
 { #category : 'testing' }

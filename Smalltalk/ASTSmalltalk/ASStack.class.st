@@ -21,6 +21,20 @@ ASStack >> add: newObject [
 	^ self shouldNotImplement
 ]
 
+{ #category : 'enumerating' }
+ASStack >> addToCollection: aCollection [
+
+	^ aCollection
+
+	
+]
+
+{ #category : 'inspecting' }
+ASStack >> asOrderedCollection [
+
+	^ self addToCollection: OrderedCollection new
+]
+
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.
@@ -100,6 +114,12 @@ ASStack >> newElementFor: anASCInlineBlock [
 ASStack >> offset [
 
 	^ 0
+]
+
+{ #category : 'displaying' }
+ASStack >> printNameOn: stream [
+
+	self subclassResponsibility
 ]
 
 { #category : 'printing' }

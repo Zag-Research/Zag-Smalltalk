@@ -21,3 +21,13 @@ ASParameterNamed >> makeStackTheSource [
 	data := ASFlowParameter from: data.
 	^ next makeStackTheSource
 ]
+
+{ #category : 'data flow instructions' }
+ASParameterNamed >> newElementFor: aBasicBlock [
+
+	| flow |
+	flow := aBasicBlock flowForParameters.
+	flow ifNil: [ ^ self ].
+	^ (self replicate: (next newElementFor: aBasicBlock)) data:
+		  (flow new basicBlock: aBasicBlock)
+]

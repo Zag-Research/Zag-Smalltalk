@@ -29,7 +29,7 @@ ASStackTemporary >> displayStringOn: stream [
 	stream
 		nextPutAll: ' (';
 		print: offset;
-		nextPutAll: ' >';
+		nextPutAll: ') >';
 		print: data
 ]
 
@@ -108,9 +108,14 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 { #category : 'data flow instructions' }
 ASStackTemporary >> newElementFor: aBasicBlock [
 
-	| new |
-	new := aBasicBlock classForTemporaries new basicBlock: aBasicBlock.
-	^ (self replicate: (next newElementFor: aBasicBlock)) data: new
+	^ (self replicate: (next newElementFor: aBasicBlock)) data:
+		  (aBasicBlock flowForTemporaries new basicBlock: aBasicBlock)
+]
+
+{ #category : 'displaying' }
+ASStackTemporary >> printNameOn: stream [
+
+	stream nextPutAll: 'temp'
 ]
 
 { #category : 'initialization' }

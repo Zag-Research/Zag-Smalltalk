@@ -104,7 +104,7 @@ ASFlowNonNil >> printOn: aStream [
 { #category : 'output' }
 ASFlowNonNil >> pushFromContext: anInteger with: anASLLMethodOutput [ 
 
-	^ anASLLMethodOutput emitPushFromContext: anInteger
+	^ anASLLMethodOutput emitPushFromContext: anInteger flow: self
 ]
 
 { #category : 'accessing' }

@@ -19,6 +19,13 @@ ASStackNonEmpty class >> fromStack: anASStack [
 	^ self new fromStack: anASStack
 ]
 
+{ #category : 'enumerating' }
+ASStackNonEmpty >> addToCollection: aCollection [
+
+	aCollection addLast: self.
+	^ next addToCollection: aCollection
+]
+
 { #category : 'accessing' }
 ASStackNonEmpty >> at: aSymbol [
 
@@ -31,6 +38,12 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 	| element |
 	element := self at: aSymbol.
 	element data: (element data value: anObject)
+]
+
+{ #category : 'displaying' }
+ASStackNonEmpty >> displayStringOn: stream [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'enumerating' }

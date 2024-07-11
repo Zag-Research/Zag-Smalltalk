@@ -51,6 +51,13 @@ ASStackSelf >> nameStack: aCollection offset: anInteger forBlock: aBasicBlock [
 	self assert: #self = aCollection first description: 'can''t rename self'
 ]
 
+{ #category : 'data flow instructions' }
+ASStackSelf >> newElementFor: aBasicBlock [
+
+	^ (self replicate: (next newElementFor: aBasicBlock)) data:
+		  (aBasicBlock flowForSelf new basicBlock: aBasicBlock)
+]
+
 { #category : 'stack' }
 ASStackSelf >> offsetToSelf [
 

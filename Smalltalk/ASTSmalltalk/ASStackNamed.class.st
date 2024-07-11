@@ -13,6 +13,15 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'enumerating' }
+ASStackNamed >> addToCollection: aCollection [
+
+	aCollection addLast: self.
+	#self = name ifTrue: [^ aCollection].
+	^ next addToCollection: aCollection
+
+]
+
 { #category : 'accessing' }
 ASStackNamed >> at: aSymbol [
 
@@ -25,8 +34,6 @@ ASStackNamed >> displayStringOn: stream [
 
 	self printNameOn: stream.
 	stream
-		nextPut: Character space;
-		nextPutAll: name;
 		nextPutAll: ' (';
 		print: offset;
 		nextPutAll: (isInContext
@@ -99,10 +106,10 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : 'data flow instructions' }
-ASStackNamed >> newElementFor: aBasicBlock [
-	"nothing to do - use the global named source"
+{ #category : 'displaying' }
+ASStackNamed >> printNameOn: stream [
 
+	stream nextPutAll: name
 ]
 
 { #category : 'output' }

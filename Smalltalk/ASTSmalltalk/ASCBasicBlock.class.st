@@ -121,18 +121,6 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	^ case
 ]
 
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> classForLocals [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> classForTemporaries [
-
-	^ self subclassResponsibility
-]
-
 { #category : 'copying' }
 ASCBasicBlock >> copyOfStackFor: anASCInlineBlock [ 
 
@@ -170,6 +158,18 @@ ASCBasicBlock >> endsWithCall [
 ASCBasicBlock >> flow [
 
 	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> flowForLocals [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> flowForTemporaries [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
@@ -215,7 +215,7 @@ ASCBasicBlock >> indexOf: anObject [
 ASCBasicBlock >> initLocalNamed: aSymbol [
 
 	stack := stack initLocalNamed: aSymbol.
-	^ stack data: (self classForLocals new
+	^ stack data: (self flowForLocals new
 			   basicBlock: self;
 			   class: nil)
 ]

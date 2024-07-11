@@ -46,6 +46,12 @@ ASStackContext >> offset [
 	^ 0
 ]
 
+{ #category : 'displaying' }
+ASStackContext >> printNameOn: stream [
+
+	stream nextPutAll: '<context>'
+]
+
 { #category : 'initialization' }
 ASStackContext >> reset [
 

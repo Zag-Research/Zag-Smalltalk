@@ -23,13 +23,25 @@ ASCInlineBlock >> addSourceBlock: aBasicBlock [
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> classForLocals [
+ASCInlineBlock >> flowForLocals [
 
 	^ ASFlowPhi
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> classForTemporaries [
+ASCInlineBlock >> flowForParameters [
+
+	^ nil
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForSelf [
+
+	^ nil
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForTemporaries [
 
 	^ ASFlowPhi
 ]
