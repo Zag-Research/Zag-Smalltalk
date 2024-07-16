@@ -19,8 +19,7 @@ Class {
 { #category : 'adding' }
 ASCBlockClosureBlock >> addBlock: anASCReturnBlock [
 
-self halt.
-	anASCReturnBlock context: self getContext.
+	self halt.
 	^ returnBlocks
 		  at: anASCReturnBlock
 		  ifAbsentPut: [ returnBlocks size + 1 ]
@@ -48,6 +47,14 @@ ASCBlockClosureBlock >> flowForTemporaries [
 ASCBlockClosureBlock >> hasContextOnEntry [
 
 	^ sourceElements hasContext
+]
+
+{ #category : 'API' }
+ASCBlockClosureBlock >> initContext [
+
+	stack := ASStackContext fromStack: stack.
+	stack data: (context := ASFlowContext new)
+
 ]
 
 { #category : 'API' }

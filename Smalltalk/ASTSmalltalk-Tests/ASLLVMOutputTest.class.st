@@ -35,10 +35,12 @@ ASLLVMOutputTest >> testLLVMOutput [
 ASLLVMOutputTest >> testLLVM_blockReturnEasy [
 
 	| cg |
-	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #blockReturnEasy.
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #blockReturnEasy.
 	cg
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -58,7 +60,7 @@ ASLLVMOutputTest >> testLLVM_fibonacci [
 	self halt.
 	cg
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -109,7 +111,7 @@ ASLLVMOutputTest >> testLLVM_inlined_fibonacci [
 	cg := ASCompilerInlineTest inlined_fibonacci.
 	cg
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -137,7 +139,7 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
-	cg finalAnalysis.
+	cg finalAnalysis;flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -153,7 +155,7 @@ ASLLVMOutputTest >> testLLVM_yourself [
 	cg inspect.
 	cg
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;flowAnalysis.
 	output
 		codeGenerator: cg;
 		outputToStream.
@@ -180,7 +182,7 @@ ASLLVMOutputTest >> test_plus_and [
 	cg returnTop.
 	cg
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -205,9 +207,11 @@ ASLLVMOutputTest >> test_plus_and_and [
 	cg send: #*. " and create new ReturnBlock"
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
-	cg halt;
+	cg
+		inspect;halt;
 		inline: true;
-		finalAnalysis.
+		finalAnalysis;
+		flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;

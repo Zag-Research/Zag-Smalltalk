@@ -34,6 +34,10 @@ ASFlowNil class >> value: ignored [
 	^ self new
 ]
 
+{ #category : 'accessing' }
+ASFlowNil >> basicBlock: aBasicBlock [
+]
+
 { #category : 'instance creation' }
 ASFlowNil >> class: ignored [
 ]

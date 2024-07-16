@@ -76,16 +76,6 @@ ASStackNamed >> isInContext [
 	^ isInContext
 ]
 
-{ #category : 'API' }
-ASStackNamed >> makeContextRequired: aBlock [
-
-	| context |
-	self intoContext: 0.
-	context := ASStackContext fromStack: self.
-	aBlock cull: context.
-	^ context
-]
-
 { #category : 'data flow instructions' }
 ASStackNamed >> markReferenced [
 

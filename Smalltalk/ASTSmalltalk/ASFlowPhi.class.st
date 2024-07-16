@@ -71,10 +71,11 @@ ASFlowPhi >> printOn: aStream [
 				nextPut: $?;
 				print: sources first ]
 		ifFalse: [
+			sources size = 0 ifTrue: [ ^ super printOn: aStream ] ifFalse: [
 			aStream nextPutAll: '?('.
 			sources
 				do: [ :source | source printOn: aStream ]
 				separatedBy: [ aStream space ].
-			aStream nextPut: $) ].
+			aStream nextPut: $) ]].
 	^ self printClassOn: aStream
 ]

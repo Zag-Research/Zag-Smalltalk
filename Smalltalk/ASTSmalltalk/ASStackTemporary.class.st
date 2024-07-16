@@ -45,22 +45,10 @@ ASStackTemporary >> drop: count [
 	^ next drop: count-1
 ]
 
-{ #category : 'rewriting' }
-ASStackTemporary >> dropUnder: n [
-
-	^ self replicate: (next drop: n)
-]
-
 { #category : 'accessing' }
 ASStackTemporary >> id [
 
 	^ offset
-]
-
-{ #category : 'API' }
-ASStackTemporary >> makeContextRequired: aBlock [
-
-	^ self replicate: (next makeContextRequired: aBlock)
 ]
 
 { #category : 'as yet unclassified' }

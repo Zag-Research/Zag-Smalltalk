@@ -86,18 +86,18 @@ ASCBasicBlock >> blocks [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> branch: anASCInlineBlock [
+ASCBasicBlock >> branch: aBasicBlock [
 
-	self addOperation: (ASCBranch with: anASCInlineBlock).
-	anASCInlineBlock addSourceBlock: self.
-	^ anASCInlineBlock
+	self addOperation: (ASCBranch with: aBasicBlock).
+	aBasicBlock addSourceBlock: self.
+	^ aBasicBlock
 ]
 
 { #category : 'data flow instructions' }
 ASCBasicBlock >> checkForCalls [
 
-	(sourceBlocks anySatisfy: #endsWithCall) ifFalse: [ ^ self ].
-	self primitiveChangeClassTo: ASCReturnBlock basicNew.
+	(sourceBlocks noneSatisfy: #endsWithCall) ifTrue: [ ^ self ].
+	self primitiveChangeClassTo: ASCInlineBlock basicNew.
 	stack makeStackTheSource
 ]
 
@@ -122,9 +122,9 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 ]
 
 { #category : 'copying' }
-ASCBasicBlock >> copyOfStackFor: anASCInlineBlock [ 
+ASCBasicBlock >> copyOfStackFor: aBasicBlock [ 
 
-	^ stack newElementFor: anASCInlineBlock
+	^ stack copyFor: aBasicBlock
 ]
 
 { #category : 'adding' }
@@ -275,7 +275,7 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 				   beNotExpandable;
 				   beNotSortable;
 				   yourself);
-		  items: sourceElements asOrderedCollection;
+		  items: self sourceElementsForInspect;
 		  yourself
 ]
 
@@ -489,7 +489,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCInlineBlock new ].
+	next := tailCall ifFalse: [ ASCReturnBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
@@ -509,6 +509,12 @@ ASCBasicBlock >> setStackForBlock: anASCBlock [
 ASCBasicBlock >> sourceElements [
 
 	^ sourceElements
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> sourceElementsForInspect [
+
+	^ sourceElements asOrderedCollection
 ]
 
 { #category : 'accessing' }

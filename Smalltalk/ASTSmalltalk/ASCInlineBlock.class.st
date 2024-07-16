@@ -9,19 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'adding' }
-ASCInlineBlock >> addSourceBlock: aBasicBlock [
-
-	sourceBlocks add: aBasicBlock andIfNewDo: [
-		sourceElements
-			ifNil: [
-			sourceElements := self copyStackFrom: aBasicBlock ]
-			ifNotNil: [
-				sourceElements
-					with: aBasicBlock stack
-					do: [ :stackElement :other | stackElement mergeWith: other ] ] ]
-]
-
 { #category : 'data flow instructions' }
 ASCInlineBlock >> flowForLocals [
 

@@ -6,7 +6,8 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'offset',
-		'next'
+		'next',
+		'data'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -38,6 +39,25 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 	| element |
 	element := self at: aSymbol.
 	element data: (element data value: anObject)
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> data [
+
+	^ data
+]
+
+{ #category : 'accessing' }
+ASStackNonEmpty >> data: anObject [
+
+	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
+	data := anObject
+]
+
+{ #category : 'evaluating' }
+ASStackNonEmpty >> dataClass [
+
+	^ data dataClass
 ]
 
 { #category : 'displaying' }
@@ -79,7 +99,7 @@ ASStackNonEmpty >> isInContext [
 ]
 
 { #category : 'API' }
-ASStackNonEmpty >> makeContextRequired: aFullBlockClosure [ 
+ASStackNonEmpty >> linkContext: aFullBlockClosure [ 
 	^ self subclassResponsibility
 ]
 

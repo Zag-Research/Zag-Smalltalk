@@ -152,8 +152,7 @@ ASCodeGenerator >> finalAnalysis [
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
 	blockClosures do: #finalAnalysis.
-	basicBlocks do: #checkForCalls.
-	basicBlocks do: #markReferences
+
 ]
 
 { #category : 'API' }
@@ -167,6 +166,13 @@ ASCodeGenerator >> find: aSymbol [
 { #category : 'private - testing' }
 ASCodeGenerator >> firstBlock [
 	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
+]
+
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> flowAnalysis [
+
+	basicBlocks do: #checkForCalls.
+	basicBlocks do: #markReferences
 ]
 
 { #category : 'translating' }
@@ -374,7 +380,8 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 ASCodeGenerator >> locals: locals parameters: arguments [
 
 	code initSelf: targetClass.
-	code locals: locals parameters: arguments
+	code locals: locals parameters: arguments.
+	code initContext
 ]
 
 { #category : 'compiling' }

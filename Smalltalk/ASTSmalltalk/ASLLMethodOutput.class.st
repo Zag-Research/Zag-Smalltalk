@@ -48,6 +48,11 @@ ASLLMethodOutput >> emitPushFromContext: anInteger [
 	self shouldBeImplemented.
 ]
 
+{ #category : 'output' }
+ASLLMethodOutput >> emitPushFromContext: anInteger flow: aFlow [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'as yet unclassified' }
 ASLLMethodOutput >> generateTemp [
 

@@ -6,6 +6,9 @@ I may,  or may not be reified in a particular method
 Class {
 	#name : 'ASStackContext',
 	#superclass : 'ASStackNonEmpty',
+	#instVars : [
+		'uses'
+	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
@@ -34,11 +37,6 @@ ASStackContext >> drop: count [
 ASStackContext >> hasContext [
 
 	^ true
-]
-
-{ #category : 'API' }
-ASStackContext >> makeContextRequired: aFullBlockClosure [ 
-
 ]
 
 { #category : 'data flow instructions' }

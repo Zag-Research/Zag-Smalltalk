@@ -35,6 +35,12 @@ ASStack >> asOrderedCollection [
 	^ self addToCollection: OrderedCollection new
 ]
 
+{ #category : 'copying' }
+ASStack >> copyFor: aBasicBlock [ 
+
+	^ self newElementFor: aBasicBlock
+]
+
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.
@@ -144,6 +150,11 @@ ASStack >> pushForTests: anObject [
 ASStack >> remove: oldObject ifAbsent: anExceptionBlock [
 
 	^ self shouldNotImplement
+]
+
+{ #category : 'stack' }
+ASStack >> replicate [
+
 ]
 
 { #category : 'data flow instructions' }

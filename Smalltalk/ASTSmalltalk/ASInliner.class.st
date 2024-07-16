@@ -142,6 +142,15 @@ ASInliner class >> reset [
 	primitiveChecker := OrderedCollection new.
 	primitiveReturn := OrderedCollection new.
 	self bothMatch: SmallInteger >> #+ returns: SmallInteger.
+	" %5 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %4, i64 1), !nosanitize !8
+  %6 = extractvalue { i64, i1 } %5, 0, !nosanitize !8
+  %7 = extractvalue { i64, i1 } %5, 1, !nosanitize !8
+  br i1 %7, label %8, label %10, !prof !9, !nosanitize !8
+
+; <label>:8:                                      ; preds = %0
+ !!! error
+10: success
+"
 	self bothMatch: SmallInteger >> #- returns: SmallInteger.
 	self bothMatch: SmallInteger >> #+ returns: SmallInteger.
 	self bothMatch: SmallInteger >> #< returns: Boolean.

@@ -4,33 +4,10 @@ All the things on the stack with real content
 Class {
 	#name : 'ASStackNonContext',
 	#superclass : 'ASStackNonEmpty',
-	#instVars : [
-		'outputName',
-		'data'
-	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
-
-{ #category : 'as yet unclassified' }
-ASStackNonContext >> data [
-
-	^ data
-]
-
-{ #category : 'accessing' }
-ASStackNonContext >> data: anObject [
-
-	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
-	data := anObject
-]
-
-{ #category : 'evaluating' }
-ASStackNonContext >> dataClass [
-
-	^ data dataClass
-]
 
 { #category : 'output' }
 ASStackNonContext >> getNameOn: anASLLMethodOutput [
@@ -41,6 +18,12 @@ ASStackNonContext >> getNameOn: anASLLMethodOutput [
 { #category : 'as yet unclassified' }
 ASStackNonContext >> id [
 	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASStackNonContext >> linkContext: aBlock [
+
+	^ self replicate: (next linkContext: aBlock)
 ]
 
 { #category : 'data flow instructions' }
@@ -66,6 +49,12 @@ ASStackNonContext >> offset: anInteger to: aStackElement [
 
 	self == aStackElement ifTrue: [ ^ anInteger ].
 	^ next offset: anInteger+1 to: aStackElement
+]
+
+{ #category : 'stack' }
+ASStackNonContext >> replicate [
+
+	^ (self replicate: next replicate) data: data
 ]
 
 { #category : 'API' }

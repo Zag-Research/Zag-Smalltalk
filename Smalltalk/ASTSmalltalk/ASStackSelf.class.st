@@ -54,7 +54,7 @@ ASStackSelf >> nameStack: aCollection offset: anInteger forBlock: aBasicBlock [
 { #category : 'data flow instructions' }
 ASStackSelf >> newElementFor: aBasicBlock [
 
-	^ (self replicate: (next newElementFor: aBasicBlock)) data:
+	^ (self replicate: next) data:
 		  (aBasicBlock flowForSelf new basicBlock: aBasicBlock)
 ]
 
