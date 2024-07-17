@@ -11,6 +11,8 @@ Class {
 
 { #category : 'API' }
 ASZigMethodOutput >> codeGenerator [
+
+		self deprecated: 'restructured'.
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
@@ -20,25 +22,12 @@ ASZigMethodOutput >> codeGenerator [
 			                   enclosingScope: parentCodeGenerator ]
 ]
 
-{ #category : 'API' }
-ASZigMethodOutput >> codeGeneratorInlining: aClass [
-| currentCG | 
-	currentCG := codeGenerator.
-	codeGenerator := self codeGeneratorClass new
-			                   parentCodeGenerator: currentCG;
-			                   output: self;
-			                   inlining: inlining;
-			                   targetClass: aClass;
-			                   enclosingScope: currentCG.
-	^ currentCG
-]
-
 { #category : 'code generation' }
 ASZigMethodOutput >> generateCode [
 
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
-	self codeGenerator generate: ourObject.
+	self codeGenerator generateFrom: ourObject.
 	self outputToStream
 ]
 
@@ -77,9 +66,9 @@ ASZigMethodOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigMethodOutput >> outputMethodStart: bbLabel [
+ASZigMethodOutput >> outputMethodStart: bb [
 
-self subclassResponsibility 
+	self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -99,12 +88,6 @@ ASZigMethodOutput >> verifySelector: anObject [
 
 { #category : 'API' }
 ASZigMethodOutput >> visitPushLiteral: aLiteral [ 
-	^ self subclassResponsibility
-]
-
-{ #category : 'API' }
-ASZigMethodOutput >> visitPushLocal: localNumber [
-
 	^ self subclassResponsibility
 ]
 

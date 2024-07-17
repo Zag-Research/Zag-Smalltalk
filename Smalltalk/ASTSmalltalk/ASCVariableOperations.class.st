@@ -3,7 +3,7 @@ I am an abstract class for local operations
 "
 Class {
 	#name : 'ASCVariableOperations',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
 		'variable'
 	],
@@ -12,7 +12,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'code generation' }
+{ #category : 'printing' }
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.
@@ -20,9 +20,22 @@ ASCVariableOperations >> inspectZagASTOn: aStream [
 	
 ]
 
+{ #category : 'data flow instructions' }
+ASCVariableOperations >> markReferences [
+
+	stack markReferenced
+]
+
 { #category : 'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
+]
+
+{ #category : 'stack' }
+ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
+
+	stack := anASStack.
+	^ anASStack drop
 ]
 
 { #category : 'instance creation' }

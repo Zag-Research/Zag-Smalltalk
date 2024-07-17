@@ -30,10 +30,8 @@ ASReturn >> blocks [
 
 { #category : 'accessing' }
 ASReturn >> children [
-| exp |
-	exp := OrderedCollection new.
-	exp add: expression.
-	^ exp
+
+	^ OrderedCollection with: expression
 ]
 
 { #category : 'accessing' }
@@ -92,9 +90,26 @@ ASReturn >> zigWalkBlockReturn: anASCodeGenerator [
 
 { #category : 'compiling' }
 ASReturn >> zigWalkDiscard: aGenerator [
-
 	(expression zigWalkForReturn: aGenerator) ifFalse: [
-	^ aGenerator returnTop]
+		^ aGenerator returnTop ]
+]
+
+{ #category : 'as yet unclassified' }
+ASReturn >> zigWalkInlineBlockReturn: anASCodeGenerator [
+
+	self shouldBeImplemented 
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkInlineDiscard: aGenerator [
+
+	^ (expression zigWalkForReturn: aGenerator) ifFalse: [
+		aGenerator returnTopInline]
+]
+
+{ #category : 'compiling' }
+ASReturn >> zigWalkInlineMethodReturn: aGenerator [ 
+	^ self zigWalkInlineDiscard: aGenerator
 ]
 
 { #category : 'compiling' }

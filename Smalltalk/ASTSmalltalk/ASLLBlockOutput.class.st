@@ -1,3 +1,6 @@
+"
+I am the output for Blocks for LLVM
+"
 Class {
 	#name : 'ASLLBlockOutput',
 	#superclass : 'ASLLMethodOutput',
@@ -38,9 +41,4 @@ ASLLBlockOutput >> methodGenerator: anOutput block: anInteger [
 ASLLBlockOutput >> prefix [
 
 	^ 'B'
-]
-
-{ #category : 'visiting' }
-ASLLBlockOutput >> visitReturnSelf [
-	self nextPutAll: 'RETURNSELF';endStatement 
 ]

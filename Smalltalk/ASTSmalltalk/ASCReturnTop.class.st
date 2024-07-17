@@ -3,31 +3,41 @@ I represent a return
 "
 Class {
 	#name : 'ASCReturnTop',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCReturn',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
-ASCReturnTop >> manifestParameters: stack [
+{ #category : 'output' }
+ASCReturnTop >> getTop: anASLLMethodOutput [
 
-	^ stack top makeManifest
+	^ stack getNameOn: anASLLMethodOutput 
 ]
 
-{ #category : 'accessing' }
-ASCReturnTop >> next [
-	^ nil
+{ #category : 'block handling' }
+ASCReturnTop >> manifestParameters [
+
+	^ stack makeManifestFor: 1
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnTop >> markReferences [
+
+	stack markReferenced
 ]
 
 { #category : 'code generation' }
 ASCReturnTop >> outputTo: output [
 
-	^ output visitReturnTop
+	^ output visitReturnTop: self
 ]
 
-{ #category : 'instance creation' }
-ASCReturnTop >> with: ignored [
+{ #category : 'stack' }
+ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
 
-
+	| stackElement |
+	stack := aStack.
+	stackElement := aStack at: #self.
+	^ (ASStackTemporary fromStack: stackElement next) data: ((ASFlowNew from: stackElement data) basicBlock: aBasicBlock)
 ]

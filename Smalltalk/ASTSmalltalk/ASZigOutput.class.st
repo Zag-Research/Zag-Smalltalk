@@ -62,6 +62,10 @@ ASZigOutput >> ourObject [
 ]
 
 { #category : 'output' }
+ASZigOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive methods: methods [
+]
+
+{ #category : 'output' }
 ASZigOutput >> putClass: aString [ 
 self nextPutAll: 'c.';nextPutAll: aString;comma
 ]

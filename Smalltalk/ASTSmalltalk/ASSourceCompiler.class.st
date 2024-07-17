@@ -25,7 +25,7 @@ ASSourceCompiler >> compileMethodInClass: aClass [
 	| selector args method savedScope |
 	args := OrderedCollection new.
 	selector := aScanner peek classSelector: self args: args.
-	method := ASMethodNode new selector: selector; arguments: args; class: aClass; yourself.
+	method := ASMethodNode new selector: selector; arguments: args; classContext: aClass; yourself.
 	args do: [ : arg | method add: arg ].
 	savedScope := scope.
 	[

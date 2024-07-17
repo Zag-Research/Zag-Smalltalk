@@ -3,27 +3,102 @@ I reperesent an empty stack of values within a method.
 "
 Class {
 	#name : 'ASStack',
-	#superclass : 'Object',
-	#category : 'ASTSmalltalk-CodeGen',
+	#superclass : 'Collection',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
-{ #category : 'accessing' }
-ASStack >> at: aSymbol [
+{ #category : 'printing' }
+ASStack class >> canonicalArgumentName [
 
-	^ (self find: aSymbol) top
+	^ 'aStackElement'
 ]
 
-{ #category : 'accessing' }
-ASStack >> atZZZ: aSymbol [
+{ #category : 'adding' }
+ASStack >> add: newObject [
 
-	^ (self find: aSymbol) top
+	^ self shouldNotImplement
 ]
 
-{ #category : 'accessing' }
-ASStack >> find: aSymbol [
-self subclassResponsibility 
+{ #category : 'enumerating' }
+ASStack >> addToCollection: aCollection [
+
+	^ aCollection
+
+	
+]
+
+{ #category : 'inspecting' }
+ASStack >> asOrderedCollection [
+
+	^ self addToCollection: OrderedCollection new
+]
+
+{ #category : 'copying' }
+ASStack >> copyFor: aBasicBlock [ 
+
+	^ self newElementFor: aBasicBlock
+]
+
+{ #category : 'displaying' }
+ASStack >> displayStringOn: stream [
+	self printNameOn: stream.
+]
+
+{ #category : 'enumerating' }
+ASStack >> do: ignored [
+]
+
+{ #category : 'removing' }
+ASStack >> drop: count [
+
+	count = 0 ifTrue: [ ^ self ].
+	self error
+]
+
+{ #category : 'testing' }
+ASStack >> hasContext [
+
+	^ false
+]
+
+{ #category : 'API' }
+ASStack >> initLocalNamed: name [
+
+	^ (ASLocalNamed new fromStack: self) name: name
+]
+
+{ #category : 'API' }
+ASStack >> initParameterNamed: name [
+
+	^ (ASParameterNamed fromStack: self) name: name; data: ASFlowParameter new
+]
+
+{ #category : 'API' }
+ASStack >> initSelf [
+
+	^ ASStackSelf fromStack: self
+]
+
+{ #category : 'inspecting' }
+ASStack >> inspectionItems: aBuilder [
+
+	<inspectorPresentationOrder: 0 title: 'Stack'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: self asOrderedCollection;
+		  yourself
+]
+
+{ #category : 'API' }
+ASStack >> intoContext: anInteger [ 
+
 ]
 
 { #category : 'testing' }
@@ -32,52 +107,69 @@ ASStack >> isEmpty [
 	^ true
 ]
 
-{ #category : 'API' }
-ASStack >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-
-self subclassResponsibility 
+{ #category : 'data flow instructions' }
+ASStack >> makeStackTheSource [
 ]
 
-{ #category : 'API' }
-ASStack >> offsetOf: aSymbol local: blockLocal stack: blockStack other: blockOther [
+{ #category : 'instance creation' }
+ASStack >> newElementFor: anASCInlineBlock [ 
 
-	^ self
-		  offset: 0
-		  to: aSymbol
-		  local: blockLocal
-		  stack: blockStack
-		  other: blockOther 
+]
+
+{ #category : 'accessing' }
+ASStack >> offset [
+
+	^ 0
+]
+
+{ #category : 'displaying' }
+ASStack >> printNameOn: stream [
+
+	self subclassResponsibility
+]
+
+{ #category : 'printing' }
+ASStack >> printOn: aStream [
+
+	^ aStream nextPutAll: self className
 ]
 
 { #category : 'adding' }
-ASStack >> push: anObject [
+ASStack >> pushFlowAsTemporary: aFlow [
 
-	| newStack |
-	newStack := ASStackElement from: self.
-	newStack top: anObject. " (ASCClassValue new init: anObject class)."
-	^ newStack
+	^ (ASStackTemporary fromStack: self) data: aFlow 
 ]
 
 { #category : 'adding' }
-ASStack >> push: aSymbol on: aStack [
+ASStack >> pushForTests: anObject [
+
+	^ (ASStackTemporary fromStack: self) data: (ASFlowNew from: anObject)
+]
+
+{ #category : 'removing' }
+ASStack >> remove: oldObject ifAbsent: anExceptionBlock [
+
+	^ self shouldNotImplement
+]
+
+{ #category : 'stack' }
+ASStack >> replicate [
 
 ]
 
-{ #category : 'API' }
-ASStack >> pushPlaceholderContext [ 
-	^ ASStackContextPlaceholder new from: self
+{ #category : 'data flow instructions' }
+ASStack >> simplifyDependenciesFor: anASCMethodBlock [
+
 ]
 
-{ #category : 'API' }
-ASStack >> pushUnknown [
-	^ self push: ASCUnknownValue new
+{ #category : 'private' }
+ASStack >> species [
+
+	^ OrderedCollection
 ]
 
-{ #category : 'API' }
-ASStack >> stackNames: aCollection [
+{ #category : 'enumerating' }
+ASStack >> with: ignored1 do: ignored2 [
 
-	aCollection ifEmpty: [ ^ self ].
-	^ ASStackNamed new
-		  from: (self stackNames: aCollection allButFirst);
-		  name: aCollection first
+	
 ]

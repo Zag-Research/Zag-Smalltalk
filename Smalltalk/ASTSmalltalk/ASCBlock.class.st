@@ -3,7 +3,7 @@ I hold a ASBlock AST, to prepare for analysis
 "
 Class {
 	#name : 'ASCBlock',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'block',
 		'manifest',
@@ -18,20 +18,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'label' }
-ASCBlock class >> labelIndex [
-
-	index ifNil: [ index := 0 ].
-	index := index + 1.
-	^ index
-]
-
-{ #category : 'label' }
-ASCBlock class >> resetLabelIndex [
-
- index := 0
-]
-
 { #category : 'asserting' }
 ASCBlock >> assertIsValue [
 
@@ -43,19 +29,24 @@ ASCBlock >> block [
 	^ block
 ]
 
-{ #category : 'initialization' }
-ASCBlock >> initialize [ 
-super initialize .
-manifest := false
+{ #category : 'accessing' }
+ASCBlock >> inferType: anASCodeGenerator [
+
+	^ BlockClosure new "anASCodeGenerator targetClass"
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'initialization' }
+ASCBlock >> initialize [
+	super initialize.
+	manifest := false
+]
+
+{ #category : 'printing' }
 ASCBlock >> inspectZagASTOn: aStream [
 
-	super inspectZagASTOn: aStream.
-	aStream << $(.
-	aStream print: label.
-	aStream << $)
+	"super inspectZagASTOn: aStream."
+	block inspectZagASTOn: aStream
+	"aStream << block asBlock body printString"
 ]
 
 { #category : 'accessing' }
@@ -96,6 +87,12 @@ ASCBlock >> outputTo: output [
 
 manifest ifFalse: [ ^ output visitPushNil ].
 	^ output visitPushBlock: self
+]
+
+{ #category : 'stack' }
+ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: block) basicBlock: aBasicBlock)
 ]
 
 { #category : 'instance creation' }

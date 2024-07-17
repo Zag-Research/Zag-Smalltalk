@@ -3,9 +3,6 @@ I represent a Basic Block for ASCodeGenerator.
 
 Every Method or block is made up of a graph of these.
 
-I have a `then` field which is the block I will go to if the named test is true.
-
-If there is no test, or if the test is false, then I will continue with the `else` block.
 "
 Class {
 	#name : 'ASCBasicBlock',
@@ -15,12 +12,65 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'index'
+		'method',
+		'hash',
+		'stackDepth',
+		'context',
+		'sourceBlocks',
+		'sourceElements',
+		'sequence'
+	],
+	#classVars : [
+		'SequenceNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'printing' }
+ASCBasicBlock class >> canonicalArgumentName [
+
+	^ 'aBasicBlock'
+]
+
+{ #category : 'class initialization' }
+ASCBasicBlock class >> initialize [
+
+	SequenceNumber := 0
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> = other [
+
+	^ hash = other hash and: [ other class = self class ]
+]
+
+{ #category : 'adding' }
+ASCBasicBlock >> addBlock: aBasicBlock [
+
+	^ self methodBlock addBlock: aBasicBlock
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> addOperation: anOperation [
+
+	operations add: anOperation.
+	stack := anOperation resultStack: stack basicBlock: self.
+	^ false
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> anySourcesNonNilFor: id [
+
+	^ sourceBlocks anySatisfy: [ :block | block providesNonNil: id ]
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> at: nameOrOffset [
+
+	^ stack at: nameOrOffset
+]
 
 { #category : 'accessing' }
 ASCBasicBlock >> blocks [
@@ -35,108 +85,123 @@ ASCBasicBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : 'abstract interpretation' }
-ASCBasicBlock >> branch: anASCInlineBlock [
+{ #category : 'API' }
+ASCBasicBlock >> branch: aBasicBlock [
 
-	self put: (ASCBranch with: anASCInlineBlock).
-	^ anASCInlineBlock
+	self addOperation: (ASCBranch with: aBasicBlock).
+	aBasicBlock addSourceBlock: self.
+	^ aBasicBlock
 ]
 
-{ #category : 'inlining' }
-ASCBasicBlock >> canBeInlinedBy: anASCodeGenerator [
-| aSend case |
-	aSend := operations last.
-	aSend isSend ifFalse: [ ^ false ].
-	
-	case := ASCCase new.
-	"case needs to know the relationship between classes and block name!"
-	operations add: case before: operations last.
-	"check if the send can be inlined"
-	^ anASCodeGenerator inline: aSend
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> checkForCalls [
+
+	(sourceBlocks noneSatisfy: #endsWithCall) ifTrue: [ ^ self ].
+	self primitiveChangeClassTo: ASCInlineBlock basicNew.
+	stack makeStackTheSource
 ]
 
 { #category : 'accessing' }
 ASCBasicBlock >> children [
+
 	^ operations
 ]
 
-{ #category : 'abstract interpretation' }
-ASCBasicBlock >> classCase: aCollection [
+{ #category : 'API' }
+ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 
 	| case |
-	case := ASCCase new.
+	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlineBlock for: self.
+		next := ASCInlinedMethodBlock new.
 		case at: class put: next.
-		next stack: stack ].
-	self put: case.
+		next addSourceBlock: self ].
+	self addOperation: case.
 	^ case
 ]
 
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doCall: aSymbol [
+{ #category : 'copying' }
+ASCBasicBlock >> copyOfStackFor: aBasicBlock [ 
 
-	stack := stack drop: aSymbol numArgs
+	^ stack copyFor: aBasicBlock
 ]
 
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDrop [
-	stack := stack drop
-]
+{ #category : 'adding' }
+ASCBasicBlock >> copyStackFrom: aBasicBlock [
 
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDrop: n [
-
-	stack := stack drop: n.
-
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doDup [
-	stack := stack from: stack top 
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doPop [
-
-	| result |
-	result := stack value.
-	stack := stack drop.
-	^ result
+	^ stack := aBasicBlock copyOfStackFor: self
 ]
 
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
-	stack := stack push: anObject.
-	maxDepth := maxDepth max: stack depth
+
+	stack := stack pushFlowAsTemporary: ((ASFlowNew value: anObject) basicBlock: self).
+	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
-{ #category : 'abstract interpretation' }
+{ #category : 'API' }
 ASCBasicBlock >> embed: aSymbol [
 
-	| send |
-	send := ASCEmbed with: aSymbol.
-	self put: send.
-	self stack: (stack drop: aSymbol numArgs + 1) pushUnknown.
+	self addOperation: (ASCEmbed with: aSymbol).
 	^ nil
 ]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> endWithReturnTop [
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> endsWithCall [
 
-	^ self put: ASCReturnTop new
+	operations ifEmpty: [ ^ false ].
+	^ operations last isCallOperation
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> find: aSymbol [
+ASCBasicBlock >> flow [
 
-	^ (stack find: aSymbol) push: aSymbol on: stack
+	^ false
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> index [
-	^ index
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> flowForLocals [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> flowForTemporaries [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> getContext [
+
+	context ifNil: [
+		stack := stack makeContextRequired: [ :c | context := c ] ].
+	^ context
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> hasContext [
+
+	^ sourceElements hasContext
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> hasContextOnEntry [
+
+	^ sourceElements hasContext
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> hash [
+
+	^ hash
+]
+
+{ #category : 'comparing' }
+ASCBasicBlock >> hash: value [
+
+	hash := value
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -146,13 +211,31 @@ ASCBasicBlock >> indexOf: anObject [
 
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> initLocalNamed: aSymbol [
+
+	stack := stack initLocalNamed: aSymbol.
+	^ stack data: (self flowForLocals new
+			   basicBlock: self;
+			   class: nil)
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> initialize [
 
 	super initialize.
-	operations := OrderedCollection new.
-	maxDepth := 0.
-	stack := ASEmptyStack new.
+	stackDepth := maxDepth := 0.
+	stack := ASStack new.
+	hash := SequenceNumber := SequenceNumber + 1.
+	sourceBlocks := Set new.
+	operations := OrderedCollection new
+]
+
+{ #category : 'inlining' }
+ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
+
+	operations ifEmpty: [ ^ self ].
+	^ operations last inlineIfPossible: anASCodeGenerator
 ]
 
 { #category : 'printing' }
@@ -165,27 +248,79 @@ ASCBasicBlock >> inspectZagASTOn: aStream [
 		<< $)
 ]
 
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionStack: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'Stack'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: stack asOrderedCollection;
+		  yourself
+
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionStart: aBuilder [
+
+	<inspectorPresentationOrder: 1 title: 'Source'>
+	^ aBuilder newTable
+		  addColumn: (SpStringTableColumn new
+				   title: 'Stack Elements';
+				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
+				   beNotExpandable;
+				   beNotSortable;
+				   yourself);
+		  items: self sourceElementsForInspect;
+		  yourself
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> inspectionZagCode [
+
+	<inspectorPresentationOrder: 0 title: 'ZCode'>
+	^ SpTreeTablePresenter new
+		  roots: operations;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn title: 'Operations' evaluated: #contents);
+		  yourself
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> isRecursive: aCompileMethod [ 
+	"test if the given compile method has already been visited"
+	^ false
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> makeContextRequired [
-	stack := stack makeContextRequired 
+{ #category : 'output' }
+ASCBasicBlock >> llvmLabel [
+	^ self subclassResponsibility
 ]
 
 { #category : 'inlining' }
 ASCBasicBlock >> markBlockClosuresToManifest [
 
 	| last |
-	operations ifNotEmpty: [ 
 	last := operations last.
-	last requiresContext ifTrue: [ stack := stack makeContextRequired.
- ].
-	last manifestParameters: stack
-	]
+	last requiresContext ifTrue: [ self getContext ].
+	last manifestParameters
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> markReferences [
+
+	operations do: #markReferences
 ]
 
 { #category : 'accessing' }
@@ -194,24 +329,42 @@ ASCBasicBlock >> maxDepth [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> next [
-	^ operations ifNotEmpty: [ operations last next ] ifEmpty: [ nil ]
+ASCBasicBlock >> methodBlock [
+
+	^ method ifNil: [ method := sourceBlocks size > 0 ifTrue: [sourceBlocks anyOne methodBlock] ]
 ]
 
-{ #category : 'instance initialization' }
-ASCBasicBlock >> nonlocalNameLookupObject: aGenerator [
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> namedBlock [
+	^ self subclassResponsibility
+]
 
-	stack nonlocalNameLookupObject: aGenerator
+{ #category : 'accessing' }
+ASCBasicBlock >> next [
+
+	^ operations ifEmpty: [ nil ] ifNotEmpty: [ operations last next ]
+]
+
+{ #category : 'inlining' }
+ASCBasicBlock >> nextInline [
+
+	^ nil
+]
+
+{ #category : 'successor sequences' }
+ASCBasicBlock >> nextSequence [
+	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
+ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
+
 	^ stack
 		  offset: 0
-		  to: anObject
-		  local: blockLocal
+		  to: aSymbol
+		  context: blockLocal
 		  stack: blockStack
-		  other: blockOther 
+		  other: blockOther
 ]
 
 { #category : 'initialization' }
@@ -220,14 +373,9 @@ ASCBasicBlock >> offsetTo: anObject [
 	^ stack offset: 0 to: anObject
 ]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> offsetTo: anObject methodBlock: aBlock [
-	aBlock value: label.
-	 ^ stack offset: 0 to: anObject
-]
-
 { #category : 'writing' }
 ASCBasicBlock >> outputRestTo: output [
+
 	operations do: [ :operation | operation outputTo: output ].
 	^ output outputBasicBlockEnd
 ]
@@ -235,90 +383,95 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	output outputMethodStart: label.
-	output outputMethodLabel: label.
-	^ self outputRestTo: output
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> popAndCopyTopToSelf [
+
+	self addOperation: (ASCPopAndCopyTop new)
+]
+
+{ #category : 'stack' }
+ASCBasicBlock >> popStackTo: anASCMethodBlock [
+
+	self addOperation: (ASCCopyVariablesCleanStack new
+			 target: anASCMethodBlock sourceElements
+			 source: stack)
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> popVariable: aSymbol [
 
-	| target |
-	target := stack find: aSymbol.
-	stack top makeManifest.
-	self put: (ASCPopVariable with: target top).
-	self doDrop
+	self addOperation: (ASCPopVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> providesNonNil: anId [
+
+	^ (self at: anId) data isNilReference not
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> pushBlockNamed: aBlockClosure [
+ASCBasicBlock >> pushArray: arraySize [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aBlockClosure name.
-	^ stack top: aBlockClosure
+	self addOperation: (ASCArray with: arraySize)
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> pushLocalNamed: aSymbol [
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> pushNil [
 
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCLocal new init: Object;
-			   name: aSymbol)
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> pushParameterNamed: aSymbol [
-
-	stack := ASStackNamed new
-		         from: stack;
-		         name: aSymbol.
-	^ stack top: (ASCParameter new init: Object; name: aSymbol)
+	stack := stack pushFlowAsTemporary: ASFlowNil singleton
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
-	| target |
-	target := stack find: aSymbol .
-	self put: (ASCPushVariable with: target top).
-	self doPush: target top
+	self addOperation: (ASCPushVariable with: (stack at: aSymbol))
 ]
 
-{ #category : 'initialization' }
-ASCBasicBlock >> put: anObject [
+{ #category : 'accessing' }
+ASCBasicBlock >> reference: anIntegerOrSymbol [
 
-	^ operations add: anObject
+	^ (stack at: anIntegerOrSymbol) data markReferenced
+]
+
+{ #category : 'removing' }
+ASCBasicBlock >> removeLastOperation [
+
+	operations removeLast
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> replaceOperation: anOperation [
+
+	operations
+		at: operations size
+		put: (anOperation fromOperation: (operations at: operations size))
+]
+
+{ #category : 'examples' }
+ASCBasicBlock >> returnLiteral: literal [
+
+	^ self addOperation: (ASCReturnLiteral literal: literal)
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> putSimple: aSymbol [ 
-	^ self put: (ASCSimple with: aSymbol)
-]
-
-{ #category : 'enumerating' }
-ASCBasicBlock >> requiredContextDo: aBlock [
-stack requiredContextDo: aBlock 
-]
-
-{ #category : 'initialization' }
 ASCBasicBlock >> returnNonLocal [
 
-	^ self put: ASCReturnNonLocal new
+	^ self addOperation: ASCReturnNonLocal new
 ]
 
-{ #category : 'initialization' }
+{ #category : 'API' }
 ASCBasicBlock >> returnSelf [
 
-	^ self put: ASCReturnSelf new
+	^ self addOperation: ASCReturnSelf new
 ]
 
-{ #category : 'initialization' }
+{ #category : 'API' }
 ASCBasicBlock >> returnTop [
 
-	^ self put: ASCReturnTop new
+	^ self addOperation: (ASCReturnTop new)
 ]
 
 { #category : 'initialization' }
@@ -332,19 +485,36 @@ ASCBasicBlock >> roots [
 	^ roots
 ]
 
-{ #category : 'abstract interpretation' }
+{ #category : 'API' }
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock for: self ].
+	next := tailCall ifFalse: [ ASCReturnBlock new ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
 		        target: target.
-	self put: send.
-	next ifNotNil: [
-		next stack: (stack drop: aSymbol numArgs + 1) pushUnknown ].
+	self addOperation: send.
+	next ifNotNil: [ next addSourceBlock: self ].
 	^ next
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> setStackForBlock: anASCBlock [
+
+	^ anASCBlock scope: stack
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> sourceElements [
+
+	^ sourceElements
+]
+
+{ #category : 'writing' }
+ASCBasicBlock >> sourceElementsForInspect [
+
+	^ sourceElements asOrderedCollection
 ]
 
 { #category : 'accessing' }
@@ -352,11 +522,10 @@ ASCBasicBlock >> stack [
 	^ stack
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> stack: anASStack [
+{ #category : 'stackAccessHelpers' }
+ASCBasicBlock >> stackBelow: n [
 
-	stack := anASStack.
-	maxDepth := stack depth
+	^ stack drop: n
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -364,11 +533,30 @@ ASCBasicBlock >> stackTop [
 	^ stack top
 ]
 
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> storeInto: offsetOrName [
+
+	| target source |
+	target := stack at: offsetOrName.
+	source := ASFlowNew new basicBlock: self.
+	target data: source.
+	^ source
+]
+
 { #category : 'API' }
 ASCBasicBlock >> storeVariable: aSymbol [
 
-	stack top makeManifest.
-	self put: (ASCStoreVariable with: (stack find: aSymbol) top)
+	self addOperation: (ASCStoreVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> swapLastOperations [
+
+	| size temp |
+	size := operations size.
+	temp := operations at: size.
+	operations at: size put: (operations at: size - 1).
+	operations at: size - 1 put: temp
 ]
 
 { #category : 'accessing' }

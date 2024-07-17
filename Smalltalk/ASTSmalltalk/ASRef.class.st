@@ -55,7 +55,6 @@ ASRef >> variable [
 
 { #category : 'comparing' }
 ASRef >> variable: aSymbol [
-
 	aSymbol isSymbol ifFalse: [ self halt ].
 	variable := aSymbol 
 ]

@@ -19,7 +19,8 @@ Class {
 		'numLocals',
 		'componentName',
 		'blockNumber',
-		'inlining'
+		'inlining',
+		'converter'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -36,6 +37,15 @@ ASOutput >> blockClass [
 	^ self class blockClass
 ]
 
+{ #category : 'as yet unclassified' }
+ASOutput >> blockGenerator [
+
+	^ self blockClass new
+		  testing: testing;
+		  context: context;
+		  methodGenerator: self methodGenerator block: self blockNumber
+]
+
 { #category : 'API' }
 ASOutput >> blockNumber [
 
@@ -44,12 +54,20 @@ ASOutput >> blockNumber [
 
 { #category : 'API' }
 ASOutput >> codeGenerator [
-	^ codeGenerator ifNil: [
+
+"	^ self shouldNotImplement 
+"	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
-			                   output: self;
 			                   targetClass: forClass;
 			                   inlining: inlining ]
+]
+
+{ #category : 'accessing' }
+ASOutput >> codeGenerator: anASCodeGenerator [ 
+
+	codeGenerator := anASCodeGenerator.
+	^ anASCodeGenerator
 ]
 
 { #category : 'API' }
@@ -57,25 +75,11 @@ ASOutput >> codeGeneratorClass [ ^ ASCodeGenerator
 ]
 
 { #category : 'API' }
-ASOutput >> compileBlock: anASCBlock [
-	self assert: anASCBlock block ~= ourObject.
-	(self blockClass new testing: testing)
-		context: context;
-		parentCodeGenerator: codeGenerator;
-		methodGenerator: self methodGenerator block: self blockNumber;
-		generateCode: anASCBlock block for: BlockClosure
-]
-
-{ #category : 'API' }
 ASOutput >> context: anASContext [
 
 	context := anASContext.
-	anASContext addComponent: self
-]
-
-{ #category : 'API' }
-ASOutput >> endMethod [
-
+	anASContext addComponent: self.
+	converter := nil "anASContext converter"
 ]
 
 { #category : 'API' }
@@ -90,7 +94,7 @@ ASOutput >> generateCode [
 	alreadyGenerated ifTrue: [ ^ self ].
 	alreadyGenerated := true.
 	ourObject ifNotNil: [
-	self codeGenerator generate: ourObject]
+	self codeGenerator generateFrom: ourObject]
 ]
 
 { #category : 'API' }
@@ -126,8 +130,19 @@ ASOutput >> inlining: aBoolean [
 ]
 
 { #category : 'as yet unclassified' }
+ASOutput >> methodGenerator [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
 ASOutput >> name [
 	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASOutput >> outputMethodEnd [
+
 ]
 
 { #category : 'API' }
@@ -135,11 +150,11 @@ ASOutput >> outputToStream [
 
 	codeGenerator finalAnalysis.
 	self setupForOutput.
-	codeGenerator basicBlocksLinearizeDo: [ :bb |
+	codeGenerator basicBlocksLocalizeDo: [ :bb |
 		currentBasicBlock := bb.
 		maxDepth := maxDepth max: currentBasicBlock maxDepth.
 		currentBasicBlock outputTo: self ].
-	self endMethod
+	self outputMethodEnd
 ]
 
 { #category : 'API' }

@@ -6,7 +6,10 @@ Class {
 	#superclass : 'ASMethodOrBlock',
 	#instVars : [
 		'selector',
-		'pragmas'
+		'pragmas',
+		'classContext',
+		'args',
+		'compiledMethod'
 	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
@@ -53,6 +56,11 @@ ASMethodNode >> = other [
 ]
 
 { #category : 'accessing' }
+ASMethodNode >> add: anArg [
+	args add: anArg
+]
+
+{ #category : 'accessing' }
 ASMethodNode >> children [
 
 	| c |
@@ -63,8 +71,29 @@ ASMethodNode >> children [
 ]
 
 { #category : 'accessing' }
+ASMethodNode >> classContext [
+	^classContext
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> classContext: aClassContext [
+	classContext := aClassContext 
+]
+
+{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> compiledMethod [
+	^ compiledMethod
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> compiledMethod: aCompileMethod [
+
+	compiledMethod := aCompileMethod
 ]
 
 { #category : 'comparing' }
@@ -74,15 +103,15 @@ ASMethodNode >> hash [
 ]
 
 { #category : 'initialization' }
-ASMethodNode >> initialize [ 
+ASMethodNode >> initialize [
 	super initialize .
-	pragmas :=  OrderedCollection new
+	pragmas := OrderedCollection new
 ]
 
 { #category : 'accessing' }
 ASMethodNode >> inspectAST [
 
-	<inspectorPresentationOrder: 33 title: 'ZagAST'>
+	<inspectorPresentationOrder: 33 title: 'ZAST'>
 	^ SpTreeTablePresenter new
 		  roots: self roots;
 		  children: [ :aNode | aNode children ];
@@ -149,12 +178,28 @@ ASMethodNode >> stackSize [
 ]
 
 { #category : 'codegen' }
+ASMethodNode >> zigWalkInlineMethod: aGenerator [
+	"aGenerator selector: selector.
+	
+	pragmas do: [ :pragma |
+		pragma isPrimitive ifTrue: [
+			aGenerator primitive: (pragma arguments at: 1) value ] ]."
+
+	"Daniel Good oportunity to rename things on stack!"
+	"aGenerator locals: locals indirectParameters: arguments."
+	^ body
+		  zigWalkEmpty: [ aGenerator returnSelf ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkInlineMethodReturn: aGenerator ]
+]
+
+{ #category : 'codegen' }
 ASMethodNode >> zigWalkMethod: aGenerator [
 
 	aGenerator selector: selector.
 	aGenerator
 		locals: (locals)
-		arguments: (arguments).
+		parameters: (arguments).
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			aGenerator primitive: (pragma arguments at: 1) value ] ].

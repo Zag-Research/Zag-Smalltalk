@@ -21,22 +21,32 @@ Class {
 		'targetClass',
 		'maxDepth',
 		'inline',
-		'output',
 		'tailCallOptimize',
 		'blockClosures',
 		'parentCodeGenerator',
-		'enclosingScope'
+		'enclosingScope',
+		'returnBlock',
+		'blocksWithCalls',
+		'blockClosureIndex',
+		'methodBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'as yet unclassified' }
+ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
+
+	^ self new
+		  targetClass: aClass;
+		  generateFrom: (ASPharoCompiler new astFor: (ASInliner lookup: aSymbol class: aClass) method)
+]
+
 { #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
 	| rest current |
-	ASCBlock resetLabelIndex.
 	current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
@@ -44,8 +54,29 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 		current next
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
-				current := rest atRandom ifNil: [ ^ self ] ]
+				current := rest anyOne ifNil: [ ^ self ] ]
 			ifNotNil: [ :next | current := next ].
+		rest remove: current ]
+]
+
+{ #category : 'enumerating' }
+ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
+
+	| rest current namedBlock |
+	namedBlock := current := basicBlocks first.
+	rest := basicBlocks allButFirst asSet.
+	[ true ] whileNotNil: [
+		aBlock value: current.
+		current next ifNotNil: [ :next | current := next ] ifNil: [
+			rest isEmpty ifTrue: [ ^ self ].
+			current := rest
+				           detect: [ :each | each namedBlock = namedBlock ]
+				           ifFound: #yourself
+				           ifNone: [
+				           rest
+					           detect: #isNamedBlock
+					           ifFound: #yourself
+					           ifNone: [ ^ self ] ] ].
 		rest remove: current ]
 ]
 
@@ -55,16 +86,16 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> branch: anASCInlineBlock [
+ASCodeGenerator >> branch: aBasicBlock [
 
-	code branch: anASCInlineBlock
+	^ aBasicBlock ifNotNil: [ code branch: aBasicBlock ]
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> classCase: aCollection [
+ASCodeGenerator >> classCase: aCollection selector: aSymbol [
 
 	| case |
-	case := code classCase: aCollection.
+	case := code classCase: aCollection selector: aSymbol.
 	basicBlocks addAll: case blocks.
 	^ aCollection collect: [ :class | case at: class ]
 ]
@@ -75,28 +106,25 @@ ASCodeGenerator >> classOf: aString [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> compileBlock: aBlockClosure [
-	"compiling of blocks doesn't work right now"
+ASCodeGenerator >> compileBlocks: outputter [
+	"compiling of blocks probably doesn't work right now"
 
-	aBlockClosure manifest ifFalse: [ ^self].
-		code pushBlockNamed: aBlockClosure.
-		output compileBlock: aBlockClosure
+	(blockClosures reject: #manifest) do: [ :aBlockClosure |
+		outputter blockGenerator
+			parentCodeGenerator: self;
+			generateCode: aBlockClosure block for: BlockClosure ]
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
-	code
-		doDrop;
-		putSimple: #drop
+	code addOperation: ASCDrop new
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> dup [
 
-	code
-		doDup;
-		putSimple: #dup
+	code addOperation: (ASCDup new)
 ]
 
 { #category : 'initialization' }
@@ -116,71 +144,207 @@ ASCodeGenerator >> eval: aString params: aCollection [
 	^ ASCLiteralValue new init: Object new
 ]
 
-{ #category : 'post processing' }
+{ #category : 'data flow instructions' }
 ASCodeGenerator >> finalAnalysis [
 
+	self inlineWherePossible.
+	basicBlocks do: [ :aBasicBlock |
+		aBasicBlock markBlockClosuresToManifest.
+		maxDepth := maxDepth max: aBasicBlock maxDepth ].
+	blockClosures do: #finalAnalysis.
 
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> find: aSymbol [
-	^ code find: aSymbol 
+
+	^ code at: aSymbol
+	"enclosingScope ifNil: [ self halt ].
+	^ enclosingScope find: aSymbol"
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> findTargetClass: aTarget [
-
-^	aTarget = #self
-		ifTrue: [ targetClass ]
-		ifFalse: [
-			aTarget = #super
-				ifTrue: [ targetClass superclass ]
-				ifFalse: [ nil ] ]
-]
-
-{ #category : 'accessing' }
+{ #category : 'private - testing' }
 ASCodeGenerator >> firstBlock [
 	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
 ]
 
-{ #category : 'translating' }
-ASCodeGenerator >> generate: aMethodOrBlockNode [
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> flowAnalysis [
 
-	aMethodOrBlockNode zigWalkMethod: self.
-	self tryInlining.
-	basicBlocks do: [ :aBasicBlock |
-		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth ].
-	blockClosures := blockClosures select: #manifest.
-	blockClosures do: [ :aBlockClosure |
-		self compileBlock: aBlockClosure ]
+	basicBlocks do: #checkForCalls.
+	basicBlocks do: #markReferences
+]
+
+{ #category : 'translating' }
+ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
+
+	methodBlocks at: aMethodOrBlockNode compiledMethod put: code.
+	aMethodOrBlockNode zigWalkMethod: self
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> generateTemp [
+
+	^ code nextSequence
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> getOrMakeReturnBlock [
+
+	^ code next ifNil: [
+		  | tempBlock |
+		  tempBlock := self newInline.
+		  tempBlock addSourceBlock: code.
+		  tempBlock returnTop.
+		  tempBlock ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> globalFind: aString [
+	"aString asSymbol isGlobalVariable ifTrue: [ ^ ASStackNamed new name: aString ]"
+self halt.
+	^ nil
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> inferType: anExpression [
+
+	^ nil
+	"anExpression ifNil: [ ^ nil ].
+	^ anExpression inferType: self"
+	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
+]
+
+{ #category : 'initialization' }
+ASCodeGenerator >> initCode [
+
+	code := ASCMethodBlock new
 ]
 
 { #category : 'initialization' }
 ASCodeGenerator >> initialize [
+
 	super initialize.
-	code := ASCMethodBlock new.
-	code nonlocalNameLookupObject: self.
+	self initCode.
 	basicBlocks := OrderedCollection new.
 	basicBlocks add: code.
+	methodBlocks := IdentityDictionary new.
 	blockClosures := OrderedCollection new.
+	blocksWithCalls := Set new.
 	maxDepth := 0.
 	inline := false.
-	tailCallOptimize := true
+	tailCallOptimize := true.
+	blockClosureIndex := 0
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> inline: anASCSend [
+ASCodeGenerator >> inline: aBoolean [ 
+	inline := aBoolean
+]
 
-	| ast |
-	targetClass == anASCSend target ifFalse: [ ^ false ].
+{ #category : 'translating' }
+ASCodeGenerator >> inlineBlock: aSymbol next: common [
 
-	self halt. "inline a self method"
-	ast := ASPharoCompiler new astFor:
-		       anASCSend target >> anASCSend selector.
-	output generateCode: ast for: anASCSend target.
-	"look at pending components, expects a codeGenerator so need to create one and add to components"
-	^ false
+	| inlineBlock savedReturn savedTargetClass |
+	savedTargetClass := targetClass.
+	inlineBlock := self newInlineBlockClosure.
+	savedReturn := returnBlock.
+	[
+	returnBlock := common.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	(code stackBelow: aSymbol numArgs) value block zigWalkInlineMethod:
+		self.
+	code := returnBlock ] ensure: [
+		returnBlock := savedReturn.
+		targetClass := savedTargetClass ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
+	"do we need to test for recursion?"
+	
+	"find the block on the stack"
+	code stack value block zigWalkInlineMethod: self
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
+
+	| inlineBlock savedTargetClass |
+	(self isRecursive: aCompiledMethod) ifNotNil: [ :block |
+		^ self
+			  inlineRecursiveMethod: aCompiledMethod
+			  block: block
+			  from: anASCSend ].
+	self halt.
+	savedTargetClass := targetClass.
+	inlineBlock := self newInlineMethod: aCompiledMethod.
+	inlineBlock copyStackFrom: code.
+	[
+	targetClass := inlinedTargetClass.
+	returnBlock := self getOrMakeReturnBlock.
+	code removeLastOperation.
+	self branch: inlineBlock.
+	code := inlineBlock.
+	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkInlineMethod:
+		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+		code := returnBlock.
+		targetClass := savedTargetClass ]
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlineMultiple: aCollection from: anASCSend exhaustive: isExhaustive [
+
+	| case |
+	isExhaustive ifTrue: [ code removeLastOperation ].
+	case := code
+		        classCase: (aCollection collect: #methodClass)
+		        selector: aCollection first selector.
+	isExhaustive ifFalse: [ code swapLastOperations ].
+	^ aCollection do: [ :compiledMethod |
+		  | targetBlock |
+		  targetBlock := case at: compiledMethod methodClass.
+		  basicBlocks add: targetBlock.
+		  self setBasicBlock: targetBlock.
+		  "walk the sends method AST"
+		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend.
+		  self branch: anASCSend next ]
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend [
+
+	| primitive |
+	primitive := aCompiledMethod primitive.
+	returnBlock := self getOrMakeReturnBlock.
+	self halt.
+	code replaceOperation: (ASCEmbed new
+			 selector: aCompiledMethod selector;
+			 primitive: primitive).
+	self branch: returnBlock
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlineRecursiveMethod: aCompileMethod block: anASCInlinedMethodBlock from: anASCSend [
+
+	anASCSend isTailcall ifFalse: [ ^ self ].
+	code removeLastOperation.
+	code popStackTo: anASCInlinedMethodBlock.
+	self branch: anASCInlinedMethodBlock
+]
+
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> inlineWherePossible [
+
+	| temp |
+	inline ifFalse: [ ^ self ].
+	[ blocksWithCalls isEmpty ] whileFalse: [
+		temp := blocksWithCalls.
+		blocksWithCalls := Set new.
+		temp do: [ :block |
+			code := block.
+			block inlineIfPossible: self ] ]
 ]
 
 { #category : 'initialization' }
@@ -200,13 +364,24 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  yourself
 ]
 
-{ #category : 'accessing' }
-ASCodeGenerator >> locals: locals arguments: arguments [
+{ #category : 'testing' }
+ASCodeGenerator >> isRecursive: aCompiledMethod [
 
-	output forClass ifNotNil: [ :theClass |
-		code doPush: (ASCClassValue new init: theClass) ].
-	code pushSelfNamed: self selfName.
-	code locals: locals arguments: arguments
+	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals indirectParameters: parameters [
+
+	code locals: locals parameters: parameters
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals parameters: arguments [
+
+	code initSelf: targetClass.
+	code locals: locals parameters: arguments.
+	code initContext
 ]
 
 { #category : 'compiling' }
@@ -216,23 +391,10 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 		aSymbol = variable name ]
 ]
 
-{ #category : 'compiling' }
-ASCodeGenerator >> lookupName: aString block: anUndefinedObject [
-	"self shouldBeImplemented."
-
-	^code find: aString
-]
-
 { #category : 'accessing' }
 ASCodeGenerator >> lookupObject: anObject [
 
-	^ output lookupObject: anObject
-]
-
-{ #category : 'serializing' }
-ASCodeGenerator >> manifest: anASCBlock [
-
-	code makeContextRequired
+	^ self incompleteImplementation
 ]
 
 { #category : 'accessing' }
@@ -241,19 +403,41 @@ ASCodeGenerator >> name [
 ]
 
 { #category : 'instance creation' }
+ASCodeGenerator >> newBlockName [
+
+	blockClosureIndex := blockClosureIndex + 1.
+	^ selector asString , #_b , blockClosureIndex asString
+]
+
+{ #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: (ASCInlineBlock for: code)
+	^ basicBlocks add: (ASCInlineBlock new)
+]
+
+{ #category : 'private - testing' }
+ASCodeGenerator >> newInlineBlockClosure [
+
+	^ basicBlocks add: ASCInlinedClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCodeGenerator >> newInlineMethod: aCompileMethod [
+
+	| newBlock |
+	newBlock := ASCInlinedMethodBlock new theMethod: aCompileMethod.
+	methodBlocks at: aCompileMethod put: newBlock.
+	^ basicBlocks add: newBlock
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offset: anInteger to: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> offsetOf: anObject local: blockLocal stack: blockStack other: blockOther [
-	^ code offsetOf: anObject local: blockLocal stack: blockStack other: blockOther
+ASCodeGenerator >> offsetOf: anObject context: blockLocal stack: blockStack other: blockOther [
+	^ code offsetOf: anObject context: blockLocal stack: blockStack other: blockOther
 ]
 
 { #category : 'API' }
@@ -262,15 +446,10 @@ ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> output: anASFileContext [
-
-	output := anASFileContext
-]
-
-{ #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
-aCodeGenerator ifNotNil: [ 	parentCodeGenerator := aCodeGenerator.
-	code nonlocalNameLookupObject: aCodeGenerator]
+
+	aCodeGenerator ifNotNil: [
+		parentCodeGenerator := aCodeGenerator ]
 ]
 
 { #category : 'API' }
@@ -287,40 +466,39 @@ ASCodeGenerator >> primitive: primitiveNumber [
 
 { #category : 'API' }
 ASCodeGenerator >> pushArray: arraySize [
-	"What do I do here?"
-	"code doPush: (ASCValue ) put: (ASCSimple )"
 
-	
+	^ code pushArray: arraySize
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	block := ASCBlock with: anASBlock.
-	"block name: name asSymbol."
+	block := ASCBlockClosureValue new.
+	block name: self newBlockName.
 	blockClosures add: block.
-	code
-		doPush: block;
-		put: block
+	code setStackForBlock: block.
+	block asBlock: anASBlock.
+	block parent: self.
+	code addOperation: (ASCBlock with: ((ASFlowNew value: block) basicBlock: code))
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
-	code
-		doPush: (ASCLiteralValue new init: aLiteral);
-		put: (ASCLiteral with: aLiteral)
+	code addOperation: (ASCLiteral with: aLiteral)
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> pushNil [
+
+	^ code pushNil
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
-	| value |
-	value := ASCClassValue new init: targetClass.
-	code
-		doPush: value;
-		put: (ASCPushVariable with: (code find: #self) top)
+	^ code pushVariable: #self
 ]
 
 { #category : 'API' }
@@ -329,28 +507,32 @@ ASCodeGenerator >> pushVariable: variable [
 	^ code pushVariable: variable
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> putEmbedded: aSymbol [
+{ #category : 'examples' }
+ASCodeGenerator >> returnLiteral: literal [
 
-	code put: aSymbol
-]
-
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> returnCode [ 
-	^ code.
+	self pushLiteral: literal.
+	self returnTop.
+	^ true
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
-	code returnSelf
+	^ code returnSelf
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	code
-		returnTop
+	returnBlock ifNil: [ ^ code returnTop ].
+	^ self returnTopInline
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> returnTopInline [
+
+	code popAndCopyTopToSelf.
+	^ self branch: returnBlock
 ]
 
 { #category : 'accessing' }
@@ -363,14 +545,7 @@ ASCodeGenerator >> selector [
 ASCodeGenerator >> selector: aSymbol [
 
 	selector := aSymbol.
-	"label for blocks of code"
-	name := output name zigName.
 	code selector: aSymbol 
-]
-
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> selfName [
-	^ #self
 ]
 
 { #category : 'API' }
@@ -389,11 +564,14 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass [
 ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
+	blocksWithCalls add: code.
 	bb := code
 		      send: aSymbol
 		      targetClass: aTargetClass
 		      tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [ basicBlocks add: bb. code := bb ]
+	^ bb ifNotNil: [
+		  basicBlocks add: bb.
+		  code := bb ]
 ]
 
 { #category : 'API' }
@@ -435,20 +613,10 @@ targetClass:= anObject
 ]
 
 { #category : 'post processing' }
-ASCodeGenerator >> tryInlining [
-	inline ifFalse: [ ^ self ].
-	[ | bbCopy | 
-		bbCopy := OrderedCollection new.
-		bbCopy addAll: basicBlocks.
-	basicBlocks anySatisfy: [ :aBasicBlock |
-		aBasicBlock canBeInlinedBy: self. ] ] whileTrue
-]
-
-{ #category : 'post processing' }
 ASCodeGenerator >> zagBlocks [
 
 	| zagBlocks |
 	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures collect: [ :bc | InspectBlock from: bc ]).
+	zagBlocks addAll: (blockClosures "collect: #codeGenerator").
 	^ zagBlocks
 ]

@@ -4,43 +4,102 @@ for inlining
 Class {
 	#name : 'ASCInlineBlock',
 	#superclass : 'ASCBasicBlock',
-	#instVars : [
-		'method'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASCInlineBlock class >> for: anASCBlock [ 
-	^ super new method: anASCBlock namedMethod
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForLocals [
+
+	^ ASFlowPhi
 ]
 
-{ #category : 'instance creation' }
-ASCInlineBlock class >> new [
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForParameters [
 
-	self shouldNotImplement
+	^ nil
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForSelf [
+
+	^ nil
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> flowForTemporaries [
+
+	^ ASFlowPhi
+]
+
+{ #category : 'testing' }
+ASCInlineBlock >> isNamedBlock [
+
+	^ false
 ]
 
 { #category : 'initialization' }
 ASCInlineBlock >> label [
 
-	^ label ifNil: [ label := method nextSequence asString ]
+	^ label ifNil: [ label := self nextSequence asString ]
 ]
 
-{ #category : 'accessing' }
-ASCInlineBlock >> method: anASCMethodBlock [ 
-	method := anASCMethodBlock
+{ #category : 'initialization' }
+ASCInlineBlock >> llvmLabel [
+
+	^ self label
 ]
 
-{ #category : 'as yet unclassified' }
-ASCInlineBlock >> namedMethod [
-	^ method namedMethod
+{ #category : 'printing' }
+ASCInlineBlock >> locals: locals parameters: arguments [
+
+	self nameStack: arguments.
+	locals do: [ :each | self initLocalNamed: each ].
+	maxDepth := 0
+]
+
+{ #category : 'adding' }
+ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
+
+	| names |
+	names := OrderedCollection with: #self.
+	names addAll: parameterNamesLeftToRight.
+	stack := stack nameStack: names offset: 0 forBlock: self
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> namedBlock [
+
+	^ sourceBlocks anyOne namedBlock
+]
+
+{ #category : 'successor sequences' }
+ASCInlineBlock >> nextSequence [
+
+	^self  methodBlock nextSequence
+]
+
+{ #category : 'writing' }
+ASCInlineBlock >> outputTo: output [
+
+	output outputInlineBlockStart: self.
+	^ self outputRestTo: output
 ]
 
 { #category : 'printing' }
 ASCInlineBlock >> printOn: aStream [
 
-	aStream nextPutAll: self label
+	aStream nextPutAll: '>>'; nextPutAll: self label
+]
+
+{ #category : 'data flow instructions' }
+ASCInlineBlock >> selfElementClass [
+
+	^ ASStackSelf
+]
+
+{ #category : 'printing' }
+ASCInlineBlock >> updateStack: aSymbol [
+	^ nil
 ]

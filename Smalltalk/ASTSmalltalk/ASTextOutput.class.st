@@ -19,8 +19,7 @@ Class {
 	#superclass : 'ASOutput',
 	#instVars : [
 		'mainStream',
-		'symbols',
-		'label'
+		'symbols'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
@@ -56,6 +55,12 @@ ASTextOutput >> context: anASFileContext [
 	anASFileContext addComponent: self
 ]
 
+{ #category : 'printing' }
+ASTextOutput >> cr [
+
+	testing ifFalse: [ mainStream cr ]
+]
+
 { #category : 'completion' }
 ASTextOutput >> finished [
 ]
@@ -67,7 +72,6 @@ ASTextOutput >> initialize [
 	mainStream := '' writeStream.
 	symbols := OrderedCollection new.
 	numLocals := 0.
-	label := 0.
 	testing := false
 ]
 

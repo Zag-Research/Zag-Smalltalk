@@ -20,16 +20,6 @@ ASBlock >> blocks [
 	^ blocks
 ]
 
-{ #category : 'accessing' }
-ASBlock >> buildStack [
-	| stackVariables |
-	stackVariables := OrderedCollection new.
-	stackVariables add: #self.
-	stackVariables addAll: arguments.
-	stackVariables addAll: locals.
-	^ stackVariables reverse.
-]
-
 { #category : 'testing' }
 ASBlock >> isASBlock [
 	^true
@@ -45,6 +35,12 @@ ASBlock >> printOn: s [
 
 	s << self className.
 	super printOn: s
+]
+
+{ #category : 'compiling' }
+ASBlock >> scope [
+"what are we returning here?"
+^nil
 ]
 
 { #category : 'accessing' }
@@ -83,15 +79,23 @@ ASBlock >> zigWalk: aGenerator [
 	^ aGenerator pushBlock: self
 ]
 
+{ #category : 'as yet unclassified' }
+ASBlock >> zigWalkInlineMethod: aGenerator [
+
+	aGenerator locals: locals indirectParameters: arguments.
+	^ body
+		  zigWalkEmpty: [ aGenerator returnLiteral: nil]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkInlineBlockReturn: aGenerator ]
+]
+
 { #category : 'codegen' }
 ASBlock >> zigWalkMethod: aGenerator [
 
-	aGenerator
-		locals: locals
-		arguments: arguments.
 	aGenerator selector: self selector.
+	aGenerator locals: locals parameters: arguments.
 	^ body
-		  zigWalkEmpty: [ aGenerator returnNil ]
+		  zigWalkEmpty: [ aGenerator returnLiteral: nil ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
 		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
 ]

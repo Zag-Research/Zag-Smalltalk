@@ -107,7 +107,6 @@ ASTextFileContext >> writeMainPrefixOn: stream [
 { #category : 'writing' }
 ASTextFileContext >> writeMainSuffixOn: aStream [
 
-	aStream << #writeMainSuffixOn:
 ]
 
 { #category : 'writing' }

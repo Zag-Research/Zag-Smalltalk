@@ -29,7 +29,7 @@ ASCVariable >> inspectStringOn: s [
 ASCVariable >> inspectZagASTOn: s [
 
 	s << self className << $(.
-	s print: name.
+	s << name.
 	s << $)
 ]
 
@@ -59,7 +59,8 @@ ASCVariable >> name: aSymbol [
 { #category : 'printing' }
 ASCVariable >> printOn: s [
 
-	s << self className << ' ' << name
+	s << self className.
+	name ifNotNil: [ s << ' ' << name ]
 ]
 
 { #category : 'compiling' }

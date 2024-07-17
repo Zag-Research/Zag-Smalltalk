@@ -3,7 +3,7 @@ I represent a return
 "
 Class {
 	#name : 'ASCBranch',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'bb'
 	],
@@ -21,10 +21,10 @@ ASCBranch >> inspectZagASTOn: aStream [
 		<< bb label
 ]
 
-{ #category : 'accessing' }
+{ #category : 'as yet unclassified' }
 ASCBranch >> next [
 
-	^ bb
+	^ bb nextInline
 ]
 
 { #category : 'code generation' }
@@ -33,7 +33,13 @@ ASCBranch >> outputTo: output [
 	^ output visitBranch: bb
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'stack' }
+ASCBranch >> resultStack: anASStack basicBlock: anObject [
+
+	^ anASStack
+]
+
+{ #category : 'as yet unclassified' }
 ASCBranch >> with: target [
 
 	bb := target

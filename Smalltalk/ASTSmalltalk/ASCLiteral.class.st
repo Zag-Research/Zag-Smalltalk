@@ -3,7 +3,7 @@ I remember literal values to output.
 "
 Class {
 	#name : 'ASCLiteral',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'literal'
 	],
@@ -24,6 +24,12 @@ ASCLiteral >> inspectZagASTOn: aStream [
 { #category : 'code generation' }
 ASCLiteral >> outputTo: output [ 
 	^ output visitPushLiteral: literal
+]
+
+{ #category : 'stack' }
+ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: literal) basicBlock: aBasicBlock)
 ]
 
 { #category : 'instance creation' }

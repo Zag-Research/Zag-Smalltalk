@@ -16,12 +16,12 @@ Class {
 
 { #category : 'common' }
 ASCLiteralValue >> init: anObject [
-
+" horrible hack "
 	valueClass ifNil: [
-		min := anObject.
-		valueClass := anObject class.
+		anObject class instanceSide == anObject ifTrue: [ valueClass := anObject ] ifFalse: [min := anObject.
+valueClass := anObject class instanceSide].
 		^ self ].
-	self error 
+	self error
 ]
 
 { #category : 'accessing' }

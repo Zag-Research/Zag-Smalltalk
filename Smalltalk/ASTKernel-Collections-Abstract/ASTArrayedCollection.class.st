@@ -1,17 +1,18 @@
 Class {
-	#name : #ASTArrayedCollection,
-	#superclass : #ASTSequenceableCollection,
-	#category : #'ASTKernel-Collections-Abstract'
+	#name : 'ASTArrayedCollection',
+	#superclass : 'ASTSequenceableCollection',
+	#category : 'ASTKernel-Collections-Abstract',
+	#package : 'ASTKernel-Collections-Abstract'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 ASTArrayedCollection class >> new [
 	"Answer a new instance of me, with size = 0."
 
 	^ self new: 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection class >> with: anObject [
 	"Answer a new instance of me, containing only anObject."
 
@@ -21,7 +22,7 @@ ASTArrayedCollection class >> with: anObject [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection class >> with: firstObject with: secondObject [
 	"Answer a new instance of me containing the two arguments as elements."
 
@@ -32,7 +33,7 @@ ASTArrayedCollection class >> with: firstObject with: secondObject [
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection class >> with: firstObject with: secondObject with: thirdObject [
 	"Answer a new instance of me, containing the three arguments as elements."
 
@@ -44,12 +45,12 @@ ASTArrayedCollection class >> with: firstObject with: secondObject with: thirdOb
 	^ newCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> add: newObject [
 	self shouldNotImplement
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> mergeFirst: first middle: middle last: last into: dst by: aBlock [
 	"Private! Merge the sorted ranges [first..middle] and [middle+1..last] of the receiver into the range [first..last] of dst."
 
@@ -80,7 +81,7 @@ ASTArrayedCollection >> mergeFirst: first middle: middle last: last into: dst by
 				startingAt: i2 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> mergeSortFrom: startIndex to: stopIndex by: aBlock [
 	"Sort the given range of indices using the mergesort algorithm. Mergesort is a worst-case O(N log N) sorting algorithm that usually does only half as many comparisons as heapsort or quicksort."
 
@@ -104,7 +105,7 @@ ASTArrayedCollection >> mergeSortFrom: startIndex to: stopIndex by: aBlock [
 		by: aBlock
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> mergeSortFrom: first to: last src: src dst: dst by: aBlock [
 	"Private! Split the range to be sorted in half, sort each half, and merge the two half-ranges into dst."
 
@@ -132,7 +133,7 @@ ASTArrayedCollection >> mergeSortFrom: first to: last src: src dst: dst by: aBlo
 		by: aBlock
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTArrayedCollection >> size [
 	"Primitive. Answer the number of indexable fields in the receiver. This value is the same as the largest legal subscript. Primitive is specified here to override MSequenceableCollection size. Essential. See Object documentation whatIsAPrimitive. "
 
@@ -140,14 +141,14 @@ ASTArrayedCollection >> size [
 	^ self basicSize
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> sort [
 	"Sort this array into ascending order using the '<' operator."
 
 	self mergeSortFrom: 1 to: self size by: [ :el1 :el2 | el1 < el2 ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTArrayedCollection >> sort: aBlock [
 	"Sort this array using the given comparision block. The block should take two arguments and return true if the first element should precede the second in the sorted result."
 
