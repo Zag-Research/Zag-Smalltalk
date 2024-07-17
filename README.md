@@ -1,6 +1,17 @@
 # Zag-Smalltalk
+
 Smalltalk VM Written in Zig with methods stored as type-annotated ASTs
 
-We have created a [Zag Smalltalk organization](https://github.com/Zag-Smalltalk/Smalltalk) for future progress with this project.
+Eventually it wiil include a JIT compiler
 
-Please transfer you your stars there!
+Methods are re-constituted from the AST for edit windows.
+
+No Interpreter; uses Threaded and CPS execution models interchangeably
+
+Memory structure and some of execution principles loosely modelled on OpenSmalltalk VM
+
+More information in the Documentation
+
+Papers and Talks
+
+(Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
