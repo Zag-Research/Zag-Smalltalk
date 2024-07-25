@@ -80,10 +80,27 @@ ASStackNonEmpty >> fromStack: anASStack [
 	offset := anASStack offset - 1
 ]
 
+{ #category : 'output' }
+ASStackNonEmpty >> getNameOn: anASLLMethodOutput [
+
+	^ data getNameFor: self on: anASLLMethodOutput
+]
+
 { #category : 'testing' }
 ASStackNonEmpty >> hasContext [
 
 	^ next hasContext
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> id [
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASStackNonEmpty >> intoContext: anInteger [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'testing' }
@@ -99,7 +116,26 @@ ASStackNonEmpty >> isInContext [
 ]
 
 { #category : 'API' }
-ASStackNonEmpty >> linkContext: aFullBlockClosure [ 
+ASStackNonEmpty >> linkContext: aBlock [
+
+	^ self replicate: (next linkContext: aBlock)
+]
+
+{ #category : 'data flow instructions' }
+ASStackNonEmpty >> makeStackTheSource [
+
+	data := ASFlowOnDemand from: data.
+	^ next makeStackTheSource
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> markReferenced [
+	^ self subclassResponsibility
+]
+
+{ #category : 'operations' }
+ASStackNonEmpty >> mergeWith: aStackElement [
+
 	^ self subclassResponsibility
 ]
 
@@ -119,10 +155,29 @@ ASStackNonEmpty >> offset [
 	^ offset
 ]
 
+{ #category : 'stack' }
+ASStackNonEmpty >> offset: anInteger to: aStackElement [
+
+	self == aStackElement ifTrue: [ ^ anInteger ].
+	^ next offset: anInteger+1 to: aStackElement
+]
+
 { #category : 'as yet unclassified' }
 ASStackNonEmpty >> offsetToSelf: anInteger [
 
 	^ next offsetToSelf: anInteger + 1
+]
+
+{ #category : 'stack' }
+ASStackNonEmpty >> replicate [
+
+	^ (self replicate: next replicate) data: data
+]
+
+{ #category : 'API' }
+ASStackNonEmpty >> replicate: aStack [
+
+	^ (self class fromStack: aStack) data: data
 ]
 
 { #category : 'enumerating' }

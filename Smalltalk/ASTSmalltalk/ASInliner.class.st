@@ -63,10 +63,10 @@ ASInliner class >> filterMethods: aCollection [
 ]
 
 { #category : 'inlining' }
-ASInliner class >> findImplementations: aSymbol [
+ASInliner class >> findImplementations: selector [
 
 	| implementors |
-	implementors := self filterMethods: aSymbol implementors.
+	implementors := self filterMethods: selector implementors.
 	(implementors size between: 1 and: 4) ifFalse: [ ^ nil ].
 	^ ASInlineNotExhaustive new methods: implementors
 ]
@@ -79,7 +79,7 @@ ASInliner class >> findImplementations: aSymbol class: aClass stack: aStack [
 		| astClass |
 		astClass := class astClass.
 		(astClass includesSelector: aSymbol) ifFalse: [ astClass := class ].
-		^ ASInlineSingleton method: (astClass >> aSymbol) class: aClass ].
+		^ ASInlineSingleton method: astClass >> aSymbol class: aClass ].
 	^ nil
 ]
 
@@ -99,7 +99,7 @@ ASInliner class >> lookup: aString [
 ASInliner class >> lookup: aSymbol class: aClass [
 
 	^ map
-		  at: aSymbol -> aClass
+		  at: aClass -> aSymbol
 		  ifAbsentPut: [
 		  self findImplementations: aSymbol class: aClass stack: nil ]
 ]
@@ -182,27 +182,27 @@ ASInliner class >> selfMatch: anInteger class: aClass numArgs: numArgs [
 	numArgs = 0 ifTrue: [
 		self
 			prim: anInteger
-			valid: [ :stack | stack dataClass = aClass ]
+			valid: [ :stack | stack dataClass astClass = aClass ]
 			returns: nil ].
 	numArgs = 1 ifTrue: [
 		self
 			prim: anInteger
-			valid: [ :stack | stack next dataClass = aClass ]
+			valid: [ :stack | stack next dataClass astClass = aClass ]
 			returns: nil ].
 	numArgs = 2 ifTrue: [
 		self
 			prim: anInteger
-			valid: [ :stack | stack next next dataClass = aClass ]
+			valid: [ :stack | stack next next dataClass astClass = aClass ]
 			returns: nil ].
 	numArgs = 3 ifTrue: [
 		self
 			prim: anInteger
-			valid: [ :stack | stack next next next dataClass = aClass ]
+			valid: [ :stack | stack next next next dataClass astClass = aClass ]
 			returns: nil ].
 	numArgs = 4 ifTrue: [
 		self
 			prim: anInteger
-			valid: [ :stack | stack next next next next dataClass = aClass ]
+			valid: [ :stack | stack next next next next dataClass astClass = aClass ]
 			returns: nil ]
 ]
 
