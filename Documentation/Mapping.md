@@ -12,7 +12,6 @@ Defining a configuration flag allows choosing between these encodings. Once we c
 
 ### [[Encoding-NaN]]
 ### [[Encoding-Modified-Spur]]
-### [[Encoding-Modified2-Spur]]
 #### Class numbers
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most, for NaN encoding). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
 2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-562,949,953,421,312 to 562,949,953,421,311). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]). In the (modified) Spur encoding, they are 61-bit integers, and different optimizations are possible.

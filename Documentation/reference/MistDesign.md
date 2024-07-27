@@ -41,7 +41,7 @@ Simplicity is very difficult to achieve, but is very valuable. A major goal of t
 
 The desire for simplicity leads us to have a small number of design rules. The desire for consistency leads us to try to apply those rules uniformly across the entireMistImplementationDesign.MITE.odt system, avoiding special cases in which the usual rules don’t apply. In particular:
 
--   Mist will **not have reserved selectors**. Most Smalltalk implementations optimize sends of #==, #ifTrue:, #to:by:do:, and others. Mist will not do this. This conceptual simplicity comes at the cost of some implementation complexity, which is covered later in this document.
+-   Mist will **not have reserved selectors**. Most Smalltalk implementations optimize sends of `#==`, `#ifTrue:`, `#to:by:do:`, and others. Mist will not do this. This conceptual simplicity comes at the cost of some implementation complexity, which is covered later in this document.
 
 ##### Self-sufficiency
 
@@ -156,7 +156,7 @@ gcMark
                         self allReferencesDo: [:each | each gcMark]].
 ```
 
-This, incidentally, is the heart of the “mark” part of a mark-sweep garbage collector such as Mist’s. The method sends one message, #ifFalse:, to an instance variable of the receiver, isGcMarked. The argument to the message is given as a _block constructor_, some code delimited with square brackets. The block constructor specifies what kind of block (a closure instance) should actually be passed to the message send at runtime. This particular block constructor contains another block constructor. The inner block takes a single argument, each, and sends that argument one message, gcMark. It does not make reference to any other variables. The outer block, however, does reference variables from the environment in which it is defined. It references self, and an instance variable of self, isGcMarked. In general, code within a block constructor may refer to any of the following variables and constants in its environment:
+This, incidentally, is the heart of the “mark” part of a mark-sweep garbage collector such as Mist’s. The method sends one message, `#ifFalse:`, to an instance variable of the receiver, isGcMarked. The argument to the message is given as a _block constructor_, some code delimited with square brackets. The block constructor specifies what kind of block (a closure instance) should actually be passed to the message send at runtime. This particular block constructor contains another block constructor. The inner block takes a single argument, each, and sends that argument one message, gcMark. It does not make reference to any other variables. The outer block, however, does reference variables from the environment in which it is defined. It references self, and an instance variable of self, isGcMarked. In general, code within a block constructor may refer to any of the following variables and constants in its environment:
 
 -   Its own formal parameters
 -   Its own declared temporary variables
@@ -603,7 +603,7 @@ call address
 constant lookedUpMethod
 ```
   
-One key to understanding how this works is to realize that #cacheMissExpectedBehaviorAt:actualBehavior:methodAt:andAt: both looks up the method to be executed and patches the three constants in the send site to form a (monomorphic) inline cache. It is, of course, vital that the cache miss lookup and patching code use only self sends or sends to SmallIntegers, or otherwise ensure that there is never a cache miss during cache miss handling.
+One key to understanding how this works is to realize that `#cacheMissExpectedBehaviorAt:actualBehavior:methodAt:andAt:` both looks up the method to be executed and patches the three constants in the send site to form a (monomorphic) inline cache. It is, of course, vital that the cache miss lookup and patching code use only self sends or sends to SmallIntegers, or otherwise ensure that there is never a cache miss during cache miss handling.
 
 **Message send generated code**
 
@@ -707,7 +707,7 @@ A ReturnPoint contains an address within the hardware stack. To perform a non-lo
 
 An UnwindBlock specifies a block that must be evaluated during a non-local return that will discard its point on the stack. An UnwindBlock is put on the NLR stack during the evaluation of the specified code.
 
-Implementation of #ensure: and #ifCurtailed: is fairly simple. Approximate implementations:
+Implementation of `#ensure:` and `#ifCurtailed:` is fairly simple. Approximate implementations:
 ```
   ifCurtailed: terminationBlock
 
@@ -767,11 +767,11 @@ This would be translated by the compiler to the Fog equivalent of something like
 
     ^ 'converted'.
 ```
-The #pointerValueLess: method is a primitive that answers the address of the stack pointer as it was upon entry to the calling method. It needs the constant argument (3 in this case, though that may well not be the true value for this example method) since the #foo method has decremented the stack pointer on entry to make room for some number of stack-based temporary variables, and #pointerValueLess: must correct for that, as well as for the procedure call to #pointerValueLess:. The compiler knows how many stack-based temporaries it has allocated space for, so it can use that value as the constant argument.
+The `#pointerValueLess:` method is a primitive that answers the address of the stack pointer as it was upon entry to the calling method. It needs the constant argument (3 in this case, though that may well not be the true value for this example method) since the `#foo` method has decremented the stack pointer on entry to make room for some number of stack-based temporary variables, and `#pointerValueLess:` must correct for that, as well as for the procedure call to `#pointerValueLess:`. The compiler knows how many stack-based temporaries it has allocated space for, so it can use that value as the constant argument.
 
-The #returningTo: message creates a ReturnPoint instance with the given value for the stack pointer, and pushes it onto the NLR stack. Sending #invalidateAndPop to the ReturnPoint lets it know that it should signal an error on any attempt to return through it, since the context it would return from is no longer valid, and pops it from the NLR stack.
+The `#returningTo:` message creates a ReturnPoint instance with the given value for the stack pointer, and pushes it onto the NLR stack. Sending `#invalidateAndPop` to the ReturnPoint lets it know that it should signal an error on any attempt to return through it, since the context it would return from is no longer valid, and pops it from the NLR stack.
 
-The remaining piece of the non-local-return puzzle is the implementation of #return: in ReturnPoint. It might look something like this:
+The remaining piece of the non-local-return puzzle is the implementation of `#return:` in ReturnPoint. It might look something like this:
 ```
   return: anObject
 
@@ -787,7 +787,7 @@ The remaining piece of the non-local-return puzzle is the implementation of #ret
 
     "The send above does not return to here."
 ```
- Here,  #setStackPointerTo:andReturn: is a primitive that sets the hardware stack pointer to the given integer, puts the given return value into the correct register for a returned value, and returns. This truncates the stack and actually accomplishes the non-local return.
+ Here,  `#setStackPointerTo:andReturn:` is a primitive that sets the hardware stack pointer to the given integer, puts the given return value into the correct register for a returned value, and returns. This truncates the stack and actually accomplishes the non-local return.
 
 Some more approximate code to help visualize how this all fits together...
 
@@ -835,25 +835,25 @@ Most exception functionality is provided by the class ExceptionHandler. This cla
 -   **exceptionToResignal**  
     Nil, or a new exception to resignal.
 -   **isOuter**  
-    Boolean, true if I am handling an exception and I was chosen to handle the exception directly or indirectly due to another handler sending #outer to the exception.
+    Boolean, true if I am handling an exception and I was chosen to handle the exception directly or indirectly due to another handler sending `#outer` to the exception.
 -   **needsRetry**  
-    Boolean, true if my protected block needs to be evaluated. Initially true, set to false upon the first evaluation of the protected block, set to true upon the exception being sent #retry or #retryUsing:
+    Boolean, true if my protected block needs to be evaluated. Initially true, set to false upon the first evaluation of the protected block, set to true upon the exception being sent `#retry` or `#retryUsing:`
 -   **actionBlock**  
-    The block that is the argument to the do: keyword of #on:do:. I evaluate this block if I am called upon to handle an exception. 
+    The block that is the argument to the do: keyword of `#on:do:`. I evaluate this block if I am called upon to handle an exception. 
 -   **returnBlock**  
-    This block, if evaluated, performs a non-local return from the protected block. It is evaluated during processing of #return:, #retry, and #retryUsing to truncate and unwind the stack.
+    This block, if evaluated, performs a non-local return from the protected block. It is evaluated during processing of `#return:`, `#retry`, and `#retryUsing` to truncate and unwind the stack.
 -   **protectedBlock**  
     The block to be evaluated while being prepared to handle some set of exceptions.
 -   **actionUnwindBlock**  
-    This block, if evaluated, performs a non-local return from the action block. It is evaluated during processing of #resume: and #resignalAs:.
+	    This block, if evaluated, performs a non-local return from the action block. It is evaluated during processing of `#resume:` and `#resignalAs:`.
 -   **signalingEnvironment**  
     The handler that was the exception environment (first handler to be searched) when the exception I am handling was signaled.
 
-An instance of DefaultActionHandler is always at the root of the handler tree, and handles the case where no handler is found and #defaultAction should be sent to an exception. This avoids complicating the handler code with checks for nil.
+An instance of DefaultActionHandler is always at the root of the handler tree, and handles the case where no handler is found and `#defaultAction` should be sent to an exception. This avoids complicating the handler code with checks for nil.
 
 **Establishing handlers**
 
-Exception handlers are established by sending #on:do: to a _protected block_. For the duration of the evaluation of the protected block, the exceptions specified by the argument to on: will be handled by the block sent as an argument to do:. This would be implemented something like this:
+Exception handlers are established by sending `#on:do:` to a _protected block_. For the duration of the evaluation of the protected block, the exceptions specified by the argument to on: will be handled by the block sent as an argument to do:. This would be implemented something like this:
 
 In closure classes: 
 ```
@@ -886,11 +886,11 @@ push
 pop
   cExceptionHandler exceptionEnvironment: nextHandler.
 ```
-During the evaluation of the protected block (the receiver of #on:do:) the ExceptionHandler is in the handler search tree, with an action block to evaluate in case one of the exceptions in the exceptionSelector is signaled. It also has a returnBlock which the handler can use to terminate evaluation of the protected block if it likes.
+During the evaluation of the protected block (the receiver of `#on:do:`) the ExceptionHandler is in the handler search tree, with an action block to evaluate in case one of the exceptions in the exceptionSelector is signaled. It also has a returnBlock which the handler can use to terminate evaluation of the protected block if it likes.
 
 ##### Signaling an exception
 
-An exception is signaled by sending it #signal. Its response is to search up the handler tree for a handler, and to evaluate that handler’s action block. If no handler for this exception’s class is found, the exception is sent #defaultAction. It could be implemented something like this:
+An exception is signaled by sending it `#signal`. Its response is to search up the handler tree for a handler, and to evaluate that handler’s action block. If no handler for this exception’s class is found, the exception is sent `#defaultAction`. It could be implemented something like this:
 
 In exceptions:
 ```
@@ -934,7 +934,7 @@ handle: anException
 ```
 ##### Finding a handler
 
-To find a handler for a signaled exception, the ExceptionHandler class sends #findHandlerFor:ifNone: to the handler that is the first handler to search in the current exception environment. In the general case handlers form a tree. In simple cases, the tree has no branches and degenerates to a stack. In either case, each handler has a nextHandler instance variable that points to the next handler to search, which is one level closer to the root of the tree. Each element asks itself whether it handles the given exception. If so, it answers itself; if not it sends the message on to the next element. If no handler in the path from current exception environment to the root handles the exception, this processing gets to the root of the handler tree, the unhandled exception handler. This handler will agree to handle anything, but will send #defaultAction to the exception instead of having an action block to evaluate.
+To find a handler for a signaled exception, the ExceptionHandler class sends `#findHandlerFor:ifNone:` to the handler that is the first handler to search in the current exception environment. In the general case handlers form a tree. In simple cases, the tree has no branches and degenerates to a stack. In either case, each handler has a nextHandler instance variable that points to the next handler to search, which is one level closer to the root of the tree. Each element asks itself whether it handles the given exception. If so, it answers itself; if not it sends the message on to the next element. If no handler in the path from current exception environment to the root handles the exception, this processing gets to the root of the handler tree, the unhandled exception handler. This handler will agree to handle anything, but will send `#defaultAction` to the exception instead of having an action block to evaluate.
 
 In ExceptionHandler class:
 
@@ -970,7 +970,7 @@ These are messages that can be sent to exceptions from within an action block. T
 
 **return**
 
-When the message #return or #return: is sent to an exception from within a handler's action block, the stack is unwound to the point where #on:do: was sent, and the specified value (or nil) is answered from the #on:do: send. 
+When the message `#return` or `#return:` is sent to an exception from within a handler's action block, the stack is unwound to the point where `#on:do:` was sent, and the specified value (or nil) is answered from the `#on:do:` send. 
 
 In exceptions:
 
@@ -1008,7 +1008,7 @@ In ExceptionHandler:
 
 **resume**
 
-When the message #resume or #resume: is sent to an exception from within a handler's action block, the specified resumption value (or nil) is answered from the #signal, #signal:, or #outer message that caused this handler to be invoked, after unwinding the stack to that point. If the exception is not resumable, it is only valid to send #resume or #resume: within a handler block that is invoked as the result of #outer.
+When the message `#resume` or `#resume:` is sent to an exception from within a handler's action block, the specified resumption value (or nil) is answered from the `#signal`, `#signal:`, or `#outer` message that caused this handler to be invoked, after unwinding the stack to that point. If the exception is not resumable, it is only valid to send `#resume` or `#resume:` within a handler block that is invoked as the result of `#outer`.
 
 In exceptions:
 
@@ -1038,7 +1038,7 @@ Here, we once again use non-local return in order to unwind the stack. In this c
 
 **pass**
 
-When the message #pass is sent to an exception from within a handler's action block, we act as though that handler had never been found, and search again starting with the next handler in the search order.
+When the message `#pass` is sent to an exception from within a handler's action block, we act as though that handler had never been found, and search again starting with the next handler in the search order.
 
 In exceptions:
 
