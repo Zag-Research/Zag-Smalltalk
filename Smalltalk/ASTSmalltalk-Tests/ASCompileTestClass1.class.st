@@ -56,8 +56,20 @@ ASCompileTestClass1 >> blockReturn: p1 [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockReturnEasy [
+
+	true ifTrue: [ ^ 42 ] ifFalse: [ ^ self ]
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockReturnSelf [
 	true ifTrue: [ ^self ]
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockValue [
+
+	^ [ 4 ] value 
 ]
 
 { #category : 'testing - examples' }
@@ -89,6 +101,13 @@ ASCompileTestClass1 >> classVar [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> collectionAnyOne [
+| someArray |
+	someArray = #(5 6 2 10 88).
+	^ someArray anyOne
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].
@@ -109,9 +128,34 @@ ASCompileTestClass1 >> fibonacci [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> fibonacci_fast [
+
+	^ 23 fibonacci_fast
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
+	self bar isLarge. "not"
+	^ 42
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo1 [
+
+	^ self bar isLarge
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo2 [
+
 	^ self bar
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> foo3 [
+
+	self bar
 ]
 
 { #category : 'testing - examples' }
@@ -135,6 +179,11 @@ ASCompileTestClass1 >> gives43 [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> inlinePlus1 [
+	^ self plus1: 30
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> instVar [
 
 	^ bar
@@ -152,8 +201,15 @@ ASCompileTestClass1 >> plus1: aNumber [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> plus: n1 and: n2 [
+
+	^ n1 + (42 + n2)
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
-	^ n1 + n2 + n3
+
+	^ n1 + (n2 + n3)
 ]
 
 { #category : 'testing - examples' }
@@ -167,6 +223,12 @@ ASCompileTestClass1 >> plusWithLocal: n1 and: n2 and: n3 [
 ASCompileTestClass1 >> prim [
 	<primitive: 1>
 	^ false
+]
+
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> recursiveMethod [
+	^self recursiveMethod
+
 ]
 
 { #category : 'testing - examples' }
@@ -223,6 +285,21 @@ ASCompileTestClass1 >> unariesPlus [
 
 	42 negated. 
 	^ 23 negated abs max: 42
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> whileTrue [
+
+	[ false ] whileTrue
+]
+
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> whileTrueHarder [
+
+	| dirty |
+	[
+	dirty := false.
+	dirty ] whileTrue
 ]
 
 { #category : 'testing - examples' }

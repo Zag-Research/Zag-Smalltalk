@@ -4,25 +4,44 @@ I am a code generator for blocks... very minor but important differences from me
 Class {
 	#name : 'ASCodeGeneratorBlock',
 	#superclass : 'ASCodeGenerator',
+	#instVars : [
+		'parent',
+		'source'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'API' }
-ASCodeGeneratorBlock >> find: aSymbol [
+{ #category : 'accessing' }
+ASCodeGeneratorBlock >> children [ 
+	^ code children 
+]
 
-	| indirect |
+{ #category : 'initialization' }
+ASCodeGeneratorBlock >> initCode [
 
-	indirect := ASCIndirectVariable new.
-	indirect name: aSymbol.
-	^ indirect variable: (parentCodeGenerator find: aSymbol)
+	code := ASCBlockClosureBlock new
 ]
 
 { #category : 'initialization' }
 ASCodeGeneratorBlock >> initialize [ 
 	super initialize.
-	code makeBlockClosure
+"	code makeBlockClosure"
+]
+
+{ #category : 'printing' }
+ASCodeGeneratorBlock >> inspectZagASTOn: stream [
+	source inspectZagASTOn: stream
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGeneratorBlock >> parent: anASCodeGenerator source: aBlockClosureValue ast: anASBlock [
+
+	self flag: 'todo'.
+	parent := anASCodeGenerator.
+	source := aBlockClosureValue.
+	self generateFrom: anASBlock
 ]
 
 { #category : 'API' }

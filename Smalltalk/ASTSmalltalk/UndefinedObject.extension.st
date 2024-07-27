@@ -22,6 +22,12 @@ UndefinedObject >> threadFormatOn: threadPrinter [
 ]
 
 { #category : '*ASTSmalltalk' }
+UndefinedObject >> validate: aStackElement [
+
+	^ self
+]
+
+{ #category : '*ASTSmalltalk' }
 UndefinedObject >> zigCompileObject: aWriteStream [ 
 	aWriteStream nextPutAll: 'Nil'
 ]

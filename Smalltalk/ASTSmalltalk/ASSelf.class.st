@@ -34,6 +34,11 @@ ASSelf >> = other [
 ]
 
 { #category : 'accessing' }
+ASSelf >> inferType: aGenerator [
+	^ aGenerator targetClass 
+]
+
+{ #category : 'accessing' }
 ASSelf >> isASSelf [
 	^true
 ]
@@ -70,6 +75,13 @@ ASSelf >> tell: aCompiler youAreSent: aSymbol [
 ASSelf >> zigWalk: anASCodeGenerator [
 
 	^ anASCodeGenerator pushSelf
+]
+
+{ #category : 'compiling' }
+ASSelf >> zigWalkForReturn: aGenerator [
+
+	aGenerator returnSelf.
+	^ true
 ]
 
 { #category : 'compiling' }

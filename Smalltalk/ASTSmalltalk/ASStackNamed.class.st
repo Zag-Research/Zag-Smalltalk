@@ -3,35 +3,87 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackElement',
+	#superclass : 'ASStackNonContext',
 	#instVars : [
-		'name'
+		'name',
+		'isInContext'
 	],
-	#category : 'ASTSmalltalk-CodeGen',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
-{ #category : 'accessing' }
-ASStackNamed >> at: aSymbol put: anObject [
+{ #category : 'enumerating' }
+ASStackNamed >> addToCollection: aCollection [
 
-	aSymbol = name ifFalse: [ ^
-	rest at: aSymbol put: anObject].
-	^ self top: anObject
+	aCollection addLast: self.
+	#self = name ifTrue: [^ aCollection].
+	^ next addToCollection: aCollection
+
 ]
 
 { #category : 'accessing' }
-ASStackNamed >> find: aSymbol [
+ASStackNamed >> at: aSymbol [
 
 	aSymbol = name ifTrue: [ ^ self ].
-	^ rest find: aSymbol
+	^ next at: aSymbol
+]
+
+{ #category : 'displaying' }
+ASStackNamed >> displayStringOn: stream [
+
+	self printNameOn: stream.
+	stream
+		nextPutAll: ' (';
+		print: offset;
+		nextPutAll: (isInContext
+				 ifTrue: [ 'C' ]
+				 ifFalse: [ '' ]);
+		nextPut: $);
+		nextPutAll: ' >';
+		print: data
 ]
 
 { #category : 'accessing' }
-ASStackNamed >> llvmName [
+ASStackNamed >> id [
 
-	^ llvmName ifNil: [
-		  llvmName := super llvmName, name ]
+	^ name
+]
+
+{ #category : 'adding' }
+ASStackNamed >> importedSource: anInteger [
+
+]
+
+{ #category : 'initialization' }
+ASStackNamed >> initialize [
+
+	super initialize.
+	isInContext := false
+]
+
+{ #category : 'API' }
+ASStackNamed >> intoContext: anInteger [
+
+	isInContext := true.
+	offset := anInteger.
+	^ next intoContext: anInteger + 1
+]
+
+{ #category : 'testing' }
+ASStackNamed >> isInContext [
+
+	^ isInContext
+]
+
+{ #category : 'data flow instructions' }
+ASStackNamed >> markReferenced [
+
+	^ data markReferenced
+]
+
+{ #category : 'operations' }
+ASStackNamed >> mergeWith: aCollection [
 ]
 
 { #category : 'accessing' }
@@ -44,33 +96,21 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : 'API' }
-ASStackNamed >> offset: anInteger namedContext: blockLocal stack: blockStack [
+{ #category : 'displaying' }
+ASStackNamed >> printNameOn: stream [
 
-	blockStack cull: anInteger cull: self.
-	^ rest
-		  offset: anInteger + 1
-		  namedContext: blockLocal
-		  stack: blockStack
+	stream nextPutAll: name
+]
+
+{ #category : 'output' }
+ASStackNamed >> pushTheVariable: anASLLMethodOutput [
+
+	isInContext ifTrue: [^ data pushFromContext: offset with: anASLLMethodOutput].
+	^ data pushFromStack: offset with: anASLLMethodOutput
 ]
 
 { #category : 'API' }
-ASStackNamed >> offset: anInteger to: aName [
+ASStackNamed >> replicate: aStack [
 
-	aName = name ifTrue: [ ^ anInteger ].
-	^ rest
-		  offset: anInteger + 1
-		  to: aName
-]
-
-{ #category : 'API' }
-ASStackNamed >> offset: anInteger to: aName context: blockLocal stack: blockStack other: blockOther [
-
-	aName = name ifTrue: [ ^ blockStack cull: anInteger cull: self ].
-	^ rest
-		  offset: anInteger + 1
-		  to: aName
-		  context: blockLocal
-		  stack: blockStack
-		  other: blockOther
+	^ (super replicate: aStack) name: name
 ]

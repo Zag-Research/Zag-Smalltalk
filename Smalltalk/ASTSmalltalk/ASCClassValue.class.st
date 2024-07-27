@@ -17,10 +17,14 @@ Class {
 ASCClassValue >> assertIsValue [
 ]
 
+{ #category : 'accessing' }
+ASCClassValue >> inferType: anASCodeGenerator [ 
+
+	^ valueClass
+]
+
 { #category : 'common' }
 ASCClassValue >> init: aClass [
-
-	
 		valueClass := aClass.
 		^ self
 ]
@@ -47,10 +51,6 @@ ASCClassValue >> kind [
 ASCClassValue >> makeManifest [
 ]
 
-{ #category : 'serializing' }
-ASCClassValue >> manifest: aGenerator [
-]
-
 { #category : 'accessing' }
 ASCClassValue >> max [
 
@@ -62,9 +62,4 @@ ASCClassValue >> max [
 { #category : 'accessing' }
 ASCClassValue >> min [
 ^ nil
-]
-
-{ #category : 'accessing' }
-ASCClassValue >> valueClass [
-	^ valueClass
 ]

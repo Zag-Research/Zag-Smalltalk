@@ -1,55 +1,69 @@
 "
-I am an actual context... I only exist if a context is required for this method
+I rempresent a stack context.
+
+I may,  or may not be reified in a particular method
 "
 Class {
 	#name : 'ASStackContext',
-	#superclass : 'ASStackContextPlaceholder',
-	#category : 'ASTSmalltalk-CodeGen',
+	#superclass : 'ASStackNonEmpty',
+	#instVars : [
+		'uses'
+	],
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'CodeGen'
+	#tag : 'Stack'
 }
 
-{ #category : 'instance creation' }
-ASStackContext >> from: anASStack [
+{ #category : 'displaying' }
+ASStackContext >> displayStringOn: stream [
 
-	rest := anASStack
-]
-
-{ #category : 'API' }
-ASStackContext >> makeContextRequired [
-^ self
-]
-
-{ #category : 'API' }
-ASStackContext >> offset: anInteger namedContext: blockLocal stack: blockStack [
-
-	^ rest
-		  offset: 0
-		  namedContext: nil
-		  stack: blockLocal
-]
-
-{ #category : 'API' }
-ASStackContext >> offset: anInteger to: anObject [
-
-	^ rest
-		  offset: anInteger 
-		  to: anObject
-]
-
-{ #category : 'API' }
-ASStackContext >> offset: anInteger to: anObject context: blockLocal stack: blockStack other: blockOther [
-
-
-	^ rest
-		  offset: 0
-		  to: anObject
-		  context: nil
-		  stack: blockLocal
-		  other: blockOther
+	self printNameOn: stream
 ]
 
 { #category : 'enumerating' }
-ASStackContext >> requiredContextDo: aBlock [
-^ aBlock value
+ASStackContext >> do: aBlock [
+
+	^ next do: aBlock
+]
+
+{ #category : 'removing' }
+ASStackContext >> drop: count [
+
+	count = 0 ifTrue: [ ^ self ].
+	^ self error: 'stack underflow'
+]
+
+{ #category : 'testing' }
+ASStackContext >> hasContext [
+
+	^ true
+]
+
+{ #category : 'data flow instructions' }
+ASStackContext >> newElementFor: aBasicBlock [
+	^ self class new fromStack: (next newElementFor: aBasicBlock)
+]
+
+{ #category : 'accessing' }
+ASStackContext >> offset [
+
+	^ 0
+]
+
+{ #category : 'displaying' }
+ASStackContext >> printNameOn: stream [
+
+	stream nextPutAll: '<context>'
+]
+
+{ #category : 'initialization' }
+ASStackContext >> reset [
+
+	^ self
+]
+
+{ #category : 'enumerating' }
+ASStackContext >> with: other do: aBlock [
+
+	^ next with: other next do: aBlock
 ]

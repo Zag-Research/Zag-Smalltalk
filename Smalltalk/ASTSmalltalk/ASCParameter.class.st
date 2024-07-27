@@ -14,14 +14,9 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'instance creation' }
-ASCParameter class >> inBasicBlock: anASCBasicBlock [ 
-	^ self new inBasicBlock: anASCBasicBlock 
-]
-
 { #category : 'instance initialization' }
-ASCParameter >> inBasicBlock: anASCBasicBlock [ 
-	stack := anASCBasicBlock stack
+ASCParameter >> initialize [ 
+	^ super initialize 
 ]
 
 { #category : 'testing' }

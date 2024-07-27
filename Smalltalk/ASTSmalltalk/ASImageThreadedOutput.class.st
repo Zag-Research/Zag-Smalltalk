@@ -28,15 +28,15 @@ ASImageThreadedOutput >> branch: command to: target [
 			target ifNotNil: [ self labelRef: target label ] ]
 ]
 
-{ #category : 'API' }
-ASImageThreadedOutput >> endMethod [
-
-
-]
-
 { #category : 'code generation' }
 ASImageThreadedOutput >> outputBasicBlockEnd [
 	
+]
+
+{ #category : 'API' }
+ASImageThreadedOutput >> outputMethodEnd [
+
+
 ]
 
 { #category : 'code generation' }
@@ -46,9 +46,9 @@ ASImageThreadedOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASImageThreadedOutput >> outputMethodStart: bbLabel [
+ASImageThreadedOutput >> outputMethodStart: bb [
 
-
+	
 ]
 
 { #category : 'API' }
@@ -89,10 +89,10 @@ ASImageThreadedOutput >> verifySelector: anObject [
 ]
 
 { #category : 'API' }
-ASImageThreadedOutput >> visitPopLocal: anASLocal [
+ASImageThreadedOutput >> visitPopLocal: anASCLocal [
 
 	currentBasicBlock
-		offsetOf: anASLocal name
+		offsetOf: anASCLocal name
 		context: [ :local |
 			self
 				putEmbedded: #popLocal;
@@ -137,20 +137,20 @@ ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 
 	image
 		putRawInt: ZfPushLiteral;
-		put: aLiteral
+		addOperation: aLiteral
 ]
 
 { #category : 'API' }
-ASImageThreadedOutput >> visitPushLocal: anASLocal [
+ASImageThreadedOutput >> visitPushLocal: anASCLocal [
 
-^	self visitPushLocalOrBlock: anASLocal
+	^ self visitPushLocalOrBlock: anASCLocal
 ]
 
 { #category : 'API' }
-ASImageThreadedOutput >> visitPushLocalOrBlock: anASLocal [
+ASImageThreadedOutput >> visitPushLocalOrBlock: anASCLocal [
 
 	currentBasicBlock
-		offsetOf: anASLocal name
+		offsetOf: anASCLocal name
 		context: [ :local |
 			self
 				putEmbedded: #pushLocal;
@@ -205,10 +205,10 @@ ASImageThreadedOutput >> visitSimple: aString [
 ]
 
 { #category : 'visiting' }
-ASImageThreadedOutput >> visitStoreLocal: anASLocal [
+ASImageThreadedOutput >> visitStoreLocal: anASCLocal [
 
 	currentBasicBlock
-		offsetOf: anASLocal name
+		offsetOf: anASCLocal name
 		context: [ :local |
 			self
 				putEmbedded: #storeLocal;

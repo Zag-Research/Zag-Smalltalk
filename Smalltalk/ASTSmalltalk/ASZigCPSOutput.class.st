@@ -108,12 +108,11 @@ ASZigCPSOutput >> outputMethodLabel: bbLabel [
 ]
 
 { #category : 'code generation' }
-ASZigCPSOutput >> outputMethodStart: bbLabel [
-
+ASZigCPSOutput >> outputMethodStart: bb [
 
 	self
 		nextPutAll: 'fn ';
-		id: bbLabel;
+		id: bb label;
 		nextPutAll:
 			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
 '.
@@ -228,10 +227,9 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigCPSOutput >> visitPushLocal: anASLocal [
-^
-	self
-		visitPushLocalOrBlock: anASLocal name
+ASZigCPSOutput >> visitPushLocal: anASCLocal [
+
+	^ self visitPushLocalOrBlock: anASCLocal name
 ]
 
 { #category : 'API' }
@@ -358,7 +356,7 @@ ASZigCPSOutput >> writeDefinitionOn: stream [
 	context writeNewDeclarationFor: self on: self.
 	self
 		nextPutAll: 'compileMethod(';
-		putSymbol: codeGenerator selector;
+		putSymbol: self selector;
 		nextPut: $,;
 		print: numLocals;
 		nextPut: $,;

@@ -3,14 +3,51 @@ I represent an embedded send replacement.
 "
 Class {
 	#name : 'ASCEmbed',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
-		'selector'
+		'selector',
+		'primitive'
+	],
+	#classVars : [
+		'EmbeddingReturnTypes'
+	],
+	#classInstVars : [
+		'embeddings'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'class initialization' }
+ASCEmbed class >> initialize [
+
+	EmbeddingReturnTypes := Dictionary new.
+	EmbeddingReturnTypes at: #- put: SmallInteger.
+	EmbeddingReturnTypes at: #'<=' put: Boolean.
+	EmbeddingReturnTypes at: #< put: Boolean.
+	EmbeddingReturnTypes at: #+ put: SmallInteger.
+
+	embeddings := {
+		              (Integer >> #-).
+		              (Integer >> #'<=').
+		              (SmallInteger >> #'<=').
+		              (SmallInteger >> #<).
+		              (SmallInteger >> #+).
+		              (SmallInteger >> #-) }
+]
+
+{ #category : 'API' }
+ASCEmbed class >> isEmbedded: aCompileMethod [
+ 	"better to just check if this method contains a primitive and not in the list"
+	^ embeddings hasLiteral: aCompileMethod 
+]
+
+{ #category : 'instance creation' }
+ASCEmbed >> fromOperation: anASCSend [
+
+	stack := anASCSend stack
+]
 
 { #category : 'printing' }
 ASCEmbed >> inspectZagASTOn: aStream [
@@ -21,16 +58,38 @@ ASCEmbed >> inspectZagASTOn: aStream [
 		print: selector.
 ]
 
+{ #category : 'data flow instructions' }
+ASCEmbed >> markReferences [
+
+	stack markReferenced: selector numArgs
+]
+
+{ #category : 'instance creation' }
+ASCEmbed >> next [
+	^nil
+]
+
 { #category : 'code generation' }
 ASCEmbed >> outputTo: anOutput [
 
 	^ anOutput visitEmbed: selector
 ]
 
-{ #category : 'stack analysis' }
-ASCEmbed >> stackOp: output [
+{ #category : 'writing' }
+ASCEmbed >> primitive: anInteger [
 
-	^ output stackEmbed: self
+	primitive := anInteger
+]
+
+{ #category : 'stack' }
+ASCEmbed >> resultStack: anASStack basicBlock: anObject [
+
+	self halt
+]
+
+{ #category : 'accessing' }
+ASCEmbed >> selector: aString [ 
+	selector := aString
 ]
 
 { #category : 'instance creation' }

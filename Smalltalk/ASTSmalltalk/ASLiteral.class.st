@@ -23,6 +23,12 @@ ASLiteral >> = other [
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
+{ #category : 'accessing' }
+ASLiteral >> inferType: aClass [
+
+	^ literal class
+]
+
 { #category : 'printing' }
 ASLiteral >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
@@ -82,4 +88,12 @@ ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 ASLiteral >> zigWalk: aGenerator [
 
 	^ aGenerator pushLiteral: literal
+]
+
+{ #category : 'compiling' }
+ASLiteral >> zigWalkForReturn: aGenerator [
+
+	(#( true false 0 1 -1 nil ) includes: literal) ifTrue: [
+		^ aGenerator returnLiteral: literal ].
+	^ super zigWalkForReturn: aGenerator
 ]

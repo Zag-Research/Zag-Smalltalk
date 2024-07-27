@@ -3,26 +3,23 @@ Clean up stack and return self
 "
 Class {
 	#name : 'ASCReturnSelf',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCReturn',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASCReturnSelf >> next [
-
-	^ nil
-]
-
 { #category : 'code generation' }
 ASCReturnSelf >> outputTo: output [
 
-	^ output visitReturnSelf
+	^ output visitReturnSelf: self
 ]
 
-{ #category : 'instance creation' }
-ASCReturnSelf >> with: ignored [
+{ #category : 'stack' }
+ASCReturnSelf >> resultStack: aStack basicBlock: aBasicBlock [
 
-
+	| stackElement |
+	stack := aStack.
+	stackElement := aStack at: #self.
+	^ (ASStackTemporary fromStack: stackElement next) data: ((ASFlowNew from: stackElement data) basicBlock: aBasicBlock)
 ]

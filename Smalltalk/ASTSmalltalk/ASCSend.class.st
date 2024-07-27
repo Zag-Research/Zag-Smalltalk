@@ -3,27 +3,30 @@ I remember the selector for sends
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCEmbed',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
-		'useCall',
 		'bb',
-		'target'
+		'target',
+		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'initialization' }
-ASCSend >> initialize [ 
+{ #category : 'inlining' }
+ASCSend >> inlineIfPossible: anASCodeGenerator [
 
-super initialize .	useCall := false
+	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ]
 ]
 
 { #category : 'printing' }
 ASCSend >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
+	aStream
+		space;
+		print: selector.
 	bb
 		ifNotNil: [
 			aStream
@@ -32,19 +35,33 @@ ASCSend >> inspectZagASTOn: aStream [
 		ifNil: [ aStream << ' ( tailcall )' ]
 ]
 
+{ #category : 'testing' }
+ASCSend >> isCallOperation [
+
+	^ true
+]
+
 { #category : 'accessing' }
 ASCSend >> isSend [
 	^ true
 ]
 
-{ #category : 'block handling' }
-ASCSend >> manifestParameters: aStack [
+{ #category : 'testing' }
+ASCSend >> isTailcall [
 
-	| tStack |
-	tStack := aStack.
-	selector numArgs + 1 timesRepeat: [
-		tStack top makeManifest.
-		tStack := tStack drop ]
+	^ bb isNil
+]
+
+{ #category : 'block handling' }
+ASCSend >> manifestParameters [
+
+	^ stack makeManifestFor: selector numArgs + 1
+]
+
+{ #category : 'data flow instructions' }
+ASCSend >> markReferences [
+
+	stack markReferenced: selector numArgs
 ]
 
 { #category : 'accessing' }
@@ -67,6 +84,13 @@ ASCSend >> requiresContext [
 	^ true
 ]
 
+{ #category : 'stack' }
+ASCSend >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	stack := anASStack.
+	^ (anASStack drop: selector numArgs + 1) pushFlowAsTemporary: (ASFlowNew new basicBlock: aBasicBlock)
+]
+
 { #category : 'handling' }
 ASCSend >> return: aBasicBlock [
 
@@ -79,7 +103,8 @@ ASCSend >> selector [
 ]
 
 { #category : 'accessing' }
-ASCSend >> selector: aString [ 
+ASCSend >> selector: aString [
+
 	selector := aString
 ]
 
@@ -94,7 +119,8 @@ ASCSend >> target: aSymbol [
 	target := aSymbol
 ]
 
-{ #category : 'accessing' }
-ASCSend >> useCall [
-	useCall := true
+{ #category : 'instance creation' }
+ASCSend >> with: aSymbol [
+
+	selector := aSymbol
 ]

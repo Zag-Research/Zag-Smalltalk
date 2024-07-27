@@ -3,19 +3,44 @@ I remember to push local variable
 "
 Class {
 	#name : 'ASCPushVariable',
-	#superclass : 'ASCVariableOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
+	#instVars : [
+		'variable'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
-{ #category : 'code generation' }
-ASCPushVariable >> outputTo: anOutput [
-	^ variable push: anOutput
+{ #category : 'printing' }
+ASCPushVariable >> inspectZagASTOn: aStream [
+
+	super inspectZagASTOn: aStream.
+	aStream << $(;
+		<< variable name;
+		<< $)
 ]
 
-{ #category : 'stack analysis' }
-ASCPushVariable >> stackOp: output [ 
+{ #category : 'code generation' }
+ASCPushVariable >> outputTo: anOutput [
+	^ variable pushTheVariable: anOutput
+]
 
-	^ output stackPush: self
+{ #category : 'printing' }
+ASCPushVariable >> printOn: aStream [
+
+	aStream nextPutAll: ' - ';nextPutAll: variable name
+]
+
+{ #category : 'stack' }
+ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	^ anASStack pushFlowAsTemporary:
+		  ((ASFlowNew from: variable data) basicBlock: aBasicBlock)
+]
+
+{ #category : 'instance creation' }
+ASCPushVariable >> with: target [
+
+	variable := target
 ]

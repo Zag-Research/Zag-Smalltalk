@@ -3,7 +3,7 @@ I remember literal values to output.
 "
 Class {
 	#name : 'ASCLiteral',
-	#superclass : 'ASCOperations',
+	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
 		'literal'
 	],
@@ -26,10 +26,10 @@ ASCLiteral >> outputTo: output [
 	^ output visitPushLiteral: literal
 ]
 
-{ #category : 'stack analysis' }
-ASCLiteral >> stackOp: output [
+{ #category : 'stack' }
+ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ output stackPushLiteral: self
+	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: literal) basicBlock: aBasicBlock)
 ]
 
 { #category : 'instance creation' }

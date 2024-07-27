@@ -36,6 +36,11 @@ ASStatement >> children [
 	^ {  }
 ]
 
+{ #category : 'testing' }
+ASStatement >> inferType: aGenerator [
+	^ nil
+]
+
 { #category : 'compiling' }
 ASStatement >> invalidAST [
 
@@ -113,6 +118,12 @@ ASStatement >> zigWalkBlockReturn: aGenerator [
 
 { #category : 'compiling' }
 ASStatement >> zigWalkDiscard: aGenerator [
+
+	self subclassResponsibility
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkInlineBlockReturn: anASCodeGenerator [
 
 	self subclassResponsibility
 ]

@@ -1,1 +1,1 @@
-Package { #name : #'ASTKernel-Methods' }
+Package { #name : 'ASTKernel-Methods' }

@@ -256,8 +256,11 @@ ASPharoCompilerProgramTest >> testIntFib [
 	aStream := (FileSystem disk workingDirectory / 'zigIntFibString.zig')
 		           writeStream.
 	aStream truncate.
-	result writeZig: aStream.
-	aStream close
+	self halt.
+	aStream close.
+	
+	(ASNoOutput new compileMethod:
+		 ASCompileTestClass1 >> #blockValue) inspect
 ]
 
 { #category : 'tests' }

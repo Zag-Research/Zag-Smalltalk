@@ -25,19 +25,19 @@ ASCOperations >> children [
 ^ OrderedCollection new:0
 ]
 
+{ #category : 'testing' }
+ASCOperations >> isCallOperation [
+
+	^ false
+]
+
 { #category : 'accessing' }
 ASCOperations >> isSend [
 	^ false
 ]
 
-{ #category : 'serializing' }
-ASCOperations >> manifest: aGenerator [
-
-
-]
-
 { #category : 'block handling' }
-ASCOperations >> manifestParameters: stack [
+ASCOperations >> manifestParameters [
 
 ]
 

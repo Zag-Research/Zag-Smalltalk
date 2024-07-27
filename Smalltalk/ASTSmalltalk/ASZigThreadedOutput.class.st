@@ -21,12 +21,6 @@ ASZigThreadedOutput >> branch: command to: target [
 	delayedLabel := target label ] ifFalse: [ self putEmbedded: command. target ifNotNil: [self labelRef: target label ]]
 ]
 
-{ #category : 'API' }
-ASZigThreadedOutput >> endMethod [
-
-	self label: nil
-]
-
 { #category : 'accessing' }
 ASZigThreadedOutput >> methodName [
 	| predefined |
@@ -40,15 +34,25 @@ ASZigThreadedOutput >> outputBasicBlockEnd [
 ]
 
 { #category : 'code generation' }
+ASZigThreadedOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive [
+]
+
+{ #category : 'API' }
+ASZigThreadedOutput >> outputMethodEnd [
+
+	self label: nil
+]
+
+{ #category : 'code generation' }
 ASZigThreadedOutput >> outputMethodLabel: bbLabel [
 
 	self label: bbLabel
 ]
 
 { #category : 'code generation' }
-ASZigThreadedOutput >> outputMethodStart: bbLabel [
+ASZigThreadedOutput >> outputMethodStart: bb [
 
-
+	
 ]
 
 { #category : 'API' }
@@ -92,6 +96,14 @@ ASZigThreadedOutput >> verifySelector: anObject [
 	lf
 ]
 
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitBranch: anASCInlineBlock [ 
+"NEEDS TO BE IMPLMENTED ask Dave"
+	"^ self nextPutAll: '  br label %';
+		nextPutAll: anASCInlineBlock label;
+		nextPutAll: '"
+]
+
 { #category : 'API' }
 ASZigThreadedOutput >> visitCase: aClassToBlockMap [
 	
@@ -100,11 +112,18 @@ ASZigThreadedOutput >> visitCase: aClassToBlockMap [
 	lf
 ]
 
+{ #category : 'visiting' }
+ASZigThreadedOutput >> visitEmbed: aSelector [
+	self
+		putEmbedded: aSelector;
+		lf
+]
+
 { #category : 'API' }
-ASZigThreadedOutput >> visitPopLocal: anASLocal [
+ASZigThreadedOutput >> visitPopLocal: anASCLocal [
 
 	currentBasicBlock
-		offsetOf: anASLocal name
+		offsetOf: anASCLocal name
 		context: [ :local |
 			self
 				putEmbedded: #popLocal;
@@ -163,9 +182,9 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLocal: anASLocal [
+ASZigThreadedOutput >> visitPushLocal: anASCLocal [
 
-^	self visitPushLocalOrBlock: anASLocal
+	^ self visitPushLocalOrBlock: anASCLocal
 ]
 
 { #category : 'API' }

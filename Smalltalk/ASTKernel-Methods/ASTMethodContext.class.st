@@ -1,20 +1,21 @@
 Class {
-	#name : #ASTMethodContext,
-	#superclass : #ASTContext,
+	#name : 'ASTMethodContext',
+	#superclass : 'ASTContext',
 	#instVars : [
 		'method',
 		'closureOrNil',
 		'receiver'
 	],
-	#category : #'ASTKernel-Methods'
+	#category : 'ASTKernel-Methods',
+	#package : 'ASTKernel-Methods'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> asContext [
 	^ self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> home [
 	"Answer the context in which the receiver was defined."
 
@@ -23,12 +24,12 @@ ASTMethodContext >> home [
 	^ closureOrNil outerContext home
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> method [
 	^ method
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> privRefresh [
 	"Reinitialize the receiver so that it is in the state it was at its creation."
 
@@ -42,7 +43,7 @@ ASTMethodContext >> privRefresh [
 			method numArgs + 1 to: method numTemps do: [ :i | self tempAt: i put: nil ] ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> removeSelf [
 	"Nil the receiver pointer and answer its former value."
 
@@ -52,7 +53,7 @@ ASTMethodContext >> removeSelf [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> setSender: s receiver: r method: m closure: c startpc: startpc [
 	"Create the receiver's initial state."
 
@@ -64,7 +65,7 @@ ASTMethodContext >> setSender: s receiver: r method: m closure: c startpc: start
 	stackp := 0
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> stackp: newStackp [
 	"Storing into the stack pointer is a potentially dangerous thing.
 	This primitive stores nil into any cells that become accessible as a result,
@@ -76,7 +77,7 @@ ASTMethodContext >> stackp: newStackp [
 	self error: 'stackp store failure'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTMethodContext >> tempAt: index put: value [
 	"Store the argument, value, as the temporary variable whose index is the 
 	 argument, index.  Primitive. Assumes receiver is indexable. Answer the

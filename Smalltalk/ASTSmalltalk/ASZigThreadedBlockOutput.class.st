@@ -38,7 +38,7 @@ ASZigThreadedBlockOutput >> visitPopLocalData: aASCIndirectVariable [
 		stack: [ :offset |
 			self
 				putEmbedded: #popFromContaxt; "or popStack?"
-				print: currentBasicBlock offsetToSelf;
+				print: currentBasicBlock offsetOfSelf;
 				nextPutAll: ' + ( ';
 				print: offset;
 				nextPutAll: ' << 12 )';

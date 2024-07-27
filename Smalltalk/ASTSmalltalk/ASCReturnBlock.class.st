@@ -1,34 +1,58 @@
 "
 I am a BasicBlock that is the return target for a send or call
+
+Note that `ASCInlineBlock`s often get their class changed to me, so my objects must be the same size.
+Among other things that means that some slots end up in `ASCBasicBlock` rather than their more logical place of here
 "
 Class {
 	#name : 'ASCReturnBlock',
 	#superclass : 'ASCBasicBlock',
-	#instVars : [
-		'sequence',
-		'selector'
-	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
 { #category : 'adding' }
-ASCReturnBlock >> addReturnBlock: anASCReturnBlock [
+ASCReturnBlock >> addSourceBlock: aBasicBlock [
 
-	^ method addReturnBlock: anASCReturnBlock
+	sourceBlocks add: aBasicBlock andIfNewDo: [
+		sourceElements
+			ifNil: [
+			sourceElements := self copyStackFrom: aBasicBlock ]
+			ifNotNil: [
+				sourceElements
+					with: aBasicBlock stack
+					do: [ :stackElement :other | stackElement mergeWith: other ] ] ]
 ]
 
-{ #category : 'writing' }
-ASCReturnBlock >> inspectionZagCode [
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForLocals [
 
-	<inspectorPresentationOrder: 0 title: 'ZagCode'>
-	^ SpTreeTablePresenter new
-		  roots: operations;
-		  children: [ :aNode | aNode children ];
-		  addColumn:
-			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
-		  yourself
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForParameters [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForSelf [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> flowForTemporaries [
+
+	^ ASFlowOnDemand
+]
+
+{ #category : 'testing' }
+ASCReturnBlock >> hasContextOnEntry [
+
+	^ true
 ]
 
 { #category : 'initialization' }
@@ -37,26 +61,19 @@ ASCReturnBlock >> label [
 	^ label ifNil: [
 		  label := String streamContents: [ :s |
 			           s
-				           nextPutAll: method selector;
+				           nextPutAll: ($_ join: ($: split: self selector));
 				           nextPut: $.;
-				           print: (method addReturnBlock: self) ] ]
+				           print: (self methodBlock addBlock: self) ] ]
 ]
 
-{ #category : 'accessing' }
-ASCReturnBlock >> method: anASCMethodBlock [
+{ #category : 'initialization' }
+ASCReturnBlock >> llvmLabel [
 
-	super method: anASCMethodBlock.
-	anASCMethodBlock addReturnBlock: self
+	^ '0'
 ]
 
-{ #category : 'API' }
-ASCReturnBlock >> namedContext: blockLocal stack: blockStack [ 
-
-	stack namedContext: blockLocal stack: blockStack
-]
-
-{ #category : 'accessing' }
-ASCReturnBlock >> namedMethod [
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> namedBlock [
 
 	^ self
 ]
@@ -65,18 +82,18 @@ ASCReturnBlock >> namedMethod [
 ASCReturnBlock >> nextSequence [
 
 	sequence ifNil: [ ^ sequence := 1 ].
-	^ sequence := sequence +1
+	^ sequence := sequence + 1
 ]
 
 { #category : 'writing' }
 ASCReturnBlock >> outputTo: output [
 
-	output outputMethodStart: label.
+	output outputMethodStart: self.
 	^ self outputRestTo: output
 ]
 
 { #category : 'accessing' }
 ASCReturnBlock >> selector [
 
-	^ selector ifNil: [ selector := method selector]
+	^self  methodBlock selector
 ]

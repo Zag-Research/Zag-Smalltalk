@@ -39,6 +39,14 @@ Object >> asASSyntax [
 ]
 
 { #category : '*ASTSmalltalk' }
+Object class >> astClass [
+
+	^ (name beginsWith: 'AST')
+		ifTrue: [ self ]
+		ifFalse: [ Smalltalk at: ('AST' , name) asSymbol ifAbsent: [ self ] ]
+]
+
+{ #category : '*ASTSmalltalk' }
 Object >> astFields [
 	| nVars fields |
 	nVars := self class instSize.
@@ -70,18 +78,20 @@ Object >> children [
 
 { #category : '*ASTSmalltalk' }
 Object >> contents [
-"create a stream to write the AST on and return it as a String"
-	| stream |
-	stream := WriteStream on: String new.
-	self inspectZagASTOn: stream.
 
-	^ stream contents
+	^ String streamContents: [ :stream | self inspectZagASTOn: stream ]
 ]
 
 { #category : '*ASTSmalltalk' }
 Object >> inspectZagASTOn: aStream [
 	aStream
 		nextPutAll: self class name.
+]
+
+{ #category : '*ASTSmalltalk' }
+Object >> isFlowSource [
+
+	^ false
 ]
 
 { #category : '*ASTSmalltalk' }

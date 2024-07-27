@@ -22,9 +22,15 @@ CompiledMethod >> astWith: anASPharoCompiler [
 ]
 
 { #category : '*ASTSmalltalk' }
+CompiledMethod class >> canonicalArgumentName [
+
+	^ 'aCompileMethod'
+]
+
+{ #category : '*ASTSmalltalk' }
 CompiledMethod >> inspectionZagCode [
 
-	<inspectorPresentationOrder: 60 title: 'ZagCode'>
+	<inspectorPresentationOrder: 60 title: 'ZCode'>
 	| ast file output |
 	ast := ASPharoCompiler new astFor: self.
 
@@ -38,7 +44,7 @@ CompiledMethod >> inspectionZagCode [
 { #category : '*ASTSmalltalk' }
 CompiledMethod >> inspectionZagThreadedCode [
 
-	<inspectorPresentationOrder: 63 title: 'ZagThreadedCode'>
+	<inspectorPresentationOrder: 63 title: 'ZTCode'>
 	| ast file output |
 	ast := ASPharoCompiler new astFor: self.
 
@@ -53,6 +59,6 @@ CompiledMethod >> inspectionZagThreadedCode [
 
 { #category : '*ASTSmalltalk' }
 CompiledMethod >> inspectionZigAST [
-	<inspectorPresentationOrder: 61 title: 'ZagAST'>
+	<inspectorPresentationOrder: 61 title: 'ZAST'>
 	^ (ASPharoCompiler new astFor: self) inspectAST
 ]

@@ -1,10 +1,11 @@
 Class {
-	#name : #ASTSequenceableCollection,
-	#superclass : #ASTCollection,
-	#category : #'ASTKernel-Collections-Abstract'
+	#name : 'ASTSequenceableCollection',
+	#superclass : 'ASTCollection',
+	#category : 'ASTKernel-Collections-Abstract',
+	#package : 'ASTKernel-Collections-Abstract'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> , otherCollection [
 	"Concatenate two Strings or Collections."
 
@@ -17,7 +18,7 @@ ASTSequenceableCollection >> , otherCollection [
 "
 ]
 
-{ #category : #comparing }
+{ #category : 'comparing' }
 ASTSequenceableCollection >> = otherCollection [
 	"Answer whether the species of the receiver is the same as
 	otherCollection's species, and the receiver's size is the same as
@@ -35,7 +36,7 @@ ASTSequenceableCollection >> = otherCollection [
 	^ true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> asArray [
 	"Answer an Array whose elements are the elements of the receiver, in the same order."
 
@@ -45,7 +46,7 @@ ASTSequenceableCollection >> asArray [
 	^ newArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> at: index ifAbsent: absentBlock [
 	"Answer the element at the given index. If I do not contain an element at that index, answer the result of evaluating the argument, absentBlock."
 
@@ -54,7 +55,7 @@ ASTSequenceableCollection >> at: index ifAbsent: absentBlock [
 	^ absentBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> collect: aBlock [
 	"Refer to the comment in Collection|collect:."
 
@@ -64,7 +65,7 @@ ASTSequenceableCollection >> collect: aBlock [
 	^ result
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> copyFrom: start to: stop [
 	"Answer a copy of a subset of the receiver, starting from element at 
 	index start until element at index stop."
@@ -78,7 +79,7 @@ ASTSequenceableCollection >> copyFrom: start to: stop [
 		startingAt: start
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> copyReplaceFrom: start to: stop with: replacementCollection [
 	"Answer a copy of the receiver satisfying the following conditions: If 
 	stop is less than start, then this is an insertion; stop should be exactly 
@@ -109,7 +110,7 @@ ASTSequenceableCollection >> copyReplaceFrom: start to: stop with: replacementCo
 	^ newSequenceableCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> copyWith: newElement [
 	"Answer a copy of the receiver that is 1 bigger than the receiver and has 
 	newElement at the last element."
@@ -125,14 +126,14 @@ ASTSequenceableCollection >> copyWith: newElement [
 	^ newIC
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> do: aBlock [
 	"Refer to the comment in Collection|do:."
 
 	1 to: self size do: [ :index | aBlock value: (self at: index) ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> first [
 	"Answer the first element of the receiver. Create an error notification if 
 	the receiver contains no elements."
@@ -141,14 +142,14 @@ ASTSequenceableCollection >> first [
 	^ self at: 1
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> indexOf: anObject ifAbsent: absentBlock [
 	"Answer the index of the given object within me. If I do not contain the given object, answer the result of evaluating the given block."
 
 	^ self indexOf: anObject startingAt: 1 ifAbsent: absentBlock
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> indexOf: anObject startingAt: startIndex ifAbsent: absentBlock [
 	"Answer the index of the given object within me starting the search at the given index. If I do not contain the given object, answer the result of evaluating the given block."
 
@@ -158,7 +159,7 @@ ASTSequenceableCollection >> indexOf: anObject startingAt: startIndex ifAbsent: 
 	^ absentBlock value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> last [
 	"Answer the last element of the receiver. Create an error notification if 
 	the receiver contains no elements."
@@ -167,14 +168,14 @@ ASTSequenceableCollection >> last [
 	^ self at: self size
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> remove: oldObject ifAbsent: anExceptionBlock [
 	"SequencableCollections cannot implement removing."
 
 	self shouldNotImplement
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement [
 	"This destructively replaces elements from start to stop in the receiver. 
 	Answer the receiver itself. Use copyReplaceFrom:to:with: for 
@@ -189,7 +190,7 @@ ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement [
 		startingAt: 1
 ]
 
-{ #category : #'system primitives' }
+{ #category : 'system primitives' }
 ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 	"This destructively replaces elements from start to stop in the receiver 
 	starting at index, repStart, in the sequenceable collection, 
@@ -203,7 +204,7 @@ ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement start
 		whileTrue: [ self at: index put: (replacement at: repOff + index) ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> select: aBlock [
 	"Refer to the comment in Collection|select:."
 
@@ -215,12 +216,12 @@ ASTSequenceableCollection >> select: aBlock [
 	^ s contents
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 ASTSequenceableCollection >> size [
 	self subclassResponsibility
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : 'as yet unclassified' }
 ASTSequenceableCollection >> swap: oneIndex with: anotherIndex [
 	"Move the element at oneIndex to anotherIndex, and vice-versa."
 
