@@ -1,44 +1,52 @@
+// Modified Spur encoding
+
 const std = @import("std");
 const math = std.math;
 const rotr = math.rotr;
 const rotl = math.rotl;
 const pow = math.pow;
-pub const ClassIndex = enum(u16) {
+pub const ClassIndex = enum(u5) {
     none = 0,
-    Object,
-    SmallInteger,
+    ThunkHeap,
+    ThunkReturnLocal,
+    ThunkReturnSmallInteger,
+    ThunkReturnImmediate,
+    ThunkReturnCharacter,
     UndefinedObject,
-    False,
     True,
-    Float,
+    False,
+    SmallInteger,
     Symbol,
     Character,
+    ThunkImmediate,
+    ThunkFloat,
+    Float,
+    Object,
     _,
 };
 pub const Object = packed struct {
     tag: Group,
     classIndex: ClassIndex,
-    hash: u45,
-    pub const Group = enum(u3) { heap=0, smallInteger, immediates, float3, float4, float5, float6, float7};
+    hash: u56,
+    pub const Group = enum(u3) { heap=0, immediates, float2, float3, float4, float5, float6, float7};
     pub fn immediate_class(self: Object) ClassIndex {
-        switch (self.tag) {
-            .heap => return .Object,
-            .smallInteger => return .SmallInteger,
-            .immediates => return self.classIndex,
-            else => return .Float,
-        }
+        const selfU = self.u();
+        if (selfU&6>0) return .Float;
+        if (selfU&1>0) return self.classIndex;
+        if (selfU==0) return .UndefinedObject;
+        return .Object;
     }
     pub inline fn u(self: Object) u64 {
         return @bitCast(self);
     }
-    const Nil: Object = @bitCast(@as(u64,0x00001a));
-    const False: Object = @bitCast(@as(u64,0x000022));
-    const True: Object = @bitCast(@as(u64,0x10002a));
+    const Nil: Object = @bitCast(@as(u64,0));
+    const False: Object = @bitCast(@as(u64,0x41));
+    const True: Object = @bitCast(@as(u64,0x39));
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(@TypeOf(value))) {
-            .Int, .ComptimeInt => return @bitCast(@as(u64, value)*8+1),
+            .Int, .ComptimeInt => return @bitCast(@as(u64, value)*256+(if (value<255) 0x59 else 0x49)),
             .Float, .ComptimeFloat => return @bitCast(encode(value)),
             .Bool => return if (value) True else False,
             .Null => return Nil,
@@ -69,7 +77,7 @@ pub const Object = packed struct {
             .UndefinedObject => writer.print("nil", .{}),
             .Symbol => writer.print("#symbols.i_{}", .{self.hash}),
             .Character => writer.print("${c}", .{@as(u8,@truncate(self.hash))}),
-            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(selfU>>3))}),
+            .SmallInteger => writer.print("{d}", .{@as(i64,@bitCast(selfU>>8))}),
             .Float => writer.print("{}", .{ decode(selfU) }),
             else => {
                 try writer.print("0x{x:0>16}", .{selfU});
@@ -80,18 +88,16 @@ pub const Object = packed struct {
     }
 };
 fn encode(x: f64) u64 {
-    const u = rotl(u64,@bitCast(x),4);
-    if (u&7>=5) {
-        if (math.isNan(x)) return 16;
-        if (math.inf(f64)==x) return 24;
-        if (math.inf(f64)==-x) return 32;
-        return 8;
-    }
-    return u+%3;
+    const u = rotl(u64,@bitCast(x),4)+%2;
+    if (u&6>0) return u;
+    if (math.isNan(x)) return 16;
+    if (math.inf(f64)==x) return 24;
+    if (math.inf(f64)==-x) return 32;
+    return 8;
 }
 fn decode(x: u64) f64 {
-    if (x&7<3) return 0;
-    return @bitCast(rotr(u64,x-3,4));
+    if (x&7<2) return 0;
+    return @bitCast(rotr(u64,x-2,4));
 }
 fn cvtU64(value: anytype) u64 {
     return switch (@typeInfo(@TypeOf(value))) {
@@ -107,19 +113,19 @@ pub fn main() !void {
     const xMin: f64 = @bitCast(@as(u64,0x0000_0000_0000_0001));
     const xSmall: f64 = @bitCast(@as(u64,0x2fff_ffff_ffff_ffff));
     const xSmall2: f64 = @bitCast(@as(u64,0x3000_0000_0000_0000));
-    const xBig: f64 = @bitCast(@as(u64,0x4fff_ffff_ffff_ffff));
+    const xBig: f64 = @bitCast(@as(u64,0x5fff_ffff_ffff_ffff));
     const xMax: f64 = @bitCast(@as(u64,0x7fef_ffff_ffff_ffff));
     const xInf: f64 = @bitCast(@as(u64,0x7ff0_0000_0000_0000));
     const xNaN: f64 = @bitCast(@as(u64,0x7fff_ffff_ffff_ffff));
     const data = .{
-        &xBig, 42, null, false, true,
+        &xBig, 300, null, false, true, 42, 'a',
         0.0,-0.0,
         xMin,
         pow(f64,2.0,-767),pow(f64,2.0,-511),
         xSmall,xSmall2,
         0.5, 0.75, 1.0, -1.0, 2.0,
-        xBig, -xBig,
-        pow(f64,2.0,257),pow(f64,2.0,513),pow(f64,2.0,769),
+        xBig,
+        pow(f64,2.0,513),pow(f64,2.0,769),
         xMax, -xMax,
         xInf, -xInf,
         xNaN, -xNaN,
@@ -136,10 +142,5 @@ pub fn main() !void {
             }});
         } else
             std.debug.print("{x:0>16} {x:0>16} {} {} {}\n",.{cvtU64(x),u.u(),x,u,u.immediate_class()});
-    }
-    for (0..16) |x| {
-        const w:u64 = x+%0xffff_ffff_ffff_fff0;
-        const u: Object = @bitCast(w);
-        std.debug.print("{x:0>16} {} {x:0>16}\n",.{w, u, rotr(u64,w-%3,4)});
     }
 }

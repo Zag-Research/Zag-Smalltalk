@@ -1,3 +1,5 @@
+// Old version of Modified Spur encoding
+
 const std = @import("std");
 const math = std.math;
 const rotr = math.rotr;
@@ -81,17 +83,17 @@ pub const Object = packed struct {
 };
 fn encode(x: f64) u64 {
     const u = rotl(u64,@bitCast(x),4);
-    if (u&7>=6) {
+    if (u&7>=5) {
         if (math.isNan(x)) return 16;
         if (math.inf(f64)==x) return 24;
         if (math.inf(f64)==-x) return 32;
         return 8;
     }
-    return u+%2;
+    return u+%3;
 }
 fn decode(x: u64) f64 {
-    if (x&7<2) return 0;
-    return @bitCast(rotr(u64,x-2,4));
+    if (x&7<3) return 0;
+    return @bitCast(rotr(u64,x-3,4));
 }
 fn cvtU64(value: anytype) u64 {
     return switch (@typeInfo(@TypeOf(value))) {
@@ -140,6 +142,6 @@ pub fn main() !void {
     for (0..16) |x| {
         const w:u64 = x+%0xffff_ffff_ffff_fff0;
         const u: Object = @bitCast(w);
-        std.debug.print("{x:0>16} {}\n",.{w, u});
+        std.debug.print("{x:0>16} {} {x:0>16}\n",.{w, u, rotr(u64,w-%3,4)});
     }
 }
