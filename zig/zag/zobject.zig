@@ -103,6 +103,29 @@ pub const ClassIndex = enum(u16) {
     // inline fn immediate(cg: Self) u64 {
     //     return (@as(u64, @intFromEnum(Group.immediates)) << 48) | cg.base();
     // }
+    pub const Compact = enum(u5) {
+        none = 0,
+        ThunkHeap,
+        ThunkReturnLocal,
+        ThunkReturnSmallInteger,
+        ThunkReturnImmediate,
+        ThunkReturnCharacter,
+        UndefinedObject,
+        True,
+        False,
+        SmallInteger,
+        Symbol,
+        Character,
+        ThunkImmediate,
+        ThunkFloat,
+        Float,
+        inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+    };
+    pub inline fn compact(ci: ClassIndex) Compact {
+        return @enumFromInt(@intFromEnum(ci));
+    }
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);

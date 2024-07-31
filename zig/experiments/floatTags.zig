@@ -118,7 +118,7 @@ pub fn main() !void {
     const xInf: f64 = @bitCast(@as(u64,0x7ff0_0000_0000_0000));
     const xNaN: f64 = @bitCast(@as(u64,0x7fff_ffff_ffff_ffff));
     const data = .{
-        &xBig, 300, null, false, true, 42, 'a',
+        &xBig, 300, null, false, true, 42, 0x7_ffff_ffff_ffff, 0x7f_ffff_ffff_ffff, 'a',
         0.0,-0.0,
         xMin,
         pow(f64,2.0,-767),pow(f64,2.0,-511),
