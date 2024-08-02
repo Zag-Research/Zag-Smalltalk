@@ -7,6 +7,7 @@ Class {
 	#traits : 'ASOutputAPI',
 	#classTraits : 'ASOutputAPI classTrait',
 	#instVars : [
+		'',
 		'alreadyGenerated',
 		'ourObject',
 		'codeGenerator',
