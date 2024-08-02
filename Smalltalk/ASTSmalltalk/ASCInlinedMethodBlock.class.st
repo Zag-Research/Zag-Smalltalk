@@ -3,7 +3,7 @@ I am an inline block, but I'm used to inline a BlockClosure
 "
 Class {
 	#name : 'ASCInlinedMethodBlock',
-	#superclass : 'ASCInlineBlock',
+	#superclass : 'ASCInlinedJoinBlock',
 	#instVars : [
 		'theMethod'
 	],
@@ -20,7 +20,7 @@ ASCInlinedMethodBlock >> copyStackFrom: aBasicBlock [
 	^ stack
 ]
 
-{ #category : 'initialization' }
+{ #category : 'as yet unclassified' }
 ASCInlinedMethodBlock >> label [
 
 	^ label ifNil: [
@@ -31,7 +31,7 @@ ASCInlinedMethodBlock >> label [
 				           print: theMethod ] ]
 ]
 
-{ #category : 'accessing' }
+{ #category : 'as yet unclassified' }
 ASCInlinedMethodBlock >> theMethod: aCompiledMethod [
 
 	theMethod := aCompiledMethod

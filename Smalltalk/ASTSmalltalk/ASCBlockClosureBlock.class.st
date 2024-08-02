@@ -52,9 +52,7 @@ ASCBlockClosureBlock >> hasContextOnEntry [
 { #category : 'API' }
 ASCBlockClosureBlock >> initContext [
 
-	stack := ASStackContext fromStack: stack.
-	stack data: (context := ASFlowContext new)
-
+	context := ASContext forBasicBlock: self
 ]
 
 { #category : 'API' }

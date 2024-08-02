@@ -42,3 +42,11 @@ ASFlowNew >> printOn: aStream [
 			print: value ].
 	^ self printClassOn: aStream
 ]
+
+{ #category : 'accessing' }
+ASFlowNew >> value: anObject [
+
+	self halt.
+	value := anObject.
+	self class: anObject flowClass
+]

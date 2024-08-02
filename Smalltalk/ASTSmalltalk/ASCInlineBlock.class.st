@@ -12,7 +12,7 @@ Class {
 { #category : 'data flow instructions' }
 ASCInlineBlock >> flowForLocals [
 
-	^ ASFlowPhi
+	^ nil
 ]
 
 { #category : 'data flow instructions' }

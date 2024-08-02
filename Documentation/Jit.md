@@ -46,3 +46,5 @@ My Task: I am not generating the CPS code - rather, I am simply taking the compi
 - The JIT uses [Execution](Execution.md#Method%20dispatch)
 - Eclipse-OMR, [Eclipse-OMR](https://eclipse-omr.org)
 - OpenJIT, [openjit.org](https://www.openjit.org/)
+- [LLVM IR](https://llvm.org/docs/Reference.html#llvm-ir) [Reference Manual](https://llvm.org/docs/LangRef.html#syntax) [Turorials](https://llvm.org/docs/GettingStartedTutorials.html)
+- [LLVM getelementptr](https://llvm.org/docs/GetElementPtr.html)

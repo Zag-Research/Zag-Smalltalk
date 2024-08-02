@@ -60,6 +60,19 @@ ASCBasicBlock >> addOperation: anOperation [
 	^ false
 ]
 
+{ #category : 'adding' }
+ASCBasicBlock >> addSourceBlock: aBasicBlock [
+
+	sourceBlocks add: aBasicBlock andIfNewDo: [
+		sourceElements
+			ifNil: [
+			sourceElements := self copyStackFrom: aBasicBlock ]
+			ifNotNil: [
+				sourceElements
+					with: aBasicBlock stack
+					do: [ :stackElement :other | stackElement mergeWith: other ] ] ]
+]
+
 { #category : 'data flow instructions' }
 ASCBasicBlock >> anySourcesNonNilFor: id [
 
@@ -167,6 +180,18 @@ ASCBasicBlock >> flowForLocals [
 ]
 
 { #category : 'data flow instructions' }
+ASCBasicBlock >> flowForParameters [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
+ASCBasicBlock >> flowForSelf [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'data flow instructions' }
 ASCBasicBlock >> flowForTemporaries [
 
 	^ self subclassResponsibility
@@ -175,9 +200,8 @@ ASCBasicBlock >> flowForTemporaries [
 { #category : 'API' }
 ASCBasicBlock >> getContext [
 
-	context ifNil: [
-		stack := stack makeContextRequired: [ :c | context := c ] ].
-	^ context
+	^ context ifNil: [
+		stack := stack intoContext: 0. context := self halt]
 ]
 
 { #category : 'testing' }

@@ -3,7 +3,7 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackNonContext',
+	#superclass : 'ASStackNonEmpty',
 	#instVars : [
 		'name',
 		'isInContext'
@@ -94,6 +94,13 @@ ASStackNamed >> name [
 { #category : 'accessing' }
 ASStackNamed >> name: aSymbol [
 	name := aSymbol
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNamed >> offsetForTemps [
+
+	isInContext ifTrue: [ ^ 0 ].
+	^ offset
 ]
 
 { #category : 'displaying' }

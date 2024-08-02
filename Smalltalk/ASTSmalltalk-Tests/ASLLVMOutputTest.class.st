@@ -50,6 +50,25 @@ ASLLVMOutputTest >> testLLVM_blockReturnEasy [
 ]
 
 { #category : 'tests' }
+ASLLVMOutputTest >> testLLVM_blockValue [
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #blockValue.
+	cg
+		inline: true;
+		finalAnalysis;
+		flowAnalysis.
+	cg inspect.
+	output
+		codeGenerator: cg;
+		outputToStream.
+	output asString inspect.
+	self assert: output name equals: 'blockValue'
+]
+
+{ #category : 'tests' }
 ASLLVMOutputTest >> testLLVM_fibonacci [
 	" self <= 2 ifTrue: [ ^ 1 ]
  ^ (self - 1) fibonacci + (self - 2) fibonacci "

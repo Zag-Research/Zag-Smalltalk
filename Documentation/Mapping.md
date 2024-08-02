@@ -9,91 +9,13 @@ We use one of 2 object encodings with different properties:
 Both have immediate representations for symbols, characters, booleans, `nil`, and some special closures.
 
 Defining a configuration flag allows choosing between these encodings. Once we can run real benchmarks, we will determine which is actually faster for particular workloads.
-### NaN Encoding
-The IEEE 754 64-bit binary number is encoded as follows:
-	![IEEE 754 Binary-64](images/Pasted%20image%2020210311212924.png)
-When the 11 mantissa bits are all 1s and at least one of the bottom 51 bits is non-zero, then the value is considered Not a Number (NaN), and the low 52 bits are otherwise ignored as a floating point number.^[Bit 51 could also be 1 to make a quiet (non-signaling) NaN, but it doesn't seem necessary.]
 
-So we have 52 bits to play with, as long as at least one bit is non-zero. This lets us encode 2^52 possible values (see the comment at [SpiderMonkey](https://github.com/ricardoquesada/Spidermonkey/blob/4a75ea2543408bd1b2c515aa95901523eeef7858/js/src/gdb/mozilla/jsval.py)). They further point out that on many architectures only the bottom 48 bits are valid as memory addresses, and when used as such, the high 16 bits must be the same as bit 47.
-
-There are several ways to do NaN tagging/encoding. You can choose integers, pointers, or doubles to be naturally encoded and all the others be encoded with some shifting/adding. While integers and pointers are probably more common in most Smalltalk images, leaving doubles as naturally encoded means that vector instructions and/or GPUs could act directly on memory.
-
-So this leaves us with the following encoding based on the **S**ign+**E**xponent and **F**raction bits:
-
-| S+E       | F    | F    | F    | Type                                       |
-| --------- | ---- | ---- | ---- | ------------------------------------------ |
-| 0000      | 0000 | 0000 | 0000 | double  +0                                 |
-| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)                          |
-| 7FF0      | 0000 | 0000 | 0000 | +inf                                       |
-| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                               |
-| 8000      | 0000 | 0000 | 0000 | double     -0                              |
-| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)                          |
-| FFF0      | 0000 | 0000 | 0000 | -inf                                       |
-| FFF0      | 0000 | xxxx | xxxx | NaN (unused)                               |
-| FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)                    |
-| FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger)              |
-| FFF0      | 0003 | FFFF | FFFF | UndefinedObject                            |
-| FFF0      | 0004 | 0000 | 0000 | False                                      |
-| FFF0      | 0005 | 0000 | 0001 | True                                       |
-| FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))            |
-| FFF0      | 0007 | xxxx | xxaa | Symbol                                     |
-| FFF0      | 0008 | 00xx | xxxx | Character                                  |
-| FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy) |
-| FFF1-FFF4 | xxxx | xxxx | xxxx | unused                                     |
-| FFF5      | xxxx | xxxx | xxxx | heap thunk                                 |
-| FFF6      | xxxx | xxxx | xxxx | non-local thunk                            |
-| FFF7      | xxxx | xxxx | xxxx | heap object                                |
-| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                               |
-| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal                        |
-| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                             |
-| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal                        |
-
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
-Groups 5 through 7 have the low 48 bits being the address of an object.
-
-### Modified Spur Encoding
-Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk).
-
-Spur uses the [following format](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/):
-![[Pasted image 20240115082827.png]]
-This provides 61-bit SmallInteger and immediate floats that have an exponent range equivalent to 32-bit floats (approximately 1e-77 to 1e77) with the full 64-bit float mantissa. Determining which of the 4 types is a simple bit-test. Decoding the float is a test for the zero case and then a shift, add a 64-bit constant, and a rotate.
-
-We extend this slightly, by using all 8 possible tag values:
-0: Pointer
-1: SmallInteger
-2: immediate values for the classes Character, Symbol, True, False, UndefinedObject. The next 16 bits are the class number, and the top 32 bits are the information (the character Unicode value or the symbol hash code). In a few cases, the top 45 bits plus 3 low zero bits provides a 48-bit address allowing capture of closures or contexts.
-3-7: Float. By using 5 tags we can encode all 64-bit floats less than 2e77. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 3, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits; if the resulting low 3 bits are less than 5, add 3; otherwise immediate encoding is not possible.
-
-| Rest     |          |     |          |     |          |          | Tag      | Type          |
-| -------- | -------- | --- | -------- | --- | -------- | -------- | -------- | ------------- |
-| aaaaaaaa | ...      | ... | ...      | ... | aaaaaaaa | aaaaaaaa | aaaaa000 | pointer       |
-| xxxxxxxx | ...      | ... | ...      | ... | xxxxxxxx | xxxxxxxx | xxxxx001 | SmallInteger  |
-| xxxxxxxx | ...      | ... | xxxxxxxx | ... | 00000ccc | cccccccc | ccccc010 | intermediates |
-| aaaaaaaa | ...      | ... | ...      | ... | aaaaaccc | cccccccc | ccccc010 | intermediates |
-| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn011 | double        |
-| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn100 | double        |
-| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn101 | double        |
-| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn110 | double        |
-| eeeeeeee | nnnnnnnn | ... | ...      | ... | ...      | nnnnnnnn | nnnnn111 | double        |
-
-Because we are using all 8 possible values of the tag field, where the test in Spur for "is a SmallInteger" (or Float) was simply an `and`, using our encoding it requires an `and` followed by a `cmp`.
-### Immediates
-
-All zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `nil`, `true`, `false`, Characters, and Symbols.
-
-| 32 bit Data |          |          |          |       | Tag | Class           |
-| ----------- | -------- | -------- | -------- | ----- | --- | --------------- |
-| dddddddd    | 00000000 | 00000000 | 00000000 | 00011 | 010 | UndefinedObject |
-| dddddddd    | 00000000 | 00000000 | 00000000 | 00100 | 010 | False           |
-| dddddddd    | 00000000 | 00000000 | 00000000 | 00101 | 010 | True            |
-| dddddddd    | 00000000 | 00000000 | 00000000 | 00111 | 010 | Symbol          |
-| dddddddd    | 00000000 | 00000000 | 00000000 | 01000 | 010 | Character       |
-
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 16 bits and the hash code is 32-45 bits. Most immediate classes use the hash32 value which is the top 32 bits. A few use the full 45 available bits, because extended with 3 zero bits they can be treated as a pointer. The encodings for UndefinedObject, True, and False are extremely wasteful of space (because there is only one instance of each, so the hash code is irrelevant), but the efficiency of dispatch and code generation depend on them being immediate values and having separate classes.
-
+### [[Encoding-NaN]]
+### [[Encoding-Modified-Spur]]
+### [[Encoding-Modified2-Spur]]
 #### Class numbers
 1. Object - this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object, so sign-extending the address is all that is required (at most, for NaN encoding). This gives us 48-bit addresses, which is the maximum for current architectures. (This could be extended by 3 more bits, if required.)
-2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-1,125,899,906,842,624 to 1,125,899,906,842,623). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]). In the (modified) Spur encoding, they are 61-bit integers, and different optimizations are possible.
+2. SmallInteger - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. In the NaN encoding, for integers the low 50 bits of the"hash code" make up the value, so this provides 50-bit integers (-562,949,953,421,312 to 562,949,953,421,311). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]). In the (modified) Spur encoding, they are 61-bit integers, and different optimizations are possible.
 3. UndefinedObject: This encodes the singleton value `nil`.
 4. False: The False and True classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation). This encodes the singleton value `false`.
 5. True: This encodes the singleton value `true`
