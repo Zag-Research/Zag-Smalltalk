@@ -9,7 +9,7 @@ Code generators can inquire as to values and types
 "
 Class {
 	#name : 'ASStackTemporary',
-	#superclass : 'ASStackNonContext',
+	#superclass : 'ASStackNonEmpty',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
@@ -45,10 +45,23 @@ ASStackTemporary >> drop: count [
 	^ next drop: count-1
 ]
 
+{ #category : 'instance creation' }
+ASStackTemporary >> fromStack: anASStack [
+
+	next := anASStack.
+	offset := anASStack offsetForTemps - 1
+]
+
 { #category : 'accessing' }
 ASStackTemporary >> id [
 
 	^ offset
+]
+
+{ #category : 'API' }
+ASStackTemporary >> intoContext: anInteger [
+
+	^ next intoContext: anInteger
 ]
 
 { #category : 'as yet unclassified' }
@@ -98,6 +111,12 @@ ASStackTemporary >> newElementFor: aBasicBlock [
 
 	^ (self replicate: (next newElementFor: aBasicBlock)) data:
 		  (aBasicBlock flowForTemporaries new basicBlock: aBasicBlock)
+]
+
+{ #category : 'as yet unclassified' }
+ASStackTemporary >> offsetForTemps [
+
+	^ offset
 ]
 
 { #category : 'displaying' }

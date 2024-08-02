@@ -92,6 +92,7 @@ manifest ifFalse: [ ^ output visitPushNil ].
 { #category : 'stack' }
 ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
 
+	block parent: aBasicBlock.
 	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: block) basicBlock: aBasicBlock)
 ]
 

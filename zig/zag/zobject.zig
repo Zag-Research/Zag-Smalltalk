@@ -185,9 +185,9 @@ const NanObject = packed struct(u64) {
     }
     pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
-    pub const False = oImm(.False, 0x0);
-    pub const True = oImm(.True, 0x1);
-    pub const Nil = oImm(.UndefinedObject, 0xffffffff);
+    pub const False = oImm(.False, 0);
+    pub const True = oImm(.True, 0);
+    pub const Nil = oImm(.UndefinedObject, 0);
     pub const NotAnObject = oImm(.UndefinedObject, 0x3); // never a valid object... should never be visible to managed language
     pub const u64_MINVAL = g(.smallInt);
     const u64_ZERO = g(.smallInt0);
@@ -408,7 +408,7 @@ const TagObject = packed struct(u64) {
         return .{.tag=.immediates,.classIndex=cls,.hash=low32};
     }
     pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.hash>>8);
+        return @truncate(self.hash);
     }
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.hash);

@@ -260,14 +260,6 @@ ASCodeGenerator >> inlineBlock: aSymbol next: common [
 		targetClass := savedTargetClass ]
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> inlineBlock: aString tail: aBoolean [
-	"do we need to test for recursion?"
-	
-	"find the block on the stack"
-	code stack value block zigWalkInlineMethod: self
-]
-
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
 
@@ -294,15 +286,15 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 ]
 
 { #category : 'inlining' }
-ASCodeGenerator >> inlineMultiple: aCollection from: anASCSend exhaustive: isExhaustive [
+ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaustive [
 
 	| case |
 	isExhaustive ifTrue: [ code removeLastOperation ].
 	case := code
-		        classCase: (aCollection collect: #methodClass)
-		        selector: aCollection first selector.
+		        classCase: (methods collect: #methodClass)
+		        selector: methods first selector.
 	isExhaustive ifFalse: [ code swapLastOperations ].
-	^ aCollection do: [ :compiledMethod |
+	^ methods do: [ :compiledMethod |
 		  | targetBlock |
 		  targetBlock := case at: compiledMethod methodClass.
 		  basicBlocks add: targetBlock.
@@ -479,8 +471,8 @@ ASCodeGenerator >> pushBlock: anASBlock [
 	blockClosures add: block.
 	code setStackForBlock: block.
 	block asBlock: anASBlock.
-	block parent: self.
-	code addOperation: (ASCBlock with: ((ASFlowNew value: block) basicBlock: code))
+	block codeGenerator: self.
+	code addOperation: (ASCBlock with: block)
 ]
 
 { #category : 'API' }

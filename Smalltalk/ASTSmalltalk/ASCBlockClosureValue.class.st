@@ -43,9 +43,20 @@ ASCBlockClosureValue >> codeGenerator [
 			                   ast: asBlock ]
 ]
 
+{ #category : 'accessing' }
+ASCBlockClosureValue >> codeGenerator: anASCodeGenerator [ 
+	codeGenerator := anASCodeGenerator
+]
+
 { #category : 'data flow instructions' }
 ASCBlockClosureValue >> finalAnalysis [
 	self codeGenerator finalAnalysis
+]
+
+{ #category : 'flow' }
+ASCBlockClosureValue >> flowClass [
+
+	^ BlockClosure
 ]
 
 { #category : 'accessing' }
