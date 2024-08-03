@@ -43,20 +43,23 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 #### Class numbers
 1. `ThunkHeap`: This encodes a thunk that evaluates to a heap object. The address of the heap object is in the high 48 bits. (A non-zero extra field could be encoded to access an instance variable, if that is deemed to be a useful optimization.)
 2. `ThunkReturnLocal`: This and the following 3 classes encode thunks that do non-local returns of a value, where the address of the `Context` is in the high 48 bits. This class returns a value from the `Context` (a local, parameter, or the `self` object). The local offset is encoded in the extra field.
-3. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable number is encoded in the extra field.
+3. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object.
 4. `ThunkReturnSmallInteger`: This encodes a non-local return of a 8-bit signed integer, encoded in the extra field.
 5. `ThunkReturnImmediate`: This encode a non-local return of an immediate value (`nil`, `false`, or `true`). Simply returns the extra field, so 0 is `nil`, `00111001` is `true`, etc.
 6. `ThunkReturnCharacter`: This encodes a non-local return of an 8-bit character, with the character encoded in the extra field. This doesn't encode all characters, but it encodes all the ASCII characters.
-7. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
-8. `True`: This encodes the singleton value `true`.
-9. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-10. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
-11. `Symbol`: See [Symbols](Symbols.md) for detailed information on the format.
-12. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-13. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
-14. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include any reasonable integral value as well as common fractional values such as 0.5, 0.25). Values that can't be encoded that way would use `ThunkHeap` to return an object.
-15. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
-16. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
+7. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local in the `Context`. That value is also the result. The local offset is encoded in the extra field.
+8. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the high 48 bits. That value is also the result. The variable index is encoded in the extra field.
+9. `BlockGetInstance`: This evaluates to the value of an instance variable of the object referred to in the high 48 bits. The variable index is encoded in the extra field.
+10. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
+11. `True`: This encodes the singleton value `true`.
+12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
+13. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
+14. `Symbol`: See [Symbols](Symbols.md) for detailed information on the format.
+15. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
+16. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
+17. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include any reasonable integral value as well as common fractional values such as 0.5, 0.25). Values that can't be encoded that way would use `ThunkHeap` to return an object.
+18. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
+19. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
