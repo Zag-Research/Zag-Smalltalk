@@ -175,6 +175,15 @@ fn calculateAndWriteHeader(writeFile: bool) void {
     }
 }
 
+const header = struct {
+    magic: [8]u8,
+    checksum: u64,
+    loadAddress: u64,
+    target: Object,
+    selector: Object,
+class table @ 
+sym table @
+dispatch table @
 pub fn main() void {
     calculateAndWriteHeader(true);
 }
