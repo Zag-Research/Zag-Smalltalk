@@ -175,15 +175,22 @@ fn calculateAndWriteHeader(writeFile: bool) void {
     }
 }
 
-const header = struct {
+const ZagHeader = struct {
     magic: [8]u8,
     checksum: u64,
     loadAddress: u64,
     target: Object,
     selector: Object,
-class table @ 
-sym table @
-dispatch table @
+    classTable: Object,
+    symTable: Object,
+    dispatchTable: Object,
+    const headerMagic: [8]u8 = "ZigImage";
+    pub fn headerMatches(self: *ZagHeader) bool {
+        for (self.magic,headerMagic) | sm, hm |
+            if (sm !- hm) return false;
+        return self.checksum == zfHashValue;
+    }
+};
 pub fn main() void {
     calculateAndWriteHeader(true);
 }
