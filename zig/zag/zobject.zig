@@ -62,14 +62,21 @@ pub fn fromLE(comptime T: type, v: T) Object {
 pub const compareObject = Object.compare;
 pub const ClassIndex = enum(u16) {
     none = 0,
-    Object,
-    SmallInteger,
+    ThunkHeap,
+    ThunkReturnLocal,
+    ThunkReturnSmallInteger,
+    ThunkReturnImmediate,
+    ThunkReturnCharacter,
     UndefinedObject,
-    False,
     True,
-    Float,
+    False,
+    SmallInteger,
     Symbol,
     Character,
+    ThunkImmediate,
+    ThunkFloat,
+    Float,
+    Object,
     Array,
     String,
     CompiledMethod,
@@ -78,18 +85,6 @@ pub const ClassIndex = enum(u16) {
     BlockClosure,
     Method,
     Dispatch,
-    ThunkSmallInteger,
-    ThunkFloat,
-    ThunkImmediate,
-    ThunkReturnSelf,
-    ThunkReturnTrue,
-    ThunkReturnFalse,
-    ThunkReturnNil,
-    ThunkReturn_1,
-    ThunkReturn0,
-    ThunkReturn1,
-    ThunkReturn2,
-    ThunkHeap,
     max = 0xffff - 8,
     replace7,
     replace6,
@@ -108,6 +103,29 @@ pub const ClassIndex = enum(u16) {
     // inline fn immediate(cg: Self) u64 {
     //     return (@as(u64, @intFromEnum(Group.immediates)) << 48) | cg.base();
     // }
+    pub const Compact = enum(u5) {
+        none = 0,
+        ThunkHeap,
+        ThunkReturnLocal,
+        ThunkReturnSmallInteger,
+        ThunkReturnImmediate,
+        ThunkReturnCharacter,
+        UndefinedObject,
+        True,
+        False,
+        SmallInteger,
+        Symbol,
+        Character,
+        ThunkImmediate,
+        ThunkFloat,
+        Float,
+        inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+    };
+    pub inline fn compact(ci: ClassIndex) Compact {
+        return @enumFromInt(@intFromEnum(ci));
+    }
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);

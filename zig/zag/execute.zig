@@ -265,6 +265,9 @@ pub const PC = extern struct {
     pub inline fn next(self: PC) PC {
         return asPC(self.array() + 1);
     }
+    pub inline fn prev(self: PC) PC {
+        return asPC(self.array() - 1);
+    }
     pub inline fn prim2(self: PC) ThreadedFn {
         return self.array()[1].prim;
     }
@@ -1225,6 +1228,23 @@ pub const controlPrimitives = struct {
         const context = tfAsContext(_context);
         trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, undefined });
+    }
+    pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+        const process = tfAsProcess(_process);
+        const context = tfAsContext(_context);
+        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        const tPc = context.getTPc();
+        const nPc = tPc.prev().prim();
+        return @call(tailCall, nPc, .{ tPc, sp, process, context, undefined });
+    }
+    pub fn isCallerInThreadedMode(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+        const process = tfAsProcess(_process);
+        const context = tfAsContext(_context);
+        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        const tPc = context.getTPc();
+        const nPc = tPc.prev().prim();
+        const newSp = sp.push(if (nPc==context.getNPc()) True else False);
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
 };
 pub const Execution = struct {

@@ -126,7 +126,7 @@ const fibCPS  = if (cpsIncluded) struct {
             try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
         }
     }
-    var fibCPSM = compileMethod(Sym.i_0, 0, 0, .none, .{&fib});
+    var fibCPSM = compileMethod(Sym.i_0, 0, 0, .none, .{&fib,&fibCPS0,&fibCPS1,&fibCPS2});
     const fibCPST = PC.init(&fibCPSM.code[0]);
     const method = fibCPSM.asCompiledMethodPtr();
     pub fn fib(_: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
@@ -330,9 +330,8 @@ const fibDispatch  = if (dispatchIncluded) struct {
             "^",
             &e.pushLocal0,
             &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
-            &e.send0,
-
-            Sym.i_0,
+            &e.send0,     Sym.i_0,  // #fib
+            // dispatch block
             &e.pushLocal0,
             &e.SmallInteger.@"-_L2", // -2
             &e.send0,
