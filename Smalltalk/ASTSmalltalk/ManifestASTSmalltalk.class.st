@@ -70,32 +70,14 @@ ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #sequenceTo:then:withReturn:
-	              #false ) )
-	        #'2021-10-04T23:01:49.526703-04:00' )
-	     #( #( #RGMethodDefinition #( #ASScanner #token #false ) )
-	        #'2021-10-09T08:06:50.250593-04:00' )
-	     #( #( #RGMethodDefinition #( #ASCValue #value: #false ) )
-	        #'2023-10-06T17:33:21.190789-04:00' )
-	     #( #( #RGMethodDefinition #( #'ASImage class' #initialize
-	              #true ) )
-	        #'2024-04-12T11:41:16.943424-04:00' )
-	     #( #( #RGMethodDefinition #( #ASImage #initialize #false ) )
-	        #'2024-04-13T09:00:24.594294-04:00' )
-	     #( #( #RGMethodDefinition #( #'ASAllocationInfo class'
-	              #headerIVars:indexed:element:weak:
-	              #true ) )
-	        #'2024-04-13T20:36:41.511805-04:00' )
-	     #( #( #RGMethodDefinition #( #ASCodeGenerator #initialize
-	              #false ) )
-	        #'2024-06-28T09:13:23.111016-04:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#AStExactClass #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImage #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:23.111016-04:00') #(#(#RGMethodDefinition #(#'ASInliner class' #reset #true)) #'2024-08-10T09:35:19.414618-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleMinMaxRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') #(#(#RGMethodDefinition #(#ASCValue #value: #false)) #'2023-10-06T17:33:14.213283-04:00') #(#(#RGMethodDefinition #(#ASCValue #store: #false)) #'2023-10-06T21:44:23.963698-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') #(#(#RGMethodDefinition #(#AStExactClass #value: #false)) #'2023-10-06T17:33:14.213283-04:00') #(#(#RGMethodDefinition #(#AStExactClass #store: #false)) #'2023-10-06T21:44:23.963698-04:00') )
 ]
 
 { #category : 'code-critics' }

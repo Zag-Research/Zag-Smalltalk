@@ -10,18 +10,20 @@ Class {
 ASCValueTest >> testBoolean [
 
 	| val |
-	val := ASCValue new store: (ASCLiteralValue new init: true).
+	self fail: 'needs rewrite'.
+	val := AStExactClass new store: (ASCLiteralValue new init: true).
 	self assert: val kind equals: True.
 	val store: (ASCLiteralValue new init: false).
 	self assert: val kind equals: Boolean.
-	self deny: val isRanged 
+	self deny: val isRanged
 ]
 
 { #category : 'tests' }
 ASCValueTest >> testNumbers [
 
 	| val |
-	val := ASCValue new store: (ASCLiteralValue new init: 17).
+	self fail: 'needs rewrite'.
+	val := AStExactClass new store: (ASCLiteralValue new init: 17).
 	self assert: val kind equals: SmallInteger.
 	val store: (ASCLiteralValue new init: 42).
 	self assert: val kind equals: SmallInteger.

@@ -41,7 +41,7 @@ ASStackNamed >> displayStringOn: stream [
 				 ifFalse: [ '' ]);
 		nextPut: $);
 		nextPutAll: ' >';
-		print: data
+		print: location
 ]
 
 { #category : 'accessing' }
@@ -76,12 +76,6 @@ ASStackNamed >> isInContext [
 	^ isInContext
 ]
 
-{ #category : 'data flow instructions' }
-ASStackNamed >> markReferenced [
-
-	^ data markReferenced
-]
-
 { #category : 'operations' }
 ASStackNamed >> mergeWith: aCollection [
 ]
@@ -112,8 +106,8 @@ ASStackNamed >> printNameOn: stream [
 { #category : 'output' }
 ASStackNamed >> pushTheVariable: anASLLMethodOutput [
 
-	isInContext ifTrue: [^ data pushFromContext: offset with: anASLLMethodOutput].
-	^ data pushFromStack: offset with: anASLLMethodOutput
+	isInContext ifTrue: [^ location pushFromContext: offset with: anASLLMethodOutput].
+	^ location pushFromStack: offset with: anASLLMethodOutput
 ]
 
 { #category : 'API' }

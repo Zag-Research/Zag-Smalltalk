@@ -39,5 +39,5 @@ ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
 	| stackElement |
 	stack := aStack.
 	stackElement := aStack at: #self.
-	^ (ASStackTemporary fromStack: stackElement next) data: ((ASFlowNew from: stackElement data) basicBlock: aBasicBlock)
+	^ (ASStackTemporary fromStack: stackElement next) data: aStack data
 ]

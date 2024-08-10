@@ -228,8 +228,15 @@ ASCompilerInlineTest >> testBlockValueInlined [
 
 	^ [ 4 ] value "
 
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #blockValue)
-		inspect.
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #blockValue.
+	cg
+		inline: true;
+		finalAnalysis;
+		flowAnalysis.
+	cg inspect.
 ]
 
 { #category : 'tests' }

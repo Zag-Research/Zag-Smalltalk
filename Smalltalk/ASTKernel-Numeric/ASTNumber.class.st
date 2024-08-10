@@ -436,32 +436,28 @@ ASTNumber >> to: stop by: step [
 
 { #category : 'enumerating' }
 ASTNumber >> to: stop by: step do: aBlock [
-
 	"Evaluate aBlock for each element of the interval (self to: stop by: step)."
 
-	| nextValue |
-	nextValue := self.
-	step < 0
-		ifTrue: [ 
-			^ [ stop <= nextValue ] whileTrue: [ 
-				aBlock value: nextValue.
-				nextValue := nextValue + step ] ]
-		ifFalse: [ 
-			^ [ stop >= nextValue ] whileTrue: [ 
-				aBlock value: nextValue.
-				nextValue := nextValue + step ] ]
+	step < 0 ifTrue: [
+		self >= stop ifTrue: [
+			aBlock value: self.
+			^ self + step to: stop by: step do: aBlock ].
+		^ self ].
+	step > 0 ifTrue: [
+		self <= stop ifTrue: [
+			aBlock value: self.
+			^ self + step to: stop by: step do: aBlock ].
+		^ self ].
+	self error: 'step must be non-zero'
 ]
 
 { #category : 'enumerating' }
 ASTNumber >> to: stop do: aBlock [
+	"Evaluate aBlock for each element of the interval (self to: stop by: 1)."
 
-	"NEvaluate aBlock for each element of the interval (self to: stop by: 1)."
-
-	| nextValue |
-	nextValue := self.
-	^ [ nextValue <= stop ] whileTrue: [ 
-		aBlock value: nextValue.
-		nextValue := nextValue + 1 ]
+	self <= stop ifTrue: [
+		aBlock value: self.
+		^ self + 1 to: stop do: aBlock ]
 ]
 
 { #category : 'truncation and round off' }

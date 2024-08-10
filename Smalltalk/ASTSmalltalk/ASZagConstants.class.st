@@ -95,9 +95,9 @@ Class {
 		'ZfVerifyDirectSelector',
 		'ZfVerifySelector'
 	],
-	#category : 'ASTSmalltalk-Output',
+	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#tag : 'Image'
 }
 
 { #category : 'mapping' }

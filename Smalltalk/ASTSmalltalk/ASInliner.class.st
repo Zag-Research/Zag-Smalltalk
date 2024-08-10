@@ -114,6 +114,12 @@ ASInliner class >> lookup: selector stack: aStack [
 	^ nil
 ]
 
+{ #category : 'instance creation' }
+ASInliner class >> new [
+
+	self error: 'don''t create ASInliner instances'
+]
+
 { #category : 'inlining' }
 ASInliner class >> prim: anInteger class: selfClass parameterClass: parameterClass returns: returnClass [
 
@@ -164,7 +170,11 @@ ASInliner class >> reset [
 	self selfMatch: ASTBlockClosure >> #value:.
 	self selfMatch: ASTBlockClosure >> #value:value:.
 	self selfMatch: ASTBlockClosure >> #value:value:value:.
-	self selfMatch: ASTBlockClosure >> #value:value:value:value:
+	self selfMatch: ASTBlockClosure >> #value:value:value:value:.
+	self selfMatch: ASTSymbol >> #value:".
+	self selfMatch: ASTSymbol >> #value:value:.
+	self selfMatch: ASTSymbol >> #value:value:value:.
+	self selfMatch: ASTSymbol >> #value:value:value:value:"
 ]
 
 { #category : 'inlining' }

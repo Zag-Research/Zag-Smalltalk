@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'offset',
 		'next',
-		'data'
+		'location'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -44,20 +44,21 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 { #category : 'as yet unclassified' }
 ASStackNonEmpty >> data [
 
-	^ data
+	^ location stackValue
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> data: anObject [
+ASStackNonEmpty >> data: aStackValue [
 
-	anObject isFlowSource ifFalse: [ ^ self error: 'must be source' ].
-	data := anObject
+	(aStackValue isKindOf: AStackValue) ifFalse: [
+		self error: 'must be a AStackValue' ].
+	location stackValue: aStackValue
 ]
 
 { #category : 'evaluating' }
 ASStackNonEmpty >> dataClass [
 
-	^ data dataClass
+	^ location dataClass
 ]
 
 { #category : 'displaying' }
@@ -83,7 +84,7 @@ ASStackNonEmpty >> fromStack: anASStack [
 { #category : 'output' }
 ASStackNonEmpty >> getNameOn: anASLLMethodOutput [
 
-	^ data getNameFor: self on: anASLLMethodOutput
+	^ location getNameFor: self on: anASLLMethodOutput
 ]
 
 { #category : 'testing' }
@@ -95,6 +96,13 @@ ASStackNonEmpty >> hasContext [
 { #category : 'as yet unclassified' }
 ASStackNonEmpty >> id [
 	^ self subclassResponsibility
+]
+
+{ #category : 'initialization' }
+ASStackNonEmpty >> initialize [
+
+	super initialize.
+	location := AStackLocation new
 ]
 
 { #category : 'API' }
@@ -121,16 +129,23 @@ ASStackNonEmpty >> linkContext: aBlock [
 	^ self replicate: (next linkContext: aBlock)
 ]
 
+{ #category : 'accessing' }
+ASStackNonEmpty >> location: anAStackLocation [
+
+	location := anAStackLocation
+]
+
 { #category : 'data flow instructions' }
 ASStackNonEmpty >> makeStackTheSource [
 
-	data := ASFlowOnDemand from: data.
+	location := ASFlowOnDemand from: location.
 	^ next makeStackTheSource
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'data flow instructions' }
 ASStackNonEmpty >> markReferenced [
-	^ self subclassResponsibility
+
+	^ location markReferenced
 ]
 
 { #category : 'operations' }
@@ -140,8 +155,9 @@ ASStackNonEmpty >> mergeWith: aStackElement [
 ]
 
 { #category : 'data flow instructions' }
-ASStackNonEmpty >> newElementFor: aBasicBlock [ 
-	^ self subclassResponsibility
+ASStackNonEmpty >> newElementFor: aBasicBlock [
+
+	^ self replicate: (next newElementFor: aBasicBlock)
 ]
 
 { #category : 'accessing' }
@@ -171,13 +187,19 @@ ASStackNonEmpty >> offsetToSelf: anInteger [
 { #category : 'stack' }
 ASStackNonEmpty >> replicate [
 
-	^ (self replicate: next replicate) data: data
+	^ (self replicate: next replicate) data: location
 ]
 
 { #category : 'API' }
 ASStackNonEmpty >> replicate: aStack [
 
-	^ (self class fromStack: aStack) data: data
+	^ (self class fromStack: aStack) location: location
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNonEmpty >> stackValue [
+
+	^ location stackValue
 ]
 
 { #category : 'enumerating' }

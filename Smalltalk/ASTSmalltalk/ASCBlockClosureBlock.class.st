@@ -69,7 +69,7 @@ ASCBlockClosureBlock >> initSelf: targetClass [
 
 	| source |
 	stack := stack initSelf.
-	source := ASFlowParameter new class: targetClass.
+	source := AStackValue fromClass: targetClass.
 	^ stack data: source
 ]
 

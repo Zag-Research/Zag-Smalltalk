@@ -243,18 +243,19 @@ ASCodeGenerator >> inline: aBoolean [
 ]
 
 { #category : 'translating' }
-ASCodeGenerator >> inlineBlock: aSymbol next: common [
+ASCodeGenerator >> inlineBlock: offset next: common [
 
-	| inlineBlock savedReturn savedTargetClass |
+	| savedReturn savedTargetClass |
 	savedTargetClass := targetClass.
-	inlineBlock := self newInlineBlockClosure.
 	savedReturn := returnBlock.
 	[
+	| inlineBlock |
 	returnBlock := common.
+	inlineBlock := self newInlineBlockClosure.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	(code stackBelow: aSymbol numArgs) value block zigWalkInlineMethod:
-		self.
+	self halt.
+	(code stackBelow: offset) stackValue block zigWalkInlineMethod: self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
@@ -311,6 +312,7 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 	primitive := aCompiledMethod primitive.
 	returnBlock := self getOrMakeReturnBlock.
 	self halt.
+	(primitive between: 201 and: 205) ifTrue: [ ^ self inlineValue: primitive for: aClass next: returnBlock ].
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
 			 primitive: primitive).
@@ -324,6 +326,13 @@ ASCodeGenerator >> inlineRecursiveMethod: aCompileMethod block: anASCInlinedMeth
 	code removeLastOperation.
 	code popStackTo: anASCInlinedMethodBlock.
 	self branch: anASCInlinedMethodBlock
+]
+
+{ #category : 'inlining' }
+ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
+
+	aClass == BlockClosure ifTrue: [ ^ self inlineBlock: anInteger - 201 next: aBasicBlock ].
+	self halt " handle Symbol value: "
 ]
 
 { #category : 'data flow instructions' }
@@ -466,12 +475,8 @@ ASCodeGenerator >> pushArray: arraySize [
 ASCodeGenerator >> pushBlock: anASBlock [
 
 	| block |
-	block := ASCBlockClosureValue new.
-	block name: self newBlockName.
+	block := AStBlock new block: anASBlock.
 	blockClosures add: block.
-	code setStackForBlock: block.
-	block asBlock: anASBlock.
-	block codeGenerator: self.
 	code addOperation: (ASCBlock with: block)
 ]
 

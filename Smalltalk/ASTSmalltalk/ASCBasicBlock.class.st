@@ -70,7 +70,7 @@ ASCBasicBlock >> addSourceBlock: aBasicBlock [
 			ifNotNil: [
 				sourceElements
 					with: aBasicBlock stack
-					do: [ :stackElement :other | stackElement mergeWith: other ] ] ]
+					do: [ :stackElement :other | self flag: 'stackElement mergeWith: other' ] ] ]
 ]
 
 { #category : 'data flow instructions' }
@@ -149,7 +149,7 @@ ASCBasicBlock >> copyStackFrom: aBasicBlock [
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> doPush: anObject [
 
-	stack := stack pushFlowAsTemporary: ((ASFlowNew value: anObject) basicBlock: self).
+	stack := stack pushDataAsTemporary: (AStackValue fromValue: anObject).
 	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
@@ -238,10 +238,10 @@ ASCBasicBlock >> indexOf: anObject [
 { #category : 'API' }
 ASCBasicBlock >> initLocalNamed: aSymbol [
 
-	stack := stack initLocalNamed: aSymbol.
+	^ stack := stack initLocalNamed: aSymbol".
 	^ stack data: (self flowForLocals new
 			   basicBlock: self;
-			   class: nil)
+			   class: nil)"
 ]
 
 { #category : 'initialization' }
@@ -445,7 +445,7 @@ ASCBasicBlock >> pushArray: arraySize [
 { #category : 'as yet unclassified' }
 ASCBasicBlock >> pushNil [
 
-	stack := stack pushFlowAsTemporary: ASFlowNil singleton
+	stack := stack pushDataAsTemporary: AStUndefinedClass singleton
 ]
 
 { #category : 'API' }

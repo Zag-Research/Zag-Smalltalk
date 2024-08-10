@@ -73,6 +73,14 @@ ASTSymbol >> numArgs [
 	^ self identityHash >> 25
 ]
 
+{ #category : 'error handling' }
+ASTSymbol >> numArgsError: numArgsForInvocation [
+
+	ArgumentsCountMismatch
+		signalExpectedArgumentsCount: self numArgs
+		calledArgumentsCount: numArgsForInvocation
+]
+
 { #category : 'printing' }
 ASTSymbol >> printOn: aStream [
 	aStream nextPutAll: self
@@ -93,4 +101,12 @@ ASTSymbol >> shallowCopy [
 { #category : 'as yet unclassified' }
 ASTSymbol >> species [
 	^ ASTString
+]
+
+{ #category : 'accessing' }
+ASTSymbol >> value: arg [
+	"Send self to the argument. (i.e. perform: )"
+
+	<primitive: 202>
+	^ self numArgsError: 1
 ]

@@ -12,12 +12,5 @@ Class {
 { #category : 'operations' }
 ASLocalNamed >> mergeWith: aStackElement [
 
-	data := data mergeWith: aStackElement data
-]
-
-{ #category : 'data flow instructions' }
-ASLocalNamed >> newElementFor: aBasicBlock [
-
-	^ (self replicate: (next newElementFor: aBasicBlock)) data:
-		  (aBasicBlock flowForLocals new basicBlock: self)
+	location stackValue: (location stackValue mergeWith: aStackElement stackValue)
 ]

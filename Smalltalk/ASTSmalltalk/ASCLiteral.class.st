@@ -29,7 +29,8 @@ ASCLiteral >> outputTo: output [
 { #category : 'stack' }
 ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack pushFlowAsTemporary: ((ASFlowNew value: literal) basicBlock: aBasicBlock)
+	^ anASStack pushDataAsTemporary:
+		  (AStackValue fromValue: literal)
 ]
 
 { #category : 'instance creation' }

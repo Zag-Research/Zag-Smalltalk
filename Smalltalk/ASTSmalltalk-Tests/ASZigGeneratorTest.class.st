@@ -13,9 +13,9 @@ ASZigGeneratorTest >> testASAssign [
 	stackVars := OrderedCollection new.
 	stackVars add: 'x'.
 
-	result := (ASAssign
+"	result := (ASAssign
 		           variable: (ASCLocal name: 'x')
-		           expression: (ASLiteral literal: 3)) zigTestString.
+		           expression: (ASLiteral literal: 3)) zigTestString."
 	self
 		assert: result
 		equals: '&e.pushLiteral, Object.from(3), &e.popLocal, 1'

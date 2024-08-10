@@ -18,16 +18,6 @@ ASParameterNamed >> dependentValuesDo: ignored [
 { #category : 'data flow instructions' }
 ASParameterNamed >> makeStackTheSource [
 
-	data := ASFlowParameter from: data.
+	location := ASFlowParameter from: location.
 	^ next makeStackTheSource
-]
-
-{ #category : 'data flow instructions' }
-ASParameterNamed >> newElementFor: aBasicBlock [
-
-	| flow |
-	flow := aBasicBlock flowForParameters.
-	flow ifNil: [ ^ self ].
-	^ (self replicate: (next newElementFor: aBasicBlock)) data:
-		  (flow new basicBlock: aBasicBlock)
 ]

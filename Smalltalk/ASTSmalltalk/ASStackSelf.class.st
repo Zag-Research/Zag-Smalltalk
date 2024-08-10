@@ -4,18 +4,10 @@ I am a stack element for the `self` position on the stack. This let's code be si
 Class {
 	#name : 'ASStackSelf',
 	#superclass : 'ASParameterNamed',
-	#instVars : [
-		'codeBlock'
-	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
-
-{ #category : 'as yet unclassified' }
-ASStackSelf >> codeBlock: aBlock [
-	codeBlock := aBlock
-]
 
 { #category : 'enumerating' }
 ASStackSelf >> do: aBlock [
@@ -42,7 +34,7 @@ ASStackSelf >> intoContext: anInteger [
 { #category : 'data flow instructions' }
 ASStackSelf >> makeStackTheSource [
 
-	data := ASFlowParameter from: data
+	location := ASFlowParameter from: location
 ]
 
 { #category : 'adding' }
@@ -54,8 +46,7 @@ ASStackSelf >> nameStack: aCollection offset: anInteger forBlock: aBasicBlock [
 { #category : 'data flow instructions' }
 ASStackSelf >> newElementFor: aBasicBlock [
 
-	^ (self replicate: next) data:
-		  (aBasicBlock flowForSelf ifNil: [data] ifNotNil: [: flowClass | flowClass new basicBlock: aBasicBlock])
+	^ self replicate: next
 ]
 
 { #category : 'stack' }

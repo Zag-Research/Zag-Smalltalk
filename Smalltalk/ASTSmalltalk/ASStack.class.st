@@ -122,6 +122,12 @@ ASStack >> offset [
 	^ 0
 ]
 
+{ #category : 'as yet unclassified' }
+ASStack >> offsetForTemps [
+
+	^ 0
+]
+
 { #category : 'displaying' }
 ASStack >> printNameOn: stream [
 
@@ -135,7 +141,7 @@ ASStack >> printOn: aStream [
 ]
 
 { #category : 'adding' }
-ASStack >> pushFlowAsTemporary: aFlow [
+ASStack >> pushDataAsTemporary: aFlow [
 
 	^ (ASStackTemporary fromStack: self) data: aFlow 
 ]

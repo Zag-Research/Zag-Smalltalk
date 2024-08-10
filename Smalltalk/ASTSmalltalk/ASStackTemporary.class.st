@@ -30,7 +30,7 @@ ASStackTemporary >> displayStringOn: stream [
 		nextPutAll: ' (';
 		print: offset;
 		nextPutAll: ') >';
-		print: data
+		print: location
 ]
 
 { #category : 'accessing' }
@@ -67,29 +67,23 @@ ASStackTemporary >> intoContext: anInteger [
 { #category : 'as yet unclassified' }
 ASStackTemporary >> makeManifestFor: anInteger [
 
-	data markReferenced.
+	location markReferenced.
 	anInteger <= 1 ifTrue: [ ^ self ].
 	^ next makeManifestFor: anInteger - 1
-]
-
-{ #category : 'data flow instructions' }
-ASStackTemporary >> markReferenced [
-
-	^ data markReferenced
 ]
 
 { #category : 'data flow instructions' }
 ASStackTemporary >> markReferenced: n [
 
 	n == 0 ifTrue: [ ^ self ].
-	data markReferenced.
+	location markReferenced.
 	^ next markReferenced: n - 1
 ]
 
 { #category : 'operations' }
 ASStackTemporary >> mergeWith: aStackElement [
 
-	data := data mergeWith: aStackElement data
+	location stackValue: (location stackValue mergeWith: aStackElement stackValue)
 ]
 
 { #category : 'adding' }
@@ -103,14 +97,7 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 			   (ASParameterNamed fromStack: (next
 					     nameStack: parameterNamesLeftToRight
 					     offset: anInteger + 1
-					     forBlock: basicBlock)) name: name ]) data: data
-]
-
-{ #category : 'data flow instructions' }
-ASStackTemporary >> newElementFor: aBasicBlock [
-
-	^ (self replicate: (next newElementFor: aBasicBlock)) data:
-		  (aBasicBlock flowForTemporaries new basicBlock: aBasicBlock)
+					     forBlock: basicBlock)) name: name ]) location: location
 ]
 
 { #category : 'as yet unclassified' }
