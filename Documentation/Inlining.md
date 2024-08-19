@@ -1,8 +1,8 @@
 Inlining is the primary target-independent optimization for the Zag Smalltalk compiler. This is similar to [SELF](papers-others/An_Efficient_Implementation_of_SELF_a_Dy.pdf); it is available because methods are compiled for each target (class in Smalltalk, prototype in SELF).
 
-When Zag compiler is asked to compile a particular selector for a target class, it looks at the class and its superclasses for the corresponding method, stored as an abstract syntax tree (AST). It is translated to an intermediate form of a series of basic blocks - each ending in either a send or a return. This is perfectly executable and, in fact, is the initial implementation for a method. If it is executed frequently enough, it will get re-compiled with some level of inlining.
+When the Zag compiler is asked to compile a particular selector for a target class, it looks at the class and its superclasses for the corresponding method, stored as an abstract syntax tree (AST). It is translated to an intermediate form of a series of basic blocks - each ending in either a send or a return. This is perfectly executable and, in fact, is the initial implementation for a method. If it is executed frequently enough, it will get re-compiled with some level of inlining.
 
-When inlining, the compiler looks at all the blocks that end with a send, and tries to find a way to replace the send with a semantically equivalent operation - i.e. to inline the send. This is repeated as long as there is a send that could be replaced.
+When inlining, the compiler looks at each block that end with a send, and tries to find a way to replace the send with a semantically equivalent operation - i.e. to inline the send. This is repeated as long as there is a send that could be replaced.
 
 In some cases all sends can be replaced, in which case there isn't even a reason to create a `Context`, saving a considerable number of instructions.
 
@@ -20,7 +20,10 @@ This is a special case of a primitive method send. This is very similar to the f
 1. any explicit return is a non-local return, so it will need to branch to the return point that the method in which the block is defined would use;
 2. when doing name resolution, when we get to the position of the receiver on the stack, we skip to the scope where this block is defined.
 #### Send where there are few implementations of a method
+If there are only a few classes that have access to an implementation of a particular (i.e they have it themselves or a superclass has an implementation), we emit a class-case instruction and inline the method for each of them, with each of them branching to the original return block on "return". To have the correct/conservative semantics, there is also a fall-back of doing the original send, unless we can prove that the list is exhaustive.
 
+#### Send where the target is the result of a comparison primitive
+As a special case of the previous example, we know that comparison primitives always return `true` or `false` (or an error if the values are incomparable), so we have an exhaustive list. But more, we know know something about the relationship of these values. So, for example, we might know that a value is in the range of 1 to the size of an array, which means that we can safely index into it.
 
 ## Removal of redundant operations
 After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required, or pushing a `BlockClosure` that is subsequently inlined so that the block itself need never be created. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects
