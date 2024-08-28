@@ -130,7 +130,7 @@ ASCodeGenerator >> dup [
 { #category : 'initialization' }
 ASCodeGenerator >> enableInlining [
 
-	inline := true
+	self inline: true
 ]
 
 { #category : 'accessing' }
@@ -232,14 +232,17 @@ ASCodeGenerator >> initialize [
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
 	maxDepth := 0.
-	inline := false.
+	inline := 0.
 	tailCallOptimize := true.
 	blockClosureIndex := 0
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> inline: aBoolean [ 
-	inline := aBoolean
+ASCodeGenerator >> inline: aBooleanOrInteger [
+
+	inline := aBooleanOrInteger isInteger
+		          ifTrue: [ aBooleanOrInteger ]
+		          ifFalse: [ 1000 ]
 ]
 
 { #category : 'translating' }
@@ -339,18 +342,15 @@ ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
 ASCodeGenerator >> inlineWherePossible [
 
 	| temp |
-	inline ifFalse: [ ^ self ].
-	[ blocksWithCalls isEmpty ] whileFalse: [
+	[
+	inline > 0 ifFalse: [ ^ self ].
+	inline := inline - 1.
+	blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.
 		temp do: [ :block |
 			code := block.
 			block inlineIfPossible: self ] ]
-]
-
-{ #category : 'initialization' }
-ASCodeGenerator >> inlining: aBoolean [
-	inline := aBoolean
 ]
 
 { #category : 'accessing' }

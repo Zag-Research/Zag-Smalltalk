@@ -227,8 +227,9 @@ ASCompileTestClass1 >> prim [
 
 { #category : 'as yet unclassified' }
 ASCompileTestClass1 >> recursiveMethod [
-	^self recursiveMethod
 
+	self recursiveMethod.
+	^ self
 ]
 
 { #category : 'testing - examples' }
@@ -262,6 +263,12 @@ ASCompileTestClass1 >> simpleBlock [
 	  | temp |
 	  temp := each + 5.
 	  temp + 3 ] value: 42
+]
+
+{ #category : 'as yet unclassified' }
+ASCompileTestClass1 >> tailRecursiveMethod [
+
+	^ self tailRecursiveMethod
 ]
 
 { #category : 'testing - examples' }

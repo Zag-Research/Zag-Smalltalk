@@ -103,10 +103,5 @@ ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
 ManifestASTSmalltalkTests class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASCValueTest #testBoolean
-	              #false ) )
-	        #'2023-10-06T18:22:13.148315-04:00' )
-	     #( #( #RGMetaclassDefinition #( #'ASCompilerInlineTest class'
-	              #ASCompilerInlineTest ) )
-	        #'2024-06-12T11:39:44.923785-04:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') #(#(#RGMetaclassDefinition #(#'ASCompilerInlineTest class' #ASCompilerInlineTest)) #'2024-06-12T11:39:44.923785-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #send:to: #false)) #'2024-08-28T18:02:38.499126-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #initialize #false)) #'2024-08-28T18:43:43.973277-04:00') )
 ]

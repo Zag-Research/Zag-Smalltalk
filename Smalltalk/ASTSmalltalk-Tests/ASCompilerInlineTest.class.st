@@ -1,6 +1,9 @@
 Class {
 	#name : 'ASCompilerInlineTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'interpreter'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
@@ -177,6 +180,12 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ]
 
 { #category : 'asserting' }
+ASCompilerInlineTest >> assertEquivalentSending: aSymbol to: anObject [
+
+	self assert: (interpreter send: aSymbol to: anObject) equals: (anObject perform: aSymbol)
+]
+
+{ #category : 'asserting' }
 ASCompilerInlineTest >> class: aClass selector: aSelector [
 	aClass ifNil: [ ^nil ].
 	aClass methodDictionary at: aSelector ifPresent: [ ^ aClass >> aSelector ].
@@ -188,55 +197,8 @@ ASCompilerInlineTest >> setUp [
 
 	super setUp.
 
-	ASInliner reset
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testBlockReturnEasyInline [
-	"
-blockReturn: p1
-	true ifTrue: [ ^ 42 ]
-"
-
-	(ASNoOutput withInlining compileMethod:
-		 ASCompileTestClass1 >> #blockReturnEasy) inspect
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testBlockReturnInline [
-	"
-blockReturn: p1
-	true ifTrue: [ ^ p1 ]
-"
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #blockReturn:.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testBlockValueInlined [
-	"blockValue
-
-	^ [ 4 ] value "
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #blockValue.
-	cg
-		inline: true;
-		finalAnalysis;
-		flowAnalysis.
-	cg inspect.
+	ASInliner reset.
+	interpreter := ASemanticInterpreter new
 ]
 
 { #category : 'tests' }
@@ -301,34 +263,14 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testCollectionAnyOne [
-	"blockValue
-
-	^ [ 4 ] value "
-
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #collectionAnyOne)
-		inspect.
-]
-
-{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci [
 	"
 fibonacci
 
 	self < 2 ifTrue: [ ^ self ].
-	^ (self - 1) fibonacci + (self - 2) fibonaccis"
+	^ (self - 1) fibonacci + (self - 2) fibonacci"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: SmallInteger
-		      selector: #fibonacci.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self assertEquivalentSending: #fibonacci to: 4
 ]
 
 { #category : 'tests' }
@@ -471,24 +413,6 @@ ASCompilerInlineTest >> testFoo1Inlined [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testFoo2Inlined [
-	"foo
-	^ self bar"
-
-	"bar
-	^ 42"
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #foo2.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
-]
-
-{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo3Inlined [
 	"foo3
 	self bar"
@@ -592,36 +516,6 @@ ASCompilerInlineTest >> testNegatedInlined [
 		inline: true;
 		finalAnalysis;
 		inspect
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testRecursiveMethod [
-	"recursiveMethod
-	^ self recursiveMethod"
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #recursiveMethod.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testWhileTrueInlined [
-	"whileTrue
-
-	| dirty |
-	[
-	dirty := false.
-	dirty ] whileTrue"
-
-	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #whileTrue) inspect
 ]
 
 { #category : 'hand compiled' }
