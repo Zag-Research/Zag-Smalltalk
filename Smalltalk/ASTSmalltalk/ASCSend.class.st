@@ -81,7 +81,9 @@ ASCSend >> outputTo: anOutput [
 
 { #category : 'testing' }
 ASCSend >> requiresContext [
-	^ true
+
+	self halt.
+	^ false
 ]
 
 { #category : 'stack' }

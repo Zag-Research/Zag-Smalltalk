@@ -11,7 +11,9 @@ Class {
 
 { #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleBadMessageRule2V1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') )
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #interpret #false)) #'2024-08-29T09:17:23.777197-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -103,5 +105,5 @@ ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
 ManifestASTSmalltalkTests class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') #(#(#RGMetaclassDefinition #(#'ASCompilerInlineTest class' #ASCompilerInlineTest)) #'2024-06-12T11:39:44.923785-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #send:to: #false)) #'2024-08-28T18:02:38.499126-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #initialize #false)) #'2024-08-28T18:43:43.973277-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCValueTest #testBoolean #false)) #'2023-10-06T18:22:13.148315-04:00') #(#(#RGMetaclassDefinition #(#'ASCompilerInlineTest class' #ASCompilerInlineTest)) #'2024-06-12T11:39:44.923785-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #send:to: #false)) #'2024-08-28T18:02:38.499126-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #initialize #false)) #'2024-08-28T18:43:43.973277-04:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #reset #false)) #'2024-08-29T08:55:59.601569-04:00') )
 ]

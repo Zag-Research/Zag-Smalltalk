@@ -10,7 +10,9 @@ Class {
 		'classes',
 		'dispatch',
 		'lastClass',
-		'inlineDepth'
+		'inlineDepth',
+		'pc',
+		'executing'
 	],
 	#category : 'ASTSmalltalk-Tests-SemanticInterpreter',
 	#package : 'ASTSmalltalk-Tests',
@@ -26,32 +28,62 @@ ASemanticInterpreter >> addClasses: aCollection [
 ]
 
 { #category : 'compiling' }
-ASemanticInterpreter >> compile: aString for: anInteger [
+ASemanticInterpreter >> compile: aSymbol for: aClass [
 
 	| cg |
-	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
+	cg := ASCodeGenerator targetClass: aClass selector: aSymbol.
 	cg
 		inline: inlineDepth;
 		finalAnalysis.
-	^ ASemanticOutput codeGenerator: cg
+	^ ASemanticOutput new codeGenerator: cg;outputToStream
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'adding' }
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
-	| index |
-	index := classes at: anObject class ifAbsentPut: [ lastClass := lastClass + 1 ].
-	self interpret: (((dispatch at: index) ifNil: [ dispatch at: index put: IdentityDictionary new ]) at: aSymbol ifAbsentPut: [ self compile: aSymbol for: anObject ])
+	| classIndex |
+	classIndex := classes
+		         at: anObject class
+		         ifAbsentPut: [ lastClass := lastClass + 1 ].
+	^ (((dispatch at: classIndex) ifNil: [
+			  dispatch at: classIndex put: IdentityDictionary new ])
+			 at: aSymbol
+			 ifAbsentPut: [ self compile: aSymbol for: anObject class ])
 ]
 
 { #category : 'initialization' }
 ASemanticInterpreter >> initialize [
 
 	super initialize.
+	inlineDepth := 0
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> inlineDepth: anInteger [
+
+	inlineDepth := anInteger
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> interpret [
+
+	executing := true.
+	[ executing ] whileTrue: [ pc doForInterpreter: self ]
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> pushLiteral [
+
+	stack addLast: pc next
+]
+
+{ #category : 'initialization' }
+ASemanticInterpreter >> reset [
+
 	stack := OrderedCollection new.
+	context := nil.
 	classes := IdentityDictionary new.
 	lastClass := 0.
-	inlineDepth := 0.
 	self addClasses: {
 			#ThunkHeap.
 			#ThunkReturnLocal.
@@ -79,53 +111,30 @@ ASemanticInterpreter >> initialize [
 	dispatch := Array new: 50
 ]
 
-{ #category : 'accessing' }
-ASemanticInterpreter >> inlineDepth: anInteger [
+{ #category : 'interpreting' }
+ASemanticInterpreter >> returnTOS [
 
-	inlineDepth := anInteger
+	context ifNil: [
+		executing := false.
+		^ self ].
+	self halt
 ]
 
-{ #category : 'instructions' }
+{ #category : 'interpreting' }
 ASemanticInterpreter >> send: aSymbol [
 
 	| obj method |
 	obj := stack at: stack size - aSymbol numArgs.
 	method := self getMethod: aSymbol for: obj.
-	self shouldBeImplemented.
+	pc := method startingPc
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'initialization' }
 ASemanticInterpreter >> send: aSymbol to: anObject [
 
-	stack := OrderedCollection new.
-	context := nil.
+	self reset.
 	stack addLast: anObject.
-	classes := IdentityDictionary new.
-	lastClass := 0.
-	self addClasses: {
-			#ThunkHeap.
-			#ThunkReturnLocal.
-			#ThunkReturnSmallInteger.
-			#ThunkReturnImmediate.
-			#ThunkReturnCharacter.
-			UndefinedObject.
-			True.
-			False.
-			SmallInteger.
-			Symbol.
-			Character.
-			#ThunkImmediate.
-			#ThunkFloat.
-			Float.
-			Object.
-			Array.
-			String.
-			CompiledMethod.
-			Class.
-			Context.
-			BlockClosure.
-			#Method.
-			#Dispatch }.
-	dispatch := Array new: 50.
-	self send: aSymbol
+	self send: aSymbol.
+	self interpret.
+	^ stack last
 ]

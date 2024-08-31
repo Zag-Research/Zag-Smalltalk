@@ -202,6 +202,16 @@ ASCompilerInlineTest >> setUp [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBar [
+	"
+bar
+
+	^ 42"
+
+	self assertEquivalentSending: #bar to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
 "bracketSend
 
