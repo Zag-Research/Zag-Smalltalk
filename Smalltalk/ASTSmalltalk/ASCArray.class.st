@@ -30,7 +30,7 @@ ASCArray >> outputTo: output [
 { #category : 'stack' }
 ASCArray >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack pushClass: Array
+	^ self created: (anASStack pushClass: Array)
 ]
 
 { #category : 'instance creation' }

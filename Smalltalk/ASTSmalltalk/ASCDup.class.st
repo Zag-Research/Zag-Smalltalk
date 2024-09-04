@@ -42,7 +42,7 @@ ASCDup >> outputTo: aCodeEmitter [
 ASCDup >> resultStack: anASStack basicBlock: anObject [
 
 	stack := anASStack.
-	^ anASStack replicate: anASStack
+	^ self created: (anASStack replicate: anASStack)
 ]
 
 { #category : 'as yet unclassified' }

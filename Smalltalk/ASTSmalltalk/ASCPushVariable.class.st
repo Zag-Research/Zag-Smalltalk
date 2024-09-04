@@ -35,7 +35,7 @@ ASCPushVariable >> printOn: aStream [
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack pushDataAsTemporary: variable stackValue
+	^ self created: (anASStack pushDataAsTemporary: variable stackValue)
 ]
 
 { #category : 'instance creation' }

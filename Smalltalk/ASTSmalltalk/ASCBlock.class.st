@@ -49,9 +49,9 @@ ASCBlock >> outputTo: output [
 
 { #category : 'stack' }
 ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
+	"	block parent: aBasicBlock."
 
-"	block parent: aBasicBlock."
-	^ anASStack pushDataAsTemporary: block
+	^ self created: (anASStack pushDataAsTemporary: block)
 ]
 
 { #category : 'instance creation' }

@@ -25,6 +25,13 @@ ASCOperations >> children [
 ^ OrderedCollection new:0
 ]
 
+{ #category : 'instance creation' }
+ASCOperations >> created: aStackElement [
+
+	aStackElement location creator: self.
+	^ aStackElement
+]
+
 { #category : 'testing' }
 ASCOperations >> isCallOperation [
 

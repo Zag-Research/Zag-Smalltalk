@@ -9,12 +9,19 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'stackValue',
-		'isReferenced'
+		'isReferenced',
+		'creator'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'accessing' }
+AStackLocation >> creator: anASCLiteral [
+
+	creator := anASCLiteral
+]
 
 { #category : 'accessing' }
 AStackLocation >> dataClass [

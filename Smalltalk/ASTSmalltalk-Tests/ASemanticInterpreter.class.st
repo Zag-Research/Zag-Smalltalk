@@ -12,7 +12,8 @@ Class {
 		'lastClass',
 		'inlineDepth',
 		'pc',
-		'executing'
+		'executing',
+		'basicBlocks'
 	],
 	#category : 'ASTSmalltalk-Tests-SemanticInterpreter',
 	#package : 'ASTSmalltalk-Tests',
@@ -27,6 +28,12 @@ ASemanticInterpreter >> addClasses: aCollection [
 		each isClass ifTrue: [ classes at: each put: lastClass ] ]
 ]
 
+{ #category : 'accessing' }
+ASemanticInterpreter >> basicBlocks [
+
+	^ basicBlocks
+]
+
 { #category : 'compiling' }
 ASemanticInterpreter >> compile: aSymbol for: aClass [
 
@@ -35,7 +42,10 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 	cg
 		inline: inlineDepth;
 		finalAnalysis.
-	^ ASemanticOutput new codeGenerator: cg;outputToStream
+	basicBlocks addAll: cg basicBlocks.
+	^ ASemanticOutput new
+		  codeGenerator: cg;
+		  outputToStream
 ]
 
 { #category : 'adding' }
@@ -55,7 +65,8 @@ ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 ASemanticInterpreter >> initialize [
 
 	super initialize.
-	inlineDepth := 0
+	inlineDepth := 0.
+	self reset
 ]
 
 { #category : 'accessing' }
@@ -82,6 +93,7 @@ ASemanticInterpreter >> reset [
 
 	stack := OrderedCollection new.
 	context := nil.
+	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
 	lastClass := 0.
 	self addClasses: {

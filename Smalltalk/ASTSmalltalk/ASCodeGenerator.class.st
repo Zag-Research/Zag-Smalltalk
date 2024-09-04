@@ -43,6 +43,11 @@ ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
 		  generateFrom: (ASPharoCompiler new astFor: (ASInliner lookup: aSymbol class: aClass) method)
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> basicBlocks [
+	^ basicBlocks
+]
+
 { #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 
@@ -109,7 +114,7 @@ ASCodeGenerator >> classOf: aString [
 ASCodeGenerator >> compileBlocks: outputter [
 	"compiling of blocks probably doesn't work right now"
 
-	(blockClosures reject: #manifest) do: [ :aBlockClosure |
+	(blockClosures select: #manifest) do: [ :aBlockClosure |
 		outputter blockGenerator
 			parentCodeGenerator: self;
 			generateCode: aBlockClosure block for: BlockClosure ]
@@ -138,12 +143,6 @@ ASCodeGenerator >> enclosingScope: aScope [
 	enclosingScope := aScope
 ]
 
-{ #category : 'evaluating' }
-ASCodeGenerator >> eval: aString params: aCollection [
-
-	^ ASCLiteralValue new init: Object new
-]
-
 { #category : 'data flow instructions' }
 ASCodeGenerator >> finalAnalysis [
 
@@ -153,14 +152,6 @@ ASCodeGenerator >> finalAnalysis [
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
 	blockClosures do: #finalAnalysis.
 
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> find: aSymbol [
-
-	^ code at: aSymbol
-	"enclosingScope ifNil: [ self halt ].
-	^ enclosingScope find: aSymbol"
 ]
 
 { #category : 'private - testing' }
@@ -197,22 +188,6 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 		  tempBlock addSourceBlock: code.
 		  tempBlock returnTop.
 		  tempBlock ]
-]
-
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> globalFind: aString [
-	"aString asSymbol isGlobalVariable ifTrue: [ ^ ASStackNamed new name: aString ]"
-self halt.
-	^ nil
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> inferType: anExpression [
-
-	^ nil
-	"anExpression ifNil: [ ^ nil ].
-	^ anExpression inferType: self"
-	"anExpression isASSend ifTrue: [ ^ self inferType: anExpression ]."
 ]
 
 { #category : 'initialization' }
@@ -268,7 +243,7 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
 
 	| inlineBlock savedTargetClass |
-	(self isRecursive: aCompiledMethod) ifNotNil: [ :block |
+	(self recursiveBasicBlock: aCompiledMethod) ifNotNil: [ :block |
 		^ self
 			  inlineRecursiveMethod: aCompiledMethod
 			  block: block
@@ -363,12 +338,6 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  addColumn:
 			  (SpStringTableColumn title: 'Blocks' evaluated: #contents);
 		  yourself
-]
-
-{ #category : 'testing' }
-ASCodeGenerator >> isRecursive: aCompiledMethod [
-
-	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }
@@ -502,6 +471,12 @@ ASCodeGenerator >> pushSelf [
 ASCodeGenerator >> pushVariable: variable [
 
 	^ code pushVariable: variable
+]
+
+{ #category : 'testing' }
+ASCodeGenerator >> recursiveBasicBlock: aCompiledMethod [
+
+	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
 { #category : 'examples' }

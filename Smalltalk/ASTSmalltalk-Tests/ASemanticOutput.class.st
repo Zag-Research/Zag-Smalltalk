@@ -46,6 +46,12 @@ ASemanticOutput >> startingPc [
 ]
 
 { #category : 'API' }
+ASemanticOutput >> visitPushBlock: anASCBlock [
+
+	^ self halt
+]
+
+{ #category : 'API' }
 ASemanticOutput >> visitPushLiteral: aLiteral [
 
 	code add: #pushLiteral; add: aLiteral

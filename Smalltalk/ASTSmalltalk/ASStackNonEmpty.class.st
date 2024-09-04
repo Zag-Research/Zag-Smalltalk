@@ -130,6 +130,11 @@ ASStackNonEmpty >> linkContext: aBlock [
 ]
 
 { #category : 'accessing' }
+ASStackNonEmpty >> location [
+	^ location
+]
+
+{ #category : 'accessing' }
 ASStackNonEmpty >> location: anAStackLocation [
 
 	location := anAStackLocation

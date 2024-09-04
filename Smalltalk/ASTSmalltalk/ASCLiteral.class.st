@@ -29,8 +29,8 @@ ASCLiteral >> outputTo: output [
 { #category : 'stack' }
 ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ anASStack pushDataAsTemporary:
-		  (AStackValue fromValue: literal)
+	^ self created: (anASStack pushDataAsTemporary:
+		             (AStackValue fromValue: literal))
 ]
 
 { #category : 'instance creation' }

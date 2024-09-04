@@ -34,5 +34,6 @@ ASCReturnLiteral >> outputTo: output [
 ASCReturnLiteral >> resultStack: aStack basicBlock: aBasicBlock [
 
 	stack := aStack.
-	^ (aStack at: #self) next pushDataAsTemporary: ((ASFlowNew value: literal) basicBlock: aBasicBlock)
+	^ self created: ((aStack at: #self) next pushDataAsTemporary:
+		  ((ASFlowNew value: literal) basicBlock: aBasicBlock))
 ]

@@ -315,12 +315,6 @@ ASCBasicBlock >> inspectionZagCode [
 		  yourself
 ]
 
-{ #category : 'testing' }
-ASCBasicBlock >> isRecursive: aCompileMethod [ 
-	"test if the given compile method has already been visited"
-	^ false
-]
-
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
@@ -452,6 +446,12 @@ ASCBasicBlock >> pushNil [
 ASCBasicBlock >> pushVariable: aSymbol [
 
 	self addOperation: (ASCPushVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'testing' }
+ASCBasicBlock >> recursiveBasicBlock: aCompileMethod [ 
+	"test if the given compile method has already been visited"
+	^ false
 ]
 
 { #category : 'accessing' }

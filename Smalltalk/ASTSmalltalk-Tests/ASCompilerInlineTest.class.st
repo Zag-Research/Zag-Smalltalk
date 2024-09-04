@@ -212,6 +212,71 @@ bar
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBarInlined [
+	"bar
+
+	^ 42"
+
+	self testBar.
+	self assert: interpreter basicBlocks size equals: 1.
+	interpreter
+		reset;
+		inlineDepth: 100.
+	self testBar.
+	self assert: interpreter basicBlocks size equals: 1
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockReturnEasyInline [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ 42 ]
+"
+
+	(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #blockReturnEasy) inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockReturnInline [
+	"
+blockReturn: p1
+	true ifTrue: [ ^ p1 ]
+"
+
+	| cg |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #blockReturn:.
+	cg
+		inspect;
+		halt.
+	cg
+		inline: true;
+		finalAnalysis;
+		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockValue [
+	"blockValue
+
+	^ [ 4 ] value "
+
+	self assertEquivalentSending: #blockValue to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockValueInlined [
+	"blockValue
+
+	^ [ 4 ] value "
+
+	interpreter inlineDepth: 1.
+	self assertEquivalentSending: #blockValue to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
 "bracketSend
 
@@ -284,6 +349,23 @@ fibonacci
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciFast [
+	"
+fibonacci_fast
+
+	^ self fibonacci_accumulator: 1 prev: 0
+	
+fibonacci_accumulator: accumulator prev: prev
+
+	self = 0 ifTrue: [ ^ prev ].
+	^ self - 1
+		  fibonacci_accumulator: prev + accumulator
+		  prev: accumulator"
+
+	self assertEquivalentSending: #fibonacci_fast to: 4
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacciFastInline [
 	"
 fibonacci_fast
@@ -297,40 +379,8 @@ fibonacci_accumulator: accumulator prev: prev
 		  fibonacci_accumulator: prev + accumulator
 		  prev: accumulator"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: SmallInteger
-		      selector: #fibonacci_fast.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testFibonacciFastInline_prev [
-	"
-fibonacci_accumulator: accumulator prev: prev
-
-	self = 0 ifTrue: [ ^ prev ].
-	^ self - 1
-		  fibonacci_accumulator: prev + accumulator
-		  prev: accumulator"
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: SmallInteger
-		      selector: #fibonacci_accumulator:prev:.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	interpreter inlineDepth: 1.
+	self testFibonacciFast
 ]
 
 { #category : 'tests' }
@@ -405,6 +455,18 @@ pub fn main() !void {
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFoo1 [
+	"foo
+	^ self bar isLarge"
+
+	"bar
+	^ 42"
+
+	self assertEquivalentSending: #foo1 to: ASCompileTestClass1 new
+
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo1Inlined [
 	"foo
 	^ self bar isLarge"
@@ -412,10 +474,22 @@ ASCompilerInlineTest >> testFoo1Inlined [
 	"bar
 	^ 42"
 
+	interpreter inlineDepth: 1.
+	self testFoo1
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFoo2Inlined [
+	"foo
+	^ self bar"
+
+	"bar
+	^ 42"
+
 	| cg |
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
-		      selector: #foo1.
+		      selector: #foo2.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -526,6 +600,18 @@ ASCompilerInlineTest >> testNegatedInlined [
 		inline: true;
 		finalAnalysis;
 		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testWhileTrueInlined [
+	"whileTrue
+
+	| dirty |
+	[
+	dirty := false.
+	dirty ] whileTrue"
+
+	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #whileTrue) inspect
 ]
 
 { #category : 'hand compiled' }
