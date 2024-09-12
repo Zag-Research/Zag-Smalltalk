@@ -14,3 +14,11 @@ More information in the [Documentation](Documentation)
 Papers and Talks can be found [here](Documentation/papers)
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
+
+### Loading into Pharo (known to work with Pharo 13)
+```smalltalk
+Metacello new
+  baseline: 'ASTSmalltalk';
+  repository: 'github://Zag-Research/Zag-Smalltalk:main';
+  load
+```
