@@ -48,17 +48,29 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 		  outputToStream
 ]
 
+{ #category : 'accessing' }
+ASemanticInterpreter >> dispatchFor: aCompileMethod [ 
+
+	| class |
+	class := self getClass: aCompileMethod methodClass.
+	^ (dispatch at: class ifAbsent: [ ^ nil ]) at: aCompileMethod selector ifAbsent: [ nil ]
+]
+
+{ #category : 'adding' }
+ASemanticInterpreter >> getClass: aClass [
+
+	^ classes at: aClass ifAbsentPut: [ lastClass := lastClass + 1 ]
+]
+
 { #category : 'adding' }
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
 	| classIndex |
-	classIndex := classes
-		         at: anObject class
-		         ifAbsentPut: [ lastClass := lastClass + 1 ].
-	^ (((dispatch at: classIndex) ifNil: [
-			  dispatch at: classIndex put: IdentityDictionary new ])
-			 at: aSymbol
-			 ifAbsentPut: [ self compile: aSymbol for: anObject class ])
+	classIndex := self getClass: anObject class.
+	^ ((dispatch at: classIndex) ifNil: [
+		   dispatch at: classIndex put: IdentityDictionary new ])
+		  at: aSymbol
+		  ifAbsentPut: [ self compile: aSymbol for: anObject class ]
 ]
 
 { #category : 'initialization' }
