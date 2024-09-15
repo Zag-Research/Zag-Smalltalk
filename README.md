@@ -15,7 +15,8 @@ Papers and Talks can be found [here](Documentation/papers)
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
 
-### Loading into Pharo (known to work with Pharo 13)
+### Loading into Pharo (known to load with Pharo 13)
+*very much work-in-progress at the moment*
 ```smalltalk
 Metacello new
   baseline: 'ASTSmalltalk';
