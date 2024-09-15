@@ -189,6 +189,14 @@ ASCompilerInlineTest >> assertEquivalentSending: aSymbol to: anObject [
 ]
 
 { #category : 'asserting' }
+ASCompilerInlineTest >> assertEquivalentSending: aSymbol with: aCollection to: anObject [ 
+	self
+		assert: (interpreter send: aSymbol with: aCollection to: anObject)
+		equals: (anObject perform: aSymbol).
+	self assert: interpreter stackDepth equals: 1
+]
+
+{ #category : 'asserting' }
 ASCompilerInlineTest >> class: aClass selector: aSelector [
 	aClass ifNil: [ ^nil ].
 	aClass methodDictionary at: aSelector ifPresent: [ ^ aClass >> aSelector ].
@@ -603,6 +611,16 @@ ASCompilerInlineTest >> testNegatedInlined [
 		inline: true;
 		finalAnalysis;
 		inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testRecursiveSum [
+	"
+bar
+
+	^ 42"
+
+	self assertEquivalentSending: #recursiveSum: with: #(#(4 5 6)) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
