@@ -350,8 +350,7 @@ ASCodeGenerator >> locals: locals indirectParameters: parameters [
 ASCodeGenerator >> locals: locals parameters: arguments [
 
 	code initSelf: targetClass.
-	code locals: locals parameters: arguments.
-	code initContext
+	code locals: locals parameters: arguments
 ]
 
 { #category : 'compiling' }

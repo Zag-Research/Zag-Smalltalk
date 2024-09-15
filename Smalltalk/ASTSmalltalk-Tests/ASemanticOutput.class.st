@@ -18,6 +18,12 @@ ASemanticOutput >> at: anInteger [
 	^ code at: anInteger
 ]
 
+{ #category : 'accessing' }
+ASemanticOutput >> codeSize [
+
+	^ code size
+]
+
 { #category : 'initialization' }
 ASemanticOutput >> initialize [
 

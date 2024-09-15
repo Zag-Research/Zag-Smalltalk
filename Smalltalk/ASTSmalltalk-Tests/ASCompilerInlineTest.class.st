@@ -182,7 +182,10 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 { #category : 'asserting' }
 ASCompilerInlineTest >> assertEquivalentSending: aSymbol to: anObject [
 
-	self assert: (interpreter send: aSymbol to: anObject) equals: (anObject perform: aSymbol)
+self halt.
+	self
+		assert: (interpreter send: aSymbol to: anObject)
+		equals: (anObject perform: aSymbol)
 ]
 
 { #category : 'asserting' }
@@ -208,7 +211,10 @@ bar
 
 	^ 42"
 
-	self assertEquivalentSending: #bar to: ASCompileTestClass1 new
+	self assertEquivalentSending: #bar to: ASCompileTestClass1 new.
+	self assert: interpreter basicBlocks size equals: 1.
+	self assert: (interpreter dispatchFor: ASCompileTestClass1>>#bar) codeSize equals: 3
+
 ]
 
 { #category : 'tests' }
@@ -218,7 +224,6 @@ ASCompilerInlineTest >> testBarInlined [
 	^ 42"
 
 	self testBar.
-	self assert: interpreter basicBlocks size equals: 1.
 	interpreter
 		reset;
 		inlineDepth: 100.
@@ -273,7 +278,7 @@ ASCompilerInlineTest >> testBlockValueInlined [
 	^ [ 4 ] value "
 
 	interpreter inlineDepth: 1.
-	self assertEquivalentSending: #blockValue to: ASCompileTestClass1 new
+	self testBlockValue
 ]
 
 { #category : 'tests' }

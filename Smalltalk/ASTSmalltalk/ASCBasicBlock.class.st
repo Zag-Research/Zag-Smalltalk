@@ -15,7 +15,6 @@ Class {
 		'method',
 		'hash',
 		'stackDepth',
-		'context',
 		'sourceBlocks',
 		'sourceElements',
 		'sequence'
@@ -197,13 +196,6 @@ ASCBasicBlock >> flowForTemporaries [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> getContext [
-
-	^ context ifNil: [
-		stack := stack intoContext: 0. context := self halt]
-]
-
 { #category : 'testing' }
 ASCBasicBlock >> hasContext [
 
@@ -323,6 +315,12 @@ ASCBasicBlock >> label [
 
 { #category : 'output' }
 ASCBasicBlock >> llvmLabel [
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> locals: locals parameters: arguments [
+
 	^ self subclassResponsibility
 ]
 
