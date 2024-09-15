@@ -10,7 +10,7 @@ Class {
 ASCBasicBlockTest >> testNameStack [
 
 	| bb |
-	bb := ASCInlineBlock new.
+	bb := ASCJoinBlock new.
 	bb doPush: 42.
 	bb doPush: 27.
 	bb doPush: 98.
@@ -31,7 +31,7 @@ ASCBasicBlockTest >> testStackFlow [
 	cg := ASCodeGenerator new.
 	cg targetClass: SmallInteger.
 	cg selector: #foo:bar:.
-	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
+	cg sender: nil locals: #( l1 l2 ) parameters: #( p1 p2 ).
 
 	bb1 := cg firstBlock.
 	self assert: (bb1 at: #l1) data isNilReference.
@@ -65,7 +65,9 @@ ASCBasicBlockTest >> testStackFlow [
 	bb4 reference: #l1.
 	self assert: (bb1 at: #l1) data isNilReference.
 
-	cg finalAnalysis;flowAnalysis.
+	cg
+		finalAnalysis;
+		flowAnalysis.
 	self assert: bb4 namedBlock equals: bb1.
 
 	self assert: (bb1 at: #l1) data isNilReference.
@@ -84,7 +86,7 @@ ASCBasicBlockTest >> test_extend [
 	"1. push temp values and convert to named values"
 
 	| bb block ascBlock |
-	bb := ASCInlineBlock new.
+	bb := ASCJoinBlock new.
 	bb doPush: 42.
 	bb doPush: 27.
 	bb doPush: 98.
@@ -108,13 +110,15 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg := ASCodeGenerator new.
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
-	cg locals: #(  ) parameters: #( n1 n2 n3 ).
+	cg sender: nil locals: #(  ) parameters: #( n1 n2 n3 ).
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.
 	cg send: #*. " and create new ReturnBlock"
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
-	cg finalAnalysis;flowAnalysis.
+	cg
+		finalAnalysis;
+		flowAnalysis.
 	cg inspect
 ]

@@ -193,7 +193,7 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 { #category : 'initialization' }
 ASCodeGenerator >> initCode [
 
-	code := ASCMethodBlock new
+	code := ASCPublicMethodBlock new
 ]
 
 { #category : 'initialization' }
@@ -233,7 +233,7 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 	self branch: inlineBlock.
 	code := inlineBlock.
 	self halt.
-	(code stackBelow: offset) stackValue block zigWalkInlineMethod: self.
+	(code stackBelow: offset) stackValue block zigWalkMethod: self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
@@ -258,7 +258,7 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 	code removeLastOperation.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkInlineMethod:
+	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkMethod:
 		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 		code := returnBlock.
 		targetClass := savedTargetClass ]
@@ -340,19 +340,6 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  yourself
 ]
 
-{ #category : 'accessing' }
-ASCodeGenerator >> locals: locals indirectParameters: parameters [
-
-	code locals: locals parameters: parameters
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> locals: locals parameters: arguments [
-
-	code initSelf: targetClass.
-	code locals: locals parameters: arguments
-]
-
 { #category : 'compiling' }
 ASCodeGenerator >> lookupLocal: aSymbol [
 
@@ -375,26 +362,26 @@ ASCodeGenerator >> name [
 ASCodeGenerator >> newBlockName [
 
 	blockClosureIndex := blockClosureIndex + 1.
-	^ selector asString , #_b , blockClosureIndex asString
+	^ self selector asString , #_b , blockClosureIndex asString
 ]
 
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: (ASCInlineBlock new)
+	^ basicBlocks add: (ASCJoinBlock new)
 ]
 
 { #category : 'private - testing' }
 ASCodeGenerator >> newInlineBlockClosure [
 
-	^ basicBlocks add: ASCInlinedClosureBlock new
+	^ basicBlocks add: ASCClosureBlock new
 ]
 
 { #category : 'instance creation' }
 ASCodeGenerator >> newInlineMethod: aCompileMethod [
 
 	| newBlock |
-	newBlock := ASCInlinedMethodBlock new theMethod: aCompileMethod.
+	newBlock := ASCMethodBlock new theMethod: aCompileMethod.
 	methodBlocks at: aCompileMethod put: newBlock.
 	^ basicBlocks add: newBlock
 ]
@@ -509,14 +496,13 @@ ASCodeGenerator >> returnTopInline [
 { #category : 'accessing' }
 ASCodeGenerator >> selector [
 
-	^	selector
+	^ basicBlocks first selector
 ]
 
 { #category : 'accessing' }
 ASCodeGenerator >> selector: aSymbol [
 
-	selector := aSymbol.
-	code selector: aSymbol 
+	code selector: aSymbol
 ]
 
 { #category : 'API' }
@@ -553,6 +539,15 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	^ bb ifNotNil: [
 		  basicBlocks add: bb.
 		  code := bb ]
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> sender: sender locals: locals parameters: arguments [
+
+	^ code
+		sender: (sender ifNil: [ targetClass ])
+		locals: locals
+		parameters: arguments
 ]
 
 { #category : 'accessing' }

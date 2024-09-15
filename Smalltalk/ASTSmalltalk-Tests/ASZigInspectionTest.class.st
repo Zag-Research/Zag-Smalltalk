@@ -10,8 +10,11 @@ Class {
 ASZigInspectionTest >> testInspectionMadeUpAST [
 
 	| block |
-	block := ASCMethodBlock new.
-	block locals: { (#size , #location) } parameters: { #aSample }.
+	block := ASCPublicMethodBlock new.
+	block
+		sender: nil
+		locals: { (#size , #location) }
+		parameters: { #aSample }.
 	block inspect
 ]
 

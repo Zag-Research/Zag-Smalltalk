@@ -1,47 +1,38 @@
+"
+I am an inline block, but I'm used to inline a BlockClosure
+"
 Class {
 	#name : 'ASCMethodBlock',
 	#superclass : 'ASCCompilableUnitBlock',
+	#instVars : [
+		'theMethod'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
 { #category : 'adding' }
-ASCMethodBlock >> addSourceBlock: aBasicBlock [
-	" nothing to do, because this can only happen with tail recursive calls "
+ASCMethodBlock >> copyStackFrom: aBasicBlock [
 
-	self halt
+	stack := aBasicBlock stack.
+	self nameStack: theMethod argumentNames.
+	^ stack
 ]
 
-{ #category : 'API' }
-ASCMethodBlock >> initParameterNamed: aSymbol [
+{ #category : 'as yet unclassified' }
+ASCMethodBlock >> label [
 
-	| source |
-	stack := stack initParameterNamed: aSymbol.
-	source := ASFlowParameter new.
-	^ stack data: source
+	^ label ifNil: [
+		  label := String streamContents: [ :s |
+			           s
+				           nextPutAll: super label;
+				           nextPut: $_;
+				           print: theMethod ] ]
 ]
 
-{ #category : 'API' }
-ASCMethodBlock >> initSelf: targetClass [
+{ #category : 'as yet unclassified' }
+ASCMethodBlock >> theMethod: aCompiledMethod [
 
-	| source |
-	stack := stack initSelf.
-	source := AStackValue fromClass: targetClass.
-	^ stack data: source
-]
-
-{ #category : 'accessing' }
-ASCMethodBlock >> locals: locals parameters: arguments [
-
-	arguments do: [ :each | self initParameterNamed: each ].
-"	locals do: [ :each | self initLocalNamed: each ]."
-	sourceElements := stack.
-	self branch: 42
-]
-
-{ #category : 'writing' }
-ASCMethodBlock >> sourceElementsForInspect [
-
-	^ OrderedCollection new addAll: sourceElements replicate;yourself
+	theMethod := aCompiledMethod
 ]

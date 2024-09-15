@@ -109,7 +109,7 @@ ASLLVMOutputTest >> testLLVM_inlined [
 	cg := output codeGenerator.
 	cg targetClass: SmallInteger.
 	cg selector: #foo:arg:.
-	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
+	cg sender: nil locals: #( l1 l2 ) parameters: #( p1 p2 ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg popVariable: #l1.
@@ -155,10 +155,12 @@ ASLLVMOutputTest >> testLLVM_inlined_simple [
 
 	| cg |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #simple.
-	cg locals: #(  ) parameters: #(  ).
+	cg sender: nil locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 42.
 	cg returnTop.
-	cg finalAnalysis;flowAnalysis.
+	cg
+		finalAnalysis;
+		flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -192,7 +194,7 @@ ASLLVMOutputTest >> test_plus_and [
 	cg := ASCodeGenerator new.
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:.
-	cg locals: #(  ) parameters: #( n1 n2 ).
+	cg sender: nil locals: #(  ) parameters: #( n1 n2 ).
 	cg pushVariable: #n1.
 	cg pushLiteral: 42.
 	cg pushVariable: #n2.
@@ -201,7 +203,8 @@ ASLLVMOutputTest >> test_plus_and [
 	cg returnTop.
 	cg
 		inline: true;
-		finalAnalysis;flowAnalysis.
+		finalAnalysis;
+		flowAnalysis.
 	cg inspect.
 	output
 		codeGenerator: cg;
@@ -219,7 +222,7 @@ ASLLVMOutputTest >> test_plus_and_and [
 	cg := ASCodeGenerator new.
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
-	cg locals: #(  ) parameters: #( n1 n2 n3 ).
+	cg sender: nil locals: #(  ) parameters: #( n1 n2 n3 ).
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.
@@ -227,7 +230,8 @@ ASLLVMOutputTest >> test_plus_and_and [
 	cg send: #+. " and create new ReturnBlock"
 	cg returnTop.
 	cg
-		inspect;halt;
+		inspect;
+		halt;
 		inline: true;
 		finalAnalysis;
 		flowAnalysis.

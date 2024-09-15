@@ -79,25 +79,18 @@ ASBlock >> zigWalk: aGenerator [
 	^ aGenerator pushBlock: self
 ]
 
-{ #category : 'as yet unclassified' }
-ASBlock >> zigWalkInlineMethod: aGenerator [
-
-	aGenerator locals: locals indirectParameters: arguments.
-	^ body
-		  zigWalkEmpty: [ aGenerator returnLiteral: nil]
-		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-		  last: [ :exp | exp zigWalkInlineBlockReturn: aGenerator ]
-]
-
 { #category : 'codegen' }
 ASBlock >> zigWalkMethod: aGenerator [
 
-	aGenerator selector: self selector.
-	aGenerator locals: locals parameters: arguments.
+	| headerBlock |
+	self halt.
+	headerBlock := aGenerator
+		               selector: self selector;
+		               sender: nil locals: locals parameters: arguments.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnLiteral: nil ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-		  last: [ :exp | exp zigWalkBlockReturn: aGenerator ]
+		  last: [ :exp | headerBlock zigWalkReturn: exp for: aGenerator ]
 ]
 
 { #category : 'compiling' }

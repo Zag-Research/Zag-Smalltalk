@@ -1,18 +1,39 @@
+"
+I represent a block closure object on the stack.
+
+I can only represent myself, so even another block closure isn't compatible.
+"
 Class {
-	#name : 'ASTBlock',
-	#superclass : 'Object',
+	#name : 'AStBlock',
+	#superclass : 'AStackValue',
 	#instVars : [
-		'blockNumber',
-		'sequence'
+		'block'
 	],
-	#category : 'ASTSmalltalk-IR',
+	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
-	#tag : 'IR'
+	#tag : 'Stack'
 }
 
-{ #category : 'initializing' }
-ASTBlock >> from: anIRSequence [
+{ #category : 'accessing' }
+AStBlock >> block: anASBlock [
 
-	blockNumber := anIRSequence orderNumber.
-	sequence := anIRSequence collect: [ :node | node asAST ]
+	block := anASBlock
+]
+
+{ #category : 'as yet unclassified' }
+AStBlock >> couldMergeIn: other [
+
+	^ self == other
+]
+
+{ #category : 'as yet unclassified' }
+AStBlock >> dataClass [
+
+	^ BlockClosure
+]
+
+{ #category : 'as yet unclassified' }
+AStBlock >> finalAnalysis [
+
+	self halt
 ]

@@ -16,7 +16,7 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 
 	| cg targets |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
-	cg locals: #(  ) parameters: #(  ).
+	cg sender: nil locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -55,7 +55,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 
 	| cg targets common |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
-	cg locals: #(  ) parameters: #(  ).
+	cg sender: nil locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -90,7 +90,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 
 { #category : 'hand compiled' }
 ASCompilerInlineTest class >> inlined_insertionSorted [
-" Array>>#size, Array>>at:, Array>>at:put: and BlockClosure>>#value are primitive
+	" Array>>#size, Array>>at:, Array>>at:put: and BlockClosure>>#value are primitive
 
 defined in SequencableCollection	
 	insertionSorted
@@ -127,7 +127,7 @@ defined in BlockClosure
 	cg := ASCodeGenerator new.
 	cg targetClass: Array.
 	cg selector: #insertionSorted.
-	cg locals: #(  ) parameters: #(  ).
+	cg sender: nil locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 2.
 	cg pushSelf.
 
@@ -182,10 +182,10 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 { #category : 'asserting' }
 ASCompilerInlineTest >> assertEquivalentSending: aSymbol to: anObject [
 
-self halt.
 	self
 		assert: (interpreter send: aSymbol to: anObject)
-		equals: (anObject perform: aSymbol)
+		equals: (anObject perform: aSymbol).
+	self assert: interpreter stackDepth equals: 1
 ]
 
 { #category : 'asserting' }
@@ -224,9 +224,7 @@ ASCompilerInlineTest >> testBarInlined [
 	^ 42"
 
 	self testBar.
-	interpreter
-		reset;
-		inlineDepth: 100.
+	interpreter inlineDepth: 100.
 	self testBar.
 	self assert: interpreter basicBlocks size equals: 1
 ]

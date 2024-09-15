@@ -4,15 +4,15 @@ I am the first block in a method.
 All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
 "
 Class {
-	#name : 'ASCBlockClosureBlock',
-	#superclass : 'ASCCompilableUnitBlock',
+	#name : 'ASCPublicClosureBlock',
+	#superclass : 'ASCClosureBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
 { #category : 'adding' }
-ASCBlockClosureBlock >> addBlock: anASCReturnBlock [
+ASCPublicClosureBlock >> addBlock: anASCReturnBlock [
 
 	self halt.
 	^ returnBlocks
@@ -21,30 +21,30 @@ ASCBlockClosureBlock >> addBlock: anASCReturnBlock [
 ]
 
 { #category : 'data flow instructions' }
-ASCBlockClosureBlock >> flowForLocals [
+ASCPublicClosureBlock >> flowForLocals [
 
 	^ ASFlowNil
 ]
 
 { #category : 'data flow instructions' }
-ASCBlockClosureBlock >> flowForTemporaries [
+ASCPublicClosureBlock >> flowForTemporaries [
 
 	^ self shouldNotImplement
 ]
 
 { #category : 'testing' }
-ASCBlockClosureBlock >> hasContextOnEntry [
+ASCPublicClosureBlock >> hasContextOnEntry [
 
 	^ sourceElements hasContext
 ]
 
 { #category : 'initialization' }
-ASCBlockClosureBlock >> labelExtra: s [
+ASCPublicClosureBlock >> labelExtra: s [
 
 ]
 
 { #category : 'writing' }
-ASCBlockClosureBlock >> outputTo: output [
+ASCPublicClosureBlock >> outputTo: output [
 
 	output
 		outputMethodDefinition: self label
@@ -55,19 +55,19 @@ ASCBlockClosureBlock >> outputTo: output [
 ]
 
 { #category : 'printing' }
-ASCBlockClosureBlock >> printOn: aStream [
+ASCPublicClosureBlock >> printOn: aStream [
 
 	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
 { #category : 'accessing' }
-ASCBlockClosureBlock >> stackDepth [
+ASCPublicClosureBlock >> stackDepth [
 
 	^ sourceElements offset
 ]
 
 { #category : 'data flow instructions' }
-ASCBlockClosureBlock >> updateDataDependencies: ignored [
+ASCPublicClosureBlock >> updateDataDependencies: ignored [
 	" a MethodBlock has no dependencies "
 
 ]

@@ -38,6 +38,7 @@ ASemanticInterpreter >> basicBlocks [
 ASemanticInterpreter >> compile: aSymbol for: aClass [
 
 	| cg |
+	self halt.
 	cg := ASCodeGenerator targetClass: aClass selector: aSymbol.
 	cg
 		inline: inlineDepth;
@@ -161,4 +162,10 @@ ASemanticInterpreter >> send: aSymbol to: anObject [
 	self send: aSymbol.
 	self interpret.
 	^ stack last
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> staclDepth [
+
+	^ stack size
 ]

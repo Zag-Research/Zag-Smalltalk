@@ -109,7 +109,7 @@ ASCBasicBlock >> branch: aBasicBlock [
 ASCBasicBlock >> checkForCalls [
 
 	(sourceBlocks noneSatisfy: #endsWithCall) ifTrue: [ ^ self ].
-	self primitiveChangeClassTo: ASCInlineBlock basicNew.
+	self primitiveChangeClassTo: ASCJoinBlock basicNew.
 	stack makeStackTheSource
 ]
 
@@ -126,7 +126,7 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := ASCInlinedMethodBlock new.
+		next := ASCMethodBlock new.
 		case at: class put: next.
 		next addSourceBlock: self ].
 	self addOperation: case.
@@ -315,12 +315,6 @@ ASCBasicBlock >> label [
 
 { #category : 'output' }
 ASCBasicBlock >> llvmLabel [
-	^ self subclassResponsibility
-]
-
-{ #category : 'accessing' }
-ASCBasicBlock >> locals: locals parameters: arguments [
-
 	^ self subclassResponsibility
 ]
 
@@ -519,6 +513,12 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 	self addOperation: send.
 	next ifNotNil: [ next addSourceBlock: self ].
 	^ next
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> sender: sender locals: locals parameters: arguments [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'initialization' }

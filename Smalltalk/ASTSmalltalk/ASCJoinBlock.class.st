@@ -2,65 +2,64 @@
 for inlining
 "
 Class {
-	#name : 'ASCInlineBlock',
+	#name : 'ASCJoinBlock',
 	#superclass : 'ASCBasicBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'adding' }
+ASCJoinBlock >> copyStackFrom: aBasicBlock [
+
+	stack := aBasicBlock stack.
+	^ stack
+]
+
 { #category : 'data flow instructions' }
-ASCInlineBlock >> flowForLocals [
+ASCJoinBlock >> flowForLocals [
 
 	^ nil
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> flowForParameters [
+ASCJoinBlock >> flowForParameters [
 
 	^ nil
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> flowForSelf [
+ASCJoinBlock >> flowForSelf [
 
 	^ nil
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> flowForTemporaries [
+ASCJoinBlock >> flowForTemporaries [
 
 	^ ASFlowPhi
 ]
 
 { #category : 'testing' }
-ASCInlineBlock >> isNamedBlock [
+ASCJoinBlock >> isNamedBlock [
 
 	^ false
 ]
 
 { #category : 'initialization' }
-ASCInlineBlock >> label [
+ASCJoinBlock >> label [
 
 	^ label ifNil: [ label := self nextSequence asString ]
 ]
 
 { #category : 'initialization' }
-ASCInlineBlock >> llvmLabel [
+ASCJoinBlock >> llvmLabel [
 
 	^ self label
 ]
 
-{ #category : 'printing' }
-ASCInlineBlock >> locals: locals parameters: arguments [
-
-	self nameStack: arguments.
-	locals do: [ :each | self initLocalNamed: each ].
-	maxDepth := 0
-]
-
 { #category : 'adding' }
-ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
+ASCJoinBlock >> nameStack: parameterNamesLeftToRight [
 
 	| names |
 	names := OrderedCollection with: #self.
@@ -69,37 +68,45 @@ ASCInlineBlock >> nameStack: parameterNamesLeftToRight [
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> namedBlock [
+ASCJoinBlock >> namedBlock [
 
 	^ sourceBlocks anyOne namedBlock
 ]
 
 { #category : 'successor sequences' }
-ASCInlineBlock >> nextSequence [
+ASCJoinBlock >> nextSequence [
 
 	^self  methodBlock nextSequence
 ]
 
 { #category : 'writing' }
-ASCInlineBlock >> outputTo: output [
+ASCJoinBlock >> outputTo: output [
 
 	output outputInlineBlockStart: self.
 	^ self outputRestTo: output
 ]
 
 { #category : 'printing' }
-ASCInlineBlock >> printOn: aStream [
+ASCJoinBlock >> printOn: aStream [
 
 	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
 { #category : 'data flow instructions' }
-ASCInlineBlock >> selfElementClass [
+ASCJoinBlock >> selfElementClass [
 
 	^ ASStackSelf
 ]
 
+{ #category : 'accessing' }
+ASCJoinBlock >> sender: sender locals: locals parameters: arguments [
+
+	self nameStack: arguments.
+	locals do: [ :each | self initLocalNamed: each ].
+	maxDepth := 0
+]
+
 { #category : 'printing' }
-ASCInlineBlock >> updateStack: aSymbol [
+ASCJoinBlock >> updateStack: aSymbol [
 	^ nil
 ]

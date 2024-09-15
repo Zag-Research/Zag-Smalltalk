@@ -21,7 +21,7 @@ ASCodeGeneratorBlock >> children [
 { #category : 'initialization' }
 ASCodeGeneratorBlock >> initCode [
 
-	code := ASCBlockClosureBlock new
+	code := ASCPublicClosureBlock new
 ]
 
 { #category : 'initialization' }
