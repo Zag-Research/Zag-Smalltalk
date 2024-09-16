@@ -614,11 +614,18 @@ ASCompilerInlineTest >> testNegatedInlined [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testRecursiveSum [
-	"
-bar
+ASCompilerInlineTest >> testPlus1 [
+	"plus1: aNumber
+	^ aNumber + 1"
 
-	^ 42"
+	self assertEquivalentSending: #plus1: with: #(6) to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testRecursiveSum [
+	"recursiveSum: listOfNumbers
+		listOfNumbers empty ifTrue: [^0].
+		^ listOfNumbers first + listOfNumbers allButFirst"
 
 	self assertEquivalentSending: #recursiveSum: with: #(#(4 5 6)) to: ASCompileTestClass1 new
 ]
