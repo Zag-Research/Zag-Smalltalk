@@ -164,6 +164,17 @@ ASemanticInterpreter >> send: aSymbol to: anObject [
 	^ stack last
 ]
 
+{ #category : 'initialization' }
+ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
+
+	self reset.
+	stack addLast: anObject.
+	arguments do: [ :arg | stack addLast: arg ].
+	self send: aSymbol.
+	self interpret.
+	^ stack last
+]
+
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> staclDepth [
 

@@ -233,6 +233,12 @@ ASCompileTestClass1 >> recursiveMethod [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> recursiveSum: listOfNumbers [
+	listOfNumbers empty ifTrue: [^0].
+	^ listOfNumbers first + listOfNumbers allButFirst
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> simple1 [
 	..
 	^ 42..
