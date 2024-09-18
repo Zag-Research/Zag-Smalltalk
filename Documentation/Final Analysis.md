@@ -1,3 +1,4 @@
+## Inlining
 Inlining is the primary target-independent optimization for the Zag Smalltalk compiler. This is similar to [SELF](papers-others/An_Efficient_Implementation_of_SELF_a_Dy.pdf); it is available because methods are compiled for each target (class in Smalltalk, prototype in SELF).
 
 When the Zag compiler is asked to compile a particular selector for a target class, it looks at the class and its superclasses for the corresponding method, stored as an abstract syntax tree (AST). It is translated to an intermediate form of a series of basic blocks - each ending in either a send or a return. This is perfectly executable and, in fact, is the initial implementation for a method (output as either threaded or native code). If it is executed frequently enough, it will get re-compiled with some level of inlining.
@@ -23,9 +24,41 @@ This is a special case of a primitive method send. This is very similar to the f
 2. when doing name resolution, when we get to the position of the receiver on the stack, we skip to the scope where this block is defined.
 #### Send where there are few implementations of a method - not safe
 If there are only a few classes that have access to an implementation of a particular message (i.e they have it themselves or a superclass has an implementation), we emit a class-case instruction and inline the method for each of them, with each of them branching to the original return block on "return". To have the correct/conservative semantics, we need to retain a fall-back of doing the original send, unless we can prove that the list is exhaustive.
-
 #### Send where the target is the result of a comparison primitive - safe
 As a special case of the previous case, we know that comparison primitives always return `true` or `false` (or an error if the values are incomparable), so we have an exhaustive list. But more, we now know something about the relationship of these values. So, for example, we might know that a value is in the range of 1 to the size of an array, which means that we can safely use that value to index into the array.
-
+## Removal of redundant `BlockClosures`
+After all inlining is completed there will typically be pushes of `BlockClosure`s that are subsequently inlined so that the block itself need never be created. These are turned into pushes of `nil`.
+## Compiling required `BlockClosure`s
+Any `BlockClosure`s that remain after the previous step must be compiled, and the above inlining operations performed.
+## Optimizing local variable locations
+If we have block closures, we now determine the optimum location for each variable. There are several possibilities:
+1. If a variable is only referenced in the method, it will be put in the `Context` (or just on the stack if no context is created).
+2. If the variable is only referenced in one `BlockClosure` then it will be created as a local variable there.
+3. If a variable isn't modified after a `BlockClosure` is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit.
+4. For values referenced in two or more places, modified in at least one, the default would be to put them in the `Context`.  However, if a `BlockClosure` has a reference to the `Context` and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
+5. All other variables will be placed in a closure that modifies the variable.
 ## Removal of redundant operations
-After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required, or pushing a `BlockClosure` that is subsequently inlined so that the block itself need never be created. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects
+After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects.
+## Non-structural inlining
+The next stage is to inline primitives that can't affect the control-flow graph, but can use type information that is not available until the data-flow graph is complete. Current examples are `at:` and `at:put:` where the receiver is known to be an `Array`, `String` or one of the other special array types.
+## Creating `Context` and stack offsets
+Creating a `Context` is fairly expensive (dozens of instructions) and they are only required if we send a message or create a `BlockClosure` that does a non-local return. After inlining, some methods may not require a context along certain paths (see `fibonacci`). Therefore we want to delay creating a `Context` as long as we can. The size of a `Context` is variable, because it contains: `self`, the parameters, the locals, references to any `BlockClosures` we need to reference, as well as space for all the `BlockClosure`s that we create in the method.
+
+Each block has a context status:
+ - `nil` means it hasn't been established yet
+ - 0 means it is inherited - all the blocks that come to this block created or inherited a context
+ - MAXINT means there is no context
+ - n>0 is the index in the block of the context-create operation  - any references before that calculate offsets without the context, any after calculate with the context
+
+The algorithm to set all the context statuses is:
+1. Tell the first basic block that it has no context.
+2. If we haven't established yet and we're told we have not context, go through all the operations in the block
+	1. If we don't have a context yet and the current instruction needs a context, insert one (ideally before any pushes in this block) and then resume scanning from that point.
+	2. If the current instruction references a local, calculate the offset (with or without the closure size) for that instruction
+3. If we still have no context and any of our next blocks  have an inherited context, then we must create one, and then tell all our next blocks that they have inherited, otherwise tell all our next blocks that they have no context.
+4. If we now have a context, tell each of our next blocks that they have inherited a context
+5. If we haven't established yet and we're told we have inherited a context, go through all the operations in the block:
+	1. If the current instruction references a local, calculate the offset with context
+6. If we had not context and we're being told to inherit...
+7. If we had inherited a context
+8. If we creates a context in this block and we're being tole we inherit...
