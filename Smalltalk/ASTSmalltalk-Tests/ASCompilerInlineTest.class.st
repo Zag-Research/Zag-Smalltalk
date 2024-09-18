@@ -180,19 +180,20 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ]
 
 { #category : 'asserting' }
-ASCompilerInlineTest >> assertEquivalentSending: aSymbol to: anObject [
+ASCompilerInlineTest >> assertEquivalentSending: selecter to: anObject [
 
 	self
-		assert: (interpreter send: aSymbol to: anObject)
-		equals: (anObject perform: aSymbol).
+		assert: (interpreter send: selecter to: anObject)
+		equals: (anObject perform: selecter).
 	self assert: interpreter stackDepth equals: 1
 ]
 
 { #category : 'asserting' }
-ASCompilerInlineTest >> assertEquivalentSending: aSymbol with: aCollection to: anObject [ 
+ASCompilerInlineTest >> assertEquivalentSending: selecter with: aCollection to: anObject [
+
 	self
-		assert: (interpreter send: aSymbol with: aCollection to: anObject)
-		equals: (anObject perform: aSymbol).
+		assert: (interpreter send: selecter with: aCollection to: anObject)
+		equals: (anObject perform: selecter).
 	self assert: interpreter stackDepth equals: 1
 ]
 
@@ -221,8 +222,10 @@ bar
 
 	self assertEquivalentSending: #bar to: ASCompileTestClass1 new.
 	self assert: interpreter basicBlocks size equals: 1.
-	self assert: (interpreter dispatchFor: ASCompileTestClass1>>#bar) codeSize equals: 3
-
+	self
+		assert:
+		(interpreter dispatchFor: ASCompileTestClass1 >> #bar) codeSize
+		equals: 3
 ]
 
 { #category : 'tests' }
@@ -406,63 +409,18 @@ ASCompilerInlineTest >> testFibonacci_fast_forCorrectness [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFoo [
-"foo
+	"foo
 	^ self bar"
-"bar
+
+	"bar
 	^ 42"
+
+	self assertEquivalentSending: #foo to: ASCompileTestClass1 new.
+	self assert: interpreter basicBlocks size equals: 2.
 	self
-		assert: ASCompileTestClass1 >> #foo
-		outputTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
-&e.pushContext,"^",
-":Mfoo:1",
-&e.pushLocal,0,
-&e.setupSend,Sym.i_1,
-&e.dynamicDispatch,
- });
-const Sym = struct {
-	bar: Object,
-    const ss = heap.compileStrings(.{
-	"bar",
-    });
-    usingnamespace symbol.symbols;
-    fn init() Sym {
-        return .{
-	.bar = symbol.intern(ss[0].asObject()),
-        };
-    }
-};
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-    sym = Sym.init();
-Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
+		assert:
+		(interpreter dispatchFor: ASCompileTestClass1 >> #foo) codeSize
+		equals: 3
 ]
 
 { #category : 'tests' }

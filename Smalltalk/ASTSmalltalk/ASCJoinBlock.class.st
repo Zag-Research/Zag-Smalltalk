@@ -1,5 +1,7 @@
 "
-for inlining
+I'm an inline block that will be the join point for an `ASCCase`.
+
+That mean I have multiple sources, but they all came from the same place, so they do not create loops 
 "
 Class {
 	#name : 'ASCJoinBlock',

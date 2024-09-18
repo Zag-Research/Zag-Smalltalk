@@ -48,8 +48,7 @@ ASStackTemporary >> drop: count [
 { #category : 'instance creation' }
 ASStackTemporary >> fromStack: anASStack [
 
-	next := anASStack.
-	offset := anASStack offsetForTemps - 1
+	next := anASStack
 ]
 
 { #category : 'accessing' }

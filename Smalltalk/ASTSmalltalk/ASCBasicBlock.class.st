@@ -254,6 +254,13 @@ ASCBasicBlock >> inlineIfPossible: anASCodeGenerator [
 	^ operations last inlineIfPossible: anASCodeGenerator
 ]
 
+{ #category : 'inlining' }
+ASCBasicBlock >> inlineWithFixedCFG: anASCodeGenerator [
+
+	operations ifEmpty: [ ^ self ].
+	^ operations last inlineWithFixedCFG: anASCodeGenerator
+]
+
 { #category : 'printing' }
 ASCBasicBlock >> inspectZagASTOn: aStream [
 
@@ -428,7 +435,7 @@ ASCBasicBlock >> pushArray: arraySize [
 	self addOperation: (ASCArray with: arraySize)
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 ASCBasicBlock >> pushNil [
 
 	stack := stack pushDataAsTemporary: AStUndefinedClass singleton
@@ -458,36 +465,12 @@ ASCBasicBlock >> removeLastOperation [
 	operations removeLast
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'inlining' }
 ASCBasicBlock >> replaceOperation: anOperation [
 
 	operations
 		at: operations size
 		put: (anOperation fromOperation: (operations at: operations size))
-]
-
-{ #category : 'examples' }
-ASCBasicBlock >> returnLiteral: literal [
-
-	^ self addOperation: (ASCReturnLiteral literal: literal)
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> returnNonLocal [
-
-	^ self addOperation: ASCReturnNonLocal new
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> returnSelf [
-
-	^ self addOperation: ASCReturnSelf new
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> returnTop [
-
-	^ self addOperation: (ASCReturnTop new)
 ]
 
 { #category : 'initialization' }
@@ -571,7 +554,7 @@ ASCBasicBlock >> storeVariable: aSymbol [
 	self addOperation: (ASCStoreVariable with: (stack at: aSymbol))
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'inlining' }
 ASCBasicBlock >> swapLastOperations [
 
 	| size temp |

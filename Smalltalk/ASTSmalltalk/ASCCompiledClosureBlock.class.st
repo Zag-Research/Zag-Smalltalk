@@ -1,18 +1,22 @@
 "
-I am the first block in a method.
+I am an inline block, but I'm used to inline a BlockClosure at the top level - i.e. with a possible context
 
-All the other blocks that are created are ASCBasicBlock or ASCReturnBlock
+Returns from me are real non-local returns
+My final expression will be a real return
 "
 Class {
-	#name : 'ASCPublicClosureBlock',
+	#name : 'ASCCompiledClosureBlock',
 	#superclass : 'ASCClosureBlock',
+	#instVars : [
+		'returnBlocks'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
 { #category : 'adding' }
-ASCPublicClosureBlock >> addBlock: anASCReturnBlock [
+ASCCompiledClosureBlock >> addBlock: anASCReturnBlock [
 
 	self halt.
 	^ returnBlocks
@@ -21,53 +25,58 @@ ASCPublicClosureBlock >> addBlock: anASCReturnBlock [
 ]
 
 { #category : 'data flow instructions' }
-ASCPublicClosureBlock >> flowForLocals [
+ASCCompiledClosureBlock >> flowForLocals [
 
 	^ ASFlowNil
 ]
 
 { #category : 'data flow instructions' }
-ASCPublicClosureBlock >> flowForTemporaries [
+ASCCompiledClosureBlock >> flowForTemporaries [
 
 	^ self shouldNotImplement
 ]
 
 { #category : 'testing' }
-ASCPublicClosureBlock >> hasContextOnEntry [
+ASCCompiledClosureBlock >> hasContextOnEntry [
 
 	^ sourceElements hasContext
 ]
 
 { #category : 'initialization' }
-ASCPublicClosureBlock >> labelExtra: s [
+ASCCompiledClosureBlock >> labelExtra: s [
 
 ]
 
 { #category : 'writing' }
-ASCPublicClosureBlock >> outputTo: output [
+ASCCompiledClosureBlock >> outputTo: output [
 
 	output
 		outputMethodDefinition: self label
-		primitive: primitive
 		methods: { self } , returnBlocks keys.
 	output outputMethodStart: self.
 	^ self outputRestTo: output
 ]
 
 { #category : 'printing' }
-ASCPublicClosureBlock >> printOn: aStream [
+ASCCompiledClosureBlock >> printOn: aStream [
 
 	aStream nextPutAll: '>>'; nextPutAll: self label
 ]
 
+{ #category : 'API' }
+ASCCompiledClosureBlock >> returnNonLocal [
+
+	^ self addOperation: ASCReturnNonLocal new
+]
+
 { #category : 'accessing' }
-ASCPublicClosureBlock >> stackDepth [
+ASCCompiledClosureBlock >> stackDepth [
 
 	^ sourceElements offset
 ]
 
 { #category : 'data flow instructions' }
-ASCPublicClosureBlock >> updateDataDependencies: ignored [
+ASCCompiledClosureBlock >> updateDataDependencies: ignored [
 	" a MethodBlock has no dependencies "
 
 ]

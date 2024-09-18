@@ -180,15 +180,16 @@ ASMethodNode >> stackSize [
 { #category : 'codegen' }
 ASMethodNode >> zigWalkMethod: aGenerator [
 
-	| headerBlock |
-	headerBlock := aGenerator
-		               selector: selector;
-		               sender: nil locals: locals parameters: arguments.
+	self halt.
+	aGenerator
+		selector: self selector;
+		sender: nil locals: locals parameters: arguments.
 	pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			aGenerator primitive: pragma arguments first value ] ].
-	^ body
-		  zigWalkEmpty: [ aGenerator returnSelf ]
-		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-		  last: [ :exp | headerBlock zigWalkReturn: exp for: aGenerator ]
+	^ aGenerator walkBody: [
+		  body
+			  zigWalkEmpty: [ aGenerator returnSelf ]
+			  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+			  last: [ :exp | exp zigWalkFinal: aGenerator ] ]
 ]

@@ -81,38 +81,26 @@ ASReturn >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
-ASReturn >> zigWalkBlockReturn: anASCodeGenerator [
+ASReturn >> zigWalkDiscard: aGenerator [
 
-	(expression
-		zigWalkForReturn: anASCodeGenerator)
-		ifFalse: [ ^ anASCodeGenerator returnNonLocal ]
+	^ ASTInvalid signal: 'return can''t be in the middle of a body'
 ]
 
 { #category : 'compiling' }
-ASReturn >> zigWalkDiscard: aGenerator [
+ASReturn >> zigWalkFinal: aGenerator [
+
 	(expression zigWalkForReturn: aGenerator) ifFalse: [
 		^ aGenerator returnTop ]
 ]
 
-{ #category : 'as yet unclassified' }
-ASReturn >> zigWalkInlineBlockReturn: anASCodeGenerator [
+{ #category : 'compiling' }
+ASReturn >> zigWalkForReturn: aGenerator [
 
-	self shouldBeImplemented 
+	^ ASTInvalid signal: 'return can''t be returned'
 ]
 
 { #category : 'compiling' }
-ASReturn >> zigWalkInlineDiscard: aGenerator [
+ASReturn >> zigWalkTarget: aGenerator [
 
-	^ (expression zigWalkForReturn: aGenerator) ifFalse: [
-		aGenerator returnTopInline]
-]
-
-{ #category : 'compiling' }
-ASReturn >> zigWalkInlineMethodReturn: aGenerator [ 
-	^ self zigWalkInlineDiscard: aGenerator
-]
-
-{ #category : 'compiling' }
-ASReturn >> zigWalkMethodReturn: aGenerator [ 
-	^ self zigWalkDiscard: aGenerator
+	^ ASTInvalid signal: 'return can''t be sent a message'
 ]

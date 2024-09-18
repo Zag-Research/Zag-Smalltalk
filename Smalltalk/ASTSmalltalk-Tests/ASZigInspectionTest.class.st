@@ -10,7 +10,7 @@ Class {
 ASZigInspectionTest >> testInspectionMadeUpAST [
 
 	| block |
-	block := ASCPublicMethodBlock new.
+	block := ASCCompiledMethodBlock new.
 	block
 		sender: nil
 		locals: { (#size , #location) }

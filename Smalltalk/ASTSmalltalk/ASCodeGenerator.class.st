@@ -27,8 +27,8 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'blockClosureIndex',
-		'methodBlocks'
+		'methodBlocks',
+		'currentCompilableUnitBlock'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -147,11 +147,12 @@ ASCodeGenerator >> enclosingScope: aScope [
 ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
+	self removeUnusedCode.
+	maxDepth := 0.
 	basicBlocks do: [ :aBasicBlock |
 		aBasicBlock markBlockClosuresToManifest.
 		maxDepth := maxDepth max: aBasicBlock maxDepth ].
-	blockClosures do: #finalAnalysis.
-
+	blockClosures do: #finalAnalysis
 ]
 
 { #category : 'private - testing' }
@@ -193,7 +194,7 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 { #category : 'initialization' }
 ASCodeGenerator >> initCode [
 
-	code := ASCPublicMethodBlock new
+	code := ASCCompiledMethodBlock new
 ]
 
 { #category : 'initialization' }
@@ -201,15 +202,12 @@ ASCodeGenerator >> initialize [
 
 	super initialize.
 	self initCode.
-	basicBlocks := OrderedCollection new.
-	basicBlocks add: code.
+	basicBlocks := OrderedCollection with: code.
 	methodBlocks := IdentityDictionary new.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
-	maxDepth := 0.
 	inline := 0.
-	tailCallOptimize := true.
-	blockClosureIndex := 0
+	tailCallOptimize := true
 ]
 
 { #category : 'accessing' }
@@ -325,7 +323,8 @@ ASCodeGenerator >> inlineWherePossible [
 		blocksWithCalls := Set new.
 		temp do: [ :block |
 			code := block.
-			block inlineIfPossible: self ] ]
+			block inlineIfPossible: self ] ].
+	basicBlocks do: [ : block | block inlineWithFixedCFG: self ]
 ]
 
 { #category : 'accessing' }
@@ -356,13 +355,6 @@ ASCodeGenerator >> lookupObject: anObject [
 { #category : 'accessing' }
 ASCodeGenerator >> name [
 	^ name
-]
-
-{ #category : 'instance creation' }
-ASCodeGenerator >> newBlockName [
-
-	blockClosureIndex := blockClosureIndex + 1.
-	^ self selector asString , #_b , blockClosureIndex asString
 ]
 
 { #category : 'private - testing' }
@@ -465,6 +457,11 @@ ASCodeGenerator >> recursiveBasicBlock: aCompiledMethod [
 	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
+{ #category : 'data flow instructions' }
+ASCodeGenerator >> removeUnusedCode [.
+
+]
+
 { #category : 'examples' }
 ASCodeGenerator >> returnLiteral: literal [
 
@@ -476,21 +473,13 @@ ASCodeGenerator >> returnLiteral: literal [
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
-	^ code returnSelf
+	^ currentCompilableUnitBlock returnSelf
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	returnBlock ifNil: [ ^ code returnTop ].
-	^ self returnTopInline
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> returnTopInline [
-
-	code popAndCopyTopToSelf.
-	^ self branch: returnBlock
+	^ currentCompilableUnitBlock returnTop
 ]
 
 { #category : 'accessing' }
@@ -576,6 +565,16 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> walkBody: aBlock [
+
+	| savedCompilableUnitBlock |
+	savedCompilableUnitBlock := currentCompilableUnitBlock.
+	currentCompilableUnitBlock := code.
+	aBlock ensure: [
+		currentCompilableUnitBlock := savedCompilableUnitBlock ]
 ]
 
 { #category : 'post processing' }

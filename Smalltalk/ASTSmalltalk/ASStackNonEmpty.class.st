@@ -77,8 +77,7 @@ ASStackNonEmpty >> do: aBlock [
 { #category : 'instance creation' }
 ASStackNonEmpty >> fromStack: anASStack [
 
-	next := anASStack.
-	offset := anASStack offset - 1
+	next := anASStack
 ]
 
 { #category : 'output' }

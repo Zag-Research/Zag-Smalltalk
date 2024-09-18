@@ -24,13 +24,6 @@ ASExpression >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
-ASExpression >> zigWalkBlockReturn: aGenerator [
-
-	self zigWalk: aGenerator.
-	^ aGenerator returnTop
-]
-
-{ #category : 'compiling' }
 ASExpression >> zigWalkDiscard: aGenerator [
 
 	self zigWalk: aGenerator.
@@ -38,23 +31,17 @@ ASExpression >> zigWalkDiscard: aGenerator [
 ]
 
 { #category : 'compiling' }
+ASExpression >> zigWalkFinal: aGenerator [
+
+	self zigWalk: aGenerator.
+	^ aGenerator returnTop
+]
+
+{ #category : 'compiling' }
 ASExpression >> zigWalkForReturn: aGenerator [
 
 	self zigWalk: aGenerator.
 	^ false
-]
-
-{ #category : 'as yet unclassified' }
-ASExpression >> zigWalkInlineBlockReturn: anASCodeGenerator [
-	"we're not a return so just walk self"
-	self zigWalk: anASCodeGenerator 
-]
-
-{ #category : 'compiling' }
-ASExpression >> zigWalkMethodReturn: aGenerator [
-
-	self zigWalkDiscard: aGenerator.
-	^ aGenerator returnSelf
 ]
 
 { #category : 'compiling' }
