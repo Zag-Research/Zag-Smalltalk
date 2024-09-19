@@ -15,6 +15,39 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'accessing' }
+AStSmallInteger class >> geThan: anInteger [
+
+	^ self new geThan: anInteger
+]
+
+{ #category : 'initialization' }
+AStSmallInteger class >> setValue: anInteger [
+
+	^ self new setValue: anInteger
+]
+
+{ #category : 'arithmetic' }
+AStSmallInteger >> + anInteger [
+
+	anInteger = 0 ifTrue: [ ^ self ].
+	anInteger > 0 ifTrue: [	^ self class new geThan: geThan + anInteger ].
+	anInteger < 0 ifTrue: [	^ self class new leThan: leThan + anInteger ]
+]
+
+{ #category : 'comparing' }
+AStSmallInteger >> = other [
+
+	^ leThan = other leThan and: [ geThan = other geThan ]
+]
+
+{ #category : 'arithmetic' }
+AStSmallInteger >> adaptToNumber: anInteger andSend: aSymbol [
+
+	aSymbol = #+ ifTrue: [ ^ self + anInteger ].
+	^ super adaptToNumber: anInteger andSend: aSymbol
+]
+
 { #category : 'as yet unclassified' }
 AStSmallInteger >> couldMergeIn: other [
 
@@ -57,6 +90,25 @@ AStSmallInteger >> leThan [
 AStSmallInteger >> leThan: anObject [
 
 	^ leThan := anObject
+]
+
+{ #category : 'accessing' }
+AStSmallInteger >> maxWith: anInteger [
+
+	^ leThan ifNotNil: [ anInteger ifNotNil: [leThan max: anInteger]]
+]
+
+{ #category : 'API' }
+AStSmallInteger >> mergeIn: other [
+
+	^ self class new geThan: (self minWith: other geThan);
+	leThan: (self maxWith: other leThan);yourself 
+]
+
+{ #category : 'accessing' }
+AStSmallInteger >> minWith: anInteger [
+
+	^ geThan min: anInteger
 ]
 
 { #category : 'initialization' }
