@@ -105,14 +105,6 @@ ASCBasicBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> checkForCalls [
-
-	(sourceBlocks noneSatisfy: #endsWithCall) ifTrue: [ ^ self ].
-	self primitiveChangeClassTo: ASCJoinBlock basicNew.
-	stack makeStackTheSource
-]
-
 { #category : 'accessing' }
 ASCBasicBlock >> children [
 
@@ -126,7 +118,7 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 	case := ASCCase with: aSymbol.
 	aCollection do: [ :class |
 		| next |
-		next := ASCMethodBlock new.
+		next := ASCInlineMethodBlock new.
 		case at: class put: next.
 		next addSourceBlock: self ].
 	self addOperation: case.
@@ -198,12 +190,6 @@ ASCBasicBlock >> flowForTemporaries [
 
 { #category : 'testing' }
 ASCBasicBlock >> hasContext [
-
-	^ sourceElements hasContext
-]
-
-{ #category : 'testing' }
-ASCBasicBlock >> hasContextOnEntry [
 
 	^ sourceElements hasContext
 ]
@@ -496,12 +482,6 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 	self addOperation: send.
 	next ifNotNil: [ next addSourceBlock: self ].
 	^ next
-]
-
-{ #category : 'accessing' }
-ASCBasicBlock >> sender: sender locals: locals parameters: arguments [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'initialization' }

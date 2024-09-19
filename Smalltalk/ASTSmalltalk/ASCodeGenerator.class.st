@@ -70,7 +70,7 @@ ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
 	| rest current namedBlock |
 	namedBlock := current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
-	[ true ] whileNotNil: [
+	[ true ] whileTrue: [
 		aBlock value: current.
 		current next ifNotNil: [ :next | current := next ] ifNil: [
 			rest isEmpty ifTrue: [ ^ self ].
@@ -120,6 +120,16 @@ ASCodeGenerator >> compileBlocks: outputter [
 			generateCode: aBlockClosure block for: BlockClosure ]
 ]
 
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> compileRemainingBlockClosures [
+
+	blockClosures do: #error
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> createContextAndStackOffsets [
+]
+
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
@@ -143,16 +153,16 @@ ASCodeGenerator >> enclosingScope: aScope [
 	enclosingScope := aScope
 ]
 
-{ #category : 'data flow instructions' }
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
+	self removeUnusedBlockClosures.
+	self compileRemainingBlockClosures.
+	self optimizeLocalVariableLocations.
 	self removeUnusedCode.
-	maxDepth := 0.
-	basicBlocks do: [ :aBasicBlock |
-		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth ].
-	blockClosures do: #finalAnalysis
+	self inlineDependentPrimitives.
+	self createContextAndStackOffsets.
 ]
 
 { #category : 'private - testing' }
@@ -163,7 +173,7 @@ ASCodeGenerator >> firstBlock [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> flowAnalysis [
 
-	basicBlocks do: #checkForCalls.
+	basicBlocks do: #becomeJoinBlock.
 	basicBlocks do: #markReferences
 ]
 
@@ -237,6 +247,10 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 		targetClass := savedTargetClass ]
 ]
 
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> inlineDependentPrimitives [
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
 
@@ -265,20 +279,25 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 { #category : 'inlining' }
 ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaustive [
 
-	| case |
-	isExhaustive ifTrue: [ code removeLastOperation ].
+	| case joinBlock |
+	isExhaustive ifTrue: [
+		code removeLastOperation.
+		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
+				  basicBlocks add: joinBlock ].
 	case := code
 		        classCase: (methods collect: #methodClass)
 		        selector: methods first selector.
-	isExhaustive ifFalse: [ code swapLastOperations ].
+	isExhaustive ifFalse: [
+		code swapLastOperations.
+		joinBlock := anASCSend next ].
 	^ methods do: [ :compiledMethod |
 		  | targetBlock |
 		  targetBlock := case at: compiledMethod methodClass.
+		  targetBlock next: joinBlock.
 		  basicBlocks add: targetBlock.
 		  self setBasicBlock: targetBlock.
 		  "walk the sends method AST"
-		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend.
-		  self branch: anASCSend next ]
+		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend ]
 ]
 
 { #category : 'inlining' }
@@ -311,7 +330,7 @@ ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
 	self halt " handle Symbol value: "
 ]
 
-{ #category : 'data flow instructions' }
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> inlineWherePossible [
 
 	| temp |
@@ -393,6 +412,10 @@ ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 	^ code offsetTo: anObject methodBlock: aBlock 
 ]
 
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> optimizeLocalVariableLocations [
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
 
@@ -457,7 +480,11 @@ ASCodeGenerator >> recursiveBasicBlock: aCompiledMethod [
 	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
-{ #category : 'data flow instructions' }
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> removeUnusedBlockClosures [
+]
+
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> removeUnusedCode [.
 
 ]
