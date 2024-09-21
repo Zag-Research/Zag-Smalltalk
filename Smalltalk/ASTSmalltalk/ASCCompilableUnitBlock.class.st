@@ -46,3 +46,9 @@ ASCCompilableUnitBlock >> selector [
 
 	^ self subclassResponsibility
 ]
+
+{ #category : 'accessing' }
+ASCCompilableUnitBlock >> sender: sender locals: locals parameters: arguments [
+
+	^ self subclassResponsibility
+]

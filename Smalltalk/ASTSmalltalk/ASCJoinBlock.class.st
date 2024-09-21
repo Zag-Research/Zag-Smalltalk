@@ -5,7 +5,7 @@ That mean I have multiple sources, but they all came from the same place, so the
 "
 Class {
 	#name : 'ASCJoinBlock',
-	#superclass : 'ASCBasicBlock',
+	#superclass : 'ASCReturnBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -98,14 +98,6 @@ ASCJoinBlock >> printOn: aStream [
 ASCJoinBlock >> selfElementClass [
 
 	^ ASStackSelf
-]
-
-{ #category : 'accessing' }
-ASCJoinBlock >> sender: sender locals: locals parameters: arguments [
-
-	self nameStack: arguments.
-	locals do: [ :each | self initLocalNamed: each ].
-	maxDepth := 0
 ]
 
 { #category : 'printing' }

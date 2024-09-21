@@ -36,12 +36,6 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 	^ self shouldNotImplement
 ]
 
-{ #category : 'testing' }
-ASCCompiledClosureBlock >> hasContextOnEntry [
-
-	^ sourceElements hasContext
-]
-
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> labelExtra: s [
 

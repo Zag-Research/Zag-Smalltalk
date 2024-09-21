@@ -39,13 +39,13 @@ AStackValue class >> fromValue: anObject [
 	^ self fromClass: aClass
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 AStackValue >> couldMergeIn: other [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 AStackValue >> dataClass [
 
 	^ self subclassResponsibility
@@ -67,4 +67,10 @@ AStackValue >> markUnreferenced [
 AStackValue >> markedReferenced [
 
 	^ markedReferenced
+]
+
+{ #category : 'API' }
+AStackValue >> mergeIn: other [
+
+	^ self subclassResponsibility
 ]
