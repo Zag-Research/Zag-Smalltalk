@@ -573,7 +573,7 @@ ASCompilerInlineTest >> testPlus1 [
 	"plus1: aNumber
 	^ aNumber + 1"
 
-	self assertEquivalentSending: #plus1: with: #(6) to: ASCompileTestClass1 new
+	self assertEquivalentSending: #plus1: arguments: #(6) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
