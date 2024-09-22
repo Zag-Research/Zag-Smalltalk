@@ -1,11 +1,16 @@
 Class {
 	#name : 'AStackValueTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASFinalAnalysisTest',
 	#instVars : [
 		'three',
 		'theAnswer',
 		'threePlus',
-		'fourPlus'
+		'fourPlus',
+		'otherThree',
+		'unbounded',
+		'theArray',
+		'sizeOf',
+		'threeToSizeOf'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -17,14 +22,21 @@ AStackValueTest >> setUp [
 
 	super setUp.
 
+	unbounded := AStSmallInteger new.
 	three := AStSmallInteger setValue: 3.
+	otherThree := AStSmallInteger setValue: 3.
 	threePlus := AStSmallInteger geThan: 3.
 	fourPlus := AStSmallInteger geThan: 4.
-	theAnswer := AStSmallInteger setValue: 42
+	theAnswer := AStSmallInteger setValue: 42.
+	theArray := Object new.
+	sizeOf := AStSizeOf object: theArray.
+	threeToSizeOf := (AStSmallInteger geThan: 3) leThan: sizeOf
+	" more cases to add "
 ]
 
 { #category : 'tests' }
 AStackValueTest >> testMergeSmallInteger [
+	" test all the kinds of `AStSmallInteger`s defined in the setUp "
 
 	self assert: three leThan equals: 3.
 	self assert: three geThan equals: 3.
@@ -33,8 +45,13 @@ AStackValueTest >> testMergeSmallInteger [
 	self assert: (three mergeIn: theAnswer) geThan equals: 3.
 	self assert: (threePlus mergeIn: theAnswer) geThan equals: 3.
 	self assert: (threePlus mergeIn: theAnswer) leThan equals: nil.
-	self assert: three + 1 equals: fourPlus.
-	self assert: 1 + three equals: fourPlus.
+	self assert: (three delta: 1) equals: fourPlus.
 	self assert: (threePlus mergeIn: theAnswer) equals: threePlus.
-	self assert: (theAnswer mergeIn: threePlus) equals: threePlus
+	self assert: (theAnswer mergeIn: threePlus) equals: threePlus.
+	self assert: (three mergeIn: (three delta: 1)) equals: threePlus.
+	self assert: ((three delta: 1) mergeIn: three) equals: threePlus.
+	self assert: (threePlus mergeIn: (threePlus delta: 1)) equals: threePlus.
+	self assert: ((threePlus delta: 1) mergeIn: threePlus) equals: threePlus.
+	self assert: (otherThree mergeIn: (three delta: 1)) equals: unbounded.
+	self assert: ((three delta: 1) mergeIn: otherThree) equals: unbounded
 ]

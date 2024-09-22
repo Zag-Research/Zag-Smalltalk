@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASZigThreadedOutputTest',
-	#superclass : 'ASZigTests',
+	#superclass : 'ASZigTest',
 	#instVars : [
 		'output'
 	],

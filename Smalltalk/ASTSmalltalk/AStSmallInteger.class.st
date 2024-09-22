@@ -2,6 +2,10 @@
 I represent a `SmallInteger` value, but nothing else is known.
 
 My subclasses represent `SmallInteger`s that we know something about.
+
+I `couldMergeIn:` any of my subclasses - and vice versa - although the result might simply be an unbounded `AStSmallInteger`.
+
+My `leThan` field might be `AStSizeOf`, which complicates merging
 "
 Class {
 	#name : 'AStSmallInteger',
@@ -27,38 +31,29 @@ AStSmallInteger class >> setValue: anInteger [
 	^ self new setValue: anInteger
 ]
 
-{ #category : 'arithmetic' }
-AStSmallInteger >> + anInteger [
-
-	anInteger = 0 ifTrue: [ ^ self ].
-	anInteger > 0 ifTrue: [	^ self class new geThan: geThan + anInteger ].
-	anInteger < 0 ifTrue: [	^ self class new leThan: leThan + anInteger ]
-]
-
 { #category : 'comparing' }
 AStSmallInteger >> = other [
 
 	^ leThan = other leThan and: [ geThan = other geThan ]
 ]
 
-{ #category : 'arithmetic' }
-AStSmallInteger >> adaptToNumber: anInteger andSend: aSymbol [
-
-	aSymbol = #+ ifTrue: [ ^ self + anInteger ].
-	^ super adaptToNumber: anInteger andSend: aSymbol
-]
-
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
 AStSmallInteger >> couldMergeIn: other [
 
-	| sc oc |
-	sc := self class.
-	oc := other class.
-	sc ~~ oc ifTrue: [
-		sc ~~ oc superclass  ifTrue: [ ^ false ].
-		self halt ].
-	geThan >= other geThan ifFalse: [ ^ false ].
-	^ leThan <= other leThan
+	self class == other class ifTrue: [ ^ true ].
+	^ other class inheritsFrom: AStSmallInteger
+]
+
+{ #category : 'arithmetic' }
+AStSmallInteger >> delta: anInteger [
+
+	anInteger >= 0 ifTrue: [
+		^ AStDelta new
+			  origin: self;
+			  geThan: geThan + anInteger ].
+	^ AStDelta new
+		  origin: self;
+		  leThan: leThan + anInteger
 ]
 
 { #category : 'accessing' }
@@ -101,14 +96,23 @@ AStSmallInteger >> maxWith: anInteger [
 { #category : 'API' }
 AStSmallInteger >> mergeIn: other [
 
-	^ self class new geThan: (self minWith: other geThan);
-	leThan: (self maxWith: other leThan);yourself 
+	other class ~~ AStSmallInteger ifTrue: [ ^ other mergeIn: self ].
+	^ self privateMergeIn: other
 ]
 
 { #category : 'accessing' }
 AStSmallInteger >> minWith: anInteger [
 
 	^ geThan min: anInteger
+]
+
+{ #category : 'private' }
+AStSmallInteger >> privateMergeIn: other [
+
+	^ self class new
+		  geThan: (self minWith: other geThan);
+		  leThan: (self maxWith: other leThan);
+		  yourself
 ]
 
 { #category : 'initialization' }

@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASZigCPSOutputTest',
-	#superclass : 'ASZigTests',
+	#superclass : 'ASZigTest',
 	#instVars : [
 		'output'
 	],
