@@ -1,17 +1,16 @@
 Class {
-	#name : 'ASZigTests',
-	#superclass : 'ASCodeTests',
-	#instVars : [
-		'file'
-	],
+	#name : 'ASLLVMTest',
+	#superclass : 'ASCodeTest',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
 { #category : 'running' }
-ASZigTests >> setUp [
+ASLLVMTest >> setUp [
 
 	super setUp.
-	file := ASZigFileContext new
+
+	"Convert to LLVM specific context"
+	file := ASLLFileContext new
 ]

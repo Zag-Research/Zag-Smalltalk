@@ -1,9 +1,8 @@
 Class {
 	#name : 'ASLLVMOutputTest',
-	#superclass : 'ASLLVMTests',
+	#superclass : 'ASLLVMTest',
 	#instVars : [
-		'output',
-		'common'
+		'output'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',

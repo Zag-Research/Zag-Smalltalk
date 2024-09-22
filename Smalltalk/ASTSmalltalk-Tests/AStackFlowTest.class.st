@@ -1,6 +1,6 @@
 Class {
 	#name : 'AStackFlowTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASFinalAnalysisTest',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'

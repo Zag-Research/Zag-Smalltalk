@@ -1,12 +1,15 @@
 Class {
-	#name : 'ASCodeTests',
+	#name : 'ASCodeTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'file'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
 { #category : 'method' }
-ASCodeTests >> astFor: aMethod [ 
+ASCodeTest >> astFor: aMethod [ 
 	^ ASPharoCompiler new astFor: aMethod
 ]
