@@ -422,6 +422,12 @@ ASCBasicBlock >> pushArray: arraySize [
 ]
 
 { #category : 'API' }
+ASCBasicBlock >> pushLiteral: aLiteral [
+
+	^ self addOperation: (ASCLiteral with: aLiteral)
+]
+
+{ #category : 'API' }
 ASCBasicBlock >> pushNil [
 
 	stack := stack pushDataAsTemporary: AStUndefinedClass singleton

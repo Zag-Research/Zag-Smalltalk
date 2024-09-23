@@ -453,7 +453,7 @@ ASCodeGenerator >> pushBlock: anASBlock [
 { #category : 'API' }
 ASCodeGenerator >> pushLiteral: aLiteral [
 
-	code addOperation: (ASCLiteral with: aLiteral)
+	^ code pushLiteral: aLiteral
 ]
 
 { #category : 'as yet unclassified' }
