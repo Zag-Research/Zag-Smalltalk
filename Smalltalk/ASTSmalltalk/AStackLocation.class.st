@@ -8,9 +8,9 @@ Class {
 	#name : 'AStackLocation',
 	#superclass : 'Object',
 	#instVars : [
-		'stackValue',
-		'isReferenced',
-		'creator'
+		'creator',
+		'stackValueOrFlow',
+		'consumers'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -26,23 +26,23 @@ AStackLocation >> creator: anASCLiteral [
 { #category : 'accessing' }
 AStackLocation >> dataClass [
 
-	^ stackValue dataClass
+	^ stackValueOrFlow dataClass
 ]
 
 { #category : 'data flow instructions' }
 AStackLocation >> markReferenced [
 
-	stackValue markReferenced
+	stackValueOrFlow markReferenced
 ]
 
 { #category : 'accessing' }
 AStackLocation >> stackValue [
 
-	^ stackValue
+	^ stackValueOrFlow
 ]
 
 { #category : 'accessing' }
 AStackLocation >> stackValue: aStackValue [
 
-	stackValue := aStackValue
+	stackValueOrFlow := aStackValue
 ]

@@ -111,19 +111,25 @@ ASStatement >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
-ASStatement >> zigWalkBlockReturn: aGenerator [
-
-	self subclassResponsibility
-]
-
-{ #category : 'compiling' }
 ASStatement >> zigWalkDiscard: aGenerator [
 
 	self subclassResponsibility
 ]
 
 { #category : 'compiling' }
-ASStatement >> zigWalkInlineBlockReturn: anASCodeGenerator [
+ASStatement >> zigWalkFinal: aGenerator [
+
+	self subclassResponsibility
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkForReturn: aGenerator [
+
+	self subclassResponsibility
+]
+
+{ #category : 'compiling' }
+ASStatement >> zigWalkTarget: aGenerator [
 
 	self subclassResponsibility
 ]

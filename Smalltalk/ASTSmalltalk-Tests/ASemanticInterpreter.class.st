@@ -38,11 +38,8 @@ ASemanticInterpreter >> basicBlocks [
 ASemanticInterpreter >> compile: aSymbol for: aClass [
 
 	| cg |
-	self halt.
 	cg := ASCodeGenerator targetClass: aClass selector: aSymbol.
-	cg
-		inline: inlineDepth;
-		finalAnalysis.
+	cg inline: inlineDepth.
 	basicBlocks addAll: cg basicBlocks.
 	^ ASemanticOutput new
 		  codeGenerator: cg;
@@ -140,6 +137,7 @@ ASemanticInterpreter >> reset [
 ASemanticInterpreter >> returnTOS [
 
 	context ifNil: [
+		[ stack size > 1 ] whileTrue: [ stack removeFirst ].
 		executing := false.
 		^ self ].
 	self halt
@@ -173,6 +171,12 @@ ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 	self send: aSymbol.
 	self interpret.
 	^ stack last
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> stackDepth [
+
+	^ stack size
 ]
 
 { #category : 'as yet unclassified' }

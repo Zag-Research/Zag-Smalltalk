@@ -7,29 +7,47 @@ Class {
 	#name : 'AStSizeOf',
 	#superclass : 'AStSmallInteger',
 	#instVars : [
-		'selfValue',
-		'offset'
+		'object',
+		'delta'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
 
-{ #category : 'as yet unclassified' }
-AStSizeOf >> couldMergeIn: other [
+{ #category : 'accessing' }
+AStSizeOf class >> object: anObject [
 
-	^ self class == other class and: [
-		  selfValue == other selfValue and: [ offset = other offset ] ]
+	^ self new object: anObject 
+]
+
+{ #category : 'arithmetic' }
+AStSizeOf >> delta: anInteger [
+
+	delta := anInteger
 ]
 
 { #category : 'accessing' }
-AStSizeOf >> selfValue [
+AStSizeOf >> geThan [
 
-	^ selfValue
+	^ self
+]
+
+{ #category : 'initialization' }
+AStSizeOf >> initialize [
+
+	super initialize.
+	delta := 0
 ]
 
 { #category : 'accessing' }
-AStSizeOf >> selfValue: anObject [
+AStSizeOf >> leThan [
 
-	selfValue := anObject
+	^ self
+]
+
+{ #category : 'accessing' }
+AStSizeOf >> object: anObject [
+
+	object := anObject
 ]

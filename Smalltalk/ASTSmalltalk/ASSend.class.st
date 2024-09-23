@@ -137,7 +137,6 @@ ASSend >> zigWalk: aGenerator tail: tail [
 
 	| myTarget |
 	myTarget := target zigWalkTarget: aGenerator.
-	"myTarget := aGenerator topOfStackType." "is this needed or just walk target?"
 	args do: [ :arg | arg zigWalk: aGenerator ].
 	aGenerator send: selector targetClass: myTarget tail: tail.
 	^ tail
@@ -147,17 +146,4 @@ ASSend >> zigWalk: aGenerator tail: tail [
 ASSend >> zigWalkForReturn: aGenerator [
 
 	^ self zigWalk: aGenerator  tail: true
-]
-
-{ #category : 'compiling' }
-ASSend >> zigWalkInlineMethodReturn: aGenerator [
-
-	^ self zigWalk: aGenerator tail: true
-]
-
-{ #category : 'compiling' }
-ASSend >> zigWalkTarget: aGenerator [
-
-	self zigWalk: aGenerator.
-	^ nil
 ]

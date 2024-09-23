@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASZigInspectionTest',
-	#superclass : 'ASZigTests',
+	#superclass : 'ASZigTest',
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
@@ -10,7 +10,7 @@ Class {
 ASZigInspectionTest >> testInspectionMadeUpAST [
 
 	| block |
-	block := ASCPublicMethodBlock new.
+	block := ASCCompiledMethodBlock new.
 	block
 		sender: nil
 		locals: { (#size , #location) }

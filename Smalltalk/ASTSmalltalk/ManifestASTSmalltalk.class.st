@@ -91,7 +91,7 @@ ManifestASTSmalltalk class >> ruleMissingSubclassResponsibilityRuleV1FalsePositi
 ManifestASTSmalltalk class >> ruleRefersToClassRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(  )
+	^ #(#(#(#RGMethodDefinition #(#AStSmallInteger #couldMergeIn: #false)) #'2024-09-22T08:44:00.560578-04:00') #(#(#RGMethodDefinition #(#AStSmallInteger #mergeIn: #false)) #'2024-09-22T09:16:54.776207-04:00') )
 ]
 
 { #category : 'code-critics' }

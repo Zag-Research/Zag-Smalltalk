@@ -1,8 +1,7 @@
 "
 I am a BasicBlock that is the return target for a send or call
 
-Note that `ASCInlineBlock`s often get their class changed to me, so my objects must be the same size.
-Among other things that means that some slots end up in `ASCBasicBlock` rather than their more logical place of here
+Note that I often get changed to be an `ASCJoinBlock`, so my objects must be the same size.
 "
 Class {
 	#name : 'ASCReturnBlock',
@@ -11,6 +10,13 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'data flow instructions' }
+ASCReturnBlock >> becomeJoinBlock [
+
+	self primitiveChangeClassTo: ASCJoinBlock basicNew.
+	stack makeStackTheSource
+]
 
 { #category : 'data flow instructions' }
 ASCReturnBlock >> flowForLocals [
@@ -34,12 +40,6 @@ ASCReturnBlock >> flowForSelf [
 ASCReturnBlock >> flowForTemporaries [
 
 	^ ASFlowOnDemand
-]
-
-{ #category : 'testing' }
-ASCReturnBlock >> hasContextOnEntry [
-
-	^ true
 ]
 
 { #category : 'initialization' }

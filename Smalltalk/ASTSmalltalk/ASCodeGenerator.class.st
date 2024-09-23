@@ -27,8 +27,8 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'blockClosureIndex',
-		'methodBlocks'
+		'methodBlocks',
+		'currentCompilableUnitBlock'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -70,7 +70,7 @@ ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
 	| rest current namedBlock |
 	namedBlock := current := basicBlocks first.
 	rest := basicBlocks allButFirst asSet.
-	[ true ] whileNotNil: [
+	[ true ] whileTrue: [
 		aBlock value: current.
 		current next ifNotNil: [ :next | current := next ] ifNil: [
 			rest isEmpty ifTrue: [ ^ self ].
@@ -120,6 +120,16 @@ ASCodeGenerator >> compileBlocks: outputter [
 			generateCode: aBlockClosure block for: BlockClosure ]
 ]
 
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> compileRemainingBlockClosures [
+
+	blockClosures do: #error
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> createContextAndStackOffsets [
+]
+
 { #category : 'API' }
 ASCodeGenerator >> drop [
 
@@ -143,15 +153,16 @@ ASCodeGenerator >> enclosingScope: aScope [
 	enclosingScope := aScope
 ]
 
-{ #category : 'data flow instructions' }
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> finalAnalysis [
 
 	self inlineWherePossible.
-	basicBlocks do: [ :aBasicBlock |
-		aBasicBlock markBlockClosuresToManifest.
-		maxDepth := maxDepth max: aBasicBlock maxDepth ].
-	blockClosures do: #finalAnalysis.
-
+	self removeUnusedBlockClosures.
+	self compileRemainingBlockClosures.
+	self optimizeLocalVariableLocations.
+	self removeUnusedCode.
+	self inlineDependentPrimitives.
+	self createContextAndStackOffsets.
 ]
 
 { #category : 'private - testing' }
@@ -162,7 +173,7 @@ ASCodeGenerator >> firstBlock [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> flowAnalysis [
 
-	basicBlocks do: #checkForCalls.
+	basicBlocks do: #becomeJoinBlock.
 	basicBlocks do: #markReferences
 ]
 
@@ -193,7 +204,7 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 { #category : 'initialization' }
 ASCodeGenerator >> initCode [
 
-	code := ASCPublicMethodBlock new
+	code := ASCCompiledMethodBlock new
 ]
 
 { #category : 'initialization' }
@@ -201,15 +212,12 @@ ASCodeGenerator >> initialize [
 
 	super initialize.
 	self initCode.
-	basicBlocks := OrderedCollection new.
-	basicBlocks add: code.
+	basicBlocks := OrderedCollection with: code.
 	methodBlocks := IdentityDictionary new.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
-	maxDepth := 0.
 	inline := 0.
-	tailCallOptimize := true.
-	blockClosureIndex := 0
+	tailCallOptimize := true
 ]
 
 { #category : 'accessing' }
@@ -237,6 +245,10 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> inlineDependentPrimitives [
 ]
 
 { #category : 'accessing' }
@@ -267,20 +279,25 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 { #category : 'inlining' }
 ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaustive [
 
-	| case |
-	isExhaustive ifTrue: [ code removeLastOperation ].
+	| case joinBlock |
+	isExhaustive ifTrue: [
+		code removeLastOperation.
+		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
+				  basicBlocks add: joinBlock ].
 	case := code
 		        classCase: (methods collect: #methodClass)
 		        selector: methods first selector.
-	isExhaustive ifFalse: [ code swapLastOperations ].
+	isExhaustive ifFalse: [
+		code swapLastOperations.
+		joinBlock := anASCSend next ].
 	^ methods do: [ :compiledMethod |
 		  | targetBlock |
 		  targetBlock := case at: compiledMethod methodClass.
+		  targetBlock next: joinBlock.
 		  basicBlocks add: targetBlock.
 		  self setBasicBlock: targetBlock.
 		  "walk the sends method AST"
-		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend.
-		  self branch: anASCSend next ]
+		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend ]
 ]
 
 { #category : 'inlining' }
@@ -313,7 +330,7 @@ ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
 	self halt " handle Symbol value: "
 ]
 
-{ #category : 'data flow instructions' }
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> inlineWherePossible [
 
 	| temp |
@@ -325,7 +342,8 @@ ASCodeGenerator >> inlineWherePossible [
 		blocksWithCalls := Set new.
 		temp do: [ :block |
 			code := block.
-			block inlineIfPossible: self ] ]
+			block inlineIfPossible: self ] ].
+	basicBlocks do: [ : block | block inlineWithFixedCFG: self ]
 ]
 
 { #category : 'accessing' }
@@ -356,13 +374,6 @@ ASCodeGenerator >> lookupObject: anObject [
 { #category : 'accessing' }
 ASCodeGenerator >> name [
 	^ name
-]
-
-{ #category : 'instance creation' }
-ASCodeGenerator >> newBlockName [
-
-	blockClosureIndex := blockClosureIndex + 1.
-	^ self selector asString , #_b , blockClosureIndex asString
 ]
 
 { #category : 'private - testing' }
@@ -399,6 +410,10 @@ ASCodeGenerator >> offsetOf: anObject context: blockLocal stack: blockStack othe
 { #category : 'API' }
 ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 	^ code offsetTo: anObject methodBlock: aBlock 
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> optimizeLocalVariableLocations [
 ]
 
 { #category : 'accessing' }
@@ -465,6 +480,15 @@ ASCodeGenerator >> recursiveBasicBlock: aCompiledMethod [
 	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
 ]
 
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> removeUnusedBlockClosures [
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> removeUnusedCode [.
+
+]
+
 { #category : 'examples' }
 ASCodeGenerator >> returnLiteral: literal [
 
@@ -476,21 +500,13 @@ ASCodeGenerator >> returnLiteral: literal [
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
-	^ code returnSelf
+	^ currentCompilableUnitBlock returnSelf
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	returnBlock ifNil: [ ^ code returnTop ].
-	^ self returnTopInline
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> returnTopInline [
-
-	code popAndCopyTopToSelf.
-	^ self branch: returnBlock
+	^ currentCompilableUnitBlock returnTop
 ]
 
 { #category : 'accessing' }
@@ -576,6 +592,16 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeGenerator >> walkBody: aBlock [
+
+	| savedCompilableUnitBlock |
+	savedCompilableUnitBlock := currentCompilableUnitBlock.
+	currentCompilableUnitBlock := code.
+	aBlock ensure: [
+		currentCompilableUnitBlock := savedCompilableUnitBlock ]
 ]
 
 { #category : 'post processing' }
