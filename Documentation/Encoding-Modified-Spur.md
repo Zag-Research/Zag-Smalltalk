@@ -15,7 +15,7 @@ We extend this slightly, by using all 8 possible tag values:
 | High 8 bits | Next 24 bits |            |            |            | Tag        | Type               |
 | ----------- | ------------ | ---------- | ---------- | ---------- | ---------- | ------------------ |
 | `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `00000000` | `nil`              |
-| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | pointer            |
+| `00000000`  | ...          | ...        | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | pointer            |
 | `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `00000000` | `00001001` | `ThunkHeap`        |
 | `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `eeeeeeee` | -          | -                  |
 | `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `01001001` | `ThunkGetInstance` |

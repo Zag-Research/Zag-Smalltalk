@@ -58,6 +58,11 @@ $ make install
 - [Computer Organization and Design](https://www.academia.edu/38301807/Computer_organization_and_design_RISC_V?auto=download&email_work_card=download-paper)
 #### LLVM
 - [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
+
+#### Atomics and Locks
+- [Rust Atomics and Locks](https://marabos.nl/atomics/) most of which applies to Zig
+- [Understanding Memory Ordering in Rust](https://emschwartz.me/understanding-memory-ordering-in-rust/) ditto (refers to Chapter 3 of the above)
+
 #### IEEE Floating point
 - 64 bit floating point ![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
 - [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754)
