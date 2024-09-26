@@ -3,7 +3,7 @@ I am a named stack element (i.e. a local).
 "
 Class {
 	#name : 'ASStackNamed',
-	#superclass : 'ASStackNonEmpty',
+	#superclass : 'ASStackElement',
 	#instVars : [
 		'name',
 		'isInContext'

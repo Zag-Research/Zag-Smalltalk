@@ -7,6 +7,8 @@ My final expression will be a real return
 Class {
 	#name : 'ASCCompiledClosureBlock',
 	#superclass : 'ASCClosureBlock',
+	#traits : 'ASCCompiledBlock',
+	#classTraits : 'ASCCompiledBlock classTrait',
 	#instVars : [
 		'returnBlocks'
 	],

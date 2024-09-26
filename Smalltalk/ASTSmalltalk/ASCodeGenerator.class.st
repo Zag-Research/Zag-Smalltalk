@@ -27,7 +27,6 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'methodBlocks',
 		'currentCompilableUnitBlock'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
@@ -180,7 +179,7 @@ ASCodeGenerator >> flowAnalysis [
 { #category : 'translating' }
 ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
-	methodBlocks at: aMethodOrBlockNode compiledMethod put: code.
+	code theMethod: aMethodOrBlockNode.
 	aMethodOrBlockNode zigWalkMethod: self
 ]
 
@@ -196,7 +195,7 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 	^ code next ifNil: [
 		  | tempBlock |
 		  tempBlock := self newInline.
-		  tempBlock addSourceBlock: code.
+		  tempBlock branchedToFrom: code.
 		  tempBlock returnTop.
 		  tempBlock ]
 ]
@@ -213,7 +212,6 @@ ASCodeGenerator >> initialize [
 	super initialize.
 	self initCode.
 	basicBlocks := OrderedCollection with: code.
-	methodBlocks := IdentityDictionary new.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
 	inline := 0.
@@ -252,17 +250,17 @@ ASCodeGenerator >> inlineDependentPrimitives [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: anASCSend [
+ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCSend [
 
 	| inlineBlock savedTargetClass |
-	(self recursiveBasicBlock: aCompiledMethod) ifNotNil: [ :block |
+	(self recursiveBasicBlock: aMethodAST) ifNotNil: [ :block |
 		^ self
-			  inlineRecursiveMethod: aCompiledMethod
+			  inlineRecursiveMethod: aMethodAST
 			  block: block
 			  from: anASCSend ].
 	self halt.
 	savedTargetClass := targetClass.
-	inlineBlock := self newInlineMethod: aCompiledMethod.
+	inlineBlock := self newInlineMethod: aMethodAST.
 	inlineBlock copyStackFrom: code.
 	[
 	targetClass := inlinedTargetClass.
@@ -270,10 +268,10 @@ ASCodeGenerator >> inlineMethod: aCompiledMethod for: inlinedTargetClass from: a
 	code removeLastOperation.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	(ASPharoCompiler new astFor: aCompiledMethod) zigWalkMethod:
-		self ] ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
-		code := returnBlock.
-		targetClass := savedTargetClass ]
+	(ASPharoCompiler new astFor: aMethodAST) zigWalkMethod: self ]
+		ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
+			code := returnBlock.
+			targetClass := savedTargetClass ]
 ]
 
 { #category : 'inlining' }
@@ -283,21 +281,21 @@ ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaust
 	isExhaustive ifTrue: [
 		code removeLastOperation.
 		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
-				  basicBlocks add: joinBlock ].
+		basicBlocks add: joinBlock ].
 	case := code
 		        classCase: (methods collect: #methodClass)
 		        selector: methods first selector.
 	isExhaustive ifFalse: [
 		code swapLastOperations.
 		joinBlock := anASCSend next ].
-	^ methods do: [ :compiledMethod |
+	^ methods do: [ :methodAST |
 		  | targetBlock |
-		  targetBlock := case at: compiledMethod methodClass.
+		  targetBlock := case at: methodAST methodClass.
 		  targetBlock next: joinBlock.
 		  basicBlocks add: targetBlock.
 		  self setBasicBlock: targetBlock.
 		  "walk the sends method AST"
-		  self inlineMethod: compiledMethod for: targetBlock from: anASCSend ]
+		  self inlineMethod: methodAST for: targetBlock from: anASCSend ]
 ]
 
 { #category : 'inlining' }
@@ -389,11 +387,10 @@ ASCodeGenerator >> newInlineBlockClosure [
 ]
 
 { #category : 'instance creation' }
-ASCodeGenerator >> newInlineMethod: aCompileMethod [
+ASCodeGenerator >> newInlineMethod: aMethodAST [
 
 	| newBlock |
-	newBlock := ASCMethodBlock new theMethod: aCompileMethod.
-	methodBlocks at: aCompileMethod put: newBlock.
+	newBlock := ASCInlineMethodBlock new theMethod: aMethodAST.
 	^ basicBlocks add: newBlock
 ]
 
@@ -475,9 +472,10 @@ ASCodeGenerator >> pushVariable: variable [
 ]
 
 { #category : 'testing' }
-ASCodeGenerator >> recursiveBasicBlock: aCompiledMethod [
+ASCodeGenerator >> recursiveBasicBlock: aMethodAST [
 
-	^ methodBlocks at: aCompiledMethod ifAbsent: [ nil ]
+	self flag: ' need to look through the stack for the aMethodAST ';
+		halt
 ]
 
 { #category : 'finalAnalysis' }
@@ -518,7 +516,7 @@ ASCodeGenerator >> selector [
 { #category : 'accessing' }
 ASCodeGenerator >> selector: aSymbol [
 
-	code selector: aSymbol
+	^ code selector: aSymbol
 ]
 
 { #category : 'API' }
