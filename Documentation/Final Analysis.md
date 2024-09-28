@@ -26,7 +26,7 @@ This is a special case of a primitive method send. This is very similar to the f
 If there are only a few classes that have access to an implementation of a particular message (i.e they have it themselves or a superclass has an implementation), we emit a class-case instruction and inline the method for each of them, with each of them branching to the original return block on "return". To have the correct/conservative semantics, we need to retain a fall-back of doing the original send, unless we can prove that the list is exhaustive.
 #### Send where the target is the result of a comparison primitive - safe
 As a special case of the previous case, we know that comparison primitives always return `true` or `false` (or an error if the values are incomparable), so we have an exhaustive list. But more, we now know something about the relationship of these values. So, for example, we might know that a value is in the range of 1 to the size of an array, which means that we can safely use that value to index into the array.
-## Removal of redundant `BlockClosures`
+## Removal of redundant `BlockClosure`s
 After all inlining is completed there will typically be pushes of `BlockClosure`s that are subsequently inlined so that the block itself need never be created. These are turned into pushes of `nil`.
 ## Compiling required `BlockClosure`s
 Any `BlockClosure`s that remain after the previous step must be compiled, and the above inlining operations performed.
@@ -34,11 +34,11 @@ Any `BlockClosure`s that remain after the previous step must be compiled, and th
 If we have block closures, we now determine the optimum location for each variable. There are several possibilities:
 1. If a variable is only referenced in the method, it will be put in the `Context` (or just on the stack if no context is created).
 2. If the variable is only referenced in one `BlockClosure` then it will be created as a local variable there.
-3. If a variable isn't modified after a `BlockClosure` is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit.
+3. If a variable isn't modified after a `BlockClosure` (in which it's referenced) is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit.
 4. For values referenced in two or more places, modified in at least one, the default would be to put them in the `Context`.  However, if a `BlockClosure` has a reference to the `Context` and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
 5. All other variables will be placed in a closure that modifies the variable.
 ## Removal of redundant operations
-After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects.
+After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects. Note that `self` values may need at least nil pushed into the location so there is space to return a value.
 ## Non-structural inlining
 The next stage is to inline primitives that can't affect the control-flow graph, but can use type information that is not available until the data-flow graph is complete. Current examples are `at:` and `at:put:` where the receiver is known to be an `Array`, `String` or one of the other special array types.
 ## Creating `Context` and stack offsets

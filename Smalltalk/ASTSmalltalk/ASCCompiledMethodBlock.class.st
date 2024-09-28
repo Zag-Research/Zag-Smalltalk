@@ -5,13 +5,15 @@ Returns from me are real returns
 Class {
 	#name : 'ASCCompiledMethodBlock',
 	#superclass : 'ASCMethodBlock',
+	#traits : 'ASCCompiledBlock',
+	#classTraits : 'ASCCompiledBlock classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
 { #category : 'adding' }
-ASCCompiledMethodBlock >> addSourceBlock: aBasicBlock [
+ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	" nothing to do, because this can only happen with tail recursive calls "
 
 	self halt
@@ -29,10 +31,8 @@ ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
 { #category : 'API' }
 ASCCompiledMethodBlock >> initSelf: targetClass [
 
-	| source |
 	stack := stack initSelf.
-	source := AStackValue fromClass: targetClass.
-	^ stack data: source
+	^ stack data: (AStackValue fromClass: targetClass)
 ]
 
 { #category : 'initialization' }
@@ -58,6 +58,13 @@ ASCCompiledMethodBlock >> outputTo: output [
 ASCCompiledMethodBlock >> returnSelf [
 
 	^ self addOperation: ASCReturnSelf new
+]
+
+{ #category : 'accessing' }
+ASCCompiledMethodBlock >> selector: aString [
+
+	selector := aString.
+	label := aString
 ]
 
 { #category : 'accessing' }

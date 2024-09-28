@@ -62,14 +62,14 @@ ASCBasicBlockTest >> testStackFlow [
 	bb2 := cg newInline.
 	bb3 := cg newInline.
 	bb4 := cg newInline.
-	bb2 addSourceBlock: bb1.
-	bb3 addSourceBlock: bb1.
-	bb4 addSourceBlock: bb2.
+	bb2 branchedToFrom: bb1.
+	bb3 branchedToFrom: bb1.
+	bb4 branchedToFrom: bb2.
 
 	self assert: (bb1 at: #l1) data isNilReference.
 	self deny: (bb2 at: #l1) equals: (bb1 at: #l1).
 
-	bb4 addSourceBlock: bb3.
+	bb4 branchedToFrom: bb3.
 	self assert: (bb1 at: #l1) data isNilReference.
 
 	bb3Rl1 := bb3 reference: #l1.

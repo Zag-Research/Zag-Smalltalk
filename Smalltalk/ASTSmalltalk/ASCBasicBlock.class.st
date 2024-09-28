@@ -59,19 +59,6 @@ ASCBasicBlock >> addOperation: anOperation [
 	^ false
 ]
 
-{ #category : 'adding' }
-ASCBasicBlock >> addSourceBlock: aBasicBlock [
-
-	sourceBlocks add: aBasicBlock andIfNewDo: [
-		sourceElements
-			ifNil: [
-			sourceElements := self copyStackFrom: aBasicBlock ]
-			ifNotNil: [
-				sourceElements
-					with: aBasicBlock stack
-					do: [ :stackElement :other | self flag: 'stackElement mergeWith: other' ] ] ]
-]
-
 { #category : 'data flow instructions' }
 ASCBasicBlock >> anySourcesNonNilFor: id [
 
@@ -101,8 +88,21 @@ ASCBasicBlock >> blocks [
 ASCBasicBlock >> branch: aBasicBlock [
 
 	self addOperation: (ASCBranch with: aBasicBlock).
-	aBasicBlock addSourceBlock: self.
+	aBasicBlock branchedToFrom: self.
 	^ aBasicBlock
+]
+
+{ #category : 'adding' }
+ASCBasicBlock >> branchedToFrom: aBasicBlock [
+
+	sourceBlocks add: aBasicBlock andIfNewDo: [
+		sourceElements
+			ifNil: [
+			sourceElements := self copyStackFrom: aBasicBlock ]
+			ifNotNil: [
+				sourceElements
+					with: aBasicBlock stack
+					do: [ :stackElement :other | self flag: 'stackElement mergeWith: other' ] ] ]
 ]
 
 { #category : 'accessing' }
@@ -120,15 +120,15 @@ ASCBasicBlock >> classCase: aCollection selector: aSymbol [
 		| next |
 		next := ASCInlineMethodBlock new.
 		case at: class put: next.
-		next addSourceBlock: self ].
+		next branchedToFrom: self ].
 	self addOperation: case.
 	^ case
 ]
 
 { #category : 'copying' }
-ASCBasicBlock >> copyOfStackFor: aBasicBlock [ 
+ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 
-	^ stack copyFor: aBasicBlock
+	^ stack newElementFor: aBasicBlock
 ]
 
 { #category : 'adding' }
@@ -422,6 +422,12 @@ ASCBasicBlock >> pushArray: arraySize [
 ]
 
 { #category : 'API' }
+ASCBasicBlock >> pushLiteral: aLiteral [
+
+	^ self addOperation: (ASCLiteral with: aLiteral)
+]
+
+{ #category : 'API' }
 ASCBasicBlock >> pushNil [
 
 	stack := stack pushDataAsTemporary: AStUndefinedClass singleton
@@ -480,7 +486,7 @@ ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 		        return: next;
 		        target: target.
 	self addOperation: send.
-	next ifNotNil: [ next addSourceBlock: self ].
+	next ifNotNil: [ next branchedToFrom: self ].
 	^ next
 ]
 

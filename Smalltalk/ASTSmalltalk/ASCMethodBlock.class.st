@@ -49,15 +49,8 @@ ASCMethodBlock >> selector [
 	^ selector
 ]
 
-{ #category : 'accessing' }
-ASCMethodBlock >> selector: aString [
-
-	selector := aString.
-	label := aString
-]
-
 { #category : 'as yet unclassified' }
-ASCMethodBlock >> theMethod: aCompiledMethod [
+ASCMethodBlock >> theMethod: aMethodAST [
 
-	theMethod := aCompiledMethod
+	theMethod := aMethodAST
 ]

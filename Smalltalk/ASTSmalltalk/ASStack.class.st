@@ -35,12 +35,6 @@ ASStack >> asOrderedCollection [
 	^ self addToCollection: OrderedCollection new
 ]
 
-{ #category : 'copying' }
-ASStack >> copyFor: aBasicBlock [ 
-
-	^ self newElementFor: aBasicBlock
-]
-
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.

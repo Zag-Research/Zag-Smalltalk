@@ -2,7 +2,7 @@
 I have the common methods for non-empty stack elements
 "
 Class {
-	#name : 'ASStackNonEmpty',
+	#name : 'ASStackElement',
 	#superclass : 'ASStack',
 	#instVars : [
 		'offset',
@@ -15,26 +15,26 @@ Class {
 }
 
 { #category : 'instance creation' }
-ASStackNonEmpty class >> fromStack: anASStack [
+ASStackElement class >> fromStack: anASStack [
 
 	^ self new fromStack: anASStack
 ]
 
 { #category : 'enumerating' }
-ASStackNonEmpty >> addToCollection: aCollection [
+ASStackElement >> addToCollection: aCollection [
 
 	aCollection addLast: self.
 	^ next addToCollection: aCollection
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> at: aSymbol [
+ASStackElement >> at: aSymbol [
 
 	^ next at: aSymbol
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> at: aSymbol put: anObject [
+ASStackElement >> at: aSymbol put: anObject [
 
 	| element |
 	element := self at: aSymbol.
@@ -42,13 +42,13 @@ ASStackNonEmpty >> at: aSymbol put: anObject [
 ]
 
 { #category : 'as yet unclassified' }
-ASStackNonEmpty >> data [
+ASStackElement >> data [
 
 	^ location stackValue
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> data: aStackValue [
+ASStackElement >> data: aStackValue [
 
 	(aStackValue isKindOf: AStackValue) ifFalse: [
 		self error: 'must be a AStackValue' ].
@@ -56,158 +56,158 @@ ASStackNonEmpty >> data: aStackValue [
 ]
 
 { #category : 'evaluating' }
-ASStackNonEmpty >> dataClass [
+ASStackElement >> dataClass [
 
 	^ location dataClass
 ]
 
 { #category : 'displaying' }
-ASStackNonEmpty >> displayStringOn: stream [
+ASStackElement >> displayStringOn: stream [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'enumerating' }
-ASStackNonEmpty >> do: aBlock [
+ASStackElement >> do: aBlock [
 
 	aBlock value: self.
 	^ next do: aBlock
 ]
 
 { #category : 'instance creation' }
-ASStackNonEmpty >> fromStack: anASStack [
+ASStackElement >> fromStack: anASStack [
 
 	next := anASStack
 ]
 
 { #category : 'output' }
-ASStackNonEmpty >> getNameOn: anASLLMethodOutput [
+ASStackElement >> getNameOn: anASLLMethodOutput [
 
 	^ location getNameFor: self on: anASLLMethodOutput
 ]
 
 { #category : 'testing' }
-ASStackNonEmpty >> hasContext [
+ASStackElement >> hasContext [
 
 	^ next hasContext
 ]
 
 { #category : 'as yet unclassified' }
-ASStackNonEmpty >> id [
+ASStackElement >> id [
 	^ self subclassResponsibility
 ]
 
 { #category : 'initialization' }
-ASStackNonEmpty >> initialize [
+ASStackElement >> initialize [
 
 	super initialize.
 	location := AStackLocation new
 ]
 
 { #category : 'API' }
-ASStackNonEmpty >> intoContext: anInteger [
+ASStackElement >> intoContext: anInteger [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'testing' }
-ASStackNonEmpty >> isEmpty [
+ASStackElement >> isEmpty [
 
 	^ false
 ]
 
 { #category : 'testing' }
-ASStackNonEmpty >> isInContext [
+ASStackElement >> isInContext [
 
 	^ false
 ]
 
 { #category : 'API' }
-ASStackNonEmpty >> linkContext: aBlock [
+ASStackElement >> linkContext: aBlock [
 
 	^ self replicate: (next linkContext: aBlock)
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> location [
+ASStackElement >> location [
 	^ location
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> location: anAStackLocation [
+ASStackElement >> location: anAStackLocation [
 
 	location := anAStackLocation
 ]
 
 { #category : 'data flow instructions' }
-ASStackNonEmpty >> makeStackTheSource [
+ASStackElement >> makeStackTheSource [
 
 	location := ASFlowOnDemand from: location.
 	^ next makeStackTheSource
 ]
 
 { #category : 'data flow instructions' }
-ASStackNonEmpty >> markReferenced [
+ASStackElement >> markReferenced [
 
 	^ location markReferenced
 ]
 
 { #category : 'operations' }
-ASStackNonEmpty >> mergeWith: aStackElement [
+ASStackElement >> mergeWith: aStackElement [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'data flow instructions' }
-ASStackNonEmpty >> newElementFor: aBasicBlock [
+ASStackElement >> newElementFor: aBasicBlock [
 
 	^ self replicate: (next newElementFor: aBasicBlock)
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> next [
+ASStackElement >> next [
 	^ next
 ]
 
 { #category : 'accessing' }
-ASStackNonEmpty >> offset [
+ASStackElement >> offset [
 
 	^ offset
 ]
 
 { #category : 'stack' }
-ASStackNonEmpty >> offset: anInteger to: aStackElement [
+ASStackElement >> offset: anInteger to: aStackElement [
 
 	self == aStackElement ifTrue: [ ^ anInteger ].
 	^ next offset: anInteger+1 to: aStackElement
 ]
 
 { #category : 'as yet unclassified' }
-ASStackNonEmpty >> offsetToSelf: anInteger [
+ASStackElement >> offsetToSelf: anInteger [
 
 	^ next offsetToSelf: anInteger + 1
 ]
 
 { #category : 'stack' }
-ASStackNonEmpty >> replicate [
+ASStackElement >> replicate [
 
 	^ (self replicate: next replicate) data: location
 ]
 
 { #category : 'API' }
-ASStackNonEmpty >> replicate: aStack [
+ASStackElement >> replicate: aStack [
 
 	^ (self class fromStack: aStack) location: location
 ]
 
 { #category : 'as yet unclassified' }
-ASStackNonEmpty >> stackValue [
+ASStackElement >> stackValue [
 
 	^ location stackValue
 ]
 
 { #category : 'enumerating' }
-ASStackNonEmpty >> with: other do: aBlock [
+ASStackElement >> with: other do: aBlock [
 
 	aBlock value: self value: other.
 	^ next with: other next do: aBlock

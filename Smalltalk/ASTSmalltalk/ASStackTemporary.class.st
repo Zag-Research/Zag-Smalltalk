@@ -9,7 +9,7 @@ Code generators can inquire as to values and types
 "
 Class {
 	#name : 'ASStackTemporary',
-	#superclass : 'ASStackNonEmpty',
+	#superclass : 'ASStackElement',
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
