@@ -19,6 +19,12 @@ ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	self halt
 ]
 
+{ #category : 'as yet unclassified' }
+ASCCompiledMethodBlock >> deriveOwnership [
+	owns addAll: (declares intersection: references).
+	owns addAll: (declares intersection: modifies ).
+]
+
 { #category : 'API' }
 ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
 
@@ -37,10 +43,14 @@ ASCCompiledMethodBlock >> initSelf: targetClass [
 
 { #category : 'initialization' }
 ASCCompiledMethodBlock >> initialize [
-
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self
+	method := self.
+	references := Set new.
+	modifies := Set new.
+	owns := Set new.
+	declares := Set new.
+	
 ]
 
 { #category : 'writing' }

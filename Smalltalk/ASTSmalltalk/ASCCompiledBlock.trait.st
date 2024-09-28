@@ -12,6 +12,18 @@ Trait {
 }
 
 { #category : 'accessing' }
+ASCCompiledBlock >> declares [
+
+	^ declares
+]
+
+{ #category : 'accessing' }
+ASCCompiledBlock >> declares: anObject [
+
+	declares := anObject
+]
+
+{ #category : 'accessing' }
 ASCCompiledBlock >> modified [
 
 	^ modifies
@@ -21,6 +33,18 @@ ASCCompiledBlock >> modified [
 ASCCompiledBlock >> modified: anObject [
 
 	modifies := anObject
+]
+
+{ #category : 'accessing' }
+ASCCompiledBlock >> owns [
+
+	^ owns
+]
+
+{ #category : 'accessing' }
+ASCCompiledBlock >> owns: anObject [
+
+	owns := anObject
 ]
 
 { #category : 'accessing' }
