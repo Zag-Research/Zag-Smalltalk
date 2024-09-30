@@ -15,6 +15,12 @@ Class {
 }
 
 { #category : 'accessing' }
+AStBlock class >> block: aBlock [
+	
+	^ self new block: aBlock.
+]
+
+{ #category : 'accessing' }
 AStBlock >> block: anASBlock [
 
 	block := anASBlock

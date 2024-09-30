@@ -10,7 +10,9 @@ Class {
 		'unbounded',
 		'theArray',
 		'sizeOf',
-		'threeToSizeOf'
+		'threeToSizeOf',
+		'block1',
+		'block2'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -30,8 +32,19 @@ AStackValueTest >> setUp [
 	theAnswer := AStSmallInteger setValue: 42.
 	theArray := Object new.
 	sizeOf := AStSizeOf object: theArray.
-	threeToSizeOf := (AStSmallInteger geThan: 3) leThan: sizeOf
+	threeToSizeOf := (AStSmallInteger geThan: 3) leThan: sizeOf.
+	block1 := AStBlock block: [ 3 + 4 ].
+	block2 := AStBlock block: [ 34 * 2 ].
 	" more cases to add "
+]
+
+{ #category : 'tests' }
+AStackValueTest >> testMergeBlock [
+	" test all the kinds of `AStBlock`s defined in the setUp "
+
+	self assert: (block1 couldMergeIn: block2) equals: false.
+	self assert: (block2 couldMergeIn: block1) equals: false.
+	self assert: (block2 couldMergeIn: block2) equals: true.	
 ]
 
 { #category : 'tests' }
