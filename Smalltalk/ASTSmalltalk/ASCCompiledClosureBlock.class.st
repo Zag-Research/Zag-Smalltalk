@@ -39,6 +39,12 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 ]
 
 { #category : 'initialization' }
+ASCCompiledClosureBlock >> initialize [ 
+	super initialize.
+	self initializeASCCompiledBlock 
+]
+
+{ #category : 'initialization' }
 ASCCompiledClosureBlock >> labelExtra: s [
 
 ]

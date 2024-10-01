@@ -24,6 +24,14 @@ ASCCompiledBlock >> declares: anObject [
 ]
 
 { #category : 'accessing' }
+ASCCompiledBlock >> initializeASCCompiledBlock [
+	references := Set new.
+	modifies := Set new.
+	owns := Set new.
+	declares := Set new.
+]
+
+{ #category : 'accessing' }
 ASCCompiledBlock >> modified [
 
 	^ modifies

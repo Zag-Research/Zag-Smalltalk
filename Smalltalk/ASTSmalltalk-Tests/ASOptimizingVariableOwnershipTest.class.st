@@ -63,3 +63,22 @@ method deriveOwnership.
 
 self assert: (method owns includes: #myVar) 
 ]
+
+{ #category : 'tests' }
+ASOptimizingVariableOwnershipTest >> testTwoBlocksOneBlockDeclaresOtherReferences [
+"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
+
+| method block |
+method := ASCCompiledMethodBlock new.
+method declares add: #myVar.
+
+block := ASCCompiledClosureBlock new.
+block referenced add: #myVar.
+
+"how many passes?"
+method deriveOwnership.
+block deriveOwnership.
+
+self assert: (method owns isEmpty).
+
+]
