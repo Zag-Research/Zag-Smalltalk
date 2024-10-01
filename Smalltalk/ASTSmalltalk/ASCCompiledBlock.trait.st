@@ -23,6 +23,12 @@ ASCCompiledBlock >> declares: anObject [
 	declares := anObject
 ]
 
+{ #category : 'analyzing' }
+ASCCompiledBlock >> deriveOwnership [
+	owns addAll: (declares intersection: references).
+	owns addAll: (declares intersection: modifies ).
+]
+
 { #category : 'accessing' }
 ASCCompiledBlock >> initializeASCCompiledBlock [
 	references := Set new.
