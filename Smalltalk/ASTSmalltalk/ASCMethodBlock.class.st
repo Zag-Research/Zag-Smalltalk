@@ -9,7 +9,6 @@ Class {
 	#instVars : [
 		'theMethod',
 		'primitive',
-		'returnBlocks',
 		'selector'
 	],
 	#category : 'ASTSmalltalk-CodeGen',

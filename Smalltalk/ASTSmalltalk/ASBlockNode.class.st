@@ -4,15 +4,15 @@ I represent a BlockClosure which like a Method except that returns return from t
 Note that this is also an ASExpression although the class taxonomy doesn't reflect it.
 "
 Class {
-	#name : 'ASBlock',
-	#superclass : 'ASMethodOrBlock',
+	#name : 'ASBlockNode',
+	#superclass : 'ASCodeBlock',
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
 	#tag : 'AST'
 }
 
 { #category : 'accessing' }
-ASBlock >> blocks [
+ASBlockNode >> blocks [
 
 	| blocks |
 	blocks := OrderedCollection new.
@@ -21,30 +21,30 @@ ASBlock >> blocks [
 ]
 
 { #category : 'testing' }
-ASBlock >> isASBlock [
+ASBlockNode >> isASBlock [
 	^true
 ]
 
 { #category : 'accessing' }
-ASBlock >> maxDepth [
+ASBlockNode >> maxDepth [
 	^locals size
 ]
 
 { #category : 'printing' }
-ASBlock >> printOn: s [
+ASBlockNode >> printOn: s [
 
 	s << self className.
 	super printOn: s
 ]
 
 { #category : 'compiling' }
-ASBlock >> scope [
+ASBlockNode >> scope [
 "what are we returning here?"
 ^nil
 ]
 
 { #category : 'accessing' }
-ASBlock >> selector [
+ASBlockNode >> selector [
 
 	| size |
 	size := arguments size.
@@ -54,47 +54,33 @@ ASBlock >> selector [
 ]
 
 { #category : 'accessing' }
-ASBlock >> selectorWithArgs [
+ASBlockNode >> selectorWithArgs [
 
 	| size |
 	size := arguments size.
-	size = 0 ifTrue: [ ^ String empty ].
-	^ (String streamContents: [ :s |
-		   arguments
-			   do: [ :arg |
-				   s nextPutAll: 'value: '.
-				   s nextPutAll: arg ]
-			   separatedBy: [ s space ] ]) asSymbol
+	size = 0 ifTrue: [ ^ 'value' ].
+	^ String streamContents: [ :s |
+		  arguments
+			  do: [ :arg |
+				  s nextPutAll: 'value: '.
+				  s nextPutAll: arg ]
+			  separatedBy: [ s space ] ]
 ]
 
 { #category : 'compiling' }
-ASBlock >> tell: aCompiler youAreSent: aSymbol [
+ASBlockNode >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toBlock: self
 ]
 
 { #category : 'codegen' }
-ASBlock >> zigWalk: aGenerator [
+ASBlockNode >> zigWalk: aGenerator [
 
 	^ aGenerator pushBlock: self
 ]
 
-{ #category : 'codegen' }
-ASBlock >> zigWalkMethod: aGenerator [
-
-	self halt.
-	aGenerator
-		selector: self selector;
-		sender: nil locals: locals parameters: arguments.
-	^ aGenerator walkBody: [
-		  body
-			  zigWalkEmpty: [ aGenerator returnLiteral: nil ]
-			  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-			  last: [ :exp | exp zigWalkFinal: aGenerator ] ]
-]
-
 { #category : 'compiling' }
-ASBlock >> zigWalkTarget: aGenerator [
+ASBlockNode >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.
 	^ BlockClosure 

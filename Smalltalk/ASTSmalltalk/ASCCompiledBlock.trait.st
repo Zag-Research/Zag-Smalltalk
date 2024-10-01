@@ -4,7 +4,8 @@ Trait {
 		'declares',
 		'owns',
 		'modifies',
-		'references'
+		'references',
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',

@@ -1,5 +1,5 @@
 "
-I am an inline block, but I'm used to inline a BlockClosure at the top level - i.e. with a possible context
+I am a separately compiled BlockClosure - structurally equivalent to a ASCCompiledMethodBloc - i.e. with a possible context
 
 Returns from me are real non-local returns
 My final expression will be a real return
