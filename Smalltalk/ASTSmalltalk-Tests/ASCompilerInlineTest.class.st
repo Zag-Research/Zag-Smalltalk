@@ -180,21 +180,18 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ]
 
 { #category : 'asserting' }
-ASCompilerInlineTest >> assertEquivalentSending: selecter to: anObject [
-
-	self
-		assert: (interpreter send: selecter to: anObject)
-		equals: (anObject perform: selecter).
-	self assert: interpreter stackDepth equals: 1
-]
-
-{ #category : 'asserting' }
-ASCompilerInlineTest >> assertEquivalentSending: selecter with: aCollection to: anObject [
+ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
 
 	self
 		assert: (interpreter send: selecter with: aCollection to: anObject)
 		equals: (anObject perform: selecter).
 	self assert: interpreter stackDepth equals: 1
+]
+
+{ #category : 'asserting' }
+ASCompilerInlineTest >> assertEquivalentSending: selecter to: anObject [
+
+	self assertEquivalentSending: selecter arguments: #() to: anObject 
 ]
 
 { #category : 'asserting' }
@@ -576,7 +573,7 @@ ASCompilerInlineTest >> testPlus1 [
 	"plus1: aNumber
 	^ aNumber + 1"
 
-	self assertEquivalentSending: #plus1: with: #(6) to: ASCompileTestClass1 new
+	self assertEquivalentSending: #plus1: arguments: #(6) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -585,7 +582,7 @@ ASCompilerInlineTest >> testRecursiveSum [
 		listOfNumbers empty ifTrue: [^0].
 		^ listOfNumbers first + listOfNumbers allButFirst"
 
-	self assertEquivalentSending: #recursiveSum: with: #(#(4 5 6)) to: ASCompileTestClass1 new
+	self assertEquivalentSending: #recursiveSum: arguments: #(#(4 5 6)) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }

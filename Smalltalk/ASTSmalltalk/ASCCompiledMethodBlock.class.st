@@ -45,10 +45,10 @@ ASCCompiledMethodBlock >> initSelf: targetClass [
 
 { #category : 'initialization' }
 ASCCompiledMethodBlock >> initialize [
-
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self
+	method := self.
+	self initializeASCCompiledBlock 
 ]
 
 { #category : 'writing' }
