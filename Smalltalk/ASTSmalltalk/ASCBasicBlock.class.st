@@ -12,12 +12,12 @@ Class {
 		'maxDepth',
 		'operations',
 		'label',
-		'method',
 		'hash',
 		'stackDepth',
 		'sourceBlocks',
 		'sourceElements',
-		'sequence'
+		'sequence',
+		'methodBlock'
 	],
 	#classVars : [
 		'SequenceNumber'
@@ -59,6 +59,12 @@ ASCBasicBlock >> addOperation: anOperation [
 	^ false
 ]
 
+{ #category : 'enumerating' }
+ASCBasicBlock >> afterSourcesDo: aBlock [
+
+	^ aBlock value: self
+]
+
 { #category : 'data flow instructions' }
 ASCBasicBlock >> anySourcesNonNilFor: id [
 
@@ -76,10 +82,10 @@ ASCBasicBlock >> blocks [
 
 	| blocks block |
 	blocks := OrderedCollection new.
-	block := self next.
-	[ block notNil ] whileTrue: [
+	block := self nextBasicBlocks.
+	[ block isEmpty ] whileFalse: [
 		blocks add: block.
-		block := block next ].
+		block := block nextBasicBlocks ].
 
 	^ blocks
 ]
@@ -112,16 +118,25 @@ ASCBasicBlock >> children [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> classCase: aCollection selector: aSymbol [
+ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive [
 
-	| case |
-	case := ASCCase with: aSymbol.
-	aCollection do: [ :class |
+	| case anASCSend joinBlock numArgs |
+	anASCSend := operations last.
+	numArgs := anASCSend selector numArgs.
+	joinBlock := anASCSend nextBasicBlocks.
+	case := ASCCase with: numArgs.
+	isExhaustive ifTrue: [
+		self removeLastOperation.
+		joinBlock becomeJoinBlock ].
+	aCollection do: [ :method |
 		| next |
-		next := ASCInlineMethodBlock new.
-		case at: class put: next.
-		next branchedToFrom: self ].
+		next := ASCInlineMethodBlock new
+					theMethod: method;
+			        branchedToFrom: self;
+			        returnBlock: joinBlock.
+		case at: method methodClass put: next ].
 	self addOperation: case.
+	isExhaustive ifFalse: [ self swapLastOperations ].
 	^ case
 ]
 
@@ -135,6 +150,12 @@ ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 ASCBasicBlock >> copyStackFrom: aBasicBlock [
 
 	^ stack := aBasicBlock copyOfStackFor: self
+]
+
+{ #category : 'Collection API' }
+ASCBasicBlock >> do: aBlock [
+
+	^ aBlock value: self
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -300,10 +321,21 @@ ASCBasicBlock >> inspectionZagCode [
 		  yourself
 ]
 
+{ #category : 'Collection API' }
+ASCBasicBlock >> isEmpty [
+
+	^ false
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
-	^ self subclassResponsibility
+	^ label ifNil: [ '???' ]
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> label: aString [ 
+	label := aString
 ]
 
 { #category : 'output' }
@@ -334,7 +366,7 @@ ASCBasicBlock >> maxDepth [
 { #category : 'accessing' }
 ASCBasicBlock >> methodBlock [
 
-	^ method ifNil: [ method := sourceBlocks size > 0 ifTrue: [sourceBlocks anyOne methodBlock] ]
+	^ methodBlock ifNil: [ methodBlock := sourceBlocks size > 0 ifTrue: [sourceBlocks anyOne methodBlock] ]
 ]
 
 { #category : 'data flow instructions' }
@@ -343,15 +375,9 @@ ASCBasicBlock >> namedBlock [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> next [
+ASCBasicBlock >> nextBasicBlocks [
 
-	^ operations ifEmpty: [ nil ] ifNotEmpty: [ operations last next ]
-]
-
-{ #category : 'inlining' }
-ASCBasicBlock >> nextInline [
-
-	^ nil
+	^ operations ifEmpty: [ nil ] ifNotEmpty: [ operations last nextBasicBlocks ]
 ]
 
 { #category : 'successor sequences' }

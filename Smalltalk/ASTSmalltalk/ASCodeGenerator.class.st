@@ -54,7 +54,7 @@ ASCodeGenerator >> basicBlocksLinearizeDo: aBlock [
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileNotNil: [
 		aBlock value: current.
-		current next
+		current nextBasicBlocks
 			ifNil: [
 				rest isEmpty ifTrue: [ ^ self ].
 				current := rest anyOne ifNil: [ ^ self ] ]
@@ -70,7 +70,7 @@ ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
 	rest := basicBlocks allButFirst asSet.
 	[ true ] whileTrue: [
 		aBlock value: current.
-		current next ifNotNil: [ :next | current := next ] ifNil: [
+		current nextBasicBlocks ifNotNil: [ :next | current := next ] ifNil: [
 			rest isEmpty ifTrue: [ ^ self ].
 			current := rest
 				           detect: [ :each | each namedBlock = namedBlock ]
@@ -92,15 +92,6 @@ ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [
 ASCodeGenerator >> branch: aBasicBlock [
 
 	^ aBasicBlock ifNotNil: [ code branch: aBasicBlock ]
-]
-
-{ #category : 'API' }
-ASCodeGenerator >> classCase: aCollection selector: aSymbol [
-
-	| case |
-	case := code classCase: aCollection selector: aSymbol.
-	basicBlocks addAll: case blocks.
-	^ aCollection collect: [ :class | case at: class ]
 ]
 
 { #category : 'class relationship' }
@@ -195,7 +186,7 @@ ASCodeGenerator >> generateTemp [
 { #category : 'accessing' }
 ASCodeGenerator >> getOrMakeReturnBlock [
 
-	^ code next ifNil: [
+	^ code nextBasicBlocks ifNil: [
 		  | tempBlock |
 		  tempBlock := self newInline.
 		  tempBlock branchedToFrom: code.
@@ -286,21 +277,13 @@ ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCS
 { #category : 'inlining' }
 ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaustive [
 
-	| case joinBlock |
-	isExhaustive ifTrue: [
-		code removeLastOperation.
-		joinBlock := anASCSend next becomeJoinBlock.
-		basicBlocks add: joinBlock ].
+	| case |
 	case := code
-		        classCase: (methods collect: #methodClass)
-		        selector: methods first selector.
-	isExhaustive ifFalse: [
-		code swapLastOperations.
-		joinBlock := anASCSend next ].
+		        classCase: methods
+		        exhaustive: isExhaustive.
 	^ methods do: [ :methodAST |
 		  | targetBlock |
 		  targetBlock := case at: methodAST methodClass.
-		  targetBlock next: joinBlock.
 		  basicBlocks add: targetBlock.
 		  self setBasicBlock: targetBlock.
 		  "walk the sends method AST"

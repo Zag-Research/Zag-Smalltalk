@@ -20,7 +20,7 @@ Class {
 ASCMethodBlock >> copyStackFrom: aBasicBlock [
 
 	stack := aBasicBlock stack.
-	self nameStack: theMethod argumentNames.
+	self nameStack: theMethod arguments.
 	^ stack
 ]
 

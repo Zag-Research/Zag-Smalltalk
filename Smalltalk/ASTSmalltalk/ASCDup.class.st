@@ -27,11 +27,6 @@ ASCDup >> markReferences [
 	^ stack markReferenced
 ]
 
-{ #category : 'accessing' }
-ASCDup >> next [
-	^ nil
-]
-
 { #category : 'code generation' }
 ASCDup >> outputTo: aCodeEmitter [
 

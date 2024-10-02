@@ -1,10 +1,54 @@
 Class {
 	#name : 'ASCBasicBlockTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'bb1',
+		'blocks'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
+
+{ #category : 'running' }
+ASCBasicBlockTest >> setUp [
+
+	| first second third bbs sixth fifth methods |
+	super setUp.
+
+	first := ASCBasicBlock new label: 'bb1'.
+	first pushLiteral: 1.
+	second := (first send: #foo targetClass: nil tail: false) label:
+		          'bb2'.
+	third := (second send: #foo targetClass: nil tail: false) label:
+		         'bb3'.
+	third branch: second.
+	methods := {
+		           ASMethodNode new selector: #foo; methodClass: True.
+		           ASMethodNode new selector: #foo; methodClass: False }.
+	bbs := second classCase: methods exhaustive: true.
+	bbs first label: 'bb4'.
+	fifth := bbs second label: 'bb5'.
+	sixth := (fifth send: #foo targetClass: nil tail: false) label: 'bb6'.
+	bbs := fifth
+		       classCase: {
+				       True.
+				       False }
+		       exhaustive: true.
+	first
+		inspect;
+		halt
+]
+
+{ #category : 'tests' }
+ASCBasicBlockTest >> testAfterSources [
+
+	| count |
+	count := 0.
+	self halt.
+	blocks first afterSourcesDo: [ :bb | count := count + 1 ].
+	self assert: count equals: blocks size
+]
 
 { #category : 'tests' }
 ASCBasicBlockTest >> testNameStack [

@@ -49,12 +49,6 @@ ASCJoinBlock >> isNamedBlock [
 ]
 
 { #category : 'initialization' }
-ASCJoinBlock >> label [
-
-	^ label ifNil: [ label := self nextSequence asString ]
-]
-
-{ #category : 'initialization' }
 ASCJoinBlock >> llvmLabel [
 
 	^ self label

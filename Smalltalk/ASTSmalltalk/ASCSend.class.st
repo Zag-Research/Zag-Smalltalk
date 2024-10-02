@@ -65,7 +65,7 @@ ASCSend >> markReferences [
 ]
 
 { #category : 'accessing' }
-ASCSend >> next [
+ASCSend >> nextBasicBlocks [
 
 	^ bb
 ]

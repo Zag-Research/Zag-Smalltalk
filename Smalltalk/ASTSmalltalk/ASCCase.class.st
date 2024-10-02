@@ -10,7 +10,7 @@ Class {
 	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
 		'map',
-		'selector'
+		'numArgs'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -53,13 +53,13 @@ ASCCase >> inspectZagASTOn: aStream [
 { #category : 'data flow instructions' }
 ASCCase >> markReferences [
 
-	(stack at: selector numArgs) markReferenced
+	(stack at: numArgs) markReferenced
 ]
 
 { #category : 'accessing' }
-ASCCase >> next [
+ASCCase >> nextBasicBlocks [
 
-	^ self blocks first
+	^ map values
 ]
 
 { #category : 'code generation' }
@@ -76,9 +76,7 @@ ASCCase >> resultStack: anASStack basicBlock: anObject [
 ]
 
 { #category : 'instance creation' }
-ASCCase >> with: aSymbol [
+ASCCase >> with: anInteger [
 
-	selector := aSymbol
-
-	
+	numArgs := anInteger
 ]

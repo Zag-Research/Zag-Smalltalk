@@ -9,12 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
-ASCReturn >> next [
-
-	^ nil
-]
-
 { #category : 'instance creation' }
 ASCReturn >> with: ignored [
 
