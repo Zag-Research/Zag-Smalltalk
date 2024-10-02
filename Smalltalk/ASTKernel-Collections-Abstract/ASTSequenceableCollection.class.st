@@ -192,16 +192,19 @@ ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement [
 
 { #category : 'system primitives' }
 ASTSequenceableCollection >> replaceFrom: start to: stop with: replacement startingAt: repStart [
+
 	"This destructively replaces elements from start to stop in the receiver 
 	starting at index, repStart, in the sequenceable collection, 
 	replacementCollection. Answer the receiver. No range checks are 
 	performed."
-
-	| index repOff |
-	repOff := repStart - start.
-	index := start - 1.
-	[ (index := index + 1) <= stop ]
-		whileTrue: [ self at: index put: (replacement at: repOff + index) ]
+	(start <= stop and: [ repStart <= replacement size ]) ifFalse: [
+		^ self ].
+	self at: start put: (replacement at: repStart).
+	^ self
+		  replaceFrom: start + 1
+		  to: stop
+		  with: replacement
+		  startingAt: repStart + 1
 ]
 
 { #category : 'as yet unclassified' }

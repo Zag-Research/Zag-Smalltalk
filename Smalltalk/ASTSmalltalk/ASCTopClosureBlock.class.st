@@ -6,7 +6,7 @@ My final result will be a stack adjustment and branch to the return point
 "
 Class {
 	#name : 'ASCTopClosureBlock',
-	#superclass : 'ASCClosureBlock',
+	#superclass : 'ASCInlineClosureBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

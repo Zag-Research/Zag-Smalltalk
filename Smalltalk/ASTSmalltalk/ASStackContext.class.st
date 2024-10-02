@@ -7,12 +7,25 @@ Class {
 	#name : 'ASStackContext',
 	#superclass : 'ASStack',
 	#instVars : [
-		'size'
+		'size',
+		'next'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
 	#tag : 'Stack'
 }
+
+{ #category : 'accessing' }
+ASStackContext >> at: aSymbol [
+
+	^ next at: aSymbol
+]
+
+{ #category : 'instance creation' }
+ASStackContext >> fromStack: anASStack [
+
+	next := anASStack
+]
 
 { #category : 'initialization' }
 ASStackContext >> initialize [

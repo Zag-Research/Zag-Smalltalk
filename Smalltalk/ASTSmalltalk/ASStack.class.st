@@ -125,7 +125,6 @@ ASStack >> offsetForTemps [
 { #category : 'displaying' }
 ASStack >> printNameOn: stream [
 
-	self subclassResponsibility
 ]
 
 { #category : 'printing' }

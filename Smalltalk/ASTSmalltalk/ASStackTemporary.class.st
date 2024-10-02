@@ -45,12 +45,6 @@ ASStackTemporary >> drop: count [
 	^ next drop: count-1
 ]
 
-{ #category : 'instance creation' }
-ASStackTemporary >> fromStack: anASStack [
-
-	next := anASStack
-]
-
 { #category : 'accessing' }
 ASStackTemporary >> id [
 

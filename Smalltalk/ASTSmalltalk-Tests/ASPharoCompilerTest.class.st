@@ -87,7 +87,7 @@ ASPharoCompilerTest >> testBlock [
 											     args: {  }) })
 							   selector: #collect:
 							   args:
-								   { (ASBlock
+								   { (ASBlockNode
 									    arguments: #( #each )
 									    locals: #( #temp )
 									    body: {

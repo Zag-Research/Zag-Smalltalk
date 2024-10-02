@@ -6,15 +6,24 @@ Note that I often get changed to be an `ASCJoinBlock`, so my objects must be the
 Class {
 	#name : 'ASCReturnBlock',
 	#superclass : 'ASCBasicBlock',
+	#classVars : [
+		'TargetBlockPrototype'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'class initialization' }
+ASCReturnBlock class >> initialize [
+
+	TargetBlockPrototype := ASCJoinBlock basicNew
+]
+
 { #category : 'data flow instructions' }
 ASCReturnBlock >> becomeJoinBlock [
 
-	self primitiveChangeClassTo: ASCJoinBlock basicNew.
+	self primitiveChangeClassTo: TargetBlockPrototype.
 	stack makeStackTheSource
 ]
 
