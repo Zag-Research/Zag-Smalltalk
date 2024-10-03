@@ -14,16 +14,10 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'class initialization' }
-ASCReturnBlock class >> initialize [
-
-	TargetBlockPrototype := ASCJoinBlock basicNew
-]
-
 { #category : 'data flow instructions' }
 ASCReturnBlock >> becomeJoinBlock [
 
-	self primitiveChangeClassTo: TargetBlockPrototype.
+	self primitiveChangeClassTo: ASCJoinBlock basicNew.
 	stack makeStackTheSource
 ]
 

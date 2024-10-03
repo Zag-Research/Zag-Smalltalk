@@ -51,6 +51,13 @@ ASCBasicBlock >> addBlock: aBasicBlock [
 	^ self methodBlock addBlock: aBasicBlock
 ]
 
+{ #category : 'adding' }
+ASCBasicBlock >> addFlow [
+
+	stack := stack addFlow: self.
+	^ self.
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> addOperation: anOperation [
 
@@ -360,6 +367,14 @@ ASCBasicBlock >> markReferences [
 { #category : 'accessing' }
 ASCBasicBlock >> maxDepth [
 	^ maxDepth
+]
+
+{ #category : 'accessing' }
+ASCBasicBlock >> merge [ 
+	
+	"recurse over sources"
+	"generate phi for all elements until we hit a 'common path' - first thing that is not an ASFlowNew (?)"
+	"the stack of the basicBlock should contain phis + common path"
 ]
 
 { #category : 'accessing' }

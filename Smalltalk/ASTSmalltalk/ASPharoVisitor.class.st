@@ -64,7 +64,7 @@ ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 
 	| block body |
 	body := ASSequence new: aRBBlockNode statements size.
-	block := ASBlockNode
+	block := ASBlock
 		  arguments: aRBBlockNode argumentNames
 		  locals: aRBBlockNode temporaryNames
 		  body: body.

@@ -14,6 +14,15 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'initialization' }
+ASFlowPhi >> asAssociationList [ 
+	
+	| associationList |
+	associationList := OrderedCollection new.
+	sources do: [ :source | associationList add: (source basicBlock -> source)].
+	^ associationList.
+]
+
 { #category : 'accessing' }
 ASFlowPhi >> dataClass [
 

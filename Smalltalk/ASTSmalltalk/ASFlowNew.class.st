@@ -14,6 +14,12 @@ Class {
 }
 
 { #category : 'accessing' }
+ASFlowNew >> basicBlock [
+	
+	^ basicBlock.
+]
+
+{ #category : 'accessing' }
 ASFlowNew >> basicBlock: aBasicBlock [ 
 	basicBlock := aBasicBlock
 ]
@@ -22,6 +28,14 @@ ASFlowNew >> basicBlock: aBasicBlock [
 ASFlowNew >> getNameFor: aStackElement on: anOutput [
 
 	^ outputName ifNil: [ outputName := anOutput generateTemp ]
+]
+
+{ #category : 'actions' }
+ASFlowNew >> merge: otherFlowNew [
+	
+	^ ASFlowPhi new 
+		mergeWith: self; 
+		mergeWith: otherFlowNew. 
 ]
 
 { #category : 'testing' }
@@ -46,7 +60,6 @@ ASFlowNew >> printOn: aStream [
 { #category : 'accessing' }
 ASFlowNew >> value: anObject [
 
-	self halt.
 	value := anObject.
 	self class: anObject flowClass
 ]

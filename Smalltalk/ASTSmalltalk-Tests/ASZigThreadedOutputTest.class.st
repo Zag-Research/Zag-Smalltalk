@@ -31,8 +31,8 @@ ASZigThreadedOutputTest >> testZigAST_fib [
 								    args: { (ASLiteral literal: 2) })
 						   selector: #ifTrue:ifFalse:
 						   args: {
-								   (ASBlockNode body: { { (ASLiteral literal: 1) } }).
-								   (ASBlockNode body: { { (ASSend
+								   (ASBlock body: { { (ASLiteral literal: 1) } }).
+								   (ASBlock body: { { (ASSend
 										     target:
 											     (ASSend
 												      target: ASSelf

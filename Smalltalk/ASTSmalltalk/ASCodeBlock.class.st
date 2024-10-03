@@ -7,8 +7,7 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'body',
-		'locals',
-		'arguments'
+		'locals'
 	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
@@ -26,26 +25,14 @@ ASCodeBlock class >> locals: locals body: body [
 { #category : 'comparing' }
 ASCodeBlock >> = other [
 
-	^ self class = other class and: [
-		  locals = other locals and: [
-			  body = other body and: [ self arguments = other arguments ] ] ]
+	^ self class = other class and: [ 
+		locals = other locals and: [ body = other body ] ]
 ]
 
 { #category : 'accessing' }
 ASCodeBlock >> addStatement: anASStatement [
 
 	body add: anASStatement
-]
-
-{ #category : 'accessing' }
-ASCodeBlock >> arguments [
-	^ arguments
-]
-
-{ #category : 'accessing' }
-ASCodeBlock >> arguments: aCollection [
-
-	arguments := aCollection asArray
 ]
 
 { #category : 'accessing' }
@@ -70,27 +57,17 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	arguments := #(  ).
 	body := ASSequence new
 ]
 
-{ #category : 'printing' }
-ASCodeBlock >> inspectZagASTOn: aStream [
+{ #category : 'testing' }
+ASCodeBlock >> isASRef [
+	^false
+]
 
-	super inspectZagASTOn: aStream.
-	
-	aStream nextPut: $(.
-	self selectorWithArgs ifNotEmpty: [ :s | aStream print: s ].
-	locals ifNotEmpty: [
-		aStream space.
-		aStream << #|.
-		aStream space.
-		locals do: [ :local |
-			aStream << local.
-			aStream space ].
-		aStream << #| ].
-
-	aStream nextPut: $)
+{ #category : 'testing' }
+ASCodeBlock >> isASVariable [
+	^ false
 ]
 
 { #category : 'accessing' }
@@ -108,10 +85,6 @@ ASCodeBlock >> locals: aCollection [
 { #category : 'printing' }
 ASCodeBlock >> printOn: s [
 
-	arguments isEmpty ifFalse: [
-		s << ' arguments: #('.
-		arguments do: [ :arg | s << arg ] separatedBy: [ s << ' ' ].
-		s << ')' ].
 	locals isEmpty ifFalse: [
 		s << ' locals: #('.
 		locals do: [ :local | s << local ] separatedBy: [ s << ' ' ].
@@ -127,21 +100,4 @@ ASCodeBlock >> roots [
 	roots := OrderedCollection new.
 	roots add: self.
 	^ roots
-]
-
-{ #category : 'accessing' }
-ASCodeBlock >> selectorWithArgs [
-self subclassResponsibility 
-]
-
-{ #category : 'codegen' }
-ASCodeBlock >> zigWalkMethod: aGenerator [
-
-	self halt.
-	aGenerator initCompilableUnitBlockFrom: self.
-	^ aGenerator walkBody: [
-		  body
-			  zigWalkEmpty: [ aGenerator returnEmpty ]
-			  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-			  last: [ :exp | exp zigWalkFinal: aGenerator ] ]
 ]

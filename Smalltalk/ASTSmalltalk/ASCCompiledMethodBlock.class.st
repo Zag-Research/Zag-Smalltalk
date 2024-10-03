@@ -19,14 +19,6 @@ ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	self halt
 ]
 
-{ #category : 'as yet unclassified' }
-ASCCompiledMethodBlock >> initCompilableUnitBlockFrom: anASMethodNode [
-
-	selector := anASMethodNode selector.
-	primitive := anASMethodNode primitive.
-	self halt
-]
-
 { #category : 'API' }
 ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
 

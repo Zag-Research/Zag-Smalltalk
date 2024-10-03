@@ -14,12 +14,6 @@ Class {
 	#tag : 'AST'
 }
 
-{ #category : 'as yet unclassified' }
-ASMethodNode class >> arguments: arguments locals: locals body: body [
-
-	^ self new arguments: arguments; locals: locals; body: body
-]
-
 { #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol arguments: args locals: locals body: body [
 
@@ -57,6 +51,11 @@ ASMethodNode >> = other [
 	^ super = other and: [ 
 			  self selector = other selector and: [ 
 				  self className = other className ] ]
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> add: anArg [
+	args add: anArg
 ]
 
 { #category : 'accessing' }
@@ -130,16 +129,6 @@ ASMethodNode >> pragmas: somePragmas [
 	pragmas := somePragmas 
 ]
 
-{ #category : 'accessing' }
-ASMethodNode >> primitive [
-
-	pragmas do: [ :pragma |
-		pragma isPrimitive ifTrue: [
-			^ pragma arguments first value ] ].
-	^ nil
-
-]
-
 { #category : 'printing' }
 ASMethodNode >> printOn: s [
 
@@ -163,16 +152,33 @@ ASMethodNode >> selector: aString [
 { #category : 'accessing' }
 ASMethodNode >> selectorWithArgs [
 
-	selector numArgs = 0 ifTrue: [ ^ selector asString ].
+	selector numArgs = 0 ifTrue: [ ^ selector ].
 	^ (String streamContents: [ :s |
 		   (selector findTokens: $:) with: arguments do: [ :keyword :arg |
 			   s nextPutAll: keyword.
 			   s nextPut: $:.
 			   s nextPutAll: arg.
-			   s space ] ])
+			   s space ] ]) asSymbol 
 ]
 
 { #category : 'utilities' }
 ASMethodNode >> stackSize [
 	^0
+]
+
+{ #category : 'codegen' }
+ASMethodNode >> zigWalkMethod: aGenerator [
+
+	self halt.
+	aGenerator
+		selector: self selector;
+		sender: nil locals: locals parameters: arguments.
+	pragmas do: [ :pragma |
+		pragma isPrimitive ifTrue: [
+			aGenerator primitive: pragma arguments first value ] ].
+	^ aGenerator walkBody: [
+		  body
+			  zigWalkEmpty: [ aGenerator returnSelf ]
+			  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+			  last: [ :exp | exp zigWalkFinal: aGenerator ] ]
 ]

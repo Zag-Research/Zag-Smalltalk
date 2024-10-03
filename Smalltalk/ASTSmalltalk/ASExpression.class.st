@@ -34,7 +34,7 @@ ASExpression >> zigWalkDiscard: aGenerator [
 ASExpression >> zigWalkFinal: aGenerator [
 
 	self zigWalk: aGenerator.
-	^ aGenerator returnFinal
+	^ aGenerator returnTop
 ]
 
 { #category : 'compiling' }

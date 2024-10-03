@@ -16,6 +16,15 @@ Class {
 }
 
 { #category : 'accessing' }
+ASStackTemporary >> addFlow: aBasicBlock [
+
+	| flow |
+	flow := ASFlowNew new basicBlock: aBasicBlock.
+	self location stackValue: flow.
+	self next addFlow: aBasicBlock. 
+]
+
+{ #category : 'accessing' }
 ASStackTemporary >> at: nameOrIndex [
 	0 = nameOrIndex ifTrue: [ ^ self ].
 	nameOrIndex isInteger ifTrue: [ ^ next at: nameOrIndex - 1 ].
@@ -43,6 +52,18 @@ ASStackTemporary >> drop [
 ASStackTemporary >> drop: count [ 
 	count = 0 ifTrue: [ ^self ].
 	^ next drop: count-1
+]
+
+{ #category : 'accessing' }
+ASStackTemporary >> flow [ 
+	
+	^ location stackValue.
+]
+
+{ #category : 'instance creation' }
+ASStackTemporary >> fromStack: anASStack [
+
+	next := anASStack
 ]
 
 { #category : 'accessing' }
