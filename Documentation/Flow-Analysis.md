@@ -1,0 +1,1 @@
+It seems that flow analysis (PHIs, nils, temps, etc.) need a different structure than the stack element/location model that the dataflow discovery needs.
