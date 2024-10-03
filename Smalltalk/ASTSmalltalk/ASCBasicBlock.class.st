@@ -101,14 +101,15 @@ ASCBasicBlock >> branch: aBasicBlock [
 { #category : 'adding' }
 ASCBasicBlock >> branchedToFrom: aBasicBlock [
 
+	self halt.
 	sourceBlocks add: aBasicBlock andIfNewDo: [
 		sourceElements
-			ifNil: [
-			sourceElements := self copyStackFrom: aBasicBlock ]
+			ifNil: [ sourceElements := self copyStackFrom: aBasicBlock ]
 			ifNotNil: [
 				sourceElements
 					with: aBasicBlock stack
-					do: [ :stackElement :other | self flag: 'stackElement mergeWith: other' ] ] ]
+					do: [ :stackElement :other |
+					self flag: 'stackElement mergeWith: other' ] ] ]
 ]
 
 { #category : 'accessing' }
@@ -128,13 +129,11 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive [
 	isExhaustive ifTrue: [
 		self removeLastOperation.
 		joinBlock becomeJoinBlock ].
-	aCollection do: [ :method |
-		| next |
-		next := ASCInlineMethodBlock new
-					theMethod: method;
-			        branchedToFrom: self;
-			        returnBlock: joinBlock.
-		case at: method methodClass put: next ].
+	case fillFrom: aCollection with: [ :methodAST |
+			ASCInlineMethodBlock new
+				theMethod: methodAST;
+				branchedToFrom: self;
+				returnBlock: joinBlock ].
 	self addOperation: case.
 	isExhaustive ifFalse: [ self swapLastOperations ].
 	^ case
@@ -433,6 +432,12 @@ ASCBasicBlock >> popStackTo: anASCMethodBlock [
 ASCBasicBlock >> popVariable: aSymbol [
 
 	self addOperation: (ASCPopVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'printing' }
+ASCBasicBlock >> printOn: aStream [
+
+	aStream nextPutAll: self label
 ]
 
 { #category : 'data flow instructions' }

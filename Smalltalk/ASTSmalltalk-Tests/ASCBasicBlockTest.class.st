@@ -2,8 +2,15 @@ Class {
 	#name : 'ASCBasicBlockTest',
 	#superclass : 'TestCase',
 	#instVars : [
+		'blocks',
 		'bb1',
-		'blocks'
+		'bb2',
+		'bb5',
+		'bb3',
+		'bb6',
+		'bb4',
+		'bb7',
+		'bb8'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -13,29 +20,44 @@ Class {
 { #category : 'running' }
 ASCBasicBlockTest >> setUp [
 
-	| first second third bbs sixth fifth methods |
 	super setUp.
 
-	first := ASCBasicBlock new label: 'bb1'.
-	first pushLiteral: 1.
-	second := (first send: #foo targetClass: nil tail: false) label:
-		          'bb2'.
-	third := (second send: #foo targetClass: nil tail: false) label:
-		         'bb3'.
-	third branch: second.
+	self halt.
+	bb1 := ASCCompiledMethodBlock new
+		       label: 'bb1';
+		       initCompilableUnitBlockFrom: (ASMethodNode new
+				        selector: #main;
+				        methodClass: self).
+	bb1 pushLiteral: 1.
+	bb2 := (bb1 send: #foo targetClass: nil tail: false) label: 'bb2'.
+	bb3 := (bb2 send: #foo targetClass: nil tail: false) label: 'bb3'.
+
+]
+
+{ #category : 'running' }
+ASCBasicBlockTest >> setup8graph [
+
+	| bbs methods |
+	bb3 branch: bb2.
 	methods := {
-		           ASMethodNode new selector: #foo; methodClass: True.
-		           ASMethodNode new selector: #foo; methodClass: False }.
-	bbs := second classCase: methods exhaustive: true.
-	bbs first label: 'bb4'.
-	fifth := bbs second label: 'bb5'.
-	sixth := (fifth send: #foo targetClass: nil tail: false) label: 'bb6'.
-	bbs := fifth
-		       classCase: {
-				       True.
-				       False }
-		       exhaustive: true.
-	first
+		           (ASMethodNode new
+			            selector: #foo;
+			            methodClass: True).
+		           (ASMethodNode new
+			            selector: #foo;
+			            methodClass: False) }.
+	bbs := (bb2 classCase: methods exhaustive: true) nextBasicBlocks.
+	bb4 := bbs first
+		       label: 'bb4';
+		       returnEmpty.
+	bb5 := bbs second label: 'bb5'.
+	bb5 pushLiteral: 2.
+	bb6 := (bb5 send: #foo targetClass: nil tail: false) label: 'bb6'.
+	bbs := (bb5 classCase: methods exhaustive: true) nextBasicBlocks.
+	bb7 := bbs first label: 'bb7'.
+	bb8 := bbs second label: 'bb8'.
+	bb8 returnTop.
+	bb1
 		inspect;
 		halt
 ]
@@ -46,8 +68,8 @@ ASCBasicBlockTest >> testAddBasicBlock [
 	| aBB |
 	aBB := ASCBasicBlock new.
 	bb1 addSourceBlock: aBB.
-	
-	self assert: bb1 blocks size equals: 1.
+
+	self assert: bb1 blocks size equals: 1
 ]
 
 { #category : 'tests' }
@@ -56,8 +78,30 @@ ASCBasicBlockTest >> testAfterSources [
 	| count |
 	count := 0.
 	self halt.
+	bb3 returnFinal.
+	bb1 afterSourcesDo: [ :bb | count := count + 1 ].
+	self assert: count equals: 8
+]
+
+{ #category : 'tests' }
+ASCBasicBlockTest >> testAfterSources8 [
+
+	| count |
+	self setup8graph.
+	count := 0.
+	self halt.
 	blocks first afterSourcesDo: [ :bb | count := count + 1 ].
-	self assert: count equals: blocks size
+	self assert: count equals: 8
+]
+
+{ #category : 'tests' }
+ASCBasicBlockTest >> testAfterSourcesOrdered [
+
+	| labels |
+	labels := OrderedCollection new.
+	self halt.
+	bb1 afterSourcesDo: [ :bb | labels add: bb label asSymbol ].
+	self assert: labels equals: #( bb1 bb4 bb5 bb8 bb7 bb6 bb3 bb2).
 ]
 
 { #category : 'tests' }

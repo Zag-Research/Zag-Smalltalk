@@ -35,6 +35,15 @@ ASCCase >> blocks [
 	^ map values
 ]
 
+{ #category : 'private' }
+ASCCase >> fillFrom: aCollection with: aBlock [
+	"Evaluate aBlock with each of aCollections's elements as the argument.
+	Collect the resulting values into self. Answer self."
+
+	aCollection do: [ :each |
+		self at: each methodClass put: (aBlock value: each) ]
+]
+
 { #category : 'initialization' }
 ASCCase >> initialize [
 
@@ -71,6 +80,7 @@ ASCCase >> outputTo: anOutput [
 { #category : 'stack' }
 ASCCase >> resultStack: anASStack basicBlock: anObject [
 
+	self halt.
 	stack := anASStack.
 	^ anASStack
 ]
