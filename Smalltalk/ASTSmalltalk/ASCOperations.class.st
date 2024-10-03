@@ -32,10 +32,24 @@ ASCOperations >> created: aStackElement [
 	^ aStackElement
 ]
 
+{ #category : 'Collection API' }
+ASCOperations >> do: ignored [
+	" this just exists so that `next` can return something that does nothing for a `do:` message "
+
+	^ nil
+]
+
 { #category : 'testing' }
 ASCOperations >> isCallOperation [
 
 	^ false
+]
+
+{ #category : 'Collection API' }
+ASCOperations >> isEmpty [
+	" this just exists so that `next` can return something that does nothing for a `do:` message "
+
+	^ true
 ]
 
 { #category : 'accessing' }
@@ -46,6 +60,12 @@ ASCOperations >> isSend [
 { #category : 'block handling' }
 ASCOperations >> manifestParameters [
 
+]
+
+{ #category : 'accessing' }
+ASCOperations >> nextBasicBlocks [
+
+	^ self
 ]
 
 { #category : 'code generation' }

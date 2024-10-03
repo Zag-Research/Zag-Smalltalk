@@ -40,7 +40,8 @@ ASCCompiledMethodBlock >> initialize [
 
 	super initialize.
 	returnBlocks := Dictionary new.
-	method := self
+	methodBlock := self.
+	self initializeASCCompiledBlock
 ]
 
 { #category : 'writing' }

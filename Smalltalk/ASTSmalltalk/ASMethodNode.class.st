@@ -7,8 +7,7 @@ Class {
 	#instVars : [
 		'selector',
 		'pragmas',
-		'classContext',
-		'compiledMethod'
+		'methodClass'
 	],
 	#category : 'ASTSmalltalk-AST',
 	#package : 'ASTSmalltalk',
@@ -70,29 +69,8 @@ ASMethodNode >> children [
 ]
 
 { #category : 'accessing' }
-ASMethodNode >> classContext [
-	^classContext
-]
-
-{ #category : 'accessing' }
-ASMethodNode >> classContext: aClassContext [
-	classContext := aClassContext 
-]
-
-{ #category : 'accessing' }
 ASMethodNode >> closureSize [
 	^0
-]
-
-{ #category : 'accessing' }
-ASMethodNode >> compiledMethod [
-	^ compiledMethod
-]
-
-{ #category : 'accessing' }
-ASMethodNode >> compiledMethod: aCompileMethod [
-
-	compiledMethod := aCompileMethod
 ]
 
 { #category : 'comparing' }
@@ -127,6 +105,18 @@ ASMethodNode >> isASBlock [
 { #category : 'accessing' }
 ASMethodNode >> maxBlockLocals [
 	^0
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> methodClass [
+
+	^ methodClass
+]
+
+{ #category : 'accessing' }
+ASMethodNode >> methodClass: aClass [
+
+	methodClass := aClass
 ]
 
 { #category : 'accessing' }

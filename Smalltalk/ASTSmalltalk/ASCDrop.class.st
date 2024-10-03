@@ -9,11 +9,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'accessing' }
-ASCDrop >> next [
-	^ nil
-]
-
 { #category : 'code generation' }
 ASCDrop >> outputTo: aCodeEmitter [
 

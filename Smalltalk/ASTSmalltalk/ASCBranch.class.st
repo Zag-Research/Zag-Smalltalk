@@ -22,9 +22,9 @@ ASCBranch >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'as yet unclassified' }
-ASCBranch >> next [
+ASCBranch >> nextBasicBlocks [
 
-	^ bb nextInline
+	^ bb
 ]
 
 { #category : 'code generation' }

@@ -46,17 +46,6 @@ ASCReturnBlock >> flowForTemporaries [
 ]
 
 { #category : 'initialization' }
-ASCReturnBlock >> label [
-
-	^ label ifNil: [
-		  label := String streamContents: [ :s |
-			           s
-				           nextPutAll: ($_ join: ($: split: self selector));
-				           nextPut: $.;
-				           print: (self methodBlock addBlock: self) ] ]
-]
-
-{ #category : 'initialization' }
 ASCReturnBlock >> llvmLabel [
 
 	^ '0'

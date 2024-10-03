@@ -65,7 +65,7 @@ ASCEmbed >> markReferences [
 ]
 
 { #category : 'instance creation' }
-ASCEmbed >> next [
+ASCEmbed >> nextBasicBlocks [
 	^nil
 ]
 

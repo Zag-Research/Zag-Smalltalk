@@ -39,7 +39,7 @@ ASPharoCompiler >> compileMethod: aCompiledMethod [
 	| visitor result |
 	visitor := ASPharoVisitor compiler: self.
 	result := visitor visit: aCompiledMethod ast.
-	result compiledMethod: aCompiledMethod.
+	result methodClass: aCompiledMethod methodClass.
 	^ result
 	"^ (ASPharoVisitor compiler: self) visit: aCompiledMethod ast"
 ]
