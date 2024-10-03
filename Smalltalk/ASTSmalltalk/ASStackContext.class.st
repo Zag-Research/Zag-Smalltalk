@@ -15,18 +15,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'accessing' }
-ASStackContext >> at: aSymbol [
-
-	^ next at: aSymbol
-]
-
-{ #category : 'instance creation' }
-ASStackContext >> fromStack: anASStack [
-
-	next := anASStack
-]
-
 { #category : 'initialization' }
 ASStackContext >> initialize [
 

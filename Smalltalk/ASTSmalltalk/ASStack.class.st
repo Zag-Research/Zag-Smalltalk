@@ -21,6 +21,12 @@ ASStack >> add: newObject [
 	^ self shouldNotImplement
 ]
 
+{ #category : 'adding' }
+ASStack >> addFlow: aBasicBlock [
+
+	^ self.
+]
+
 { #category : 'enumerating' }
 ASStack >> addToCollection: aCollection [
 
@@ -125,6 +131,7 @@ ASStack >> offsetForTemps [
 { #category : 'displaying' }
 ASStack >> printNameOn: stream [
 
+	self subclassResponsibility
 ]
 
 { #category : 'printing' }

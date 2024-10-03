@@ -23,6 +23,12 @@ ASCCompilableUnitBlock >> expressionReturn [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'examples' }
+ASCCompilableUnitBlock >> returnLiteral: literal [
+
+	^ self addOperation: (ASCReturnLiteral literal: literal)
+]
+
 { #category : 'API' }
 ASCCompilableUnitBlock >> returnSelf [
 

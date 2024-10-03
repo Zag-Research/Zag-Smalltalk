@@ -171,7 +171,6 @@ ASCodeGenerator >> firstBlock [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> flowAnalysis [
 
-	self halt.
 	basicBlocks do: #becomeJoinBlock.
 	basicBlocks do: #markReferences
 ]
@@ -186,9 +185,6 @@ ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 { #category : 'as yet unclassified' }
 ASCodeGenerator >> generateTemp [
 
-	self
-		flag: 'used later';
-		halt.
 	^ code nextSequence
 ]
 
@@ -207,12 +203,6 @@ ASCodeGenerator >> getOrMakeReturnBlock [
 ASCodeGenerator >> initCode [
 
 	code := ASCCompiledMethodBlock new
-]
-
-{ #category : 'compiling' }
-ASCodeGenerator >> initCompilableUnitBlockFrom: anASMethodNode [
-
-	^ code initCompilableUnitBlockFrom: anASMethodNode
 ]
 
 { #category : 'initialization' }
@@ -289,7 +279,7 @@ ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaust
 	| case joinBlock |
 	isExhaustive ifTrue: [
 		code removeLastOperation.
-		joinBlock := anASCSend next becomeJoinBlock.
+		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
 		basicBlocks add: joinBlock ].
 	case := code
 		        classCase: (methods collect: #methodClass)
@@ -386,8 +376,7 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	self flag: 'shouldnt be called';halt.
-	^ basicBlocks add: ASCJoinBlock new
+	^ basicBlocks add: (ASCJoinBlock new)
 ]
 
 { #category : 'private - testing' }
@@ -463,7 +452,7 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 	^ code pushLiteral: aLiteral
 ]
 
-{ #category : 'compiling' }
+{ #category : 'as yet unclassified' }
 ASCodeGenerator >> pushNil [
 
 	^ code pushNil
@@ -497,12 +486,6 @@ ASCodeGenerator >> removeUnusedCode [.
 
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> returnFinal [
-
-	^ currentCompilableUnitBlock returnFinal
-]
-
 { #category : 'examples' }
 ASCodeGenerator >> returnLiteral: literal [
 
@@ -526,7 +509,13 @@ ASCodeGenerator >> returnTop [
 { #category : 'accessing' }
 ASCodeGenerator >> selector [
 
-	^ currentCompilableUnitBlock selector
+	^ basicBlocks first selector
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> selector: aSymbol [
+
+	^ code selector: aSymbol
 ]
 
 { #category : 'API' }
@@ -602,11 +591,10 @@ ASCodeGenerator >> targetClass: anObject [
 targetClass:= anObject 
 ]
 
-{ #category : 'compiling' }
+{ #category : 'as yet unclassified' }
 ASCodeGenerator >> walkBody: aBlock [
 
 	| savedCompilableUnitBlock |
-	self assert: currentCompilableUnitBlock isNil.
 	savedCompilableUnitBlock := currentCompilableUnitBlock.
 	currentCompilableUnitBlock := code.
 	aBlock ensure: [
