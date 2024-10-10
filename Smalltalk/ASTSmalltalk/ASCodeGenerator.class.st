@@ -367,7 +367,7 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: (ASCJoinBlock new)
+	^ basicBlocks add: (ASCJoinBlock new withHeader: code headerBlock)
 ]
 
 { #category : 'private - testing' }

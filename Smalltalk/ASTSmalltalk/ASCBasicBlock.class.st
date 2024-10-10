@@ -233,6 +233,12 @@ ASCBasicBlock >> hash: value [
 	hash := value
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> headerBlock [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'stackAccessHelpers' }
 ASCBasicBlock >> indexOf: anObject [
 "delegate to stack?"
@@ -511,6 +517,12 @@ ASCBasicBlock >> replaceOperation: anOperation [
 		put: (anOperation fromOperation: (operations at: operations size))
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> returnFinal [
+
+	^ self headerBlock returnFinalFor: self
+]
+
 { #category : 'initialization' }
 ASCBasicBlock >> roots [
 
@@ -526,7 +538,7 @@ ASCBasicBlock >> roots [
 ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock new ].
+	next := tailCall ifFalse: [ ASCReturnBlock new withHeader: self headerBlock ].
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;

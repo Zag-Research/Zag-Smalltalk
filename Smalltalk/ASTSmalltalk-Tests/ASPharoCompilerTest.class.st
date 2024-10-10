@@ -87,19 +87,18 @@ ASPharoCompilerTest >> testBlock [
 											     args: {  }) })
 							   selector: #collect:
 							   args:
-								   { (ASBlock
+								   { (ASBlockNode
 									    arguments: #( #each )
 									    locals: #( #temp )
 									    body: {
 											    (ASAssign
-												     variable: (ASLocal name: #temp)
+												     variable: (ASLocalNamed name: #temp)
 												     expression: (ASSend
-														      target:
-														      (ASRef variable: #each)
+														      target: (ASRef variable: #each)
 														      selector: #+
 														      args: { (ASLiteral literal: 5) })).
 											    (ASSend
-												     target: (ASRef variable: (ASLocal name: #temp))
+												     target: (ASRef variable: (ASLocalNamed name: #temp))
 												     selector: #+
 												     args: { (ASLiteral literal: 3) }) }) })) }
 						 asASSequence)

@@ -31,14 +31,12 @@ ASZigGeneratorTest >> testASBlock [
 			 selector: #size
 			 args: Array new).
 	body := OrderedCollection new.
-	body add: (ASSend
-			 target: (ASRef variable: #index)
-			 selector: #'<='
-			 args: args).
+	body add:
+		(ASSend target: (ASRef variable: #index) selector: #'<=' args: args).
 	stackVars := OrderedCollection new.
 	stackVars add: 'x'.
 
-	result := ((ASBlock arguments: Array new locals: Array new body: body)
+	result := ((ASBlockNode arguments: Array new locals: Array new body: body)
 		           selector: '@foo:bar:1')
 		          zigString: Dictionary new
 		          and: stackVars.
@@ -47,11 +45,12 @@ ASZigGeneratorTest >> testASBlock [
 
 { #category : 'tests' }
 ASZigGeneratorTest >> testASBlockWithFalse [
+
 	| result body |
 	"pushNonlocalBlock_false"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: false)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_false,'
@@ -64,7 +63,7 @@ ASZigGeneratorTest >> testASBlockWithMinusOne [
 	"pushNonlocalBlock_minusone"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: -1)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_minusOne,'
@@ -77,7 +76,7 @@ ASZigGeneratorTest >> testASBlockWithNil [
 	"pushNonlocalBlock_nil"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: nil)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_nil,'
@@ -90,7 +89,7 @@ ASZigGeneratorTest >> testASBlockWithOne [
 	"pushNonlocalBlock_one"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 1)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_one,'
@@ -105,7 +104,7 @@ ASZigGeneratorTest >> testASBlockWithSelf [
 	stackVariables add: #self.
 	body := OrderedCollection new.
 	body add: (ASReturn expression: ASSelf new).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: stackVariables.
 	self assert: result equals: '&e.pushNonlocalBlock_self,1,'
@@ -118,7 +117,7 @@ ASZigGeneratorTest >> testASBlockWithTrue [
 	"pushNonlocalBlock_true"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: true)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_true,'
@@ -131,7 +130,7 @@ ASZigGeneratorTest >> testASBlockWithTwo [
 	"pushNonlocalBlock_two"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 2)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_two,'
@@ -144,7 +143,7 @@ ASZigGeneratorTest >> testASBlockWithZero [
 	"pushNonlocalBlock_zero"
 	body := OrderedCollection new.
 	body add: (ASReturn expression: (ASLiteral literal: 0)).
-	result := (ASBlock arguments: Array new locals: Array new body: body)
+	result := (ASBlockNode arguments: Array new locals: Array new body: body)
 		          zigString: Dictionary new
 		          and: OrderedCollection new.
 	self assert: result equals: '&e.pushNonlocalBlock_zero,'
