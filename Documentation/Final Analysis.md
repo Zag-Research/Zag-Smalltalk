@@ -5,7 +5,7 @@ When the Zag compiler is asked to compile a particular selector for a target cla
 
 When inlining, the compiler looks at each block that end with a send, and tries to find a way to replace the send with a semantically equivalent operation - i.e. to inline the send. This is repeated as long as there is a send that could be replaced.
 
-In some cases all sends can be replaced, in which case there isn't even a reason to create a `Context`, saving a considerable number of instructions.
+In some cases all sends can be replaced, in which case there isn't even a reason to create a `Context` for the method (because the `Context` is where we would save the return address for the send), saving a considerable number of instructions.
 
 There are several patterns that can be inlined, based on what we can determine about the receiver. In the following, "known type" is clearly safe for a literal or literal parameter, but harder if it is some kind of calculation or uses a local variable.
 #### Send to `self`, `super` or known type
@@ -30,6 +30,8 @@ As a special case of the previous case, we know that comparison primitives alway
 After all inlining is completed there will typically be pushes of `BlockClosure`s that are subsequently inlined so that the block itself need never be created. These are turned into pushes of `nil`.
 ## Compiling required `BlockClosure`s
 Any `BlockClosure`s that remain after the previous step must be compiled, and the above inlining operations performed.
+## Removal of redundant operations
+After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects. Note that `self` values may need at least nil pushed into the location so there is space to return a value.
 ## Optimizing local variable locations
 If we have block closures, we now determine the optimum location for each variable. There are several possibilities:
 1. If a variable is only referenced in the method, it will be put in the `Context` (or just on the stack if no context is created).
@@ -37,8 +39,6 @@ If we have block closures, we now determine the optimum location for each variab
 3. If a variable isn't modified after a `BlockClosure` (in which it's referenced) is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit.
 4. For values referenced in two or more places, modified in at least one, the default would be to put them in the `Context`.  However, if a `BlockClosure` has a reference to the `Context` and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
 5. All other variables will be placed in a closure that modifies the variable.
-## Removal of redundant operations
-After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects. Note that `self` values may need at least nil pushed into the location so there is space to return a value.
 ## Non-structural inlining
 The next stage is to inline primitives that can't affect the control-flow graph, but can use type information that is not available until the data-flow graph is complete. Current examples are `at:` and `at:put:` where the receiver is known to be an `Array`, `String` or one of the other special array types.
 ## Creating `Context` and stack offsets

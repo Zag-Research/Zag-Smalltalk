@@ -18,7 +18,9 @@ $ cd build
 $ make install
 ```
 - [Clement Bera on Spur's object format](https://clementbera.wordpress.com/2014/01/16/spurs-new-object-format/) and [floating point](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/)
-- 
+- [Richard Eng's post on the power of symmetry](https://medium.com/smalltalk-talk/lisp-smalltalk-and-the-power-of-symmetry-8bd96aaa0c0c)
+- [Alan Kay's "Early History of Smalltalk"](https://worrydream.com/EarlyHistoryOfSmalltalk/)
+- [Graph Neural Networks](https://www.analyticsvidhya.com/blog/2022/03/what-are-graph-neural-networks-and-how-do-they-work/)
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
