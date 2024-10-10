@@ -64,10 +64,10 @@ ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 
 	| block body |
 	body := ASSequence new: aRBBlockNode statements size.
-	block := ASBlock
-		  arguments: aRBBlockNode argumentNames
-		  locals: aRBBlockNode temporaryNames
-		  body: body.
+	block := ASBlockNode
+		         arguments: aRBBlockNode argumentNames
+		         locals: aRBBlockNode temporaryNames
+		         body: body.
 	compiler inScope: block do: [
 		aRBBlockNode statements doWithIndex: [ :statement :index |
 			body at: index put: (self visit: statement) ] ].

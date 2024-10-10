@@ -25,9 +25,8 @@ ASCBasicBlockTest >> setUp [
 	self halt.
 	bb1 := ASCCompiledMethodBlock new
 		       label: 'bb1';
-		       initCompilableUnitBlockFrom: (ASMethodNode new
-				        selector: #main;
-				        methodClass: self).
+		       selector: #main;
+				sender: nil locals: #() parameters: #().
 	bb1 pushLiteral: 1.
 	bb2 := (bb1 send: #foo targetClass: nil tail: false) label: 'bb2'.
 	bb3 := (bb2 send: #foo targetClass: nil tail: false) label: 'bb3'.
