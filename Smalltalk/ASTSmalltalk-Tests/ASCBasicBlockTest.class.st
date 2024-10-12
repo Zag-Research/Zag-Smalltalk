@@ -26,11 +26,10 @@ ASCBasicBlockTest >> setUp [
 	bb1 := ASCCompiledMethodBlock new
 		       label: 'bb1';
 		       selector: #main;
-				sender: nil locals: #() parameters: #().
+		       locals: #(  ) parameters: #(  ).
 	bb1 pushLiteral: 1.
 	bb2 := (bb1 send: #foo targetClass: nil tail: false) label: 'bb2'.
-	bb3 := (bb2 send: #foo targetClass: nil tail: false) label: 'bb3'.
-
+	bb3 := (bb2 send: #foo targetClass: nil tail: false) label: 'bb3'
 ]
 
 { #category : 'running' }
@@ -128,7 +127,7 @@ ASCBasicBlockTest >> testStackFlow [
 	cg := ASCodeGenerator new.
 	cg targetClass: SmallInteger.
 	cg selector: #foo:bar:.
-	cg sender: nil locals: #( l1 l2 ) parameters: #( p1 p2 ).
+	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
 
 	bb1 := cg firstBlock.
 	self assert: (bb1 at: #l1) data isNilReference.
@@ -207,7 +206,7 @@ ASCBasicBlockTest >> test_plus_and_and [
 	cg := ASCodeGenerator new.
 	cg targetClass: ASCompileTestClass1.
 	cg selector: #plus:and:and:.
-	cg sender: nil locals: #(  ) parameters: #( n1 n2 n3 ).
+	cg locals: #(  ) parameters: #( n1 n2 n3 ).
 	cg pushVariable: #n1.
 	cg pushVariable: #n2.
 	cg pushVariable: #n3.

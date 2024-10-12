@@ -16,7 +16,7 @@ ASCompilerInlineTest class >> inlined_fibonacci [
 
 	| cg targets |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
-	cg sender: nil locals: #(  ) parameters: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -55,7 +55,7 @@ ASCompilerInlineTest class >> inlined_fibonacci_alt [
 
 	| cg targets common |
 	cg := ASCodeGenerator targetClass: SmallInteger selector: #fibonacci.
-	cg sender: nil locals: #(  ) parameters: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushSelf.
 	cg pushLiteral: 2.
 	cg sendEmbedded: #'<='.
@@ -127,7 +127,7 @@ defined in BlockClosure
 	cg := ASCodeGenerator new.
 	cg targetClass: Array.
 	cg selector: #insertionSorted.
-	cg sender: nil locals: #(  ) parameters: #(  ).
+	cg locals: #(  ) parameters: #(  ).
 	cg pushLiteral: 2.
 	cg pushSelf.
 

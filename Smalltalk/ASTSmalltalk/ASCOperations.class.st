@@ -65,7 +65,7 @@ ASCOperations >> manifestParameters [
 { #category : 'accessing' }
 ASCOperations >> nextBasicBlocks [
 
-	^ self
+	^ nil
 ]
 
 { #category : 'code generation' }

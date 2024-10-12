@@ -1,24 +1,18 @@
 "
-I remember the selector for sends
+I represent a normal send.
+
+I  need to store return addresses before dispatch.
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCStackReferencingOperations',
+	#superclass : 'ASCTailSend',
 	#instVars : [
-		'bb',
-		'target',
-		'selector'
+		'blockToReturnTo'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
-
-{ #category : 'inlining' }
-ASCSend >> inlineIfPossible: anASCodeGenerator [
-
-	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ]
-]
 
 { #category : 'printing' }
 ASCSend >> inspectZagASTOn: aStream [
@@ -26,103 +20,31 @@ ASCSend >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream
 		space;
-		print: selector.
-	bb
-		ifNotNil: [
-			aStream
-				<< ' -> ';
-				<< bb label ]
-		ifNil: [ aStream << ' ( tailcall )' ]
-]
-
-{ #category : 'testing' }
-ASCSend >> isCallOperation [
-
-	^ true
-]
-
-{ #category : 'accessing' }
-ASCSend >> isSend [
-	^ true
+		print: selector;
+		<< ' -> ';
+		<< blockToReturnTo label
 ]
 
 { #category : 'testing' }
 ASCSend >> isTailcall [
 
-	^ bb isNil
-]
-
-{ #category : 'block handling' }
-ASCSend >> manifestParameters [
-
-	^ stack makeManifestFor: selector numArgs + 1
-]
-
-{ #category : 'data flow instructions' }
-ASCSend >> markReferences [
-
-	stack markReferenced: selector numArgs
+	^ false
 ]
 
 { #category : 'accessing' }
 ASCSend >> nextBasicBlocks [
 
-	^ bb
+	^ blockToReturnTo
 ]
 
 { #category : 'code generation' }
 ASCSend >> outputTo: anOutput [
 
-	^ anOutput
-		  visitSend: selector
-		  returnIndex: bb
-		  target: target
-]
-
-{ #category : 'testing' }
-ASCSend >> requiresContext [
-
-	self halt.
-	^ false
-]
-
-{ #category : 'stack' }
-ASCSend >> resultStack: anASStack basicBlock: aBasicBlock [
-
-	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) pushDataAsTemporary: (AStSubClass new dataClass: Object)
+	^ anOutput visitSend: selector returnIndex: blockToReturnTo target: target
 ]
 
 { #category : 'handling' }
 ASCSend >> return: aBasicBlock [
 
-	bb := aBasicBlock 
-]
-
-{ #category : 'accessing' }
-ASCSend >> selector [
-	^ selector 
-]
-
-{ #category : 'accessing' }
-ASCSend >> selector: aString [
-
-	selector := aString
-]
-
-{ #category : 'accessing' }
-ASCSend >> target [
-
-	^ target
-]
-
-{ #category : 'accessing' }
-ASCSend >> target: aSymbol [
-	target := aSymbol
-]
-
-{ #category : 'instance creation' }
-ASCSend >> with: aSymbol [
-
-	selector := aSymbol
+	blockToReturnTo := aBasicBlock 
 ]

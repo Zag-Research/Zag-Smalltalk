@@ -11,10 +11,7 @@ ASZigInspectionTest >> testInspectionMadeUpAST [
 
 	| block |
 	block := ASCCompiledMethodBlock new.
-	block
-		sender: nil
-		locals: { (#size , #location) }
-		parameters: { #aSample }.
+	block locals: { (#size , #location) } parameters: { #aSample }.
 	block inspect
 ]
 

@@ -40,9 +40,11 @@ ASMethodNode class >> selector: aSymbol locals: locals body: body [
 { #category : 'tests - instance creation' }
 ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals: locals body: body [
 
-	^ (self arguments: args locals: locals body: body)
-		  selector: aSymbol;
-		  pragmas: pragmas
+	^ (self
+		   selector: aSymbol
+		   arguments: args
+		   locals: locals
+		   body: body) pragmas: pragmas
 ]
 
 { #category : 'comparing' }

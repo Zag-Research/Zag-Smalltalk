@@ -13,7 +13,6 @@ Class {
 	#name : 'ASCodeGenerator',
 	#superclass : 'Object',
 	#instVars : [
-		'selector',
 		'code',
 		'basicBlocks',
 		'name',
@@ -26,7 +25,7 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'currentCompilableUnitBlock'
+		'currentCodeUnit'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -86,6 +85,12 @@ ASCodeGenerator >> basicBlocksLocalizeDo: aBlock [
 { #category : 'enumerating' }
 ASCodeGenerator >> basicBlocksUnorderedDo: aBlock [ 
 	basicBlocks do: aBlock
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> blockClosureClass [
+
+	^ currentCodeUnit blockClosureClass
 ]
 
 { #category : 'API' }
@@ -169,7 +174,7 @@ ASCodeGenerator >> flowAnalysis [
 { #category : 'translating' }
 ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
-	code theMethod: aMethodOrBlockNode.
+	code theMethod: aMethodOrBlockNode; initSelf: targetClass.
 	aMethodOrBlockNode zigWalkMethod: self
 ]
 
@@ -346,6 +351,12 @@ ASCodeGenerator >> inspectBasicBlocks [
 		  yourself
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> locals: locals parameters: arguments [
+
+	^ currentCodeUnit locals: locals parameters: arguments
+]
+
 { #category : 'compiling' }
 ASCodeGenerator >> lookupLocal: aSymbol [
 
@@ -367,7 +378,7 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: (ASCJoinBlock new withHeader: code headerBlock)
+	^ basicBlocks add: ASCJoinBlock new
 ]
 
 { #category : 'private - testing' }
@@ -477,6 +488,13 @@ ASCodeGenerator >> removeUnusedCode [.
 
 ]
 
+{ #category : 'API' }
+ASCodeGenerator >> returnEmpty [
+
+	" `code` and `currentCodeUnitBlock` are the same"
+	^ currentCodeUnit returnEmpty
+]
+
 { #category : 'examples' }
 ASCodeGenerator >> returnLiteral: literal [
 
@@ -488,13 +506,13 @@ ASCodeGenerator >> returnLiteral: literal [
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 
-	^ currentCompilableUnitBlock returnSelf
+	^ currentCodeUnit returnSelfFor: code
 ]
 
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	^ currentCompilableUnitBlock returnTop
+	^ currentCodeUnit returnTopFor: code
 ]
 
 { #category : 'accessing' }
@@ -526,13 +544,15 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 
 	| bb |
 	blocksWithCalls add: code.
-	bb := code
-		      send: aSymbol
-		      targetClass: aTargetClass
-		      tail: tail & tailCallOptimize.
-	^ bb ifNotNil: [
-		  basicBlocks add: bb.
-		  code := bb ]
+	tail & tailCallOptimize ifTrue: [
+		^ currentCodeUnit
+			  sendTail: aSymbol
+			  targetClass: aTargetClass
+			  for: code ].
+	bb := code send: aSymbol targetClass: aTargetClass.
+	basicBlocks add: bb.
+	code := bb.
+	^ bb
 ]
 
 { #category : 'API' }
@@ -546,18 +566,15 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 ]
 
 { #category : 'accessing' }
-ASCodeGenerator >> sender: sender locals: locals parameters: arguments [
-
-	^ code
-		sender: (sender ifNil: [ targetClass ])
-		locals: locals
-		parameters: arguments
-]
-
-{ #category : 'accessing' }
 ASCodeGenerator >> setBasicBlock: anASCBlock [
 
 	code := anASCBlock
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> setCodeUnit [
+
+	currentCodeUnit := code
 ]
 
 { #category : 'API' }
@@ -580,16 +597,6 @@ ASCodeGenerator >> targetClass [
 { #category : 'accessing' }
 ASCodeGenerator >> targetClass: anObject [ 
 targetClass:= anObject 
-]
-
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> walkBody: aBlock [
-
-	| savedCompilableUnitBlock |
-	savedCompilableUnitBlock := currentCompilableUnitBlock.
-	currentCompilableUnitBlock := code.
-	aBlock ensure: [
-		currentCompilableUnitBlock := savedCompilableUnitBlock ]
 ]
 
 { #category : 'post processing' }

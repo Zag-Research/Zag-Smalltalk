@@ -44,6 +44,14 @@ ASCCompiledMethodBlock >> initialize [
 	self initializeASCCompiledBlock
 ]
 
+{ #category : 'accessing' }
+ASCCompiledMethodBlock >> locals: locals parameters: arguments [
+
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
+	sourceElements := stack
+]
+
 { #category : 'writing' }
 ASCCompiledMethodBlock >> outputTo: output [
 
@@ -55,10 +63,10 @@ ASCCompiledMethodBlock >> outputTo: output [
 	^ self outputRestTo: output
 ]
 
-{ #category : 'API' }
-ASCCompiledMethodBlock >> returnSelf [
+{ #category : 'as yet unclassified' }
+ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [ 
 
-	^ self addOperation: ASCReturnSelf new
+	^ aBasicBlock returnTop
 ]
 
 { #category : 'accessing' }
@@ -66,15 +74,6 @@ ASCCompiledMethodBlock >> selector: aString [
 
 	selector := aString.
 	label := aString
-]
-
-{ #category : 'accessing' }
-ASCCompiledMethodBlock >> sender: sender locals: locals parameters: arguments [
-
-	self initSelf: sender.
-	arguments do: [ :each | self initParameterNamed: each ].
-	locals do: [ :each | self initLocalNamed: each ].
-	sourceElements := stack
 ]
 
 { #category : 'writing' }

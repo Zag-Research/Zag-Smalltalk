@@ -6,9 +6,6 @@ Note that I often get changed to be an `ASCJoinBlock`, so my objects must be the
 Class {
 	#name : 'ASCReturnBlock',
 	#superclass : 'ASCBasicBlock',
-	#instVars : [
-		'headerBlock'
-	],
 	#classVars : [
 		'TargetBlockPrototype'
 	],
@@ -48,12 +45,6 @@ ASCReturnBlock >> flowForTemporaries [
 	^ ASFlowOnDemand
 ]
 
-{ #category : 'API' }
-ASCReturnBlock >> headerBlock [
-
-	^ headerBlock
-]
-
 { #category : 'initialization' }
 ASCReturnBlock >> llvmLabel [
 
@@ -84,10 +75,4 @@ ASCReturnBlock >> outputTo: output [
 ASCReturnBlock >> selector [
 
 	^self  methodBlock selector
-]
-
-{ #category : 'as yet unclassified' }
-ASCReturnBlock >> withHeader: aBasicBlock [
-
-	headerBlock := aBasicBlock
 ]

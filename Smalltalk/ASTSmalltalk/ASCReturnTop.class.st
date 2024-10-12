@@ -15,6 +15,11 @@ ASCReturnTop >> getTop: anASLLMethodOutput [
 	^ stack getNameOn: anASLLMethodOutput 
 ]
 
+{ #category : 'Collection API' }
+ASCReturnTop >> inlineWithFixedCFG: anASCodeGenerator [ 
+
+]
+
 { #category : 'block handling' }
 ASCReturnTop >> manifestParameters [
 

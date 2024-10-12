@@ -108,7 +108,6 @@ ASCBasicBlock >> branch: aBasicBlock [
 { #category : 'adding' }
 ASCBasicBlock >> branchedToFrom: aBasicBlock [
 
-	self halt.
 	sourceBlocks add: aBasicBlock andIfNewDo: [
 		sourceElements
 			ifNil: [ sourceElements := self copyStackFrom: aBasicBlock ]
@@ -231,12 +230,6 @@ ASCBasicBlock >> hash [
 ASCBasicBlock >> hash: value [
 
 	hash := value
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> headerBlock [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'stackAccessHelpers' }
@@ -517,10 +510,16 @@ ASCBasicBlock >> replaceOperation: anOperation [
 		put: (anOperation fromOperation: (operations at: operations size))
 ]
 
-{ #category : 'as yet unclassified' }
-ASCBasicBlock >> returnFinal [
+{ #category : 'API' }
+ASCBasicBlock >> returnSelf [
 
-	^ self headerBlock returnFinalFor: self
+	^ self addOperation: ASCReturnSelf new
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> returnTop [
+
+	^ self addOperation: (ASCReturnTop new)
 ]
 
 { #category : 'initialization' }
@@ -535,17 +534,29 @@ ASCBasicBlock >> roots [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> send: aSymbol targetClass: target tail: tailCall [
+ASCBasicBlock >> send: aSymbol targetClass: target [
 
 	| next send |
-	next := tailCall ifFalse: [ ASCReturnBlock new withHeader: self headerBlock ].
+	next := ASCReturnBlock new.
 	send := ASCSend new
 		        selector: aSymbol;
 		        return: next;
 		        target: target.
 	self addOperation: send.
-	next ifNotNil: [ next branchedToFrom: self ].
+	next branchedToFrom: self.
 	^ next
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> sendTail: aSymbol targetClass: target [
+
+	| send |
+	send := ASCTailSend new
+		        selector: aSymbol;
+		        return: nil;
+		        target: target.
+	self addOperation: send.
+	^ nil
 ]
 
 { #category : 'initialization' }

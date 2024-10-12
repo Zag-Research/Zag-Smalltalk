@@ -12,43 +12,43 @@ Class {
 }
 
 { #category : 'API' }
-ASCCompilableUnitBlock >> expressionFinal [
+ASCCompilableUnitBlock >> blockClosureClass [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ASCCompilableUnitBlock >> expressionReturn [
-
-	^ self subclassResponsibility
-]
-
-{ #category : 'examples' }
-ASCCompilableUnitBlock >> returnLiteral: literal [
-
-	^ self addOperation: (ASCReturnLiteral literal: literal)
-]
-
-{ #category : 'API' }
-ASCCompilableUnitBlock >> returnSelf [
+ASCCompilableUnitBlock >> locals: locals parameters: arguments [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ASCCompilableUnitBlock >> returnTop [
+ASCCompilableUnitBlock >> returnEmpty [
 
-	^ self addOperation: (ASCReturnTop new)
+	^ self subclassResponsibility
 ]
 
-{ #category : 'accessing' }
+{ #category : 'API' }
+ASCCompilableUnitBlock >> returnSelfFor: aBasicBlock [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ASCCompilableUnitBlock >> returnTopFor: aBasicBlock [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
 ASCCompilableUnitBlock >> selector [
 
 	^ self subclassResponsibility
 ]
 
-{ #category : 'accessing' }
-ASCCompilableUnitBlock >> sender: sender locals: locals parameters: arguments [
+{ #category : 'API' }
+ASCCompilableUnitBlock >> sendTail: aSymbol targetClass: aTargetClass for: aBasicBlock [
 
 	^ self subclassResponsibility
 ]

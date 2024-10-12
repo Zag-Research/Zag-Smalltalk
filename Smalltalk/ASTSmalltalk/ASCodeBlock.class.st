@@ -146,16 +146,15 @@ self subclassResponsibility
 { #category : 'codegen' }
 ASCodeBlock >> zigWalkMethod: aGenerator [
 
-	self halt.
 	aGenerator
+		setCodeUnit;
 		selector: self selector;
-		sender: nil locals: locals parameters: arguments.
+		locals: locals parameters: arguments.
 	self pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
 			aGenerator primitive: pragma arguments first value ] ].
-	^ aGenerator walkBody: [
-		  body
-			  zigWalkEmpty: [ aGenerator returnSelf ]
-			  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-			  last: [ :exp | exp zigWalkFinal: aGenerator ] ]
+	^ body
+		  zigWalkEmpty: [ aGenerator returnEmpty ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkFinal: aGenerator ]
 ]
