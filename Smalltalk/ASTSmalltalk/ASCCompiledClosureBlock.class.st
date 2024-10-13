@@ -21,6 +21,12 @@ ASCCompiledClosureBlock >> addBlock: anASCReturnBlock [
 		  ifAbsentPut: [ returnBlocks size + 1 ]
 ]
 
+{ #category : 'API' }
+ASCCompiledClosureBlock >> blockClosureClass [
+
+	^ ASCTopClosureBlock
+]
+
 { #category : 'data flow instructions' }
 ASCCompiledClosureBlock >> flowForLocals [
 
@@ -64,12 +70,6 @@ ASCCompiledClosureBlock >> printOn: aStream [
 ASCCompiledClosureBlock >> returnNonLocal [
 
 	^ self addOperation: ASCReturnNonLocal new
-]
-
-{ #category : 'as yet unclassified' }
-ASCCompiledClosureBlock >> selfElementClass [
-
-	^ ASStackNamedIndirect
 ]
 
 { #category : 'accessing' }

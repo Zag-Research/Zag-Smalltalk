@@ -1,3 +1,6 @@
+"
+I am a trait usable by all DispatchableBlocks - in fact, I should be moved into that class, now that all my previous users have been made subclasses of it.
+"
 Trait {
 	#name : 'ASCCompiledBlock',
 	#instVars : [

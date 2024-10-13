@@ -9,6 +9,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCInlinedBlock >> blockClosureClass [
+
+	^ ASCInlineClosureBlock
+]
+
 { #category : 'as yet unclassified' }
 ASCInlinedBlock >> selfElementClass [
 	^ self subclassResponsibility
