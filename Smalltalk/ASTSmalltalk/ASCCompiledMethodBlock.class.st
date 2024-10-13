@@ -4,9 +4,7 @@ Returns from me are real returns
 "
 Class {
 	#name : 'ASCCompiledMethodBlock',
-	#superclass : 'ASCMethodBlock',
-	#traits : 'ASCCompiledBlock',
-	#classTraits : 'ASCCompiledBlock classTrait',
+	#superclass : 'ASCDispatchableBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -17,6 +15,13 @@ ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	" nothing to do, because this can only happen with tail recursive calls "
 
 	self halt
+]
+
+{ #category : 'adding' }
+ASCCompiledMethodBlock >> copyStackFrom: aBasicBlock [
+
+	stack := aBasicBlock stack.
+	^ stack
 ]
 
 { #category : 'API' }
@@ -57,7 +62,6 @@ ASCCompiledMethodBlock >> outputTo: output [
 
 	output
 		outputMethodDefinition: self label
-		primitive: primitive
 		methods: { self } , returnBlocks keys.
 	output outputMethodStart: self.
 	^ self outputRestTo: output
@@ -67,13 +71,6 @@ ASCCompiledMethodBlock >> outputTo: output [
 ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [ 
 
 	^ aBasicBlock returnTop
-]
-
-{ #category : 'accessing' }
-ASCCompiledMethodBlock >> selector: aString [
-
-	selector := aString.
-	label := aString
 ]
 
 { #category : 'writing' }

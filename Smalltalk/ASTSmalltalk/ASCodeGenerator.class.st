@@ -174,7 +174,7 @@ ASCodeGenerator >> flowAnalysis [
 { #category : 'translating' }
 ASCodeGenerator >> generateFrom: aMethodOrBlockNode [
 
-	code theMethod: aMethodOrBlockNode; initSelf: targetClass.
+	code initSelf: targetClass.
 	aMethodOrBlockNode zigWalkMethod: self
 ]
 
@@ -384,14 +384,14 @@ ASCodeGenerator >> newInline [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInlineBlockClosure [
 
-	^ basicBlocks add: ASCClosureBlock new
+	^ basicBlocks add: currentCodeUnit blockClosureClass
 ]
 
 { #category : 'instance creation' }
 ASCodeGenerator >> newInlineMethod: aMethodAST [
 
 	| newBlock |
-	newBlock := ASCInlineMethodBlock new theMethod: aMethodAST.
+	newBlock := ASCInlineMethodBlock new .
 	^ basicBlocks add: newBlock
 ]
 

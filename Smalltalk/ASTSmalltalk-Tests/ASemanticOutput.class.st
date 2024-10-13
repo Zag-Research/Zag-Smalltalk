@@ -37,7 +37,7 @@ ASemanticOutput >> outputBasicBlockEnd [
 ]
 
 { #category : 'code generation' }
-ASemanticOutput >> outputMethodDefinition: aString primitive: anUndefinedObject methods: aCollection [ 
+ASemanticOutput >> outputMethodDefinition: aString methods: aCollection [ 
 ]
 
 { #category : 'code generation' }

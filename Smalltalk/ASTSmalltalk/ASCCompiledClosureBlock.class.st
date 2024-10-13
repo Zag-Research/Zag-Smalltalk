@@ -6,12 +6,7 @@ My final expression will be a real return
 "
 Class {
 	#name : 'ASCCompiledClosureBlock',
-	#superclass : 'ASCClosureBlock',
-	#traits : 'ASCCompiledBlock',
-	#classTraits : 'ASCCompiledBlock classTrait',
-	#instVars : [
-		'returnBlocks'
-	],
+	#superclass : 'ASCDispatchableBlock',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -69,6 +64,12 @@ ASCCompiledClosureBlock >> printOn: aStream [
 ASCCompiledClosureBlock >> returnNonLocal [
 
 	^ self addOperation: ASCReturnNonLocal new
+]
+
+{ #category : 'as yet unclassified' }
+ASCCompiledClosureBlock >> selfElementClass [
+
+	^ ASStackNamedIndirect
 ]
 
 { #category : 'accessing' }

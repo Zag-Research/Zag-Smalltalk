@@ -225,13 +225,12 @@ ASLLMethodOutput >> outputInlineBlockStart: anASCInlineBlock [
 ]
 
 { #category : 'code generation' }
-ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive methods: methods [
+ASLLMethodOutput >> outputMethodDefinition: bbLabel methods: methods [
 
-	| header stackStructure signature verifier seperator |
+	| header stackStructure signature seperator |
 	header := 0.
 	stackStructure := 0.
 	signature := 0.
-	verifier := aPrimitive ifNil: [ 'verifyMethod' ].
 	seperator := ''.
 	self
 		nextPutAll: '@';
@@ -243,7 +242,7 @@ ASLLMethodOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive method
 		nextPutAll: ' }, @zag.execute.MethodSignature ';
 		print: signature;
 		nextPutAll: ', ptr ';
-		nextPutAll: verifier;
+		nextPutAll: 'verifyMethod';
 		nextPutAll: ', [';
 		print: methods size;
 		nextPutAll: ' x %union.Code] ['.

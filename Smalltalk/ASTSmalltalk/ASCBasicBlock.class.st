@@ -137,7 +137,6 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive [
 		joinBlock becomeJoinBlock ].
 	case fillFrom: aCollection with: [ :methodAST |
 			ASCInlineMethodBlock new
-				theMethod: methodAST;
 				branchedToFrom: self;
 				returnBlock: joinBlock ].
 	self addOperation: case.

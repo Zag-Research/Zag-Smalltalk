@@ -62,7 +62,7 @@ ASZigOutput >> ourObject [
 ]
 
 { #category : 'output' }
-ASZigOutput >> outputMethodDefinition: bbLabel primitive: aPrimitive methods: methods [
+ASZigOutput >> outputMethodDefinition: bbLabel methods: methods [
 ]
 
 { #category : 'output' }
