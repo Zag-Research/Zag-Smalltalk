@@ -182,12 +182,6 @@ ASZigThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitPushLocal: anASCLocal [
-
-	^ self visitPushLocalOrBlock: anASCLocal
-]
-
-{ #category : 'API' }
 ASZigThreadedOutput >> visitPushLocalOrBlock: anASLocal [
 
 	currentBasicBlock
@@ -237,7 +231,7 @@ ASZigThreadedOutput >> visitReturnTop [
 ]
 
 { #category : 'API' }
-ASZigThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
+ASZigThreadedOutput >> visitSend: aSelector returnIndex: index receiver: aClass [
 
 	self
 		putEmbedded: 'setupSend';

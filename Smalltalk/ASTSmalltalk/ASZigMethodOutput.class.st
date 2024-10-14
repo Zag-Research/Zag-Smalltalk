@@ -97,7 +97,7 @@ ASZigMethodOutput >> visitReturnTop [
 ]
 
 { #category : 'API' }
-ASZigMethodOutput >> visitSend: aSelector returnIndex: index target: anObject [ 
+ASZigMethodOutput >> visitSend: aSelector returnIndex: index receiver: anObject [ 
 	^ self subclassResponsibility
 ]
 

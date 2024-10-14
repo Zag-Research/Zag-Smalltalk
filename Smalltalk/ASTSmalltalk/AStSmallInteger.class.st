@@ -120,3 +120,10 @@ AStSmallInteger >> setValue: aSmallInteger [
 
 	geThan := leThan := aSmallInteger
 ]
+
+{ #category : 'evaluating' }
+AStSmallInteger >> value [
+
+	geThan = leThan ifFalse: [ ^ self error: 'not single value' ].
+	^ geThan
+]

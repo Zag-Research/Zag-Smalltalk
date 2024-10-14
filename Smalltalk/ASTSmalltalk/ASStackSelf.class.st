@@ -28,7 +28,7 @@ ASStackSelf >> initialize [
 ASStackSelf >> intoContext: anInteger [
 
 	isInContext := true.
-	offset := anInteger
+	^ offset := anInteger
 ]
 
 { #category : 'data flow instructions' }

@@ -60,22 +60,10 @@ ASStackTemporary >> flow [
 	^ location stackValue.
 ]
 
-{ #category : 'instance creation' }
-ASStackTemporary >> fromStack: anASStack [
-
-	next := anASStack
-]
-
 { #category : 'accessing' }
 ASStackTemporary >> id [
 
 	^ offset
-]
-
-{ #category : 'API' }
-ASStackTemporary >> intoContext: anInteger [
-
-	^ next intoContext: anInteger
 ]
 
 { #category : 'as yet unclassified' }
@@ -112,12 +100,6 @@ ASStackTemporary >> nameStack: parameterNamesLeftToRight offset: anInteger forBl
 					     nameStack: parameterNamesLeftToRight
 					     offset: anInteger + 1
 					     forBlock: basicBlock)) name: name ]) location: location
-]
-
-{ #category : 'as yet unclassified' }
-ASStackTemporary >> offsetForTemps [
-
-	^ offset
 ]
 
 { #category : 'displaying' }

@@ -40,7 +40,7 @@ ASCSend >> nextBasicBlocks [
 { #category : 'code generation' }
 ASCSend >> outputTo: anOutput [
 
-	^ anOutput visitSend: selector returnIndex: blockToReturnTo target: target
+	^ anOutput visitSend: selector returnIndex: blockToReturnTo receiver: target
 ]
 
 { #category : 'handling' }

@@ -5,7 +5,8 @@ Class {
 	#name : 'ASCPushVariable',
 	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
-		'variable'
+		'variable',
+		'stackOffset'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -23,7 +24,8 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
-	^ variable pushTheVariable: anOutput
+
+	^ variable pushTheVariable: anOutput stackOffset: stackOffset
 ]
 
 { #category : 'printing' }
@@ -35,6 +37,7 @@ ASCPushVariable >> printOn: aStream [
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
+	stackOffset := anASStack offset.
 	^ self created: (anASStack pushDataAsTemporary: variable stackValue)
 ]
 

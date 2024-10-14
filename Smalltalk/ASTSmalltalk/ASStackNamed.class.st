@@ -90,13 +90,6 @@ ASStackNamed >> name: aSymbol [
 	name := aSymbol
 ]
 
-{ #category : 'as yet unclassified' }
-ASStackNamed >> offsetForTemps [
-
-	isInContext ifTrue: [ ^ 0 ].
-	^ offset
-]
-
 { #category : 'displaying' }
 ASStackNamed >> printNameOn: stream [
 
@@ -104,10 +97,11 @@ ASStackNamed >> printNameOn: stream [
 ]
 
 { #category : 'output' }
-ASStackNamed >> pushTheVariable: anASLLMethodOutput [
+ASStackNamed >> pushTheVariable: anOutput stackOffset: stackOffset [
 
-	isInContext ifTrue: [^ location pushFromContext: offset with: anASLLMethodOutput].
-	^ location pushFromStack: offset with: anASLLMethodOutput
+	isInContext ifTrue: [
+		^ location pushFromContext: offset with: anOutput ].
+	^ location pushFromStack: stackOffset - offset with: anOutput
 ]
 
 { #category : 'API' }

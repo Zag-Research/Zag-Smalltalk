@@ -69,7 +69,7 @@ ASCTailSend >> nextBasicBlocks [
 { #category : 'code generation' }
 ASCTailSend >> outputTo: anOutput [
 
-	^ anOutput visitTaiSend: selector target: target
+	^ anOutput visitTailSend: selector receiver: target
 ]
 
 { #category : 'testing' }

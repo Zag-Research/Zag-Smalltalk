@@ -15,6 +15,12 @@ ASStack class >> canonicalArgumentName [
 	^ 'aStackElement'
 ]
 
+{ #category : 'instance creation' }
+ASStack class >> fromStack: anASStack [
+
+	^ self new fromStack: anASStack
+]
+
 { #category : 'adding' }
 ASStack >> add: newObject [
 
@@ -41,6 +47,20 @@ ASStack >> asOrderedCollection [
 	^ self addToCollection: OrderedCollection new
 ]
 
+{ #category : 'accessing' }
+ASStack >> at: aSymbol [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+ASStack >> at: aSymbol put: anObject [
+
+	| element |
+	element := self at: aSymbol.
+	element data: (AStackValue fromValue: anObject)
+]
+
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.
@@ -55,6 +75,12 @@ ASStack >> drop: count [
 
 	count = 0 ifTrue: [ ^ self ].
 	self error
+]
+
+{ #category : 'instance creation' }
+ASStack >> fromStack: anASStack [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'testing' }
@@ -72,7 +98,7 @@ ASStack >> initLocalNamed: name [
 { #category : 'API' }
 ASStack >> initParameterNamed: name [
 
-	^ (ASParameterNamed fromStack: self) name: name; data: ASFlowParameter new
+	^ (ASParameterNamed fromStack: self) name: name; data: AStUndefinedClass new
 ]
 
 { #category : 'API' }
@@ -97,8 +123,9 @@ ASStack >> inspectionItems: aBuilder [
 ]
 
 { #category : 'API' }
-ASStack >> intoContext: anInteger [ 
+ASStack >> intoContext: anInteger [
 
+	^ anInteger
 ]
 
 { #category : 'testing' }
@@ -122,12 +149,6 @@ ASStack >> offset [
 	^ 0
 ]
 
-{ #category : 'as yet unclassified' }
-ASStack >> offsetForTemps [
-
-	^ 0
-]
-
 { #category : 'displaying' }
 ASStack >> printNameOn: stream [
 
@@ -144,12 +165,6 @@ ASStack >> printOn: aStream [
 ASStack >> pushDataAsTemporary: aFlow [
 
 	^ (ASStackTemporary fromStack: self) data: aFlow 
-]
-
-{ #category : 'adding' }
-ASStack >> pushForTests: anObject [
-
-	^ (ASStackTemporary fromStack: self) data: (ASFlowNew from: anObject)
 ]
 
 { #category : 'removing' }

@@ -227,12 +227,6 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASZigCPSOutput >> visitPushLocal: anASCLocal [
-
-	^ self visitPushLocalOrBlock: anASCLocal name
-]
-
-{ #category : 'API' }
 ASZigCPSOutput >> visitPushLocalOrBlock: anObject [
 
 	self
@@ -289,7 +283,7 @@ ASZigCPSOutput >> visitReturnTop [
 ]
 
 { #category : 'API' }
-ASZigCPSOutput >> visitSend: aSelector returnIndex: index target: target [
+ASZigCPSOutput >> visitSend: aSelector returnIndex: index receiver: target [
 
 	index ifNotNil: [self
 		nextPutAll: 'context.setReturn(&';

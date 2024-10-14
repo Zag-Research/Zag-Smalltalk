@@ -9,11 +9,6 @@ Trait {
 }
 
 { #category : 'API' }
-ASOutputAPI >> branch: command to: unused [
-^self explicitRequirement
-]
-
-{ #category : 'API' }
 ASOutputAPI >> codeGeneratorClass [
 
 	^ self explicitRequirement
@@ -38,18 +33,6 @@ ASOutputAPI >> generateCode: unused [
 
 { #category : 'API' }
 ASOutputAPI >> outputMethodEnd [
-
-	^ self explicitRequirement
-]
-
-{ #category : 'API' }
-ASOutputAPI >> popLocalData: name stackIndex: stackIndex blockIndex: blockIndex [
-
-	^ self explicitRequirement
-]
-
-{ #category : 'API' }
-ASOutputAPI >> pushLocal: localNumber [
 
 	^ self explicitRequirement
 ]
@@ -90,13 +73,13 @@ ASOutputAPI >> visitPushContext: anUndefinedObject [
 ]
 
 { #category : 'API' }
-ASOutputAPI >> visitPushLiteral: anUndefinedObject [
+ASOutputAPI >> visitPushFromStack: anInteger [
 
 	^ self explicitRequirement
 ]
 
 { #category : 'API' }
-ASOutputAPI >> visitPushLocal: anASCLocal [
+ASOutputAPI >> visitPushLiteral: anUndefinedObject [
 
 	^ self explicitRequirement
 ]
@@ -126,8 +109,14 @@ ASOutputAPI >> visitReturnTop: anOperation [
 ]
 
 { #category : 'API' }
-ASOutputAPI >> visitSend: aSelector returnIndex: index target: aClass [
+ASOutputAPI >> visitSend: aSelector returnIndex: index receiver: aClass [
 
+
+	^ self explicitRequirement
+]
+
+{ #category : 'API' }
+ASOutputAPI >> visitTailSend: selector receiver: receiver [
 
 	^ self explicitRequirement
 ]

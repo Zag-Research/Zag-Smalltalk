@@ -14,12 +14,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'instance creation' }
-ASStackElement class >> fromStack: anASStack [
-
-	^ self new fromStack: anASStack
-]
-
 { #category : 'enumerating' }
 ASStackElement >> addToCollection: aCollection [
 
@@ -31,14 +25,6 @@ ASStackElement >> addToCollection: aCollection [
 ASStackElement >> at: aSymbol [
 
 	^ next at: aSymbol
-]
-
-{ #category : 'accessing' }
-ASStackElement >> at: aSymbol put: anObject [
-
-	| element |
-	element := self at: aSymbol.
-	element data: (element data value: anObject)
 ]
 
 { #category : 'as yet unclassified' }
@@ -77,6 +63,7 @@ ASStackElement >> do: aBlock [
 { #category : 'instance creation' }
 ASStackElement >> fromStack: anASStack [
 
+	offset := anASStack offset + 1.
 	next := anASStack
 ]
 

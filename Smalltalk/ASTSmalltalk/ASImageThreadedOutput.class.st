@@ -141,12 +141,6 @@ ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
-ASImageThreadedOutput >> visitPushLocal: anASCLocal [
-
-	^ self visitPushLocalOrBlock: anASCLocal
-]
-
-{ #category : 'API' }
 ASImageThreadedOutput >> visitPushLocalOrBlock: anASCLocal [
 
 	currentBasicBlock
@@ -190,7 +184,7 @@ ASImageThreadedOutput >> visitReturnTop [
 ]
 
 { #category : 'API' }
-ASImageThreadedOutput >> visitSend: aSelector returnIndex: index target: aClass [
+ASImageThreadedOutput >> visitSend: aSelector returnIndex: index receiver: aClass [
 
 	self
 		putEmbedded: ('send' , aSelector numArgs asString

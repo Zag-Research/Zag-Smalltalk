@@ -425,13 +425,6 @@ ASLLMethodOutput >> visitPushLiteral: aLiteral [
 		lf
 ]
 
-{ #category : 'API' }
-ASLLMethodOutput >> visitPushLocal: anASCLocal [
-
-	self nextPutAll: 'visitPushLocal:
-'
-]
-
 { #category : 'visiting' }
 ASLLMethodOutput >> visitPushNil [
 	self nextPutAll: 'visitPushNil';cr
@@ -467,7 +460,7 @@ ASLLMethodOutput >> visitReturnTop: anASCReturnTop [
 ]
 
 { #category : 'API' }
-ASLLMethodOutput >> visitSend: aSelector returnIndex: index target: aClass [
+ASLLMethodOutput >> visitSend: aSelector returnIndex: index receiver: aClass [
 
 	^ self
 		  nextPutAll: 'visitSend';

@@ -58,6 +58,14 @@ ASemanticOutput >> visitPushBlock: anASCBlock [
 ]
 
 { #category : 'API' }
+ASemanticOutput >> visitPushFromStack: anInteger [
+
+	code
+		add: #pushFromStack;
+		add: anInteger
+]
+
+{ #category : 'API' }
 ASemanticOutput >> visitPushLiteral: aLiteral [
 
 	code add: #pushLiteral; add: aLiteral

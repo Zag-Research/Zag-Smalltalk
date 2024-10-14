@@ -36,6 +36,12 @@ AStackLocation >> markReferenced [
 ]
 
 { #category : 'accessing' }
+AStackLocation >> pushFromStack: anInteger with: anOutput [
+
+		^ anOutput visitPushFromStack: anInteger
+]
+
+{ #category : 'accessing' }
 AStackLocation >> stackValue [
 
 	^ stackValueOrFlow

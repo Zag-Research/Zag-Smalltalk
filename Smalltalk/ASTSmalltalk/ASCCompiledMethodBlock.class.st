@@ -54,7 +54,7 @@ ASCCompiledMethodBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
-	sourceElements := stack
+	sourceElements := ASStackContext fromStack: stack
 ]
 
 { #category : 'writing' }
