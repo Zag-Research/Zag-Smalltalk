@@ -4,23 +4,39 @@ I test algorithm that optimizes the ownership of variables in blocks. See https:
 Class {
 	#name : 'ASOptimizingVariableOwnershipTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'cg'
+	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'Tests'
 }
 
+{ #category : 'running' }
+ASOptimizingVariableOwnershipTest >> setUp [
+	super setUp.
+
+	"Put here a common initialization logic for tests"
+	cg := ASCodeGenerator new.
+]
+
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testBlockVariable [
-"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
+	"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
 
-| method |
-method := ASCCompiledMethodBlock new.
-method declares add: #myVar.
-method modified add: #myVar.
+	| method variableOwnership location1 location2 |
+	location1 := AStackLocation new.
+	location2 := AStackLocation new.
 
-method deriveOwnership.
+	method := cg basicBlocks first.
+	method referenced add: location1.
+	method modified add: location2.
 
-self assert: (method owns isNotEmpty)
+	variableOwnership := cg deriveOwnership.
+
+	self assert: variableOwnership isNotEmpty.
+	self assert: (method owns includes: location1).
+	self assert: (method owns includes: location2)
 ]
 
 { #category : 'tests' }

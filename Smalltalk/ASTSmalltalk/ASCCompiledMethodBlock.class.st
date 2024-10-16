@@ -44,9 +44,7 @@ ASCCompiledMethodBlock >> initSelf: targetClass [
 ASCCompiledMethodBlock >> initialize [
 
 	super initialize.
-	returnBlocks := Dictionary new.
 	methodBlock := self.
-	self initializeASCCompiledBlock
 ]
 
 { #category : 'accessing' }
