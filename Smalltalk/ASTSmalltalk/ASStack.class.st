@@ -134,6 +134,11 @@ ASStack >> isEmpty [
 	^ true
 ]
 
+{ #category : 'accessing' }
+ASStack >> location [ 
+	^nil.
+]
+
 { #category : 'data flow instructions' }
 ASStack >> makeStackTheSource [
 ]

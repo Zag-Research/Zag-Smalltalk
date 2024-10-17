@@ -5,6 +5,8 @@ Returns from me are real returns
 Class {
 	#name : 'ASCCompiledMethodBlock',
 	#superclass : 'ASCDispatchableBlock',
+	#traits : 'ASCMergeBlocks',
+	#classTraits : 'ASCMergeBlocks classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

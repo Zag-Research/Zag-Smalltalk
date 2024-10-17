@@ -14,15 +14,6 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'initialization' }
-ASFlowPhi >> asAssociationList [ 
-	
-	| associationList |
-	associationList := OrderedCollection new.
-	sources do: [ :source | associationList add: (source basicBlock -> source)].
-	^ associationList.
-]
-
 { #category : 'accessing' }
 ASFlowPhi >> dataClass [
 
@@ -63,6 +54,12 @@ ASFlowPhi >> isNilReference [
 ASFlowPhi >> isPhiReference [
 
 	^ true
+]
+
+{ #category : 'as yet unclassified' }
+ASFlowPhi >> mergeMultiple: sourceList [ 
+
+	sourceList do: [ :source | self mergeWith: source flow. ]
 ]
 
 { #category : 'operations' }
