@@ -42,7 +42,7 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> initialize [ 
 	super initialize.
-	self initializeASCCompiledBlock 
+	self initialize 
 ]
 
 { #category : 'initialization' }
