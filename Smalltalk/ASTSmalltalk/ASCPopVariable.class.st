@@ -12,5 +12,5 @@ Class {
 { #category : 'code generation' }
 ASCPopVariable >> outputTo: anOutput [
 
-	^ variable popTheVariable: anOutput stackOffset: stack offset
+	^ variableLocation popTheVariable: anOutput stackOffset: stack offset
 ]

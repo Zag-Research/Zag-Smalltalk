@@ -5,8 +5,8 @@ Class {
 	#name : 'ASCPushVariable',
 	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
-		'variable',
-		'stackOffset'
+		'stackOffset',
+		'variableLocation'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -18,31 +18,31 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(;
-		<< variable name;
+		<< variableLocation name;
 		<< $)
 ]
 
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
 
-	^ variable pushTheVariable: anOutput stackOffset: stackOffset
+	^ variableLocation pushTheVariable: anOutput stackOffset: stackOffset
 ]
 
 { #category : 'printing' }
 ASCPushVariable >> printOn: aStream [
 
-	aStream nextPutAll: ' - ';nextPutAll: variable name
+	aStream nextPutAll: ' - ';nextPutAll: variableLocation name
 ]
 
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stackOffset := anASStack offset.
-	^ self created: (anASStack pushDataAsTemporary: variable stackValue)
+	^ self created: (anASStack pushDataAsTemporary: variableLocation stackValue)
 ]
 
 { #category : 'instance creation' }
 ASCPushVariable >> with: target [
 
-	variable := target
+	variableLocation := target
 ]

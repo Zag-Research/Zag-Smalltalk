@@ -5,7 +5,7 @@ Class {
 	#name : 'ASCVariableOperations',
 	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
-		'variable'
+		'variableLocation'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -16,7 +16,7 @@ Class {
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.
-	aStream << variable name
+	aStream << variableLocation name
 	
 ]
 
@@ -40,5 +40,5 @@ ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
 
 { #category : 'instance creation' }
 ASCVariableOperations >> with: ascVariable [
-	variable := ascVariable
+	variableLocation := ascVariable
 ]
