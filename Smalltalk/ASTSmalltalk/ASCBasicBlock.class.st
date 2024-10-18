@@ -509,6 +509,12 @@ ASCBasicBlock >> replaceOperation: anOperation [
 		put: (anOperation fromOperation: (operations at: operations size))
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> replaceStack: newStack [
+	stack := newStack.
+	^ self.
+]
+
 { #category : 'API' }
 ASCBasicBlock >> returnSelf [
 
@@ -574,6 +580,11 @@ ASCBasicBlock >> sourceElements [
 ASCBasicBlock >> sourceElementsForInspect [
 
 	^ sourceElements asOrderedCollection
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> sources [ 
+	^ sourceBlocks.
 ]
 
 { #category : 'accessing' }

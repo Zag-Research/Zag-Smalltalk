@@ -6,6 +6,8 @@ That mean I have multiple sources, but they all came from the same place, so the
 Class {
 	#name : 'ASCJoinBlock',
 	#superclass : 'ASCReturnBlock',
+	#traits : 'ASCMergeBlocks',
+	#classTraits : 'ASCMergeBlocks classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

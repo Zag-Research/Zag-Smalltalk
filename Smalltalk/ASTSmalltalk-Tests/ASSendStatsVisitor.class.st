@@ -3,7 +3,7 @@ I calculate statistics about message sends
 "
 Class {
 	#name : 'ASSendStatsVisitor',
-	#superclass : 'RBProgramNodeVisitor',
+	#superclass : 'ASTProgramNodeVisitor',
 	#instVars : [
 		'totalSends',
 		'selfSends',
