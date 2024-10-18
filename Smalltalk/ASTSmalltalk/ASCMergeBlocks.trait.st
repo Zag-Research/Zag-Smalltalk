@@ -6,12 +6,14 @@ Trait {
 }
 
 { #category : 'adding' }
-ASCMergeBlocks >> addFlow [ 
+ASCMergeBlocks >> addFlow [
+
 	| stackFromSources |
-	stackFromSources := OrderedCollection new.
-	self sources do: [ :source | stackFromSources add: source stack ].
-	
-	^ self replaceStack: (self mergeStackSources: stackFromSources).
+	stackFromSources := self sources
+		                    collect: #stack
+		                    as: Array.
+
+	^ self replaceStack: (self mergeStackSources: stackFromSources)
 ]
 
 { #category : 'as yet unclassified' }
