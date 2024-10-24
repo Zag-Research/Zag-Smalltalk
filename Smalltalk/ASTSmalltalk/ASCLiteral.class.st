@@ -12,6 +12,14 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCLiteral >> dotStringOn: aStream [
+
+	aStream
+		<< 'push literal ';
+		print: literal
+]
+
 { #category : 'printing' }
 ASCLiteral >> inspectZagASTOn: aStream [
 
@@ -19,6 +27,12 @@ ASCLiteral >> inspectZagASTOn: aStream [
 	aStream << $(.
 	aStream print: literal.
 	aStream << $)
+]
+
+{ #category : 'Collection API' }
+ASCLiteral >> interpretFor: anInterpreter [
+
+	^ anInterpreter push: literal
 ]
 
 { #category : 'code generation' }

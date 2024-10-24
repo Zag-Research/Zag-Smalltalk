@@ -13,6 +13,14 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCPushVariable >> dotStringOn: aStream [
+
+	aStream
+		<< 'push offset ';
+		print: variableLocation offset - stackOffset
+]
+
 { #category : 'printing' }
 ASCPushVariable >> inspectZagASTOn: aStream [
 
@@ -20,6 +28,12 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 	aStream << $(;
 		<< variableLocation name;
 		<< $)
+]
+
+{ #category : 'Collection API' }
+ASCPushVariable >> interpretFor: anInterpreter [
+
+	^ anInterpreter push: (anInterpreter stackAt: stackOffset - variableLocation offset)
 ]
 
 { #category : 'code generation' }

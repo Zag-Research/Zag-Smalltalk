@@ -44,14 +44,16 @@ ASCBasicBlockTest >> setup8graph [
 		           (ASMethodNode new
 			            selector: #foo;
 			            methodClass: False) }.
-	bbs := (bb2 classCase: methods exhaustive: true) nextBasicBlocks.
+	bbs := (bb2 classCase: methods exhaustive: true genertor: nil)
+		       nextBasicBlocks.
 	bb4 := bbs first
 		       label: 'bb4';
 		       returnEmpty.
 	bb5 := bbs second label: 'bb5'.
 	bb5 pushLiteral: 2.
 	bb6 := (bb5 send: #foo targetClass: nil tail: false) label: 'bb6'.
-	bbs := (bb5 classCase: methods exhaustive: true) nextBasicBlocks.
+	bbs := (bb5 classCase: methods exhaustive: true genertor: nil)
+		       nextBasicBlocks.
 	bb7 := bbs first label: 'bb7'.
 	bb8 := bbs second label: 'bb8'.
 	bb8 returnTop.

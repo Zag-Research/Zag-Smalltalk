@@ -13,7 +13,12 @@ Class {
 ManifestASTSmalltalkTests class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #interpret #false)) #'2024-08-29T09:17:23.777197-04:00') )
+	^ #( #( #( #RGMethodDefinition #( #'ASTimings class'
+	              #updateBenchmarks #true ) )
+	        #'2022-08-25T20:02:32.671305+02:00' )
+	     #( #( #RGMethodDefinition #( #ASemanticInterpreter
+	              #interpret #false ) )
+	        #'2024-08-29T09:17:23.777197-04:00' ) )
 ]
 
 { #category : 'code-critics' }
@@ -99,6 +104,13 @@ ManifestASTSmalltalkTests class >> ruleToDoCollectRuleV1FalsePositive [
 { #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-07-06T19:53:44.153899-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalkTests class >> ruleUsesAddRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASemanticOutput)) #'2024-10-18T16:26:11.139019-04:00') )
 ]
 
 { #category : 'code-critics' }

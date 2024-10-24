@@ -4,10 +4,23 @@ I represent a return
 Class {
 	#name : 'ASCReturnTop',
 	#superclass : 'ASCReturn',
+	#instVars : [
+		'stackElement'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
+
+{ #category : 'as yet unclassified' }
+ASCReturnTop >> dotEdgesOn: aWriteStream from: aBasicBlock [
+]
+
+{ #category : 'API' }
+ASCReturnTop >> dotStringOn: aStream [
+
+	^ aStream << 'return top'
+]
 
 { #category : 'output' }
 ASCReturnTop >> getTop: anASLLMethodOutput [
@@ -18,6 +31,12 @@ ASCReturnTop >> getTop: anASLLMethodOutput [
 { #category : 'Collection API' }
 ASCReturnTop >> inlineWithFixedCFG: anASCodeGenerator [ 
 
+]
+
+{ #category : 'Collection API' }
+ASCReturnTop >> interpretFor: anInterpreter [
+
+	^ anInterpreter return: anInterpreter top selfOffset: stack offset - stackElement offset
 ]
 
 { #category : 'block handling' }
@@ -41,7 +60,6 @@ ASCReturnTop >> outputTo: output [
 { #category : 'stack' }
 ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
 
-	| stackElement |
 	stack := aStack.
 	stackElement := aStack at: #self.
 	^ (ASStackTemporary fromStack: stackElement next) data: aStack data

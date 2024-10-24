@@ -12,6 +12,23 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'as yet unclassified' }
+ASCBranch >> dotEdgesOn: aStream from: aBasicBlock [
+
+	aBasicBlock dotNameOn: aStream.
+	aStream << ':end:e ->'.
+	bb dotNameOn: aStream.
+	^ aStream << ';
+'
+]
+
+{ #category : 'API' }
+ASCBranch >> dotStringOn: aStream [
+
+	aStream
+		<< '<end>branch '
+]
+
 { #category : 'printing' }
 ASCBranch >> inspectZagASTOn: aStream [
 

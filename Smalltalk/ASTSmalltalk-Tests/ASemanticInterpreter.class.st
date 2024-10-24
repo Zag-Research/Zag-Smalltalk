@@ -29,9 +29,26 @@ ASemanticInterpreter >> addClasses: aCollection [
 ]
 
 { #category : 'accessing' }
+ASemanticInterpreter >> asDotString [
+
+	^ String streamContents: [ :s |
+		  s << 'digraph structs {
+    node [shape=record];
+'.
+		  basicBlocks do: [ :bb | bb dotStringOn: s ].
+		  s << '}' ]
+]
+
+{ #category : 'accessing' }
 ASemanticInterpreter >> basicBlocks [
 
 	^ basicBlocks
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> codeSize [
+
+	^ basicBlocks size
 ]
 
 { #category : 'compiling' }
@@ -41,12 +58,10 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 	cg := ASCodeGenerator targetClass: aClass selector: aSymbol.
 	cg inline: inlineDepth.
 	basicBlocks addAll: cg basicBlocks.
-	^ ASemanticOutput new
-		  codeGenerator: cg;
-		  outputToStream
+	^ cg basicBlocks first
 ]
 
-{ #category : 'accessing' }
+{ #category : 'private - testing' }
 ASemanticInterpreter >> dispatchFor: aCompileMethod [ 
 
 	| class |
@@ -92,10 +107,18 @@ ASemanticInterpreter >> interpret [
 	[ executing ] whileTrue: [ pc doForInterpreter: self ]
 ]
 
-{ #category : 'interpreting' }
-ASemanticInterpreter >> pushLiteral [
+{ #category : 'accessing' }
+ASemanticInterpreter >> pop [
 
-	stack addLast: pc next
+	^ stack removeLast
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> push: anObject [
+
+	^ stack addLast: anObject 
+
+
 ]
 
 { #category : 'initialization' }
@@ -133,14 +156,22 @@ ASemanticInterpreter >> reset [
 	dispatch := Array new: 50
 ]
 
-{ #category : 'interpreting' }
-ASemanticInterpreter >> returnTOS [
+{ #category : 'handling' }
+ASemanticInterpreter >> return: anObject selfOffset: anInteger [
 
 	context ifNil: [
-		[ stack size > 1 ] whileTrue: [ stack removeFirst ].
+		stack removeLast: anInteger.
+		self assert: stack size = 1.
+		stack at: 1 put: anObject.
 		executing := false.
 		^ self ].
-	self halt
+	self shouldBeImplemented
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> returnTo: aBasicBlock [
+
+	pc := ASIProgramCounter new forBasicBlock: aBasicBlock
 ]
 
 { #category : 'interpreting' }
@@ -149,20 +180,16 @@ ASemanticInterpreter >> send: aSymbol [
 	| obj method |
 	obj := stack at: stack size - aSymbol numArgs.
 	method := self getMethod: aSymbol for: obj.
-	pc := method startingPc
+	pc := ASIProgramCounter new forBasicBlock: method
 ]
 
-{ #category : 'initialization' }
+{ #category : 'private - testing' }
 ASemanticInterpreter >> send: aSymbol to: anObject [
 
-	self reset.
-	stack addLast: anObject.
-	self send: aSymbol.
-	self interpret.
-	^ stack last
+	^ self send: aSymbol with: #() to: anObject
 ]
 
-{ #category : 'initialization' }
+{ #category : 'private - testing' }
 ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 
 	self reset.
@@ -174,13 +201,19 @@ ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 ]
 
 { #category : 'accessing' }
+ASemanticInterpreter >> stackAt: anInteger [
+
+	^ stack at: stack size - anInteger 
+]
+
+{ #category : 'private - testing' }
 ASemanticInterpreter >> stackDepth [
 
 	^ stack size
 ]
 
-{ #category : 'as yet unclassified' }
-ASemanticInterpreter >> staclDepth [
+{ #category : 'accessing' }
+ASemanticInterpreter >> top [
 
-	^ stack size
+	^ stack last
 ]

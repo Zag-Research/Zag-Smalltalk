@@ -17,10 +17,12 @@ Class {
 		'sourceBlocks',
 		'sourceElements',
 		'sequence',
-		'methodBlock'
+		'methodBlock',
+		'structNumber'
 	],
 	#classVars : [
-		'SequenceNumber'
+		'SequenceNumber',
+		'StructNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -36,7 +38,8 @@ ASCBasicBlock class >> canonicalArgumentName [
 { #category : 'class initialization' }
 ASCBasicBlock class >> initialize [
 
-	SequenceNumber := 0
+	SequenceNumber := 0.
+	StructNumber := 0
 ]
 
 { #category : 'comparing' }
@@ -125,7 +128,7 @@ ASCBasicBlock >> children [
 ]
 
 { #category : 'API' }
-ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive [
+ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive genertor: generator [
 
 	| case anASCSend joinBlock numArgs |
 	anASCSend := operations last.
@@ -136,9 +139,9 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive [
 		self removeLastOperation.
 		joinBlock becomeJoinBlock ].
 	case fillFrom: aCollection with: [ :methodAST |
-			ASCInlineMethodBlock new
-				branchedToFrom: self;
-				returnBlock: joinBlock ].
+		(generator newInlineMethod: methodAST)
+			branchedToFrom: self;
+			returnBlock: joinBlock ].
 	self addOperation: case.
 	isExhaustive ifFalse: [ self swapLastOperations ].
 	^ case
@@ -167,6 +170,29 @@ ASCBasicBlock >> doPush: anObject [
 
 	stack := stack pushDataAsTemporary: (AStackValue fromValue: anObject).
 	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> dotNameOn: aStream [
+
+	^ aStream
+		  << '    struct';
+		  print: self structNumber
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> dotStringOn: aStream [
+
+	self dotNameOn: aStream.
+	aStream
+		<< '[label="{';
+		<< self label.
+	operations do: [ :operation |
+		aStream << '|'.
+		operation dotStringOn: aStream ].
+	aStream << '}"];
+'.
+	operations last dotEdgesOn: aStream from: self
 ]
 
 { #category : 'API' }
@@ -334,7 +360,7 @@ ASCBasicBlock >> isEmpty [
 { #category : 'initialization' }
 ASCBasicBlock >> label [
 
-	^ label ifNil: [ '???' ]
+	^ self subclassResponsibility
 ]
 
 { #category : 'accessing' }
@@ -412,6 +438,12 @@ ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: 
 ASCBasicBlock >> offsetTo: anObject [
 
 	^ stack offset: 0 to: anObject
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> operationAt: anInteger [ 
+
+	^ operations at: anInteger
 ]
 
 { #category : 'writing' }
@@ -558,7 +590,6 @@ ASCBasicBlock >> sendTail: aSymbol targetClass: target [
 	| send |
 	send := ASCTailSend new
 		        selector: aSymbol;
-		        return: nil;
 		        target: target.
 	self addOperation: send.
 	^ nil
@@ -617,6 +648,12 @@ ASCBasicBlock >> storeInto: offsetOrName [
 ASCBasicBlock >> storeVariable: aSymbol [
 
 	self addOperation: (ASCStoreVariable with: (stack at: aSymbol))
+]
+
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> structNumber [
+
+	^ structNumber ifNil: [ structNumber := StructNumber := StructNumber + 1 ]
 ]
 
 { #category : 'inlining' }

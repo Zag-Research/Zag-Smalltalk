@@ -410,7 +410,8 @@ ASCodeGenerator >> newInlineBlockClosure [
 ASCodeGenerator >> newInlineMethod: aMethodAST [
 
 	| newBlock |
-	newBlock := ASCInlineMethodBlock new .
+	newBlock := ASCInlineMethodBlock new.
+	newBlock label: 'inlined ',aMethodAST selector.
 	^ basicBlocks add: newBlock
 ]
 
@@ -588,6 +589,12 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 ASCodeGenerator >> setBasicBlock: anASCBlock [
 
 	code := anASCBlock
+]
+
+{ #category : 'initialization' }
+ASCodeGenerator >> setBlockName: aSymbol [ 
+
+	^ code selector: aSymbol class: targetClass codeUnit: currentCodeUnit
 ]
 
 { #category : 'accessing' }
