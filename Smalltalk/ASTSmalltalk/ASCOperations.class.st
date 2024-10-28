@@ -20,6 +20,12 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : 'instance creation' }
+ASCOperations >> ariableReferences: referenced modifies: modified [
+
+	
+]
+
 { #category : 'accessing' }
 ASCOperations >> children [
 ^ OrderedCollection new:0
@@ -77,6 +83,10 @@ ASCOperations >> outputTo: aCodeEmitter [
 { #category : 'testing' }
 ASCOperations >> requiresContext [
 	^ false
+]
+
+{ #category : 'instance creation' }
+ASCOperations >> variableUsage: aDispatchableBlock [
 ]
 
 { #category : 'instance creation' }

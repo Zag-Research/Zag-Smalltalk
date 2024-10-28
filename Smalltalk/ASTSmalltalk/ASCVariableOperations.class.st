@@ -39,6 +39,22 @@ ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
 ]
 
 { #category : 'instance creation' }
+ASCVariableOperations >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+	modified
+		at: variable location
+		ifPresent: [ :dic |
+			dic at: aDispatchableBlock ifPresent: [ :count |
+			dic at: aDispatchableBlock put: count + 1 ] ifAbsentPut: [ 1 ]]
+	 	ifAbsentPut: [ Dictionary new at: aDispatchableBlock put: 1; yourself ]
+]
+
+{ #category : 'instance creation' }
+ASCVariableOperations >> variableUsage: aDispatchableBlock [
+
+	aDispatchableBlock modified: variable
+]
+
+{ #category : 'instance creation' }
 ASCVariableOperations >> with: ascVariable [
 	variable := ascVariable
 ]

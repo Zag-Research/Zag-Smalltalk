@@ -41,8 +41,7 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> initialize [ 
-	super initialize.
-	self initialize 
+	super initialize
 ]
 
 { #category : 'initialization' }
@@ -68,7 +67,6 @@ ASCCompiledClosureBlock >> printOn: aStream [
 
 { #category : 'API' }
 ASCCompiledClosureBlock >> returnNonLocal [
-
 	^ self addOperation: ASCReturnNonLocal new
 ]
 

@@ -41,6 +41,27 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 	^ self created: (anASStack pushDataAsTemporary: variable stackValue)
 ]
 
+{ #category : 'as yet unclassified' }
+ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+	referenced
+		at: variable location
+		ifPresent: [ :dic |
+			dic
+				at: aDispatchableBlock
+				ifPresent: [ :count | dic at: aDispatchableBlock put: count + 1 ]
+				ifAbsentPut: [ 1 ] ]
+		ifAbsentPut: [
+			Dictionary new
+				at: aDispatchableBlock put: 1;
+				yourself ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCPushVariable >> variableUsage: aDispatchableBlock [
+
+	aDispatchableBlock referenced: variable
+]
+
 { #category : 'instance creation' }
 ASCPushVariable >> with: target [
 
