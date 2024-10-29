@@ -71,8 +71,8 @@ ASCDispatchableBlock >> deriveVariableUsage [
 ASCDispatchableBlock >> initialize [
 
 	super initialize.
-	references := Dictionary new.
-	modifies := Dictionary new.
+	references := Set new.
+	modifies := Set new.
 	owns := Set new.
 	declares := Set new
 ]
