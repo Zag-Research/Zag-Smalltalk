@@ -14,6 +14,24 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'as yet unclassified' }
+ASCSend >> dotEdgesOn: aStream from: aBasicBlock [
+
+	aBasicBlock dotNameOn: aStream.
+	aStream << ':end:e ->'.
+	blockToReturnTo dotNameOn: aStream.
+	^ aStream << ';
+'
+]
+
+{ #category : 'API' }
+ASCSend >> dotStringOn: aStream [
+
+	aStream
+		<< '<end>send ';
+		print: selector
+]
+
 { #category : 'printing' }
 ASCSend >> inspectZagASTOn: aStream [
 
@@ -23,6 +41,12 @@ ASCSend >> inspectZagASTOn: aStream [
 		print: selector;
 		<< ' -> ';
 		<< blockToReturnTo label
+]
+
+{ #category : 'Collection API' }
+ASCSend >> interpretFor: anInterpreter [
+
+	^ anInterpreter returnTo: blockToReturnTo;send: selector
 ]
 
 { #category : 'testing' }

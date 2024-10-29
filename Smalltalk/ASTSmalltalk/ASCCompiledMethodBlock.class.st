@@ -5,6 +5,8 @@ Returns from me are real returns
 Class {
 	#name : 'ASCCompiledMethodBlock',
 	#superclass : 'ASCDispatchableBlock',
+	#traits : 'ASCMergeBlocks',
+	#classTraits : 'ASCMergeBlocks classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -47,6 +49,12 @@ ASCCompiledMethodBlock >> initialize [
 	methodBlock := self.
 ]
 
+{ #category : 'initialization' }
+ASCCompiledMethodBlock >> label [
+
+	^ label
+]
+
 { #category : 'accessing' }
 ASCCompiledMethodBlock >> locals: locals parameters: arguments [
 
@@ -69,6 +77,18 @@ ASCCompiledMethodBlock >> outputTo: output [
 ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [ 
 
 	^ aBasicBlock returnTop
+]
+
+{ #category : 'as yet unclassified' }
+ASCCompiledMethodBlock >> selector: aSymbol class: aClass codeUnit: aBasicBlock [
+
+	label := aClass name, '>>', aSymbol
+]
+
+{ #category : 'API' }
+ASCCompiledMethodBlock >> sendTail: aSymbol targetClass: target for: aBasicBlock [
+
+	^ aBasicBlock sendTail: aSymbol targetClass: target
 ]
 
 { #category : 'writing' }

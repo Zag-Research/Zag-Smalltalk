@@ -8,7 +8,8 @@ Class {
 		'declares',
 		'owns',
 		'modifies',
-		'references'
+		'references',
+		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -75,6 +76,10 @@ ASCDispatchableBlock >> initialize [
 	modifies := Set new.
 	owns := Set new.
 	declares := Set new
+]
+
+{ #category : 'accessing' }
+ASCDispatchableBlock >> methodBlock [
 ]
 
 { #category : 'accessing' }

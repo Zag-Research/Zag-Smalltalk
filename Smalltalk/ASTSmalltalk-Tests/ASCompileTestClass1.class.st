@@ -136,8 +136,7 @@ ASCompileTestClass1 >> fibonacci_fast [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
-	self bar isLarge. "not"
-	^ 42
+	^ self bar isLarge not
 ]
 
 { #category : 'testing - examples' }

@@ -148,6 +148,7 @@ ASCodeBlock >> zigWalkMethod: aGenerator [
 
 	aGenerator
 		setCodeUnit;
+		setBlockName: self selector;
 		locals: locals parameters: arguments.
 	self pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [

@@ -9,6 +9,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCDrop >> dotStringOn: aStream [
+
+	^ aStream << 'drop'
+]
+
 { #category : 'code generation' }
 ASCDrop >> outputTo: aCodeEmitter [
 

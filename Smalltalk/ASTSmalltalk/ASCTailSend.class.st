@@ -15,6 +15,18 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'as yet unclassified' }
+ASCTailSend >> dotEdgesOn: aWriteStream from: aBasicBlock [
+]
+
+{ #category : 'API' }
+ASCTailSend >> dotStringOn: aStream [
+
+	aStream
+		<< 'tail send ';
+		print: selector
+]
+
 { #category : 'inlining' }
 ASCTailSend >> inlineIfPossible: anASCodeGenerator [
 

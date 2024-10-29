@@ -219,10 +219,11 @@ bar
 
 	self assertEquivalentSending: #bar to: ASCompileTestClass1 new.
 	self assert: interpreter basicBlocks size equals: 1.
+	interpreter inspect.
 	self
 		assert:
-		(interpreter dispatchFor: ASCompileTestClass1 >> #bar) codeSize
-		equals: 3
+		interpreter codeSize
+		equals: 1
 ]
 
 { #category : 'tests' }
@@ -413,7 +414,8 @@ ASCompilerInlineTest >> testFoo [
 	^ 42"
 
 	self assertEquivalentSending: #foo to: ASCompileTestClass1 new.
-	self assert: interpreter basicBlocks size equals: 2.
+	self assert: interpreter codeSize equals: 2.
+	interpreter inspect.
 	self
 		assert:
 		(interpreter dispatchFor: ASCompileTestClass1 >> #foo) codeSize

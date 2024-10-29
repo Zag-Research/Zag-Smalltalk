@@ -42,16 +42,15 @@ AStackFlowTest >> testPhi1 [
 { #category : 'tests' }
 AStackFlowTest >> testPhi2 [
 
-	"Merge `ASCBasicBlock`s together - in-progress"
-	| basicBlock |
-	basicBlock := ASCBasicBlock new.
-	basicBlock branchedToFrom: simpleBlock1.
-	basicBlock branchedToFrom: simpleBlock2.
-	basicBlock merge.
+	"Merge `ASCBasicBlock`s together"
+	| joinBlock |
+	joinBlock := ASCJoinBlock new.
+	joinBlock branchedToFrom: simpleBlock1.
+	joinBlock branchedToFrom: simpleBlock2.
+	joinBlock addFlow.
 	
-	self assert: (basicBlock stack flow) class equals: ASFlowPhi.
-	
-	self assert: (basicBlock stack flow) asAssociationList asSet equals: {
+	self assert: (joinBlock stack flow) class equals: ASFlowPhi.
+	self assert: (joinBlock stack flow) asAssociationList asSet equals: {
 			(simpleBlock1 -> flowNew1).
 			(simpleBlock2 -> flowNew2) } asSet.
 ]

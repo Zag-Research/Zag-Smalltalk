@@ -5,40 +5,54 @@ Class {
 	#name : 'ASCPushVariable',
 	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
-		'variable',
-		'stackOffset'
+		'stackOffset',
+		'variableLocation'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCPushVariable >> dotStringOn: aStream [
+
+	aStream
+		<< 'push offset ';
+		print: variableLocation offset - stackOffset
+]
+
 { #category : 'printing' }
 ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(;
-		<< variable name;
+		<< variableLocation name;
 		<< $)
+]
+
+{ #category : 'Collection API' }
+ASCPushVariable >> interpretFor: anInterpreter [
+
+	^ anInterpreter push: (anInterpreter stackAt: stackOffset - variableLocation offset)
 ]
 
 { #category : 'code generation' }
 ASCPushVariable >> outputTo: anOutput [
 
-	^ variable pushTheVariable: anOutput stackOffset: stackOffset
+	^ variableLocation pushTheVariable: anOutput stackOffset: stackOffset
 ]
 
 { #category : 'printing' }
 ASCPushVariable >> printOn: aStream [
 
-	aStream nextPutAll: ' - ';nextPutAll: variable name
+	aStream nextPutAll: ' - ';nextPutAll: variableLocation name
 ]
 
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stackOffset := anASStack offset.
-	^ self created: (anASStack pushDataAsTemporary: variable stackValue)
+	^ self created: (anASStack pushDataAsTemporary: variableLocation stackValue)
 ]
 
 { #category : 'as yet unclassified' }
@@ -65,5 +79,5 @@ ASCPushVariable >> variableUsage: aDispatchableBlock [
 { #category : 'instance creation' }
 ASCPushVariable >> with: target [
 
-	variable := target
+	variableLocation := target
 ]
