@@ -78,8 +78,8 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies 
 				  location: location1)).
 
 	cg basicBlocks add: bb1.
-	
-	
+
+
 	cg deriveOwnership.
 
 	self assert: (method owns includes: location1) not.
