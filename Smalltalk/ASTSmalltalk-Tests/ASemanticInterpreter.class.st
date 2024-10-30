@@ -28,12 +28,12 @@ ASemanticInterpreter >> addClasses: aCollection [
 		each isClass ifTrue: [ classes at: each put: lastClass ] ]
 ]
 
-{ #category : 'accessing' }
+{ #category : 'callgraph' }
 ASemanticInterpreter >> asDotString [
 
 	^ String streamContents: [ :s |
 		  s << 'digraph structs {
-    node [shape=record];
+  node [shape=record];
 '.
 		  basicBlocks do: [ :bb | bb dotStringOn: s ].
 		  s << '}' ]
@@ -57,6 +57,7 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 	| cg |
 	cg := ASCodeGenerator targetClass: aClass selector: aSymbol.
 	cg inline: inlineDepth.
+	cg finalAnalysis.
 	basicBlocks addAll: cg basicBlocks.
 	^ cg basicBlocks first
 ]
@@ -158,7 +159,7 @@ ASemanticInterpreter >> reset [
 
 { #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: anInteger [
-
+self halt.
 	context ifNil: [
 		stack removeLast: anInteger.
 		self assert: stack size = 1.
@@ -171,7 +172,7 @@ ASemanticInterpreter >> return: anObject selfOffset: anInteger [
 { #category : 'accessing' }
 ASemanticInterpreter >> returnTo: aBasicBlock [
 
-	pc := ASIProgramCounter new forBasicBlock: aBasicBlock
+	^ context pc: (ASIProgramCounter new forBasicBlock: aBasicBlock)
 ]
 
 { #category : 'interpreting' }

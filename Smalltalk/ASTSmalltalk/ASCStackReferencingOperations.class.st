@@ -12,6 +12,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'accessing' }
+ASCStackReferencingOperations >> consumes: aStackElement [
+
+	^ aStackElement location consumer: self
+]
+
 { #category : 'data flow instructions' }
 ASCStackReferencingOperations >> markReferences [
 

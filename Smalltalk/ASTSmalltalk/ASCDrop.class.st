@@ -9,7 +9,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCDrop >> dotStringOn: aStream [
 
 	^ aStream << 'drop'

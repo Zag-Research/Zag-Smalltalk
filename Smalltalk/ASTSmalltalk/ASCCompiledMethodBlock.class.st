@@ -12,11 +12,22 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'API' }
+ASCCompiledMethodBlock >> blockClosureClass [
+
+	^ ASCTopMethodClosureBlock
+]
+
 { #category : 'adding' }
 ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	" nothing to do, because this can only happen with tail recursive calls "
 
 	self halt
+]
+
+{ #category : 'API' }
+ASCCompiledMethodBlock >> contextRoot [
+	self shouldBeImplemented.
 ]
 
 { #category : 'adding' }
@@ -82,7 +93,7 @@ ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> selector: aSymbol class: aClass codeUnit: aBasicBlock [
 
-	label := aClass name, '>>', aSymbol
+	label := aClass name , '.' , aSymbol
 ]
 
 { #category : 'API' }

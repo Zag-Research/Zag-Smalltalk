@@ -12,11 +12,11 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'callgraph' }
 ASCReturnTop >> dotEdgesOn: aWriteStream from: aBasicBlock [
 ]
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCReturnTop >> dotStringOn: aStream [
 
 	^ aStream << 'return top'

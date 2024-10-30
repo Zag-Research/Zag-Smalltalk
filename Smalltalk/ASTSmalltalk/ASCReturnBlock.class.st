@@ -46,6 +46,12 @@ ASCReturnBlock >> flowForTemporaries [
 ]
 
 { #category : 'initialization' }
+ASCReturnBlock >> label [
+
+	^ label ifNil: [ label := self methodBlock label, '.', self nextSequence asString ]
+]
+
+{ #category : 'initialization' }
 ASCReturnBlock >> llvmLabel [
 
 	^ '0'

@@ -32,7 +32,7 @@ ASCOperations >> children [
 ]
 
 { #category : 'instance creation' }
-ASCOperations >> created: aStackElement [
+ASCOperations >> creates: aStackElement [
 
 	aStackElement location creator: self.
 	^ aStackElement

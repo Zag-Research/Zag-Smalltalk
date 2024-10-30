@@ -15,11 +15,11 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'callgraph' }
 ASCTailSend >> dotEdgesOn: aWriteStream from: aBasicBlock [
 ]
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCTailSend >> dotStringOn: aStream [
 
 	aStream

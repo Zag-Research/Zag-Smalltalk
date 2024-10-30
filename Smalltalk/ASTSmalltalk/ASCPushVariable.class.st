@@ -13,7 +13,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCPushVariable >> dotStringOn: aStream [
 
 	aStream
@@ -52,7 +52,7 @@ ASCPushVariable >> printOn: aStream [
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stackOffset := anASStack offset.
-	^ self created: (anASStack pushDataAsTemporary: variableLocation stackValue)
+	^ self creates: (anASStack pushDataAsTemporary: variableLocation stackValue)
 ]
 
 { #category : 'as yet unclassified' }
