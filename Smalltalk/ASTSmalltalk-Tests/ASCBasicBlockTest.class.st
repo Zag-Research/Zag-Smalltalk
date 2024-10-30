@@ -131,7 +131,7 @@ ASCBasicBlockTest >> testStackFlow [
 	cg selector: #foo:bar:.
 	cg locals: #( l1 l2 ) parameters: #( p1 p2 ).
 
-	bb1 := cg firstBlock.
+	bb1 := cg methodBlock.
 	self assert: (bb1 at: #l1) data isNilReference.
 	self assert: (bb1 at: #l1) offset > (bb1 at: #l2) offset.
 	self assert: (bb1 at: #p1) offset > (bb1 at: #p2) offset.

@@ -18,9 +18,21 @@ Class {
 }
 
 { #category : 'accessing' }
-AStackLocation >> creator: anASCLiteral [
+AStackLocation >> consumer: anOperation [
 
-	creator := anASCLiteral
+	^ consumers add: anOperation
+]
+
+{ #category : 'accessing' }
+AStackLocation >> consumers [
+
+	^ consumers
+]
+
+{ #category : 'accessing' }
+AStackLocation >> creator: anOperation [
+
+	creator := anOperation
 ]
 
 { #category : 'accessing' }
@@ -29,10 +41,17 @@ AStackLocation >> dataClass [
 	^ stackValueOrFlow dataClass
 ]
 
+{ #category : 'initialization' }
+AStackLocation >> initialize [
+
+	super initialize.
+	consumers := OrderedCollection new
+]
+
 { #category : 'data flow instructions' }
 AStackLocation >> markReferenced [
 
-	stackValueOrFlow markReferenced
+	^ stackValueOrFlow markReferenced
 ]
 
 { #category : 'accessing' }

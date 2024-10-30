@@ -31,5 +31,5 @@ ASZigInspectionTest >> testInspectionOfZagBlocksForFib [
 		          context: file;
 		          generateCode: ast.
 
-	output codeGenerator firstBlock inspect
+	output codeGenerator methodBlock inspect
 ]

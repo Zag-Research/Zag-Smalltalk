@@ -111,6 +111,8 @@ ASCBasicBlock >> branch: aBasicBlock [
 { #category : 'adding' }
 ASCBasicBlock >> branchedToFrom: aBasicBlock [
 
+	(sourceBlocks includes: aBasicBlock) ifTrue: [ 
+		self error: 're-adding edge' ].
 	sourceBlocks add: aBasicBlock andIfNewDo: [
 		sourceElements
 			ifNil: [ sourceElements := self copyStackFrom: aBasicBlock ]
@@ -172,17 +174,18 @@ ASCBasicBlock >> doPush: anObject [
 	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'callgraph' }
 ASCBasicBlock >> dotNameOn: aStream [
 
 	^ aStream
-		  << '    struct';
+		  << 'struct';
 		  print: self structNumber
 ]
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCBasicBlock >> dotStringOn: aStream [
 
+	aStream << '  '.
 	self dotNameOn: aStream.
 	aStream
 		<< '[label="{';

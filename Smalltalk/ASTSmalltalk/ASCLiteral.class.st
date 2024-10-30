@@ -12,7 +12,7 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCLiteral >> dotStringOn: aStream [
 
 	aStream
@@ -43,7 +43,7 @@ ASCLiteral >> outputTo: output [
 { #category : 'stack' }
 ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	^ self created: (anASStack pushDataAsTemporary:
+	^ self creates: (anASStack pushDataAsTemporary:
 		             (AStackValue fromValue: literal))
 ]
 

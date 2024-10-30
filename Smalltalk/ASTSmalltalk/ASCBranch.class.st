@@ -12,9 +12,10 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'callgraph' }
 ASCBranch >> dotEdgesOn: aStream from: aBasicBlock [
 
+	aStream << '  '.
 	aBasicBlock dotNameOn: aStream.
 	aStream << ':end:e ->'.
 	bb dotNameOn: aStream.
@@ -22,7 +23,7 @@ ASCBranch >> dotEdgesOn: aStream from: aBasicBlock [
 '
 ]
 
-{ #category : 'API' }
+{ #category : 'callgraph' }
 ASCBranch >> dotStringOn: aStream [
 
 	aStream

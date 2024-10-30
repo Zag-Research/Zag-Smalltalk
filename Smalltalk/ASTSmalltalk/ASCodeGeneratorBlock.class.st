@@ -35,6 +35,12 @@ ASCodeGeneratorBlock >> inspectZagASTOn: stream [
 	source inspectZagASTOn: stream
 ]
 
+{ #category : 'private - testing' }
+ASCodeGeneratorBlock >> methodBlock [
+
+	^ parent methodBlock
+]
+
 { #category : 'as yet unclassified' }
 ASCodeGeneratorBlock >> parent: anASCodeGenerator source: aBlockClosureValue ast: anASBlock [
 

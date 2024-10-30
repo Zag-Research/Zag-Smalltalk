@@ -122,6 +122,10 @@ ASCodeGenerator >> compileRemainingBlockClosures [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> createContextAndStackOffsets [
+
+	basicBlocks first contextRoot.
+	basicBlocks do: #blockInReturn.
+	basicBlocks do: #requireSourceContext
 ]
 
 { #category : 'accessing' }
@@ -176,11 +180,6 @@ ASCodeGenerator >> finalAnalysis [
 	self removeUnusedCode.
 	self inlineDependentPrimitives.
 	self createContextAndStackOffsets.
-]
-
-{ #category : 'private - testing' }
-ASCodeGenerator >> firstBlock [
-	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
 ]
 
 { #category : 'data flow instructions' }
@@ -387,6 +386,11 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ self incompleteImplementation
+]
+
+{ #category : 'private - testing' }
+ASCodeGenerator >> methodBlock [
+	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
 ]
 
 { #category : 'accessing' }
