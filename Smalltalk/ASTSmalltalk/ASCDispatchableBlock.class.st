@@ -75,7 +75,8 @@ ASCDispatchableBlock >> initialize [
 	references := Set new.
 	modifies := Set new.
 	owns := Set new.
-	declares := Set new
+	declares := Set new.
+	returnBlocks := Dictionary new
 ]
 
 { #category : 'accessing' }

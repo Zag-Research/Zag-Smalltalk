@@ -30,15 +30,17 @@ ASOptimizingVariableOwnershipTest >> testBlockVariable [
 
 	location1 := AStackLocation new.
 	location1 stackValue: (AStackValue fromValue: 1).
-	method addOperation:( ASCPushVariable new with: (ASLocalNamed new
+	"method addOperation:( ASCPushVariable new with: (ASLocalNamed new
 			             name: #l1;
-			             location: location1)).
-
+			             location: location1))."
+	method addOperation:( ASCPushVariable new with: location1).
+	
 	location2 := AStackLocation new.
 	location2 stackValue: (AStackValue fromValue: 2).
-	method addOperation: (ASCPopVariable new with: (ASLocalNamed new
+	"method addOperation: (ASCPopVariable new with: (ASLocalNamed new
 			            name: #l2;
-			            location: location2)).
+			            location: location2))."
+	method addOperation: (ASCPopVariable new with: location2).
 
 	cg deriveOwnership.
 
@@ -61,21 +63,12 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies 
 	location2 := AStackLocation new.
 	location2 stackValue: (AStackValue fromValue: 2).
 
-	method addOperation: (ASCPushVariable new with: (ASLocalNamed new
-				  name: #l1;
-				  location: location1)).
-
-	method addOperation: (ASCPopVariable new with: (ASLocalNamed new
-				  name: #l2;
-				  location: location2)).
+	method addOperation: (ASCPushVariable new with: location1).
+	method addOperation: (ASCPopVariable new with: location2).
 
 	bb1 := ASCCompiledClosureBlock new label: 'bb1'.
-	bb1 addOperation: (ASCPushVariable new with: (ASLocalNamed new
-				  name: #l1;
-				  location: location1)).
-	bb1 addOperation: (ASCPopVariable new with: (ASLocalNamed new
-				  name: #l2;
-				  location: location1)).
+	bb1 addOperation: (ASCPushVariable new with: location1).
+	bb1 addOperation: (ASCPopVariable new with: location1).
 
 	cg basicBlocks add: bb1.
 

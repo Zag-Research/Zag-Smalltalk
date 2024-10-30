@@ -58,7 +58,7 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 { #category : 'as yet unclassified' }
 ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
 	referenced
-		at: variable location
+		at: variableLocation 
 		ifPresent: [ :dic |
 			dic
 				at: aDispatchableBlock

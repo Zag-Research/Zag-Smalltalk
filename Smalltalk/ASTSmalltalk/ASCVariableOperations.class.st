@@ -41,7 +41,7 @@ ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
 { #category : 'instance creation' }
 ASCVariableOperations >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
 	modified
-		at: variable location
+		at: variableLocation
 		ifPresent: [ :dic |
 			dic at: aDispatchableBlock ifPresent: [ :count |
 			dic at: aDispatchableBlock put: count + 1 ] ifAbsentPut: [ 1 ]]
