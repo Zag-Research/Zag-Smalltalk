@@ -68,6 +68,11 @@ ASCDispatchableBlock >> deriveVariableUsage [
 		op variableUsage: self ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASCDispatchableBlock >> hasNonLocalReturn [
+	^ False
+]
+
 { #category : 'accessing' }
 ASCDispatchableBlock >> initialize [
 

@@ -7,6 +7,9 @@ My final expression will be a real return
 Class {
 	#name : 'ASCCompiledClosureBlock',
 	#superclass : 'ASCDispatchableBlock',
+	#instVars : [
+		'hasNonLocalReturn'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -39,9 +42,15 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 	^ self shouldNotImplement
 ]
 
+{ #category : 'data flow instructions' }
+ASCCompiledClosureBlock >> hasNonLocalReturn [
+	^ hasNonLocalReturn
+]
+
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> initialize [ 
-	super initialize
+	super initialize.
+	hasNonLocalReturn := False
 ]
 
 { #category : 'initialization' }
@@ -67,6 +76,7 @@ ASCCompiledClosureBlock >> printOn: aStream [
 
 { #category : 'API' }
 ASCCompiledClosureBlock >> returnNonLocal [
+	hasNonLocalReturn := True.
 	^ self addOperation: ASCReturnNonLocal new
 ]
 
