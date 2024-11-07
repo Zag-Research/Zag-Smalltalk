@@ -51,8 +51,10 @@ ASCPushVariable >> printOn: aStream [
 { #category : 'stack' }
 ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
+	stack := anASStack.
 	stackOffset := anASStack offset.
-	^ self creates: (anASStack pushDataAsTemporary: variableLocation stackValue)
+	^ self creates:
+		  (anASStack pushDataAsTemporary: variableLocation stackValue)
 ]
 
 { #category : 'instance creation' }

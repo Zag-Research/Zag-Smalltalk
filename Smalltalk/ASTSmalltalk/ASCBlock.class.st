@@ -51,7 +51,8 @@ ASCBlock >> outputTo: output [
 ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
 	"	block parent: aBasicBlock."
 
-	^ self created: (anASStack pushDataAsTemporary: block)
+	stack := anASStack.
+	^ self creates: (anASStack pushDataAsTemporary: block)
 ]
 
 { #category : 'instance creation' }

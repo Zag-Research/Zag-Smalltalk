@@ -43,6 +43,12 @@ ASCTailSend >> inspectZagASTOn: aStream [
 		<< ' ( tailcall )'
 ]
 
+{ #category : 'Collection API' }
+ASCTailSend >> interpretFor: anInterpreter [
+
+	^ anInterpreter send: selector
+]
+
 { #category : 'testing' }
 ASCTailSend >> isCallOperation [
 

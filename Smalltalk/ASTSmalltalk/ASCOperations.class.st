@@ -4,6 +4,9 @@ I am the superclass of all the CodeGenerator operations
 Class {
 	#name : 'ASCOperations',
 	#superclass : 'Object',
+	#instVars : [
+		'stack'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -62,6 +65,12 @@ ASCOperations >> manifestParameters [
 
 ]
 
+{ #category : 'as yet unclassified' }
+ASCOperations >> needsContext [
+
+	^ false
+]
+
 { #category : 'accessing' }
 ASCOperations >> nextBasicBlocks [
 
@@ -77,6 +86,18 @@ ASCOperations >> outputTo: aCodeEmitter [
 { #category : 'testing' }
 ASCOperations >> requiresContext [
 	^ false
+]
+
+{ #category : 'as yet unclassified' }
+ASCOperations >> shrinksStack [
+
+	^ false
+]
+
+{ #category : 'Collection API' }
+ASCOperations >> stack [
+
+	^ stack
 ]
 
 { #category : 'instance creation' }

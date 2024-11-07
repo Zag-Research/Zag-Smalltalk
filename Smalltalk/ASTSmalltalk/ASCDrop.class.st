@@ -24,7 +24,14 @@ ASCDrop >> outputTo: aCodeEmitter [
 { #category : 'stack' }
 ASCDrop >> resultStack: anASStack basicBlock: anObject [
 
+	stack := anASStack.
 	^ anASStack drop
+]
+
+{ #category : 'as yet unclassified' }
+ASCDrop >> shrinksStack [
+
+	^ true
 ]
 
 { #category : 'instance creation' }
