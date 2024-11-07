@@ -86,6 +86,10 @@ ASCOperations >> requiresContext [
 ]
 
 { #category : 'instance creation' }
+ASCOperations >> variableReferences: aCollection modifies: aCollection2 block: aBasicBlock [ 
+]
+
+{ #category : 'instance creation' }
 ASCOperations >> variableUsage: aDispatchableBlock [
 ]
 

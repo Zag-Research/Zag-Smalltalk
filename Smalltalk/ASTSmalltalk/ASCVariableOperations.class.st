@@ -16,7 +16,7 @@ Class {
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.
-	aStream << variableLocation name
+	aStream << '???' "variableLocation name"
 	
 ]
 

@@ -26,7 +26,7 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(;
-		<< variableLocation name;
+		<< '???'; "variableLocaton name;"
 		<< $)
 ]
 
