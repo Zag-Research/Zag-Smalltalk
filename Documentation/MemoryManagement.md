@@ -3,15 +3,15 @@
 
 Safe and efficient memory management is an essential part of a Smalltalk system. While the original Smalltalk system approach of creating activation records as heap objects has been replaced with stack allocation, idiomatic Smalltalk still creates a lot of short-term objects that need to be collected.
 
-AST Smalltalk has several features that minimize garbage creation:
+Zag Smalltalk has several features that minimize garbage creation:
 - activation records (contexts) are stack allocated
 - `nil`, `true`, `false`, Symbols, Characters, SmallIntegers and most Floats are encoded as immediate values
-- SmallIntegers have a wide range (2^51) so extension to BigIntegers (which would be heap-allocated) is rare
+- SmallIntegers have a wide range (2^55) so extension to BigIntegers (which would be heap-allocated) is rare
 - BlockClosures are stack allocated
 - code blocks are generated outside the heap
 - several kinds of common BlockClosures are encoded as immediate values
 
-AST Smalltalk has several features that minimize the amount of work required by garbage collection:
+Zag Smalltalk has several features that minimize the amount of work required by garbage collection:
 - all execution stacks and code addresses are outside the range of valid heap pointers, so by being careful to never save anything in a stack frame that looks like a heap reference, no scanning is required for the stacks;
 - scanning for roots can proceed very quickly (a single comparison filters all non-heap values);
 - the format of indexable objects encodes if they are pointer-free, so don't need to be scanned;
@@ -20,21 +20,25 @@ AST Smalltalk has several features that minimize the amount of work required by 
 
 ## Heap structure
 
-The heap is structured as per-process arenas (accessible only by the execution proccess itself) and a global arena accessible by all processes.
+The heap is structured as per-process arenas (accessible only by the execution process itself) and a global arena accessible by all processes.
 
 ## Per-Process Arenas
 Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are process-private, there is no locking required for allocation in the nursery arena, nor for collection.
 
 The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack and current context.
 
-If, for an allocation in the nursery, there is not enough free space in the current arena, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a proccess, so no locks are required. The actual collection is done with a copying collector as much of the content is likely garbage.
+If, for an allocation in the nursery, there is not enough free space in the current arena, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a process, so no locks are required. The actual collection is done with a copying collector as much of the content is likely garbage.
 
 ### Stack of Contexts
 The execution stack is allocated in the stack area of each Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
 
 The stack pointer points to the top of the working stack. If the sender's context is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context. If the sender's context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
 
-On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details.
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details. This `Context` will be created as late as possible, because after inlining, there may be paths through the method that don't require the `Context`.
+
+### Block Closures
+Block closures are allocated "on top" of the `Context`, with a field in the `Context` referencing them. Each closure that does a non-local return, or references local variables stored in the `Context`, will have a reference to the `Context`. When the `Context` is created, the field in the `Context` that references the closure is initialized appropriately, but the reserved memory for the closures will simply be filled with `nil` values. This is because nothing can reference the closure until it is actually created, and we may not need to create them all before the method returns. The tricky detail is that the `Context` may have to be spilled to the heap before some of these closures are filled in. In such a case, an empty closure object of the appropriate size will have to be created on the heap.
+
 ### Copying Collector
 Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-process arena, where no locks are required. This is why Zag uses this for [[Garbage Collection#Per-process arenas|per-process arena collection]].
 
@@ -55,7 +59,7 @@ Roots for the GlobalArena include:
 3. roots from all processes
 4. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
 
-If you have an arena that is accessible to multiple processes, then moving becomes a big deal - you'd have to stop all processes to move anything, and you can't collect in parallel. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
+If you have an arena that is accessible to multiple processes, then moving becomes a big deal - you'd have to stop all processes to move anything, and you can't collect in parallel. The production Java systems do this by partitioning the heap and only locking one section at a time, copying that into a new area and then letting things proceed; this works, but we think we can do better. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
 
 The Global Arena uses a non-moving mark and sweep collector. There is a dedicated OS thread that periodically does a [[Garbage Collection#Global arenas|global collection]].
 
@@ -98,7 +102,7 @@ Free-space is split up into power-of-2-sized pieces and put on the appropriate q
 - Otherwise, free-space is split into two pieces: the largest power of 2 that will fit, which is put on the appropriate list, and loop to allocate the rest.
 
 #### Allocation
-Allocation simply requires finding the enclosing power of 2, then taking the next block off that list. This is done without a lock. If the appropriate list is empty, then a value is requested off the next list (which may also be empty which will request the next...). Once a value is found from the next list, it is split in 2, with one of the resulting blocks prepended to its list, and the other one being returned to the requestor. If the list of the largest size is empty, another block is allocated from the operating system.
+Allocation simply requires finding the enclosing power of 2, then taking the next block off that list. This is done without a lock. If the appropriate list is empty, then a value is requested off the next list (which may also be empty which will request the next...). Once a value is found from the next list, it is split in 2, with one of the resulting blocks prepended to this list, and the other one being returned to the requestor. If the list of the largest size is empty, another block is allocated from the operating system.
 
 ## Large data allocation
 For objects of 2048^[this exact size will be tuned with experience and may become smaller] words or more (16KiB or more), separate pages are allocated for each object. This allows them to be separately freed when they are no longer accessible. This prevents internal memory fragmentation. It also supports mapping large files, so for example a "read whole file" for anything large will simply map the file as an indirect string, and for anything smaller allocate the string and read the data into it.
@@ -110,7 +114,7 @@ The become instruction swaps the two heap-objects, so that all existing referenc
 
 We have a compile-time (of the runtime) flag to support or not support forwarding (because it slows down many operations) which, by implication, also controls the `become:` cases in the global arena other than number 1. In the nursery they are OK, because nurseries are small, the `become:` only affects one process, and we immediately do a nursery collect.
 
-There is a complex approach that we considered, but full  `become:` is rare enough, and the size of in-heap portion of objects is bounded, so we instead take a simpler approach, which has 4 cases (after promoting a process-local object if the other one is global):
+There is a complex approach that we considered, but full `become:` is rare enough, and the size of in-heap portion of objects is bounded, so we instead take a simpler approach, which has 4 cases (after promoting a process-local object if the other one is global):
 1. if the in-heap portion of the objects are the same size, then the contents are swapped except for the hashes
 2. if it's a forwarding become, the source header is replaced with with a simple forwarding pointer.
 3. if both are forwarding pointers, we just swap those (after swapping the hashes)
