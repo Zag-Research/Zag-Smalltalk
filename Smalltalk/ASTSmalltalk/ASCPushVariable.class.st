@@ -30,10 +30,11 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 		<< $)
 ]
 
-{ #category : 'Collection API' }
-ASCPushVariable >> interpretFor: anInterpreter [
+{ #category : 'testing' }
+ASCPushVariable >> needsContext [
+	" this should be renamed needsLocals if reifyLocals is to work "
 
-	^ anInterpreter push: (anInterpreter stackAt: stackOffset - variableLocation offset)
+	^ true
 ]
 
 { #category : 'code generation' }

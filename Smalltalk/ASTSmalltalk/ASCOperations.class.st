@@ -65,7 +65,7 @@ ASCOperations >> manifestParameters [
 
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
 ASCOperations >> needsContext [
 
 	^ false
@@ -83,9 +83,10 @@ ASCOperations >> outputTo: aCodeEmitter [
 	self subclassResponsibility
 ]
 
-{ #category : 'testing' }
-ASCOperations >> requiresContext [
-	^ false
+{ #category : 'stack' }
+ASCOperations >> resultStack: anASStack basicBlock: anObject [
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'as yet unclassified' }

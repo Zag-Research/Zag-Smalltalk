@@ -29,12 +29,6 @@ ASCLiteral >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'Collection API' }
-ASCLiteral >> interpretFor: anInterpreter [
-
-	^ anInterpreter push: literal
-]
-
 { #category : 'code generation' }
 ASCLiteral >> outputTo: output [ 
 	^ output visitPushLiteral: literal

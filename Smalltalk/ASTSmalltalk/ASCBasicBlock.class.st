@@ -505,12 +505,6 @@ ASCBasicBlock >> outputTo: output [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> popAndCopyTopToSelf [
-
-	self addOperation: (ASCPopAndCopyTop new)
-]
-
 { #category : 'stack' }
 ASCBasicBlock >> popStackTo: anASCMethodBlock [
 

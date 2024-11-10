@@ -66,7 +66,7 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 { #category : 'menu morph' }
 ASemanticInterpreter >> createContext [
 
-	context := ASIContext new sendingContext: context
+	^ context := ASIContext new sendingContext: context
 ]
 
 { #category : 'private - testing' }

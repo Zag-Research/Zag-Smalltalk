@@ -11,12 +11,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'Collection API' }
-ASCCreateContext >> interpretFor: aSemanticInterpreter [
-
-	^ aSemanticInterpreter createContext
-]
-
 { #category : 'stack' }
 ASCCreateContext >> resultStack: anASStack basicBlock: anObject [
 

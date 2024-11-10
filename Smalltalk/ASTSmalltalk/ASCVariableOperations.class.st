@@ -26,6 +26,13 @@ ASCVariableOperations >> markReferences [
 	stack markReferenced
 ]
 
+{ #category : 'testing' }
+ASCVariableOperations >> needsContext [
+	" this should be renamed needsLocals if reifyLocals is to work "
+
+	^ true
+]
+
 { #category : 'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 

@@ -507,8 +507,9 @@ ASCodeGenerator >> recursiveBasicBlock: aMethodAST [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> reifyLocals [
+	" for this to work, operations on variables must rename needsContext to needsLocals "
 
-	"basicBlocks do: #reifyLocals"
+	
 ]
 
 { #category : 'finalAnalysis' }

@@ -33,12 +33,6 @@ ASCReturnTop >> inlineWithFixedCFG: anASCodeGenerator [
 
 ]
 
-{ #category : 'Collection API' }
-ASCReturnTop >> interpretFor: anInterpreter [
-
-	^ anInterpreter return: anInterpreter top selfOffset: stack offset - stackElement offset
-]
-
 { #category : 'block handling' }
 ASCReturnTop >> manifestParameters [
 

@@ -183,7 +183,7 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
 
 	self
-		assert: (interpreter halt;send: selecter with: aCollection to: anObject)
+		assert: (interpreter send: selecter with: aCollection to: anObject)
 		equals: (anObject perform: selecter).
 	self assert: interpreter stackDepth equals: 1
 ]
@@ -208,6 +208,18 @@ ASCompilerInlineTest >> setUp [
 
 	ASInliner reset.
 	interpreter := ASemanticInterpreter new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testArray [
+	"
+bar
+
+	^ 42"
+
+	self assertEquivalentSending: #array to: ASCompileTestClass1 new.
+	self assert: interpreter basicBlocks size equals: 1.
+	self assert: interpreter codeSize equals: 1
 ]
 
 { #category : 'tests' }
@@ -502,26 +514,7 @@ ASCompilerInlineTest >> testFooInlined [
 { #category : 'tests' }
 ASCompilerInlineTest >> testGives43 [
 
-	self
-		assert: ASCompileTestClass1 >> #gives43
-		inlinesTo: (ASMethodNode
-				 selector: #gives43
-				 locals: #( #forty2 )
-				 body: (ASSequence newFromArray: {
-							  (ASAssign variable: #forty2 expression: (ASSend
-									    target: (ASSend
-											     target: (ASSelf method: #gives43)
-											     selector: #unaries
-											     args: {  })
-									    selector: #*
-									    args: { (ASLiteral literal: 2) })).
-							  (ASReturn expression: (ASSend
-									    target: (ASSelf method: #gives43)
-									    selector: #plus1:
-									    args: { (ASSend
-											     target: (ASRef variable: #forty2)
-											     selector: #-
-											     args: { (ASLiteral literal: 4) }) })) }))
+	self assertEquivalentSending: #gives43 to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
