@@ -37,6 +37,12 @@ ASCompileTestClass1 >> addTwoNumbers [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> array [
+
+	^ {42 . 17 . 99}
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> bar [
 
 	^ 42

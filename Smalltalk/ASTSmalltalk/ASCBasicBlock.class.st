@@ -18,7 +18,8 @@ Class {
 		'sourceElements',
 		'sequence',
 		'methodBlock',
-		'structNumber'
+		'structNumber',
+		'contextStartsAt'
 	],
 	#classVars : [
 		'SequenceNumber',
@@ -148,6 +149,12 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive genertor: gener
 	^ case
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> contextInherited [
+
+	^ 0
+]
+
 { #category : 'copying' }
 ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 
@@ -158,6 +165,12 @@ ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 ASCBasicBlock >> copyStackFrom: aBasicBlock [
 
 	^ stack := aBasicBlock copyOfStackFor: self
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> defaultAsReturn [
+
+	contextStartsAt ifNil: [ contextStartsAt := self contextInherited ]
 ]
 
 { #category : 'Collection API' }
@@ -241,6 +254,12 @@ ASCBasicBlock >> flowForTemporaries [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> forceCreateContext [
+
+	contextStartsAt = self noContext ifTrue: [ self insertContext ]
+]
+
 { #category : 'testing' }
 ASCBasicBlock >> hasContext [
 
@@ -298,6 +317,24 @@ ASCBasicBlock >> inlineWithFixedCFG: anASCodeGenerator [
 
 	operations ifEmpty: [ ^ self ].
 	^ operations last inlineWithFixedCFG: anASCodeGenerator
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> insertContext [
+
+	self halt.
+	contextStartsAt ifNotNil: [ contextStartsAt = self noContext ifFalse: [ ^ self ]].
+	operations withIndexDo: [ :operation :index |
+		operation shrinksStack ifFalse: [
+			operations
+				add:
+				(ASCCreateContext new
+					 resultStack: operation stack
+					 basicBlock: self;
+					yourself)
+				beforeIndex: index.
+			contextStartsAt := index.
+			^ self ] ]
 ]
 
 { #category : 'printing' }
@@ -425,6 +462,12 @@ ASCBasicBlock >> nextSequence [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'as yet unclassified' }
+ASCBasicBlock >> noContext [
+
+	^ SmallInteger maxVal
+]
+
 { #category : 'API' }
 ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
 
@@ -487,6 +530,17 @@ ASCBasicBlock >> printOn: aStream [
 	aStream nextPutAll: self label
 ]
 
+{ #category : 'API' }
+ASCBasicBlock >> propagateContextFreeFor: aStackContext [
+
+	contextStartsAt ifNil: [
+		contextStartsAt := self noContext.
+		(operations anySatisfy: #needsContext) ifTrue: [
+			self insertContext.
+			aStackContext growBy: 0.
+			^ self ] ]
+]
+
 { #category : 'data flow instructions' }
 ASCBasicBlock >> providesNonNil: anId [
 
@@ -547,6 +601,12 @@ ASCBasicBlock >> replaceOperation: anOperation [
 ASCBasicBlock >> replaceStack: newStack [
 	stack := newStack.
 	^ self.
+]
+
+{ #category : 'API' }
+ASCBasicBlock >> requireSourceContext [
+
+	sourceBlocks do: [ : source | source forceCreateContext ]
 ]
 
 { #category : 'API' }

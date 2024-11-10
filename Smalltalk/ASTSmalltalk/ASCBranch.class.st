@@ -39,6 +39,12 @@ ASCBranch >> inspectZagASTOn: aStream [
 		<< bb label
 ]
 
+{ #category : 'testing' }
+ASCBranch >> needsContext [
+
+	self halt
+]
+
 { #category : 'as yet unclassified' }
 ASCBranch >> nextBasicBlocks [
 
@@ -54,6 +60,7 @@ ASCBranch >> outputTo: output [
 { #category : 'stack' }
 ASCBranch >> resultStack: anASStack basicBlock: anObject [
 
+	stack := anASStack.
 	^ anASStack
 ]
 

@@ -56,6 +56,12 @@ ASCSend >> isTailcall [
 	^ false
 ]
 
+{ #category : 'as yet unclassified' }
+ASCSend >> needsContext [
+
+	^ true
+]
+
 { #category : 'accessing' }
 ASCSend >> nextBasicBlocks [
 

@@ -3,7 +3,7 @@ I represent the program counter pointing into a compiled method.
 "
 Class {
 	#name : 'ASIProgramCounter',
-	#superclass : 'Object',
+	#superclass : 'ASINullProgramCounter',
 	#instVars : [
 		'currentIndex',
 		'basicBlock'

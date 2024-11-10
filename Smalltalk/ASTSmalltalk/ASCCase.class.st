@@ -65,6 +65,12 @@ ASCCase >> markReferences [
 	(stack at: numArgs) markReferenced
 ]
 
+{ #category : 'testing' }
+ASCCase >> needsContext [
+
+	self halt
+]
+
 { #category : 'accessing' }
 ASCCase >> nextBasicBlocks [
 

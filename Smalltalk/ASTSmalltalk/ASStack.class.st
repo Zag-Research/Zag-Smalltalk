@@ -157,13 +157,18 @@ ASStack >> offset [
 { #category : 'displaying' }
 ASStack >> printNameOn: stream [
 
-	self subclassResponsibility
 ]
 
 { #category : 'printing' }
 ASStack >> printOn: aStream [
 
 	^ aStream nextPutAll: self className
+]
+
+{ #category : 'adding' }
+ASStack >> pushClass: aClass [
+
+	^ (ASStackTemporary fromStack: self) data: (AStackValue fromClass: self)
 ]
 
 { #category : 'adding' }

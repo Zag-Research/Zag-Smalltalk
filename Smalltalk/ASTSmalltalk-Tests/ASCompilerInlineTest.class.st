@@ -183,7 +183,7 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
 
 	self
-		assert: (interpreter send: selecter with: aCollection to: anObject)
+		assert: (interpreter halt;send: selecter with: aCollection to: anObject)
 		equals: (anObject perform: selecter).
 	self assert: interpreter stackDepth equals: 1
 ]

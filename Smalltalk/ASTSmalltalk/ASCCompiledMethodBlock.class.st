@@ -25,11 +25,6 @@ ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	self halt
 ]
 
-{ #category : 'API' }
-ASCCompiledMethodBlock >> contextRoot [
-	self shouldBeImplemented.
-]
-
 { #category : 'adding' }
 ASCCompiledMethodBlock >> copyStackFrom: aBasicBlock [
 
@@ -71,7 +66,7 @@ ASCCompiledMethodBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
-	sourceElements := ASStackContext fromStack: stack
+	stack := sourceElements := ASStackContext fromStack: stack
 ]
 
 { #category : 'writing' }
@@ -82,6 +77,12 @@ ASCCompiledMethodBlock >> outputTo: output [
 		methods: { self } , returnBlocks keys.
 	output outputMethodStart: self.
 	^ self outputRestTo: output
+]
+
+{ #category : 'as yet unclassified' }
+ASCCompiledMethodBlock >> propagateContextFreeFor [
+
+	^ self propagateContextFreeFor: sourceElements " context is the first thing on the stack"
 ]
 
 { #category : 'as yet unclassified' }
