@@ -132,7 +132,7 @@ ASCodeGenerator >> createContextWhereRequired [
 ASCodeGenerator >> deriveOwnership [
 	"drive the ownership of compilable unit blocks"
 
-	| varsModified varsReferenced |
+	| varsModified varsReferenced locations |
 	varsModified := Dictionary new.
 	varsReferenced := Dictionary new.
 
@@ -145,13 +145,22 @@ ASCodeGenerator >> deriveOwnership [
    3. For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
    4. All other variables will be placed in a closure that modifies the variable.
 "
+	locations := Set new.
+	locations addAll: varsModified keys.
+	locations addAll: varsReferenced keys.
+	
 	varsReferenced keysAndValuesDo: [ :k :v |
 		(varsModified includes: k) ifFalse: [ "this variable is never modified"
-			v size = 1 ifTrue: [ "only one reference so put the variable there"
+			(v size = 1 & v keys first hasNonLocalReturn not ) ifTrue: [ "only one reference so put the variable there"
+				locations remove: k.
 				v keys first owns add: k ] ] ].
 	
 	varsModified keysAndValuesDo: [ :k :v | 
-			v keys anyOne owns add: k ]
+			v keys do: [ :bb | bb hasNonLocalReturn ifFalse: [ 
+			locations remove: k.
+			v keys anyOne owns add: k ] ]].
+	
+	locations do: [ :l | self methodBlock owns add: l ]
 ]
 
 { #category : 'API' }

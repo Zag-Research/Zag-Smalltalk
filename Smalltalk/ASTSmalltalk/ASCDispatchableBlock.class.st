@@ -70,7 +70,7 @@ ASCDispatchableBlock >> deriveVariableUsage [
 
 { #category : 'as yet unclassified' }
 ASCDispatchableBlock >> hasNonLocalReturn [
-	^ False
+	^ false
 ]
 
 { #category : 'accessing' }

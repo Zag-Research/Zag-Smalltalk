@@ -50,7 +50,7 @@ ASCCompiledClosureBlock >> hasNonLocalReturn [
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> initialize [ 
 	super initialize.
-	hasNonLocalReturn := False
+	hasNonLocalReturn := false
 ]
 
 { #category : 'initialization' }
@@ -76,7 +76,7 @@ ASCCompiledClosureBlock >> printOn: aStream [
 
 { #category : 'API' }
 ASCCompiledClosureBlock >> returnNonLocal [
-	hasNonLocalReturn := True.
+	hasNonLocalReturn := true.
 	^ self addOperation: ASCReturnNonLocal new
 ]
 
