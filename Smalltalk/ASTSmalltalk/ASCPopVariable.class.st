@@ -14,3 +14,9 @@ ASCPopVariable >> outputTo: anOutput [
 
 	^ variableLocation popTheVariable: anOutput stackOffset: stack offset
 ]
+
+{ #category : 'as yet unclassified' }
+ASCPopVariable >> shrinksStack [
+
+	^ true
+]

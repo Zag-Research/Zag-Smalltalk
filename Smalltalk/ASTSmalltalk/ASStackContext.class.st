@@ -15,6 +15,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'printing' }
+ASStackContext class >> canonicalArgumentName [
+
+	^ 'aStackContext'
+]
+
 { #category : 'accessing' }
 ASStackContext >> at: aSymbol [
 
@@ -30,7 +36,7 @@ ASStackContext >> fromStack: anASStack [
 { #category : 'accessing' }
 ASStackContext >> growBy: anInteger [
 
-	size = 0 ifTrue: [ size := 1 + (next intoContext: 0) ].
+	size = 0 ifTrue: [ size := 1 + (next intoContext: 1) ].
 	size := size + anInteger
 ]
 
@@ -45,6 +51,12 @@ ASStackContext >> initialize [
 ASStackContext >> offset [
 
 	^ next offset
+]
+
+{ #category : 'displaying' }
+ASStackContext >> printNameOn: stream [
+
+	^ stream nextPutAll: 'context'
 ]
 
 { #category : 'accessing' }

@@ -37,6 +37,12 @@ ASCompileTestClass1 >> addTwoNumbers [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> array [
+
+	^ { 17. 42. 99 }
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> bar [
 
 	^ 42
@@ -136,7 +142,7 @@ ASCompileTestClass1 >> fibonacci_fast [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> foo [
 
-	^ self bar isLarge not
+	^ self bar
 ]
 
 { #category : 'testing - examples' }

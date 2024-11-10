@@ -5,7 +5,7 @@ I  need to store return addresses before dispatch.
 "
 Class {
 	#name : 'ASCSend',
-	#superclass : 'ASCTailSend',
+	#superclass : 'ASCSends',
 	#instVars : [
 		'blockToReturnTo'
 	],
@@ -44,16 +44,16 @@ ASCSend >> inspectZagASTOn: aStream [
 		<< blockToReturnTo label
 ]
 
-{ #category : 'Collection API' }
-ASCSend >> interpretFor: anInterpreter [
-
-	^ anInterpreter returnTo: blockToReturnTo;send: selector
-]
-
 { #category : 'testing' }
 ASCSend >> isTailcall [
 
 	^ false
+]
+
+{ #category : 'testing' }
+ASCSend >> needsContext [
+
+	^ true
 ]
 
 { #category : 'accessing' }

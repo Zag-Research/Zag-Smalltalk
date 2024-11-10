@@ -31,14 +31,14 @@ CompiledMethod class >> canonicalArgumentName [
 CompiledMethod >> inspectionZagCode [
 
 	<inspectorPresentationOrder: 60 title: 'ZCode'>
-	| ast file output |
+	| ast cg |
 	ast := ASPharoCompiler new astFor: self.
-
-	file := ASZigTestContext new.
-	output := ASZigThreadedOutput testing
-		          context: file;
-		          generateCode: ast.
-	^ output codeGenerator inspectBasicBlocks
+	cg := ASCodeGenerator new
+		      targetClass: self methodClass;
+		      generateFrom: ast.
+	cg inline: true.
+	cg finalAnalysis.
+	^ cg inspectBasicBlocks
 ]
 
 { #category : '*ASTSmalltalk' }

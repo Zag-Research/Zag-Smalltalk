@@ -3,13 +3,30 @@ I am a context for the Semantic Interpreter
 "
 Class {
 	#name : 'ASIContext',
-	#superclass : 'Object',
+	#superclass : 'ASIStackHeapObject',
 	#instVars : [
 		'returnPC',
-		'sendingContext',
-		'stackOffset'
+		'sendingContext'
 	],
 	#category : 'ASTSmalltalk-Tests-SemanticInterpreter',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'SemanticInterpreter'
 }
+
+{ #category : 'accessing' }
+ASIContext >> returnPC [
+
+	^ returnPC
+]
+
+{ #category : 'accessing' }
+ASIContext >> returnPC: aProgramCounter [
+
+	returnPC := aProgramCounter
+]
+
+{ #category : 'accessing' }
+ASIContext >> sendingContext: aSemanticContext [
+
+	sendingContext := aSemanticContext
+]

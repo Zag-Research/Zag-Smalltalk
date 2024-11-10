@@ -121,10 +121,10 @@ ASCodeGenerator >> compileRemainingBlockClosures [
 ]
 
 { #category : 'finalAnalysis' }
-ASCodeGenerator >> createContextAndStackOffsets [
+ASCodeGenerator >> createContextWhereRequired [
 
-	basicBlocks first contextRoot.
-	basicBlocks do: #blockInReturn.
+	basicBlocks first propagateContextFreeFor.
+	basicBlocks do: #defaultAsReturn.
 	basicBlocks do: #requireSourceContext
 ]
 
@@ -179,7 +179,8 @@ ASCodeGenerator >> finalAnalysis [
 	self optimizeLocalVariableLocations.
 	self removeUnusedCode.
 	self inlineDependentPrimitives.
-	self createContextAndStackOffsets.
+	self createContextWhereRequired.
+	self reifyLocals
 ]
 
 { #category : 'data flow instructions' }
@@ -390,7 +391,8 @@ ASCodeGenerator >> lookupObject: anObject [
 
 { #category : 'private - testing' }
 ASCodeGenerator >> methodBlock [
-	^basicBlocks ifNotEmpty: [ basicBlocks at:1] ifEmpty: [ nil ]
+
+	^ basicBlocks ifNotEmpty: [ basicBlocks first ] ifEmpty: [ nil ]
 ]
 
 { #category : 'accessing' }
@@ -501,6 +503,13 @@ ASCodeGenerator >> recursiveBasicBlock: aMethodAST [
 
 	self flag: ' need to look through the stack for the aMethodAST ';
 		halt
+]
+
+{ #category : 'finalAnalysis' }
+ASCodeGenerator >> reifyLocals [
+	" for this to work, operations on variables must rename needsContext to needsLocals "
+
+	
 ]
 
 { #category : 'finalAnalysis' }
