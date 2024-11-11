@@ -64,6 +64,10 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 32. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
 33. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
 34. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
+35. `BlockClosure`: this is reserved for block closures. All the Thunk... are subclasses of this.
+36. `Context`: this is reserved for method contexts.
+37. `Array`: this is reserved for the fundamental `Array` class.
+38. `String`: this is reserved for 
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
