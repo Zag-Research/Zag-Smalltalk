@@ -62,6 +62,13 @@ ManifestASTSmalltalkTests class >> rulePrecedenceRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalkTests class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASIStackHeapObjectTest #testSimple #false)) #'2024-11-10T09:39:04.439243-05:00') #(#(#RGMethodDefinition #(#ASemanticInterpreterTest #testSimple #false)) #'2024-11-11T17:55:28.755883-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleReNoPrintStringInPrintOnRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASFindPrimitives #printOn: #false)) #'2023-07-09T10:39:44.76397-04:00') )
 ]

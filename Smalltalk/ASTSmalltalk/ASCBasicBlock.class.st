@@ -323,7 +323,6 @@ ASCBasicBlock >> inlineWithFixedCFG: anASCodeGenerator [
 { #category : 'API' }
 ASCBasicBlock >> insertContext [
 
-	self halt.
 	contextStartsAt ifNotNil: [ contextStartsAt = self noContext ifFalse: [ ^ self ]].
 	operations withIndexDo: [ :operation :index |
 		operation shrinksStack ifFalse: [
