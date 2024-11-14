@@ -171,6 +171,26 @@ ASemanticInterpreter >> reset [
 	dispatch := Array new: 50
 ]
 
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> restructureStack: anInteger [
+
+	| oldPtr sources top offset |
+	offset := anInteger bitAnd: 16rff.
+	sources := anInteger bitShift: -8.
+	sources = offset ifTrue: [ stackPointer := stackPointer + offset - 1. ^ self ].
+	sources = 1 ifTrue: [
+		top := stackArray at: stackPointer.
+		^ stackArray
+			  at:
+			  (stackPointer := stackPointer + offset - 1)
+			  put: top ].
+	oldPtr := stackPointer - 1.
+	stackPointer := stackPointer + offset.
+	[ sources isZero ] whileFalse: [
+		self push: (stackArray at: oldPtr + (sources bitAnd: 16rff)).
+		sources := sources bitShift: -8 ]
+]
+
 { #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 
@@ -235,4 +255,14 @@ ASemanticInterpreter >> stackSize: stackSize [
 ASemanticInterpreter >> top [
 
 	^ stackArray at: stackPointer
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> top: size [
+
+	^ (Array new: size)
+		                replaceFrom: 1
+		                to: size
+		                with: stackArray 
+		                startingAt: stackPointer
 ]
