@@ -24,11 +24,12 @@ We extend this slightly, by using all 8 possible tag values:
 | `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `xxxxxxxx` | `01100001` | `SmallInteger`     |
 | `00000000`  | ...          | hhhhhhhh   | `hhhhhhhh` | `hhhhhhhh` | `01101001` | `Symbol`           |
 | `00000000`  | ...          | hhhhhhhh   | `hhhhhhhh` | `hhhhhhhh` | `01110001` | `Character`        |
-| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `ccccc001` | `01111001` | `ThunkImmediate`   |
-| `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `10000001` | `ThunkFloat`       |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10001001` | unused             |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | -          | unused             |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `11111001` | unused             |
+| char7 or 0  | ...          | ...        | char2      | char1      | `01111001` | `ShortString`      |
+| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `ccccc001` | `10000001` | `ThunkImmediate`   |
+| `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `10001001` | `ThunkFloat`       |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10010001` | reserved           |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | -          | reserved           |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `11111001` | reserved           |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms010` | `Float`            |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | -          | `Float`            |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms111` | `Float`            |
@@ -37,7 +38,7 @@ Because we are using all 8 possible values of the tag field, where the test in S
 
 Getting the class looks at the low 3 bits: 0 it's `nil` or it's a heap object and need to look at the header, 1 it's an immediate and the next 5 bits are the class, 2-7 it's a `Float`.
 
-Testing for a pointer-containing object (for the garbage collector): if the value is not `nil`, take the low byte, rotate right 3 and if the result is less than `0b00101010` then it contains a pointer.
+Testing for a pointer-containing object (for the garbage collector): if the value is not `nil`, take the low byte, rotate right 3 and if the result is less than `0b00101010` then it contains a pointer (i.e. it is one of the first 11 tags above). Any of the other values can have a hash value calculated by anding out the top 2 bits and the bottom 8 bits, and then adding in `0b01100001` to make a `SmallInteger`, or shifting left 10, then right 2, and then adding in `0b01100001`. 
 ### Immediates
 
 Any selection of zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `True`, `False`, `Character`, and `Symbol`, as well as `SmallInteger`. By restricting to only 5 bits for the class, we significantly increase the range of useful values we can encode into immediate values.
@@ -58,16 +59,19 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 12. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
 13. `Symbol`: See [Symbols](Symbols.md) for detailed information on the format.
 14. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-15. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
-16. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include any reasonable integral value as well as common fractional values such as 0.5, 0.25). Values that can't be encoded that way would use `ThunkHeap` to return an object.
-17. to 31 unused
-32. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
-33. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
-34. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
-35. `BlockClosure`: this is reserved for block closures. All the Thunk... are subclasses of this.
-36. `Context`: this is reserved for method contexts.
-37. `Array`: this is reserved for the fundamental `Array` class.
-38. `String`: this is reserved for 
+15. `ShortString`: immutable ASCII string of 0-7 characters; null terminated.
+16. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
+17. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include any reasonable integral value as well as common fractional values such as 0.5, 0.25). Values that can't be encoded that way would use `ThunkHeap` to return an object.
+18. to 23 unused
+23. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
+24. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
+25. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
+26. `BlockClosure`: this is reserved for block closures. All the Thunk... are subclasses of this.
+27. `BlockClosuerValue`: this is reserved for the BlockClosure that simply evaluates to its field.
+28. `Context`: this is reserved for method contexts.
+29. `Array`: this is reserved for the fundamental `Array` class.
+30. `String`: this is reserved for ASCII strings
+31. `Utf8String`: this is reserved for utf-8 strings
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
