@@ -6,6 +6,8 @@ I will precede a branch-return or a branch for an inlined tail send
 Class {
 	#name : 'ASCRestructureStack',
 	#superclass : 'ASCStackReferencingOperations',
+	#traits : 'ASCContextDependentOperations',
+	#classTraits : 'ASCContextDependentOperations classTrait',
 	#instVars : [
 		'restructure'
 	],

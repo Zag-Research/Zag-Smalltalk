@@ -30,12 +30,6 @@ ASCSends >> isSend [
 	^ true
 ]
 
-{ #category : 'block handling' }
-ASCSends >> manifestParameters [
-
-	^ stack makeManifestFor: selector numArgs + 1
-]
-
 { #category : 'data flow instructions' }
 ASCSends >> markReferences [
 
@@ -46,7 +40,9 @@ ASCSends >> markReferences [
 ASCSends >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) pushDataAsTemporary: (AStSubClass new dataClass: Object)
+	^ self
+		  createsTemporary: (anASStack drop: selector numArgs + 1)
+		  data: (AStSubClass new dataClass: Object)
 ]
 
 { #category : 'accessing' }

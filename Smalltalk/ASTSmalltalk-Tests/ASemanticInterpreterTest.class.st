@@ -12,12 +12,24 @@ Class {
 	#tag : 'Tests'
 }
 
+{ #category : 'as yet unclassified' }
+ASemanticInterpreterTest >> primitiveSuccess: anObject [
+
+	^ anObject
+]
+
 { #category : 'running' }
 ASemanticInterpreterTest >> setUp [
 
 	super setUp.
 
 	interpreter := ASemanticInterpreter new
+]
+
+{ #category : 'tests' }
+ASemanticInterpreterTest >> testPrimitive [
+
+	self assert: ((1 siPrim1: 2) processPrimitiveResult: self) equals: 3
 ]
 
 { #category : 'tests' }

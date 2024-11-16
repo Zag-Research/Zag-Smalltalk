@@ -34,11 +34,12 @@ ASCDup >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCDup >> resultStack: anASStack basicBlock: anObject [
+ASCDup >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
-	^ self consumes: anASStack;
-			creates: (anASStack replicate: anASStack)
+	^ self
+		  consumes: anASStack;
+		  creates: (anASStack replicate: anASStack)
 ]
 
 { #category : 'as yet unclassified' }

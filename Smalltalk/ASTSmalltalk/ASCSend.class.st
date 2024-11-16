@@ -51,7 +51,7 @@ ASCSend >> isTailcall [
 ]
 
 { #category : 'testing' }
-ASCSend >> needsContext [
+ASCSend >> needsContext: aStackContext [
 
 	^ true
 ]

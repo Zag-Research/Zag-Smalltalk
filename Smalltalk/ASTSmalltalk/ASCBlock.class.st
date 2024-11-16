@@ -41,7 +41,7 @@ ASCBlock >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'testing' }
-ASCBlock >> needsContext [
+ASCBlock >> needsContext: aStackContext [
 
 	^ true
 ]
@@ -58,7 +58,7 @@ ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
 	"	block parent: aBasicBlock."
 
 	stack := anASStack.
-	^ self creates: (anASStack pushDataAsTemporary: block)
+	^ self createsTemporary: anASStack data: block
 ]
 
 { #category : 'instance creation' }

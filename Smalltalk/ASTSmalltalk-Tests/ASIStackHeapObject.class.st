@@ -36,10 +36,23 @@ ASIStackHeapObject >> at: position put: anObject [
 	^ stackOrArray at: position + offset put: anObject
 ]
 
+{ #category : 'initialization' }
+ASIStackHeapObject >> initialize [
+
+	super initialize.
+	isOnStack := false
+]
+
 { #category : 'testing' }
 ASIStackHeapObject >> isOnStack [
 
 	^ isOnStack
+]
+
+{ #category : 'accessing' }
+ASIStackHeapObject >> offset [
+
+	^ offset
 ]
 
 { #category : 'transforming' }

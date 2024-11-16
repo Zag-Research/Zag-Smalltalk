@@ -28,3 +28,15 @@ ASIProgramCounter >> forBasicBlock: aBasicBlock [
 	basicBlock := aBasicBlock.
 	currentIndex := 1
 ]
+
+{ #category : 'printing' }
+ASIProgramCounter >> printOn: aStream [
+
+	super printOn: aStream.
+	aStream
+		nextPutAll: ' (';
+		print: basicBlock;
+		nextPutAll: ' #';
+		print: currentIndex;
+		nextPut: $)
+]

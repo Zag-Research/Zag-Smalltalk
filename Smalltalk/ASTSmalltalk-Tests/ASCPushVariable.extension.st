@@ -3,5 +3,9 @@ Extension { #name : 'ASCPushVariable' }
 { #category : '*ASTSmalltalk-Tests' }
 ASCPushVariable >> interpretFor: anInterpreter [
 
-	^ anInterpreter push: (anInterpreter stackAt: stackOffset - variableLocation offset)
+	^ anInterpreter push:
+		  ((inContext and: [ variableLocation isInContext ])
+			   ifTrue: [ anInterpreter contextAt: variableLocation offset ]
+			   ifFalse: [
+			   anInterpreter stackAt: stackOffset - variableLocation offset ])
 ]

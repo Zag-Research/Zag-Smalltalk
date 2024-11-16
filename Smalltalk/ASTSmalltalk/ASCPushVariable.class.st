@@ -4,9 +4,12 @@ I remember to push local variable
 Class {
 	#name : 'ASCPushVariable',
 	#superclass : 'ASCNonStackReferencingOperations',
+	#traits : 'ASCContextDependentOperations',
+	#classTraits : 'ASCContextDependentOperations classTrait',
 	#instVars : [
 		'stackOffset',
-		'variableLocation'
+		'variableLocation',
+		'needsContext'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -31,8 +34,14 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'testing' }
-ASCPushVariable >> needsContext [
-	" this should be renamed needsLocals if reifyLocals is to work "
+ASCPushVariable >> needsContext: aStackContext [
+	" this should be removed when reifyLocals is to work "
+
+	^ self needsLocals
+]
+
+{ #category : 'testing' }
+ASCPushVariable >> needsLocals [
 
 	^ true
 ]
@@ -54,12 +63,13 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
 	stackOffset := anASStack offset.
-	^ self creates:
-		  (anASStack pushDataAsTemporary: variableLocation stackValue)
+	^ self createsTemporary: anASStack data: variableLocation stackValue
 ]
 
 { #category : 'instance creation' }
 ASCPushVariable >> with: target [
 
+
+	needsContext := target isLocal.
 	variableLocation := target
 ]

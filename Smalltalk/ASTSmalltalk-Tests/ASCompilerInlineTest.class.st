@@ -184,7 +184,7 @@ ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection
 
 	self
 		assert: (interpreter send: selecter with: aCollection to: anObject)
-		equals: (anObject perform: selecter).
+		equals: (anObject perform: selecter withArguments: aCollection).
 	self assert: interpreter stackDepth equals: 1
 ]
 
@@ -244,7 +244,6 @@ ASCompilerInlineTest >> testBarInlined [
 
 	^ 42"
 
-	self testBar.
 	interpreter inlineDepth: 100.
 	self testBar.
 	self assert: interpreter basicBlocks size equals: 1
@@ -529,7 +528,6 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
 		      selector: #inlinePlus1.
-	cg inspect;halt.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -569,6 +567,18 @@ ASCompilerInlineTest >> testPlus1 [
 	^ aNumber + 1"
 
 	self assertEquivalentSending: #plus1: arguments: #(6) to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testPrimitive [
+
+	self assertEquivalentSending: #testDiv: arguments: #( 2 ) to: 6
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testPrimitiveFailing [
+
+	self assertEquivalentSending: #testDiv: arguments: #( 0 ) to: 6
 ]
 
 { #category : 'tests' }

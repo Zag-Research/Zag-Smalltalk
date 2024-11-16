@@ -4,6 +4,8 @@ I represent a nonLocal return usually from a block. I must clean up stack and re
 Class {
 	#name : 'ASCReturn',
 	#superclass : 'ASCStackReferencingOperations',
+	#traits : 'ASCContextDependentOperations',
+	#classTraits : 'ASCContextDependentOperations classTrait',
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'

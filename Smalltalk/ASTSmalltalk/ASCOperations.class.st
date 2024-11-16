@@ -35,6 +35,12 @@ ASCOperations >> creates: aStackElement [
 	^ aStackElement
 ]
 
+{ #category : 'as yet unclassified' }
+ASCOperations >> createsTemporary: aStack data: aStackValue [
+
+	^ self creates: ((ASStackTemporary fromStack: aStack) data: aStackValue)
+]
+
 { #category : 'Collection API' }
 ASCOperations >> do: ignored [
 	" this just exists so that `next` can return something that does nothing for a `do:` message "
@@ -60,13 +66,14 @@ ASCOperations >> isSend [
 	^ false
 ]
 
-{ #category : 'block handling' }
-ASCOperations >> manifestParameters [
+{ #category : 'testing' }
+ASCOperations >> needsContext: aStackContext [
 
+	^ false
 ]
 
 { #category : 'testing' }
-ASCOperations >> needsContext [
+ASCOperations >> needsLocals [
 
 	^ false
 ]
@@ -84,9 +91,13 @@ ASCOperations >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCOperations >> resultStack: anASStack basicBlock: anObject [
+ASCOperations >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	^ self subclassResponsibility
+]
+
+{ #category : 'initialization' }
+ASCOperations >> setInContext: aBoolean [
 ]
 
 { #category : 'as yet unclassified' }

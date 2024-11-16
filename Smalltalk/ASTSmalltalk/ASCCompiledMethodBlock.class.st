@@ -7,6 +7,9 @@ Class {
 	#superclass : 'ASCDispatchableBlock',
 	#traits : 'ASCMergeBlocks',
 	#classTraits : 'ASCMergeBlocks classTrait',
+	#instVars : [
+		'primitive'
+	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
 	#tag : 'CodeGen'
@@ -25,6 +28,12 @@ ASCCompiledMethodBlock >> branchedToFrom: aBasicBlock [
 	self halt
 ]
 
+{ #category : 'accessing' }
+ASCCompiledMethodBlock >> codeSize [
+
+	^ operations size
+]
+
 { #category : 'adding' }
 ASCCompiledMethodBlock >> copyStackFrom: aBasicBlock [
 
@@ -35,10 +44,8 @@ ASCCompiledMethodBlock >> copyStackFrom: aBasicBlock [
 { #category : 'API' }
 ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
 
-	| source |
 	stack := stack initParameterNamed: aSymbol.
-	source := ASFlowParameter new.
-	^ stack data: source
+	^ stack data: (AStSubClass new dataClass: Object)
 ]
 
 { #category : 'API' }
@@ -53,12 +60,6 @@ ASCCompiledMethodBlock >> initialize [
 
 	super initialize.
 	methodBlock := self.
-]
-
-{ #category : 'initialization' }
-ASCCompiledMethodBlock >> label [
-
-	^ label
 ]
 
 { #category : 'accessing' }

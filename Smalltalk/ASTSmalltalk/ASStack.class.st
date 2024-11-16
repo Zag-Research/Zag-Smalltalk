@@ -61,6 +61,12 @@ ASStack >> at: aSymbol put: anObject [
 	element data: (AStackValue fromValue: anObject)
 ]
 
+{ #category : 'accessing' }
+ASStack >> context [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 	self printNameOn: stream.
@@ -92,7 +98,7 @@ ASStack >> hasContext [
 { #category : 'API' }
 ASStack >> initLocalNamed: name [
 
-	^ (ASLocalNamed new fromStack: self) name: name
+	^ (ASLocalNamed new fromStack: self) name: name; data: AStUndefinedClass new
 ]
 
 { #category : 'API' }
@@ -168,7 +174,8 @@ ASStack >> printOn: aStream [
 { #category : 'adding' }
 ASStack >> pushClass: aClass [
 
-	^ (ASStackTemporary fromStack: self) data: (AStackValue fromClass: self)
+	^ (ASStackTemporary fromStack: self) data:
+		  (AStackValue fromClass: aClass)
 ]
 
 { #category : 'adding' }

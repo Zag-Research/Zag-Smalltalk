@@ -138,7 +138,7 @@ ManifestASTSmalltalk class >> ruleUnwindBlocksRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleUsesAddRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #send:targetClass:tail: #false)) #'2023-11-11T11:51:23.341686-05:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #addOperation: #false)) #'2023-11-11T18:07:39.377391-05:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInline #false)) #'2024-06-18T13:33:21.771718-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineBlockClosure #false)) #'2024-06-23T11:10:01.368119-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineMethod: #false)) #'2024-10-18T21:33:11.841325-04:00') #(#(#RGMethodDefinition #(#AStackLocation #consumer: #false)) #'2024-10-29T08:47:55.259044-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASCodeGenerator #send:targetClass:tail: #false)) #'2023-11-11T11:51:23.341686-05:00') #(#(#RGMethodDefinition #(#ASCBasicBlock #addOperation: #false)) #'2023-11-11T18:07:39.377391-05:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInline #false)) #'2024-06-18T13:33:21.771718-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineBlockClosure #false)) #'2024-06-23T11:10:01.368119-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #newInlineMethod: #false)) #'2024-10-18T21:33:11.841325-04:00') #(#(#RGMethodDefinition #(#AStackLocation #consumer: #false)) #'2024-10-29T08:47:55.259044-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #primitive: #false)) #'2024-11-15T10:07:37.092192-05:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #addBlock: #false)) #'2024-11-15T11:36:57.73124-05:00') )
 ]
 
 { #category : 'code-critics' }

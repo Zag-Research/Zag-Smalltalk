@@ -66,7 +66,7 @@ ASCCase >> markReferences [
 ]
 
 { #category : 'testing' }
-ASCCase >> needsContext [
+ASCCase >> needsContext: aStackContext [
 
 	self halt
 ]
@@ -84,7 +84,7 @@ ASCCase >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCCase >> resultStack: anASStack basicBlock: anObject [
+ASCCase >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	self halt.
 	stack := anASStack.

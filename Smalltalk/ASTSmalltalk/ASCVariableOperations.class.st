@@ -27,8 +27,14 @@ ASCVariableOperations >> markReferences [
 ]
 
 { #category : 'testing' }
-ASCVariableOperations >> needsContext [
-	" this should be renamed needsLocals if reifyLocals is to work "
+ASCVariableOperations >> needsContext: aStackContext [
+	" this should be removed when reifyLocals is to work "
+
+	^ self needsLocals
+]
+
+{ #category : 'testing' }
+ASCVariableOperations >> needsLocals [
 
 	^ true
 ]
@@ -36,13 +42,6 @@ ASCVariableOperations >> needsContext [
 { #category : 'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
-]
-
-{ #category : 'stack' }
-ASCVariableOperations >> resultStack: anASStack basicBlock: anObject [
-
-	stack := anASStack.
-	^ anASStack drop
 ]
 
 { #category : 'instance creation' }

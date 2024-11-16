@@ -4,8 +4,11 @@ I respresent tail calls, which require some stack manipuation before doing the d
 Class {
 	#name : 'ASCTailSend',
 	#superclass : 'ASCSends',
+	#traits : 'ASCContextDependentOperations',
+	#classTraits : 'ASCContextDependentOperations classTrait',
 	#instVars : [
-		'restructure'
+		'restructure',
+		'selfLocation'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -50,4 +53,16 @@ ASCTailSend >> nextBasicBlocks [
 ASCTailSend >> outputTo: anOutput [
 
 	^ anOutput visitTailSend: selector receiver: target
+]
+
+{ #category : 'stack' }
+ASCTailSend >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	| nArgs |
+	nArgs := selector numArgs + 1.
+	selfLocation := anASStack at: #self.
+	restructure := 0.
+	1 to: nArgs do: [ :n |
+		restructure := restructure bitOr: (nArgs + 1 - n bitShift: 8 * n) ].
+	^ super resultStack: anASStack basicBlock: aBasicBlock
 ]
