@@ -26,3 +26,10 @@ ASSuper >> zigWalk: aGenerator [
 
 	self invalidAST:  '"super" in a non-target position'
 ]
+
+{ #category : 'compiling' }
+ASSuper >> zigWalkTarget: aGenerator [
+
+	super zigWalk: aGenerator.
+	^ aGenerator targetClass halt;superclass
+]

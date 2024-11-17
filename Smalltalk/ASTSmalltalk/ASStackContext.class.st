@@ -8,7 +8,9 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'size',
-		'next'
+		'next',
+		'extra',
+		'parameters'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -27,6 +29,18 @@ ASStackContext >> at: aSymbol [
 	^ next at: aSymbol
 ]
 
+{ #category : 'accessing' }
+ASStackContext >> context [
+
+	^ self
+]
+
+{ #category : 'accessing' }
+ASStackContext >> extra [
+
+	^ extra
+]
+
 { #category : 'instance creation' }
 ASStackContext >> fromStack: anASStack [
 
@@ -36,15 +50,22 @@ ASStackContext >> fromStack: anASStack [
 { #category : 'accessing' }
 ASStackContext >> growBy: anInteger [
 
-	size = 0 ifTrue: [ size := 1 + (next intoContext: 1) ].
-	size := size + anInteger
+self halt.
+	size := 1 + size.
+	extra := extra + anInteger
 ]
 
 { #category : 'initialization' }
 ASStackContext >> initialize [
 
 	super initialize.
-	size := 0
+	size := parameters := extra := 0
+]
+
+{ #category : 'accessing' }
+ASStackContext >> locals [
+
+	^ size - parameters
 ]
 
 { #category : 'accessing' }
@@ -57,6 +78,14 @@ ASStackContext >> offset [
 ASStackContext >> printNameOn: stream [
 
 	^ stream nextPutAll: 'context'
+]
+
+{ #category : 'accessing' }
+ASStackContext >> required [
+
+	size = 0 ifTrue: [
+		size := next intoContext: 1.
+		parameters := next countParameters ]
 ]
 
 { #category : 'accessing' }

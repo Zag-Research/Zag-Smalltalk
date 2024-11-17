@@ -13,12 +13,7 @@ Class {
 ManifestASTSmalltalkTests class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #'ASTimings class'
-	              #updateBenchmarks #true ) )
-	        #'2022-08-25T20:02:32.671305+02:00' )
-	     #( #( #RGMethodDefinition #( #ASemanticInterpreter
-	              #interpret #false ) )
-	        #'2024-08-29T09:17:23.777197-04:00' ) )
+	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #interpret #false)) #'2024-08-29T09:17:23.777197-04:00') #(#(#RGMethodDefinition #(#ASCPrimitive2 #interpretFor: #false)) #'2024-11-16T10:20:12.238148-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive1 #interpretFor: #false)) #'2024-11-16T10:20:28.724663-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive #interpretFor: #false)) #'2024-11-16T10:20:34.696857-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -59,6 +54,13 @@ ManifestASTSmalltalkTests class >> ruleNobodyShouldSendMethodDictV1FalsePositive
 { #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> rulePrecedenceRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-21T00:02:16.426567-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalkTests class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASIStackHeapObjectTest #testSimple #false)) #'2024-11-10T09:39:04.439243-05:00') #(#(#RGMethodDefinition #(#ASemanticInterpreterTest #testSimple #false)) #'2024-11-11T17:55:28.755883-05:00') )
 ]
 
 { #category : 'code-critics' }

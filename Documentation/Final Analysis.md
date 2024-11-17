@@ -33,10 +33,10 @@ Any `BlockClosure`s that remain after the previous step must be compiled, and th
 ## Removal of redundant operations
 After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects. Note that `self` values may need at least nil pushed into the location so there is space to return a value.
 ## Optimizing local variable locations
-If we have block closures, we now determine the optimum location for each variable. There are several possibilities:
+If we have block closures, we now determine the optimum location for each method-scoped variable. There are several possibilities:
 1. If a variable is only referenced in the method, it will be put in the `Context` (or just on the stack if no context is created).
 2. If the variable is only referenced in one `BlockClosure` then it will be created as a local variable there.
-3. If a variable isn't modified after a `BlockClosure` (in which it's referenced) is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit.
+3. If a variable isn't modified after a `BlockClosure` (in which it's referenced) is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit. Alternately, it could be only in that closure.
 4. For values referenced in two or more places, modified in at least one, the default would be to put them in the `Context`.  However, if a `BlockClosure` has a reference to the `Context` and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
 5. All other variables will be placed in a closure that modifies the variable.
 ## Non-structural inlining

@@ -11,6 +11,11 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'as yet unclassified' }
+ASBlockNode class >> arguments: aCollection locals: aCollection2 body: aCollection3 [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'accessing' }
 ASBlockNode >> blocks [
 

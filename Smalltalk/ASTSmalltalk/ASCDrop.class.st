@@ -22,7 +22,7 @@ ASCDrop >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCDrop >> resultStack: anASStack basicBlock: anObject [
+ASCDrop >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
 	^ anASStack drop

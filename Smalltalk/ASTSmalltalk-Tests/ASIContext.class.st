@@ -6,12 +6,33 @@ Class {
 	#superclass : 'ASIStackHeapObject',
 	#instVars : [
 		'returnPC',
-		'sendingContext'
+		'sendingContext',
+		'extra'
 	],
 	#category : 'ASTSmalltalk-Tests-SemanticInterpreter',
 	#package : 'ASTSmalltalk-Tests',
 	#tag : 'SemanticInterpreter'
 }
+
+{ #category : 'as yet unclassified' }
+ASIContext >> baseAddress [
+
+	isOnStack ifFalse: [ ^ nil ].
+	^ offset - extra
+]
+
+{ #category : 'accessing' }
+ASIContext >> extra: anInteger [
+
+	extra := anInteger
+]
+
+{ #category : 'initialization' }
+ASIContext >> initialize [
+
+	super initialize.
+	extra := 0
+]
 
 { #category : 'accessing' }
 ASIContext >> returnPC [
@@ -23,6 +44,12 @@ ASIContext >> returnPC [
 ASIContext >> returnPC: aProgramCounter [
 
 	returnPC := aProgramCounter
+]
+
+{ #category : 'accessing' }
+ASIContext >> sendingContext [
+
+	^ sendingContext
 ]
 
 { #category : 'accessing' }

@@ -183,8 +183,8 @@ ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
 ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
 
 	self
-		assert: (interpreter halt;send: selecter with: aCollection to: anObject)
-		equals: (anObject perform: selecter).
+		assert: (interpreter send: selecter with: aCollection to: anObject)
+		equals: (anObject perform: selecter withArguments: aCollection).
 	self assert: interpreter stackDepth equals: 1
 ]
 
@@ -211,6 +211,18 @@ ASCompilerInlineTest >> setUp [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testArray [
+	"
+bar
+
+	^ 42"
+
+	self assertEquivalentSending: #array to: ASCompileTestClass1 new.
+	self assert: interpreter basicBlocks size equals: 1.
+	self assert: interpreter codeSize equals: 1
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBar [
 	"
 bar
@@ -232,7 +244,6 @@ ASCompilerInlineTest >> testBarInlined [
 
 	^ 42"
 
-	self testBar.
 	interpreter inlineDepth: 100.
 	self testBar.
 	self assert: interpreter basicBlocks size equals: 1
@@ -502,26 +513,7 @@ ASCompilerInlineTest >> testFooInlined [
 { #category : 'tests' }
 ASCompilerInlineTest >> testGives43 [
 
-	self
-		assert: ASCompileTestClass1 >> #gives43
-		inlinesTo: (ASMethodNode
-				 selector: #gives43
-				 locals: #( #forty2 )
-				 body: (ASSequence newFromArray: {
-							  (ASAssign variable: #forty2 expression: (ASSend
-									    target: (ASSend
-											     target: (ASSelf method: #gives43)
-											     selector: #unaries
-											     args: {  })
-									    selector: #*
-									    args: { (ASLiteral literal: 2) })).
-							  (ASReturn expression: (ASSend
-									    target: (ASSelf method: #gives43)
-									    selector: #plus1:
-									    args: { (ASSend
-											     target: (ASRef variable: #forty2)
-											     selector: #-
-											     args: { (ASLiteral literal: 4) }) })) }))
+	self assertEquivalentSending: #gives43 to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -536,7 +528,6 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
 		      selector: #inlinePlus1.
-	cg inspect;halt.
 	cg
 		inline: true;
 		finalAnalysis;
@@ -576,6 +567,18 @@ ASCompilerInlineTest >> testPlus1 [
 	^ aNumber + 1"
 
 	self assertEquivalentSending: #plus1: arguments: #(6) to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testPrimitive [
+
+	self assertEquivalentSending: #testDiv: arguments: #( 2 ) to: 6
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testPrimitiveFailing [
+
+	self assertEquivalentSending: #testDiv: arguments: #( 0 ) to: 6
 ]
 
 { #category : 'tests' }

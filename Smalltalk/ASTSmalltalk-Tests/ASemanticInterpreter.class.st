@@ -14,7 +14,8 @@ Class {
 		'executing',
 		'basicBlocks',
 		'stackArray',
-		'stackPointer'
+		'stackPointer',
+		'primitiveSuccessStackPointer'
 	],
 	#category : 'ASTSmalltalk-Tests-SemanticInterpreter',
 	#package : 'ASTSmalltalk-Tests',
@@ -46,6 +47,19 @@ ASemanticInterpreter >> basicBlocks [
 	^ basicBlocks
 ]
 
+{ #category : 'primitive execution' }
+ASemanticInterpreter >> binary: aBlock [
+
+	primitiveSuccessStackPointer := stackPointer + 1.
+	^ (aBlock value: (stackArray at: primitiveSuccessStackPointer) value: (stackArray at: stackPointer))
+		  processPrimitiveResult: self
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> branch: aBasicBlock [
+	pc := ASIProgramCounter new forBasicBlock: aBasicBlock
+]
+
 { #category : 'accessing' }
 ASemanticInterpreter >> codeSize [
 
@@ -63,10 +77,51 @@ ASemanticInterpreter >> compile: aSymbol for: aClass [
 	^ cg basicBlocks first
 ]
 
-{ #category : 'menu morph' }
-ASemanticInterpreter >> createContext [
+{ #category : 'accessing' }
+ASemanticInterpreter >> contextAt: anInteger [
 
-	context := ASIContext new sendingContext: context
+	^ context at: anInteger
+]
+
+{ #category : 'menu morph' }
+ASemanticInterpreter >> createContext: aStackContext [
+
+	| contextPtr size locals extra |
+	locals := aStackContext locals.
+	extra := aStackContext extra.
+	contextPtr := stackPointer - locals - 1.
+	size := (context baseAddress ifNil: [ stackArray size + 1 ])
+	        - (contextPtr + 1).
+	context := ASIContext new
+		           array: stackArray offset: contextPtr size: size;
+		           sendingContext: context;
+		           extra: extra.
+	stackPointer := contextPtr - extra.
+	stackArray at: contextPtr put: context.
+	stackPointer to: contextPtr - 1 do: [ :idx |
+	stackArray at: idx put: nil ].
+	contextPtr + 1 to: contextPtr + locals do: [ :idx |
+	stackArray at: idx put: nil ]
+]
+
+{ #category : 'menu morph' }
+ASemanticInterpreter >> createContext: locals extra: extra [
+
+	| contextPtr size |
+	contextPtr := stackPointer - locals - 1.
+	size := (context baseAddress ifNil: [ stackArray size + 1 ]) - (contextPtr + 1).
+	context := ASIContext new
+		           array: stackArray
+		           offset: contextPtr
+		           size: size;
+		           sendingContext: context;
+					  extra: extra.
+	stackPointer := contextPtr - extra.
+	stackArray at: contextPtr put: context.
+	stackPointer to: contextPtr - 1 do: [ :idx |
+		stackArray at: idx put: nil ].
+	contextPtr + 1 to: contextPtr + locals do: [ :idx |
+		stackArray at: idx put: nil ]
 ]
 
 { #category : 'private - testing' }
@@ -105,7 +160,7 @@ ASemanticInterpreter >> initialize [
 
 	super initialize.
 	inlineDepth := 0.
-	self stackSize: 500.
+	self stackSize: 10.
 	self reset
 ]
 
@@ -127,6 +182,14 @@ ASemanticInterpreter >> pop [
 
 	stackPointer := stackPointer + 1.
 	^ stackArray at: stackPointer - 1
+]
+
+{ #category : 'primitive execution' }
+ASemanticInterpreter >> primitiveSuccess: anObject [
+
+	stackPointer := primitiveSuccessStackPointer.
+	stackArray at: stackPointer put: anObject.
+	pc := context returnPC
 ]
 
 { #category : 'accessing' }
@@ -169,6 +232,54 @@ ASemanticInterpreter >> reset [
 			#Method.
 			#Dispatch }.
 	dispatch := Array new: 50
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> restructure: anInteger stack: selfPointer [
+
+	| old sources size |
+	sources := anInteger bitShift: -8.
+	size := 0.
+	[ sources isZero ] whileFalse: [
+		size := size max: (sources bitAnd: 16rff).
+		sources := sources bitShift: -8 ].
+	old := (Array new: size)
+		       replaceFrom: 1
+		       to: size
+		       with: stackArray
+		       startingAt: stackPointer.
+	stackPointer := selfPointer + 1.
+	sources := anInteger bitShift: -8.
+	[ sources isZero ] whileFalse: [
+		self push: (old at: (sources bitAnd: 16rff)).
+		sources := sources bitShift: -8 ]
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> restructureContext: anInteger [
+
+	| offset |
+	offset := anInteger bitAnd: 16rff.
+	context isOnStack
+		ifTrue: [
+			self
+				restructure: anInteger
+				stack: context offset + (anInteger bitAnd: 16rff) ]
+		ifFalse: [
+			stackPointer := stackArray size + 1 - (context sizeFrom: offset).
+			stackArray
+				replaceFrom: stackPointer
+				to: stackArray size
+				with: context array
+				startingAt: offset ].
+	pc := context returnPC.
+	context := context sendingContext
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> restructureStack: anInteger [
+
+	^ self restructure: anInteger stack: stackPointer + (anInteger bitAnd: 16rff) - 1
 ]
 
 { #category : 'handling' }
@@ -235,4 +346,22 @@ ASemanticInterpreter >> stackSize: stackSize [
 ASemanticInterpreter >> top [
 
 	^ stackArray at: stackPointer
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> top: size [
+
+	^ (Array new: size)
+		                replaceFrom: 1
+		                to: size
+		                with: stackArray 
+		                startingAt: stackPointer
+]
+
+{ #category : 'primitive execution' }
+ASemanticInterpreter >> unary: aBlock [
+
+	primitiveSuccessStackPointer := stackPointer.
+	^ (aBlock value: (stackArray at: stackPointer))
+		  processPrimitiveResult: self
 ]

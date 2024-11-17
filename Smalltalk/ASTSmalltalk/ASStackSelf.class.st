@@ -9,6 +9,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'accessing' }
+ASStackSelf >> countParameters [
+
+	^ 1
+]
+
 { #category : 'enumerating' }
 ASStackSelf >> do: aBlock [
 	" never go deeper than this "

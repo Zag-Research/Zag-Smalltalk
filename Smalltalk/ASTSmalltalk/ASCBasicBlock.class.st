@@ -22,6 +22,8 @@ Class {
 		'contextStartsAt'
 	],
 	#classVars : [
+		'ContextInherited',
+		'NoContext',
 		'SequenceNumber',
 		'StructNumber'
 	],
@@ -40,7 +42,9 @@ ASCBasicBlock class >> canonicalArgumentName [
 ASCBasicBlock class >> initialize [
 
 	SequenceNumber := 0.
-	StructNumber := 0
+	StructNumber := 0.
+	ContextInherited := 0.
+	NoContext := SmallInteger maxVal
 ]
 
 { #category : 'comparing' }
@@ -52,7 +56,7 @@ ASCBasicBlock >> = other [
 { #category : 'adding' }
 ASCBasicBlock >> addBlock: aBasicBlock [
 
-	^ self methodBlock addBlock: aBasicBlock
+self halt.	^ self methodBlock addBlock: aBasicBlock
 ]
 
 { #category : 'adding' }
@@ -149,12 +153,6 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive genertor: gener
 	^ case
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> contextInherited [
-
-	^ 0
-]
-
 { #category : 'copying' }
 ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 
@@ -170,20 +168,13 @@ ASCBasicBlock >> copyStackFrom: aBasicBlock [
 { #category : 'API' }
 ASCBasicBlock >> defaultAsReturn [
 
-	contextStartsAt ifNil: [ contextStartsAt := self contextInherited ]
+	contextStartsAt ifNil: [ contextStartsAt := ContextInherited ]
 ]
 
 { #category : 'Collection API' }
 ASCBasicBlock >> do: aBlock [
 
 	^ aBlock value: self
-]
-
-{ #category : 'stackAccessHelpers' }
-ASCBasicBlock >> doPush: anObject [
-
-	stack := stack pushDataAsTemporary: (AStackValue fromValue: anObject).
-	maxDepth := maxDepth max: (stackDepth := stackDepth + 1)
 ]
 
 { #category : 'callgraph' }
@@ -257,7 +248,7 @@ ASCBasicBlock >> flowForTemporaries [
 { #category : 'API' }
 ASCBasicBlock >> forceCreateContext [
 
-	contextStartsAt = self noContext ifTrue: [ self insertContext ]
+	contextStartsAt = NoContext ifTrue: [ self insertContext ]
 ]
 
 { #category : 'testing' }
@@ -322,8 +313,7 @@ ASCBasicBlock >> inlineWithFixedCFG: anASCodeGenerator [
 { #category : 'API' }
 ASCBasicBlock >> insertContext [
 
-	self halt.
-	contextStartsAt ifNotNil: [ contextStartsAt = self noContext ifFalse: [ ^ self ]].
+	contextStartsAt ifNotNil: [ contextStartsAt = NoContext ifFalse: [ ^ self ]].
 	operations withIndexDo: [ :operation :index |
 		operation shrinksStack ifFalse: [
 			operations
@@ -396,29 +386,21 @@ ASCBasicBlock >> isEmpty [
 	^ false
 ]
 
-{ #category : 'initialization' }
+{ #category : 'accessing' }
 ASCBasicBlock >> label [
 
-	^ self subclassResponsibility
+	^ label
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> label: aString [ 
+ASCBasicBlock >> label: aString [
+
 	label := aString
 ]
 
 { #category : 'output' }
 ASCBasicBlock >> llvmLabel [
 	^ self subclassResponsibility
-]
-
-{ #category : 'inlining' }
-ASCBasicBlock >> markBlockClosuresToManifest [
-
-	| last |
-	last := operations last.
-	last requiresContext ifTrue: [ self getContext ].
-	last manifestParameters
 ]
 
 { #category : 'data flow instructions' }
@@ -462,12 +444,6 @@ ASCBasicBlock >> nextSequence [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'as yet unclassified' }
-ASCBasicBlock >> noContext [
-
-	^ SmallInteger maxVal
-]
-
 { #category : 'API' }
 ASCBasicBlock >> offsetOf: aSymbol context: blockLocal stack: blockStack other: blockOther [
 
@@ -504,12 +480,6 @@ ASCBasicBlock >> outputTo: output [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
-ASCBasicBlock >> popAndCopyTopToSelf [
-
-	self addOperation: (ASCPopAndCopyTop new)
-]
-
 { #category : 'stack' }
 ASCBasicBlock >> popStackTo: anASCMethodBlock [
 
@@ -524,21 +494,29 @@ ASCBasicBlock >> popVariable: aSymbol [
 	self addOperation: (ASCPopVariable with: (stack at: aSymbol))
 ]
 
+{ #category : 'accessing' }
+ASCBasicBlock >> primitive: anInteger [
+
+	self addOperation: (ASCPrimitive with: anInteger)
+]
+
 { #category : 'printing' }
 ASCBasicBlock >> printOn: aStream [
 
-	aStream nextPutAll: self label
+	aStream nextPutAll: label
 ]
 
 { #category : 'API' }
 ASCBasicBlock >> propagateContextFreeFor: aStackContext [
 
 	contextStartsAt ifNil: [
-		contextStartsAt := self noContext.
-		(operations anySatisfy: #needsContext) ifTrue: [
-			self insertContext.
-			aStackContext growBy: 0.
-			^ self ] ]
+		contextStartsAt := NoContext.
+		(operations anySatisfy: [ :operation | operation needsContext: aStackContext ])
+			ifTrue: [
+				self insertContext.
+				aStackContext required.
+				^ false ] ].
+	^ contextStartsAt = ContextInherited
 ]
 
 { #category : 'data flow instructions' }
@@ -557,12 +535,6 @@ ASCBasicBlock >> pushArray: arraySize [
 ASCBasicBlock >> pushLiteral: aLiteral [
 
 	^ self addOperation: (ASCLiteral with: aLiteral)
-]
-
-{ #category : 'API' }
-ASCBasicBlock >> pushNil [
-
-	stack := stack pushDataAsTemporary: AStUndefinedClass singleton
 ]
 
 { #category : 'API' }
@@ -606,7 +578,8 @@ ASCBasicBlock >> replaceStack: newStack [
 { #category : 'API' }
 ASCBasicBlock >> requireSourceContext [
 
-	sourceBlocks do: [ : source | source forceCreateContext ]
+	contextStartsAt = ContextInherited ifTrue: [
+		sourceBlocks do: [ :source | source forceCreateContext ] ]
 ]
 
 { #category : 'API' }
@@ -655,6 +628,13 @@ ASCBasicBlock >> sendTail: aSymbol targetClass: target [
 		        target: target.
 	self addOperation: send.
 	^ nil
+]
+
+{ #category : 'initialization' }
+ASCBasicBlock >> setInContextForOperations [
+
+	operations withIndexDo: [ :each :idx |
+		each setInContext: idx >= contextStartsAt ]
 ]
 
 { #category : 'initialization' }

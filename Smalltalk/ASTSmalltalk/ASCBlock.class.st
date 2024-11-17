@@ -40,6 +40,12 @@ ASCBlock >> inspectZagASTOn: aStream [
 	"aStream << block asBlock body printString"
 ]
 
+{ #category : 'testing' }
+ASCBlock >> needsContext: aStackContext [
+
+	^ true
+]
+
 { #category : 'code generation' }
 ASCBlock >> outputTo: output [
 	"seems like we should determin if this is a nonLocal return block"
@@ -52,7 +58,7 @@ ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
 	"	block parent: aBasicBlock."
 
 	stack := anASStack.
-	^ self creates: (anASStack pushDataAsTemporary: block)
+	^ self createsTemporary: anASStack data: block
 ]
 
 { #category : 'instance creation' }

@@ -1,6 +1,12 @@
 Extension { #name : 'Object' }
 
 { #category : '*ASTSmalltalk-Tests' }
+Object >> processPrimitiveResult: aSemanticInterpreter [
+
+	^ aSemanticInterpreter primitiveSuccess: self
+]
+
+{ #category : '*ASTSmalltalk-Tests' }
 Object >> zigCGString [
 
 	| file codeGen |

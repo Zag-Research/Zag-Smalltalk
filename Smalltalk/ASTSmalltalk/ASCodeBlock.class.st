@@ -152,7 +152,7 @@ ASCodeBlock >> zigWalkMethod: aGenerator [
 		locals: locals parameters: arguments.
 	self pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
-			aGenerator primitive: pragma arguments first value ] ].
+			aGenerator primitive: pragma arguments first literal ] ].
 	^ body
 		  zigWalkEmpty: [ aGenerator returnEmpty ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]

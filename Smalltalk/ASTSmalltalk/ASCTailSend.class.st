@@ -1,14 +1,14 @@
 "
-I remember the selector for sends
-
 I respresent tail calls, which require some stack manipuation before doing the dispatch
 "
 Class {
 	#name : 'ASCTailSend',
-	#superclass : 'ASCStackReferencingOperations',
+	#superclass : 'ASCSends',
+	#traits : 'ASCContextDependentOperations',
+	#classTraits : 'ASCContextDependentOperations classTrait',
 	#instVars : [
-		'target',
-		'selector'
+		'restructure',
+		'selfLocation'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -27,12 +27,6 @@ ASCTailSend >> dotStringOn: aStream [
 		print: selector
 ]
 
-{ #category : 'inlining' }
-ASCTailSend >> inlineIfPossible: anASCodeGenerator [
-
-	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ]
-]
-
 { #category : 'printing' }
 ASCTailSend >> inspectZagASTOn: aStream [
 
@@ -43,39 +37,10 @@ ASCTailSend >> inspectZagASTOn: aStream [
 		<< ' ( tailcall )'
 ]
 
-{ #category : 'Collection API' }
-ASCTailSend >> interpretFor: anInterpreter [
-
-	^ anInterpreter send: selector
-]
-
-{ #category : 'testing' }
-ASCTailSend >> isCallOperation [
-
-	^ true
-]
-
-{ #category : 'accessing' }
-ASCTailSend >> isSend [
-	^ true
-]
-
 { #category : 'testing' }
 ASCTailSend >> isTailcall [
 
 	^ true
-]
-
-{ #category : 'block handling' }
-ASCTailSend >> manifestParameters [
-
-	^ stack makeManifestFor: selector numArgs + 1
-]
-
-{ #category : 'data flow instructions' }
-ASCTailSend >> markReferences [
-
-	stack markReferenced: selector numArgs
 ]
 
 { #category : 'accessing' }
@@ -90,44 +55,14 @@ ASCTailSend >> outputTo: anOutput [
 	^ anOutput visitTailSend: selector receiver: target
 ]
 
-{ #category : 'testing' }
-ASCTailSend >> requiresContext [
-
-	self halt.
-	^ false
-]
-
 { #category : 'stack' }
 ASCTailSend >> resultStack: anASStack basicBlock: aBasicBlock [
 
-	stack := anASStack.
-	^ (anASStack drop: selector numArgs + 1) pushDataAsTemporary: (AStSubClass new dataClass: Object)
-]
-
-{ #category : 'accessing' }
-ASCTailSend >> selector [
-	^ selector 
-]
-
-{ #category : 'accessing' }
-ASCTailSend >> selector: aString [
-
-	selector := aString
-]
-
-{ #category : 'accessing' }
-ASCTailSend >> target [
-
-	^ target
-]
-
-{ #category : 'accessing' }
-ASCTailSend >> target: aSymbol [
-	target := aSymbol
-]
-
-{ #category : 'instance creation' }
-ASCTailSend >> with: aSymbol [
-
-	selector := aSymbol
+	| nArgs |
+	nArgs := selector numArgs + 1.
+	selfLocation := anASStack at: #self.
+	restructure := 0.
+	1 to: nArgs do: [ :n |
+		restructure := restructure bitOr: (nArgs + 1 - n bitShift: 8 * n) ].
+	^ super resultStack: anASStack basicBlock: aBasicBlock
 ]

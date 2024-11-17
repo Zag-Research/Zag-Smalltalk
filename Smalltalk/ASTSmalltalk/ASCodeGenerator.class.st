@@ -25,7 +25,8 @@ Class {
 		'enclosingScope',
 		'returnBlock',
 		'blocksWithCalls',
-		'currentCodeUnit'
+		'currentCodeUnit',
+		'nextSequence'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -38,6 +39,13 @@ ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
 	^ self new
 		  targetClass: aClass;
 		  generateFrom: (ASPharoCompiler new astFor: (ASInliner lookup: aSymbol class: aClass) method)
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> addBlock: aBasicBlock [
+
+	aBasicBlock label: (String streamContents: [ :s| s nextPutAll: basicBlocks first label;nextPut: $.; print: self nextSequence]).
+	^ basicBlocks add: aBasicBlock
 ]
 
 { #category : 'accessing' }
@@ -123,9 +131,11 @@ ASCodeGenerator >> compileRemainingBlockClosures [
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> createContextWhereRequired [
 
-	basicBlocks first propagateContextFreeFor.
-	basicBlocks do: #defaultAsReturn.
-	basicBlocks do: #requireSourceContext
+	basicBlocks first
+		propagateContextFreeFor.
+	^ basicBlocks	do: #defaultAsReturn;
+		do: #requireSourceContext;
+		do: #setInContextForOperations
 ]
 
 { #category : 'accessing' }
@@ -244,7 +254,7 @@ ASCodeGenerator >> initialize [
 	basicBlocks := OrderedCollection with: code.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
-	inline := 0.
+	inline := nextSequence := 0.
 	tailCallOptimize := true
 ]
 
@@ -311,7 +321,7 @@ ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaust
 	isExhaustive ifTrue: [
 		code removeLastOperation.
 		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
-		basicBlocks add: joinBlock ].
+		self addBlock: joinBlock ].
 	case := code
 		        classCase: (methods collect: #methodClass)
 		        selector: methods first selector.
@@ -322,7 +332,7 @@ ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaust
 		  | targetBlock |
 		  targetBlock := case at: methodAST methodClass.
 		  targetBlock next: joinBlock.
-		  basicBlocks add: targetBlock.
+		  self addBlock: targetBlock.
 		  self setBasicBlock: targetBlock.
 		  "walk the sends method AST"
 		  self inlineMethod: methodAST for: targetBlock from: anASCSend ]
@@ -419,22 +429,25 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ basicBlocks add: ASCJoinBlock new
+	^ self addBlock: ASCJoinBlock new
 ]
 
 { #category : 'private - testing' }
 ASCodeGenerator >> newInlineBlockClosure [
 
-	^ basicBlocks add: currentCodeUnit blockClosureClass
+	^ self addBlock: currentCodeUnit blockClosureClass
 ]
 
 { #category : 'instance creation' }
 ASCodeGenerator >> newInlineMethod: aMethodAST [
 
-	| newBlock |
-	newBlock := ASCInlineMethodBlock new.
-	newBlock label: 'inlined ',aMethodAST selector.
-	^ basicBlocks add: newBlock
+	^ self addBlock: ASCInlineMethodBlock new
+]
+
+{ #category : 'API' }
+ASCodeGenerator >> nextSequence [
+
+	^ nextSequence := nextSequence + 1
 ]
 
 { #category : 'API' }
@@ -472,7 +485,11 @@ ASCodeGenerator >> popVariable: aSymbol [
 { #category : 'API' }
 ASCodeGenerator >> primitive: primitiveNumber [
 
-	code primitive: primitiveNumber
+	| new |
+	code primitive: primitiveNumber.
+	new := self addBlock: ASCBasicBlock new.
+	code branch: new.
+	code := new
 ]
 
 { #category : 'API' }
@@ -496,12 +513,6 @@ ASCodeGenerator >> pushLiteral: aLiteral [
 	^ code pushLiteral: aLiteral
 ]
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator >> pushNil [
-
-	^ code pushNil
-]
-
 { #category : 'API' }
 ASCodeGenerator >> pushSelf [
 
@@ -523,8 +534,9 @@ ASCodeGenerator >> recursiveBasicBlock: aMethodAST [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> reifyLocals [
+	" for this to work, operations on variables must rename needsContext to needsLocals "
 
-	"basicBlocks do: #reifyLocals"
+	
 ]
 
 { #category : 'finalAnalysis' }
@@ -598,7 +610,7 @@ ASCodeGenerator >> send: aSymbol targetClass: aTargetClass tail: tail [
 			  targetClass: aTargetClass
 			  for: code ].
 	bb := code send: aSymbol targetClass: aTargetClass.
-	basicBlocks add: bb.
+	self addBlock: bb.
 	code := bb.
 	^ bb
 ]
@@ -609,7 +621,7 @@ ASCodeGenerator >> sendEmbedded: aSymbol [
 	| bb |
 	bb := code embed: aSymbol.
 	^ bb ifNotNil: [
-		  basicBlocks add: bb.
+		  self addBlock: bb.
 		  code := bb ]
 ]
 

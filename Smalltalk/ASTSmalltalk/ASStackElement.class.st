@@ -27,6 +27,12 @@ ASStackElement >> at: aSymbol [
 	^ next at: aSymbol
 ]
 
+{ #category : 'accessing' }
+ASStackElement >> context [
+
+	^ next context
+]
+
 { #category : 'as yet unclassified' }
 ASStackElement >> data [
 
@@ -105,6 +111,12 @@ ASStackElement >> isEmpty [
 
 { #category : 'testing' }
 ASStackElement >> isInContext [
+
+	^ false
+]
+
+{ #category : 'testing' }
+ASStackElement >> isLocal [
 
 	^ false
 ]

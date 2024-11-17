@@ -29,12 +29,6 @@ ASCLiteral >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'Collection API' }
-ASCLiteral >> interpretFor: anInterpreter [
-
-	^ anInterpreter push: literal
-]
-
 { #category : 'code generation' }
 ASCLiteral >> outputTo: output [ 
 	^ output visitPushLiteral: literal
@@ -44,8 +38,8 @@ ASCLiteral >> outputTo: output [
 ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
 
 	stack := anASStack.
-	^ self creates:
-		  (anASStack pushDataAsTemporary: (AStackValue fromValue: literal))
+	^ self createsTemporary: anASStack data:
+		  (AStackValue fromValue: literal)
 ]
 
 { #category : 'instance creation' }

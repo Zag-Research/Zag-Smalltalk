@@ -1,3 +1,6 @@
+"
+I am a trait that has the common code for basic blocks that are possible merge targets.
+"
 Trait {
 	#name : 'ASCMergeBlocks',
 	#category : 'ASTSmalltalk-CodeGen',

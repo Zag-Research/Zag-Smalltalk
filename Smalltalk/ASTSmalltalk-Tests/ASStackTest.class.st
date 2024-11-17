@@ -17,7 +17,7 @@ ASStackTest >> testLookupContext [
 	stack := context := ASStackContext fromStack: stack.
 	self assert: stack offset equals: 2.
 	stack := stack pushForTests: 42.
-	context growBy: 2.
+	context required;growBy: 2.
 	self assert: context size equals: 5.
 
 	self deny: (stack at: 0) isInContext.
@@ -46,7 +46,7 @@ ASStackTest >> testNames [
 	self assert: (stack at: 0) stackValue value equals: 99.
 	self assert: (stack at: #p1) offset equals: 2.
 	self deny: (stack at: #p1) isInContext.
-	context growBy: 0.
+	context required.
 	self assert: stack offset equals: 5.
 	self assert: context size equals: 4.
 	self assert: stack offset equals: 5.

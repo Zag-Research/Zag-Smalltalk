@@ -33,18 +33,6 @@ ASCReturnTop >> inlineWithFixedCFG: anASCodeGenerator [
 
 ]
 
-{ #category : 'Collection API' }
-ASCReturnTop >> interpretFor: anInterpreter [
-
-	^ anInterpreter return: anInterpreter top selfOffset: stack offset - stackElement offset
-]
-
-{ #category : 'block handling' }
-ASCReturnTop >> manifestParameters [
-
-	^ stack makeManifestFor: 1
-]
-
 { #category : 'data flow instructions' }
 ASCReturnTop >> markReferences [
 
@@ -62,5 +50,5 @@ ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
 
 	stack := aStack.
 	stackElement := aStack at: #self.
-	^ (ASStackTemporary fromStack: stackElement next) data: aStack data
+	^ self createsTemporary: stackElement next data: aStack data
 ]

@@ -9,6 +9,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'accessing' }
+ASParameterNamed >> countParameters [
+
+	^ 1 + next countParameters
+]
+
 { #category : 'enumerating' }
 ASParameterNamed >> dependentValuesDo: ignored [
 
