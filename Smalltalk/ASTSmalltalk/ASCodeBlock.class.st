@@ -15,7 +15,7 @@ Class {
 	#tag : 'AST'
 }
 
-{ #category : 'tests - instance creation' }
+{ #category : 'instance creation' }
 ASCodeBlock class >> locals: locals body: body [
 
 	^ self new

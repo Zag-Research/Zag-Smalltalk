@@ -300,6 +300,15 @@ ASCompilerInlineTest >> testBlockValueInlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockValueNonlocal [
+	"blockValue
+
+	^ [ 4 ] value "
+
+	self assertEquivalentSending: #blockValueNonlocal to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBracketSendInlined [
 "bracketSend
 

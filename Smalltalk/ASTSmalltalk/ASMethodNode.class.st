@@ -14,7 +14,7 @@ Class {
 	#tag : 'AST'
 }
 
-{ #category : 'tests - instance creation' }
+{ #category : 'instance creation' }
 ASMethodNode class >> selector: aSymbol arguments: args locals: locals body: body [
 
 	^ (self selector: aSymbol locals: locals body: body) arguments: args
@@ -37,7 +37,7 @@ ASMethodNode class >> selector: aSymbol locals: locals body: body [
 		  pragmas: #(  )
 ]
 
-{ #category : 'tests - instance creation' }
+{ #category : 'instance creation' }
 ASMethodNode class >> selector: aSymbol pragmas: pragmas arguments: args locals: locals body: body [
 
 	^ (self
