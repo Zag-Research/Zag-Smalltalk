@@ -91,6 +91,19 @@ ASBlockNode >> zigWalk: aGenerator [
 	^ aGenerator pushBlock: self
 ]
 
+{ #category : 'codegen' }
+ASBlockNode >> zigWalkMethod: aGenerator [
+
+	aGenerator
+		setCodeUnit;
+		setBlockName: self selector;
+		locals: locals parameters: arguments.
+	^ body
+		  zigWalkEmpty: [ aGenerator returnEmpty ]
+		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
+		  last: [ :exp | exp zigWalkBlockFinal: aGenerator ]
+]
+
 { #category : 'compiling' }
 ASBlockNode >> zigWalkTarget: aGenerator [
 

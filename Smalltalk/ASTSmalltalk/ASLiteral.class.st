@@ -91,6 +91,11 @@ ASLiteral >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
+ASLiteral >> zigWalkBlockFinal: anASCodeGenerator [ 
+	self shouldBeImplemented.
+]
+
+{ #category : 'compiling' }
 ASLiteral >> zigWalkForReturn: aGenerator [
 
 	(#( true false 0 1 -1 nil ) includes: literal) ifTrue: [

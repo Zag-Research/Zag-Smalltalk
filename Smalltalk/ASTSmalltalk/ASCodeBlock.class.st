@@ -142,19 +142,3 @@ ASCodeBlock >> roots [
 ASCodeBlock >> selectorWithArgs [
 self subclassResponsibility 
 ]
-
-{ #category : 'codegen' }
-ASCodeBlock >> zigWalkMethod: aGenerator [
-
-	aGenerator
-		setCodeUnit;
-		setBlockName: self selector;
-		locals: locals parameters: arguments.
-	self pragmas do: [ :pragma |
-		pragma isPrimitive ifTrue: [
-			aGenerator primitive: pragma arguments first literal ] ].
-	^ body
-		  zigWalkEmpty: [ aGenerator returnEmpty ]
-		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
-		  last: [ :exp | exp zigWalkFinal: aGenerator ]
-]

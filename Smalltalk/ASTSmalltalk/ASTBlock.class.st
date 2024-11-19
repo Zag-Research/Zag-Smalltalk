@@ -21,9 +21,21 @@ AStBlock class >> block: aBlock [
 ]
 
 { #category : 'accessing' }
+AStBlock >> ast [
+
+	^ block
+]
+
+{ #category : 'accessing' }
 AStBlock >> block: anASBlock [
 
 	block := anASBlock
+]
+
+{ #category : 'compiling' }
+AStBlock >> compileIn: aCodeGenerator [
+
+	^ aCodeGenerator compileBlock: self
 ]
 
 { #category : 'as yet unclassified' }

@@ -18,15 +18,14 @@ ASStackNamedIndirect >> at: aSymbol [
 	^ myScope at: aSymbol
 ]
 
+{ #category : 'accessing' }
+ASStackNamedIndirect >> myScope: aStackContext [
+
+	myScope := aStackContext
+]
+
 { #category : 'as yet unclassified' }
 ASStackNamedIndirect >> offsetToSelf: anInteger [
 
 	self halt
-]
-
-{ #category : 'accessing' }
-ASStackNamedIndirect >> value: anObject [
-
-	super value: anObject.
-	myScope := anObject block scope
 ]

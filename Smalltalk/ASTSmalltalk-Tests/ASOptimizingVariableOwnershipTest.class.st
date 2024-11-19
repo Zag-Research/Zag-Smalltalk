@@ -5,7 +5,8 @@ Class {
 	#name : 'ASOptimizingVariableOwnershipTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'cg'
+		'cg',
+		'stack'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -14,38 +15,47 @@ Class {
 
 { #category : 'running' }
 ASOptimizingVariableOwnershipTest >> setUp [
+
+	| first |
 	super setUp.
 
 	"Put here a common initialization logic for tests"
 	cg := ASCodeGenerator new.
+	first := cg basicBlocks first.
+	first label: 'test method'.
+	stack := first stack
 ]
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testBlockVariable [
 	"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
 
-	| method location1 location2 flow |
+	| method location1 location2 flow element1 element2 |
 	method := cg basicBlocks first.
 	flow := ASFlowNew new basicBlock: method.
 
 	location1 := AStackLocation new.
+	stack := ASStackTemporary fromStack: stack.
+	element1 := stack location: location1.
 	location1 stackValue: (AStackValue fromValue: 1).
 	"method addOperation:( ASCPushVariable new with: (ASLocalNamed new
 			             name: #l1;
 			             location: location1))."
-	method addOperation:( ASCPushVariable new with: location1).
-	
+	method addOperation: (ASCPushVariable new with: element1).
+
 	location2 := AStackLocation new.
+	stack := ASStackTemporary fromStack: stack.
+	element2 := stack location: location2.
 	location2 stackValue: (AStackValue fromValue: 2).
 	"method addOperation: (ASCPopVariable new with: (ASLocalNamed new
 			            name: #l2;
 			            location: location2))."
-	method addOperation: (ASCPopVariable new with: location2).
+	method addOperation: (ASCPopVariable new with: element2).
 
 	cg deriveOwnership.
 
-	self assert: (method owns includes: location1).
-	self assert: (method owns includes: location2)
+	self assert: (method owns includes: element1).
+	self assert: (method owns includes: element2)
 ]
 
 { #category : 'tests' }

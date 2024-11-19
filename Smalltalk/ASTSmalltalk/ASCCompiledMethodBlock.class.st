@@ -62,14 +62,6 @@ ASCCompiledMethodBlock >> initialize [
 	methodBlock := self.
 ]
 
-{ #category : 'accessing' }
-ASCCompiledMethodBlock >> locals: locals parameters: arguments [
-
-	arguments do: [ :each | self initParameterNamed: each ].
-	locals do: [ :each | self initLocalNamed: each ].
-	stack := sourceElements := ASStackContext fromStack: stack
-]
-
 { #category : 'writing' }
 ASCCompiledMethodBlock >> outputTo: output [
 
@@ -94,6 +86,12 @@ ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [
 
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> selector: aSymbol class: aClass codeUnit: aBasicBlock [
+
+	label := aClass name , '.' , aSymbol
+]
+
+{ #category : 'as yet unclassified' }
+ASCCompiledMethodBlock >> selector: aSymbol class: aClass generator: aGenerator [
 
 	label := aClass name , '.' , aSymbol
 ]

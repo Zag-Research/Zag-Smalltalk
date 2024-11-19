@@ -48,6 +48,12 @@ ASCCompiledClosureBlock >> hasNonLocalReturn [
 ]
 
 { #category : 'initialization' }
+ASCCompiledClosureBlock >> initNamedIndirect: aBasicBlock [
+
+	stack := stack initNamedIndirect myScope: aBasicBlock sourceElements
+]
+
+{ #category : 'initialization' }
 ASCCompiledClosureBlock >> initialize [ 
 	super initialize.
 	hasNonLocalReturn := false
@@ -78,6 +84,12 @@ ASCCompiledClosureBlock >> printOn: aStream [
 ASCCompiledClosureBlock >> returnNonLocal [
 	hasNonLocalReturn := true.
 	^ self addOperation: ASCReturnNonLocal new
+]
+
+{ #category : 'initialization' }
+ASCCompiledClosureBlock >> selector: aSymbol class: aClass generator: aGenerator [
+
+	label := aGenerator blockLabel,'.',aSymbol
 ]
 
 { #category : 'accessing' }

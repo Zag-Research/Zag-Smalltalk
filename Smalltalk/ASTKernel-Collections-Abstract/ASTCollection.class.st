@@ -59,8 +59,8 @@ ASTCollection >> anyOne [
 	([#() anyOne] on: SubscriptOutOfBounds do: [ :ex | 'whatever' ]) >>> 'whatever'
 	"
 
-	self emptyCheck.
-	self do: [ :each | ^ each ]
+	self do: [ :each | ^ each ].
+	self errorEmptyCollection
 ]
 
 { #category : 'as yet unclassified' }

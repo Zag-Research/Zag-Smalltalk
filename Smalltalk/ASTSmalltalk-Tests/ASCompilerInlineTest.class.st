@@ -212,12 +212,12 @@ ASCompilerInlineTest >> setUp [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testArray [
-	"
-bar
+	"array
 
-	^ 42"
+	^ { 17. 42. 99 }"
 
 	self assertEquivalentSending: #array to: ASCompileTestClass1 new.
+	interpreter inspect.
 	self assert: interpreter basicBlocks size equals: 1.
 	self assert: interpreter codeSize equals: 1
 ]

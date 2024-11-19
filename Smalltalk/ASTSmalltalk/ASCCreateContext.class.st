@@ -14,6 +14,12 @@ Class {
 	#tag : 'CodeGen'
 }
 
+{ #category : 'callgraph' }
+ASCCreateContext >> dotStringOn: aStream [
+
+	aStream << 'createContext'
+]
+
 { #category : 'stack' }
 ASCCreateContext >> resultStack: anASStack basicBlock: aBasicBlock [
 

@@ -26,7 +26,9 @@ Class {
 		'returnBlock',
 		'blocksWithCalls',
 		'currentCodeUnit',
-		'nextSequence'
+		'nextSequence',
+		'compiledUnits',
+		'blockNumber'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
 	#package : 'ASTSmalltalk',
@@ -44,7 +46,7 @@ ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
 { #category : 'API' }
 ASCodeGenerator >> addBlock: aBasicBlock [
 
-	aBasicBlock label: (String streamContents: [ :s| s nextPutAll: basicBlocks first label;nextPut: $.; print: self nextSequence]).
+	aBasicBlock label: self blockLabel.
 	^ basicBlocks add: aBasicBlock
 ]
 
@@ -101,6 +103,16 @@ ASCodeGenerator >> blockClosureClass [
 	^ currentCodeUnit blockClosureClass
 ]
 
+{ #category : 'accessing' }
+ASCodeGenerator >> blockLabel [
+
+	^ (String streamContents: [ :s |
+			 s
+				 nextPutAll: basicBlocks first label;
+				 nextPut: $.;
+				 print: (blockNumber := blockNumber + 1) ])
+]
+
 { #category : 'API' }
 ASCodeGenerator >> branch: aBasicBlock [
 
@@ -112,20 +124,19 @@ ASCodeGenerator >> classOf: aString [
 	self shouldBeImplemented.
 ]
 
-{ #category : 'API' }
-ASCodeGenerator >> compileBlocks: outputter [
-	"compiling of blocks probably doesn't work right now"
+{ #category : 'compiling' }
+ASCodeGenerator >> compileBlock: anAStBlock [
 
-	(blockClosures select: #manifest) do: [ :aBlockClosure |
-		outputter blockGenerator
-			parentCodeGenerator: self;
-			generateCode: aBlockClosure block for: BlockClosure ]
+	code := ASCCompiledClosureBlock new.
+	compiledUnits add: code.
+	code initNamedIndirect: basicBlocks first.
+	anAStBlock ast zigWalkMethod: self
 ]
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> compileRemainingBlockClosures [
 
-	blockClosures do: #error
+	blockClosures do: [ : blockClosure | blockClosure compileIn: self ]
 ]
 
 { #category : 'finalAnalysis' }
@@ -138,13 +149,13 @@ ASCodeGenerator >> createContextWhereRequired [
 		do: #setInContextForOperations
 ]
 
-{ #category : 'accessing' }
+{ #category : 'finalAnalysis' }
 ASCodeGenerator >> deriveOwnership [
 	"drive the ownership of compilable unit blocks"
 
-	| varsModified varsReferenced locations |
-	varsModified := Dictionary new.
-	varsReferenced := Dictionary new.
+	| varsModified varsReferenced allVariables |
+	varsModified := IdentityDictionary new.
+	varsReferenced := IdentityDictionary new.
 
 	"get each block to gather variable usage"
 	basicBlocks do: [ :bb |
@@ -155,22 +166,24 @@ ASCodeGenerator >> deriveOwnership [
    3. For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
    4. All other variables will be placed in a closure that modifies the variable.
 "
-	locations := Set new.
-	locations addAll: varsModified keys.
-	locations addAll: varsReferenced keys.
-	
-	varsReferenced keysAndValuesDo: [ :k :v |
-		(varsModified includes: k) ifFalse: [ "this variable is never modified"
-			(v size = 1 & v keys first hasNonLocalReturn not ) ifTrue: [ "only one reference so put the variable there"
-				locations remove: k.
-				v keys first owns add: k ] ] ].
-	
-	varsModified keysAndValuesDo: [ :k :v | 
-			v keys do: [ :bb | bb hasNonLocalReturn ifFalse: [ 
-			locations remove: k.
-			v keys anyOne owns add: k ] ]].
-	
-	locations do: [ :l | self methodBlock owns add: l ]
+	allVariables := IdentitySet new.
+	allVariables addAll: varsModified keys.
+	allVariables addAll: varsReferenced keys.
+
+	varsReferenced keysAndValuesDo: [ :variable :blocks |
+		(varsModified includes: variable) ifFalse: [ "this variable is never modified"
+			(blocks sizeAsSet = 1 and: [ blocks anyOne hasNonLocalReturn not ])
+				ifTrue: [ "only one reference so put the variable there"
+					allVariables remove: variable.
+					blocks anyOne owns add: variable ] ] ].
+
+	varsModified keysAndValuesDo: [ :variable :blocks |
+		blocks doWithOccurrences: [ :bb :ignore|
+			bb hasNonLocalReturn ifFalse: [
+				allVariables remove: variable.
+				blocks anyOne owns add: variable ] ] ].
+
+	self methodBlock owns addAll: allVariables
 ]
 
 { #category : 'API' }
@@ -252,9 +265,10 @@ ASCodeGenerator >> initialize [
 	super initialize.
 	self initCode.
 	basicBlocks := OrderedCollection with: code.
+	compiledUnits := OrderedCollection with: code.
 	blockClosures := OrderedCollection new.
 	blocksWithCalls := Set new.
-	inline := nextSequence := 0.
+	inline := nextSequence := blockNumber := 0.
 	tailCallOptimize := true
 ]
 
@@ -467,6 +481,8 @@ ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> optimizeLocalVariableLocations [
+
+	compiledUnits do: #yourself
 ]
 
 { #category : 'accessing' }
@@ -634,7 +650,7 @@ ASCodeGenerator >> setBasicBlock: anASCBlock [
 { #category : 'initialization' }
 ASCodeGenerator >> setBlockName: aSymbol [ 
 
-	^ code selector: aSymbol class: targetClass codeUnit: currentCodeUnit
+	^ code selector: aSymbol class: targetClass generator: self
 ]
 
 { #category : 'accessing' }

@@ -68,23 +68,11 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 
 { #category : 'as yet unclassified' }
 ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+
 	referenced
-		at: variableLocation 
-		ifPresent: [ :dic |
-			dic
-				at: aDispatchableBlock
-				ifPresent: [ :count | dic at: aDispatchableBlock put: count + 1 ]
-				ifAbsentPut: [ 1 ] ]
-		ifAbsentPut: [
-			Dictionary new
-				at: aDispatchableBlock put: 1;
-				yourself ]
-]
-
-{ #category : 'as yet unclassified' }
-ASCPushVariable >> variableUsage: aDispatchableBlock [
-
-	aDispatchableBlock referenced: variable
+		at: variableLocation
+		ifPresent: [ :bag | bag add: aDispatchableBlock ]
+		ifAbsentPut: [ IdentityBag with: aDispatchableBlock ]
 ]
 
 { #category : 'instance creation' }

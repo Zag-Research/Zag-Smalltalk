@@ -101,6 +101,12 @@ ASStack >> initLocalNamed: name [
 	^ (ASLocalNamed new fromStack: self) name: name; data: AStUndefinedClass new
 ]
 
+{ #category : 'accessing' }
+ASStack >> initNamedIndirect [
+
+	^ ASStackNamedIndirect fromStack: self
+]
+
 { #category : 'API' }
 ASStack >> initParameterNamed: name [
 

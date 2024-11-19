@@ -5,10 +5,7 @@ Class {
 	#name : 'ASCDispatchableBlock',
 	#superclass : 'ASCCompilableUnitBlock',
 	#instVars : [
-		'declares',
 		'owns',
-		'modifies',
-		'references',
 		'returnBlocks'
 	],
 	#category : 'ASTSmalltalk-CodeGen',
@@ -21,40 +18,6 @@ ASCDispatchableBlock class >> recategorizeSelector: selector from: oldProtocol t
 	^ self subclassResponsibility
 ]
 
-{ #category : 'accessing' }
-ASCDispatchableBlock >> declares [
-
-	^ declares
-]
-
-{ #category : 'accessing' }
-ASCDispatchableBlock >> declares: anObject [
-
-	declares := anObject
-]
-
-{ #category : 'analyzing' }
-ASCDispatchableBlock >> deriveVariableOwnership: variables [
-
-	| doBlock |
-	"
-	1. If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created).
-   2. If the variable is only referenced in one BlockClosure then it will be created as a local variable there.
-   3. For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
-   4. All other variables will be placed in a closure that modifies the variable.
-"
-	doBlock := [ :var :count |
-	           variables
-		           at: var
-		           ifPresent: [ :dic | dic at: self ifPresent: [ :bbCount | dic at: self put: bbCount + count ] ifAbsentPut: [count] ]
-		           ifAbsentPut: [
-			          Dictionary new
-			           at: self put: count;
-			           yourself ] ].
-	references keysAndValuesDo: doBlock.
-	modifies keysAndValuesDo: doBlock
-]
-
 { #category : 'as yet unclassified' }
 ASCDispatchableBlock >> deriveVariableReferences: referenced modifies: modified [
 
@@ -62,47 +25,28 @@ ASCDispatchableBlock >> deriveVariableReferences: referenced modifies: modified 
 ]
 
 { #category : 'as yet unclassified' }
-ASCDispatchableBlock >> deriveVariableUsage [
-
-	operations do: [ :op |
-		op variableUsage: self ]
-]
-
-{ #category : 'as yet unclassified' }
 ASCDispatchableBlock >> hasNonLocalReturn [
 	^ false
 ]
 
-{ #category : 'accessing' }
+{ #category : 'initialization' }
 ASCDispatchableBlock >> initialize [
 
 	super initialize.
-	references := Set new.
-	modifies := Set new.
-	owns := Set new.
-	declares := Set new.
+	owns := IdentitySet new.
 	returnBlocks := Dictionary new
 ]
 
 { #category : 'accessing' }
+ASCDispatchableBlock >> locals: locals parameters: arguments [
+
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
+	stack := sourceElements := ASStackContext fromStack: stack
+]
+
+{ #category : 'accessing' }
 ASCDispatchableBlock >> methodBlock [
-]
-
-{ #category : 'accessing' }
-ASCDispatchableBlock >> modified [
-
-	^ modifies
-]
-
-{ #category : 'accessing' }
-ASCDispatchableBlock >> modified: aStackElement [
-
-	modifies
-		at: aStackElement location
-		ifPresent: [ :count |
-						self halt.
-		modifies at: aStackElement location put: count + 1 ]
-		ifAbsentPut: [ 1 ]
 ]
 
 { #category : 'accessing' }
@@ -115,20 +59,4 @@ ASCDispatchableBlock >> owns [
 ASCDispatchableBlock >> owns: anObject [
 
 	owns := anObject
-]
-
-{ #category : 'accessing' }
-ASCDispatchableBlock >> referenced [
-
-	^ references
-]
-
-{ #category : 'accessing' }
-ASCDispatchableBlock >> referenced: aStackElement [
-
-	references
-		at: aStackElement location
-		ifPresent: [ :count |
-		references at: aStackElement location put: count + 1 ]
-		ifAbsentPut: [ 1 ]
 ]
