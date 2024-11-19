@@ -16,7 +16,7 @@ Class {
 ASCVariableOperations >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.
 	aStream tab.
-	aStream << variableLocation name
+	aStream << '???' "variableLocation name"
 	
 ]
 
@@ -42,6 +42,22 @@ ASCVariableOperations >> needsLocals [
 { #category : 'code generation' }
 ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
+]
+
+{ #category : 'instance creation' }
+ASCVariableOperations >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+	modified
+		at: variableLocation
+		ifPresent: [ :dic |
+			dic at: aDispatchableBlock ifPresent: [ :count |
+			dic at: aDispatchableBlock put: count + 1 ] ifAbsentPut: [ 1 ]]
+	 	ifAbsentPut: [ Dictionary new at: aDispatchableBlock put: 1; yourself ]
+]
+
+{ #category : 'instance creation' }
+ASCVariableOperations >> variableUsage: aDispatchableBlock [
+
+	aDispatchableBlock modified: variable
 ]
 
 { #category : 'instance creation' }

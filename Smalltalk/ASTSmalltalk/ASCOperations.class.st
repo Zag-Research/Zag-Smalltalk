@@ -23,6 +23,12 @@ ASCOperations class >> with: anObject and: another [
 	^ self new with: anObject and: another
 ]
 
+{ #category : 'instance creation' }
+ASCOperations >> ariableReferences: referenced modifies: modified [
+
+	
+]
+
 { #category : 'accessing' }
 ASCOperations >> children [
 ^ OrderedCollection new:0
@@ -110,6 +116,14 @@ ASCOperations >> shrinksStack [
 ASCOperations >> stack [
 
 	^ stack
+]
+
+{ #category : 'instance creation' }
+ASCOperations >> variableReferences: aCollection modifies: aCollection2 block: aBasicBlock [ 
+]
+
+{ #category : 'instance creation' }
+ASCOperations >> variableUsage: aDispatchableBlock [
 ]
 
 { #category : 'instance creation' }
