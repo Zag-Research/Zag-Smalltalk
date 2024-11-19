@@ -68,7 +68,6 @@ ASCBasicBlock >> addFlow [
 
 { #category : 'initialization' }
 ASCBasicBlock >> addOperation: anOperation [
-
 	operations add: anOperation.
 	stack := anOperation resultStack: stack basicBlock: self.
 	^ false

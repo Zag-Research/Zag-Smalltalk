@@ -29,7 +29,7 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(;
-		<< variableLocation name;
+		<< '???'; "variableLocaton name;"
 		<< $)
 ]
 
@@ -64,6 +64,27 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 	stack := anASStack.
 	stackOffset := anASStack offset.
 	^ self createsTemporary: anASStack data: variableLocation stackValue
+]
+
+{ #category : 'as yet unclassified' }
+ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+	referenced
+		at: variableLocation 
+		ifPresent: [ :dic |
+			dic
+				at: aDispatchableBlock
+				ifPresent: [ :count | dic at: aDispatchableBlock put: count + 1 ]
+				ifAbsentPut: [ 1 ] ]
+		ifAbsentPut: [
+			Dictionary new
+				at: aDispatchableBlock put: 1;
+				yourself ]
+]
+
+{ #category : 'as yet unclassified' }
+ASCPushVariable >> variableUsage: aDispatchableBlock [
+
+	aDispatchableBlock referenced: variable
 ]
 
 { #category : 'instance creation' }
