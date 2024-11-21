@@ -81,6 +81,13 @@ ASReturn >> zigWalk: aGenerator [
 ]
 
 { #category : 'compiling' }
+ASReturn >> zigWalkBlockFinal: aGenerator [
+
+	(expression zigWalkForNonLocal: aGenerator) ifFalse: [
+		^ aGenerator returnNonLocal ]
+]
+
+{ #category : 'compiling' }
 ASReturn >> zigWalkDiscard: aGenerator [
 
 	^ ASTInvalid signal: 'return can''t be in the middle of a body'

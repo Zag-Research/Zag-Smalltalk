@@ -248,7 +248,7 @@ ASCBasicBlock >> flowForTemporaries [
 { #category : 'API' }
 ASCBasicBlock >> forceCreateContext [
 
-	contextStartsAt = NoContext ifTrue: [ self insertContext ]
+	contextStartsAt = NoContext ifTrue: [ self halt;insertContext ]
 ]
 
 { #category : 'testing' }
@@ -511,11 +511,11 @@ ASCBasicBlock >> propagateContextFreeFor: aStackContext [
 
 	contextStartsAt ifNil: [
 		contextStartsAt := NoContext.
-		(operations anySatisfy: [ :operation | operation needsContext: aStackContext ])
-			ifTrue: [
-				self insertContext.
-				aStackContext required.
-				^ false ] ].
+		(operations anySatisfy: [ :operation |
+			 operation needsContext: aStackContext ]) ifTrue: [
+			self halt;insertContext.
+			aStackContext required.
+			^ false ] ].
 	^ contextStartsAt = ContextInherited
 ]
 
