@@ -44,7 +44,7 @@ ASCVariableOperations >> outputTo: unknown [
 self subclassResponsibility 
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'finalAnalysis' }
 ASCVariableOperations >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
 
 	modified

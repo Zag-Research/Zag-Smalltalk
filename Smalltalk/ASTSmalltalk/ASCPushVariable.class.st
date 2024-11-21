@@ -66,9 +66,8 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 	^ self createsTemporary: anASStack data: variableLocation stackValue
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'finalAnalysis' }
 ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
-
 	referenced
 		at: variableLocation
 		ifPresent: [ :bag | bag add: aDispatchableBlock ]

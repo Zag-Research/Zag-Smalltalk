@@ -52,7 +52,7 @@ ASOptimizingVariableOwnershipTest >> testBlockVariable [
 			            location: location2))."
 	method addOperation: (ASCPopVariable new with: element2).
 
-	cg deriveOwnership.
+	cg optimizeLocalVariableLocations.
 
 	self assert: (method owns includes: element1).
 	self assert: (method owns includes: element2)
@@ -76,17 +76,17 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies 
 	element2 := stack location: location2.
 	location2 stackValue: (AStackValue fromValue: 2).
 
-	method addOperation: (ASCPushVariable new with: element1 ).
+	method addOperation: (ASCPushVariable new with: element2).
 	method addOperation: (ASCPopVariable new with: element2).
 
-	bb1 := ASCCompiledClosureBlock new label: 'bb1'.
+	bb1 := ASCDispatchableBlock new label: 'bb1'.
 	bb1 addOperation: (ASCPushVariable new with: element1).
 	bb1 addOperation: (ASCPopVariable new with: element1).
 
-	cg basicBlocks add: bb1.
+	cg compiledUnits add: bb1.
 
 
-	cg deriveOwnership.
+	cg optimizeLocalVariableLocations.
 
 	self assert: (method owns includes: element1) not.
 	self assert: (method owns includes: element2).
@@ -129,7 +129,7 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesW
 	cg basicBlocks add: bb1.
 
 
-	cg deriveOwnership.
+	cg optimizeLocalVariableLocations.
 
 	self assert: (method owns includes: element1).
 	self assert: (method owns includes: element2).
