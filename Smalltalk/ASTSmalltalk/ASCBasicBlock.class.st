@@ -215,12 +215,6 @@ ASCBasicBlock >> endsWithCall [
 	^ operations last isCallOperation
 ]
 
-{ #category : 'accessing' }
-ASCBasicBlock >> flow [
-
-	^ false
-]
-
 { #category : 'data flow instructions' }
 ASCBasicBlock >> flowForLocals [
 

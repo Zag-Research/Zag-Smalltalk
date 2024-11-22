@@ -10,7 +10,8 @@ Class {
 	#instVars : [
 		'creator',
 		'stackValueOrFlow',
-		'consumers'
+		'consumers',
+		'flowValue'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -39,6 +40,18 @@ AStackLocation >> creator: anOperation [
 AStackLocation >> dataClass [
 
 	^ stackValueOrFlow dataClass
+]
+
+{ #category : 'flow analysis' }
+AStackLocation >> flowValue [
+
+	^ flowValue
+]
+
+{ #category : 'accessing' }
+AStackLocation >> flowValue: aFlow [
+
+	flowValue := aFlow
 ]
 
 { #category : 'initialization' }

@@ -27,7 +27,7 @@ ASStack >> add: newObject [
 	^ self shouldNotImplement
 ]
 
-{ #category : 'adding' }
+{ #category : 'flow analysis' }
 ASStack >> addFlow: aBasicBlock [
 
 	^ self.

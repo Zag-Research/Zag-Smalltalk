@@ -84,6 +84,11 @@ ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [
 	^ aBasicBlock returnTop
 ]
 
+{ #category : 'accessing' }
+ASCCompiledMethodBlock >> selector: aString [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> selector: aSymbol class: aClass codeUnit: aBasicBlock [
 
@@ -105,7 +110,7 @@ ASCCompiledMethodBlock >> sendTail: aSymbol targetClass: target for: aBasicBlock
 { #category : 'writing' }
 ASCCompiledMethodBlock >> sourceElementsForInspect [
 
-	^ OrderedCollection new addAll: sourceElements replicate;yourself
+	^ OrderedCollection new addAll: (sourceElements ifNil: [#()] ifNotNil: [sourceElements replicate]);yourself
 ]
 
 { #category : 'as yet unclassified' }

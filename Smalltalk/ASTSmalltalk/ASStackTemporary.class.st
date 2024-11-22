@@ -15,13 +15,13 @@ Class {
 	#tag : 'Stack'
 }
 
-{ #category : 'accessing' }
+{ #category : 'flow analysis' }
 ASStackTemporary >> addFlow: aBasicBlock [
 
 	| flow |
 	flow := ASFlowNew new basicBlock: aBasicBlock.
-	self location stackValue: flow.
-	self next addFlow: aBasicBlock. 
+	self location flowValue: flow.
+	self next addFlow: aBasicBlock
 ]
 
 { #category : 'accessing' }
@@ -55,9 +55,9 @@ ASStackTemporary >> drop: count [
 ]
 
 { #category : 'accessing' }
-ASStackTemporary >> flow [ 
-	
-	^ location stackValue.
+ASStackTemporary >> flow [
+
+	^ location flowValue
 ]
 
 { #category : 'accessing' }
