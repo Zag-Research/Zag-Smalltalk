@@ -12,6 +12,7 @@ Trait {
 ASCMergeBlocks >> addFlow [
 
 	| stackFromSources |
+	self sources isEmptyOrNil ifTrue: [ ^ self ].
 	stackFromSources := self sources
 		                    collect: #stack
 		                    as: Array.

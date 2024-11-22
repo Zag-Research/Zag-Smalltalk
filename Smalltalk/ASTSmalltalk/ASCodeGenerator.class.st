@@ -226,8 +226,7 @@ ASCodeGenerator >> finalAnalysis [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> flowAnalysis [
 
-	basicBlocks do: #becomeJoinBlock.
-	basicBlocks do: #markReferences
+	basicBlocks do: #addFlow
 ]
 
 { #category : 'translating' }

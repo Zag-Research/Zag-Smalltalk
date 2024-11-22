@@ -107,12 +107,6 @@ ASCCompiledMethodBlock >> sendTail: aSymbol targetClass: target for: aBasicBlock
 	^ aBasicBlock sendTail: aSymbol targetClass: target
 ]
 
-{ #category : 'writing' }
-ASCCompiledMethodBlock >> sourceElementsForInspect [
-
-	^ OrderedCollection new addAll: (sourceElements ifNil: [#()] ifNotNil: [sourceElements replicate]);yourself
-]
-
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> zigWalkReturn: anASReturn for: anASCodeGenerator [ 
 	self shouldBeImplemented.

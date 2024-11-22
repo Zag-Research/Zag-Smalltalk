@@ -9,6 +9,13 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'flow analysis' }
+ASParameterNamed >> addFlow: aBasicBlock [
+
+	self location flowValue: ASFlowOnDemand new.
+	self next addFlow: aBasicBlock
+]
+
 { #category : 'accessing' }
 ASParameterNamed >> countParameters [
 

@@ -30,7 +30,7 @@ ASStack >> add: newObject [
 { #category : 'flow analysis' }
 ASStack >> addFlow: aBasicBlock [
 
-	^ self.
+	^ self
 ]
 
 { #category : 'enumerating' }
@@ -69,7 +69,8 @@ ASStack >> context [
 
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
-	self printNameOn: stream.
+
+	^ self subclassResponsibility
 ]
 
 { #category : 'enumerating' }

@@ -23,6 +23,19 @@ ASStackContext class >> canonicalArgumentName [
 	^ 'aStackContext'
 ]
 
+{ #category : 'flow analysis' }
+ASStackContext >> addFlow: aBasicBlock [
+
+	^ next addFlow: aBasicBlock
+]
+
+{ #category : 'enumerating' }
+ASStackContext >> addToCollection: aCollection [
+
+	aCollection addLast: self.
+	^ next addToCollection: aCollection
+]
+
 { #category : 'accessing' }
 ASStackContext >> at: aSymbol [
 
@@ -33,6 +46,12 @@ ASStackContext >> at: aSymbol [
 ASStackContext >> context [
 
 	^ self
+]
+
+{ #category : 'displaying' }
+ASStackContext >> displayStringOn: stream [
+
+	self printNameOn: stream
 ]
 
 { #category : 'accessing' }
@@ -77,7 +96,7 @@ ASStackContext >> offset [
 { #category : 'displaying' }
 ASStackContext >> printNameOn: stream [
 
-	^ stream nextPutAll: 'context'
+	^ stream nextPutAll: '<context>'
 ]
 
 { #category : 'accessing' }
