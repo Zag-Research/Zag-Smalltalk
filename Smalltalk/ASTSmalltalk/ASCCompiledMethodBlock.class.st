@@ -5,8 +5,6 @@ Returns from me are real returns
 Class {
 	#name : 'ASCCompiledMethodBlock',
 	#superclass : 'ASCDispatchableBlock',
-	#traits : 'ASCMergeBlocks',
-	#classTraits : 'ASCMergeBlocks classTrait',
 	#instVars : [
 		'primitive'
 	],
