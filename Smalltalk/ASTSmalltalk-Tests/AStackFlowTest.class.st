@@ -82,7 +82,7 @@ AStackFlowTest >> testPlusAndAnd [
 	allAnnotatedOnDemand := params allSatisfy: [:param |
         param location flowValue class = ASFlowOnDemand].
 
-	"All parameters are annoted with `on Demand`"
+	"All parameters are annotated with `on Demand`"
 	self assert: allAnnotatedOnDemand.
 	"Top stack element is the temp result, hence is annotated with `new`"
 	self assert: (result location flowValue class) equals: ASFlowNew.
