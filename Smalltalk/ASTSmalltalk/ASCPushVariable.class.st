@@ -29,7 +29,7 @@ ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
 	aStream << $(;
-		<< '???'; "variableLocaton name;"
+		<< variableLocation name;
 		<< $)
 ]
 
@@ -55,7 +55,7 @@ ASCPushVariable >> outputTo: anOutput [
 { #category : 'printing' }
 ASCPushVariable >> printOn: aStream [
 
-	aStream nextPutAll: ' - ';nextPutAll: variableLocation name
+	aStream nextPutAll: variableLocation name.
 ]
 
 { #category : 'stack' }
