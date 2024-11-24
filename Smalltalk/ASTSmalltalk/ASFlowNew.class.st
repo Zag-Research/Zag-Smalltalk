@@ -49,17 +49,5 @@ ASFlowNew >> printOn: aStream [
 
 	aStream
 		nextPutAll: 'new ';
-		nextPutAll: (outputName ifNil: [ '' ]).
-	value ifNotNil: [
-		aStream
-			space;
-			print: value ].
-	^ self printClassOn: aStream
-]
-
-{ #category : 'accessing' }
-ASFlowNew >> value: anObject [
-
-	value := anObject.
-	self class: anObject flowClass
+		nextPutAll: (outputName ifNil: [ '' ])
 ]

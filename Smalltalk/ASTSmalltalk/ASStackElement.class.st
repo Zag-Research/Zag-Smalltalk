@@ -14,6 +14,12 @@ Class {
 	#tag : 'Stack'
 }
 
+{ #category : 'flow analysis' }
+ASStackElement >> addFlow: aBasicBlock [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'enumerating' }
 ASStackElement >> addToCollection: aCollection [
 
@@ -51,12 +57,6 @@ ASStackElement >> data: aStackValue [
 ASStackElement >> dataClass [
 
 	^ location dataClass
-]
-
-{ #category : 'displaying' }
-ASStackElement >> displayStringOn: stream [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'enumerating' }

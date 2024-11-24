@@ -7,7 +7,8 @@ Class {
 	#name : 'AStBlock',
 	#superclass : 'AStackValue',
 	#instVars : [
-		'block'
+		'block',
+		'compiledUnit'
 	],
 	#category : 'ASTSmalltalk-Stack',
 	#package : 'ASTSmalltalk',
@@ -38,6 +39,17 @@ AStBlock >> compileIn: aCodeGenerator [
 	^ aCodeGenerator compileBlock: self
 ]
 
+{ #category : 'accessing' }
+AStBlock >> compiledUnit [
+	^ compiledUnit
+]
+
+{ #category : 'accessing' }
+AStBlock >> compiledUnit: aCompiledUnit [
+
+	compiledUnit := aCompiledUnit
+]
+
 { #category : 'as yet unclassified' }
 AStBlock >> couldMergeIn: other [
 
@@ -48,10 +60,4 @@ AStBlock >> couldMergeIn: other [
 AStBlock >> dataClass [
 
 	^ BlockClosure
-]
-
-{ #category : 'as yet unclassified' }
-AStBlock >> finalAnalysis [
-
-	self halt
 ]

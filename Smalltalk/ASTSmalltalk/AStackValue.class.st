@@ -34,8 +34,9 @@ AStackValue class >> fromValue: anObject [
 
 	| aClass |
 	aClass := anObject class.
-	aClass == SmallInteger ifTrue: [ ^ AStSmallInteger new setValue: anObject ].
-	aClass == BlockClosure ifTrue: [ ^ AStBlock new block: anObject ].
+	aClass == SmallInteger ifTrue: [
+		^ AStSmallInteger new setValue: anObject ].
+	aClass == BlockClosure ifTrue: [ ^ AStBlock new halt;block: anObject ].
 	^ self fromClass: aClass
 ]
 

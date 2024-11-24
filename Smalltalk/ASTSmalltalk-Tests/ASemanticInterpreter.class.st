@@ -83,6 +83,11 @@ ASemanticInterpreter >> contextAt: anInteger [
 	^ context at: anInteger
 ]
 
+{ #category : 'accessing' }
+ASemanticInterpreter >> copiledUnitAt: anInteger [ 
+	self shouldBeImplemented.
+]
+
 { #category : 'menu morph' }
 ASemanticInterpreter >> createContext: aStackContext [
 

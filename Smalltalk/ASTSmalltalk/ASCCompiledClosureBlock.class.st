@@ -86,6 +86,12 @@ ASCCompiledClosureBlock >> returnNonLocal [
 	^ self addOperation: ASCReturnNonLocal new
 ]
 
+{ #category : 'API' }
+ASCCompiledClosureBlock >> returnTopFor: aBasicBlock [
+
+	aBasicBlock returnTop
+]
+
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> selector: aSymbol class: aClass generator: aGenerator [
 

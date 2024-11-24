@@ -129,6 +129,7 @@ ASCodeGenerator >> compileBlock: anAStBlock [
 
 	code := ASCCompiledClosureBlock new.
 	compiledUnits add: code.
+	anAStBlock compiledUnit: code.
 	code initNamedIndirect: basicBlocks first.
 	anAStBlock ast zigWalkMethod: self
 ]
@@ -194,8 +195,7 @@ ASCodeGenerator >> finalAnalysis [
 { #category : 'data flow instructions' }
 ASCodeGenerator >> flowAnalysis [
 
-	basicBlocks do: #becomeJoinBlock.
-	basicBlocks do: #markReferences
+	basicBlocks do: #addFlow
 ]
 
 { #category : 'translating' }
@@ -515,10 +515,10 @@ ASCodeGenerator >> pushArray: arraySize [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> pushBlock: anASBlock [
+ASCodeGenerator >> pushBlock: anASBlockNode [
 
 	| block |
-	block := AStBlock new block: anASBlock.
+	block := AStBlock new block: anASBlockNode.
 	blockClosures add: block.
 	code addOperation: (ASCBlock with: block)
 ]
@@ -569,14 +569,6 @@ ASCodeGenerator >> returnEmpty [
 
 	" `code` and `currentCodeUnitBlock` are the same"
 	^ currentCodeUnit returnEmpty
-]
-
-{ #category : 'examples' }
-ASCodeGenerator >> returnLiteral: literal [
-
-	self pushLiteral: literal.
-	self returnTop.
-	^ true
 ]
 
 { #category : 'API' }

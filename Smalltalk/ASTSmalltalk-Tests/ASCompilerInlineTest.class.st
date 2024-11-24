@@ -185,6 +185,7 @@ ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection
 	self
 		assert: (interpreter send: selecter with: aCollection to: anObject)
 		equals: (anObject perform: selecter withArguments: aCollection).
+		interpreter inspect.
 	self assert: interpreter stackDepth equals: 1
 ]
 

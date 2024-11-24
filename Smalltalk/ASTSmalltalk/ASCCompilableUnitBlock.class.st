@@ -32,7 +32,7 @@ ASCCompilableUnitBlock >> returnEmpty [
 { #category : 'API' }
 ASCCompilableUnitBlock >> returnSelfFor: aBasicBlock [
 
-	^ self subclassResponsibility
+	^ aBasicBlock returnSelf
 ]
 
 { #category : 'API' }

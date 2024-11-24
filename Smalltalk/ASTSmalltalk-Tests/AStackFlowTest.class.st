@@ -30,6 +30,17 @@ AStackFlowTest >> setUp [
 ]
 
 { #category : 'tests' }
+AStackFlowTest >> testBar [
+
+	| cg |
+	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #bar.
+	cg finalAnalysis.
+	cg flowAnalysis.
+	self deny: (cg basicBlocks first stack at: self) flowValue isNil.
+	cg inspect
+]
+
+{ #category : 'tests' }
 AStackFlowTest >> testPhi1 [
 
 	"Merge `ASFlowNew`s together"
