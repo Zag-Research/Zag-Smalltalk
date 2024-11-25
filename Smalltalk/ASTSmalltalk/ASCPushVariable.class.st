@@ -67,7 +67,8 @@ ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
 ]
 
 { #category : 'finalAnalysis' }
-ASCPushVariable >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+ASCPushVariable >> variableReferences: referenced modifies: ignore block: aDispatchableBlock [
+
 	referenced
 		at: variableLocation
 		ifPresent: [ :bag | bag add: aDispatchableBlock ]

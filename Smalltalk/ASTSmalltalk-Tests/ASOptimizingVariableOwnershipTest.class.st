@@ -6,7 +6,17 @@ Class {
 	#superclass : 'TestCase',
 	#instVars : [
 		'cg',
-		'stack'
+		'stack',
+		'method',
+		'flow',
+		'location1',
+		'element1',
+		'location2',
+		'element2',
+		'location3',
+		'element3',
+		'bb1',
+		'bb2'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
 	#package : 'ASTSmalltalk-Tests',
@@ -23,33 +33,39 @@ ASOptimizingVariableOwnershipTest >> setUp [
 	cg := ASCodeGenerator new.
 	first := cg basicBlocks first.
 	first label: 'test method'.
-	stack := first stack
-]
+	stack := first stack.
 
-{ #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testBlockVariable [
-	"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-
-	| method location1 location2 flow element1 element2 |
 	method := cg basicBlocks first.
+	method label: #method.
 	flow := ASFlowNew new basicBlock: method.
 
 	location1 := AStackLocation new.
 	stack := ASStackTemporary fromStack: stack.
 	element1 := stack location: location1.
 	location1 stackValue: (AStackValue fromValue: 1).
-	"method addOperation:( ASCPushVariable new with: (ASLocalNamed new
-			             name: #l1;
-			             location: location1))."
-	method addOperation: (ASCPushVariable new with: element1).
 
 	location2 := AStackLocation new.
 	stack := ASStackTemporary fromStack: stack.
 	element2 := stack location: location2.
 	location2 stackValue: (AStackValue fromValue: 2).
-	"method addOperation: (ASCPopVariable new with: (ASLocalNamed new
-			            name: #l2;
-			            location: location2))."
+
+	location3 := AStackLocation new.
+	stack := ASStackTemporary fromStack: stack.
+	element3 := stack location: location3.
+	location3 stackValue: (AStackValue fromValue: 3).
+
+	bb1 := ASCCompiledClosureBlock new label: 'bb1'.
+	cg compiledUnits add: bb1.
+	
+	bb2 := ASCCompiledClosureBlock new label: 'bb2'.
+	cg compiledUnits add: bb2
+]
+
+{ #category : 'tests' }
+ASOptimizingVariableOwnershipTest >> testBlockVariable [
+	"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
+	
+	method addOperation: (ASCPushVariable new with: element1).
 	method addOperation: (ASCPopVariable new with: element2).
 
 	cg optimizeLocalVariableLocations.
@@ -59,32 +75,61 @@ ASOptimizingVariableOwnershipTest >> testBlockVariable [
 ]
 
 { #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies [
+ASOptimizingVariableOwnershipTest >> testMultipleBlockModifieds [
 	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
 
-	| method bb1 location1 location2 element1 element2 |
-	method := cg basicBlocks first.
-	method label: #method.
+	bb1 addOperation: (ASCPushVariable new with: element1).
+	bb1 addOperation: (ASCPopVariable new with: element1).
 
-	location1 := AStackLocation new.
-	stack := ASStackTemporary fromStack: stack.
-	element1 := stack location: location1.
-	location1 stackValue: (AStackValue fromValue: 1).
+	bb2 addOperation: (ASCPushVariable new with: element1).
+	bb2 addOperation: (ASCPopVariable new with: element1).
 
-	location2 := AStackLocation new.
-	stack := ASStackTemporary fromStack: stack.
-	element2 := stack location: location2.
-	location2 stackValue: (AStackValue fromValue: 2).
+	cg optimizeLocalVariableLocations.
+
+	self
+		assert: ((bb1 owns includes: element1)
+		xor: [ bb2 owns includes: element1 ])
+]
+
+{ #category : 'tests' }
+ASOptimizingVariableOwnershipTest >> testMultipleBlockReference [
+	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+
+	bb1 addOperation: (ASCPushVariable new with: element1).
+	
+	bb2 addOperation: (ASCPushVariable new with: element1).
+	
+	cg optimizeLocalVariableLocations.
+
+	self assert: (bb1 owns includes: element1) not.
+	self assert: (bb2 owns includes: element1) not.
+	self assert: (method owns includes: element1).
+]
+
+{ #category : 'tests' }
+ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceAndOneModifiesWithNonLocalReturn [
+	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+
+	bb1 addOperation: (ASCPushVariable new with: element1).
+	
+	bb2 addOperation: (ASCPushVariable new with: element1).
+	bb2 addOperation: (ASCPopVariable new with: element1).
+	
+	cg optimizeLocalVariableLocations.
+
+	self assert: (bb1 owns includes: element1) not.
+	self assert: (bb2 owns includes: element1).
+]
+
+{ #category : 'tests' }
+ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies [
+	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
 
 	method addOperation: (ASCPushVariable new with: element2).
 	method addOperation: (ASCPopVariable new with: element2).
 
-	bb1 := ASCDispatchableBlock new label: 'bb1'.
 	bb1 addOperation: (ASCPushVariable new with: element1).
 	bb1 addOperation: (ASCPopVariable new with: element1).
-
-	cg compiledUnits add: bb1.
-
 
 	cg optimizeLocalVariableLocations.
 
@@ -97,37 +142,13 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies 
 ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesWithNonLocalReturn [
 	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
 
-	| method bb1 location1 location2 flow location3 element1 element2 element3 |
-	method := cg basicBlocks first.
-	method label: #method.
-	flow := ASFlowNew new basicBlock: method.
-
-		location1 := AStackLocation new.
-		stack := ASStackTemporary fromStack: stack.
-		element1 := stack location: location1.
-		location1 stackValue: (AStackValue fromValue: 1).
-
-		location2 := AStackLocation new.
-		stack := ASStackTemporary fromStack: stack.
-		element2 := stack location: location2.
-		location2 stackValue: (AStackValue fromValue: 2).
-
-		location3 := AStackLocation new.
-		stack := ASStackTemporary fromStack: stack.
-		element3 := stack location: location3.
-		location3 stackValue: (AStackValue fromValue: 3).
-
-		method addOperation: (ASCPushVariable new with: element1).
+	method addOperation: (ASCPushVariable new with: element1).
 	method addOperation: (ASCPopVariable new with: element2).
-
-	bb1 := ASCCompiledClosureBlock new label: 'bb1'.
+	
 	bb1 addOperation: (ASCPushVariable new with: element1).
-	bb1 addOperation: (ASCPopVariable new with: element1 ).
+	bb1 addOperation: (ASCPopVariable new with: element1).
 	bb1 addOperation: (ASCPushVariable new with: element3).
 	bb1 returnNonLocal.
-
-	cg basicBlocks add: bb1.
-
 
 	cg optimizeLocalVariableLocations.
 
@@ -135,64 +156,4 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesW
 	self assert: (method owns includes: element2).
 	self assert: (bb1 owns includes: element1) not.
 	self assert: (bb1 owns includes: element2) not
-]
-
-{ #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testSimpleOneBlockDeclares [
-"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-
-| method |
-method := ASCCompiledMethodBlock new.
-method declares add: #myVar.
-
-method deriveOwnership.
-
-self assert: (method owns isEmpty)
-]
-
-{ #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testSimpleOneBlockDeclaresAndModifies [
-"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-
-| method |
-method := ASCCompiledMethodBlock new.
-method declares add: #myVar.
-method modified add: #myVar.
-
-method deriveOwnership.
-
-self assert: (method owns includes: #myVar)
-]
-
-{ #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testSimpleOneBlockDeclaresAndReferences [
-"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-
-| method |
-method := ASCCompiledMethodBlock new.
-method declares add: #myVar.
-method referenced add: #myVar.
-
-method deriveOwnership.
-
-self assert: (method owns includes: #myVar) 
-]
-
-{ #category : 'tests' }
-ASOptimizingVariableOwnershipTest >> testTwoBlocksOneBlockDeclaresOtherReferences [
-"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-
-| method block |
-method := ASCCompiledMethodBlock new.
-method declares add: #myVar.
-
-block := ASCCompiledClosureBlock new.
-block referenced add: #myVar.
-
-"how many passes?"
-method deriveOwnership.
-block deriveOwnership.
-
-self assert: method owns isEmpty.
-self assert: (block owns includes: #myVar).
 ]

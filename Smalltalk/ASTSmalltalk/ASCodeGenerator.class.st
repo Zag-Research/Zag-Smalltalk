@@ -469,20 +469,22 @@ ASCodeGenerator >> optimizeLocalVariableLocations [
 	allVariables addAll: varsModified keys.
 	allVariables addAll: varsReferenced keys.
 
-	varsReferenced keysAndValuesDo: [ :variable :blocks |
-		(varsModified includesKey: variable) ifFalse: [ "this variable is never modified"
-			(blocks sizeAsSet = 1 and: [ blocks anyOne hasNonLocalReturn not ])
+	allVariables do: [ :var |
+		(varsModified includesKey: var) ifTrue: [ | owner |
+			owner := (varsModified at: var) asSet detect: [ :bb |
+				bb hasNonLocalReturn ifFalse: [
+					true ]
+			].
+			owner ifNil: [self methodBlock owns add: var ] ifNotNil: [owner owns add: var]
+		] ifFalse: [ | blocksWithOccurences |
+			blocksWithOccurences := varsReferenced at: var.
+			(blocksWithOccurences sizeAsSet  = 1 and: [ blocksWithOccurences anyOne hasNonLocalReturn not ])
 				ifTrue: [ "only one reference so put the variable there"
-					allVariables remove: variable.
-					blocks anyOne owns add: variable ] ] ].
-
-	varsModified keysAndValuesDo: [ :variable :blocks |
-		blocks doWithOccurrences: [ :bb :ignore |
-			bb hasNonLocalReturn ifFalse: [
-				allVariables remove: variable.
-				blocks anyOne owns add: variable ] ] ].
-
-	self methodBlock owns addAll: allVariables
+					blocksWithOccurences anyOne owns add: var ] 
+				ifFalse: [
+					self methodBlock owns add: var ]
+		]
+	] 
 ]
 
 { #category : 'accessing' }

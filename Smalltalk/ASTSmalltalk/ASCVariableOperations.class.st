@@ -45,7 +45,7 @@ self subclassResponsibility
 ]
 
 { #category : 'finalAnalysis' }
-ASCVariableOperations >> variableReferences: referenced modifies: modified block: aDispatchableBlock [
+ASCVariableOperations >> variableReferences: ignore modifies: modified block: aDispatchableBlock [
 
 	modified
 		at: variableLocation
