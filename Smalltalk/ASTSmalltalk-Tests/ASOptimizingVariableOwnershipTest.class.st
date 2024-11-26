@@ -63,8 +63,8 @@ ASOptimizingVariableOwnershipTest >> setUp [
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testBlockVariable [
-	"If a variable is only referenced in the method, it will be put in the Context (or just on the stack if no context is created)."
-	
+	"a method references element1 and modifies element1 so it owns both"
+
 	method addOperation: (ASCPushVariable new with: element1).
 	method addOperation: (ASCPopVariable new with: element2).
 
@@ -76,7 +76,7 @@ ASOptimizingVariableOwnershipTest >> testBlockVariable [
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testMultipleBlockModifieds [
-	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+	"both bb1 and bb2 refernece and modify element1 so either could own element1"
 
 	bb1 addOperation: (ASCPushVariable new with: element1).
 	bb1 addOperation: (ASCPopVariable new with: element1).
@@ -86,44 +86,44 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockModifieds [
 
 	cg optimizeLocalVariableLocations.
 
-	self
-		assert: ((bb1 owns includes: element1)
-		xor: [ bb2 owns includes: element1 ])
+	self assert:
+		((bb1 owns includes: element1) xor: [ bb2 owns includes: element1 ])
 ]
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testMultipleBlockReference [
-	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+	"  element1 is referenced by both bb1 and bb2 but since bb1 is a nonlocal return the method owns the element1"
 
 	bb1 addOperation: (ASCPushVariable new with: element1).
-	
+	bb1 returnNonLocal.
 	bb2 addOperation: (ASCPushVariable new with: element1).
-	
+
 	cg optimizeLocalVariableLocations.
 
 	self assert: (bb1 owns includes: element1) not.
 	self assert: (bb2 owns includes: element1) not.
-	self assert: (method owns includes: element1).
+	self assert: (method owns includes: element1)
+	
 ]
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceAndOneModifiesWithNonLocalReturn [
-	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+	" bb1 references element1 but bb2 owns it because it references and modifies element1"
 
 	bb1 addOperation: (ASCPushVariable new with: element1).
-	
+
 	bb2 addOperation: (ASCPushVariable new with: element1).
 	bb2 addOperation: (ASCPopVariable new with: element1).
-	
+
 	cg optimizeLocalVariableLocations.
 
 	self assert: (bb1 owns includes: element1) not.
-	self assert: (bb2 owns includes: element1).
+	self assert: (bb2 owns includes: element1)
 ]
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies [
-	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+	"method referneces element2 and owns it, bb1 references and modified element2 and owns it"
 
 	method addOperation: (ASCPushVariable new with: element2).
 	method addOperation: (ASCPopVariable new with: element2).
@@ -140,11 +140,13 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifies 
 
 { #category : 'tests' }
 ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesWithNonLocalReturn [
-	" For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context."
+	"method referneces element1 and writes element2
+	bb1 references element1, writes element1 and references element3
+	but! bb1 has a non local return so all vars owned by method"
 
 	method addOperation: (ASCPushVariable new with: element1).
 	method addOperation: (ASCPopVariable new with: element2).
-	
+
 	bb1 addOperation: (ASCPushVariable new with: element1).
 	bb1 addOperation: (ASCPopVariable new with: element1).
 	bb1 addOperation: (ASCPushVariable new with: element3).
@@ -154,6 +156,8 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesW
 
 	self assert: (method owns includes: element1).
 	self assert: (method owns includes: element2).
+	self assert: (method owns includes: element3).
 	self assert: (bb1 owns includes: element1) not.
-	self assert: (bb1 owns includes: element2) not
+	self assert: (bb1 owns includes: element2) not.
+	self assert: (bb1 owns includes: element3) not.
 ]

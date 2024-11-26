@@ -140,12 +140,6 @@ ASCodeGenerator >> compileRemainingBlockClosures [
 	blockClosures do: [ : blockClosure | blockClosure compileIn: self ]
 ]
 
-{ #category : 'accessing' }
-ASCodeGenerator >> compiledUnits [
-	
-	^ compiledUnits
-]
-
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> createContextWhereRequired [
 
@@ -450,12 +444,12 @@ ASCodeGenerator >> offsetTo: anObject methodBlock: aBlock [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> optimizeLocalVariableLocations [
-
 	"drive the ownership of compilable unit blocks"
-	| varsModified varsReferenced allVariables |
+
+	| varsModified varsReferenced allVariables nonLocalReturnBlock |
 	varsModified := IdentityDictionary new.
 	varsReferenced := IdentityDictionary new.
-	
+
 	"get each block to gather variable usage"
 	compiledUnits do: [ :bb |
 		bb deriveVariableReferences: varsReferenced modifies: varsModified ].
@@ -465,26 +459,29 @@ ASCodeGenerator >> optimizeLocalVariableLocations [
    3. For values referenced in two or more places, modified in at least one, the default would be to put them in the Context. However, if a BlockClosure has a reference to the Context and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
    4. All other variables will be placed in a closure that modifies the variable.
 "
+	nonLocalReturnBlock := [ :dictionary :var|
+				((dictionary at: var) asSet
+					         detect: [ :bb | bb hasNonLocalReturn ] ifNone: [ nil ])
+					ifNotNil: [ self methodBlock owns add: var ]
+				   ifNil: [(dictionary at: var) anyOne owns add: var ].
+			].
 	allVariables := IdentitySet new.
 	allVariables addAll: varsModified keys.
 	allVariables addAll: varsReferenced keys.
 
 	allVariables do: [ :var |
-		(varsModified includesKey: var) ifTrue: [ | owner |
-			owner := (varsModified at: var) asSet detect: [ :bb |
-				bb hasNonLocalReturn ifFalse: [
-					true ]
-			].
-			owner ifNil: [self methodBlock owns add: var ] ifNotNil: [owner owns add: var]
-		] ifFalse: [ | blocksWithOccurences |
-			blocksWithOccurences := varsReferenced at: var.
-			(blocksWithOccurences sizeAsSet  = 1 and: [ blocksWithOccurences anyOne hasNonLocalReturn not ])
-				ifTrue: [ "only one reference so put the variable there"
-					blocksWithOccurences anyOne owns add: var ] 
-				ifFalse: [
-					self methodBlock owns add: var ]
-		]
-	] 
+		(varsModified includesKey: var)
+			ifTrue: [ nonLocalReturnBlock value: varsModified value: var ]
+			ifFalse: [
+				| blocksWithOccurences |
+				blocksWithOccurences := varsReferenced at: var.
+				(blocksWithOccurences sizeAsSet = 1 and: [
+					 blocksWithOccurences anyOne hasNonLocalReturn not ])
+					ifTrue: [ "only one reference so put the variable there"
+						blocksWithOccurences anyOne owns add: var ]
+					ifFalse: [ nonLocalReturnBlock value: varsReferenced value: var ]
+				 ] 
+			]
 ]
 
 { #category : 'accessing' }
