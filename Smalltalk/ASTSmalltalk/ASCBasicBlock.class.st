@@ -507,7 +507,7 @@ ASCBasicBlock >> propagateContextFreeFor: aStackContext [
 		contextStartsAt := NoContext.
 		(operations anySatisfy: [ :operation |
 			 operation needsContext: aStackContext ]) ifTrue: [
-			self halt;insertContext.
+			self insertContext.
 			aStackContext required.
 			^ false ] ].
 	^ contextStartsAt = ContextInherited

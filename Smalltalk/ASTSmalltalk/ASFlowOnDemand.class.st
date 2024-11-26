@@ -25,5 +25,4 @@ ASFlowOnDemand >> needsToBeSpilled [
 ASFlowOnDemand >> printOn: aStream [
 
 	aStream nextPutAll: 'on demand'.
-	^ self printClassOn: aStream
 ]

@@ -67,6 +67,12 @@ AStackLocation >> markReferenced [
 	^ stackValueOrFlow markReferenced
 ]
 
+{ #category : 'printing' }
+AStackLocation >> printOn: stream [
+
+	stream nextPutAll: flowValue asString.
+]
+
 { #category : 'accessing' }
 AStackLocation >> pushFromStack: anInteger with: anOutput [
 
