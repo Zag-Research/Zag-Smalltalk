@@ -71,19 +71,22 @@ AStackFlowTest >> testPhi2 [
 { #category : 'tests' }
 AStackFlowTest >> testPlusAndAnd [
 
-	| cg result params allAnnotatedOnDemand|
-	cg := ASCodeGenerator targetClass: ASCompileTestClass1 selector: #plus:and:and:.
+	| cg result params allAnnotatedOnDemand |
+	cg := ASCodeGenerator
+		      targetClass: ASCompileTestClass1
+		      selector: #plus:and:and:.
 	cg finalAnalysis.
 	cg flowAnalysis.
-	
+
 	result := cg basicBlocks second stack at: 0.
-	params := #(n1 n2 n3) collect: [:paramName |
-        cg basicBlocks first stack at: paramName].
-	allAnnotatedOnDemand := params allSatisfy: [:param |
-        param location flowValue class = ASFlowOnDemand].
+	params := #( n1 n2 n3 ) collect: [ :paramName |
+		          cg basicBlocks first stack at: paramName ].
+	allAnnotatedOnDemand := params allSatisfy: [ :param |
+		                        param location flowValue class
+		                        = ASFlowOnDemand ].
 
 	"All parameters are annotated with `on Demand`"
 	self assert: allAnnotatedOnDemand.
 	"Top stack element is the temp result, hence is annotated with `new`"
-	self assert: (result location flowValue class) equals: ASFlowNew.
+	self assert: result location flowValue class equals: ASFlowNew
 ]
