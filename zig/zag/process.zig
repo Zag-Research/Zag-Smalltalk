@@ -85,15 +85,18 @@ pub const Process = extern struct {
         }
         self.trapContextNumber = 0;
     }
-    const checkType = u5;
-    const checkMax: checkType = @as(checkType, @truncate(std.mem.page_size - 1));
+    const countType = u5;
+    const countMask: usize = math.maxInt(u16);
+    const countOverflowFlag = countMask + 1;
+    const othersFlag = countOverflowFlag << 1;
+    const checkFlags = othersFlag | countOverflowFlag;
     pub inline fn needsCheck(self: *const Self) bool {
-        return @as(checkType, @truncate(@intFromPtr(self))) == 1;
+        return (@intFromPtr(self) & checkFlags) != 0;
     }
     pub inline fn decCheck(self: *Self) *Self {
         if (self.needsCheck()) return self;
         @setRuntimeSafety(false);
-        return @as(*Self, @ptrFromInt(@intFromPtr(self) - 1));
+        return @as(*Self, @ptrFromInt(@intFromPtr(self) + 1));
     }
     pub inline fn maxCheck(self: *const Self) *Self {
         @setRuntimeSafety(false);

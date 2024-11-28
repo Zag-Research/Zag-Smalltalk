@@ -63,15 +63,18 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 16. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
 17. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include 45-bit integral values as well as values with common fractional parts such as 0.5, 0.25, 0.75). Values that can't be encoded that way would use `ThunkHeap` to return an object.
 18. to 23 unused
-23. `UndefinedObject`: This is reserved for the singleton value `nil` which is represented as all zero bits. 
-24. `Float`: this is reserved  for the bit patterns that encode double-precision IEEE floating point.
-25. `Object`: this is reserved for the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
-26. `BlockClosure`: this is reserved for block closures. All the Thunk... are subclasses of this.
-27. `BlockClosureValue`: this is reserved for the BlockClosure that simply evaluates to its field.
-28. `Context`: this is reserved for method contexts.
-29. `Array`: this is reserved for the fundamental `Array` class.
-30. `String`: this is reserved for ASCII strings which are mutable
-31. `Utf8String`: this is reserved for immutable [UTF-8](https://datatracker.ietf.org/doc/html/rfc3629) strings; a subclass of `String`.
+23. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits. 
+24. `Float`: the bit patterns that encode double-precision IEEE floating point.
+25. `ProtoObject`: the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
+26. `Object`: the superclass of all normal objects
+27. `BlockClosure`: this is reserved for block closures. All the Thunk... are subclasses of this.
+28. `BlockClosureValue`: the BlockClosure that simply evaluates to its field.
+29. `Context`: method contexts.
+30. `Array`: the fundamental `Array` class.
+31. `String`: ASCII strings (which are mutable)
+32. `Utf8String`: immutable [UTF-8](https://datatracker.ietf.org/doc/html/rfc3629) strings; a subclass of `String`.
+33. `DoubleWordArray`: array of 64-bit non objects.
+34. `Process`: an object that contains all the information of a process, including the stack and nursery heap areas.
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 

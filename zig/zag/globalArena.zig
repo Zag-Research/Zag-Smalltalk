@@ -38,6 +38,9 @@ const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength) + 1;
 const heap_allocation_size = @max(4 << nFreeLists, @max(128 * 1024, (math.maxInt(u16) + 1) * @sizeOf(Object)));
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
 const HeapAllocation = extern struct {
+    header: HeapHeader, // Object header with hash='ZAG', class=ZagHeap - e.g. 0x00A8775A41470021
+    loadAddress: Object, // address that corresponds with the filename
+    nextHeap: HeapAllocationPtr, // link to next heap header
     mem: [size]HeapObject,
     freeLists: [nFreeLists]FreeList,
     flags: HeapFlags,
