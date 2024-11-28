@@ -36,6 +36,13 @@ ASStackContext >> addToCollection: aCollection [
 	^ next addToCollection: aCollection
 ]
 
+{ #category : 'adding' }
+ASStackContext >> addToCollection: aCollection for: aBasicBlock [
+
+	aBasicBlock hasContext ifTrue: [ aCollection addLast: self ].
+	^ next addToCollection: aCollection for: aBasicBlock
+]
+
 { #category : 'accessing' }
 ASStackContext >> at: aSymbol [
 

@@ -245,10 +245,9 @@ ASCBasicBlock >> forceCreateContext [
 	contextStartsAt = NoContext ifTrue: [ self halt;insertContext ]
 ]
 
-{ #category : 'testing' }
+{ #category : 'API' }
 ASCBasicBlock >> hasContext [
-
-	^ sourceElements hasContext
+	^ contextStartsAt ~= NoContext
 ]
 
 { #category : 'comparing' }
@@ -342,9 +341,8 @@ ASCBasicBlock >> inspectionStack: aBuilder [
 				   beNotExpandable;
 				   beNotSortable;
 				   yourself);
-		  items: stack asOrderedCollection;
+		  items: (stack asOrderedCollectionFor: self);
 		  yourself
-
 ]
 
 { #category : 'writing' }
@@ -358,7 +356,7 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 				   beNotExpandable;
 				   beNotSortable;
 				   yourself);
-		  items: self sourceElementsForInspect;
+		  items: (sourceElements asOrderedCollectionFor: self);
 		  yourself
 ]
 
@@ -507,7 +505,7 @@ ASCBasicBlock >> propagateContextFreeFor: aStackContext [
 		contextStartsAt := NoContext.
 		(operations anySatisfy: [ :operation |
 			 operation needsContext: aStackContext ]) ifTrue: [
-			self halt;insertContext.
+			self insertContext.
 			aStackContext required.
 			^ false ] ].
 	^ contextStartsAt = ContextInherited
@@ -641,12 +639,6 @@ ASCBasicBlock >> setStackForBlock: anASCBlock [
 ASCBasicBlock >> sourceElements [
 
 	^ sourceElements
-]
-
-{ #category : 'writing' }
-ASCBasicBlock >> sourceElementsForInspect [
-
-	^ sourceElements asOrderedCollection
 ]
 
 { #category : 'as yet unclassified' }

@@ -27,6 +27,13 @@ ASStackElement >> addToCollection: aCollection [
 	^ next addToCollection: aCollection
 ]
 
+{ #category : 'adding' }
+ASStackElement >> addToCollection: aCollection for: aBasicBlock [
+
+	aCollection addLast: self.
+	^ next addToCollection: aCollection for: aBasicBlock 
+]
+
 { #category : 'accessing' }
 ASStackElement >> at: aSymbol [
 

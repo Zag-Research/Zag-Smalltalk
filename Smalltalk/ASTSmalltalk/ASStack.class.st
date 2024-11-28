@@ -41,10 +41,22 @@ ASStack >> addToCollection: aCollection [
 	
 ]
 
+{ #category : 'adding' }
+ASStack >> addToCollection: aCollection for: aBasicBlock [
+
+	^ aCollection
+]
+
 { #category : 'inspecting' }
 ASStack >> asOrderedCollection [
 
 	^ self addToCollection: OrderedCollection new
+]
+
+{ #category : 'converting' }
+ASStack >> asOrderedCollectionFor: aBasicBlock [
+
+	^ self addToCollection: OrderedCollection new for: aBasicBlock
 ]
 
 { #category : 'accessing' }
