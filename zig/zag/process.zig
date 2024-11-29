@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const assert = std.debug.assert;
 const mem = std.mem;
 const builtin = @import("builtin");
@@ -90,26 +91,24 @@ pub const Process = extern struct {
     const countOverflowFlag = countMask + 1;
     const othersFlag = countOverflowFlag << 1;
     const checkFlags = othersFlag | countOverflowFlag;
+    const nonFlags = ~(checkFlags | countMask);
     pub inline fn needsCheck(self: *const Self) bool {
         return (@intFromPtr(self) & checkFlags) != 0;
     }
-    pub inline fn decCheck(self: *Self) *Self {
+    pub inline fn checkBump(self: *Self) *Self {
         if (self.needsCheck()) return self;
         @setRuntimeSafety(false);
         return @as(*Self, @ptrFromInt(@intFromPtr(self) + 1));
     }
     pub inline fn maxCheck(self: *const Self) *Self {
         @setRuntimeSafety(false);
-        return @as(*Self, @ptrFromInt(@intFromPtr(self) | checkMax));
-    }
-    pub inline fn noCheck(self: *const Self) *Self {
-        return @as(*Self, @ptrFromInt(@intFromPtr(self) & ~@as(usize, checkMax)));
+        return @as(*Self, @ptrFromInt(@intFromPtr(self) | countMask));
     }
     pub inline fn debugger(self: *Self) ?ThreadedFn {
         return self.ptr().debugFn;
     }
     pub inline fn ptr(self: *const Self) *Self {
-        return @as(*Self, @ptrFromInt(@intFromPtr(self.noCheck())));
+        return @as(*Self, @ptrFromInt(@intFromPtr(self) & nonFlags));
     }
     pub fn deinit(self: *Self) void {
         self.ptr().* = undefined;
@@ -296,7 +295,7 @@ test "check flag" {
     try testing.expect(!pr.needsCheck());
     var count = Process.checkMax - 1;
     while (count > 1) : (count -= 1) {
-        pr = pr.decCheck();
+        pr = pr.checkBump();
     }
     try testing.expect(!pr.needsCheck());
     try testing.expectEqual(pr.endOfStack(), origEOS);

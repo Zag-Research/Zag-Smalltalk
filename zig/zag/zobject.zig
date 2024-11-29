@@ -64,26 +64,35 @@ pub const ClassIndex = enum(u16) {
     none = 0,
     ThunkHeap,
     ThunkReturnLocal,
+    ThunkReturnInstance,
     ThunkReturnSmallInteger,
     ThunkReturnImmediate,
     ThunkReturnCharacter,
-    UndefinedObject,
-    True,
+    BlockAssignLocal,
+    BlockAssignInstance,
+    ThunkGetInstance,
     False,
+    True,
     SmallInteger,
     Symbol,
     Character,
+    ShortString,
     ThunkImmediate,
     ThunkFloat,
+    UndefinedObject=23,
     Float,
+    ProtoObject,
     Object,
+    BlockClosure,
+    BlockClosureValue,
+    Context,
     Array,
     String,
-    CompiledMethod,
+    Utf8String,
+    DoubleWordArray,
+    Process,
     Class,
-    Context,
-    BlockClosure,
-    Method,
+    CompiledMethod,
     Dispatch,
     max = 0xffff - 8,
     replace7,
@@ -95,7 +104,7 @@ pub const ClassIndex = enum(u16) {
     replace1,
     replace0,
     _,
-    pub const LastSpecial = @intFromEnum(Self.Context);
+    pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
     // inline fn base(ci: Self) u64 {
     //     return @as(u64, @intFromEnum(ci)) << 32;
@@ -107,19 +116,22 @@ pub const ClassIndex = enum(u16) {
         none = 0,
         ThunkHeap,
         ThunkReturnLocal,
+        ThunkReturnInstance,
         ThunkReturnSmallInteger,
         ThunkReturnImmediate,
         ThunkReturnCharacter,
-        UndefinedObject,
-        True,
+        BlockAssignLocal,
+        BlockAssignInstance,
+        ThunkGetInstance,
         False,
+        True,
         SmallInteger,
         Symbol,
         Character,
+        ShortString,
         ThunkImmediate,
         ThunkFloat,
-        Float,
-        inline fn classIndex(cp: Compact) ClassIndex {
+         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
     };
@@ -129,7 +141,8 @@ pub const ClassIndex = enum(u16) {
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkHeap)+1,29) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkHeap),1) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkFloat),17) catch unreachable;
 }
 const MemoryFloat = extern struct {
     header: HeapHeader,
@@ -362,7 +375,7 @@ const NanObject = packed struct(u64) {
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
             .heapThunk => .BlockClosure,
-            .nonLocalThunk => @enumFromInt(@intFromEnum(ClassIndex.ThunkReturnSelf)+(self.rawU()&7)),
+            .nonLocalThunk => @panic("nonLocalThunk"),
             .immediates => self.classIndex,
             .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
             .smallIntMin, .smallIntNeg_2, .smallIntNeg_3, .smallIntNeg_4, .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => .SmallInteger,

@@ -928,7 +928,7 @@ pub const controlPrimitives = struct {
         }
         const target = pc.next().back(@as(u64, @intCast(-offset)));
         if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined });
-        return @call(tailCall, target.prim(), .{ target.next(), sp, process.decCheck(), context, undefined });
+        return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
     }
     pub fn ifTrue(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
         const process = tfAsProcess(_process);

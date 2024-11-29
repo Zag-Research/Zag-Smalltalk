@@ -75,6 +75,9 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 32. `Utf8String`: immutable [UTF-8](https://datatracker.ietf.org/doc/html/rfc3629) strings; a subclass of `String`.
 33. `DoubleWordArray`: array of 64-bit non objects.
 34. `Process`: an object that contains all the information of a process, including the stack and nursery heap areas.
+35. `Class`:
+36. `CompiledMethod`:
+37. `Dipatch`:
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
