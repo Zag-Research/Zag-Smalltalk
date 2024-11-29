@@ -85,7 +85,7 @@ ASImageThreadedOutput >> pushLocal: localNumber [
 { #category : 'code generation' }
 ASImageThreadedOutput >> verifySelector: anObject [
 
-	^ image putRawInt: ZfVerifySelector
+	^ image putU64: ZfVerifySelector
 ]
 
 { #category : 'API' }
@@ -136,7 +136,7 @@ ASImageThreadedOutput >> visitPushContext: anUndefinedObject [
 ASImageThreadedOutput >> visitPushLiteral: aLiteral [
 
 	image
-		putRawInt: ZfPushLiteral;
+		putU64: ZfPushLiteral;
 		addOperation: aLiteral
 ]
 
@@ -174,13 +174,13 @@ ASImageThreadedOutput >> visitReturnNil [
 { #category : 'visiting' }
 ASImageThreadedOutput >> visitReturnSelf [
 
-	^ image putRawInt: ZfReturnSelf
+	^ image putU64: ZfReturnSelf
 ]
 
 { #category : 'API' }
 ASImageThreadedOutput >> visitReturnTop [
 
-	^ image putRawInt: ZfReturnTop
+	^ image putU64: ZfReturnTop
 ]
 
 { #category : 'API' }
@@ -194,8 +194,9 @@ ASImageThreadedOutput >> visitSend: aSelector returnIndex: index receiver: aClas
 ]
 
 { #category : 'visiting' }
-ASImageThreadedOutput >> visitSimple: aString [ 
-	^ image putRawInt: (Addresses at: aString)
+ASImageThreadedOutput >> visitSimple: aString [
+
+	^ image putU64: (Addresses at: aString)
 ]
 
 { #category : 'visiting' }

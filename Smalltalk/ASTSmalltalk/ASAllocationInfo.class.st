@@ -17,7 +17,7 @@ Class {
 		'HashCounter'
 	],
 	#pools : [
-		'ASImage'
+		'ASImageExporter'
 	],
 	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
@@ -133,8 +133,9 @@ ASAllocationInfo >> put: anObject into: anImage [
 
 	| address class |
 	class := anImage class: anObject class.
-	address := anImage putRawInt: (self header: class).
-	1 to: instVars do: [ :n | (anObject instVarAt: n) astImageObject: anImage ].
+	address := anImage putU64: (self header: class).
+	1 to: instVars do: [ :n |
+	(anObject instVarAt: n) astImageObject: anImage ].
 	1 to: extra do: [ :n | (anObject at: n) astImageObject: anImage ].
 	^ anImage pointer: address class: class
 ]

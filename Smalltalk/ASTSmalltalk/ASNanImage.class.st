@@ -3,7 +3,7 @@ I have the knowledge of how to encode values for NaN images
 "
 Class {
 	#name : 'ASNanImage',
-	#superclass : 'ASImage',
+	#superclass : 'ASImageExporter',
 	#classVars : [
 		'GroupHeap',
 		'GroupImmediates',
@@ -14,8 +14,14 @@ Class {
 	#tag : 'Image'
 }
 
+{ #category : 'accessing' }
+ASNanImage class >> boolean: value [
+
+	^ ClassFalse + value asBit
+]
+
 { #category : 'converting' }
-ASNanImage class >> double: n [
+ASNanImage class >> double: n for: ignored [
 
 	^ ('16r' , n hex) asNumber
 ]

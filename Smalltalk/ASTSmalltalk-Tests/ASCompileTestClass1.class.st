@@ -220,7 +220,7 @@ ASCompileTestClass1 >> plus: n1 and: n2 [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> plus: n1 and: n2 and: n3 [
 
-	^ n1 + (n2 + n3)
+	^ 5 + (n1 + (n2 + n3)) + 4
 ]
 
 { #category : 'testing - examples' }

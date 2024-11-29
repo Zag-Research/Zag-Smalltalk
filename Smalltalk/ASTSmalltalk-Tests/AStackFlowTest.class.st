@@ -72,11 +72,13 @@ AStackFlowTest >> testPhi2 [
 AStackFlowTest >> testPlusAndAnd [
 
 	| cg result params allAnnotatedOnDemand |
-	cg := ASCodeGenerator
+	ASInliner reset.
+	cg := ASCodeGenerator halt;
 		      targetClass: ASCompileTestClass1
 		      selector: #plus:and:and:.
 	cg finalAnalysis.
 	cg flowAnalysis.
+	cg inspect.
 
 	result := cg basicBlocks second stack at: 0.
 	params := #( n1 n2 n3 ) collect: [ :paramName |

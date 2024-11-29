@@ -64,6 +64,13 @@ ManifestASTSmalltalkTests class >> ruleReCollectionAtCollectionSizeRuleV1FalsePo
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalkTests class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2024-11-28T19:23:31.208843-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleReNoPrintStringInPrintOnRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASFindPrimitives #printOn: #false)) #'2023-07-09T10:39:44.76397-04:00') )
 ]
