@@ -12,17 +12,22 @@ Class {
 { #category : 'running' }
 ASImageTest >> image: aBlock equals: value [
 
-	| result |
+	| result image |
+	image := self imageClass test.
 	result := ByteArray streamContents: [ :s |
-		          aBlock value: (self imageClass test on: s) ].
+		          aBlock value: image.
+		          image testStorage toStream: s ].
+	self
+		assert: result asU64Array first hexString
+		equals: image testStorage address hexString.
 	value isInteger
 		ifTrue: [
 			self
-				assert: (self u64From: result) first hexString
+				assert: result asU64Array fourth hexString
 				equals: value hexString ]
 		ifFalse: [
 			self
-				assert: ((self u64From: result) collect: #hexString)
+				assert: (result asU64Array collect: #hexString)
 				equals: (value collect: #hexString) ]
 ]
 
@@ -38,6 +43,20 @@ ASImageTest >> setUp [
 	super setUp.
 
 	ASAllocationInfo reset
+]
+
+{ #category : 'tests' }
+ASImageTest >> testU64Array [
+
+	self assert: #[  ] asU64Array equals: #(  ).
+	self assert: #[ 1 ] asU64Array equals: #( 1 ).
+	self
+		assert: #[ 1 2 3 4 5 6 7 8 ] asU64Array
+		equals: #( 16r0807060504030201 ).
+	self
+		assert: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 ] asU64Array
+		equals: #( 16r0807060504030201 16r0605040302010009
+		   16r0807 )
 ]
 
 { #category : 'tests' }
@@ -62,13 +81,4 @@ ASImageTest >> threaded: ast equals: converted [
 					ifTrue: [
 					self assert: code equals: (self imageClass convertNumber: each) ]
 					ifFalse: [ self assert: code equals: each ] ] ]
-]
-
-{ #category : 'running' }
-ASImageTest >> u64From: aByteArray [
-
-	^ ((aByteArray groupsOf: 8) collect: [ :group |
-		  group reversed
-			  inject: 0
-			  into: [ :t :each | (t bitShift: 8) + each ] ]) asArray
 ]

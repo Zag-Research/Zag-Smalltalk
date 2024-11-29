@@ -181,7 +181,7 @@ ASExploreImage class >> primitives [
 	" self primitives associations sorted "
 	| primitives number |
 	primitives := IdentityDictionary new.
-	ASImage exportMethods do: [: method |
+	ASImageExporter exportMethods do: [: method |
 		method pragmas do: [: pragma |
 			pragma selector = #primitive: ifTrue: [
 				number := pragma arguments first.

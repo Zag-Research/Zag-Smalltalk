@@ -2,12 +2,11 @@
 I write out ASTSmalltalk images
 "
 Class {
-	#name : 'ASImage',
+	#name : 'ASImageExporter',
 	#superclass : 'SharedPool',
 	#instVars : [
 		'symbols',
 		'classes',
-		'aStream',
 		'currentAddress',
 		'objects',
 		'process',
@@ -18,13 +17,15 @@ Class {
 		'symbolTableRef',
 		'alreadyPuttingObject',
 		'pendingObjects',
-		'classTableRef'
+		'classTableRef',
+		'currentHeap'
 	],
 	#classVars : [
 		'BaseAddress',
 		'ClassArray',
 		'ClassCharacter',
 		'ClassClass',
+		'ClassDoubleWordArray',
 		'ClassFalse',
 		'ClassFloat',
 		'ClassMask',
@@ -63,13 +64,16 @@ Class {
 		'SizeShift',
 		'Special'
 	],
+	#classInstVars : [
+		'imageFolder'
+	],
 	#category : 'ASTSmalltalk-Image',
 	#package : 'ASTSmalltalk',
 	#tag : 'Image'
 }
 
 { #category : 'converting' }
-ASImage class >> convertNumber: aNumber [
+ASImageExporter class >> convertNumber: aNumber [
 
 	aNumber isInteger ifTrue: [ ^ self smallInteger: aNumber ].
 	aNumber isFloat  ifTrue: [ ^ self double: aNumber ].
@@ -77,26 +81,26 @@ ASImage class >> convertNumber: aNumber [
 ]
 
 { #category : 'converting' }
-ASImage class >> convertToZag: anObject [
+ASImageExporter class >> convertToZag: anObject [
 
 	^ anObject convertToZag: self
 ]
 
 { #category : 'converting' }
-ASImage class >> double: aNumber [
+ASImageExporter class >> double: aNumber for: anImage [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'export' }
-ASImage class >> exportMethods [
+ASImageExporter class >> exportMethods [
 	^ self exportPackages flatCollect: [ :package |
 			package methods
 		]
 ]
 
 { #category : 'export' }
-ASImage class >> exportPackages [
+ASImageExporter class >> exportPackages [
 	^ RPackageOrganizer default packages select: [: package |
 			((package name beginsWith: 'ASTSmalltalk')
 					or: ((package name beginsWith: 'PC') 
@@ -105,14 +109,26 @@ ASImage class >> exportPackages [
 		]
 ]
 
+{ #category : 'as yet unclassified' }
+ASImageExporter class >> ifInvalidFolder: folder do: aBlock [
+	
+	(folder isNil or: [folder exists not]) ifTrue: aBlock
+]
+
 { #category : 'instance creation' }
-ASImage class >> image [
+ASImageExporter class >> image [
 
 	^ super new initHeapHeader
 ]
 
+{ #category : 'accessing' }
+ASImageExporter class >> imageFolder: anObject [
+	
+	imageFolder := anObject
+]
+
 { #category : 'class initialization' }
-ASImage class >> initialize [
+ASImageExporter class >> initialize [
 
 	BaseAddress := 16r1000000000.
 	SizeMask := 16r7fff.
@@ -123,19 +139,19 @@ ASImage class >> initialize [
 	HashMask := 1 << (FormatShift - HashShift) - 1.
 	ClassMask := 1 << HashShift - 1.
 	MaxHeaderLength := 4093.
-	ClassObject := 1.
-	ClassSmallInteger := ClassObject + 1.
-	ClassUndefinedObject := ClassSmallInteger + 1.
-	ClassFalse := ClassUndefinedObject + 1.
+	ClassFalse := 10.
 	ClassTrue := ClassFalse + 1.
-	ClassFloat := ClassTrue + 1.
-	ClassSymbol := ClassFloat + 1.
-	ClassCharacter := ClassSymbol + 1.
-	ClassArray := ClassCharacter + 1.
-	ClassString := ClassArray + 1.
-	ClassClass := ClassString + 1.
-	ClassMethod := ClassClass + 1.
-	FirstAssignableClass := 30.
+	ClassSmallInteger := 12.
+	ClassSymbol := 13.
+	ClassCharacter := 14.
+	ClassUndefinedObject := 23.
+	ClassFloat := 24.
+	ClassObject := 26.
+	ClassArray := 30.
+	ClassString := 31.
+"	ClassClass := ClassString + 1.
+	ClassMethod := ClassClass + 1."
+	FirstAssignableClass := 35.
 	ListOfClasses := {
 		                 Object.
 		                 SmallInteger.
@@ -172,74 +188,87 @@ ASImage class >> initialize [
 ]
 
 { #category : 'converting' }
-ASImage class >> literal: l class: c [
+ASImageExporter class >> literal: l class: c [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'instance creation' }
-ASImage class >> new [
+ASImageExporter class >> new [
 
 	^ self error: 'use "image" or "test" to create instances of ',self name
 ]
 
 { #category : 'converting' }
-ASImage class >> pointer: p class: c [
+ASImageExporter class >> pointer: p class: c [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'image analysis' }
-ASImage class >> primitiveNumber: n [
+ASImageExporter class >> primitiveNumber: n [
 
 	^ ((#primitive: senders flatCollect: [ :m | m pragmas ])
 		    select: [ :p | p selector = #primitive: and: [p arguments first = n] ])
 ]
 
 { #category : 'image analysis' }
-ASImage class >> primitiveNumbers [
+ASImageExporter class >> primitiveNumbers [
 ^ (((#primitive: senders flatCollect: [ :m| m pragmas]) select: [:p| p selector = #primitive: ] thenCollect: [:p| p arguments first ]) asSet asArray select: #isInteger) asSortedCollection 
 ]
 
 { #category : 'image analysis' }
-ASImage class >> primitiveNumbers: aCollection [
+ASImageExporter class >> primitiveNumbers: aCollection [
 
 	^ ((#primitive: senders flatCollect: [ :m | m pragmas ]) select: [ :p |
 		  p selector = #primitive: and: [
 			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
 ]
 
+{ #category : 'initialization' }
+ASImageExporter class >> setUpImageFolder [
+	
+	| folder |
+	folder := UIManager default chooseDirectory: self setUpImageFolderPrompt.
+	self ifInvalidFolder: folder do: [  
+		^self error: 'Image: Invalid folder for exporting image'].
+	self imageFolder: folder.
+]
+
+{ #category : 'initialization' }
+ASImageExporter class >> setUpImageFolderPrompt [
+
+	^ 'Folder for image export please?'
+]
+
 { #category : 'converting' }
-ASImage class >> smallInteger: aNumber [
+ASImageExporter class >> smallInteger: aNumber [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'instance creation' }
-ASImage class >> test [
-	^ super new
+ASImageExporter class >> test [
+
+	^ super new testOutput
 ]
 
 { #category : 'writing' }
-ASImage >> addFirstMethod: selector in: canonicalClasses [
+ASImageExporter >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |
 		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
 	]
 
 ]
 
-{ #category : 'writing' }
-ASImage >> at: position put: anInteger [
+{ #category : 'accessing' }
+ASImageExporter >> at: position put: anInteger [
 
-	| savedPosition |
-	savedPosition := aStream position.
-	aStream position: position - BaseAddress.
-	self putRawInt: anInteger.
-	^ aStream position: savedPosition
+	self halt
 ]
 
 { #category : 'accessing' }
-ASImage >> canonicalClasses: aClass [
+ASImageExporter >> canonicalClasses: aClass [
 	| name side |
 	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
 	name := aClass instanceSide name.
@@ -251,7 +280,7 @@ ASImage >> canonicalClasses: aClass [
 ]
 
 { #category : 'adding' }
-ASImage >> class: aClass [
+ASImageExporter >> class: aClass [
 
 	| cc |
 	cc := (self canonicalClasses: aClass) first.
@@ -261,7 +290,7 @@ ASImage >> class: aClass [
 ]
 
 { #category : 'writing' }
-ASImage >> closeOverClassesAndSelectors [
+ASImageExporter >> closeOverClassesAndSelectors [
 	| tempClasses tempSelectors |
 	[ newClasses size + newSelectors size > 0 ] whileTrue: [
 		tempClasses := newClasses.
@@ -285,12 +314,12 @@ ASImage >> closeOverClassesAndSelectors [
 ]
 
 { #category : 'compiling' }
-ASImage >> compileMethod: aMethod [
+ASImageExporter >> compileMethod: aMethod [
 	self halt
 ]
 
 { #category : 'writing' }
-ASImage >> createClassTable [ 
+ASImageExporter >> createClassTable [ 
 	| table |
 	table := Array new: classes size.
 	classes keysAndValuesDo: [: class : number |
@@ -299,32 +328,23 @@ ASImage >> createClassTable [
 ]
 
 { #category : 'accessing' }
-ASImage >> currentAddress [
+ASImageExporter >> currentAddress [
 
 	^ currentAddress
 ]
 
 { #category : 'adding' }
-ASImage >> double: n [ 
+ASImageExporter >> double: n [ 
 	^ self class double: n 
 ]
 
 { #category : 'objects' }
-ASImage >> imageObject: anObject [ 
+ASImageExporter >> imageObject: anObject [ 
 	^ anObject astImageObject: self
 ]
 
-{ #category : 'writing' }
-ASImage >> initHeapHeader [
-
-	self putRawInt: 16r6567616d69545341.
-	symbolTableRef := self putRawInt: 0.
-	classTableRef := self putRawInt: 0.
-	self initClasses
-]
-
 { #category : 'initialization' }
-ASImage >> initialize [
+ASImageExporter >> initialize [
 
 	super initialize.
 	currentAddress := BaseAddress.
@@ -369,12 +389,12 @@ ASImage >> initialize [
 ]
 
 { #category : 'adding' }
-ASImage >> literal: l class: c [ 
+ASImageExporter >> literal: l class: c [ 
 	^ self class literal: l class: c 
 ]
 
 { #category : 'writing' }
-ASImage >> manifestObject: object [
+ASImageExporter >> manifestObject: object [
 
 	alreadyPuttingObject := true.
 	object ifNotNil: [objects at: object put: (object astImagePut: self)].
@@ -390,37 +410,17 @@ ASImage >> manifestObject: object [
 ]
 
 { #category : 'accessing' }
-ASImage >> method: aCompiledMethod [
+ASImageExporter >> method: aCompiledMethod [
 	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
 ]
 
 { #category : 'accessing' }
-ASImage >> methods [
+ASImageExporter >> methods [
 	^ methods
 ]
 
-{ #category : 'writing' }
-ASImage >> nextPutAll: aByteArray [
-	^ aStream nextPutAll: aByteArray.
-]
-
 { #category : 'adding' }
-ASImage >> nextRawInt [
-	"input in little-endian order"
-
-	| result |
-	result := 0.
-	0 to: 63 by: 8 do: [ :i | result := aStream next << i + result ].
-	^ result
-]
-
-{ #category : 'objects' }
-ASImage >> object: aObject fields: nFields elements: nElements [ 
-	self shouldBeImplemented 
-]
-
-{ #category : 'adding' }
-ASImage >> objectClass: aClass [
+ASImageExporter >> objectClass: aClass [
 
 	| cc |
 	cc := (self canonicalClasses: aClass) first.
@@ -429,13 +429,13 @@ ASImage >> objectClass: aClass [
 ]
 
 { #category : 'adding' }
-ASImage >> objectMethod: aMethod [
+ASImageExporter >> objectMethod: aMethod [
 
 	self halt
 ]
 
 { #category : 'adding' }
-ASImage >> objectObject: anObject [
+ASImageExporter >> objectObject: anObject [
 
 	| nInstVars nExtra ai class |
 	class := anObject class.
@@ -450,7 +450,7 @@ ASImage >> objectObject: anObject [
 ]
 
 { #category : 'adding' }
-ASImage >> objectString: aString [
+ASImageExporter >> objectString: aString [
 
 	| ai |
 	ai := ASAllocationInfo
@@ -458,60 +458,41 @@ ASImage >> objectString: aString [
 		      indexed: aString size
 		      element: 1
 		      weak: false.
-	self putRawInt: (ai header: ClassString).
+	self putU64: (ai header: ClassString).
 	^ self putRawByteArray: aString asByteArray
 ]
 
-{ #category : 'instance creation' }
-ASImage >> on: aWriteStream [ 
-	aStream := aWriteStream
-]
-
 { #category : 'adding' }
-ASImage >> pointer: p class: c [ 
+ASImageExporter >> pointer: p class: c [ 
 	^ self class pointer: p class: c 
 ]
 
-{ #category : 'process' }
-ASImage >> processOut [
+{ #category : 'writing' }
+ASImageExporter >> putBoolean: value [
 
-	^ self manifestObject: nil
-]
-
-{ #category : 'instance creation' }
-ASImage >> put: value [
-
-	| result |
-	result := value astImageObject: self.
-	self processOut.
-	^ result
+	^ currentHeap addU64: (self class boolean: value)
 ]
 
 { #category : 'writing' }
-ASImage >> putBoolean: value [
-
-	^ self putLiteral: value asBit class: ClassFalse + value asBit
-]
-
-{ #category : 'writing' }
-ASImage >> putCharacter: aCharacter [
+ASImageExporter >> putCharacter: aCharacter [
 
 	^ self putLiteral: aCharacter asInteger class: ClassCharacter
 ]
 
 { #category : 'writing' }
-ASImage >> putFloat: aFloat [
+ASImageExporter >> putFloat: aFloat [
 
-	^ self putRawInt: (self double: aFloat)
+	^ self putU64: (self class double: aFloat for: self)
 ]
 
 { #category : 'writing' }
-ASImage >> putLiteral: hash class: class [
-	^ self putRawInt: (self literal: hash class: class)
+ASImageExporter >> putLiteral: hash class: class [
+
+	^ self putU64: (self literal: hash class: class)
 ]
 
 { #category : 'writing' }
-ASImage >> putObject: object [
+ASImageExporter >> putObject: object [
 
 	alreadyPuttingObject ifTrue: [
 		| location |
@@ -524,18 +505,18 @@ ASImage >> putObject: object [
 		^ location ].
 	objects
 		at: object
-		ifPresent: [ :pointer | ^ self putRawInt: pointer ].
+		ifPresent: [ :pointer | ^ self putU64: pointer ].
 	^ self manifestObject: object
 ]
 
 { #category : 'adding' }
-ASImage >> putPlaceholder [
+ASImageExporter >> putPlaceholder [
 
-	^ self putRawInt: -1
+	^ self putU64: 16rffffffffffffffff
 ]
 
 { #category : 'writing' }
-ASImage >> putRawByteArray: aCollection [
+ASImageExporter >> putRawByteArray: aCollection [
 
 	| length result |
 	length := aCollection size - 1 | 7 + 1.
@@ -547,58 +528,43 @@ ASImage >> putRawByteArray: aCollection [
 ]
 
 { #category : 'writing' }
-ASImage >> putRawInt: anInteger [
+ASImageExporter >> putSmallInteger: anInteger [
+
+	^ self putU64: (self smallInteger: anInteger)
+]
+
+{ #category : 'writing' }
+ASImageExporter >> putSymbol: aString [
+
+	^ self putU64: (self symbol: aString)
+]
+
+{ #category : 'writing' }
+ASImageExporter >> putU64: anInteger [
 	"output in little-endian order"
 
-	| result |
-	1 to: 8 do: [ :i | aStream nextPut: (anInteger byteAt: i) ].
-	result := currentAddress.
-	currentAddress := aStream position + BaseAddress.
-	^ result
+	currentHeap addU64: anInteger
 ]
 
 { #category : 'writing' }
-ASImage >> putSmallInteger: anInteger [
+ASImageExporter >> putUndefinedObject [
 
-	^ self putRawInt: (self smallInteger: anInteger)
-]
-
-{ #category : 'writing' }
-ASImage >> putSymbol: aString [
-
-	^ self putRawInt: (self symbol: aString)
-]
-
-{ #category : 'writing' }
-ASImage >> putUndefinedObject [
-
-	^ self putLiteral: 16rffffffff class: ClassUndefinedObject
-]
-
-{ #category : 'writing' }
-ASImage >> rawIntAt: position [
-
-	| savedPosition result |
-	savedPosition := aStream position.
-	aStream position: position * 8.
-	result := self nextRawInt.
-	aStream position: savedPosition.
-	^ result
+	currentHeap addU64: 0
 ]
 
 { #category : 'adding' }
-ASImage >> selector: aSymbol [
+ASImageExporter >> selector: aSymbol [
 	^ selectors add: aSymbol andIfNewDo:  [ newSelectors add: aSymbol ].
 
 ]
 
 { #category : 'adding' }
-ASImage >> smallInteger: n [ 
+ASImageExporter >> smallInteger: n [ 
 	^ self class smallInteger: n 
 ]
 
 { #category : 'adding' }
-ASImage >> symbol: aString [
+ASImageExporter >> symbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
 	^ self
@@ -607,23 +573,33 @@ ASImage >> symbol: aString [
 		  class: ClassSymbol
 ]
 
-{ #category : 'writing' }
-ASImage >> writeClassTable [
+{ #category : 'tests' }
+ASImageExporter >> testOutput [
 
-	self at: classTableRef put: (self putRawInt: classes size).
-	classes keysDo: [ :key | self put: key ]
+	currentHeap := ASSubHeap new: 1000 at: 16r100000 exporter: self
+]
+
+{ #category : 'tests' }
+ASImageExporter >> testStorage [
+
+	^ currentHeap
 ]
 
 { #category : 'writing' }
-ASImage >> writeHeap [
+ASImageExporter >> writeClassTable [
+
+	self halt
+]
+
+{ #category : 'writing' }
+ASImageExporter >> writeHeap [
 
 	self writeSymbolTable.
 	self writeClassTable
 ]
 
 { #category : 'writing' }
-ASImage >> writeSymbolTable [
+ASImageExporter >> writeSymbolTable [
 
-	self at: symbolTableRef put: (self putRawInt: symbols size).
-	symbols keysDo: [ :key | self put: key ]
+	self halt
 ]

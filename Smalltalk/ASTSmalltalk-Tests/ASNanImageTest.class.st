@@ -2,7 +2,7 @@ Class {
 	#name : 'ASNanImageTest',
 	#superclass : 'ASImageTest',
 	#pools : [
-		'ASImage',
+		'ASImageExporter',
 		'ASZagConstants'
 	],
 	#category : 'ASTSmalltalk-Tests-Tests',
@@ -54,19 +54,6 @@ ASNanImageTest >> testSimple [
 	self image: [ :i | i put: 2.0 ] equals: 16r4000000000000000.
 	self image: [ :i | i put: 6.25e-2 ] equals: 16r3fb0000000000000.
 	self image: [ :i | i put: #'==' ] equals: 16rfff0000700000E01
-]
-
-{ #category : 'tests' }
-ASNanImageTest >> testU64From [
-
-	self assert: (self u64From: #[  ]) equals: #(  ).
-	self assert: (self u64From: #[ 1 ]) equals: #( 1 ).
-	self
-		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 ])
-		equals: #( 16r0807060504030201 ).
-	self
-		assert: (self u64From: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8])
-		equals: #( 16r0807060504030201 16r0605040302010009 16r0807 )
 ]
 
 { #category : 'tests' }
