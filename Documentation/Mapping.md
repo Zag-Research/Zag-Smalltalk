@@ -28,13 +28,13 @@ There are a few significant changes:
 All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move.
 
 ##### HeapObject word format:
-| Bits | What          | Characteristics                        |
-| ---- | ------------- | -------------------------------------- |
-| 12   | length        | number of long-words besides the footer |
-| 4    | age           | number of times object has been copied |
-| 8    | format        | see below                              |
-| 24   | identityHash  |                                        |
-| 16   | classIndex    | LSB                                    |
+| Bits | What         | Characteristics                         |
+| ---- | ------------ | --------------------------------------- |
+| 12   | length       | number of long-words besides the header |
+| 4    | age          | number of times object has been copied  |
+| 8    | format       | see below                               |
+| 24   | identityHash |                                         |
+| 16   | classIndex   | LSB                                     |
 
 #### Length
 The length field encodes the total size of the heap allocation except for the HeapObject word itself.
