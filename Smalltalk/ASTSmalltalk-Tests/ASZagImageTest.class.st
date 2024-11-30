@@ -13,28 +13,27 @@ Class {
 { #category : 'tests' }
 ASZagImageTest >> imageClass [
 
-	^ ASZagImage
+	^ ASZagImageExporter
 ]
 
 { #category : 'tests' }
 ASZagImageTest >> testObjects [
 
 	self
-		image: [ :i | i put: 'Hello' ]
-		equals: #( 16r1705000001000A 16r6F6C6C6548 ).
+		image: [ :i | i put: 'Hello World!' ]
+		equals:
+		#( 16r270C000001001F 16r6F57206F6C6C6548 16r21646C72 16r100020 ).
 	self
 		image: [ :i | i put: #( 4 2 ) ]
-		equals:
-		#( 16r27730000020009 16rfffc000000000004 16rfffc000000000002 ).
+		equals: #( 16r27730000020009 16r461 16r261 16r100020 ).
 	self
 		image: [ :i | i put: 4 @ 2 ]
-		equals:
-		#( 16r2770000003001D 16rfffc000000000004 16rfffc000000000002 ).
+		equals: #( 16r2770000003001D 16r461 16r261 16r100020 ).
 	self
 		image: [ :i | i put: #( #( 4 2 ) 1 ) ]
 		equals:
-			#( 16r27730000040009 16rfff7001000000018 16rfffc000000000001
-			   16r27730000050009 16rfffc000000000004 16rfffc000000000002 )
+			#( 16r27730000040009 16r100038 16r161 16r27730000050009
+			   16r461 16r261 16r100020 )
 ]
 
 { #category : 'tests' }

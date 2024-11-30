@@ -9,7 +9,7 @@ Boolean >> asZigLiteral [
 { #category : '*ASTSmalltalk' }
 Boolean >> astImageObject: anASImage [
 
-	^ anASImage putBoolean: self
+	^ anASImage objectBoolean: self
 ]
 
 { #category : '*ASTSmalltalk' }

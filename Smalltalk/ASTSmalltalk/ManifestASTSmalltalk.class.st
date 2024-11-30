@@ -29,7 +29,7 @@ ManifestASTSmalltalk class >> ruleBadMessageRule2V1FalsePositive [
 ManifestASTSmalltalk class >> ruleBooleanPrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #include:object:fields: #false)) #'2021-04-24T08:09:44.248594-04:00') #(#(#RGMethodDefinition #(#'ASSpurPlusImage class' #double:for: #true)) #'2024-11-27T22:32:39.146485-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #include:object:fields: #false)) #'2021-04-24T08:09:44.248594-04:00') #(#(#RGMethodDefinition #(#'ASSpurPlusImage class' #double:for: #true)) #'2024-11-27T22:32:39.146485-05:00') #(#(#RGMethodDefinition #(#'ASZagImageExporter class' #double:for: #true)) #'2024-11-30T11:50:04.315969-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -37,6 +37,13 @@ ManifestASTSmalltalk class >> ruleCollectionProtocolRuleV1FalsePositive [
 
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #compileMethodInClass: #false)) #'2021-10-09T09:13:12.016388-04:00') #(#(#RGMethodDefinition #(#ASArray #baseValue #false)) #'2023-10-19T10:44:08.600293-04:00') #(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-04-12T09:43:28.817134-04:00') #(#(#RGMethodDefinition #(#ASLLMethodOutput #setupForOutput #false)) #'2024-05-26T22:42:46.085628-07:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #inlineMultiple:from:exhaustive: #false)) #'2024-07-07T18:33:46.333081+02:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleConsistencyCheckRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASSubHeap #prepareForOutput #false)) #'2024-11-30T00:08:38.138311-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -90,14 +97,21 @@ ManifestASTSmalltalk class >> ruleMissingSubclassResponsibilityRuleV1FalsePositi
 ManifestASTSmalltalk class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #add:arrayBlock:ivSize:arraySize:class: #false)) #'2024-11-28T23:36:08.577709-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-11-28T23:36:08.577709-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASSpurPlusImage class' #double:for: #true)) #'2024-11-27T22:26:37.421275-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASSpurPlusImage class' #double:for: #true)) #'2024-11-27T22:26:37.421275-05:00') #(#(#RGMethodDefinition #(#'ASZagImageExporter class' #double:for: #true)) #'2024-11-30T11:49:44.395611-05:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-11-30T09:16:55.515465-05:00') )
 ]
 
 { #category : 'code-critics' }

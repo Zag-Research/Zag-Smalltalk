@@ -18,6 +18,24 @@ Class {
 	#tag : 'Image'
 }
 
+{ #category : 'adding' }
+ASStorage class >> addStorage: anExporter [
+
+	^ self new: self defaultSize at: self defaultAddress exporter: anExporter
+]
+
+{ #category : 'adding' }
+ASStorage class >> defaultAddress [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'adding' }
+ASStorage class >> defaultSize [
+
+	^ self subclassResponsibility
+]
+
 { #category : 'accessing' }
 ASStorage class >> extension [
 
@@ -37,32 +55,6 @@ ASStorage class >> new: size at: address exporter: anExporter [
 ]
 
 { #category : 'accessing' }
-ASStorage >> add: iBlock arrayBlock: aBlock ivSize: ivSize arraySize: arraySize class: class [
-
-	| save size |
-	size := ivSize + arraySize.
-	size > maxSize ifTrue: [
-		^ self
-			  addBig: iBlock
-			  arrayBlock: aBlock
-			  instVars: ivSize
-			  array: arraySize
-			  class: class ].
-	save := freeIndex.
-	freeIndex := freeIndex + size + 1.
-	storage at: freeIndex put: (self
-			 headerSize: size
-			 format:
-			 (self formatClass: class ivSize: ivSize arraySize: arraySize)
-			 hash: save * 8 + address
-			 class: class).
-	1 to: ivSize do: [ :i | storage at: save + i put: (iBlock cull: i) ].
-	1 to: arraySize do: [ :i |
-	storage at: save + i + ivSize put: (aBlock cull: i) ].
-	^ save - 1 * 8 + address
-]
-
-{ #category : 'accessing' }
 ASStorage >> add: size do: aBlock [
 
 	| save |
@@ -72,17 +64,13 @@ ASStorage >> add: size do: aBlock [
 	^ save * 8 + address
 ]
 
-{ #category : 'accessing' }
-ASStorage >> addBig: iBlock arrayBlock: aBlock instVars: ivSize array: arraySize class: class [
-
-	self halt
-]
-
 { #category : 'adding' }
 ASStorage >> addU64: anInteger [
 
+	freeIndex > storage size ifTrue: [ ^ nil ].
 	storage at: freeIndex put: anInteger.
-	freeIndex := freeIndex + 1
+	freeIndex := freeIndex + 1.
+	^ anInteger 
 ]
 
 { #category : 'accessing' }
@@ -109,7 +97,8 @@ ASStorage >> formatClass: class ivSize: ivSize arraySize: arraySize [
 { #category : 'accessing' }
 ASStorage >> headerSize: size format: format hash: hash class: class [
 
-	self halt
+	^ class + ((hash bitAnd: 16rffffff) bitShift: 16)
+	  + (format bitShift: 40) + 16r8000000000000 + (size bitShift: 52)
 ]
 
 { #category : 'initialization' }
@@ -128,6 +117,46 @@ ASStorage >> initializeStorage [
 { #category : 'output' }
 ASStorage >> prepareForOutput [
 
+]
+
+{ #category : 'accessing' }
+ASStorage >> register: registerBlock ivBlock: iBlock arrayBlock: aBlock ivSize: ivSize arraySize: arraySize class: class [
+
+	| save size |
+	size := ivSize + (arraySize ifNil: [ 0 ]).
+	size > maxSize ifTrue: [
+		^ self
+			  registerBig: registerBlock
+			  ivBlock: iBlock
+			  arrayBlock: aBlock
+			  instVars: ivSize
+			  array: arraySize
+			  class: class ].
+	save := freeIndex.
+	freeIndex := freeIndex + size + 1.
+	storage at: save put: (self
+			 headerSize: size
+			 format:
+			 (self formatClass: class ivSize: ivSize arraySize: arraySize)
+			 hash: save - 1 * 8 + address
+			 class: class).
+	registerBlock value: save - 1 * 8 + address.
+	1 to: ivSize do: [ :i | storage at: save + i put: (iBlock cull: i) ].
+	1 to: arraySize do: [ :i |
+	storage at: save + i + ivSize put: (aBlock cull: i) ].
+	^ true
+]
+
+{ #category : 'accessing' }
+ASStorage >> registerBig: anObject ivBlock: iBlock arrayBlock: aBlock instVars: ivSize array: arraySize class: class [
+
+	self error: 'can''t handle big arrays yet'
+]
+
+{ #category : 'accessing' }
+ASStorage >> size [
+
+	^ storage size * 8
 ]
 
 { #category : 'output' }

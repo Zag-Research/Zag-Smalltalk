@@ -19,7 +19,7 @@ ASLLFileContext >> initialize [
 
 	super initialize.
 	names := Dictionary new.
-	converter := ASNanImage
+	converter := ASNanImageExporter
 ]
 
 { #category : 'writing' }

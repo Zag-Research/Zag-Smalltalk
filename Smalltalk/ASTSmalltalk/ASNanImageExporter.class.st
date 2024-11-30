@@ -2,7 +2,7 @@
 I have the knowledge of how to encode values for NaN images
 "
 Class {
-	#name : 'ASNanImage',
+	#name : 'ASNanImageExporter',
 	#superclass : 'ASImageExporter',
 	#classVars : [
 		'GroupHeap',
@@ -15,19 +15,19 @@ Class {
 }
 
 { #category : 'accessing' }
-ASNanImage class >> boolean: value [
+ASNanImageExporter class >> boolean: value [
 
-	^ ClassFalse + value asBit
+	^ self literal: value asBit class: ClassFalse + value asBit
 ]
 
 { #category : 'converting' }
-ASNanImage class >> double: n for: ignored [
+ASNanImageExporter class >> double: n for: ignored [
 
 	^ ('16r' , n hex) asNumber
 ]
 
 { #category : 'class initialization' }
-ASNanImage class >> initialize [
+ASNanImageExporter class >> initialize [
 
 	GroupHeap := 16rFFF7000000000000.
 	GroupSmallInt0 := 16rFFFC000000000000.
@@ -35,37 +35,43 @@ ASNanImage class >> initialize [
 ]
 
 { #category : 'converting' }
-ASNanImage class >> literal: l class: c [
+ASNanImageExporter class >> literal: l class: c [
 
 	^ GroupImmediates + l + (c bitShift: 32)
 ]
 
 { #category : 'converting' }
-ASNanImage class >> pointer: p class: c [
+ASNanImageExporter class >> pointer: p [
 
 	^ GroupHeap + p
 ]
 
 { #category : 'converting' }
-ASNanImage class >> smallInteger: n [
+ASNanImageExporter class >> smallInteger: n [
 
 	^ GroupSmallInt0 + n
 ]
 
 { #category : 'converting' }
-ASNanImage class >> zagFalse [
+ASNanImageExporter class >> undefinedObject [
+
+	^ self literal: 16rffffffff class: ClassUndefinedObject
+]
+
+{ #category : 'converting' }
+ASNanImageExporter class >> zagFalse [
 	
 	^ self literal: 0 class: 4
 ]
 
 { #category : 'converting' }
-ASNanImage class >> zagNil [
+ASNanImageExporter class >> zagNil [
 
 	^ self literal: 16rffffffff class: 3
 ]
 
 { #category : 'converting' }
-ASNanImage class >> zagTrue [
+ASNanImageExporter class >> zagTrue [
 
 	^ self literal: 1 class: 5
 ]

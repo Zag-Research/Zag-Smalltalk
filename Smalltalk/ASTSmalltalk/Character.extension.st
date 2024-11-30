@@ -3,7 +3,7 @@ Extension { #name : 'Character' }
 { #category : '*ASTSmalltalk' }
 Character >> astImageObject: anASImage [
 
-	^ anASImage putCharacter: self
+	^ anASImage objectCharacter: self
 ]
 
 { #category : '*ASTSmalltalk' }

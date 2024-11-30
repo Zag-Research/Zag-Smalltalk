@@ -1,7 +1,8 @@
 Extension { #name : 'ByteString' }
 
 { #category : '*ASTSmalltalk' }
-ByteString >> astImagePut: anASImage [ 
+ByteString >> astImageObject: anASImage [
+
 	^ anASImage objectString: self
 ]
 
