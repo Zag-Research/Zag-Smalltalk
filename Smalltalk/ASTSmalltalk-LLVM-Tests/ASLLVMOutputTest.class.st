@@ -4,9 +4,8 @@ Class {
 	#instVars : [
 		'output'
 	],
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#category : 'ASTSmalltalk-LLVM-Tests',
+	#package : 'ASTSmalltalk-LLVM-Tests'
 }
 
 { #category : 'running' }

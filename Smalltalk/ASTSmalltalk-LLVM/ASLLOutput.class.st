@@ -4,9 +4,8 @@ I am the generic text outputter for LLVM
 Class {
 	#name : 'ASLLOutput',
 	#superclass : 'ASTextOutput',
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-LLVM',
+	#package : 'ASTSmalltalk-LLVM'
 }
 
 { #category : 'accessing' }
