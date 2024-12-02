@@ -41,6 +41,11 @@ ASCBlock >> inspectZagASTOn: aStream [
 ]
 
 { #category : 'testing' }
+ASCBlock >> isBlock [
+	^ true
+]
+
+{ #category : 'testing' }
 ASCBlock >> needsContext: aStackContext [
 
 	^ true
