@@ -1,9 +1,8 @@
 Class {
 	#name : 'ASLLVMTest',
 	#superclass : 'ASCodeTest',
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Tests'
+	#category : 'ASTSmalltalk-LLVM-Tests',
+	#package : 'ASTSmalltalk-LLVM-Tests'
 }
 
 { #category : 'running' }
