@@ -1,14 +1,55 @@
 Class {
 	#name : 'ZagOutputLLVM',
 	#superclass : 'Object',
+	#instVars : [
+		'gen'
+	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'as yet unclassified' }
+ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
+
+	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
+	aNumber := gen valueAt: #sp.
+	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
+	primitiveFail := self generateLabel.
+	self branchIf: aNumberIsSmallInteger isFalseTo: primitiveFail.
+	addressOfSelf := gen register: #sp plus: 8.
+	selfValue := gen valueAt: addressOfSelf.
+	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
+	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
+	
+	nativeResult := aBlock value: nativeANumber value: nativeSelf.
+	
+	overflow := self validSmallInteger: nativeResult.
+	self branchIf: overflow isTrueTo: primitiveFail.
+	result := self tagSmallInteger: nativeResult.
+	gen store: result at: addressOfSelf.
+	self returnWithSP: addressOfSelf.
+	self defineLabel: primitiveFail.
+	self primitiveFail
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> primitiveSmallIntegerMinus [
+
+	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
+		  gen subtract: aNumber from: selfValue ]
+]
+
+{ #category : 'as yet unclassified' }
 ZagOutputLLVM >> primitiveSmallIntegerPlus [
 
-	| aNumber gen sp aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
+	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
+		  gen add: aNumber to: selfValue ]
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
+
+	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	primitiveFail := self generateLabel.
@@ -22,7 +63,7 @@ ZagOutputLLVM >> primitiveSmallIntegerPlus [
 	self branchIf: overflow isTrueTo: primitiveFail.
 	result := self tagSmallInteger: nativeResult.
 	gen store: result at: addressOfSelf.
-	self returnWithSP: addressOfSelf.	
+	self returnWithSP: addressOfSelf.
 	self defineLabel: primitiveFail.
-	self primitiveFail. 
+	self primitiveFail
 ]
