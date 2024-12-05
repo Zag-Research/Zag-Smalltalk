@@ -12,7 +12,8 @@ CompiledMethod >> astFields [
 ]
 
 { #category : '*ASTSmalltalk' }
-CompiledMethod >> astImagePut: anASImage [ 
+CompiledMethod >> astImageObject: anASImage [
+
 	^ anASImage objectMethod: self
 ]
 

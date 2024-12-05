@@ -15,7 +15,6 @@ Class {
 		'newSelectors',
 		'methods',
 		'symbolTableRef',
-		'alreadyPuttingObject',
 		'pendingObjects',
 		'classTableRef',
 		'currentHeap'
@@ -71,14 +70,6 @@ Class {
 	#package : 'ASTSmalltalk',
 	#tag : 'Image'
 }
-
-{ #category : 'converting' }
-ASImageExporter class >> convertNumber: aNumber [
-
-	aNumber isInteger ifTrue: [ ^ self smallInteger: aNumber ].
-	aNumber isFloat  ifTrue: [ ^ self double: aNumber ].
-	self error: 'unexpected number'
-]
 
 { #category : 'converting' }
 ASImageExporter class >> convertToZag: anObject [
@@ -200,7 +191,7 @@ ASImageExporter class >> new [
 ]
 
 { #category : 'converting' }
-ASImageExporter class >> pointer: p class: c [
+ASImageExporter class >> pointer: p [
 
 	^ self subclassResponsibility
 ]
@@ -247,18 +238,18 @@ ASImageExporter class >> smallInteger: aNumber [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'instance creation' }
-ASImageExporter class >> test [
-
-	^ super new testOutput
-]
-
 { #category : 'writing' }
 ASImageExporter >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |
 		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
 	]
 
+]
+
+{ #category : 'writing' }
+ASImageExporter >> addSubHeap [
+
+	currentHeap := (currentHeap ifNil: [ ASSubHeap ]) addStorage: self
 ]
 
 { #category : 'accessing' }
@@ -291,26 +282,23 @@ ASImageExporter >> class: aClass [
 
 { #category : 'writing' }
 ASImageExporter >> closeOverClassesAndSelectors [
+
 	| tempClasses tempSelectors |
 	[ newClasses size + newSelectors size > 0 ] whileTrue: [
 		tempClasses := newClasses.
 		newClasses := OrderedCollection new.
 		tempSelectors := newSelectors.
 		newSelectors := OrderedCollection new.
-		tempClasses do: [: class | | cc |
+		tempClasses do: [ :class |
+			| cc |
 			cc := self canonicalClasses: class.
-			cc first superclass ifNotNil: [: superclass | self imageObject: superclass ].
-			self imageObject: cc first.
-			selectors do: [: selector |
-				self addFirstMethod: selector in: cc.
-			]
-		].
-		tempSelectors do: [: selector |
-			classes keysDo: [: class |
-				self addFirstMethod: selector in: (self canonicalClasses: class).
-			]
-		]
-	]
+			cc first superclass ifNotNil: [ :superclass |
+				superclass astImageObject: self ].
+			cc first astImageObject: self.
+			selectors do: [ :selector | self addFirstMethod: selector in: cc ] ].
+		tempSelectors do: [ :selector |
+			classes keysDo: [ :class |
+				self addFirstMethod: selector in: (self canonicalClasses: class) ] ] ]
 ]
 
 { #category : 'compiling' }
@@ -319,28 +307,19 @@ ASImageExporter >> compileMethod: aMethod [
 ]
 
 { #category : 'writing' }
-ASImageExporter >> createClassTable [ 
+ASImageExporter >> createClassTable [
+
 	| table |
 	table := Array new: classes size.
-	classes keysAndValuesDo: [: class : number |
-		table at: number+1 put: (self imageObject: class) ].
+	classes keysAndValuesDo: [ :class :number |
+		table at: number + 1 put: (class astImageObject: self) ].
 	^ table
 ]
 
-{ #category : 'accessing' }
-ASImageExporter >> currentAddress [
+{ #category : 'tests' }
+ASImageExporter >> currentHeap [
 
-	^ currentAddress
-]
-
-{ #category : 'adding' }
-ASImageExporter >> double: n [ 
-	^ self class double: n 
-]
-
-{ #category : 'objects' }
-ASImageExporter >> imageObject: anObject [ 
-	^ anObject astImageObject: self
+	^ currentHeap
 ]
 
 { #category : 'initialization' }
@@ -355,7 +334,6 @@ ASImageExporter >> initialize [
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
-	alreadyPuttingObject := false.
 	pendingObjects := Dictionary new.
 	#( #= value value: cull: yourself doesNotUnderstand:
 	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
@@ -388,27 +366,6 @@ ASImageExporter >> initialize [
 		do: [ :className | classes at: className put: nil ]
 ]
 
-{ #category : 'adding' }
-ASImageExporter >> literal: l class: c [ 
-	^ self class literal: l class: c 
-]
-
-{ #category : 'writing' }
-ASImageExporter >> manifestObject: object [
-
-	alreadyPuttingObject := true.
-	object ifNotNil: [objects at: object put: (object astImagePut: self)].
-	[ pendingObjects isEmpty ] whileFalse: [
-		| tempPending |
-		tempPending := pendingObjects.
-		pendingObjects := Dictionary new.
-		tempPending keysAndValuesDo: [ :obj :locations |
-			| pointer |
-			pointer := obj astImagePut: self.
-			locations do: [ :each | self at: each put: pointer ] ] ].
-	alreadyPuttingObject := false
-]
-
 { #category : 'accessing' }
 ASImageExporter >> method: aCompiledMethod [
 	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
@@ -419,19 +376,43 @@ ASImageExporter >> methods [
 	^ methods
 ]
 
+{ #category : 'writing' }
+ASImageExporter >> objectBoolean: value [
+
+	^ self class boolean: value
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectCharacter: aCharacter [
+
+	^ self objectLiteral: aCharacter asInteger class: ClassCharacter
+]
+
 { #category : 'adding' }
 ASImageExporter >> objectClass: aClass [
 
 	| cc |
 	cc := (self canonicalClasses: aClass) first.
-	self halt.
+	self shouldBeImplemented.
 	^ classes at: cc ifAbsentPut: [ classes size ]
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectFloat: aFloat [
+
+	^ self class double: aFloat for: self
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectLiteral: hash class: class [
+
+	^ self class literal: hash class: class
 ]
 
 { #category : 'adding' }
 ASImageExporter >> objectMethod: aMethod [
 
-	self halt
+	self shouldBeImplemented
 ]
 
 { #category : 'adding' }
@@ -449,107 +430,54 @@ ASImageExporter >> objectObject: anObject [
 	^ ai put: anObject into: self
 ]
 
+{ #category : 'writing' }
+ASImageExporter >> objectSmallInteger: anInteger [
+
+	^ self class smallInteger: anInteger
+]
+
 { #category : 'adding' }
 ASImageExporter >> objectString: aString [
 
-	| ai |
+	| ai result |
 	ai := ASAllocationInfo
 		      headerIVars: 0
 		      indexed: aString size
 		      element: 1
 		      weak: false.
-	self putU64: (ai header: ClassString).
-	^ self putRawByteArray: aString asByteArray
+	result := ai header: ClassString into: self.
+	currentHeap
+		at: result
+		with: (aString asByteArray asU64Array)
+		do: [ :chunk | chunk ].
+	^ self pointer: result
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectSymbol: aString [
+
+	^ self symbol: aString
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectUndefinedObject [
+
+	^ self class undefinedObject
 ]
 
 { #category : 'adding' }
-ASImageExporter >> pointer: p class: c [ 
-	^ self class pointer: p class: c 
-]
+ASImageExporter >> pointer: p [
 
-{ #category : 'writing' }
-ASImageExporter >> putBoolean: value [
-
-	^ currentHeap addU64: (self class boolean: value)
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putCharacter: aCharacter [
-
-	^ self putLiteral: aCharacter asInteger class: ClassCharacter
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putFloat: aFloat [
-
-	^ self putU64: (self class double: aFloat for: self)
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putLiteral: hash class: class [
-
-	^ self putU64: (self literal: hash class: class)
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putObject: object [
-
-	alreadyPuttingObject ifTrue: [
-		| location |
-		location := self putPlaceholder.
-		pendingObjects
-			at: object
-			ifPresent: [ :existing |
-			pendingObjects at: object put: existing , { location } ]
-			ifAbsentPut: [ { location } ].
-		^ location ].
-	objects
-		at: object
-		ifPresent: [ :pointer | ^ self putU64: pointer ].
-	^ self manifestObject: object
-]
-
-{ #category : 'adding' }
-ASImageExporter >> putPlaceholder [
-
-	^ self putU64: 16rffffffffffffffff
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putRawByteArray: aCollection [
-
-	| length result |
-	length := aCollection size - 1 | 7 + 1.
-	aStream nextPutAll: aCollection.
-	aCollection size to: length - 1 do: [ :ignored | aStream nextPut: 0 ].
-	result := currentAddress.
-	currentAddress := aStream position + BaseAddress.
-	^ result
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putSmallInteger: anInteger [
-
-	^ self putU64: (self smallInteger: anInteger)
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putSymbol: aString [
-
-	^ self putU64: (self symbol: aString)
+	^ self class pointer: p
 ]
 
 { #category : 'writing' }
 ASImageExporter >> putU64: anInteger [
 	"output in little-endian order"
 
-	currentHeap addU64: anInteger
-]
-
-{ #category : 'writing' }
-ASImageExporter >> putUndefinedObject [
-
-	currentHeap addU64: 0
+	(currentHeap hasSpaceFor: 1) ifFalse: [
+		  self addSubHeap].
+	^ currentHeap addU64: anInteger
 ]
 
 { #category : 'adding' }
@@ -559,30 +487,14 @@ ASImageExporter >> selector: aSymbol [
 ]
 
 { #category : 'adding' }
-ASImageExporter >> smallInteger: n [ 
-	^ self class smallInteger: n 
-]
-
-{ #category : 'adding' }
 ASImageExporter >> symbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ self
-		  literal: (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) <<8
+	^ self class
+		  literal:
+			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
 			  + aString numArgs
 		  class: ClassSymbol
-]
-
-{ #category : 'tests' }
-ASImageExporter >> testOutput [
-
-	currentHeap := ASSubHeap new: 1000 at: 16r100000 exporter: self
-]
-
-{ #category : 'tests' }
-ASImageExporter >> testStorage [
-
-	^ currentHeap
 ]
 
 { #category : 'writing' }

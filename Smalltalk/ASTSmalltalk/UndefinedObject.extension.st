@@ -3,7 +3,7 @@ Extension { #name : 'UndefinedObject' }
 { #category : '*ASTSmalltalk' }
 UndefinedObject >> astImageObject: anASImage [
 
-	^ anASImage putUndefinedObject
+	^ anASImage objectUndefinedObject
 ]
 
 { #category : '*ASTSmalltalk' }

@@ -3,7 +3,7 @@ I test algorithm that optimizes the ownership of variables in blocks. See https:
 "
 Class {
 	#name : 'ASOptimizingVariableOwnershipTest',
-	#superclass : 'TestCase',
+	#superclass : 'ASFinalAnalysisTest',
 	#instVars : [
 		'cg',
 		'stack',

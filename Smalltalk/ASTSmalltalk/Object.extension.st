@@ -61,12 +61,8 @@ Object >> astFormat [
 ]
 
 { #category : '*ASTSmalltalk' }
-Object >> astImageObject: anASImage [ 
-	^ anASImage putObject: self
-]
+Object >> astImageObject: anASImage [
 
-{ #category : '*ASTSmalltalk' }
-Object >> astImagePut: anASImage [ 
 	^ anASImage objectObject: self
 ]
 

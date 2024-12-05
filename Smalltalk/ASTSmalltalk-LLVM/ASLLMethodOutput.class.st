@@ -15,9 +15,8 @@ Class {
 		'NilName',
 		'TypeMap'
 	],
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-LLVM',
+	#package : 'ASTSmalltalk-LLVM'
 }
 
 { #category : 'compiling' }

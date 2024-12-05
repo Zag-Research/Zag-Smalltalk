@@ -9,9 +9,8 @@ Class {
 	#instVars : [
 		'converter'
 	],
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-LLVM',
+	#package : 'ASTSmalltalk-LLVM'
 }
 
 { #category : 'initialization' }
@@ -19,7 +18,7 @@ ASLLFileContext >> initialize [
 
 	super initialize.
 	names := Dictionary new.
-	converter := ASNanImage
+	converter := ASNanImageExporter
 ]
 
 { #category : 'writing' }

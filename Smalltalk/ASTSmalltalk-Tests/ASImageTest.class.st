@@ -16,10 +16,10 @@ ASImageTest >> image: aBlock equals: value [
 	image := self imageClass test.
 	result := ByteArray streamContents: [ :s |
 		          aBlock value: image.
-		          image testStorage toStream: s ].
+		          image currentHeap toStream: s ].
 	self
 		assert: result asU64Array first hexString
-		equals: image testStorage address hexString.
+		equals: image currentHeap address hexString.
 	value isInteger
 		ifTrue: [
 			self
@@ -27,7 +27,7 @@ ASImageTest >> image: aBlock equals: value [
 				equals: value hexString ]
 		ifFalse: [
 			self
-				assert: (result asU64Array collect: #hexString)
+				assert: ((result asU64Array allButFirst: 3) collect: #hexString)
 				equals: (value collect: #hexString) ]
 ]
 

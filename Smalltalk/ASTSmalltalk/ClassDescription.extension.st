@@ -1,6 +1,7 @@
 Extension { #name : 'ClassDescription' }
 
 { #category : '*ASTSmalltalk' }
-ClassDescription >> astImagePut: anASImage [ 
+ClassDescription >> astImageObject: anASImage [
+
 	^ anASImage objectClass: self
 ]

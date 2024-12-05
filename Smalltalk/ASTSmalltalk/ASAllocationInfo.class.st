@@ -103,14 +103,19 @@ ASAllocationInfo >> format: fmt [
 ]
 
 { #category : 'accessing' }
-ASAllocationInfo >> header: classNumber [
+ASAllocationInfo >> header: classNumber into: anImage [
 
 	| length |
 	length := instVars + extra + footerLength.
 	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
+	(anImage currentHeap hasSpaceFor: length) ifFalse: [
+		anImage addSubHeap ].
 	HashCounter := HashCounter + 1.
-	^ length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
-	  + classNumber
+	^ anImage currentHeap
+			   header:
+				   length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
+				   + classNumber
+			   size: length
 ]
 
 { #category : 'initialization' }
@@ -133,9 +138,15 @@ ASAllocationInfo >> put: anObject into: anImage [
 
 	| address class |
 	class := anImage class: anObject class.
-	address := anImage putU64: (self header: class).
-	1 to: instVars do: [ :n |
-	(anObject instVarAt: n) astImageObject: anImage ].
-	1 to: extra do: [ :n | (anObject at: n) astImageObject: anImage ].
-	^ anImage pointer: address class: class
+	address := self header: class into: anImage.
+	anImage currentHeap
+		at: address
+		with: ((1 to: instVars) collect: [ :i | anObject instVarAt: i ])
+		do: [ :v | v astImageObject: anImage ].
+	extra > 0 ifTrue: [
+	anImage currentHeap
+		at: address + instVars
+		with: anObject
+		do: [ :v | v astImageObject: anImage ]].
+	^ anImage pointer: address
 ]

@@ -86,6 +86,13 @@ ManifestASTSmalltalkTests class >> ruleReVariableAssignedLiteralRuleV1FalsePosit
 ]
 
 { #category : 'code-critics' }
+ManifestASTSmalltalkTests class >> ruleSendsDifferentSuperRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ASImageExporter class' #test #true)) #'2024-11-30T11:48:49.078941-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestASTSmalltalkTests class >> ruleSendsUnknownMessageToGlobalRuleV1FalsePositive [
 	^ #(#(#(#RGClassDefinition #(#ASPharoCompilerTest)) #'2022-05-26T11:58:53.101937-04:00') )
 ]
