@@ -553,6 +553,10 @@ ASCodeGenerator >> reifyLocals [
 
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> removeUnusedBlockClosures [
+	"Removal of redundant BlockClosures
+After all inlining is completed there will typically be pushes of BlockClosures that are subsequently inlined so that the block itself need never be created. These are turned into pushes of nil."
+
+	basicBlocks do: [ :bb | bb removeUnusedBlockClosures: blockClosures ]
 ]
 
 { #category : 'finalAnalysis' }

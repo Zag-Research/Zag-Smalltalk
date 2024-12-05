@@ -553,6 +553,14 @@ ASCBasicBlock >> removeLastOperation [
 	operations removeLast
 ]
 
+{ #category : 'removing' }
+ASCBasicBlock >> removeUnusedBlockClosures: blockClosures [
+
+	operations doWithIndex: [ :op :index |
+		(op isBlock and: [ (blockClosures includes: op block) not] ) ifTrue: [
+			operations at: index put: (ASCNil new fromOperation: op) ] ]
+]
+
 { #category : 'inlining' }
 ASCBasicBlock >> replaceOperation: anOperation [
 
