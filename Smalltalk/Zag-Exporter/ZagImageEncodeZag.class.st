@@ -40,7 +40,9 @@ ZagImageEncodeZag class >> pointer: p [
 { #category : 'converting' }
 ZagImageEncodeZag class >> smallInteger: anInteger [
 
-	^ self literal: (anInteger bitAnd: 16r00ffffffffffffff) << 8 class: self classSmallInteger
+	^ self
+		  literal: (anInteger bitAnd: 16r00ffffffffffffff)
+		  class: self classSmallInteger
 ]
 
 { #category : 'converting' }
