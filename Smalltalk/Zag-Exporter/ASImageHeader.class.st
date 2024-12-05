@@ -4,9 +4,9 @@ I am storage that will be exported to a .image file that will be loaded by a Zag
 Class {
 	#name : 'ASImageHeader',
 	#superclass : 'ASStorage',
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'Zag-Exporter-Exporting',
+	#package : 'Zag-Exporter',
+	#tag : 'Exporting'
 }
 
 { #category : 'accessing' }

@@ -8,7 +8,7 @@ Class {
 		'image'
 	],
 	#pools : [
-		'ASZagConstants'
+		'AnObsoleteZagConstants'
 	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',

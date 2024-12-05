@@ -4,9 +4,9 @@ An outputter that doesn't actually output anything, but simply compiles a method
 Class {
 	#name : 'ASNoOutput',
 	#superclass : 'ASOutput',
-	#category : 'ASTSmalltalk-Output',
-	#package : 'ASTSmalltalk',
-	#tag : 'Output'
+	#category : 'ASTSmalltalk-Tests-Tests',
+	#package : 'ASTSmalltalk-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'compiling' }

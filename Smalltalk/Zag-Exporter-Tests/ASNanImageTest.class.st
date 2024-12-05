@@ -2,18 +2,17 @@ Class {
 	#name : 'ASNanImageTest',
 	#superclass : 'ASImageTest',
 	#pools : [
-		'ASImageExporter',
-		'ASZagConstants'
+		'ASImageExporter'
 	],
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
+	#category : 'Zag-Exporter-Tests-Tests',
+	#package : 'Zag-Exporter-Tests',
 	#tag : 'Tests'
 }
 
 { #category : 'as yet unclassified' }
-ASNanImageTest >> imageClass [
+ASNanImageTest >> encoderClass [
 
-	^ ASNanImageExporter
+	^ ZagImageEncodeNan
 ]
 
 { #category : 'tests' }
@@ -61,7 +60,10 @@ ASNanImageTest >> test_simple1 [
 
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
-	self threaded: ast equals: { ZfPushLiteral . 42 . ZfReturnTop }
+	self threaded: ast equals: {
+			constants tPushLiteral.
+			42.
+			constants tReturnTop }
 ]
 
 { #category : 'tests' }

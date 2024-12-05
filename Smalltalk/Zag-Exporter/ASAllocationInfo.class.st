@@ -13,31 +13,27 @@ Class {
 		'format'
 	],
 	#classVars : [
-		'AgeStatic',
 		'HashCounter'
 	],
-	#pools : [
-		'ASImageExporter'
-	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'Zag-Exporter-Exporting',
+	#package : 'Zag-Exporter',
+	#tag : 'Exporting'
 }
 
 { #category : 'adding' }
-ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
+ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak constants: constants [
 
 	nElements ifNotNil: [
 		| arraySize |
 		arraySize := nElements * (element ifNil: [ 8 ]) + 7 // 8.
 		makeWeak ifTrue: [
-			iVars + arraySize + 3 > MaxHeaderLength ifTrue: [
+			iVars + arraySize + 3 > constants maxHeaderLength ifTrue: [
 				^ self new
-					  format: ExternalWeakWithPointers;
+					  format: constants externalWeakWithPointers;
 					  instVars: iVars;
 					  footerLength: 3 ].
 			^ self new
-				  format: IndexedWeakWithPointers;
+				  format: constants indexedWeakWithPointers;
 				  instVars: iVars;
 				  extra: arraySize;
 				  footerLength: 3 ].
@@ -48,33 +44,32 @@ ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element
 						  format: nElements;
 						  extra: arraySize ].
 			element ifNil: [
-				nElements <= MaxHeaderLength ifTrue: [
+				nElements <= constants maxHeaderLength ifTrue: [
 					^ self new
-						  format: DirectIndexed;
+						  format: constants directIndexed;
 						  extra: arraySize ] ] ].
-		iVars + arraySize > (MaxHeaderLength - 2) ifTrue: [
+		iVars + arraySize > (constants maxHeaderLength - 2) ifTrue: [
 			^ self new
 				  format: (element = Object
-						   ifTrue: [ External ]
-						   ifFalse: [ ExternalNonObject ]);
+						   ifTrue: [ constants external ]
+						   ifFalse: [ constants externalNonObject ]);
 				  instVars: iVars;
 				  footerLength: 2 ].
 		^ self new
 			  format: (element = Object
-					   ifTrue: [ Indexed ]
-					   ifFalse: [ IndexedNonObject ]);
+					   ifTrue: [ constants indexed ]
+					   ifFalse: [ constants indexedNonObject ]);
 			  instVars: iVars;
 			  extra: arraySize;
 			  footerLength: 2 ].
 	^ self new
-		  format: NotIndexable;
+		  format: constants notIndexable;
 		  instVars: iVars
 ]
 
 { #category : 'initialization' }
 ASAllocationInfo class >> initialize [
 
-	AgeStatic := 7.
 	self reset
 ]
 
@@ -107,15 +102,15 @@ ASAllocationInfo >> header: classNumber into: anImage [
 
 	| length |
 	length := instVars + extra + footerLength.
-	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
+	length < anImage constants maxHeaderLength ifFalse: [ self error: 'header too big' ].
 	(anImage currentHeap hasSpaceFor: length) ifFalse: [
 		anImage addSubHeap ].
 	HashCounter := HashCounter + 1.
 	^ anImage currentHeap
-			   header:
-				   length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
-				   + classNumber
-			   size: length
+		  header:
+			  length << 4 + anImage constants ageStatic << 8 + format << 24 + HashCounter << 16
+			  + classNumber
+		  size: length
 ]
 
 { #category : 'initialization' }

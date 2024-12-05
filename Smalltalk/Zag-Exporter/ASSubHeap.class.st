@@ -11,9 +11,9 @@ Class {
 	#pools : [
 		'ASImageExporter'
 	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'Zag-Exporter-Exporting',
+	#package : 'Zag-Exporter',
+	#tag : 'Exporting'
 }
 
 { #category : 'instance creation' }

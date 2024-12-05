@@ -1,19 +1,26 @@
 Class {
 	#name : 'ASImageTest',
 	#superclass : 'TestCase',
-	#pools : [
-		'ASZagConstants'
+	#instVars : [
+		'savedConstants',
+		'constants'
 	],
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
+	#category : 'Zag-Exporter-Tests-Tests',
+	#package : 'Zag-Exporter-Tests',
 	#tag : 'Tests'
 }
+
+{ #category : 'tests' }
+ASImageTest >> encoderClass [
+
+	^ self subclassResponsibility
+]
 
 { #category : 'running' }
 ASImageTest >> image: aBlock equals: value [
 
 	| result image |
-	image := self imageClass test.
+	image := ASImageExporter test constants: constants.
 	result := ByteArray streamContents: [ :s |
 		          aBlock value: image.
 		          image currentHeap toStream: s ].
@@ -31,18 +38,31 @@ ASImageTest >> image: aBlock equals: value [
 				equals: (value collect: #hexString) ]
 ]
 
-{ #category : 'tests' }
-ASImageTest >> imageClass [
-
-	^ self subclassResponsibility
-]
-
 { #category : 'running' }
 ASImageTest >> setUp [
 
 	super setUp.
 
-	ASAllocationInfo reset
+	ASAllocationInfo reset.
+	savedConstants := ZagImageEncoder constants.
+	ZagImageEncoder constants: (constants := self encoderClass)
+]
+
+{ #category : 'running' }
+ASImageTest >> tearDown [
+
+	ZagImageEncoder constants: savedConstants.
+	super tearDown
+]
+
+{ #category : 'tests' }
+ASImageTest >> testObjects [
+	^ self subclassResponsibility
+]
+
+{ #category : 'tests' }
+ASImageTest >> testSimple [
+	^ self subclassResponsibility
 ]
 
 { #category : 'tests' }
@@ -63,8 +83,9 @@ ASImageTest >> testU64Array [
 ASImageTest >> threaded: ast equals: converted [
 
 	| image |
-	image := self imageClass test on: (ReadWriteStream on: #[  ]).
+	image := ASImageExporter test constants: constants; on: (ReadWriteStream on: #[  ]).
 	ASImageThreadedOutput new
+		constants: constants;
 		context: (ASImageFileContext with: image);
 		generateCode: ast.
 	converted withIndexDo: [ :each :idx |
@@ -73,7 +94,7 @@ ASImageTest >> threaded: ast equals: converted [
 		each isSymbol
 			ifTrue: [
 				self
-					assert: code = (ASZagConstants classVarNamed: each)
+					assert: code = (constants perform: each)
 					description: [
 					'expected: ' , each , ' but found: ' , code hexString ] ]
 			ifFalse: [

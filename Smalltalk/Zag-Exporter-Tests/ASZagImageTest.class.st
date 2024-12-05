@@ -2,18 +2,30 @@ Class {
 	#name : 'ASZagImageTest',
 	#superclass : 'ASImageTest',
 	#pools : [
-		'ASImageExporter',
-		'ASZagConstants'
+		'ASImageExporter'
 	],
-	#category : 'ASTSmalltalk-Tests-Tests',
-	#package : 'ASTSmalltalk-Tests',
+	#classInstVars : [
+		'zagConstants'
+	],
+	#category : 'Zag-Exporter-Tests-Tests',
+	#package : 'Zag-Exporter-Tests',
 	#tag : 'Tests'
 }
 
-{ #category : 'tests' }
-ASZagImageTest >> imageClass [
+{ #category : 'initialize encoding' }
+ASZagImageTest class >> initDefaultConstants [
 
-	^ ASZagImageExporter
+	<script: 'self initDefaultConstants'>
+	zagConstants := ZagImageEncoder
+		                constantsClassFrom: 'Zag
+BaseAddress := 12345.
+' readStream
+]
+
+{ #category : 'tests' }
+ASZagImageTest >> encoderClass [
+
+	^ ZagImageEncodeZag
 ]
 
 { #category : 'tests' }
@@ -40,7 +52,7 @@ ASZagImageTest >> testObjects [
 ASZagImageTest >> testSimple [
 
 	self image: [ :i | i put: 42 ] equals: 16r0000000000002a61.
-	self image: [ :i | i put: 1 ] equals:  16r0000000000000161.
+	self image: [ :i | i put: 1 ] equals: 16r0000000000000161.
 	self image: [ :i | i put: -1 ] equals: 16rffffffffffffff61.
 	self image: [ :i | i put: true ] equals: 16r0000000000000059.
 	self image: [ :i | i put: false ] equals: 16r0000000000000051.

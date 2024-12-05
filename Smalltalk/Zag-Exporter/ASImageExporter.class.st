@@ -3,7 +3,7 @@ I write out ASTSmalltalk images
 "
 Class {
 	#name : 'ASImageExporter',
-	#superclass : 'SharedPool',
+	#superclass : 'Object',
 	#instVars : [
 		'symbols',
 		'classes',
@@ -17,71 +17,16 @@ Class {
 		'symbolTableRef',
 		'pendingObjects',
 		'classTableRef',
-		'currentHeap'
-	],
-	#classVars : [
-		'BaseAddress',
-		'ClassArray',
-		'ClassCharacter',
-		'ClassClass',
-		'ClassDoubleWordArray',
-		'ClassFalse',
-		'ClassFloat',
-		'ClassMask',
-		'ClassMethod',
-		'ClassObject',
-		'ClassSmallInteger',
-		'ClassString',
-		'ClassSymbol',
-		'ClassTrue',
-		'ClassUndefinedObject',
-		'DirectIndexed',
-		'DirectIndexedWithPointers',
-		'External',
-		'ExternalNonObject',
-		'ExternalNonObjectWithPointers',
-		'ExternalStruct',
-		'ExternalWeakWithPointers',
-		'ExternalWithPointers',
-		'FirstAssignableClass',
-		'FormatMask',
-		'FormatShift',
-		'Free',
-		'HashMask',
-		'HashShift',
-		'Indexed',
-		'IndexedNonObject',
-		'IndexedNonObjectWithPointers',
-		'IndexedStruct',
-		'IndexedWeakWithPointers',
-		'IndexedWithPointers',
-		'ListOfClasses',
-		'MaxHeaderLength',
-		'NotIndexable',
-		'NotIndexableWithPointers',
-		'SizeMask',
-		'SizeShift',
-		'Special'
+		'currentHeap',
+		'constants'
 	],
 	#classInstVars : [
 		'imageFolder'
 	],
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'Zag-Exporter-Exporting',
+	#package : 'Zag-Exporter',
+	#tag : 'Exporting'
 }
-
-{ #category : 'converting' }
-ASImageExporter class >> convertToZag: anObject [
-
-	^ anObject convertToZag: self
-]
-
-{ #category : 'converting' }
-ASImageExporter class >> double: aNumber for: anImage [
-
-	^ self subclassResponsibility
-]
 
 { #category : 'export' }
 ASImageExporter class >> exportMethods [
@@ -92,15 +37,15 @@ ASImageExporter class >> exportMethods [
 
 { #category : 'export' }
 ASImageExporter class >> exportPackages [
-	^ RPackageOrganizer default packages select: [: package |
-			((package name beginsWith: 'ASTSmalltalk')
-					or: ((package name beginsWith: 'PC') 
-								and: [(package name findString: '-Option') = 0]))
-				and: [ (package name endsWith: '-Tests') not ]
-		]
+
+	^ PackageOrganizer default packages select: [ :package |
+		  ((package name beginsWith: 'ASTSmalltalk') or:
+			   ((package name beginsWith: 'PC') and: [
+				    (package name findString: '-Option') = 0 ])) and: [
+			  (package name endsWith: '-Tests') not ] ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'export' }
 ASImageExporter class >> ifInvalidFolder: folder do: aBlock [
 	
 	(folder isNil or: [folder exists not]) ifTrue: aBlock
@@ -112,88 +57,16 @@ ASImageExporter class >> image [
 	^ super new initHeapHeader
 ]
 
-{ #category : 'accessing' }
+{ #category : 'export' }
 ASImageExporter class >> imageFolder: anObject [
 	
 	imageFolder := anObject
-]
-
-{ #category : 'class initialization' }
-ASImageExporter class >> initialize [
-
-	BaseAddress := 16r1000000000.
-	SizeMask := 16r7fff.
-	SizeShift := 48.
-	FormatMask := 16r1f.
-	FormatShift := 40.
-	HashShift := 16.
-	HashMask := 1 << (FormatShift - HashShift) - 1.
-	ClassMask := 1 << HashShift - 1.
-	MaxHeaderLength := 4093.
-	ClassFalse := 10.
-	ClassTrue := ClassFalse + 1.
-	ClassSmallInteger := 12.
-	ClassSymbol := 13.
-	ClassCharacter := 14.
-	ClassUndefinedObject := 23.
-	ClassFloat := 24.
-	ClassObject := 26.
-	ClassArray := 30.
-	ClassString := 31.
-"	ClassClass := ClassString + 1.
-	ClassMethod := ClassClass + 1."
-	FirstAssignableClass := 35.
-	ListOfClasses := {
-		                 Object.
-		                 SmallInteger.
-		                 UndefinedObject.
-		                 False.
-		                 True.
-		                 Float.
-		                 Symbol.
-		                 Character.
-		                 Array.
-		                 String.
-		                 CompiledMethod.
-		                 Class.
-		                 Context.
-		                 BlockClosure }.
-	IndexedStruct := 110.
-	ExternalStruct := IndexedStruct + 1.
-	NotIndexable := ExternalStruct + 1.
-	IndexedNonObject := NotIndexable + 1.
-	ExternalNonObject := IndexedNonObject + 1.
-	DirectIndexed := ExternalNonObject + 1.
-	Indexed := DirectIndexed + 1.
-	External := Indexed + 1.
-	Free := External + 1.
-	Special := Free + 1.
-	NotIndexableWithPointers := Special + 1.
-	IndexedNonObjectWithPointers := NotIndexableWithPointers + 1.
-	ExternalNonObjectWithPointers := IndexedNonObjectWithPointers + 1.
-	DirectIndexedWithPointers := ExternalNonObjectWithPointers + 1.
-	IndexedWithPointers := DirectIndexedWithPointers + 1.
-	ExternalWithPointers := IndexedWithPointers + 1.
-	ExternalWeakWithPointers := ExternalWithPointers + 1.
-	IndexedWeakWithPointers := ExternalWeakWithPointers + 1
-]
-
-{ #category : 'converting' }
-ASImageExporter class >> literal: l class: c [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'instance creation' }
 ASImageExporter class >> new [
 
 	^ self error: 'use "image" or "test" to create instances of ',self name
-]
-
-{ #category : 'converting' }
-ASImageExporter class >> pointer: p [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'image analysis' }
@@ -230,12 +103,6 @@ ASImageExporter class >> setUpImageFolder [
 ASImageExporter class >> setUpImageFolderPrompt [
 
 	^ 'Folder for image export please?'
-]
-
-{ #category : 'converting' }
-ASImageExporter class >> smallInteger: aNumber [
-
-	^ self subclassResponsibility
 ]
 
 { #category : 'writing' }
@@ -326,7 +193,8 @@ ASImageExporter >> currentHeap [
 ASImageExporter >> initialize [
 
 	super initialize.
-	currentAddress := BaseAddress.
+	constants := ZagImageEncoder constants.
+	currentAddress := constants baseAddress.
 	objects := IdentityDictionary new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
@@ -344,7 +212,52 @@ ASImageExporter >> initialize [
 	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
 	   perform: perform:with: perform:with:with: perform:with:with:with:
 	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self symbol: symbol ]. " has to match symbols.zig "
+		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
+	{
+		Object.
+		SmallInteger.
+		UndefinedObject.
+		False.
+		True.
+		Float.
+		Symbol.
+		Character.
+		Array.
+		String.
+		CompiledMethod.
+		Class.
+		Context.
+		BlockClosure } do: [ :class | self class: class ]. " has to match zobject.zig "
+	#( Method Dispatch ThunkSmallInteger ThunkFloat ThunkImmediate
+	   ThunkReturnSelf ThunkReturnTrue ThunkReturnFalse ThunkReturnNil
+	   ThunkReturn_1 ThunkReturn0 ThunkReturn1 ThunkReturn2 ThunkHeap )
+		do: [ :className | classes at: className put: nil ]
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> initializeConstants: aConstantsClass [
+
+	super initialize.
+	constants := aConstantsClass.
+	currentAddress := constants baseAddress.
+	objects := IdentityDictionary new.
+	symbols := Dictionary new.
+	classes := Dictionary new.
+	methods := Dictionary new.
+	selectors := Set new.
+	newClasses := OrderedCollection new.
+	newSelectors := OrderedCollection new.
+	pendingObjects := Dictionary new.
+	#( #= value value: cull: yourself doesNotUnderstand:
+	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	   negated new new: value:value:value: value:value:value:value:
+	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
+	   perform: perform:with: perform:with:with: perform:with:with:with:
+	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
+		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
 	{
 		Object.
 		SmallInteger.
@@ -379,13 +292,15 @@ ASImageExporter >> methods [
 { #category : 'writing' }
 ASImageExporter >> objectBoolean: value [
 
-	^ self class boolean: value
+	^ constants boolean: value
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectCharacter: aCharacter [
 
-	^ self objectLiteral: aCharacter asInteger class: ClassCharacter
+	^ self
+		  objectLiteral: aCharacter asInteger
+		  class: constants classCharacter
 ]
 
 { #category : 'adding' }
@@ -400,13 +315,13 @@ ASImageExporter >> objectClass: aClass [
 { #category : 'writing' }
 ASImageExporter >> objectFloat: aFloat [
 
-	^ self class double: aFloat for: self
+	^ constants double: aFloat for: self
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectLiteral: hash class: class [
 
-	^ self class literal: hash class: class
+	^ constants literal: hash class: class
 ]
 
 { #category : 'adding' }
@@ -426,14 +341,15 @@ ASImageExporter >> objectObject: anObject [
 		      headerIVars: nInstVars
 		      indexed: nExtra
 		      element: nil
-		      weak: false.
+		      weak: false
+		      constants: constants.
 	^ ai put: anObject into: self
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectSmallInteger: anInteger [
 
-	^ self class smallInteger: anInteger
+	^ constants smallInteger: anInteger
 ]
 
 { #category : 'adding' }
@@ -444,11 +360,12 @@ ASImageExporter >> objectString: aString [
 		      headerIVars: 0
 		      indexed: aString size
 		      element: 1
-		      weak: false.
-	result := ai header: ClassString into: self.
+		      weak: false
+		      constants: constants.
+	result := ai header: constants classString into: self.
 	currentHeap
 		at: result
-		with: (aString asByteArray asU64Array)
+		with: aString asByteArray asU64Array
 		do: [ :chunk | chunk ].
 	^ self pointer: result
 ]
@@ -456,19 +373,24 @@ ASImageExporter >> objectString: aString [
 { #category : 'writing' }
 ASImageExporter >> objectSymbol: aString [
 
-	^ self symbol: aString
+	aString isSymbol ifFalse: [ ^ self objectSymbol: aString asSymbol ].
+	^ constants
+		  literal:
+			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
+			  + aString numArgs
+		  class: constants ClassSymbol
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectUndefinedObject [
 
-	^ self class undefinedObject
+	^ constants undefinedObject
 ]
 
 { #category : 'adding' }
 ASImageExporter >> pointer: p [
 
-	^ self class pointer: p
+	^ constants pointer: p
 ]
 
 { #category : 'writing' }
@@ -490,11 +412,11 @@ ASImageExporter >> selector: aSymbol [
 ASImageExporter >> symbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ self class
+	^ constants
 		  literal:
 			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
 			  + aString numArgs
-		  class: ClassSymbol
+		  class: constants ClassSymbol
 ]
 
 { #category : 'writing' }

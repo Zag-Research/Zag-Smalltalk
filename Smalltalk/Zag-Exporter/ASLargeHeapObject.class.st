@@ -5,9 +5,9 @@ I contain a Large Heap Object that has no header - it's all data.
 Class {
 	#name : 'ASLargeHeapObject',
 	#superclass : 'ASStorage',
-	#category : 'ASTSmalltalk-Image',
-	#package : 'ASTSmalltalk',
-	#tag : 'Image'
+	#category : 'Zag-Exporter-Exporting',
+	#package : 'Zag-Exporter',
+	#tag : 'Exporting'
 }
 
 { #category : 'accessing' }

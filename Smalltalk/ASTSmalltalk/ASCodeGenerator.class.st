@@ -348,17 +348,18 @@ ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> inlineWherePossible [
 
-	| temp |
+	| temp remainingInlines |
+	remainingInlines := inline.
 	[
-	inline > 0 ifFalse: [ ^ self ].
-	inline := inline - 1.
+	remainingInlines > 0 ifFalse: [ ^ self ].
+	remainingInlines := remainingInlines - 1.
 	blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.
 		temp do: [ :block |
 			code := block.
 			block inlineIfPossible: self ] ].
-	basicBlocks do: [ : block | block inlineWithFixedCFG: self ]
+	basicBlocks do: [ :block | block inlineWithFixedCFG: self ]
 ]
 
 { #category : 'accessing' }

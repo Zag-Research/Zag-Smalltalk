@@ -76,7 +76,7 @@ ManifestASTSmalltalk class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#AStExactClass #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:23.111016-04:00') #(#(#RGMethodDefinition #(#'ASInliner class' #reset #true)) #'2024-08-10T09:35:19.414618-04:00') #(#(#RGMethodDefinition #(#'ASImageExporter class' #initialize #true)) #'2024-11-28T17:17:36.191922-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASSourceCompiler #sequenceTo:then:withReturn: #false)) #'2021-10-04T23:01:49.526703-04:00') #(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2021-10-09T08:06:50.250593-04:00') #(#(#RGMethodDefinition #(#AStExactClass #value: #false)) #'2023-10-06T17:33:21.190789-04:00') #(#(#RGMethodDefinition #(#'ASImage class' #initialize #true)) #'2024-04-12T11:41:16.943424-04:00') #(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-04-13T09:00:24.594294-04:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-04-13T20:36:41.511805-04:00') #(#(#RGMethodDefinition #(#ASCodeGenerator #initialize #false)) #'2024-06-28T09:13:23.111016-04:00') #(#(#RGMethodDefinition #(#'ASInliner class' #reset #true)) #'2024-08-10T09:35:19.414618-04:00') #(#(#RGMethodDefinition #(#'ASImageExporter class' #initialize #true)) #'2024-11-28T17:17:36.191922-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -111,14 +111,14 @@ ManifestASTSmalltalk class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositiv
 ManifestASTSmalltalk class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-11-30T09:16:55.515465-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-11-30T09:16:55.515465-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestASTSmalltalk class >> ruleRefersToClassRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#AStSmallInteger #couldMergeIn: #false)) #'2024-09-22T08:44:00.560578-04:00') #(#(#RGMethodDefinition #(#AStSmallInteger #mergeIn: #false)) #'2024-09-22T09:16:54.776207-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#AStSmallInteger #couldMergeIn: #false)) #'2024-09-22T08:44:00.560578-04:00') #(#(#RGMethodDefinition #(#AStSmallInteger #mergeIn: #false)) #'2024-09-22T09:16:54.776207-04:00') #(#(#RGMethodDefinition #(#'ZagImageEncoder class' #from: #true)) #'2024-12-03T19:53:22.465308-05:00') #(#(#RGMethodDefinition #(#'ZagImageEncoder class' #constantsClassFrom: #true)) #'2024-12-03T20:32:15.057748-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -150,6 +150,13 @@ ManifestASTSmalltalk class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePo
 
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#ASStackTemporary #nameReset #false)) #'2024-05-13T08:20:53.254599-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestASTSmalltalk class >> ruleUncommonMessageSendRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-12-03T19:42:32.353782-05:00') #(#(#RGClassDefinition #(#ASImageExporter)) #'2024-12-03T19:45:11.420697-05:00') )
 ]
 
 { #category : 'code-critics' }
