@@ -4,6 +4,9 @@ I have the knowledge of how to encode values for NaN images
 Class {
 	#name : 'ZagImageEncodeNan',
 	#superclass : 'ZagImageEncoder',
+	#classInstVars : [
+		'constants'
+	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
@@ -13,6 +16,12 @@ Class {
 ZagImageEncodeNan class >> boolean: value [
 
 	^ self literal: value asBit class: self classFalse + value asBit
+]
+
+{ #category : 'class initialization' }
+ZagImageEncodeNan class >> constants [
+
+	^ constants
 ]
 
 { #category : 'converting' }
@@ -31,6 +40,12 @@ ZagImageEncodeNan class >> literal: l class: c [
 ZagImageEncodeNan class >> pointer: p [
 
 	^ self groupHeap + p
+]
+
+{ #category : 'class initialization' }
+ZagImageEncodeNan class >> saveConstants [
+
+	^ constants := super nanConstants: self
 ]
 
 { #category : 'converting' }

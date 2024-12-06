@@ -4,6 +4,9 @@ I have the knowledge of how to encode values for SpurPlus images
 Class {
 	#name : 'ZagImageEncodeZag',
 	#superclass : 'ZagImageEncoder',
+	#classInstVars : [
+		'constants'
+	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
@@ -13,6 +16,42 @@ Class {
 ZagImageEncodeZag class >> boolean: value [
 
 	^ self literal: 0 class: self classFalse + value asBit
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> classCharacter [
+
+	^ 14
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> classFalse [
+
+	^ 10
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> classSmallInteger [
+
+	^ 12
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> classString [
+
+	^ 31
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> classSymbol [
+
+	^ 13
+]
+
+{ #category : 'class initialization' }
+ZagImageEncodeZag class >> constants [
+
+	^ constants
 ]
 
 { #category : 'converting' }
@@ -25,6 +64,12 @@ ZagImageEncodeZag class >> double: aFloat for: anImage [
 	^ fullFloat & 16rfffffffffffffff << 4 + tag
 ]
 
+{ #category : 'private - temporary' }
+ZagImageEncodeZag class >> groupImmediates [
+
+	^ 1
+]
+
 { #category : 'adding' }
 ZagImageEncodeZag class >> literal: l class: c [
 
@@ -35,6 +80,12 @@ ZagImageEncodeZag class >> literal: l class: c [
 ZagImageEncodeZag class >> pointer: p [
 
 	^ p
+]
+
+{ #category : 'class initialization' }
+ZagImageEncodeZag class >> saveConstants [
+
+	^ constants := super zagConstants: self
 ]
 
 { #category : 'converting' }

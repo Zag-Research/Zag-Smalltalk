@@ -29,3 +29,10 @@ ManifestZagExporter class >> rulePrecedenceRuleV1FalsePositive [
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:15:57.925386-05:00') )
 ]
+
+{ #category : 'code-critics' }
+ManifestZagExporter class >> ruleSendsDifferentSuperRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncodeZag class' #saveConstants #true)) #'2024-12-06T00:25:02.133734-05:00') #(#(#RGMethodDefinition #(#'ZagImageEncodeNan class' #saveConstants #true)) #'2024-12-06T00:25:12.848567-05:00') )
+]

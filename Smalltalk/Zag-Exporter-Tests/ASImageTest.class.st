@@ -42,17 +42,8 @@ ASImageTest >> image: aBlock equals: value [
 ASImageTest >> setUp [
 
 	super setUp.
-
 	ASAllocationInfo reset.
-	savedConstants := ZagImageEncoder constants.
-	ZagImageEncoder constants: (constants := self encoderClass)
-]
-
-{ #category : 'running' }
-ASImageTest >> tearDown [
-
-	ZagImageEncoder constants: savedConstants.
-	super tearDown
+	constants := self encoderClass constants
 ]
 
 { #category : 'tests' }

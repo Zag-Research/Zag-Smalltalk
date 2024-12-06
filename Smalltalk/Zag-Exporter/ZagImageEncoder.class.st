@@ -7,12 +7,30 @@ Class {
 	#name : 'ZagImageEncoder',
 	#superclass : 'Object',
 	#classInstVars : [
-		'constants'
+		'zagConstants',
+		'nanConstants'
 	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
 }
+
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> ageStatic [
+
+	^ 7
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> baseAddress [
+
+	^ 16r100000
+]
+
+{ #category : 'as yet unclassified' }
+ZagImageEncoder class >> boolean: value [ 
+	^ self subclassResponsibility
+]
 
 { #category : 'private - initialization' }
 ZagImageEncoder class >> constantMethodsFromStream: stream [
@@ -33,18 +51,6 @@ ZagImageEncoder class >> constantMethodsFromStream: stream [
 			notifying: nil ]
 ]
 
-{ #category : 'initialization' }
-ZagImageEncoder class >> constants [
-
-	^ constants
-]
-
-{ #category : 'initialization' }
-ZagImageEncoder class >> constants: aClass [
-
-	constants := aClass
-]
-
 { #category : 'class initialization' }
 ZagImageEncoder class >> constantsClass: className from: stream [
 
@@ -59,15 +65,7 @@ ZagImageEncoder class >> constantsClass: className from: stream [
 			           ZagImageEncodeZag ].
 	class := (encoder << (className , self hash asString)) build.
 	class constantMethodsFromStream: stream.
-	encoder constants: class.
-	constants := class.
-	^ class
-]
-
-{ #category : 'class initialization' }
-ZagImageEncoder class >> constantsClassFrom: stream [
-
-	^ self constantsClass: 'ZagConstants' from: stream
+	^ class saveConstants
 ]
 
 { #category : 'converting' }
@@ -76,33 +74,16 @@ ZagImageEncoder class >> convertToZag: anObject [
 	^ anObject convertToZag: self
 ]
 
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> directIndexed [
+
+	^ 115
+]
+
 { #category : 'converting' }
 ZagImageEncoder class >> double: aNumber for: anImage [
 
 	^ self subclassResponsibility
-]
-
-{ #category : 'class initialization' }
-ZagImageEncoder class >> from: stream [
-	"self constantsClass: #ZagConstants from: (ReadStream on: 'Zag
-	BaseAddress := 16r1000000000.
-	SizeMask := 16r7fff.
-')"
-
-	| type class superClass |
-	stream reset.
-	type := stream nextLine.
-	superClass := type = 'Nan'
-		              ifTrue: [ ZagImageEncodeNan ]
-		              ifFalse: [
-			              type = 'Zag' ifFalse: [
-				              self error: 'Unrecognized coding type: ' , type ].
-			              ZagImageEncodeZag ].
-	class := (superClass << ('ZagConstants' , self hash asString)) build.
-	class constantMethodsFromStream: stream.
-	ZagImageEncoder constants: class.
-	constants := class.
-	^ class
 ]
 
 { #category : 'class initialization' }
@@ -113,6 +94,13 @@ ZagImageEncoder class >> handleComments: stream [
 	stream atEnd not and: [ stream peek = $" ] ] whileTrue: [
 		stream next.
 		[ stream atEnd or: [ stream next = $" ] ] whileFalse ]
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> initialize [
+
+	ZagImageEncodeNan saveConstants.
+	ZagImageEncodeZag saveConstants
 ]
 
 { #category : 'initialization' }
@@ -128,8 +116,32 @@ ZagImageEncoder class >> literal: l class: c [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> maxHeaderLength [
+
+	^ 4093
+]
+
+{ #category : 'initialization' }
+ZagImageEncoder class >> nanConstants: constantsClass [
+
+	^ nanConstants := constantsClass
+]
+
+{ #category : 'private - temporary' }
+ZagImageEncoder class >> notIndexable [
+
+	^ 112
+]
+
 { #category : 'converting' }
 ZagImageEncoder class >> pointer: p [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'class initialization' }
+ZagImageEncoder class >> saveConstants [
 
 	^ self subclassResponsibility
 ]
@@ -138,4 +150,15 @@ ZagImageEncoder class >> pointer: p [
 ZagImageEncoder class >> smallInteger: aNumber [
 
 	^ self subclassResponsibility
+]
+
+{ #category : 'as yet unclassified' }
+ZagImageEncoder class >> undefinedObject [
+	^ self subclassResponsibility
+]
+
+{ #category : 'initialization' }
+ZagImageEncoder class >> zagConstants: constantsClass [
+
+	^ zagConstants := constantsClass
 ]

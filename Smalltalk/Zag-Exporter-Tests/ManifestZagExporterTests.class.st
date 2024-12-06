@@ -13,5 +13,5 @@ Class {
 ManifestZagExporterTests class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASZagImageTest #testSimple #false)) #'2024-12-03T20:06:45.52703-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASZagImageTest #testSimple #false)) #'2024-12-03T20:06:45.52703-05:00') #(#(#RGMethodDefinition #(#ASNanImageTest #testSimple #false)) #'2024-12-06T01:10:55.974704-05:00') )
 ]

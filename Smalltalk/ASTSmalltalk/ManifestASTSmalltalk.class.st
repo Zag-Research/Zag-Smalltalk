@@ -118,7 +118,15 @@ ManifestASTSmalltalk class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 ManifestASTSmalltalk class >> ruleRefersToClassRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#AStSmallInteger #couldMergeIn: #false)) #'2024-09-22T08:44:00.560578-04:00') #(#(#RGMethodDefinition #(#AStSmallInteger #mergeIn: #false)) #'2024-09-22T09:16:54.776207-04:00') #(#(#RGMethodDefinition #(#'ZagImageEncoder class' #from: #true)) #'2024-12-03T19:53:22.465308-05:00') #(#(#RGMethodDefinition #(#'ZagImageEncoder class' #constantsClassFrom: #true)) #'2024-12-03T20:32:15.057748-05:00') )
+	^ #( #( #( #RGMethodDefinition #( #AStSmallInteger #couldMergeIn:
+	              #false ) )
+	        #'2024-09-22T08:44:00.560578-04:00' )
+	     #( #( #RGMethodDefinition #( #AStSmallInteger #mergeIn:
+	              #false ) )
+	        #'2024-09-22T09:16:54.776207-04:00' )
+	     #( #( #RGMethodDefinition #( #'ZagImageEncoder class'
+	              #from: #true ) )
+	        #'2024-12-03T19:53:22.465308-05:00' ) )
 ]
 
 { #category : 'code-critics' }

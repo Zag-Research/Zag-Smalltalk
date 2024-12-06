@@ -12,16 +12,6 @@ Class {
 	#tag : 'Tests'
 }
 
-{ #category : 'initialize encoding' }
-ASZagImageTest class >> initDefaultConstants [
-
-	<script: 'self initDefaultConstants'>
-	zagConstants := ZagImageEncoder
-		                constantsClassFrom: 'Zag
-BaseAddress := 12345.
-' readStream
-]
-
 { #category : 'tests' }
 ASZagImageTest >> encoderClass [
 

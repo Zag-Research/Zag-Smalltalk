@@ -173,6 +173,29 @@ ASImageExporter >> compileMethod: aMethod [
 	self halt
 ]
 
+{ #category : 'accessing' }
+ASImageExporter >> constants [
+	^ constants
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> constants: constantsClass [
+
+	constants := constantsClass.
+	currentAddress := constants baseAddress.
+	#( #= value value: cull: yourself doesNotUnderstand:
+	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	   negated new new: value:value:value: value:value:value:value:
+	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
+	   perform: perform:with: perform:with:with: perform:with:with:with:
+	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
+		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
+
+]
+
 { #category : 'writing' }
 ASImageExporter >> createClassTable [
 
@@ -193,8 +216,6 @@ ASImageExporter >> currentHeap [
 ASImageExporter >> initialize [
 
 	super initialize.
-	constants := ZagImageEncoder constants.
-	currentAddress := constants baseAddress.
 	objects := IdentityDictionary new.
 	symbols := Dictionary new.
 	classes := Dictionary new.
@@ -203,16 +224,6 @@ ASImageExporter >> initialize [
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
 	pendingObjects := Dictionary new.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
 	{
 		Object.
 		SmallInteger.
@@ -378,7 +389,7 @@ ASImageExporter >> objectSymbol: aString [
 		  literal:
 			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
 			  + aString numArgs
-		  class: constants ClassSymbol
+		  class: constants classSymbol
 ]
 
 { #category : 'writing' }
