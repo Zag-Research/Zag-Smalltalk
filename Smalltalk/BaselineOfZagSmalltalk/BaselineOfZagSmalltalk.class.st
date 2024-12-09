@@ -17,18 +17,17 @@ BaselineOfZagSmalltalk >> baseline: spec [
 			package: 'ASTSmalltalk';
 			package: 'ASTSmalltalk-Tests'
 			with: [ spec requires: #( 'ASTSmalltalk' ) ];
-			package: 'ASTSmalltalk-LLVM'
+			package: 'Zag-Smalltalk-LLVM'
 			with: [ spec requires: #( 'ASTSmalltalk' ) ];
-			package: 'ASTSmalltalk-LLVM-Tests'
+			package: 'Zag-Smalltalk-LLVM-Tests'
 			with: [
-				spec requires: #( 'ASTSmalltalk-LLVM' 'ASTSmalltalk-Tests' ) ];
+				spec requires: #( 'Zag-Smalltalk-LLVM' 'ASTSmalltalk-Tests' ) ];
 			package: 'Benchmarks' with: [ spec requires: #( 'ASTSmalltalk' ) ];
-			package: 'Zag-LLVM'
-			with: [ spec requires: #( 'ASTSmalltalk' ) ];
+			package: 'Zag-LLVM' with: [ spec requires: #( 'ASTSmalltalk' ) ];
 			package: 'Zag-LLVM-Tests' with: [ spec requires: #( 'Zag-LLVM' ) ];
-			package: 'Zag-Exporter';
+			package: 'Zag-Exporter' with: [ spec requires: #( 'ASTSmalltalk' ) ];
 			package: 'Zag-Exporter-Tests'
-			with: [ spec requires: #( 'Zag-Exporter' ) ];
+			with: [ spec requires: #( 'Zag-Exporter' 'ASTSmalltalk-Tests' ) ];
 			package: 'Zag-Library' ]
 ]
 
