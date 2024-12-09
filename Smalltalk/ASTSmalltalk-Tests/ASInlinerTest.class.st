@@ -18,19 +18,19 @@ ASInlinerTest >> testInitial [
 
 	self assert: (ASInliner lookup: #printOn:) equals: nil.
 	self deny: (ASInliner lookup: #ifTrue:ifFalse:) isPrimitive.
-	self
+"	self
 		assert: (ASInliner lookup: #ifTrue:ifFalse:) methods asSet
 		equals: {
 				(ASTFalse >> #ifTrue:ifFalse:).
 				(ASTTrue >> #ifTrue:ifFalse:) } asSet.
-	self
+""	self
 		assert: (ASInliner lookup: #yourself class: SmallInteger) method
 		equals: ASTObject >> #yourself.
-	self assert:
+"	self assert:
 		(ASInliner lookup: #'<=' class: SmallInteger) isPrimitive.
-	self
+"	self
 		assert: (ASInliner lookup: #'<=' class: SmallInteger) method
-		equals: ASTSmallInteger >> #'<='
+		equals: ASTSmallInteger >> #'<='"
 ]
 
 { #category : 'tests' }

@@ -37,14 +37,14 @@ ASCompiler class >> initialize [
 	                   Dispatch ClassTable Magnitude Number ClassDescription
 	                   Boolean ).
 	ClassMap := Dictionary new.
-	ClassMap at: ByteString put: ASTString.
+"	ClassMap at: ByteString put: ASTString.
 	ClassMap at: ByteString class put: ASTString class.
-	ASTObject withAllSubclassesDo: [ :class | 
+	ASTObject withAllSubclassesDo: [ :class |
 		(Smalltalk
 			 at: (class name allButFirst: 3) asSymbol
-			 ifAbsent: [ nil ]) ifNotNil: [ :pharoClass | 
+			 ifAbsent: [ nil ]) ifNotNil: [ :pharoClass |
 			ClassMap at: pharoClass instanceSide put: class instanceSide.
-			ClassMap at: pharoClass classSide put: class classSide ] ]
+			ClassMap at: pharoClass classSide put: class classSide ] ]"
 ]
 
 { #category : 'building' }
