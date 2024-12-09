@@ -1,3 +1,10 @@
+"
+I have all the logic for generating LLVM JIT code.
+
+I call methods in an LLVM generator object stored in the instance variabe `gen`.
+
+My subclasses simply set `gen` to an appropriate value.
+"
 Class {
 	#name : 'ZagOutputLLVM',
 	#superclass : 'Object',
