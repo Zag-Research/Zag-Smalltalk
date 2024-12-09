@@ -29,11 +29,11 @@ ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element
 		makeWeak ifTrue: [
 			iVars + arraySize + 3 > constants maxHeaderLength ifTrue: [
 				^ self new
-					  format: constants externalWeakWithPointers;
+					  format: constants formatExternalWeakWithPointers;
 					  instVars: iVars;
 					  footerLength: 3 ].
 			^ self new
-				  format: constants indexedWeakWithPointers;
+				  format: constants formatIndexedWeakWithPointers;
 				  instVars: iVars;
 				  extra: arraySize;
 				  footerLength: 3 ].
@@ -46,24 +46,24 @@ ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element
 			element ifNil: [
 				nElements <= constants maxHeaderLength ifTrue: [
 					^ self new
-						  format: constants directIndexed;
+						  format: constants formatDirectIndexed;
 						  extra: arraySize ] ] ].
 		iVars + arraySize > (constants maxHeaderLength - 2) ifTrue: [
 			^ self new
 				  format: (element = Object
-						   ifTrue: [ constants external ]
-						   ifFalse: [ constants externalNonObject ]);
+						   ifTrue: [ constants formatExternal ]
+						   ifFalse: [ constants formatExternalNonObject ]);
 				  instVars: iVars;
 				  footerLength: 2 ].
 		^ self new
 			  format: (element = Object
-					   ifTrue: [ constants indexed ]
-					   ifFalse: [ constants indexedNonObject ]);
+					   ifTrue: [ constants formatIndexed ]
+					   ifFalse: [ constants formatIndexedNonObject ]);
 			  instVars: iVars;
 			  extra: arraySize;
 			  footerLength: 2 ].
 	^ self new
-		  format: constants notIndexable;
+		  format: constants formatNotIndexable;
 		  instVars: iVars
 ]
 

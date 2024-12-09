@@ -1,6 +1,3 @@
-"
-I have the knowledge of how to encode values for NaN images
-"
 Class {
 	#name : 'ZagImageEncodeNan',
 	#superclass : 'ZagImageEncoder',
@@ -12,13 +9,13 @@ Class {
 	#tag : 'Encoding'
 }
 
-{ #category : 'accessing' }
+{ #category : 'converting' }
 ZagImageEncodeNan class >> boolean: value [
 
 	^ self literal: value asBit class: self classFalse + value asBit
 ]
 
-{ #category : 'class initialization' }
+{ #category : 'accessing' }
 ZagImageEncodeNan class >> constants [
 
 	^ constants
@@ -42,7 +39,7 @@ ZagImageEncodeNan class >> pointer: p [
 	^ self groupHeap + p
 ]
 
-{ #category : 'class initialization' }
+{ #category : 'private - class initialization' }
 ZagImageEncodeNan class >> saveConstants [
 
 	^ constants := super nanConstants: self

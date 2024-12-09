@@ -1,6 +1,3 @@
-"
-I have the knowledge of how to encode values for SpurPlus images
-"
 Class {
 	#name : 'ZagImageEncodeZag',
 	#superclass : 'ZagImageEncoder',
@@ -12,43 +9,13 @@ Class {
 	#tag : 'Encoding'
 }
 
-{ #category : 'accessing' }
+{ #category : 'converting' }
 ZagImageEncodeZag class >> boolean: value [
 
 	^ self literal: 0 class: self classFalse + value asBit
 ]
 
-{ #category : 'private - temporary' }
-ZagImageEncodeZag class >> classCharacter [
-
-	^ 14
-]
-
-{ #category : 'private - temporary' }
-ZagImageEncodeZag class >> classFalse [
-
-	^ 10
-]
-
-{ #category : 'private - temporary' }
-ZagImageEncodeZag class >> classSmallInteger [
-
-	^ 12
-]
-
-{ #category : 'private - temporary' }
-ZagImageEncodeZag class >> classString [
-
-	^ 31
-]
-
-{ #category : 'private - temporary' }
-ZagImageEncodeZag class >> classSymbol [
-
-	^ 13
-]
-
-{ #category : 'class initialization' }
+{ #category : 'accessing' }
 ZagImageEncodeZag class >> constants [
 
 	^ constants
@@ -64,7 +31,7 @@ ZagImageEncodeZag class >> double: aFloat for: anImage [
 	^ fullFloat & 16rfffffffffffffff << 4 + tag
 ]
 
-{ #category : 'private - temporary' }
+{ #category : 'private - temporary - header' }
 ZagImageEncodeZag class >> groupImmediates [
 
 	^ 1

@@ -72,7 +72,5 @@ ASNanImageTest >> test_simple1_noreturn [
 	| ast |
 	ast := ASPharoCompiler new astFor:
 		       ASCompileTestClass1 >> #simple1_noreturn.
-	self
-		threaded: ast
-		equals: #( ZfPushLiteral 42 ZfDrop ZfReturnSelf )
+	self threaded: ast equals: { constants tPushLiteral . 42 . constants tDrop . constants tReturnSelf }
 ]
