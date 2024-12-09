@@ -50,10 +50,3 @@ ManifestZagExporter class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 	<ignoreForCoverage>
 	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncoder class' #handleComments: #true)) #'2024-12-07T22:25:26.2562-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:23:04.238647-05:00') )
 ]
-
-{ #category : 'code-critics' }
-ManifestZagExporter class >> ruleSendsDifferentSuperRuleV1FalsePositive [
-
-	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncodeZag class' #saveConstants #true)) #'2024-12-06T00:25:02.133734-05:00') #(#(#RGMethodDefinition #(#'ZagImageEncodeNan class' #saveConstants #true)) #'2024-12-06T00:25:12.848567-05:00') )
-]

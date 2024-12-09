@@ -1,9 +1,6 @@
 Class {
 	#name : 'ZagImageEncodeZag',
 	#superclass : 'ZagImageEncoder',
-	#classInstVars : [
-		'constants'
-	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
@@ -18,7 +15,7 @@ ZagImageEncodeZag class >> boolean: value [
 { #category : 'accessing' }
 ZagImageEncodeZag class >> constants [
 
-	^ constants
+	^ self
 ]
 
 { #category : 'converting' }
@@ -52,7 +49,7 @@ ZagImageEncodeZag class >> pointer: p [
 { #category : 'class initialization' }
 ZagImageEncodeZag class >> saveConstants [
 
-	^ constants := super zagConstants: self
+	super zagConstants: self
 ]
 
 { #category : 'converting' }
