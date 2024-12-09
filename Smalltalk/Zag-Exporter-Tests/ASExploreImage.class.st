@@ -8,9 +8,8 @@ Class {
 		'Info',
 		'Something'
 	],
-	#category : 'ASTSmalltalk-Tests-Explore',
-	#package : 'ASTSmalltalk-Tests',
-	#tag : 'Explore'
+	#category : 'Zag-Exporter-Tests',
+	#package : 'Zag-Exporter-Tests'
 }
 
 { #category : 'private - accessing' }
