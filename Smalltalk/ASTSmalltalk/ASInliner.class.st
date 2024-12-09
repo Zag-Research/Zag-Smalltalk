@@ -166,12 +166,12 @@ ASInliner class >> reset [
 	self bothMatch: SmallInteger >> #> returns: Boolean.
 	self alwaysValid: Object selector: #'==' returns: Boolean.
 	self alwaysValid: Object selector: #'~~' returns: Boolean.
-	self selfMatch: ASTBlockClosure >> #value.
+"	self selfMatch: ASTBlockClosure >> #value.
 	self selfMatch: ASTBlockClosure >> #value:.
 	self selfMatch: ASTBlockClosure >> #value:value:.
 	self selfMatch: ASTBlockClosure >> #value:value:value:.
 	self selfMatch: ASTBlockClosure >> #value:value:value:value:.
-	self selfMatch: ASTSymbol >> #value:".
+	self selfMatch: ASTSymbol >> #value:.
 	self selfMatch: ASTSymbol >> #value:value:.
 	self selfMatch: ASTSymbol >> #value:value:value:.
 	self selfMatch: ASTSymbol >> #value:value:value:value:"
@@ -244,9 +244,9 @@ ASInliner >> initialize [
 			(False >> #ifFalse:ifTrue:) }.
 	implementors at: #isLarge put: { (SmallInteger >> #isLarge) }.
 	implementors at: #not put: { (Number >> #abs) }.
-	implementors at: #value put: { (ASTBlockClosure >> #value) }.
+"	implementors at: #value put: { (ASTBlockClosure >> #value) }.
 	implementors at: #whileTrue put: { (ASTBlockClosure >> #whileTrue) }.
-	implementors
+"	implementors
 		at: #fibonacci_fast
 		put: { (Integer >> #fibonacci_fast) }.
 	implementors
