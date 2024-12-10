@@ -19,7 +19,7 @@ Papers and Talks can be found [here](Documentation/papers)
 *very much work-in-progress at the moment*
 ```smalltalk
 Metacello new
-  baseline: 'ASTSmalltalk';
+  baseline: 'ZagSmalltalk';
   repository: 'github://Zag-Research/Zag-Smalltalk:main';
   load
 ```
