@@ -3,7 +3,7 @@ I am the superclass of all the operations that don't referencce the top elements
 "
 Class {
 	#name : 'ASCNonStackReferencingOperations',
-	#superclass : 'ASCOperations',
+	#superclass : 'ZagOperations',
 	#category : 'Zag-Core-CodeGen',
 	#package : 'Zag-Core',
 	#tag : 'CodeGen'

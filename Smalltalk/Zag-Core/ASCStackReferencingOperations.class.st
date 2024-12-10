@@ -3,7 +3,7 @@ I am the superclass of all the operations that referencce the top elements of th
 "
 Class {
 	#name : 'ASCStackReferencingOperations',
-	#superclass : 'ASCOperations',
+	#superclass : 'ZagOperations',
 	#category : 'Zag-Core-CodeGen',
 	#package : 'Zag-Core',
 	#tag : 'CodeGen'
