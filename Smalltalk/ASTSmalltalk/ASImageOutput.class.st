@@ -7,9 +7,6 @@ Class {
 	#instVars : [
 		'image'
 	],
-	#pools : [
-		'AnObsoleteZagConstants'
-	],
 	#category : 'ASTSmalltalk-Output',
 	#package : 'ASTSmalltalk',
 	#tag : 'Output'

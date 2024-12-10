@@ -7,9 +7,6 @@ Class {
 	#instVars : [
 		'image'
 	],
-	#pools : [
-		'AnObsoleteZagConstants'
-	],
 	#category : 'Zag-Core-Output',
 	#package : 'Zag-Core',
 	#tag : 'Output'
