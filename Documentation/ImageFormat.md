@@ -14,6 +14,11 @@ An image is composed of a set of files in a directory.
 | `dispatchTable` | `Array`              | a copy of the dispatch table                       |
 | `codeAddresses` | `DoubleWordArray`    | the addresses encoded in threaded methods          |
 | `processTable`  | `Array`              | the array of process objects                       |
+The `codeAddresses` array contains the code addresses encoded in the threaded portion of the `CompiledMethod` objects referenced in the dispatch tables. If they don't correspond with the current Zag runtime, then the `CompiledMethod` objects must be modified. There are 2 parts to this:
+1. any JITed code needs to be discarded (freed)
+2. any threaded code needs to be scanned and any thing equal to one of the values needs to be replaced with the correct value from the current runtime.
+A special case for this is when the image has been exported from another Smalltalk (Pharo, Cuis, etc.), in which case the values will be sequential, illegal heap pointers (8,16,24,...).
+This mechanism makes changing versions of the runtime easy to handle, and also makes code generation in another Smalltalk easy.
 ### Other files
 The remaining files each represent a part of the heap (a sub-heap). Most begin with an object header (a `ZagHeap` object), the address is encoded in the name of the image file as the longest valid hex number before the extension, e.g., `Zag_1000000000.heap` would be mapped at address 0x1000000000 (64GB). There may be several in the directory, and they will all be `mmap`'ed at the appropriate addresses.
 #### `.heap` file
