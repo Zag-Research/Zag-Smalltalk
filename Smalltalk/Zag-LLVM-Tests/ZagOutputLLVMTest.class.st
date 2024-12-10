@@ -16,7 +16,7 @@ ZagOutputLLVMTest >> setUp [
 	super setUp.
 
 	Transcript clear.
-	output := ZagOutputLLVM new with: ZagOutputLLVMAPI new
+	output := ZagOutputLLVM new generator: ZagOutputLLVMAPI new
 ]
 
 { #category : 'tests' }

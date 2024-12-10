@@ -1,23 +1,17 @@
 "
-I set `gen` to the zag runtime object that connects to the LLVM JIT code.
+I am a connector to the Zag runtime code.
+
+`new` is a primitive that returns an object that connects to a dispatch table that calls the LLVM-Zig interface to LLVM.
 "
 Class {
 	#name : 'ZagOutputLLVMInImage',
-	#superclass : 'ZagOutputLLVM',
+	#superclass : 'Object',
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
-{ #category : 'initialization' }
-ZagOutputLLVMInImage >> initPrimitive [
+{ #category : 'instance creation' }
+ZagOutputLLVMInImage class >> new [
 
-	<primative: 'generator' module: 'llvm'>
-	^ self primitiveFailed
-]
-
-{ #category : 'initialization' }
-ZagOutputLLVMInImage >> initialize [
-
-	super initialize.
-	gen := self initPrimitive
+	<primitive: 'generatorObject' module: 'llvm'>
 ]

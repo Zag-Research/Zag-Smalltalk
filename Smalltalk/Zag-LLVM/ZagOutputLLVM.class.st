@@ -15,13 +15,13 @@ Class {
 	#package : 'Zag-LLVM'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'private - processing' }
 ZagOutputLLVM >> generateLabel [
 
 	^ gen newLabel
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
@@ -45,21 +45,21 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 	self primitiveFail
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerMinus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen subtract: aNumber from: selfValue ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen add: aNumber to: selfValue ]
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
@@ -81,12 +81,12 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self primitiveFail
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'private - processing' }
 ZagOutputLLVM >> verifySmallInteger: valueRef [
 
 	| andResult |
-	andResult := gen LLVMBuildAnd: 16rff and: valueRef.
-	^ gen is: andResult equalTo: 16r61
+	andResult := gen and: 16rff with: valueRef.
+	^ gen compare: andResult is: #eq to:  16r61
 ]
 
 { #category : 'instance creation' }

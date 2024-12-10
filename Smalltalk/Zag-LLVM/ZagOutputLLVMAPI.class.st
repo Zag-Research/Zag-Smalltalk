@@ -1,3 +1,6 @@
+"
+I am a mock connection that somewhat documents how `ZagOutputLLVM` generates the JIT code.
+"
 Class {
 	#name : 'ZagOutputLLVMAPI',
 	#superclass : 'Object',
@@ -10,9 +13,10 @@ Class {
 	#package : 'Zag-LLVM'
 }
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMAPI >> LLVMBuildAnd: valueRef1 and: valueRef2 [
+{ #category : 'llvm interface' }
+ZagOutputLLVMAPI >> and: valueRef1 with: valueRef2 [
 	" may need to create constant"
+" on the zig side, if we have an Object x, then x.isInt() will return a (zig) boolean"
 
 	| result |
 	result := self newRegister.
@@ -26,6 +30,15 @@ ZagOutputLLVMAPI >> LLVMBuildAnd: valueRef1 and: valueRef2 [
 	^ result
 ]
 
+{ #category : 'llvm interface' }
+ZagOutputLLVMAPI >> compare: valueRef1 is: comparison to: valueRef2 [
+
+	| result |
+	result := self newRegister.
+	" result will be an i1 "
+	^ result
+]
+
 { #category : 'initialization' }
 ZagOutputLLVMAPI >> initialize [
 
@@ -35,27 +48,21 @@ ZagOutputLLVMAPI >> initialize [
 	nextLabel := 0
 ]
 
-{ #category : 'testing' }
-ZagOutputLLVMAPI >> is: aString equalTo: anInteger [
-
-	^ self newRegister
-]
-
-{ #category : 'instance creation' }
+{ #category : 'llvm interface' }
 ZagOutputLLVMAPI >> newLabel [
 
 	nextLabel := nextLabel + 1.
 	^ nextLabel
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'llvm interface' }
 ZagOutputLLVMAPI >> newRegister [
 
 	nextRegister := nextRegister + 1.
 	^ '%',nextRegister asString
 ]
 
-{ #category : 'accessing' }
+{ #category : 'llvm interface' }
 ZagOutputLLVMAPI >> valueAt: aString [
 
 	| result |
