@@ -1,5 +1,5 @@
 "
-I am the baseline for ASTSmalltalk aka ZagSmalltalk
+I am the baseline for ZagSmalltalk
 "
 Class {
 	#name : 'BaselineOfZagSmalltalk',

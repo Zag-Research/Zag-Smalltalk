@@ -1,5 +1,5 @@
 "
-I write out ASTSmalltalk images
+I write out Zag-Smalltalk images
 "
 Class {
 	#name : 'ASImageExporter',
@@ -39,7 +39,7 @@ ASImageExporter class >> exportMethods [
 ASImageExporter class >> exportPackages [
 
 	^ PackageOrganizer default packages select: [ :package |
-		  ((package name beginsWith: 'ASTSmalltalk') or:
+		  ((package name beginsWith: 'Zag-Smalltalk') or:
 			   ((package name beginsWith: 'PC') and: [
 				    (package name findString: '-Option') = 0 ])) and: [
 			  (package name endsWith: '-Tests') not ] ]

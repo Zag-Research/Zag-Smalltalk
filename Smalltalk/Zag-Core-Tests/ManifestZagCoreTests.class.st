@@ -23,7 +23,7 @@ ManifestZagCoreTests class >> ruleBooleanPrecedenceRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleClassNotReferencedRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-18T15:12:51.324071-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-04-18T15:12:51.324071-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -33,27 +33,27 @@ ManifestZagCoreTests class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleCollectionProtocolRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-03-19T08:33:58.800965-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-03-19T08:33:58.800965-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleConsistencyCheckRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-03-19T08:34:06.317717-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-03-19T08:34:06.317717-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleLongMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:45.328717-05:00') #(#(#RGMethodDefinition #(#ASExploreHashing #min4Table: #false)) #'2021-03-01T08:53:00.023992-05:00') #(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-03-19T08:35:39.276189-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:45.328717-05:00') #(#(#RGMethodDefinition #(#ASExploreHashing #min4Table: #false)) #'2021-03-01T08:53:00.023992-05:00') #(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-03-19T08:35:39.276189-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleNobodyShouldSendMethodDictV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-03-19T08:34:13.150996-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-03-19T08:34:13.150996-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> rulePrecedenceRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-21T00:02:16.426567-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-04-21T00:02:16.426567-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -67,7 +67,7 @@ ManifestZagCoreTests class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositiv
 ManifestZagCoreTests class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2024-11-28T19:23:31.208843-05:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2024-11-28T19:23:31.208843-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -104,12 +104,12 @@ ManifestZagCoreTests class >> ruleSentNotImplementedRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleStringConcatenationRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-19T09:17:06.696728-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-04-19T09:17:06.696728-04:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-04-20T18:11:07.482607-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-04-20T18:11:07.482607-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -119,7 +119,7 @@ ManifestZagCoreTests class >> ruleToDoCollectRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleUnclassifiedMethodsRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#'ASTSmalltalk-Tests')) #'2021-07-06T19:53:44.153899-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-07-06T19:53:44.153899-04:00') )
 ]
 
 { #category : 'code-critics' }

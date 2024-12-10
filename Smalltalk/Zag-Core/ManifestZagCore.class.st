@@ -21,7 +21,7 @@ ManifestZagCore class >> ruleAssignmentInBlockRuleV1FalsePositive [
 { #category : 'code-critics' }
 ManifestZagCore class >> ruleBadMessageRule2V1FalsePositive [
 
-	^ #( #( #( #RGPackageDefinition #( #ASTSmalltalk ) )
+	^ #( #( #( #RGPackageDefinition #( #'Zag-Core' ) )
 	        #'2021-04-23T13:00:23.089715-04:00' ) )
 ]
 
@@ -51,7 +51,7 @@ ManifestZagCore class >> ruleConsistencyCheckRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCore class >> ruleExcessiveArgumentsRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2022-05-16T09:50:39.5032-03:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core')) #'2022-05-16T09:50:39.5032-03:00') )
 ]
 
 { #category : 'code-critics' }
@@ -163,7 +163,7 @@ ManifestZagCore class >> ruleSendsDifferentSuperRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCore class >> ruleStringConcatenationRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-03-28T13:56:56.834147-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core')) #'2021-03-28T13:56:56.834147-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -175,7 +175,7 @@ ManifestZagCore class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
 
 { #category : 'code-critics' }
 ManifestZagCore class >> ruleToDoCollectRuleV1FalsePositive [
-	^ #(#(#(#RGPackageDefinition #(#ASTSmalltalk)) #'2021-04-23T13:00:13.221856-04:00') )
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core')) #'2021-04-23T13:00:13.221856-04:00') )
 ]
 
 { #category : 'code-critics' }
@@ -223,7 +223,7 @@ ManifestZagCore class >> ruleUsesTrueRuleV1FalsePositive [
 { #category : 'code-critics' }
 ManifestZagCore class >> ruleUtilityMethodsRuleV1FalsePositive [
 
-	^ #(  #( #( #RGPackageDefinition #( #ASTSmalltalk ) )
+	^ #(  #( #( #RGPackageDefinition #( #'Zag-Core' ) )
 	        #'2021-04-23T13:11:04.477962-04:00' ) )
 ]
 
