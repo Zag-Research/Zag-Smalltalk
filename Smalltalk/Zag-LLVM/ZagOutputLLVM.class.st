@@ -16,6 +16,12 @@ Class {
 }
 
 { #category : 'as yet unclassified' }
+ZagOutputLLVM >> generateLabel [
+
+	^ gen newLabel
+]
+
+{ #category : 'as yet unclassified' }
 ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
@@ -73,4 +79,18 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self returnWithSP: addressOfSelf.
 	self defineLabel: primitiveFail.
 	self primitiveFail
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> verifySmallInteger: valueRef [
+
+	| andResult |
+	andResult := gen LLVMBuildAnd: 16rff and: valueRef.
+	^ gen is: andResult equalTo: 16r61
+]
+
+{ #category : 'instance creation' }
+ZagOutputLLVM >> with: aZagOutputLLVMAPI [
+
+	gen := aZagOutputLLVMAPI
 ]
