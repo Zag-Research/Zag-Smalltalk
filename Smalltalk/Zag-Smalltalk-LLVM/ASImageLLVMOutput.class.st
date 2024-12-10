@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASImageLLVMOutput',
-	#superclass : 'ASImageOutput',
+	#superclass : 'Object',
 	#instVars : [
 		'coder'
 	],
