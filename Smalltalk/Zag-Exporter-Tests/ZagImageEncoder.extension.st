@@ -1,6 +1,6 @@
 Extension { #name : 'ZagImageEncoder' }
 
-{ #category : '*Zag-Core-Tests' }
+{ #category : '*Zag-Exporter-Tests' }
 ZagImageEncoder class >> convertNumber: aNumber [
 
 	aNumber isInteger ifTrue: [ ^ self smallInteger: aNumber ].
