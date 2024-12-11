@@ -43,8 +43,8 @@ const p = primitives.primitives;
 const testReps = 7;
 
 // fibonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) fibonacci + (self - 2) fibonacci
+//  self <= 2 ifTrue: [ ^ 1 ].
+//  ^ (self - 1) fibonacci + (self - 2) fibonacci
 
 const callsToFib40 = 204_668_309;
 pub fn fibNative(self: i64) i64 {

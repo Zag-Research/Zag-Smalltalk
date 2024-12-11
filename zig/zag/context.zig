@@ -40,7 +40,7 @@ pub const Context = struct {
     const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
     pub fn init() Self {
         return Self{
-            .header = comptime HeapHeader.calc(.Context,baseSize + nLocals, 0, .static, null, Object, false) catch unreachable,
+            .header = comptime HeapHeader.calc(.Context, baseSize + nLocals, 0, .static, null, Object, false) catch unreachable,
             .tpc = undefined,
             .npc = Code.end,
             .prevCtxt = undefined,
@@ -66,8 +66,8 @@ pub const Context = struct {
             try writer.print(" temps: {any}", .{self.temps[0..self.size]});
         }
     }
-    inline fn header(self: *const Context) *HeapHeader {
-        return @as(HeapObjectPtr,@constCast(@ptrCast(self))).headerPtr();
+    inline fn headerOf(self: *const Context) *HeapHeader {
+        return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
     }
     pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
         _ = process;

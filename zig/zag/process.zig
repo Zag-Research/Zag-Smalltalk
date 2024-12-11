@@ -81,7 +81,7 @@ pub const Process = extern struct {
         while (true) {
             self.next = allProcesses;
             self.id = if (allProcesses) |p| p.id + 1 else 1;
-            trace("\nprocess.init {}",.{self.id});
+            trace("\nprocess.init {}", .{self.id});
             if (@cmpxchgWeak(?*Self, &allProcesses, self.next, self, SeqCst, SeqCst) == null) break;
         }
         self.trapContextNumber = 0;
@@ -171,7 +171,7 @@ pub const Process = extern struct {
         }
         return error.NoSpace;
     }
-    
+
     pub fn collectNursery(self: *Self, sp: SP, contextMutable: *ContextPtr, need: usize) void {
         assert(need <= nursery_size);
         const ageSizes = [_]usize{0} ** lastNurseryAge;
@@ -222,8 +222,8 @@ pub const Process = extern struct {
                 trace("iter: {}\n", .{iter});
                 var it = iter;
                 while (it.next()) |objPtr| {
-                    if (objPtr.asMemoryObject ()) |pointer| {
-                        if (pointer.isForwarded()){
+                    if (objPtr.asMemoryObject()) |pointer| {
+                        if (pointer.isForwarded()) {
                             unreachable;
                         } else if (pointer.header.age.isNursery())
                             hp = pointer.copyTo(hp, objPtr);
@@ -249,8 +249,8 @@ pub const Process = extern struct {
         _ = fmt;
         _ = options;
         const self = orig.ptr();
-        try writer.print("process: {} .stack = {any}",.{self.id,self.getStack(self.sp)});
-        try writer.print(" .heap = {any}",.{self.getHeap()});
+        try writer.print("process: {} .stack = {any}", .{ self.id, self.getStack(self.sp) });
+        try writer.print(" .heap = {any}", .{self.getHeap()});
     }
 };
 test "nursery allocation" {

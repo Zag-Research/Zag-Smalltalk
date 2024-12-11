@@ -34,22 +34,22 @@ pub const inlines = struct {
     const stdout = std.io.getStdOut().writer();
     fn readCharacter() Object {
         var chars: [4]u8 = undefined;
-        if (stdin.read(chars[0..1])<1) return Nil;
+        if (stdin.read(chars[0..1]) < 1) return Nil;
         const n = utf8ByteSequenceLength(chars) catch @panic("invalid utf8");
-        if (n>1) {
-            if (stdin.read(chars[1..n])<n-1) return Nil;
+        if (n > 1) {
+            if (stdin.read(chars[1..n]) < n - 1) return Nil;
         }
         return Object.asCharacter(utf8Decode(char[0..n]) catch @panic("invalid utf8"));
     }
 };
 
-pub const embedded = struct {
-};
+pub const embedded = struct {};
 
-_ = try stdin.readUntilDelimiter(&input, '\n');
+fn ignore() !void {
+    _ = try stdin.readUntilDelimiter(&input, '\n');
 
-try stdout.print("The user entered: {s}\n", .{input});
-
+    try stdout.print("The user entered: {s}\n", .{input});
+}
 pub const primitives = struct {
     pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // SmallInteger>>#+
         trace("\n+: {any}", .{context.stack(sp, process)});
@@ -59,7 +59,7 @@ pub const primitives = struct {
         }
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined, undefined });
     }
 };

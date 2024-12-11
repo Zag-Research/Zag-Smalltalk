@@ -90,7 +90,7 @@ pub const inlines = struct {
         var f = fields;
         if (flags & 64 != 0) {
             f = f - 1;
-            sp.atPut(f,Object.from(context));
+            sp.atPut(f, Object.from(context));
         }
         if (flags & 128 != 0) {
             f = f - 1;
@@ -169,7 +169,7 @@ pub const embedded = struct {
             .heap => {
                 const closure = val.to(heap.HeapObjectPtr);
                 const method = closure.prev().to(CompiledMethodPtr);
-//                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
+                //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,e.dnu,.{pc,sp,process,context,selector});
                 const newPc = method.codePtr();
                 context.setReturn(pc);
                 if (true) @panic("unfinished");
@@ -201,7 +201,7 @@ pub const embedded = struct {
     pub fn closureData(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
-        const newSp = process.allocStack(sp, .BlockClosure,  @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
+        const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
         return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
     }
 
@@ -313,19 +313,19 @@ pub const embedded = struct {
 // }
 pub const primitives = struct {
     pub fn p201(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value
-        _ = .{pc,sp,process,context,signature,@panic("prim201")};
+        _ = .{ pc, sp, process, context, signature, @panic("prim201") };
     }
     pub fn p202(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:
-        _ = .{pc,sp,process,context,signature,@panic("prim202")};
+        _ = .{ pc, sp, process, context, signature, @panic("prim202") };
     }
     pub fn p203(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:
-        _ = .{pc,sp,process,context,signature,@panic("prim203")};
+        _ = .{ pc, sp, process, context, signature, @panic("prim203") };
     }
     pub fn p204(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:value:
-        _ = .{pc,sp,process,context,signature,@panic("prim204")};
+        _ = .{ pc, sp, process, context, signature, @panic("prim204") };
     }
-    pub fn p205(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature)  callconv(stdCall) SP { // value:value:value:value:
-        _ = .{pc,sp,process,context,signature,@panic("prim205")};
+    pub fn p205(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:value:value:
+        _ = .{ pc, sp, process, context, signature, @panic("prim205") };
     }
 };
 const e = struct {
