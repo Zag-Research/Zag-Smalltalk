@@ -21,14 +21,30 @@ ZagOutputLLVM >> generateLabel [
 	^ gen newLabel
 ]
 
+{ #category : 'accessing' }
+ZagOutputLLVM >> generator: aGenerator [
+	gen := aGenerator
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
+	
+	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
+]
+
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
-	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
+	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue 
+	  nativeANumber nativeSelf nativeResult overflow result primitiveSuccess |
+	
 	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	primitiveFail := self generateLabel.
-	self branchIf: aNumberIsSmallInteger isFalseTo: primitiveFail.
+	primitiveSuccess :=  self generateLabel.
+	
+	self if: aNumberIsSmallInteger isFalseThen: primitiveFail isTrueThen: primitiveSuccess.
+	
 	addressOfSelf := gen register: #sp plus: 8.
 	selfValue := gen valueAt: addressOfSelf.
 	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
