@@ -44,7 +44,7 @@ fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(p
         hint,
         size,
         os.PROT.READ | os.PROT.WRITE,
-        .{.TYPE=.PRIVATE, .ANONYMOUS = true, .NORESERVE = true},
+        .{ .TYPE = .PRIVATE, .ANONYMOUS = true, .NORESERVE = true },
         fd,
         0,
     );

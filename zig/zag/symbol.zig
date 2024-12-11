@@ -105,10 +105,9 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "value:value:value:value:", "valueWithArguments:",                 "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", "self",               "name",         "<",             "<=",                 ">=",
     ">",                        "class",                               "Class",      "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger", "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
     "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",     "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",     "perform:with:", "perform:with:with:", "perform:with:with:with:",
-    "perform:withArguments:",   "perform:withArguments:inSuperclass:",
-    "fibonacci",
+    "perform:withArguments:",   "perform:withArguments:inSuperclass:", "fibonacci",
     // add any new values here
-    "Object",
+     "Object",
 });
 pub var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: object.Object) object.Object {
@@ -170,7 +169,7 @@ pub const SymbolTable = struct {
         self.* = undefined;
     }
     fn unPhi(obj: object.Object) u24 {
-        return @as(u24, @truncate(obj.hash32()>>8))*%undoPhi24;
+        return @as(u24, @truncate(obj.hash32() >> 8)) *% undoPhi24;
     }
     fn asString(self: *Self, string: object.Object) object.Object {
         return self.theTreap(0).getKey(unPhi(string));
@@ -212,7 +211,7 @@ pub const SymbolTable = struct {
     }
     fn verify(self: *Self, symbol: object.Object) !void {
         try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[unPhi(symbol) - 1].asObject()));
-      }
+    }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
 // test "symbols match initialized symbol table" {

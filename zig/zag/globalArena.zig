@@ -51,7 +51,7 @@ const HeapAllocation = extern struct {
         allocators: u16,
         objectsNeedingScan: u16,
         marking: bool,
-        } };
+    } };
     const field_size = @sizeOf(HeapFlags) + @sizeOf(?*HeapAllocation) + @sizeOf(FreeList) * nFreeLists + @sizeOf(MutexType);
     const size = (heap_allocation_size - field_size) / @sizeOf(HeapObject);
     const minFreeList = 1;
@@ -105,8 +105,8 @@ const HeapAllocation = extern struct {
     }
     fn freeSpace(self: SelfPtr) usize {
         var count: usize = 0;
-        for (self.freeLists[0..], 0..nFreeLists) |fl,i| {
-            count += fl.count()*(@as(usize,1)<<@as(u6,@truncate(i)));
+        for (self.freeLists[0..], 0..nFreeLists) |fl, i| {
+            count += fl.count() * (@as(usize, 1) << @as(u6, @truncate(i)));
         }
         return count;
     }
@@ -117,31 +117,31 @@ const HeapAllocation = extern struct {
         return error.HeapFull;
     }
     fn allocOfSize(self: SelfPtr, classIndex: ClassIndex, instVars: u12, arraySize: ?usize, comptime T: anytype) AllocErrors!HeapObjectPtr {
-        const ar = self.alloc(classIndex,instVars, arraySize, T, T == WeakObject);
+        const ar = self.alloc(classIndex, instVars, arraySize, T, T == WeakObject);
         return ar.initAll();
     }
     pub fn alloc(self: SelfPtr, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocResult {
         const aI = AllocationInfo.calc(iVars, indexed, element, makeWeak);
         while (true) {
-            if (self.allocBlock(aI,classIndex)) |ptr|
+            if (self.allocBlock(aI, classIndex)) |ptr|
                 return .{
                     .age = .global,
                     .allocated = ptr,
                     .info = aI,
-            };
+                };
             unreachable;
         }
     }
     fn allocBlock(self: SelfPtr, aI: AllocationInfo, classIndex: ClassIndex) ?HeapObjectPtr {
         self.mutex.lock();
         defer self.mutex.unlock();
-        const words:usize = aI.objectHeapSize();
-        for (bitsToRepresent(words + 1) .. nFreeLists+1) |index| {
+        const words: usize = aI.objectHeapSize();
+        for (bitsToRepresent(words + 1)..nFreeLists + 1) |index| {
             if (self.freeLists[index].getSlice()) |slice| {
                 const heapPtr: *HeapObject = @ptrCast(slice.ptr);
                 aI.initObjectStructure(heapPtr, classIndex, Age.global);
                 self.putInFreeLists(slice.ptr, words + 1, slice.len);
-                if (aI.externalSize()>0) {
+                if (aI.externalSize() > 0) {
                     @panic("external allocation");
                 }
                 return heapPtr;
@@ -169,7 +169,7 @@ test "check HeapAllocations" {
     var ha = HeapAllocation.init();
     defer ha.deinit();
     try ee(ha.freeSpace(), HeapAllocation.size);
-//    try ee(ha.allocOfSize(.none, HeapHeader.maxLength + 2, null, Object), error.HeapFull);
+    //    try ee(ha.allocOfSize(.none, HeapHeader.maxLength + 2, null, Object), error.HeapFull);
     const alloc0 = try ha.allocOfSize(.none, 0, 60, u8);
     try ee(alloc0.header.length, 8);
     const alloc1 = try ha.allocOfSize(.none, 0, 50, Object);
@@ -230,14 +230,14 @@ const FreeList = extern struct {
                 const next = fle.next;
                 if (@cmpxchgWeak(FreeListPtr, myList, fle, next, SeqCst, SeqCst)) |_|
                     continue;
-                return @as(HeapObjectArray, @ptrCast(fle))[0..@as(usize,self.header.length)+1];
+                return @as(HeapObjectArray, @ptrCast(fle))[0 .. @as(usize, self.header.length) + 1];
             } else return null;
         }
     }
     fn init(comptime n: comptime_int) [n]FreeList {
         var initial_value: [n]FreeList = undefined;
         for (initial_value[0..], 0..) |*fl, index| {
-            fl.header = HeapHeader.freeHeader(@truncate((@as(u16, 1) << @as(u4, @intCast(index)))-1));
+            fl.header = HeapHeader.freeHeader(@truncate((@as(u16, 1) << @as(u4, @intCast(index))) - 1));
             fl.list = null;
         }
         return initial_value;

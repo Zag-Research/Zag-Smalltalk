@@ -19,86 +19,79 @@ pub fn compileReferences(comptime tup: anytype) [tup.len / 2]Reference {
     const final = result;
     return final;
 }
-const references = compileReferences(.{
-    // grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -n 's;./\(.*\)[.]zig:[ 	]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
-    "branch",                     &execute.embedded.branch,
-    "call",                       &execute.embedded.call,
-    "callRecursive",              &execute.embedded.callRecursive,
-    "closureData",                &primitives.embedded.BlockClosure.closureData,
-    "drop",                       &execute.embedded.drop,
-    "dropNext",                   &execute.embedded.dropNext,
-    "dup",                        &execute.embedded.dup,
-    "dynamicDispatch",            &execute.embedded.dynamicDispatch,
-    "fallback",                   &execute.embedded.fallback,
-    "fullClosure",                &primitives.embedded.BlockClosure.fullClosure,
-    "generalClosure",             &primitives.embedded.BlockClosure.generalClosure,
-    "ifFalse",                    &execute.embedded.ifFalse,
-    "ifNil",                      &execute.embedded.ifNil,
-    "ifNotNil",                   &execute.embedded.ifNotNil,
-    "ifTrue",                     &execute.embedded.ifTrue,
-    "immutableClosure",           &primitives.embedded.BlockClosure.immutableClosure,
-    "over",                       &execute.embedded.over,
-    "p201",                       &primitives.primitives.p201,
-    "p202",                       &primitives.primitives.p202,
-    "p203",                       &primitives.primitives.p203,
-    "p204",                       &primitives.primitives.p204,
-    "p205",                       &primitives.primitives.p205,
-    //"perform",&execute.embedded.perform,
-    //"performWith",&execute.embedded.performWith,
-    "popLocal",                   &execute.embedded.popLocal,
-    "popLocal0",                  &execute.embedded.popLocal0,
-    "popLocalData",               &execute.embedded.popLocalData,
-    "popLocalField",              &execute.embedded.popLocalField,
-    "printStack",                 &execute.embedded.printStack,
-    "pushContext",                &execute.embedded.pushContext,
-    "pushLiteral",                &execute.embedded.pushLiteral,
-    "pushLiteral0",               &execute.embedded.pushLiteral0,
-    "pushLiteral1",               &execute.embedded.pushLiteral1,
-    "pushLiteral2",               &execute.embedded.pushLiteral2,
-    "pushLiteralFalse",           &execute.embedded.pushLiteralFalse,
-    "pushLiteralIndirect",        &execute.embedded.pushLiteralIndirect,
-    "pushLiteralNil",             &execute.embedded.pushLiteralNil,
-    "pushLiteralTrue",            &execute.embedded.pushLiteralTrue,
-    "pushLiteral_1",              &execute.embedded.pushLiteral_1,
-    "pushLocal",                  &execute.embedded.pushLocal,
-    "pushLocal0",                 &execute.embedded.pushLocal0,
-    "pushLocalData",              &execute.embedded.pushLocalData,
-    "pushLocalField",             &execute.embedded.pushLocalField,
-    "pushNonlocalBlock_false",    &primitives.embedded.BlockClosure.pushNonlocalBlock_false,
-    "pushNonlocalBlock_minusOne", &primitives.embedded.BlockClosure.pushNonlocalBlock_minusOne,
-    "pushNonlocalBlock_nil",      &primitives.embedded.BlockClosure.pushNonlocalBlock_nil,
-    "pushNonlocalBlock_one",      &primitives.embedded.BlockClosure.pushNonlocalBlock_one,
-    "pushNonlocalBlock_self",     &primitives.embedded.BlockClosure.pushNonlocalBlock_self,
-    "pushNonlocalBlock_true",     &primitives.embedded.BlockClosure.pushNonlocalBlock_true,
-    "pushNonlocalBlock_two",      &primitives.embedded.BlockClosure.pushNonlocalBlock_two,
-    "pushNonlocalBlock_zero",     &primitives.embedded.BlockClosure.pushNonlocalBlock_zero,
-    "pushThisContext",            &execute.embedded.pushThisContext,
-    "replaceLiteral",             &execute.embedded.replaceLiteral,
-    "replaceLiteral0",            &execute.embedded.replaceLiteral0,
-    "replaceLiteral1",            &execute.embedded.replaceLiteral1,
-    "returnNoContext",            &execute.embedded.returnNoContext,
-    "returnNonLocal",             &execute.embedded.returnNonLocal,
-    "returnTop",                  &execute.embedded.returnTop,
-    "returnWithContext",          &execute.embedded.returnWithContext,
-    "setupSend",                  &execute.embedded.setupSend,
-    "setupTailSend",              &execute.embedded.setupTailSend,
-    "setupTailSend0",             &execute.embedded.setupTailSend0,
-    "storeLocal",                 &execute.embedded.storeLocal,
-    "swap",                       &execute.embedded.swap,
-//    "value:",                     &primitives.embedded.BlockClosure.@"value:",
-    "verifyMethod",               &execute.embedded.verifyMethod,
-});
-var zfHashValue: u64 = 0;
-const print = std.debug.print;
-fn capitalize(c: u8) u8 {
-    return c - 'a' + 'A';
-}
-fn hash(addr: ThreadedFn) void {
-    zfHashValue = std.math.rotr(u64, zfHashValue, 1) +% @intFromPtr(addr);
-}
-fn format_timestamp(timestamp: u64, out_buffer: []u8) void {
+// grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -nE 's;./\(.*\)[.]zig:[ \t]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
+const references = [_]ThreadedFn{
+    &execute.embedded.branch, // T_Branch := 1.
+    &execute.embedded.call, // T_Call := 2.
+    &execute.embedded.callRecursive, // T_CallRecursive := 3
+    &execute.embedded.drop, // T_Drop := 4
+    &execute.embedded.dropNext, // T_DropNext := 5
+    &execute.embedded.dup, // T_Dup := 6
+    &execute.embedded.dynamicDispatch, // T_DynamicDispatch := 7
+    &execute.embedded.fallback, // T_Fallback := 8
+    &execute.embedded.ifFalse, // T_IfFalse := 9
+    &execute.embedded.ifNil, // T_IfNil := 10
+    &execute.embedded.ifNotNil, // T_IfNotNil := 11
+    &execute.embedded.ifTrue, // T_IfTrue := 12
+    &execute.embedded.over, // T_Over := 13
+    &execute.embedded.popLocal, // T_PopLocal := 14
+    &execute.embedded.popLocal0, // T_PopLocal0 := 15
+    &execute.embedded.popLocalData, // T_PopLocalData := 16
+    &execute.embedded.popLocalField, // T_PopLocalField := 17
+    &execute.embedded.printStack, // T_PrintStack := 18
+    &execute.embedded.pushContext, // T_PushContext := 19
+    &execute.embedded.pushLiteral, // T_PushLiteral := 20
+    &execute.embedded.pushLiteral0, // T_PushLiteral0 := 21
+    &execute.embedded.pushLiteral1, // T_PushLiteral1 := 22
+    &execute.embedded.pushLiteral2, // T_PushLiteral2 := 23
+    &execute.embedded.pushLiteralFalse, // T_PushLiteralFalse := 24
+    &execute.embedded.pushLiteralIndirect, // T_PushLiteralIndirect := 25
+    &execute.embedded.pushLiteralNil, // T_PushLiteralNil := 26
+    &execute.embedded.pushLiteralTrue, // T_PushLiteralTrue := 27
+    &execute.embedded.pushLiteral_1, // T_PushLiteral_1 := 28
+    &execute.embedded.pushLocal, // T_PushLocal := 29
+    &execute.embedded.pushLocal0, // T_PushLocal0 := 30
+    &execute.embedded.pushLocalData, // T_PushLocalData := 31
+    &execute.embedded.pushLocalField, // T_PushLocalField := 32
+    &execute.embedded.pushThisContext, // T_PushThisContext := 33
+    &execute.embedded.replaceLiteral, // T_ReplaceLiteral := 34
+    &execute.embedded.replaceLiteral0, // T_ReplaceLiteral0 := 35
+    &execute.embedded.replaceLiteral1, // T_ReplaceLiteral1 := 36
+    &execute.embedded.returnNoContext, // T_ReturnNoContext := 37
+    &execute.embedded.returnNonLocal, // T_ReturnNonLocal := 38
+    &execute.embedded.returnTop, // T_ReturnTop := 39
+    &execute.embedded.returnWithContext, // T_ReturnWithContext := 40
+    &execute.embedded.setupSend, // T_SetupSend := 41
+    &execute.embedded.setupTailSend, // T_SetupTailSend := 42
+    &execute.embedded.setupTailSend0, // T_SetupTailSend0 := 43
+    &execute.embedded.storeLocal, // T_StoreLocal := 44
+    &execute.embedded.swap, // T_Swap := 45
+    &execute.embedded.verifyMethod, // T_VerifyMethod := 46
+};
+// &primitives.embedded.BlockClosure.closureData, // P_ClosureData := 47
+// &primitives.embedded.BlockClosure.fullClosure, // P_FullClosure := 48
+// &primitives.embedded.BlockClosure.generalClosure, // P_GeneralClosure := 49
+// &primitives.embedded.BlockClosure.immutableClosure, // P_ImmutableClosure := 50
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_false, // P_PushNonlocalBlock_false := 51
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_minusOne, // P_PushNonlocalBlock_minusOne := 52
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_nil, // P_PushNonlocalBlock_nil := 53
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_one, // P_PushNonlocalBlock_one := 54
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_self, // P_PushNonlocalBlock_self := 55
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_true, // P_PushNonlocalBlock_true := 56
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_two, // P_PushNonlocalBlock_two := 57
+// &primitives.embedded.BlockClosure.pushNonlocalBlock_zero, // P_PushNonlocalBlock_zero := 58
+// &primitives.primitives.p201, // P_P201 := 59
+// &primitives.primitives.p202, // P_P202 := 60
+// &primitives.primitives.p203, // P_P203 := 61
+// &primitives.primitives.p204, // P_P204 := 62
+// &primitives.primitives.p205, // P_P205 := 63
+// &primitives.embedded.BlockClosure.@"value:", // P_value_ := 64
+// &execute.embedded.perform, // P_Perform := 65
+// &execute.embedded.performWith, // P_PerformWith := 66
+
+fn format_timestamp(seconds: u64, out_buffer: []u8) void {
     if (std.debug.runtime_safety) std.debug.assert(out_buffer.len >= 27);
-    const epoch_seconds: std.time.epoch.EpochSeconds = .{ .secs = timestamp };
+    const epoch_seconds: std.time.epoch.EpochSeconds = .{ .secs = seconds };
     const epoch_day = epoch_seconds.getEpochDay();
     const day_seconds = epoch_seconds.getDaySeconds();
     const year_day = epoch_day.calculateYearDay();
@@ -114,177 +107,12 @@ fn format_timestamp(timestamp: u64, out_buffer: []u8) void {
         day_seconds.getSecondsIntoMinute(),
     }) catch unreachable;
 }
-fn writeConstants() void {
-    const unix_timestamp: u64 = @intCast(std.time.timestamp());
-    const timestamp: []const u8 = blk: {
-        var buffer: [27]u8 = undefined; // Buffer size increased to 27 bytes
-        format_timestamp(unix_timestamp, &buffer);
-        break :blk &buffer;
-    };
-    print(
-        \\"I have shared variables generated by zag so that images can be generated that directly reference zig code.
-            \\From zag on {s}"
-            \\
-            , .{ timestamp });
-    const FormatShift = 40;
-    const HashShift = 16;
-    print(
-	\\BaseAddress := {}.
-	    \\SizeMask := 16r7fff.
-	    \\SizeShift := 48.
-	    \\FormatMask := 16r1f.
-	    \\FormatShift := {}.
-	    \\HashShift := {}.
-	    \\HashMask := {}.
-	    \\ClassMask := {}.
-	    \\MaxHeaderLength := 4093.
-            , .{
-                0x1000000000,
-                FormatShift,
-                HashShift,
-                (@as(u64,1) << (FormatShift - HashShift)) - 1,
-                (@as(u64,1) << HashShift) - 1,
-    });
-    print(
-	    \\ClassFalse := 10.
-	    \\ClassTrue := ClassFalse + 1.
-	    \\ClassSmallInteger := 12.
-	    \\ClassSymbol := 13.
-	    \\ClassCharacter := 14.
-	    \\ClassUndefinedObject := 23.
-	    \\ClassFloat := 24.
-	    \\ClassObject := 26.
-	    \\ClassArray := 30.
-	    \\ClassString := 31.
-	    \\ClassClass := ClassString + 1.
-	    \\ClassMethod := ClassClass + 1.
-	    \\FirstAssignableClass := 35.
-	    \\ListOfClasses := {c}
-	    \\Object.
-	    \\SmallInteger.
-	    \\UndefinedObject.
-	    \\False.
-	    \\True.
-	    \\Float.
-	    \\Symbol.
-	    \\Character.
-	    \\Array.
-	    \\String.
-	    \\CompiledMethod.
-	    \\Class.
-	    \\Context.
-	    \\BlockClosure {c}.
-            , .{ '{', '}' });
-    print(
-	    \\IndexedStruct := 110.
-	    \\ExternalStruct := IndexedStruct + 1.
-	    \\NotIndexable := ExternalStruct + 1.
-	    \\IndexedNonObject := NotIndexable + 1.
-	    \\ExternalNonObject := IndexedNonObject + 1.
-	    \\DirectIndexed := ExternalNonObject + 1.
-	    \\Indexed := DirectIndexed + 1.
-	    \\External := Indexed + 1.
-	    \\Free := External + 1.
-	    \\Special := Free + 1.
-	    \\NotIndexableWithPointers := Special + 1.
-	    \\IndexedNonObjectWithPointers := NotIndexableWithPointers + 1.
-	    \\ExternalNonObjectWithPointers := IndexedNonObjectWithPointers + 1.
-	    \\DirectIndexedWithPointers := ExternalNonObjectWithPointers + 1.
-	    \\IndexedWithPointers := DirectIndexedWithPointers + 1.
-	    \\ExternalWithPointers := IndexedWithPointers + 1.
-	    \\ExternalWeakWithPointers := ExternalWithPointers + 1.
-	    \\IndexedWeakWithPointers := ExternalWeakWithPointers + 1
-            , .{});
-}
-fn writeClass() void {
-    const unix_timestamp: u64 = @intCast(std.time.timestamp());
-    const timestamp: []const u8 = blk: {
-        var buffer: [27]u8 = undefined; // Buffer size increased to 27 bytes
-        format_timestamp(unix_timestamp, &buffer);
-        break :blk &buffer;
-    };
-    print(
-        \\"I have shared variables generated by zag so that images can be generated that directly reference zig code.
-            \\From zag on {s}"
-            \\
-            , .{ timestamp });
-    print(
-        \\Class {c}
-            \\	#name : 'ASZagConstants',
-            \\	#superclass : 'SharedPool',
-            \\	#classVars : [
-            \\		'Addresses',
-            \\		'PredefinedSymbols',
-            \\		'Primitives'
-            \\
-            , .{ '{' });
-    for (references[0..]) |ref| {
-        if (ref.str[0]=='p' and ref.str[1] <= '9' and ref.str[1] >= '0') {}
-        else
-            print("\t\t'Zf{c}{s}',\n", .{ capitalize(ref.str[0]), ref.str[1..] });
-    }
-    print(
-        \\	],
-            \\	#category : 'ASTSmalltalk-Image',
-            \\	#package : 'ASTSmalltalk',
-            \\	#tag : 'Image'
-            \\{c}
-            \\
-            \\{c} #category : 'mapping' {c}
-            \\ASZagConstants class >> constantMap [
-            \\
-            \\	^ Dictionary new
-            \\
-            , .{ '}', '{', '}' });
-    for (references[0..]) |ref| {
-        if (ref.str[0]=='p' and ref.str[1] <= '9' and ref.str[1] >= '0') {}
-        else
-            print("\t\t  at: #{s} put: Zf{c}{s};\n", .{ ref.str, capitalize(ref.str[0]), ref.str[1..] });
-    }
-    print(
-        \\		  yourself
-            \\]
-            \\
-            \\{c} #category : 'class initialization' {c}
-            \\ASZagConstants class >> initialize [
-            \\
-            \\	PredefinedSymbols := #(  ).
-            \\	self initializeForImage.
-            \\	Addresses := self constantMap
-            \\]
-            \\
-            \\{c} #category : 'class initialization' {c}
-            \\ASZagConstants class >> initializeForImage [
-            \\	CodeTable := {c}
-            \\
-            , .{ '{', '}', '{', '}', '{' });
-    var nPrimitives : usize = 0;
-    for (references[0..]) |ref| {
-        if (ref.str[0]=='p' and ref.str[1] <= '9' and ref.str[1] >= '0') {
-            print("\t\t{}.\n",
-                  .{ @intFromPtr(ref.addr) });
-            nPrimitives = @max(nPrimitives,std.zig.number_literal.parseNumberLiteral(ref.str[1..]).int);
-        } else
-            print("\t\tZf{c}{s} := {}.\n",
-                  .{ capitalize(ref.str[0]), ref.str[1..], @intFromPtr(ref.addr) });
-    }
-    print(
-        \\	{c}.
-            \\	Primitives := Array new: {};
-            \\
-            ,.{'}', nPrimitives});
-    for (references[0..]) |ref| {
-        if (ref.str[0]=='p' and ref.str[1] <= '9' and ref.str[1] >= '0') {
-            print("\t\tat: {} put: {};\n",
-                  .{ std.zig.number_literal.parseNumberLiteral(ref.str[1..]).int,
-                    @intFromPtr(ref.addr) });
-        }
-    }
-    print(
-        \\		yourself
-            \\]
-            ,.{});
-}
+const unix_timestamp: u64 = @intCast(std.time.timestamp());
+const timestamp: []const u8 = blk: {
+    var buffer: [27]u8 = undefined; // Buffer size increased to 27 bytes
+    format_timestamp(unix_timestamp, &buffer);
+    break :blk &buffer;
+};
 
 const ZagImageHeader = struct {
     magic: u64,
@@ -295,27 +123,27 @@ const ZagImageHeader = struct {
     dispatchTable: Object,
     codeAddresses: Object,
     processTable: Object,
-    const magic: u64 = 0x010203040567615A;
+    const magicTag: u64 = 0x010203040567615A;
 };
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
-            std.debug.print(
-            \\Usage: zig -constants | image-directory
-            \\
-            ,.{});
+    std.debug.print(
+        \\Usage: zig -constants | image-directory
+        \\
+    , .{});
 }
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
-    if (name.len<=ext.len) return false;
-    for(name[name.len-ext.len..],ext) |n,e| {
-        if (n!=e) return false;
+    if (name.len <= ext.len) return false;
+    for (name[name.len - ext.len ..], ext) |n, e| {
+        if (n != e) return false;
     }
     return true;
 }
 fn readImage(file: std.fs.File) !void {
-    if ((try file.stat()).size!=@sizeOf(ZagImageHeader))
+    if ((try file.stat()).size != @sizeOf(ZagImageHeader))
         return error.WrongImageFileSize;
-    _ = try file.read(@as([*]u8,@ptrCast(&zagImageHeader))[0..@sizeOf(ZagImageHeader)]);
-    if (zagImageHeader.magic!=ZagImageHeader.magic)
+    _ = try file.read(@as([*]u8, @ptrCast(&zagImageHeader))[0..@sizeOf(ZagImageHeader)]);
+    if (zagImageHeader.magic != ZagImageHeader.magicTag)
         return error.BadImageMagic;
 }
 fn runImage() !void {
@@ -334,7 +162,7 @@ fn readProcess(file: std.fs.File) !void {
     @panic("not implemented");
 }
 fn loadAndRun(directory: [*:0]const u8) !void {
-    var dir = try std.fs.cwd().openDirZ(directory,.{});
+    var dir = try std.fs.cwd().openDirZ(directory, .{});
     defer dir.close();
     var loadedImage = false;
     {
@@ -343,20 +171,17 @@ fn loadAndRun(directory: [*:0]const u8) !void {
         while (try it.next()) |entry| {
             const name = entry.name;
             if (entry.kind == .file) {
-                if (extensionMatches(name,".image")) {
-                    const file = try dir.openFile(name,.{});
+                if (extensionMatches(name, ".image")) {
+                    const file = try dir.openFile(name, .{});
                     defer file.close();
                     try readImage(file);
                     loadedImage = true;
-                } else if (extensionMatches(name,".heap")) {
-                } else if (extensionMatches(name,".lho")) {
-                } else if (extensionMatches(name,".process")) {
-                } else {
-                    std.debug.print("unknown file: {s}\n",.{name});
+                } else if (extensionMatches(name, ".heap")) {} else if (extensionMatches(name, ".lho")) {} else if (extensionMatches(name, ".process")) {} else {
+                    std.debug.print("unknown file: {s}\n", .{name});
                     errors = true;
                 }
             } else {
-                std.debug.print("unknown non-file: {s}\n",.{name});
+                std.debug.print("unknown non-file: {s}\n", .{name});
                 errors = true;
             }
         }
@@ -367,17 +192,16 @@ fn loadAndRun(directory: [*:0]const u8) !void {
     while (try it.next()) |entry| {
         const name = entry.name;
         if (entry.kind == .file) {
-            if (extensionMatches(name,".image")) {
-            } else if (extensionMatches(name,".heap")) {
-                const file = try dir.openFile(name,.{});
+            if (extensionMatches(name, ".image")) {} else if (extensionMatches(name, ".heap")) {
+                const file = try dir.openFile(name, .{});
                 defer file.close();
                 try readHeap(file);
-            } else if (extensionMatches(name,".lho")) {
-                const file = try dir.openFile(name,.{});
+            } else if (extensionMatches(name, ".lho")) {
+                const file = try dir.openFile(name, .{});
                 defer file.close();
                 try readLargeHeapObject(file);
-            } else if (extensionMatches(name,".process")) {
-                const file = try dir.openFile(name,.{});
+            } else if (extensionMatches(name, ".process")) {
+                const file = try dir.openFile(name, .{});
                 defer file.close();
                 try readProcess(file);
             }
@@ -393,11 +217,7 @@ pub fn main() !void {
     _ = argsIterator.next(); // Skip executable
 
     if (argsIterator.next()) |arg| {
-        if (std.mem.orderZ(u8, arg, "-class") == .eq) {
-            writeClass();
-        } else         if (std.mem.orderZ(u8, arg, "-constants") == .eq) {
-            writeConstants();
-        } else if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
+        if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
             usage();
         } else {
             try loadAndRun(arg);
@@ -405,9 +225,8 @@ pub fn main() !void {
         while (argsIterator.next()) |extra|
             std.debug.print(
                 \\unused argument: {s}
-                    \\
-            ,.{extra});
-
+                \\
+            , .{extra});
     } else {
         usage();
     }

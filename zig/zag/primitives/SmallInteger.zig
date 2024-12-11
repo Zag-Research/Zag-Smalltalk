@@ -32,7 +32,8 @@ pub const inlines = struct {
         if (other.isInt()) {
             const result = switch (config.objectEncoding) {
                 .nan => @as(Object, @bitCast(self.rawI() +% other.toUnchecked(i64))),
-                .tag => {},};
+                .tag => {},
+            };
             if (result.isInt()) return result;
         }
         return error.primitiveError;
@@ -40,14 +41,16 @@ pub const inlines = struct {
     pub inline fn p1L(self: Object, other: i32) !Object { // Add a positive literal
         const result = switch (config.objectEncoding) {
             .nan => @as(Object, @bitCast(self.rawI() +% other)),
-            .tag => {},};
+            .tag => {},
+        };
         if (result.atMostInt()) return result;
         return error.primitiveError;
     }
     pub inline fn p_negated(self: Object) !Object { // Negate
         const result = switch (config.objectEncoding) {
             .nan => @as(Object, @bitCast(object.Object.u64_ZERO2 -% self.rawU())),
-            .tag => {}};
+            .tag => {},
+        };
         if (result.isInt()) return result;
         return error.primitiveError;
     }
@@ -78,7 +81,8 @@ pub const inlines = struct {
     pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
         return switch (config.objectEncoding) {
             .nan => self.rawU() <= other.rawU(),
-            .tag => self.rawI() <= other.rawI()};
+            .tag => self.rawI() <= other.rawI(),
+        };
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (!other.isInt()) return error.primitiveError;
@@ -148,11 +152,11 @@ test "inline primitives" {
 }
 pub const embedded = struct {
     const fallback = execute.fallback;
-    const plus =  MethodSignature.from(symbols.@"+",.SmallInteger);
-    const minus =  MethodSignature.from(symbols.@"-",.SmallInteger);
+    const plus = MethodSignature.from(symbols.@"+", .SmallInteger);
+    const minus = MethodSignature.from(symbols.@"-", .SmallInteger);
     pub const SmallInteger = struct {
         pub fn @"+"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context,plus }));
+            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context, plus }));
             return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
         }
         pub fn @"+_L1"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
@@ -195,7 +199,7 @@ pub const embedded = struct {
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, undefined });
         }
         pub fn @"*"(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, MethodSignature.from(symbols.@"*",.SmallInteger) }));
+            const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, MethodSignature.from(symbols.@"*", .SmallInteger) }));
             return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
         }
     };
@@ -206,7 +210,7 @@ pub const primitives = struct {
         if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
+            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
     pub fn p2(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#-
@@ -214,7 +218,7 @@ pub const primitives = struct {
         if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np2: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
+            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
     pub fn p7(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // at:
@@ -226,7 +230,7 @@ pub const primitives = struct {
         if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np5: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-                                                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
+            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
     pub fn p9(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#*
@@ -243,15 +247,15 @@ const e = struct {
 fn testExecute(ptr: anytype) []Object {
     const method: CompiledMethodPtr = @ptrCast(ptr);
     var te = execute.Execution.new();
-    std.debug.print("\nbefore te.init",.{});
+    std.debug.print("\nbefore te.init", .{});
     te.init();
-    std.debug.print("\nbefore te.run",.{});
+    std.debug.print("\nbefore te.run", .{});
     const result = te.run(&[_]Object{Nil}, method);
     return result;
 }
 test "simple add" {
     const expectEqual = std.testing.expectEqual;
-    std.debug.print("\nbefore prog",.{});
+    std.debug.print("\nbefore prog", .{});
     var prog = compileMethod(Sym.value, 0, 0, .none, .{
         &e.pushContext, "^",
         &e.pushLiteral, Object.from(3),
@@ -265,9 +269,9 @@ test "simple add" {
         &e.SmallInteger.@"+",
         &e.returnNoContext,
     });
-    std.debug.print("\nbefore setliteral",.{});
+    std.debug.print("\nbefore setliteral", .{});
     prog.setLiterals(empty, &[_]Object{Object.from(&method2)});
-    std.debug.print("\nbefore execute",.{});
+    std.debug.print("\nbefore execute", .{});
     const result = testExecute(&prog);
     try expectEqual(result[0].toInt(), 42);
 }

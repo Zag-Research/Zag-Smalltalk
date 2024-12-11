@@ -2,26 +2,31 @@ const std = @import("std");
 const math = std.math;
 const Order = math.Order;
 const Units = enum {
-    seconds,milliseconds,microseconds,nanoseconds,
+    seconds,
+    milliseconds,
+    microseconds,
+    nanoseconds,
     pub fn name(self: Units) []u8 {
         return switch (self) {
-            .seconds,     => "seconds",
+            .seconds,
+            => "seconds",
             .milliseconds => "milliseconds",
             .microseconds => "microseconds",
-            .nanoseconds  => "nanoseconds",
+            .nanoseconds => "nanoseconds",
         };
     }
     pub fn shortName(self: Units) []u8 {
         return switch (self) {
-            .seconds,     => "s",
+            .seconds,
+            => "s",
             .milliseconds => "ms",
             .microseconds => "us",
-            .nanoseconds  => "ns",
+            .nanoseconds => "ns",
         };
     }
 };
 pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Units) type {
-    const T = if (K==void) u64 else K;
+    const T = if (K == void) u64 else K;
     return struct {
         values: [runs]T = undefined,
         minValue: T = undefined,
@@ -35,11 +40,12 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
             else => false,
         };
         const warmups = @min(3, @max(1, (runs + 1) / 3));
-        const scale : u64 = switch (units) {
-            .seconds,     => 1_000_000_000,
+        const scale: u64 = switch (units) {
+            .seconds,
+            => 1_000_000_000,
             .milliseconds => 1_000_000,
             .microseconds => 1_000,
-            .nanoseconds  => 1,
+            .nanoseconds => 1,
         };
         pub fn init() Self {
             return .{};
@@ -56,12 +62,12 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
             }
         }
         pub fn time(self: *Self, runner: *const fn (usize) void) void {
-            for (0..warmups) |_| @call(.never_inline,runner,.{0});
+            for (0..warmups) |_| @call(.never_inline, runner, .{0});
             var timer = std.time.Timer.start() catch @panic("no timer available");
             for (1..runs + 1) |runNumber| {
                 timer.reset();
-                @call(.never_inline,runner,.{runNumber});
-                const diff = timer.read()/scale;
+                @call(.never_inline, runner, .{runNumber});
+                const diff = timer.read() / scale;
                 self.addData(diff);
             }
         }

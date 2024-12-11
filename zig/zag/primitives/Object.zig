@@ -130,7 +130,7 @@ test "simple ==" {
     var prog = compileMethod(Sym.value, 0, 0, .Object, .{
         &e.pushLiteral, Object.from(4),
         &e.pushLiteral, Object.from(4),
-        &e.p110,       &e.returnNoContext,
+        &e.p110,        &e.returnNoContext,
     });
     const result = testExecute(&prog);
     try expect(result[0].to(bool));
@@ -148,7 +148,7 @@ test "simple compare" {
     var prog = compileMethod(Sym.value, 0, 0, .Object, .{
         &e.pushLiteral, Object.from(3),
         &e.pushLiteral, Object.from(4),
-        &e.p110,       &e.returnNoContext,
+        &e.p110,        &e.returnNoContext,
     });
     try expectEqual(testExecute(&prog)[0], False);
 }
@@ -157,7 +157,7 @@ test "simple compare and don't branch" {
     var prog = compileMethod(Sym.value, 0, 0, .Object, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
-        &e.p110,        &e.ifTrue,
+        &e.p110,         &e.ifTrue,
         "true",          &e.pushLiteral,
         Object.from(17), &e.branch,
         "common",        ":true",
@@ -171,7 +171,7 @@ test "simple compare and branch" {
     var prog = compileMethod(Sym.value, 0, 0, .Object, .{
         &e.pushLiteral,  Object.from(3),
         &e.pushLiteral,  Object.from(4),
-        &e.p169,        &e.ifTrue,
+        &e.p169,         &e.ifTrue,
         "true",          &e.pushLiteral,
         Object.from(17), &e.branch,
         "common",        ":true",

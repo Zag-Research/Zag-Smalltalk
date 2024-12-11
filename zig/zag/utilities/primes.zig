@@ -57,7 +57,7 @@ test "prime diffs" {
             n += 1;
         }
         if (i + 1 == p) {
-//            std.debug.print("\naverage diff - first {}: {d:.2} ", .{ p, @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(n)) });
+            //            std.debug.print("\naverage diff - first {}: {d:.2} ", .{ p, @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(n)) });
             p *= 16;
         }
     }
