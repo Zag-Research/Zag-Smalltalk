@@ -270,12 +270,6 @@ ASCodeGenerator >> inlineDependentPrimitives [
 ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCSend [
 
 	| inlineBlock savedTargetClass |
-	(self recursiveBasicBlock: aMethodAST) ifNotNil: [ :block |
-		^ self
-			  inlineRecursiveMethod: aMethodAST
-			  block: block
-			  from: anASCSend ].
-	self halt.
 	savedTargetClass := targetClass.
 	inlineBlock := self newInlineMethod: aMethodAST.
 	inlineBlock copyStackFrom: code.

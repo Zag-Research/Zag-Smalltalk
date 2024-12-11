@@ -20,6 +20,9 @@ Class {
 		'currentHeap',
 		'constants'
 	],
+	#pools : [
+		'ZagConstants'
+	],
 	#classInstVars : [
 		'imageFolder'
 	],

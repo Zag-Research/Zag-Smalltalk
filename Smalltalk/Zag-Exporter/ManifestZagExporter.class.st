@@ -34,7 +34,7 @@ ManifestZagExporter class >> ruleInconsistentMethodClassificationRuleV1FalsePosi
 ManifestZagExporter class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:22:57.079135-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:22:57.079135-05:00') #(#(#RGMethodDefinition #(#'ZagConstants class' #initialize #true)) #'2024-12-11T07:17:16.189773-05:00') )
 ]
 
 { #category : 'code-critics' }
