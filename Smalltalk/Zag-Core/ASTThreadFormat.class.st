@@ -8,9 +8,9 @@ Class {
 		'stream',
 		'method'
 	],
-	#category : 'Zag-Core-Threaded',
+	#category : 'Zag-Core-Inspect',
 	#package : 'Zag-Core',
-	#tag : 'Threaded'
+	#tag : 'Inspect'
 }
 
 { #category : 'printing' }

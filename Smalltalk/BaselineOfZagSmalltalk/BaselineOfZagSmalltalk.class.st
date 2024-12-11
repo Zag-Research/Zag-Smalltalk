@@ -17,11 +17,6 @@ BaselineOfZagSmalltalk >> baseline: spec [
 			package: 'Zag-Core';
 			package: 'Zag-Core-Tests'
 			with: [ spec requires: #( 'Zag-Core' ) ];
-			package: 'Zag-Smalltalk-LLVM'
-			with: [ spec requires: #( 'Zag-Core' ) ];
-			package: 'Zag-Smalltalk-LLVM-Tests'
-			with: [
-				spec requires: #( 'Zag-Smalltalk-LLVM' 'Zag-Core-Tests' ) ];
 			package: 'Benchmarks' with: [ spec requires: #( 'Zag-Core' ) ];
 			package: 'Zag-LLVM' with: [ spec requires: #( 'Zag-Core' ) ];
 			package: 'Zag-LLVM-Tests' with: [ spec requires: #( 'Zag-LLVM' ) ];
