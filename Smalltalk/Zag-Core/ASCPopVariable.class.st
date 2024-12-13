@@ -4,9 +4,9 @@ I remember local pops
 Class {
 	#name : 'ASCPopVariable',
 	#superclass : 'ASCVariableOperations',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'code generation' }

@@ -7,9 +7,9 @@ Class {
 	#instVars : [
 		'literal'
 	],
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'callgraph' }

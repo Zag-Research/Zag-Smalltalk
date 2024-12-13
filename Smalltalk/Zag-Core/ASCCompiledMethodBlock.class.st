@@ -8,9 +8,9 @@ Class {
 	#instVars : [
 		'primitive'
 	],
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'API' }

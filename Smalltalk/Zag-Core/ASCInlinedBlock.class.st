@@ -4,9 +4,9 @@ I am the superclass of Code Units that are inlined, contrasted with ones that ar
 Class {
 	#name : 'ASCInlinedBlock',
 	#superclass : 'ASCCompilableUnitBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'API' }

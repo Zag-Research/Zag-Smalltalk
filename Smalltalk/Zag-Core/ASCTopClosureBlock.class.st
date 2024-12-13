@@ -7,7 +7,7 @@ My final result will be a stack adjustment and branch to the return point, repla
 Class {
 	#name : 'ASCTopClosureBlock',
 	#superclass : 'ASCInlineClosureBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }

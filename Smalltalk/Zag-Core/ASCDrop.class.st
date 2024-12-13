@@ -4,9 +4,9 @@ I implement very simple operations described by a symbol
 Class {
 	#name : 'ASCDrop',
 	#superclass : 'ASCNonStackReferencingOperations',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'callgraph' }

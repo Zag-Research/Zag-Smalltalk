@@ -7,9 +7,9 @@ My final expression will be a stack adjustment and branch to the return point, l
 Class {
 	#name : 'ASCInlineMethodBlock',
 	#superclass : 'ASCInlinedBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'adding' }
