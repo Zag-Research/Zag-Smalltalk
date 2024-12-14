@@ -4,8 +4,8 @@ Class {
 	#instVars : [
 		'output'
 	],
-	#category : 'Zag-Core-Tests-Tests',
-	#package : 'Zag-Core-Tests',
+	#category : 'Zag-Output-Tests-Tests',
+	#package : 'Zag-Output-Tests',
 	#tag : 'Tests'
 }
 

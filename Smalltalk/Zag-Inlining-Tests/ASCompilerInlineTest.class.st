@@ -4,8 +4,8 @@ Class {
 	#instVars : [
 		'interpreter'
 	],
-	#category : 'Zag-Core-Tests-Tests',
-	#package : 'Zag-Core-Tests',
+	#category : 'Zag-Inlining-Tests-Tests',
+	#package : 'Zag-Inlining-Tests',
 	#tag : 'Tests'
 }
 
@@ -144,42 +144,6 @@ ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 ]
 
 { #category : 'asserting' }
-ASCompilerInlineTest >> assert: aCompileMethod outputInlinesTo: code [
-
-	| compiledAST file compiler output |
-	compiledAST := ASPharoCompiler new astFor: aCompileMethod.
-
-	file := ASZigFileContext new.
-	compiler := ASZigThreadedOutput withInlining
-		context: file;
-		generateCode: compiledAST for: aCompileMethod classBinding value.
-
-	output := ReadWriteStream on: String new.
-	compiler codeGenerator inspect.
-	file outputTo: output.
-
-	output contents.
-	"self assert: output contents equals: code"
-]
-
-{ #category : 'asserting' }
-ASCompilerInlineTest >> assert: aCompileMethod outputTo: code [
-
-	| compiledAST file output |
-	compiledAST := ASPharoCompiler new astFor: aCompileMethod.
-	file := ASZigFileContext new.
-	ASZigThreadedOutput new
-		context: file;
-		generateCode: compiledAST for: aCompileMethod classBinding value.
-
-	output := ReadWriteStream on: String new.
-	file outputTo: output.
-
-	output contents.
-	self assert: output contents equals: code
-]
-
-{ #category : 'asserting' }
 ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
 
 	self
@@ -307,67 +271,6 @@ ASCompilerInlineTest >> testBlockValueNonlocal [
 	^ [ 4 ] value "
 
 	self assertEquivalentSending: #blockValueNonlocal to: ASCompileTestClass1 new
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testBracketSendInlined [
-"bracketSend
-
-	5 + (self fib: 2)"
-	self
-		assert: ASCompileTestClass1 >> #bracketSend
-		outputInlinesTo: 'const std = @import("std");
-const config = @import("zag/config.zig");
-const tailCall = config.tailCall;
-const trace = config.trace;
-const stdCall = config.stdCall;
-const heap = @import("zag/heap.zig");
-const symbol = @import("zag/symbol.zig");
-const primitives = @import("zag/primitives.zig");
-const object = @import("zag/zobject.zig");
-const Object = object.Object;
-const Context = @import("zag/context.zig").Context;
-const execute = @import("zag/execute.zig");
-const PC = execute.PC;
-const SP = execute.SP;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const MethodSignature = execute.MethodSignature;
-const compileMethod = execute.compileMethod;
-var Mfoo = compileMethod(Mfoo,0,3,.SmallInteger,.{
-&e.pushContext,"^",
-":Mfoo:1",
-&e.pushLocal,0,
-&e.case,,
-&e.setupSend,Sym.i_1,
-&e.dynamicDispatch,
- });
-const Sym = struct {
-	bar: Object,
-    const ss = heap.compileStrings(.{
-	"bar",
-    });
-    usingnamespace symbol.symbols;
-    fn init() Sym {
-        return .{
-	.bar = symbol.intern(ss[0].asObject()),
-        };
-    }
-};
-var sym: Sym = undefined;
-const e = primitives.embedded;
-const p = primitives.primitives;
-fn initSmalltalk() void {
-    primitives.init();
-    sym = Sym.init();
-Mfoo.setLiterals(&[_]Object{sym.bar},&[_]Object{},null);
-}
-pub fn main() !void {
-    initSmalltalk();
-}
-'
 ]
 
 { #category : 'tests' }

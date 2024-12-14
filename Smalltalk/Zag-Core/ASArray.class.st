@@ -24,15 +24,6 @@ ASArray >> = other [
 ]
 
 { #category : 'printing' }
-ASArray >> baseValue [
-
-	| bv |
-	bv := OrderedCollection new.
-	self do: [ :statement | bv add: statement baseValue ].
-	^ bv asArray
-]
-
-{ #category : 'printing' }
 ASArray >> do: aBlock [
 	1 to: self size do: [ : idx| aBlock value: (self at: idx) ]
 ]

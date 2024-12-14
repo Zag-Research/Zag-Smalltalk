@@ -1,44 +1,6 @@
 Extension { #name : 'Object' }
 
 { #category : '*Zag-Core' }
-Object >> asASIdentifier [
-	(#('true' 'false' 'nil' 'thisContext') includes: self) ifTrue: [ ^ self asASSpecial ].
-	(#('self' 'super') includes: self) ifTrue: [ ^ self asASSelf ].
-	'|' = self ifTrue: [ ^ self asASSyntax ].
-	^ ASIdentifier with: self asString
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASLiteral [
-	^ ASLiteralToken new value: self
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASSelf [
-	^ ASSelfToken new value: self
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASSpecial [
-	^ ASSpecial new value: self
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASString [
-	^ ASString new value: self
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASSymbol [
-	^ ASSymbol new value: self asSymbol
-]
-
-{ #category : '*Zag-Core' }
-Object >> asASSyntax [
-	^ ASSyntax with: self
-]
-
-{ #category : '*Zag-Core' }
 Object class >> astClass [
 
 	^ (name beginsWith: 'AST')

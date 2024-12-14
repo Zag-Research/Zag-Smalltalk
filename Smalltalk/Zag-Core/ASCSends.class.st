@@ -13,12 +13,6 @@ Class {
 	#tag : 'Operations'
 }
 
-{ #category : 'inlining' }
-ASCSends >> inlineIfPossible: anASCodeGenerator [
-
-	(ASInliner lookup: selector stack: stack) ifNotNil: [ : inliner | ^ inliner inline: self with: anASCodeGenerator ]
-]
-
 { #category : 'testing' }
 ASCSends >> isCallOperation [
 

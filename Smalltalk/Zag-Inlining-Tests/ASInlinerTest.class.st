@@ -1,8 +1,8 @@
 Class {
 	#name : 'ASInlinerTest',
 	#superclass : 'TestCase',
-	#category : 'Zag-Core-Tests-Tests',
-	#package : 'Zag-Core-Tests',
+	#category : 'Zag-Inlining-Tests-Tests',
+	#package : 'Zag-Inlining-Tests',
 	#tag : 'Tests'
 }
 

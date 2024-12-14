@@ -1,8 +1,8 @@
 Class {
 	#name : 'ASZigInspectionTest',
 	#superclass : 'ASZigTest',
-	#category : 'Zag-Core-Tests-Tests',
-	#package : 'Zag-Core-Tests',
+	#category : 'Zag-Inspector-Tests-Tests',
+	#package : 'Zag-Inspector-Tests',
 	#tag : 'Tests'
 }
 
