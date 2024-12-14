@@ -8,6 +8,7 @@ Class {
 		'AgeStatic',
 		'BaseAddress',
 		'ClassCharacter',
+		'ClassDoubleWordArray',
 		'ClassFalse',
 		'ClassFloat',
 		'ClassSmallInteger',
@@ -117,7 +118,8 @@ ZagConstants class >> initializeClassConstants [
 	ClassCharacter := 16.
 	ClassUndefinedObject := 32.
 	ClassFloat := 33.
-	ClassString := 40
+	ClassString := 40.
+	ClassDoubleWordArray := 42
 ]
 
 { #category : 'class initialization' }

@@ -15,10 +15,10 @@ Class {
 		'newSelectors',
 		'methods',
 		'symbolTableRef',
-		'pendingObjects',
 		'classTableRef',
 		'currentHeap',
-		'constants'
+		'constants',
+		'requireThreadedCode'
 	],
 	#pools : [
 		'ZagConstants'
@@ -123,12 +123,6 @@ ASImageExporter >> addSubHeap [
 ]
 
 { #category : 'accessing' }
-ASImageExporter >> at: position put: anInteger [
-
-	self halt
-]
-
-{ #category : 'accessing' }
 ASImageExporter >> canonicalClasses: aClass [
 	| name side |
 	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
@@ -226,7 +220,8 @@ ASImageExporter >> initialize [
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
-	pendingObjects := Dictionary new.
+	requireThreadedCode := false.
+	self flag: 'following table not correct';halt.
 	{
 		Object.
 		SmallInteger.
@@ -367,6 +362,14 @@ ASImageExporter >> putU64: anInteger [
 	(currentHeap hasSpaceFor: 1) ifFalse: [
 		  self addSubHeap].
 	^ currentHeap addU64: anInteger
+]
+
+{ #category : 'enumerating' }
+ASImageExporter >> requiringThreadedCodeDo: aBlock [
+
+	requireThreadedCode := true.
+	aBlock value.
+	requireThreadedCode := false
 ]
 
 { #category : 'adding' }

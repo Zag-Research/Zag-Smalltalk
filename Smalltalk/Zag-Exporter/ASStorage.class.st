@@ -9,9 +9,11 @@ Class {
 	#instVars : [
 		'storage',
 		'address',
-		'maxSize',
 		'exporter',
 		'freeIndex'
+	],
+	#pools : [
+		'ZagConstants'
 	],
 	#category : 'Zag-Exporter-Exporting',
 	#package : 'Zag-Exporter',
@@ -102,13 +104,6 @@ ASStorage >> headerSize: size format: format hash: hash class: class [
 ]
 
 { #category : 'initialization' }
-ASStorage >> initialize [
-
-	super initialize.
-	maxSize := 4093
-]
-
-{ #category : 'initialization' }
 ASStorage >> initializeStorage [
 
 	^ self subclassResponsibility
@@ -124,7 +119,7 @@ ASStorage >> register: registerBlock ivBlock: iBlock arrayBlock: aBlock ivSize: 
 
 	| save size |
 	size := ivSize + (arraySize ifNil: [ 0 ]).
-	size > maxSize ifTrue: [
+	size >= MaxHeaderLength ifTrue: [
 		^ self
 			  registerBig: registerBlock
 			  ivBlock: iBlock
