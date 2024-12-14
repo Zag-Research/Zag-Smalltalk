@@ -2,7 +2,6 @@ Class {
 	#name : 'ASImageTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'savedConstants',
 		'constants'
 	],
 	#category : 'Zag-Exporter-Tests-Tests',
@@ -10,10 +9,10 @@ Class {
 	#tag : 'Tests'
 }
 
-{ #category : 'tests' }
+{ #category : 'setup' }
 ASImageTest >> encoderClass [
 
-	^ self subclassResponsibility
+	^ nil
 ]
 
 { #category : 'running' }
@@ -43,7 +42,7 @@ ASImageTest >> setUp [
 
 	super setUp.
 	ASAllocationInfo reset.
-	constants := self encoderClass constants
+	constants := self encoderClass
 ]
 
 { #category : 'tests' }

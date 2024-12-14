@@ -185,7 +185,7 @@ ASImageExporter >> constants [
 ASImageExporter >> constants: constantsClass [
 
 	constants := constantsClass.
-	currentAddress := constants baseAddress.
+	currentAddress := BaseAddress.
 	#( #= value value: cull: yourself doesNotUnderstand:
 	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
 	   negated new new: value:value:value: value:value:value:value:
@@ -248,51 +248,6 @@ ASImageExporter >> initialize [
 		do: [ :className | classes at: className put: nil ]
 ]
 
-{ #category : 'initialization' }
-ASImageExporter >> initializeConstants: aConstantsClass [
-
-	super initialize.
-	constants := aConstantsClass.
-	currentAddress := constants baseAddress.
-	objects := IdentityDictionary new.
-	symbols := Dictionary new.
-	classes := Dictionary new.
-	methods := Dictionary new.
-	selectors := Set new.
-	newClasses := OrderedCollection new.
-	newSelectors := OrderedCollection new.
-	pendingObjects := Dictionary new.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
-	{
-		Object.
-		SmallInteger.
-		UndefinedObject.
-		False.
-		True.
-		Float.
-		Symbol.
-		Character.
-		Array.
-		String.
-		CompiledMethod.
-		Class.
-		Context.
-		BlockClosure } do: [ :class | self class: class ]. " has to match zobject.zig "
-	#( Method Dispatch ThunkSmallInteger ThunkFloat ThunkImmediate
-	   ThunkReturnSelf ThunkReturnTrue ThunkReturnFalse ThunkReturnNil
-	   ThunkReturn_1 ThunkReturn0 ThunkReturn1 ThunkReturn2 ThunkHeap )
-		do: [ :className | classes at: className put: nil ]
-]
-
 { #category : 'accessing' }
 ASImageExporter >> method: aCompiledMethod [
 	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
@@ -314,7 +269,7 @@ ASImageExporter >> objectCharacter: aCharacter [
 
 	^ self
 		  objectLiteral: aCharacter asInteger
-		  class: constants classCharacter
+		  class: ClassCharacter
 ]
 
 { #category : 'adding' }
@@ -355,8 +310,7 @@ ASImageExporter >> objectObject: anObject [
 		      headerIVars: nInstVars
 		      indexed: nExtra
 		      element: nil
-		      weak: false
-		      constants: constants.
+		      weak: false.
 	^ ai put: anObject into: self
 ]
 
@@ -374,9 +328,8 @@ ASImageExporter >> objectString: aString [
 		      headerIVars: 0
 		      indexed: aString size
 		      element: 1
-		      weak: false
-		      constants: constants.
-	result := ai header: constants classString into: self.
+		      weak: false.
+	result := ai header: ClassString into: self.
 	currentHeap
 		at: result
 		with: aString asByteArray asU64Array
@@ -392,7 +345,7 @@ ASImageExporter >> objectSymbol: aString [
 		  literal:
 			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
 			  + aString numArgs
-		  class: constants classSymbol
+		  class: ClassSymbol
 ]
 
 { #category : 'writing' }
@@ -420,17 +373,6 @@ ASImageExporter >> putU64: anInteger [
 ASImageExporter >> selector: aSymbol [
 	^ selectors add: aSymbol andIfNewDo:  [ newSelectors add: aSymbol ].
 
-]
-
-{ #category : 'adding' }
-ASImageExporter >> symbol: aString [
-
-	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ constants
-		  literal:
-			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
-			  + aString numArgs
-		  class: constants ClassSymbol
 ]
 
 { #category : 'writing' }

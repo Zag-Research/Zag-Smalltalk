@@ -1,3 +1,6 @@
+"
+I encode values the NaN way
+"
 Class {
 	#name : 'ZagImageEncodeNan',
 	#superclass : 'ZagImageEncoder',
@@ -9,19 +12,31 @@ Class {
 { #category : 'converting' }
 ZagImageEncodeNan class >> boolean: value [
 
-	^ self literal: value asBit class: self classFalse + value asBit
-]
-
-{ #category : 'accessing' }
-ZagImageEncodeNan class >> constants [
-
-	^ self
+	^ self literal: value asBit class: ClassFalse + value asBit
 ]
 
 { #category : 'converting' }
 ZagImageEncodeNan class >> double: n for: ignored [
 
 	^ ('16r' , n hex) asNumber
+]
+
+{ #category : 'private - constants' }
+ZagImageEncodeNan class >> groupHeap [
+
+	^ 16rfff7000000000000
+]
+
+{ #category : 'private - constants' }
+ZagImageEncodeNan class >> groupImmediates [
+
+	^ 16rfff0000000000000
+]
+
+{ #category : 'private - constants' }
+ZagImageEncodeNan class >> groupSmallInt0 [
+
+	^ 16rfffc000000000000
 ]
 
 { #category : 'converting' }
@@ -36,12 +51,6 @@ ZagImageEncodeNan class >> pointer: p [
 	^ self groupHeap + p
 ]
 
-{ #category : 'private - class initialization' }
-ZagImageEncodeNan class >> saveConstants [
-
-	super nanConstants: self
-]
-
 { #category : 'converting' }
 ZagImageEncodeNan class >> smallInteger: n [
 
@@ -51,5 +60,5 @@ ZagImageEncodeNan class >> smallInteger: n [
 { #category : 'converting' }
 ZagImageEncodeNan class >> undefinedObject [
 
-	^ self literal: 16rffffffff class: self classUndefinedObject
+	^ self literal: 16rffffffff class: ClassUndefinedObject
 ]

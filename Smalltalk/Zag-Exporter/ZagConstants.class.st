@@ -5,6 +5,25 @@ Class {
 	#name : 'ZagConstants',
 	#superclass : 'SharedPool',
 	#classVars : [
+		'AgeStatic',
+		'BaseAddress',
+		'ClassCharacter',
+		'ClassFalse',
+		'ClassFloat',
+		'ClassSmallInteger',
+		'ClassString',
+		'ClassSymbol',
+		'ClassTrue',
+		'ClassUndefinedObject',
+		'FormatDirectIndexed',
+		'FormatExternal',
+		'FormatExternalNonObject',
+		'FormatExternalWeakWithPointers',
+		'FormatIndexed',
+		'FormatIndexedNonObject',
+		'FormatIndexedWeakWithPointers',
+		'FormatNotIndexable',
+		'MaxHeaderLength',
 		'T_Branch',
 		'T_Call',
 		'T_CallRecursive',
@@ -83,6 +102,42 @@ ZagConstants class >> asDoubleWordArray [
 { #category : 'class initialization' }
 ZagConstants class >> initialize [
 
+	self initializeClassConstants.
+	self initializeThreadedConstants.
+	self initializeHeapConstants 
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> initializeClassConstants [
+
+	ClassFalse := 12.
+	ClassTrue := 13.
+	ClassSmallInteger := 14.
+	ClassSymbol := 15.
+	ClassCharacter := 16.
+	ClassUndefinedObject := 32.
+	ClassFloat := 33.
+	ClassString := 40
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> initializeHeapConstants [
+
+	AgeStatic := 7.
+	BaseAddress := 16r100000.
+	MaxHeaderLength := 4093.
+	FormatNotIndexable := 112.
+	FormatIndexedNonObject := 113.
+	FormatExternalNonObject := 114.
+	FormatDirectIndexed := 115.
+	FormatIndexed := 116.
+	FormatExternal := 117.
+	FormatExternalWeakWithPointers := 126.
+	FormatIndexedWeakWithPointers := 127
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> initializeThreadedConstants [
 	next := 0.
 	T_Branch := self next.
 	T_Call := self next.
@@ -144,5 +199,5 @@ ZagConstants class >> next [
 ZagConstants class >> primitive: anInteger [
 
 	maxPrimitive < anInteger ifTrue: [ maxPrimitive := anInteger ].
-	^ primitiveOffset + anInteger
+	^ primitiveOffset + (anInteger * 8)
 ]

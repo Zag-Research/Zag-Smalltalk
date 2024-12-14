@@ -20,7 +20,7 @@ ManifestZagExporter class >> ruleBadMessageRule2V1FalsePositive [
 ManifestZagExporter class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:16:07.550458-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:22:53.410073-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:16:07.550458-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-12-08T22:22:53.410073-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -34,7 +34,14 @@ ManifestZagExporter class >> ruleInconsistentMethodClassificationRuleV1FalsePosi
 ManifestZagExporter class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:22:57.079135-05:00') #(#(#RGMethodDefinition #(#'ZagConstants class' #initialize #true)) #'2024-12-11T07:17:16.189773-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-12-08T22:22:57.079135-05:00') #(#(#RGMethodDefinition #(#'ZagConstants class' #initialize #true)) #'2024-12-11T07:17:16.189773-05:00') #(#(#RGMethodDefinition #(#'ZagConstants class' #initializeThreadedConstants #true)) #'2024-12-14T11:46:40.896487-05:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestZagExporter class >> ruleMinMaxRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ZagConstants class' #primitive: #true)) #'2024-12-14T11:47:36.704175-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -48,5 +55,5 @@ ManifestZagExporter class >> rulePrecedenceRuleV1FalsePositive [
 ManifestZagExporter class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncoder class' #handleComments: #true)) #'2024-12-07T22:25:26.2562-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-12-08T22:23:04.238647-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncoder class' #handleComments: #true)) #'2024-12-07T22:25:26.2562-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-12-08T22:23:04.238647-05:00') )
 ]

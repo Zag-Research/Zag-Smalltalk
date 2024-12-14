@@ -93,7 +93,7 @@ ManifestZagCore class >> ruleLongMethodsRuleV1FalsePositive [
 	              #true ) )
 	        #'2024-04-12T11:41:16.943424-04:00' )
 	     #( #( #RGMethodDefinition #( #'ASAllocationInfo class'
-	              #headerIVars:indexed:element:weak:constants:
+	              #headerIVars:indexed:element:weak:
 	              #true ) )
 	        #'2024-04-13T20:36:41.511805-04:00' )
 	     #( #( #RGMethodDefinition #( #ASCodeGenerator #initialize
@@ -136,7 +136,7 @@ ManifestZagCore class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
 ManifestZagCore class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak:constants: #true)) #'2024-11-30T09:16:55.515465-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-11-30T09:16:55.515465-05:00') )
 ]
 
 { #category : 'code-critics' }
