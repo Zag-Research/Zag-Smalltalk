@@ -109,7 +109,7 @@ ASInliner class >> lookup: selector stack: aStack [
 
 	((self
 		  lookup: selector
-		  class: (aStack at: selector numArgs) dataClass) validate: aStack)
+		  class: (aStack at: selector numArgs) location dataClass) validate: aStack)
 		ifNotNil: [ :v | ^ v ].
 	^ nil
 ]

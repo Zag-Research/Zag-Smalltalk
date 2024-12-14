@@ -49,6 +49,12 @@ ASCompileTestClass1 >> bar [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> bar: aBlock [
+
+	^ aBlock value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> block [
 
 	^ { 
@@ -180,6 +186,12 @@ ASCompileTestClass1 >> foo: p1 bar: p2 [
         l1 := l1 + 1.
         l1 = l3 ifTrue: [ ^ 1 ] ].
     ^ l1
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> fooBarBlock [
+
+	^ self bar: [ 42 ]
 ]
 
 { #category : 'testing - examples' }
