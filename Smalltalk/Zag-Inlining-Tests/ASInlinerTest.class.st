@@ -42,6 +42,7 @@ ASInlinerTest >> testRecursiveMethod [
 	cg := ASCodeGenerator
 		      targetClass: ASCompileTestClass1
 		      selector: #recursiveMethod.
+		
 	cg
 		inspect;
 		halt.
