@@ -13,6 +13,18 @@ Class {
 }
 
 { #category : 'adding' }
+ASCInlineMethodBlock >> initParameterNamed: aSymbol [
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
+]
+
+{ #category : 'API' }
+ASCInlineMethodBlock >> locals: locals parameters: arguments [ 
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
+]
+
+{ #category : 'adding' }
 ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 
 	| names |
@@ -25,6 +37,12 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 
 	returnBlock := aBasicBlock
+]
+
+{ #category : 'initialization' }
+ASCInlineMethodBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
+	
+	label := aClass name,'.',aString
 ]
 
 { #category : 'API' }
