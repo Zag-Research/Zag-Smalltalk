@@ -12,27 +12,33 @@ We extend this slightly, by using all 8 possible tag values:
 - 1: immediate values for the classes `SmallInteger`, `Character`, `Symbol`, `True`, `False` as well as several forms of immediate `BlockClosure`s that take 0 or 1 parameters. The next 5 bits are the class number, and the top 56 bits are the information (the integer value or the character Unicode value or the symbol hash code). In some cases, the top 48 bits provide a 48-bit address allowing capture of heap objects, including contexts.
 - 2-7: `Float`. By using 6 tags we can encode all 64-bit floats less than 2.68e154. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 2, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits and add 2; if the result anded with 6 is zero, immediate encoding is not possible, so a reference to a static (`+inf`, `-inf`, or `nan`) or heap-allocated memory object is used.
 
-| High 8 bits | Next 24 bits |            |            |            | Tag        | Type               |
-| ----------- | ------------ | ---------- | ---------- | ---------- | ---------- | ------------------ |
-| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `00000000` | `nil`              |
-| `00000000`  | ...          | ...        | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | pointer            |
-| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `00000000` | `00001001` | `ThunkHeap`        |
-| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `eeeeeeee` | -          | other thunks       |
-| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `01001001` | `ThunkGetInstance` |
-| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `ccccc001` | `01010001` | `ThunkImmediate`   |
-| `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `01011001` | `ThunkFloat`       |
-| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `01100001` | `false`            |
-| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `01101001` | `true`             |
-| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `xxxxxxxx` | `01110001` | `SmallInteger`     |
-| `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `hhhhhhhh` | `01111001` | `Symbol`           |
-| `00000000`  | ...          | `00000uuu` | `uuuuuuuu` | `uuuuuuuu` | `10000001` | `Character`        |
-| char7 or 0  | ...          | ...        | char2      | char1      | `10001001` | `ShortString`      |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10010001` | reserved           |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | -          | reserved           |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `11111001` | reserved           |
-| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms010` | `Float`            |
-| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | -          | `Float`            |
-| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms111` | `Float`            |
+| High 8 bits | Next 24 bits |            |            |            | Tag        | Type                      |
+| ----------- | ------------ | ---------- | ---------- | ---------- | ---------- | ------------------------- |
+| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `00000000` | `nil`                     |
+| `00000000`  | ...          | ...        | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | pointer                   |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `00000000` | `00001001` | `ThunkHeap`               |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `llllllll` | `00010001` | `ThunkReturnLocal`        |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `00011001` | `ThunkReturnInstance`     |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `nnnnnnnn` | `00100001` | `ThunkReturnSmallInteger` |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `00101001` | `ThunkReturnImmediate`    |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `cccccccc` | `00110001` | `ThunkReturnCharacter`    |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `llllllll` | `00111001` | `BlockAssignLocal`        |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `01000001` | `BlockAssignInstance`     |
+| `aaaaaaaa`  | ...          | ...        | `aaaaaaaa` | `iiiiiiii` | `01001001` | `ThunkGetInstance`        |
+| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `ccccc001` | `01010001` | `ThunkImmediate`          |
+| `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `01011001` | `ThunkFloat`              |
+| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `01100001` | `false`                   |
+| `00000000`  | ...          | `00000000` | `00000000` | `00000000` | `01101001` | `true`                    |
+| `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `xxxxxxxx` | `01110001` | `SmallInteger`            |
+| `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `hhhhhhhh` | `01111001` | `Symbol`                  |
+| `00000000`  | ...          | `00000uuu` | `uuuuuuuu` | `uuuuuuuu` | `10000001` | `Character`               |
+| char7 or 0  | ...          | ...        | char2      | char1      | `10001001` | `ShortString`             |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10010001` | reserved                  |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | -          | reserved                  |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `11111001` | reserved                  |
+| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms010` | `Float`                   |
+| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | -          | `Float`                   |
+| `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms111` | `Float`                   |
 
 Because we are using all 8 possible values of the tag field, where the test in Spur for "is a `SmallInteger`" was simply an `and`, using our encoding it requires comparing the low byte with a constant. However testing for a `Float` is simply an `and` with 6.
 
@@ -46,15 +52,15 @@ Any selection of zero-sized objects could be encoded in the Object value if they
 Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 5 bits and the hash code is 24-56 bits. Some immediate classes use the hash24 value which is the 24 bits after the tag. Others contain a pointer in the top 48 bits with some other data in the other 8 bits.
 #### Class numbers
 1. `ThunkHeap`: This encodes a thunk (a `BlockClosure` that takes no parameters) that evaluates to a heap object. The address of the heap object is in the high 48 bits. The extra field is ignored.
-2. `ThunkReturnLocal`: This and the following 3 classes encode thunks that do non-local returns of a value, where the address of the `Context` is in the high 48 bits. This class returns a value from the `Context` (a local, parameter, or the `self` object). The local index is encoded in the extra field.
+2. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value, where the address of the `Context` is in the high 48 bits. This class returns a value from the `Context` (a local, parameter, or the `self` object). The local index is encoded in the extra field.
 3. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object.
-4. `ThunkReturnSmallInteger`: This encodes a non-local return of a 8-bit signed integer, encoded in the extra field.
-5. `ThunkReturnImmediate`: This encode a non-local return of an immediate value (`nil`, `false`, or `true`). Simply returns the extra field, so 0 is `nil`, `01011001` is `true`, etc.
+4. `ThunkReturnSmallInteger`: This encodes a non-local return of an 8-bit signed integer, encoded in the extra field.
+5. `ThunkReturnImmediate`: This encode a non-local return of an immediate value (`nil`, `false`, or `true`). Simply returns the extra field, so 0 is `nil`, `01101001` is `true`, etc.
 6. `ThunkReturnCharacter`: This encodes a non-local return of an 8-bit character, with the character encoded in the extra field. This doesn't encode all characters, but it encodes all the ASCII characters.
 7. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local in the `Context`. That value is also the result. The local index is encoded in the extra field.
 8. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the high 48 bits. That value is also the result. The variable index is encoded in the extra field.
 9. `ThunkGetInstance`: This evaluates to the value of an instance variable of the object referred to in the high 48 bits. The variable index is encoded in the extra field.
-10. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
+10. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values, as well as `nil`.
 11. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include 45-bit integral values as well as values with common fractional parts such as 0.5, 0.25, 0.75). Values that can't be encoded that way would use `ThunkHeap` to return an object.
 12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
 13. `True`: This encodes the singleton value `true`.
@@ -77,7 +83,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 43. `Process`: an object that contains all the information of a process, including the stack and nursery heap areas.
 44. `Class`:
 45. `CompiledMethod`:
-46. `Dipatch`:
+46. `Dispatch`:
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
