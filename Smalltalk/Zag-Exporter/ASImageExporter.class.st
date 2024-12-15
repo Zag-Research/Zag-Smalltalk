@@ -221,26 +221,42 @@ ASImageExporter >> initialize [
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
 	requireThreadedCode := false.
-	self flag: 'following table not correct';halt.
 	{
-		Object.
-		SmallInteger.
-		UndefinedObject.
+		#ThunkReturnHeap.
+		#ThunkReturnLocal.
+		#ThunkReturnInstance.
+		#ThunkReturnSmallInteger.
+		#ThunkReturnImmediate.
+		#ThunkReturnCharacter.
+		#BlockAssignLocal.
+		#BlockAssignInstance.
+		#ThunkGetInstance.
+		#ThunkImmediate.
+		#ThunkFloat.
 		False.
 		True.
-		Float.
+		SmallInteger.
 		Symbol.
 		Character.
+		#ShortString.
+		#UnUsed18. #UnUsed19. #UnUsed20. #UnUsed21. #UnUsed22. #UnUsed23. #UnUsed24. #UnUsed25. #UnUsed26. #UnUsed27. #UnUsed28. #UnUsed29. #UnUsed30. #UnUsed31. 
+		UndefinedObject.
+		Float.
+		ProtoObject.
+		Object.
+		BlockClosure.
+		#BlockClosureValue.
+		Context.
 		Array.
 		String.
-		CompiledMethod.
+		#Utf8String.
+		DoubleWordArray.
+		Process.
 		Class.
-		Context.
-		BlockClosure } do: [ :class | self class: class ]. " has to match zobject.zig "
-	#( Method Dispatch ThunkSmallInteger ThunkFloat ThunkImmediate
-	   ThunkReturnSelf ThunkReturnTrue ThunkReturnFalse ThunkReturnNil
-	   ThunkReturn_1 ThunkReturn0 ThunkReturn1 ThunkReturn2 ThunkHeap )
-		do: [ :className | classes at: className put: nil ]
+		CompiledMethod.
+		#Dispatch
+ } do: [ :class | self class: class ]. " has to match zobject.zig "
+
 ]
 
 { #category : 'accessing' }
