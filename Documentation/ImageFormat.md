@@ -48,9 +48,10 @@ zag foo
 Loading looks like:
 1. The `.image`, `.heap`, `.lho`, and `.process` files are mapped into memory at the appropriate addresses (which may fail if the criteria above are not met).
 2. The endianness of the image is determined. In theory the image can be corrected to the current endianness, but for now it will simply fail.
-3. The dispatch table is copied to the base sub-heap.
-4. If we found processes, OS threads are allocated to the mutator and I/O processes and start running.
-5. Otherwise, a process is created and the selector is sent to the target object (e.g. send `start` to class `System`).
+3. If the `ZagConstants` array does not match the current one, all the `CompiledMethod`s will be updated to match the current executable, and all JIT'ed methods will be discarded (because there is no obvious way to update the heap that LLVM uses to be consistent).
+4. The dispatch table is copied to the base sub-heap.
+5. If we found processes, OS threads are allocated to the mutator and I/O processes and start running.
+6. Otherwise, a process is created and the selector is sent to the target object (e.g. send `start` to class `System`).
 
 ### Saving the image
 1. all mutator threads reach a quiescent state and block.
