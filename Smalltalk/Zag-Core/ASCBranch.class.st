@@ -30,6 +30,10 @@ ASCBranch >> dotStringOn: aStream [
 		<< '<end>branch '
 ]
 
+{ #category : 'Collection API' }
+ASCBranch >> inlineWithFixedCFG: anASCodeGenerator [ 
+]
+
 { #category : 'printing' }
 ASCBranch >> inspectZagASTOn: aStream [
 

@@ -9,6 +9,10 @@ Class {
 	#tag : 'Operations'
 }
 
+{ #category : 'Collection API' }
+ASCReturnSelf >> inlineWithFixedCFG: anASCodeGenerator [ 
+]
+
 { #category : 'code generation' }
 ASCReturnSelf >> outputTo: output [
 
