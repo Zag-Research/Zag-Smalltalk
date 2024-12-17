@@ -7,12 +7,6 @@ CompiledMethod >> astFields [
 ]
 
 { #category : '*Zag-Core' }
-CompiledMethod >> astImageObject: anASImage [
-
-	^ anASImage objectMethod: self
-]
-
-{ #category : '*Zag-Core' }
 CompiledMethod >> astWith: anASPharoCompiler [ 
 	^ anASPharoCompiler compileMethod: self
 ]
