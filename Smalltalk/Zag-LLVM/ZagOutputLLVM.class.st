@@ -26,10 +26,30 @@ ZagOutputLLVM >> generator: aGenerator [
 	gen := aGenerator
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
+ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
+
+	| otherewise |
+	otherewise :=  self generateLabel.
+	self if: condition isFalseThen: falseLabel isTrueThen: otherewise.
+	gen defineLabel: otherewise
+
+]
+
+{ #category : 'testing' }
 ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
 	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
+]
+
+{ #category : 'testing' }
+ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
+
+	| otherewise |
+	otherewise :=  self generateLabel.
+	self if: condition isFalseThen: otherewise isTrueThen: trueLabel.
+	gen defineLabel: otherewise
+
 ]
 
 { #category : 'primitives' }
@@ -97,14 +117,14 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self primitiveFail
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'converting' }
 ZagOutputLLVM >> tagSmallInteger: untaggedInt [
 
 	^ gen tagSmallInteger: untaggedInt.
 	
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'converting' }
 ZagOutputLLVM >> validSmallInteger: nativeInt [ 
 	
 	| temp res1 res2 |
