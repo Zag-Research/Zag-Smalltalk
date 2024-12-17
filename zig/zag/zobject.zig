@@ -71,15 +71,15 @@ pub const ClassIndex = enum(u16) {
     BlockAssignLocal,
     BlockAssignInstance,
     ThunkGetInstance,
+    ThunkImmediate,
+    ThunkFloat,
     False,
     True,
     SmallInteger,
     Symbol,
     Character,
     ShortString,
-    ThunkImmediate,
-    ThunkFloat,
-    UndefinedObject = 23,
+    UndefinedObject = 32,
     Float,
     ProtoObject,
     Object,
@@ -123,14 +123,14 @@ pub const ClassIndex = enum(u16) {
         BlockAssignLocal,
         BlockAssignInstance,
         ThunkGetInstance,
+        ThunkImmediate,
+        ThunkFloat,
         False,
         True,
         SmallInteger,
         Symbol,
         Character,
         ShortString,
-        ThunkImmediate,
-        ThunkFloat,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -142,7 +142,8 @@ pub const ClassIndex = enum(u16) {
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkHeap), 1) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkFloat), 17) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ShortString), 17) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.ShortString), 17) catch unreachable;
 }
 const MemoryFloat = extern struct {
     header: HeapHeader,

@@ -8,9 +8,9 @@ Class {
 	#superclass : 'ASCReturnBlock',
 	#traits : 'ASCMergeBlocks',
 	#classTraits : 'ASCMergeBlocks classTrait',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'adding' }

@@ -7,12 +7,6 @@ Boolean >> asZigLiteral [
 ]
 
 { #category : '*Zag-Core' }
-Boolean >> astImageObject: anASImage [
-
-	^ anASImage objectBoolean: self
-]
-
-{ #category : '*Zag-Core' }
 Boolean >> astObject: anASImage [ 
 	^ self
 ]

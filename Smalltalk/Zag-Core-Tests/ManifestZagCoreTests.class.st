@@ -42,6 +42,13 @@ ManifestZagCoreTests class >> ruleConsistencyCheckRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestZagCoreTests class >> ruleExcessiveVariablesRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#ASemanticInterpreter)) #'2024-12-14T11:47:57.833644-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestZagCoreTests class >> ruleLongMethodsRuleV1FalsePositive [
 	^ #(#(#(#RGMethodDefinition #(#ASExploreHashing #crtTable: #false)) #'2021-02-28T19:49:45.328717-05:00') #(#(#RGMethodDefinition #(#ASExploreHashing #min4Table: #false)) #'2021-03-01T08:53:00.023992-05:00') #(#(#RGPackageDefinition #(#'Zag-Core-Tests')) #'2021-03-19T08:35:39.276189-04:00') )
 ]

@@ -35,14 +35,6 @@ Class {
 	#tag : 'CodeGen'
 }
 
-{ #category : 'as yet unclassified' }
-ASCodeGenerator class >> targetClass: aClass selector: aSymbol [
-
-	^ self new
-		  targetClass: aClass;
-		  generateFrom: (ASPharoCompiler new astFor: (ASInliner lookup: aSymbol class: aClass) method)
-]
-
 { #category : 'API' }
 ASCodeGenerator >> addBlock: aBasicBlock [
 
@@ -243,76 +235,8 @@ ASCodeGenerator >> inline: aBooleanOrInteger [
 		          ifFalse: [ 1000 ]
 ]
 
-{ #category : 'translating' }
-ASCodeGenerator >> inlineBlock: offset next: common [
-
-	| savedReturn savedTargetClass |
-	savedTargetClass := targetClass.
-	savedReturn := returnBlock.
-	[
-	| inlineBlock |
-	returnBlock := common.
-	inlineBlock := self newInlineBlockClosure.
-	self branch: inlineBlock.
-	code := inlineBlock.
-	self halt.
-	(code stackBelow: offset) stackValue block zigWalkMethod: self.
-	code := returnBlock ] ensure: [
-		returnBlock := savedReturn.
-		targetClass := savedTargetClass ]
-]
-
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> inlineDependentPrimitives [
-]
-
-{ #category : 'accessing' }
-ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCSend [
-
-	| inlineBlock savedTargetClass |
-	(self recursiveBasicBlock: aMethodAST) ifNotNil: [ :block |
-		^ self
-			  inlineRecursiveMethod: aMethodAST
-			  block: block
-			  from: anASCSend ].
-	self halt.
-	savedTargetClass := targetClass.
-	inlineBlock := self newInlineMethod: aMethodAST.
-	inlineBlock copyStackFrom: code.
-	[
-	targetClass := inlinedTargetClass.
-	returnBlock := self getOrMakeReturnBlock.
-	code removeLastOperation.
-	self branch: inlineBlock.
-	code := inlineBlock.
-	(ASPharoCompiler new astFor: aMethodAST) zigWalkMethod: self ]
-		ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
-			code := returnBlock.
-			targetClass := savedTargetClass ]
-]
-
-{ #category : 'inlining' }
-ASCodeGenerator >> inlineMultiple: methods from: anASCSend exhaustive: isExhaustive [
-
-	| case joinBlock |
-	isExhaustive ifTrue: [
-		code removeLastOperation.
-		joinBlock := ASCJoinBlock new branch: anASCSend next becomeJoinBlock.
-		self addBlock: joinBlock ].
-	case := code
-		        classCase: (methods collect: #methodClass)
-		        selector: methods first selector.
-	isExhaustive ifFalse: [
-		code swapLastOperations.
-		joinBlock := anASCSend next ].
-	^ methods do: [ :methodAST |
-		  | targetBlock |
-		  targetBlock := case at: methodAST methodClass.
-		  targetBlock next: joinBlock.
-		  self addBlock: targetBlock.
-		  self setBasicBlock: targetBlock.
-		  "walk the sends method AST"
-		  self inlineMethod: methodAST for: targetBlock from: anASCSend ]
 ]
 
 { #category : 'inlining' }
@@ -353,6 +277,8 @@ ASCodeGenerator >> inlineWherePossible [
 	[
 	remainingInlines > 0 ifFalse: [ ^ self ].
 	remainingInlines := remainingInlines - 1.
+	"does this loop make sense? should temp be set before entering and
+	ask if temp is empty after adding current blocksWithCalls"
 	blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.

@@ -15,10 +15,13 @@ Class {
 		'newSelectors',
 		'methods',
 		'symbolTableRef',
-		'pendingObjects',
 		'classTableRef',
 		'currentHeap',
-		'constants'
+		'constants',
+		'requireThreadedCode'
+	],
+	#pools : [
+		'ZagConstants'
 	],
 	#classInstVars : [
 		'imageFolder'
@@ -120,12 +123,6 @@ ASImageExporter >> addSubHeap [
 ]
 
 { #category : 'accessing' }
-ASImageExporter >> at: position put: anInteger [
-
-	self halt
-]
-
-{ #category : 'accessing' }
 ASImageExporter >> canonicalClasses: aClass [
 	| name side |
 	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
@@ -141,9 +138,9 @@ ASImageExporter >> canonicalClasses: aClass [
 ASImageExporter >> class: aClass [
 
 	| cc |
-	cc := (self canonicalClasses: aClass) first.
+	cc := aClass isClass ifFalse: [ aClass] ifTrue: [(self canonicalClasses: aClass) first].
 	^ classes at: cc ifAbsentPut: [
-		  newClasses add: cc.
+		  aClass isClass ifTrue: [newClasses add: cc].
 		  classes size + 1 ]
 ]
 
@@ -160,8 +157,8 @@ ASImageExporter >> closeOverClassesAndSelectors [
 			| cc |
 			cc := self canonicalClasses: class.
 			cc first superclass ifNotNil: [ :superclass |
-				superclass astImageObject: self ].
-			cc first astImageObject: self.
+				superclass encodedBy: self ].
+			cc first encodedBy: self.
 			selectors do: [ :selector | self addFirstMethod: selector in: cc ] ].
 		tempSelectors do: [ :selector |
 			classes keysDo: [ :class |
@@ -182,7 +179,7 @@ ASImageExporter >> constants [
 ASImageExporter >> constants: constantsClass [
 
 	constants := constantsClass.
-	currentAddress := constants baseAddress.
+	currentAddress := BaseAddress.
 	#( #= value value: cull: yourself doesNotUnderstand:
 	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
 	   negated new new: value:value:value: value:value:value:value:
@@ -202,7 +199,7 @@ ASImageExporter >> createClassTable [
 	| table |
 	table := Array new: classes size.
 	classes keysAndValuesDo: [ :class :number |
-		table at: number + 1 put: (class astImageObject: self) ].
+		table at: number + 1 put: (class encodedBy: self) ].
 	^ table
 ]
 
@@ -223,71 +220,43 @@ ASImageExporter >> initialize [
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
-	pendingObjects := Dictionary new.
+	requireThreadedCode := false.
 	{
-		Object.
-		SmallInteger.
-		UndefinedObject.
+		#ThunkReturnHeap.
+		#ThunkReturnLocal.
+		#ThunkReturnInstance.
+		#ThunkReturnSmallInteger.
+		#ThunkReturnImmediate.
+		#ThunkReturnCharacter.
+		#BlockAssignLocal.
+		#BlockAssignInstance.
+		#ThunkGetInstance.
+		#ThunkImmediate.
+		#ThunkFloat.
 		False.
 		True.
-		Float.
-		Symbol.
-		Character.
-		Array.
-		String.
-		CompiledMethod.
-		Class.
-		Context.
-		BlockClosure } do: [ :class | self class: class ]. " has to match zobject.zig "
-	#( Method Dispatch ThunkSmallInteger ThunkFloat ThunkImmediate
-	   ThunkReturnSelf ThunkReturnTrue ThunkReturnFalse ThunkReturnNil
-	   ThunkReturn_1 ThunkReturn0 ThunkReturn1 ThunkReturn2 ThunkHeap )
-		do: [ :className | classes at: className put: nil ]
-]
-
-{ #category : 'initialization' }
-ASImageExporter >> initializeConstants: aConstantsClass [
-
-	super initialize.
-	constants := aConstantsClass.
-	currentAddress := constants baseAddress.
-	objects := IdentityDictionary new.
-	symbols := Dictionary new.
-	classes := Dictionary new.
-	methods := Dictionary new.
-	selectors := Set new.
-	newClasses := OrderedCollection new.
-	newSelectors := OrderedCollection new.
-	pendingObjects := Dictionary new.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
-	{
-		Object.
 		SmallInteger.
-		UndefinedObject.
-		False.
-		True.
-		Float.
 		Symbol.
 		Character.
+		#ShortString.
+		#UnUsed18. #UnUsed19. #UnUsed20. #UnUsed21. #UnUsed22. #UnUsed23. #UnUsed24. #UnUsed25. #UnUsed26. #UnUsed27. #UnUsed28. #UnUsed29. #UnUsed30. #UnUsed31. 
+		UndefinedObject.
+		Float.
+		ProtoObject.
+		Object.
+		BlockClosure.
+		#BlockClosureValue.
+		Context.
 		Array.
 		String.
-		CompiledMethod.
+		#Utf8String.
+		DoubleWordArray.
+		Process.
 		Class.
-		Context.
-		BlockClosure } do: [ :class | self class: class ]. " has to match zobject.zig "
-	#( Method Dispatch ThunkSmallInteger ThunkFloat ThunkImmediate
-	   ThunkReturnSelf ThunkReturnTrue ThunkReturnFalse ThunkReturnNil
-	   ThunkReturn_1 ThunkReturn0 ThunkReturn1 ThunkReturn2 ThunkHeap )
-		do: [ :className | classes at: className put: nil ]
+		CompiledMethod.
+		#Dispatch
+ } do: [ :class | self class: class ]. " has to match zobject.zig "
+
 ]
 
 { #category : 'accessing' }
@@ -311,7 +280,7 @@ ASImageExporter >> objectCharacter: aCharacter [
 
 	^ self
 		  objectLiteral: aCharacter asInteger
-		  class: constants classCharacter
+		  class: ClassCharacter
 ]
 
 { #category : 'adding' }
@@ -352,8 +321,7 @@ ASImageExporter >> objectObject: anObject [
 		      headerIVars: nInstVars
 		      indexed: nExtra
 		      element: nil
-		      weak: false
-		      constants: constants.
+		      weak: false.
 	^ ai put: anObject into: self
 ]
 
@@ -371,9 +339,8 @@ ASImageExporter >> objectString: aString [
 		      headerIVars: 0
 		      indexed: aString size
 		      element: 1
-		      weak: false
-		      constants: constants.
-	result := ai header: constants classString into: self.
+		      weak: false.
+	result := ai header: ClassString into: self.
 	currentHeap
 		at: result
 		with: aString asByteArray asU64Array
@@ -389,7 +356,7 @@ ASImageExporter >> objectSymbol: aString [
 		  literal:
 			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
 			  + aString numArgs
-		  class: constants classSymbol
+		  class: ClassSymbol
 ]
 
 { #category : 'writing' }
@@ -413,21 +380,18 @@ ASImageExporter >> putU64: anInteger [
 	^ currentHeap addU64: anInteger
 ]
 
+{ #category : 'enumerating' }
+ASImageExporter >> requiringThreadedCodeDo: aBlock [
+
+	requireThreadedCode := true.
+	aBlock value.
+	requireThreadedCode := false
+]
+
 { #category : 'adding' }
 ASImageExporter >> selector: aSymbol [
 	^ selectors add: aSymbol andIfNewDo:  [ newSelectors add: aSymbol ].
 
-]
-
-{ #category : 'adding' }
-ASImageExporter >> symbol: aString [
-
-	aString isSymbol ifFalse: [ ^ self symbol: aString asSymbol ].
-	^ constants
-		  literal:
-			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
-			  + aString numArgs
-		  class: constants ClassSymbol
 ]
 
 { #category : 'writing' }

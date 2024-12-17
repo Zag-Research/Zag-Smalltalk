@@ -1,7 +1,7 @@
 Class {
 	#name : 'ASCTopMethodClosureBlock',
 	#superclass : 'ASCInlineClosureBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }

@@ -1,3 +1,6 @@
+"
+I encode values the Zag way, which is an extension of SPUR
+"
 Class {
 	#name : 'ZagImageEncodeZag',
 	#superclass : 'ZagImageEncoder',
@@ -9,13 +12,7 @@ Class {
 { #category : 'converting' }
 ZagImageEncodeZag class >> boolean: value [
 
-	^ self literal: 0 class: self classFalse + value asBit
-]
-
-{ #category : 'accessing' }
-ZagImageEncodeZag class >> constants [
-
-	^ self
+	^ self literal: 0 class: ClassFalse + value asBit
 ]
 
 { #category : 'converting' }
@@ -28,16 +25,10 @@ ZagImageEncodeZag class >> double: aFloat for: anImage [
 	^ fullFloat & 16rfffffffffffffff << 4 + tag
 ]
 
-{ #category : 'private - temporary - header' }
-ZagImageEncodeZag class >> groupImmediates [
-
-	^ 1
-]
-
-{ #category : 'adding' }
+{ #category : 'converting' }
 ZagImageEncodeZag class >> literal: l class: c [
 
-	^ (l bitShift: 8) + (c bitShift: 3) + self groupImmediates
+	^ (l bitShift: 8) + (c bitShift: 3) + 1
 ]
 
 { #category : 'converting' }
@@ -46,18 +37,12 @@ ZagImageEncodeZag class >> pointer: p [
 	^ p
 ]
 
-{ #category : 'class initialization' }
-ZagImageEncodeZag class >> saveConstants [
-
-	super zagConstants: self
-]
-
 { #category : 'converting' }
 ZagImageEncodeZag class >> smallInteger: anInteger [
 
 	^ self
 		  literal: (anInteger bitAnd: 16r00ffffffffffffff)
-		  class: self classSmallInteger
+		  class: ClassSmallInteger
 ]
 
 { #category : 'converting' }

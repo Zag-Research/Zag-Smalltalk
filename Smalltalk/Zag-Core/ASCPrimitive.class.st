@@ -14,9 +14,9 @@ Class {
 	#classVars : [
 		'Primitives'
 	],
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'class initialization' }

@@ -4,9 +4,9 @@ I am the superclass of all the operations that referencce the top elements of th
 Class {
 	#name : 'ASCStackReferencingOperations',
 	#superclass : 'ZagOperations',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'accessing' }

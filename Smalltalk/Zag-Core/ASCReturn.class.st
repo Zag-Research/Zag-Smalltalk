@@ -6,9 +6,9 @@ Class {
 	#superclass : 'ASCStackReferencingOperations',
 	#traits : 'ASCContextDependentOperations',
 	#classTraits : 'ASCContextDependentOperations classTrait',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'instance creation' }

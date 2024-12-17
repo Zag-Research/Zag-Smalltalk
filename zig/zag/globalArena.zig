@@ -37,22 +37,24 @@ pub const StructObject = extern struct {
 const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength) + 1;
 const heap_allocation_size = @max(4 << nFreeLists, @max(128 * 1024, (math.maxInt(u16) + 1) * @sizeOf(Object)));
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
+comptime {
+    std.testing.expectEqual(@sizeOf(HeapAllocation), heap_allocation_size) catch unreachable;
+}
 const HeapAllocation = extern struct {
     header: HeapHeader, // Object header with hash='ZAG', class=ZagHeap - e.g. 0x00A8775A41470021
-    loadAddress: Object, // address that corresponds with the filename
-    nextHeap: HeapAllocationPtr, // link to next heap header
-    mem: [size]HeapObject,
+    loadAddress: HeapAllocationPtr, // address that corresponds with the filename
+    nextHeap: ?HeapAllocationPtr, // link to next heap header
     freeLists: [nFreeLists]FreeList,
     flags: HeapFlags,
     mutex: MutexType = mutex_init,
-    next: ?*align(heap_allocation_size) HeapAllocation,
-    const SelfPtr = HeapAllocationPtr; //*align(heap_allocation_size)@This();
+    mem: [size]HeapObject,
+    const SelfPtr = HeapAllocationPtr;
     const HeapFlags = extern union { int: u64, f: extern struct {
         allocators: u16,
         objectsNeedingScan: u16,
         marking: bool,
     } };
-    const field_size = @sizeOf(HeapFlags) + @sizeOf(?*HeapAllocation) + @sizeOf(FreeList) * nFreeLists + @sizeOf(MutexType);
+    const field_size = @sizeOf(HeapHeader) + @sizeOf(HeapAllocationPtr) + @sizeOf(?HeapAllocationPtr) + @sizeOf(FreeList) * nFreeLists + @sizeOf(HeapFlags) + @sizeOf(MutexType);
     const size = (heap_allocation_size - field_size) / @sizeOf(HeapObject);
     const minFreeList = 1;
     const mutex_init = MutexType{};
@@ -68,7 +70,7 @@ const HeapAllocation = extern struct {
     fn init() SelfPtr {
         var self = getAligned();
         self.flags.int = 0;
-        self.next = null;
+        self.nextHeap = null;
         self.freeLists = FreeList.init(nFreeLists);
         self.putInFreeLists(@as(HeapObjectArray, @ptrCast(&self.mem[0])), 0, size);
         return self;
@@ -76,7 +78,7 @@ const HeapAllocation = extern struct {
     fn freeAll(self: SelfPtr) void {
         var ptr: ?SelfPtr = self;
         while (ptr) |ha| {
-            ptr = ha.next;
+            ptr = ha.nextHeap;
             ha.deinit();
         }
     }
@@ -84,7 +86,7 @@ const HeapAllocation = extern struct {
         memoryAllocator.unmap(@as([*]align(os.page_size) u8, @ptrCast(self))[0..heap_allocation_size]);
     }
     fn cycleNext(self: SelfPtr) SelfPtr {
-        var temp = self.next;
+        var temp = self.nextHeap;
         if (temp == null) temp = heapAllocations;
         // ToDo: update number of users of self and temp
         return temp orelse unreachable;
@@ -268,7 +270,7 @@ fn newHeapAllocation() HeapAllocationPtr {
     const ha = HeapAllocation.init();
     var prev = heapAllocations;
     while (true) {
-        ha.next = prev;
+        ha.nextHeap = prev;
         if (@cmpxchgWeak(@TypeOf(heapAllocations), &heapAllocations, prev, ha, SeqCst, SeqCst)) |old| {
             prev = old;
             continue;
@@ -281,7 +283,7 @@ fn allocatedSpace() usize {
     var ptr: ?HeapAllocationPtr = heapAllocations;
     while (ptr) |ha| {
         sum += ha.mem.len;
-        ptr = ha.next;
+        ptr = ha.nextHeap;
     }
     return sum;
 }

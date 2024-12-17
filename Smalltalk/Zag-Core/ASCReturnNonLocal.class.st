@@ -4,9 +4,9 @@ I represent a nonLocal return usually from a block. I must clean up stack and re
 Class {
 	#name : 'ASCReturnNonLocal',
 	#superclass : 'ASCReturn',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'as yet unclassified' }

@@ -1,12 +1,6 @@
 Extension { #name : 'UndefinedObject' }
 
 { #category : '*Zag-Core' }
-UndefinedObject >> astImageObject: anASImage [
-
-	^ anASImage objectUndefinedObject
-]
-
-{ #category : '*Zag-Core' }
 UndefinedObject >> astObject: anASImage [ 
 	^ self
 ]

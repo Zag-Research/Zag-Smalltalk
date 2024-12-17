@@ -8,8 +8,9 @@ Class {
 		'Info',
 		'Something'
 	],
-	#category : 'Zag-Exporter-Tests',
-	#package : 'Zag-Exporter-Tests'
+	#category : 'Zag-Exporter-Tests-Explore',
+	#package : 'Zag-Exporter-Tests',
+	#tag : 'Explore'
 }
 
 { #category : 'private - accessing' }

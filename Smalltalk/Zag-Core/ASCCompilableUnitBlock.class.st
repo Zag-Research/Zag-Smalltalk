@@ -6,9 +6,9 @@ I can be the target of tail-recuursive sends which means I can have multiple sou
 Class {
 	#name : 'ASCCompilableUnitBlock',
 	#superclass : 'ASCBasicBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'API' }

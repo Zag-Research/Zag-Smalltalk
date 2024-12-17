@@ -12,12 +12,6 @@ SmallInteger >> asZigLiteral [
 ]
 
 { #category : '*Zag-Core' }
-SmallInteger >> astImageObject: anASImage [
-
-	^ anASImage objectSmallInteger: self
-]
-
-{ #category : '*Zag-Core' }
 SmallInteger >> astObject: anASImage [ 
 	^ self
 ]

@@ -15,25 +15,28 @@ Class {
 	#classVars : [
 		'HashCounter'
 	],
+	#pools : [
+		'ZagConstants'
+	],
 	#category : 'Zag-Exporter-Exporting',
 	#package : 'Zag-Exporter',
 	#tag : 'Exporting'
 }
 
 { #category : 'adding' }
-ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak constants: constants [
+ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
 
 	nElements ifNotNil: [
 		| arraySize |
 		arraySize := nElements * (element ifNil: [ 8 ]) + 7 // 8.
 		makeWeak ifTrue: [
-			iVars + arraySize + 3 > constants maxHeaderLength ifTrue: [
+			iVars + arraySize + 3 > MaxHeaderLength ifTrue: [
 				^ self new
-					  format: constants formatExternalWeakWithPointers;
+					  format: FormatExternalWeakWithPointers;
 					  instVars: iVars;
 					  footerLength: 3 ].
 			^ self new
-				  format: constants formatIndexedWeakWithPointers;
+				  format: FormatIndexedWeakWithPointers;
 				  instVars: iVars;
 				  extra: arraySize;
 				  footerLength: 3 ].
@@ -44,26 +47,26 @@ ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element
 						  format: nElements;
 						  extra: arraySize ].
 			element ifNil: [
-				nElements <= constants maxHeaderLength ifTrue: [
+				nElements <= MaxHeaderLength ifTrue: [
 					^ self new
-						  format: constants formatDirectIndexed;
+						  format: FormatDirectIndexed;
 						  extra: arraySize ] ] ].
-		iVars + arraySize > (constants maxHeaderLength - 2) ifTrue: [
+		iVars + arraySize > (MaxHeaderLength - 2) ifTrue: [
 			^ self new
 				  format: (element = Object
-						   ifTrue: [ constants formatExternal ]
-						   ifFalse: [ constants formatExternalNonObject ]);
+						   ifTrue: [ FormatExternal ]
+						   ifFalse: [ FormatExternalNonObject ]);
 				  instVars: iVars;
 				  footerLength: 2 ].
 		^ self new
 			  format: (element = Object
-					   ifTrue: [ constants formatIndexed ]
-					   ifFalse: [ constants formatIndexedNonObject ]);
+					   ifTrue: [ FormatIndexed ]
+					   ifFalse: [ FormatIndexedNonObject ]);
 			  instVars: iVars;
 			  extra: arraySize;
 			  footerLength: 2 ].
 	^ self new
-		  format: constants formatNotIndexable;
+		  format: FormatNotIndexable;
 		  instVars: iVars
 ]
 
@@ -102,13 +105,13 @@ ASAllocationInfo >> header: classNumber into: anImage [
 
 	| length |
 	length := instVars + extra + footerLength.
-	length < anImage constants maxHeaderLength ifFalse: [ self error: 'header too big' ].
+	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
 	(anImage currentHeap hasSpaceFor: length) ifFalse: [
 		anImage addSubHeap ].
 	HashCounter := HashCounter + 1.
 	^ anImage currentHeap
 		  header:
-			  length << 4 + anImage constants ageStatic << 8 + format << 24 + HashCounter << 16
+			  length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
 			  + classNumber
 		  size: length
 ]
@@ -137,11 +140,11 @@ ASAllocationInfo >> put: anObject into: anImage [
 	anImage currentHeap
 		at: address
 		with: ((1 to: instVars) collect: [ :i | anObject instVarAt: i ])
-		do: [ :v | v astImageObject: anImage ].
+		do: [ :v | v encodedBy: anImage ].
 	extra > 0 ifTrue: [
 	anImage currentHeap
 		at: address + instVars
 		with: anObject
-		do: [ :v | v astImageObject: anImage ]].
+		do: [ :v | v encodedBy: anImage ]].
 	^ anImage pointer: address
 ]

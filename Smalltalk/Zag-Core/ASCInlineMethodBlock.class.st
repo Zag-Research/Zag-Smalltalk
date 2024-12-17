@@ -7,10 +7,22 @@ My final expression will be a stack adjustment and branch to the return point, l
 Class {
 	#name : 'ASCInlineMethodBlock',
 	#superclass : 'ASCInlinedBlock',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
+
+{ #category : 'adding' }
+ASCInlineMethodBlock >> initParameterNamed: aSymbol [
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
+]
+
+{ #category : 'API' }
+ASCInlineMethodBlock >> locals: locals parameters: arguments [ 
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
+]
 
 { #category : 'adding' }
 ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
@@ -25,6 +37,12 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 
 	returnBlock := aBasicBlock
+]
+
+{ #category : 'initialization' }
+ASCInlineMethodBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
+	
+	label := aClass name,'.',aString
 ]
 
 { #category : 'API' }

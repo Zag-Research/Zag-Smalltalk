@@ -17,6 +17,9 @@ Class {
 		'stackPointer',
 		'primitiveSuccessStackPointer'
 	],
+	#pools : [
+		'ZagConstants'
+	],
 	#category : 'Zag-Core-Tests-SemanticInterpreter',
 	#package : 'Zag-Core-Tests',
 	#tag : 'SemanticInterpreter'
@@ -95,8 +98,7 @@ ASemanticInterpreter >> createContext: aStackContext [
 	locals := aStackContext locals.
 	extra := aStackContext extra.
 	contextPtr := stackPointer - locals - 1.
-	size := (context baseAddress ifNil: [ stackArray size + 1 ])
-	        - (contextPtr + 1).
+	size := BaseAddress - (contextPtr + 1).
 	context := ASIContext new
 		           array: stackArray offset: contextPtr size: size;
 		           sendingContext: context;
@@ -114,7 +116,7 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 	| contextPtr size |
 	contextPtr := stackPointer - locals - 1.
-	size := (context baseAddress ifNil: [ stackArray size + 1 ]) - (contextPtr + 1).
+	size := BaseAddress - (contextPtr + 1).
 	context := ASIContext new
 		           array: stackArray
 		           offset: contextPtr
@@ -218,23 +220,29 @@ ASemanticInterpreter >> reset [
 			#ThunkReturnSmallInteger.
 			#ThunkReturnImmediate.
 			#ThunkReturnCharacter.
-			UndefinedObject.
-			True.
+			#ThunkImmediate.
+			#ThunkFloat.
 			False.
+			True.
 			SmallInteger.
 			Symbol.
 			Character.
-			#ThunkImmediate.
-			#ThunkFloat.
+			#ShortString.
+			nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil .
+			UndefinedObject.
 			Float.
+			ProtoObject.
 			Object.
+			BlockClosure.
+			#BlockClosureValue.
+			Context.
 			Array.
 			String.
-			CompiledMethod.
+			#Utf8String.
+			DoubleWordArray.
+			Process.
 			Class.
-			Context.
-			BlockClosure.
-			#Method.
+			CompiledMethod.
 			#Dispatch }.
 	dispatch := Array new: 50
 ]

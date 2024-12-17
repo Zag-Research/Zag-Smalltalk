@@ -4,9 +4,9 @@ I am the superclass of all the operations that don't referencce the top elements
 Class {
 	#name : 'ASCNonStackReferencingOperations',
 	#superclass : 'ZagOperations',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'data flow instructions' }

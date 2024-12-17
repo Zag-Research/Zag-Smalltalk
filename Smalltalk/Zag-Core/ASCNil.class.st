@@ -4,9 +4,9 @@ I represent a Nil placeholder do nothing operation.
 Class {
 	#name : 'ASCNil',
 	#superclass : 'ASCNonStackReferencingOperations',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'instance creation' }

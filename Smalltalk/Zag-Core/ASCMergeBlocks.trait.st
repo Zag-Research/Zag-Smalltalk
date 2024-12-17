@@ -3,9 +3,9 @@ I am a trait that has the common code for basic blocks that are possible merge t
 "
 Trait {
 	#name : 'ASCMergeBlocks',
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'BasicBlocks'
 }
 
 { #category : 'adding' }
