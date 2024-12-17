@@ -1,0 +1,8 @@
+			commonSendOrdinary:
+				/* commonSendOrdinary */
+                                if (lkupClassTag<8)
+                                  write(3,"0IC3F567"+lkupClassTag,1);
+                                else if (lkupClassTag>=0xc03 && lkupClassTag<=0xc07)
+                                  write(3,"___n_f_t"+(lkupClassTag&7),1);
+                                else
+                                  write(3,"*",1);

@@ -1,0 +1,14 @@
+#! /bin/sh
+#
+#    Run it with a headless Pharo:
+#
+DIR=~/git/pharo-project/stackVM/build
+DIR=~/git/pharo-project/build/build
+VM=$DIR/vm/Debug/Pharo.app/Contents/MacOS/Pharo
+#IMAGE=$DIR/dist/pharo-vm/resources/img.image
+IMAGE=Pharo.image
+#ls -l $VM $IMAGE
+#grep . "$@" /dev/null
+set -x
+$VM -vm-display-null -headless $IMAGE "$@" --save --quit 2>image.log
+#$DIR/Pharo -help
