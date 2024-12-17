@@ -138,9 +138,9 @@ ASImageExporter >> canonicalClasses: aClass [
 ASImageExporter >> class: aClass [
 
 	| cc |
-	cc := (self canonicalClasses: aClass) first.
+	cc := aClass isClass ifFalse: [ aClass] ifTrue: [(self canonicalClasses: aClass) first].
 	^ classes at: cc ifAbsentPut: [
-		  newClasses add: cc.
+		  aClass isClass ifTrue: [newClasses add: cc].
 		  classes size + 1 ]
 ]
 
@@ -157,8 +157,8 @@ ASImageExporter >> closeOverClassesAndSelectors [
 			| cc |
 			cc := self canonicalClasses: class.
 			cc first superclass ifNotNil: [ :superclass |
-				superclass astImageObject: self ].
-			cc first astImageObject: self.
+				superclass encodedBy: self ].
+			cc first encodedBy: self.
 			selectors do: [ :selector | self addFirstMethod: selector in: cc ] ].
 		tempSelectors do: [ :selector |
 			classes keysDo: [ :class |
@@ -199,7 +199,7 @@ ASImageExporter >> createClassTable [
 	| table |
 	table := Array new: classes size.
 	classes keysAndValuesDo: [ :class :number |
-		table at: number + 1 put: (class astImageObject: self) ].
+		table at: number + 1 put: (class encodedBy: self) ].
 	^ table
 ]
 

@@ -140,11 +140,11 @@ ASAllocationInfo >> put: anObject into: anImage [
 	anImage currentHeap
 		at: address
 		with: ((1 to: instVars) collect: [ :i | anObject instVarAt: i ])
-		do: [ :v | v astImageObject: anImage ].
+		do: [ :v | v encodedBy: anImage ].
 	extra > 0 ifTrue: [
 	anImage currentHeap
 		at: address + instVars
 		with: anObject
-		do: [ :v | v astImageObject: anImage ]].
+		do: [ :v | v encodedBy: anImage ]].
 	^ anImage pointer: address
 ]

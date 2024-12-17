@@ -3,7 +3,8 @@ Class {
 	#superclass : 'ASFinalAnalysisTest',
 	#instVars : [
 		'cgNoInline',
-		'fooBarBlockMethodAST'
+		'fooBarBlockMethodAST',
+		'cgInline'
 	],
 	#category : 'Zag-Core-Tests-Tests',
 	#package : 'Zag-Core-Tests',
@@ -19,16 +20,27 @@ ASInlineWherePossibleTest >> setUp [
 	cgNoInline := (ASCodeGenerator
 		               targetClass: ASCompileTestClass1
 		               selector: #fooBarBlock)
-		              inline: false;
+		              inline: 0;
 		              finalAnalysis.
+	ASInliner reset.
+	cgInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #fooBarBlock)
+		              inline: 1000;
+		              finalAnalysis.
+	cgInline inspect.
+	
 	fooBarBlockMethodAST := ASCompileTestClass1 >> #fooBarBlock
 ]
 
 { #category : 'tests' }
 ASInlineWherePossibleTest >> testFindMethodBlock [
 
-	| aBlock |
 	self
-		assert: (cgNoInline recursiveBasicBlock: fooBarBlockMethodAST)
-		equals: aBlock
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	self
+		assert: (cgInline basicBlocks size)
+		equals: 5
 ]

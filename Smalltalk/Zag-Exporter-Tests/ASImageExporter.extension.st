@@ -1,9 +1,9 @@
 Extension { #name : 'ASImageExporter' }
 
 { #category : '*Zag-Exporter-Tests' }
-ASImageExporter >> put: anObject [
+ASImageExporter >> encodingOf: anObject [
 
-	^ currentHeap addU64: (anObject astImageObject: self)
+	^ currentHeap addU64: (anObject encodedBy: self)
 ]
 
 { #category : '*Zag-Exporter-Tests' }

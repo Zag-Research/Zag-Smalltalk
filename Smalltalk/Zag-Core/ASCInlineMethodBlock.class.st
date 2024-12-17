@@ -50,3 +50,9 @@ ASCInlineMethodBlock >> selfElementClass [
 
 	^ ASStackSelf
 ]
+
+{ #category : 'API' }
+ASCInlineMethodBlock >> sendTail: aSymbol targetClass: target for: aBasicBlock [ 
+	
+	^ aBasicBlock sendTail: aSymbol targetClass: target
+]

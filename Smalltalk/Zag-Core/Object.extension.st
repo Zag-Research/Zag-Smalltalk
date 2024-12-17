@@ -23,12 +23,6 @@ Object >> astFormat [
 ]
 
 { #category : '*Zag-Core' }
-Object >> astImageObject: anASImage [
-
-	^ anASImage objectObject: self
-]
-
-{ #category : '*Zag-Core' }
 Object >> children [
 "return and empty list as the default children of any element"
  ^  {  }
