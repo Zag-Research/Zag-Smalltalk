@@ -122,13 +122,12 @@ const ZagImageHeader = struct {
     symTable: Object,
     dispatchTable: Object,
     codeAddresses: Object,
-    processTable: Object,
-    const magicTag: u64 = 0x010203040567615A;
+    const magicTag: u64 = 0x6567616D4967615A; // "ZagImage" in little-endian
 };
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
     std.debug.print(
-        \\Usage: zig -constants | image-directory
+        \\Usage: zig image-directory
         \\
     , .{});
 }
@@ -138,6 +137,19 @@ fn extensionMatches(name: []const u8, ext: []const u8) bool {
         if (n != e) return false;
     }
     return true;
+}
+fn parseAddress(name: []const u8) u64 {
+    var index = name.len;
+    var address: u64 = 0;
+    while (index > 0) {
+        index -= 1;
+        address = (address << 8) +
+            switch (name[index]) {
+                '0'...'9' => |c| c-'0',
+                else => 0,
+        };
+    }
+    return address;
 }
 fn readImage(file: std.fs.File) !void {
     if ((try file.stat()).size != @sizeOf(ZagImageHeader))
@@ -149,24 +161,22 @@ fn readImage(file: std.fs.File) !void {
 fn runImage() !void {
     @panic("not implemented");
 }
-fn readHeap(file: std.fs.File) !void {
-    _ = file;
+fn readHeap(file: std.fs.File, address: u64) !void {
+    _ = .{file,address};
     @panic("not implemented");
 }
-fn readLargeHeapObject(file: std.fs.File) !void {
-    _ = file;
+fn readLargeHeapObject(file: std.fs.File, address: u64) !void {
+    _ = .{file,address};
     @panic("not implemented");
 }
-fn readProcess(file: std.fs.File) !void {
-    _ = file;
+fn readProcess(file: std.fs.File, address: u64) !void {
+    _ = .{file,address};
     @panic("not implemented");
 }
 fn loadAndRun(directory: [*:0]const u8) !void {
     var dir = try std.fs.cwd().openDirZ(directory, .{});
     defer dir.close();
-    var loadedImage = false;
     {
-        var errors = false;
         var it = dir.iterate();
         while (try it.next()) |entry| {
             const name = entry.name;
@@ -175,35 +185,41 @@ fn loadAndRun(directory: [*:0]const u8) !void {
                     const file = try dir.openFile(name, .{});
                     defer file.close();
                     try readImage(file);
-                    loadedImage = true;
-                } else if (extensionMatches(name, ".heap")) {} else if (extensionMatches(name, ".lho")) {} else if (extensionMatches(name, ".process")) {} else {
+                } else if (extensionMatches(name, ".heap")) {
+                    // valid - will be processed below
+                } else if (extensionMatches(name, ".lho")) {
+                    // valid - will be processed below
+                } else if (extensionMatches(name, ".process")) {
+                    // valid - will be processed below
+                } else {
                     std.debug.print("unknown file: {s}\n", .{name});
-                    errors = true;
+                    return error.UnknownFile;
                 }
             } else {
                 std.debug.print("unknown non-file: {s}\n", .{name});
-                errors = true;
+                return error.UnknownNonFile;
             }
         }
-        if (errors or !loadedImage)
-            return error.ImageLoadProblem;
     }
     var it = dir.iterate();
     while (try it.next()) |entry| {
         const name = entry.name;
         if (entry.kind == .file) {
-            if (extensionMatches(name, ".image")) {} else if (extensionMatches(name, ".heap")) {
+            const address = parseAddress(name);
+            if (extensionMatches(name, ".image")) {
+                // ignore - already processed above
+            } else if (extensionMatches(name, ".heap")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readHeap(file);
+                try readHeap(file,address);
             } else if (extensionMatches(name, ".lho")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readLargeHeapObject(file);
+                try readLargeHeapObject(file,address);
             } else if (extensionMatches(name, ".process")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readProcess(file);
+                try readProcess(file,address);
             }
         }
     }
