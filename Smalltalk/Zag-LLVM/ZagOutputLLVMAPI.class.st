@@ -13,6 +13,22 @@ Class {
 	#package : 'Zag-LLVM'
 }
 
+{ #category : 'adding' }
+ZagOutputLLVMAPI >> add: aNumber to: selfValue [
+	
+	| result |
+	result := self newRegister.
+	stream 
+	<< 'LLVMBuildAdd(*, '
+	<< aNumber asString << ','
+	<< selfValue asString << ','
+	<< result 
+	<< ')';
+	cr.
+	^ result.
+	
+]
+
 { #category : 'llvm interface' }
 ZagOutputLLVMAPI >> and: valueRef1 with: valueRef2 [
 	"may need to create constant"
@@ -53,8 +69,8 @@ ZagOutputLLVMAPI >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel 
 	stream 
 	<< 'LLVMBuildCondBr(*, '
 	<< condition asString << ',' 
-	<< trueLabel asString << ','
-	<< falseLabel asString
+	<< 'label'<< trueLabel asString << ','
+	<< 'label' << falseLabel asString
 	<< ')';
 	cr.
 	
@@ -87,6 +103,100 @@ ZagOutputLLVMAPI >> newRegister [
 
 	nextRegister := nextRegister + 1.
 	^ '%',nextRegister asString
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> or: int1 with: int2 [
+	
+	| result | 
+	result := self newRegister.
+	stream 
+	<< 'LLVMBuildOr(*,'
+	<< int1 asString << ','
+	<< int2 asString << ','
+	<< result 
+	<< ')';
+	cr.
+	^ result. 
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> register: register plus: offset [
+	
+	| newRegister |
+	newRegister := self newRegister.
+	stream 
+	<< 'LLVMBuildGEP2(*'
+	<< '. . . )';
+	cr.
+	^ newRegister.
+	
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> returnWith: addressOfValue [
+	
+	stream
+	<< 'LLVMBuildRet(*, '
+	<< addressOfValue 
+	<< ')';
+	cr. 
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> shiftLeftArithmeticly: num1 by: num2 [ 
+	
+	| result |
+	result := self newRegister.
+	stream
+	<< 'LLVMBuildShl(*, '
+	<< num1 asString << ','
+	<< num2 asString << ','
+	<< result 
+	<< ')';
+	cr.
+	^ result.
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> shiftRightArithmeticly: num1 by: num2 [ 
+	
+	| result |
+	result := self newRegister.
+	stream
+	<< 'LLVMBuildAShr(*, '
+	<< num1 asString << ','
+	<< num2 asString << ','
+	<< result 
+	<< ')';
+	cr.
+	^ result.
+	
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> store: result at: addressOfSelf [
+	
+	stream 
+	<< 'LLVMBuildStore(*, '
+	<< result asString << ','
+	<< addressOfSelf asString 
+	<< ')';
+	cr.
+	
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVMAPI >> tagSmallInteger: untaggedInt [
+
+	| result res1 res2 |
+	result := self newRegister.
+	res1 := self shiftLeftArithmeticly: untaggedInt by: 8.
+	res2 := self or: untaggedInt with: 16rff.
+	^ res1.
+	 
+	
+	
 ]
 
 { #category : 'llvm interface' }
