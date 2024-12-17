@@ -36,7 +36,10 @@ ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
 ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue 
-	  nativeANumber nativeSelf nativeResult overflow result primitiveSuccess |
+	  nativeANumber nativeSelf nativeResult overflow result primitiveSuccess  
+	  overFlowSuccess |
+	
+	"add code to set up builder, main function, entry label"
 	
 	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
@@ -45,20 +48,28 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 	
 	self if: aNumberIsSmallInteger isFalseThen: primitiveFail isTrueThen: primitiveSuccess.
 	
+	" ----- primitiveSuccess ----- "
+
 	addressOfSelf := gen register: #sp plus: 8.
-	selfValue := gen valueAt: addressOfSelf.
+	selfValue := gen valueAt: addressOfSelf.	
 	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
 	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
 	
 	nativeResult := aBlock value: nativeANumber value: nativeSelf.
-	
 	overflow := self validSmallInteger: nativeResult.
-	self branchIf: overflow isTrueTo: primitiveFail.
+	
+	overFlowSuccess := self generateLabel.
+	self if: overflow isFalseThen: primitiveFail isTrueThen: overFlowSuccess.
+	
+	" ----- overFlowSuccess ----- "
+	
 	result := self tagSmallInteger: nativeResult.
 	gen store: result at: addressOfSelf.
-	self returnWithSP: addressOfSelf.
-	self defineLabel: primitiveFail.
-	self primitiveFail
+	gen returnWith: addressOfSelf.
+	
+	" ----- primitiveFail ----- "
+	
+	self primitiveFail.
 ]
 
 { #category : 'primitives' }
@@ -97,12 +108,30 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self primitiveFail
 ]
 
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> tagSmallInteger: untaggedInt [
+
+	^ gen tagSmallInteger: untaggedInt.
+	
+]
+
+{ #category : 'as yet unclassified' }
+ZagOutputLLVM >> validSmallInteger: nativeInt [ 
+	
+	| temp res1 res2 |
+	temp := nativeInt.
+	res1 := gen shiftRightArithmeticly: temp by: 56.
+	res2 := gen shiftLeftArithmeticly: temp by: 56.
+	^ gen compare: res2 is: #eq to: nativeInt.
+]
+
 { #category : 'private - processing' }
 ZagOutputLLVM >> verifySmallInteger: valueRef [
-
+	
+	"valueRef is a Zag smallInteger"
 	| andResult |
 	andResult := gen and: 16rff with: valueRef.
-	^ gen compare: andResult is: #eq to:  16r61
+	^ gen compare: andResult is: #eq to: 16r61
 ]
 
 { #category : 'instance creation' }

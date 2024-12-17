@@ -1,7 +1,7 @@
 Extension { #name : 'ClassDescription' }
 
-{ #category : '*Zag-Core' }
-ClassDescription >> astImageObject: anASImage [
+{ #category : '*Zag-Exporter' }
+ClassDescription >> encodedBy: anASImage [
 
 	^ anASImage objectClass: self
 ]

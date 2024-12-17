@@ -38,6 +38,23 @@ ASImageTest >> image: aBlock equals: value [
 ]
 
 { #category : 'running' }
+ASImageTest >> image: aBlock equals: value withHeap: aHeap [
+
+	| result image heap |
+	image := ASImageExporter test constants: constants.
+	result := aBlock value: image.
+	heap := ByteArray streamContents: [ :s |
+		image currentHeap toStream: s ].
+	self
+		assert: heap asU64Array first hexString
+		equals: image currentHeap address hexString.
+	self assert: result hexString equals: value hexString.
+	self
+		assert: ((heap asU64Array allButFirst: 3) collect: #hexString)
+		equals: (aHeap collect: #hexString)
+]
+
+{ #category : 'running' }
 ASImageTest >> setUp [
 
 	super setUp.

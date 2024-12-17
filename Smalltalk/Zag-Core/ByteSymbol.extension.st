@@ -10,12 +10,6 @@ ByteSymbol >> asZigString [
 ]
 
 { #category : '*Zag-Core' }
-ByteSymbol >> astImageObject: anASImage [
-
-	^ anASImage objectSymbol: self
-]
-
-{ #category : '*Zag-Core' }
 ByteSymbol >> astObject: anASImage [ 
 	^ self
 ]
