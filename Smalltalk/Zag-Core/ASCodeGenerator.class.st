@@ -232,7 +232,7 @@ ASCodeGenerator >> inline: aBooleanOrInteger [
 
 	inline := aBooleanOrInteger isInteger
 		          ifTrue: [ aBooleanOrInteger ]
-		          ifFalse: [ 1000 ]
+		          ifFalse: [ aBooleanOrInteger ifTrue: [ 1000 ] ifFalse: [ 0 ] ]
 ]
 
 { #category : 'finalAnalysis' }
@@ -277,8 +277,6 @@ ASCodeGenerator >> inlineWherePossible [
 	[
 	remainingInlines > 0 ifFalse: [ ^ self ].
 	remainingInlines := remainingInlines - 1.
-	"does this loop make sense? should temp be set before entering and
-	ask if temp is empty after adding current blocksWithCalls"
 	blocksWithCalls isEmpty ] whileFalse: [
 		temp := blocksWithCalls.
 		blocksWithCalls := Set new.

@@ -63,6 +63,14 @@ ZagOutputLLVMAPI >> compare: valueRef1 is: comparison to: valueRef2 [
 	^ result.
 ]
 
+{ #category : 'llvm interface' }
+ZagOutputLLVMAPI >> defineLabel: aLabel [
+
+	(stream << 'L' << aLabel asString)
+		<< ':';
+		cr
+]
+
 { #category : 'as yet unclassified' }
 ZagOutputLLVMAPI >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
 	

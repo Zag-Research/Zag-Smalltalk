@@ -26,50 +26,59 @@ ZagOutputLLVM >> generator: aGenerator [
 	gen := aGenerator
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing' }
+ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
+
+	| otherewise |
+	otherewise :=  self generateLabel.
+	self if: condition isFalseThen: falseLabel isTrueThen: otherewise.
+	gen defineLabel: otherewise
+
+]
+
+{ #category : 'testing' }
 ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
 	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
 ]
 
+{ #category : 'testing' }
+ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
+
+	| otherewise |
+	otherewise :=  self generateLabel.
+	self if: condition isFalseThen: otherewise isTrueThen: trueLabel.
+	gen defineLabel: otherewise
+
+]
+
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
-	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue 
-	  nativeANumber nativeSelf nativeResult overflow result primitiveSuccess  
-	  overFlowSuccess |
-	
+	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	"add code to set up builder, main function, entry label"
-	
+	primitiveFail := self generateLabel.
+
 	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
-	primitiveFail := self generateLabel.
-	primitiveSuccess :=  self generateLabel.
-	
-	self if: aNumberIsSmallInteger isFalseThen: primitiveFail isTrueThen: primitiveSuccess.
-	
-	" ----- primitiveSuccess ----- "
+	self if: aNumberIsSmallInteger isFalseThen: primitiveFail.
 
 	addressOfSelf := gen register: #sp plus: 8.
-	selfValue := gen valueAt: addressOfSelf.	
+	selfValue := gen valueAt: addressOfSelf.
 	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
 	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
-	
+
 	nativeResult := aBlock value: nativeANumber value: nativeSelf.
 	overflow := self validSmallInteger: nativeResult.
-	
-	overFlowSuccess := self generateLabel.
-	self if: overflow isFalseThen: primitiveFail isTrueThen: overFlowSuccess.
-	
-	" ----- overFlowSuccess ----- "
-	
+	self if: overflow isFalseThen: primitiveFail.
+
 	result := self tagSmallInteger: nativeResult.
 	gen store: result at: addressOfSelf.
 	gen returnWith: addressOfSelf.
-	
+
 	" ----- primitiveFail ----- "
-	
-	self primitiveFail.
+	gen defineLabel: primitiveFail.
+	self primitiveFail
 ]
 
 { #category : 'primitives' }
@@ -108,14 +117,14 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self primitiveFail
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'converting' }
 ZagOutputLLVM >> tagSmallInteger: untaggedInt [
 
 	^ gen tagSmallInteger: untaggedInt.
 	
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'converting' }
 ZagOutputLLVM >> validSmallInteger: nativeInt [ 
 	
 	| temp res1 res2 |

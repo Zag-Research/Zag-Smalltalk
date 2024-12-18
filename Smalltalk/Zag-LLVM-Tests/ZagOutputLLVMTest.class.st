@@ -19,6 +19,13 @@ ZagOutputLLVMTest >> setUp [
 	output := ZagOutputLLVM new generator: ZagOutputLLVMAPI new
 ]
 
+{ #category : 'running' }
+ZagOutputLLVMTest >> tearDown [
+
+	Transcript flush.
+	super tearDown
+]
+
 { #category : 'tests' }
 ZagOutputLLVMTest >> testAdd [
 
