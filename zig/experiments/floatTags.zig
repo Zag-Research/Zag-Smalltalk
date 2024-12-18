@@ -24,7 +24,7 @@ pub const ClassIndex = enum(u5) {
     ShortString,
     ThunkImmediate,
     ThunkFloat,
-    UndefinedObject = 24,
+    UndefinedObject = 23,
     Float,
     Object,
     BlockClosure,
@@ -64,16 +64,16 @@ pub const Object = packed struct {
         const T = @TypeOf(value);
         if (T == Object) return value;
         if (T == Character) return value.encoded();
+        if (T == bool) return if (value) True else False;
         switch (@typeInfo(T)) {
-            .Int, .ComptimeInt => return @bitCast(@as(i64, value)*256+0x61),
-            .Float, .ComptimeFloat => return @bitCast(encode(value)),
-            .Bool => return if (value) True else False,
-            .Null => return Nil,
-            .Pointer => |ptr_info| {
+            .int, .comptime_int => return @bitCast(@as(i64, value)*256+0x61),
+            .float, .comptime_float => return @bitCast(encode(value)),
+            .null => return Nil,
+            .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
                         switch (@typeInfo(ptr_info.child)) {
-                            .Array => |array_info| {
+                            .array => |array_info| {
                                 if (array_info.child == u8)
                                     return shortStringEncode(value[0..]);
                             },
@@ -144,11 +144,11 @@ fn decode(x: u64) f64 {
 }
 fn cvtU64(value: anytype) u64 {
     return switch (@typeInfo(@TypeOf(value))) {
-        .ComptimeInt => @bitCast(@as(i64,value)),
-        .ComptimeFloat => cvtU64(@as(f64,value)),
-        .Bool => @intFromBool(value),
-        .Null =>  0,
-        .Pointer => @intFromPtr(value),
+        .comptime_int => @bitCast(@as(i64,value)),
+        .comptime_float => cvtU64(@as(f64,value)),
+        .bool => @intFromBool(value),
+        .null =>  0,
+        .pointer => @intFromPtr(value),
         else => @bitCast(value),
     };
 }
@@ -193,5 +193,15 @@ pub fn main() !void {
         } else  {
             std.debug.print("{x:0>16} {x:0>16} {} {}\n",.{cvtU64(x),u.u(),u,u.immediate_class()});
         }
+    }
+    for (0..255) |bits| {
+        const sign_exponent = @as(u64,bits & 0xc0) << 56;
+        const exponent_mantissa = @as(u64,@bitCast(@as(i64,@bitCast(@as(u64,bits)<<58)) >> 6))>>2;
+        const u = sign_exponent | exponent_mantissa;
+        const x:f64 = @bitCast(u);
+        std.debug.print("{:>3} {x:0>16} {x:0>16} {x:0>16} ",.{bits,  sign_exponent, exponent_mantissa, cvtU64(x)});
+        if (@abs(x)<0.0001 or @abs(x)>1000.0) {
+            std.debug.print("{e:10.5}\n",.{x});
+        } else std.debug.print("{d:11.7}\n",.{x});
     }
 }
