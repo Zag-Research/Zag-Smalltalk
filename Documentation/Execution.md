@@ -3,19 +3,19 @@
 This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
 
 ### Semantic Interpreter
-There is an interpreter that is part of the Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
+There is an interpreter that is part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
 ##### Execution details currently having their semantics clarified
 - return with/no context - with/no tos - offset to self
 - restructure operation for branch-returns and inlined methods
 - tailSend with/no context with restructure parameter
 - can optimize away pushes into restructure instruction/tailSend
 ### Threaded Method Implementation
-The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every method has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every control operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
+The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every `CompiledMethod` has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every threaded operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
 
 ### Native Method Implementation
 The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
 
-When sending a message, the current Context will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
+When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
 When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
 1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
@@ -25,10 +25,19 @@ When we dispatch to a method, we always treat it as threaded code. This may seem
 
 ## The stack and Contexts
 
-The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of Contexts. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be spilled to the heap.
+The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be spilled to the heap.
 
 There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
-
+## Dispatch and Polymorphic Inline Caches
+When a message send is encountered a sequence of threaded words are output:
+1. Either a `SetupReturn` for a normal send, or a `SetupNoReturn` for a tail send. These both get the class from the receiver and the selector from the following word. `SetupReturn` also saves the return address (the address after the `DispatchDynamic` - the offset of which is also in that argument word) in the `Context`. `SetupNoReturn` doesn't save the return, but does restructure the stack (the parameters of which are also in that argument word). There are versions of both of these for unary and binary selectors as well as the general case, and there are versions of `SetupNoReturn` for with/without `Context` for the current method.
+2. A sequence of `DispatchDirect` words, each followed by a `nil`.
+	1. `DispatchDirect` gets the class of the receiver from the signature, hashes into the appropriate dispatch table, finds the appropriate method (which may require probing through the table).
+	2. It then replaces the `DispatchDirect` and the `nil` with disambiguator for the method and the address of the `CompiledMethod`.
+	3. Therefore, the next time we send here, the word will point directly into the code. So, these become a PIC, and bypass the hashing.
+3. Finally a `DispatchDynamic`. This is the fallback and is never replaced. It does the same lookup of the class and hashing, but rather than probing for a match, it jumps indirectly through the dispatch table which is laid out the same way: a code address to execute followed by the `CompiledMethod` address.
+4. This sequence will also be directly used for dispatch by any JIT code (although step 1 will be done in the JIT code with the native PC pointing to the return point in the JIT code, and the threaded PC pointing to the word after the `DynamicDispatch`). This means that: a) the JIT code benefits from the same PIC as the threaded code; b) no code addresses (other than the current method) are embedded in native code and would have to be invalidated; c) JIT dispatch is a little more expensive than it would otherwise be.
+If a send is to a known method of a known class, then only one `DirectDispatch` need be generated and no `DynamicDIspatch`. If the send is to this method (after inlining) steps 2-3 will be replaced by a `Branch`.
 #### Stack example
 
 When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
