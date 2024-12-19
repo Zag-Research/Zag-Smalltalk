@@ -150,7 +150,7 @@ pub const MethodSignature = extern struct {
         writer: anytype,
     ) !void {
         _ = .{ fmt, options };
-        try writer.print("MethodSignature({x},{})", .{ self.selectorHash, self.class }); // .{symbol.fromHash32(self.selectorHash),self.class});
+        try writer.print("MethodSignature({x},{})", .{ self.selectorHash, self.class });
     }
 };
 pub const CodeContextPtr = *Context;

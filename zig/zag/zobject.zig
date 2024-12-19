@@ -41,7 +41,7 @@ test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
     try e(Object.indexSymbol0(42).isSymbol());
-    try ee(Object.imm(.Symbol, 0x0002a0ff), 0xfff000070002a0ff);
+    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff89);
     try ee(Object.indexSymbol0(0x2a).rawU(), 0xfff0000700002aff);
     try ee(Object.indexSymbol0(0x2a).indexNumber(), 42);
     try e(Object.indexSymbol1(42).isSymbol());
@@ -62,15 +62,17 @@ pub fn fromLE(comptime T: type, v: T) Object {
 pub const compareObject = Object.compare;
 pub const ClassIndex = enum(u16) {
     none = 0,
-    ThunkHeap,
     ThunkReturnLocal,
     ThunkReturnInstance,
     ThunkReturnSmallInteger,
     ThunkReturnImmediate,
     ThunkReturnCharacter,
+    ThunkReturnFloat,
+    ThunkHeap,
+    ThunkLocal,
+    ThunkInstance,
     BlockAssignLocal,
     BlockAssignInstance,
-    ThunkGetInstance,
     ThunkImmediate,
     ThunkFloat,
     False,
@@ -78,7 +80,6 @@ pub const ClassIndex = enum(u16) {
     SmallInteger,
     Symbol,
     Character,
-    ShortString,
     UndefinedObject = 32,
     Float,
     ProtoObject,
@@ -114,15 +115,17 @@ pub const ClassIndex = enum(u16) {
     // }
     pub const Compact = enum(u5) {
         none = 0,
-        ThunkHeap,
         ThunkReturnLocal,
         ThunkReturnInstance,
         ThunkReturnSmallInteger,
         ThunkReturnImmediate,
         ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkHeap,
+        ThunkLocal,
+        ThunkInstance,
         BlockAssignLocal,
         BlockAssignInstance,
-        ThunkGetInstance,
         ThunkImmediate,
         ThunkFloat,
         False,
@@ -130,7 +133,6 @@ pub const ClassIndex = enum(u16) {
         SmallInteger,
         Symbol,
         Character,
-        ShortString,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -141,9 +143,9 @@ pub const ClassIndex = enum(u16) {
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkHeap), 1) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ShortString), 17) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.ShortString), 17) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
 }
 const MemoryFloat = extern struct {
     header: HeapHeader,
@@ -158,7 +160,7 @@ pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
     };
 }
 pub const Object = switch (config.objectEncoding) {
-    .nan => NanObject,
+    .nan => unreachable, // NanObject, isn't well supported right not
     .tag => TagObject,
 };
 const NanObject = packed struct(u64) {
@@ -267,7 +269,7 @@ const NanObject = packed struct(u64) {
     pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
         return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).rawU() + addr);
     }
-    pub inline fn tagbitsL(self: Object) u32 {
+    pub inline fn tagbits(self: Object) u32 {
         return @truncate(self.rawU() >> 32);
     }
     pub inline fn hashEquals(self: Object, other: Object) bool {
@@ -346,12 +348,12 @@ const NanObject = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .Int, .ComptimeInt => return cast(@as(u64, @bitCast(@as(i64, value))) +% u64_ZERO),
-            .Float => return cast(value),
-            .ComptimeFloat => return cast(@as(f64, value)),
-            .Bool => return if (value) Object.True else Object.False,
-            .Null => return Object.Nil,
-            .Pointer => |ptr_info| {
+            .int, .comptime_int => return cast(@as(u64, @bitCast(@as(i64, value))) +% u64_ZERO),
+            .float => return cast(value),
+            .comptime_float => return cast(@as(f64, value)),
+            .bool => return if (value) Object.True else Object.False,
+            .null => return Object.Nil,
+            .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
                         return cast(@as(u48, @truncate(@intFromPtr(value))) + Start_of_Heap_Objects);
@@ -377,33 +379,50 @@ const NanObject = packed struct(u64) {
 };
 const TagObject = packed struct(u64) {
     tag: Group,
-    classIndex: ClassIndex,
-    hash: u45,
-    pub const Group = enum(u3) { heap = 0, smallInteger, immediates, float3, float4, float5, float6, float7 };
+    class: ClassIndex.Compact,
+    hash: u56,
+    pub const Group = enum(u3) {
+        heap = 0,
+        immediates,
+        float2,
+        float3,
+        float4,
+        float5,
+        float6,
+        float7,
+        inline fn base(cg: Group) u64 {
+            return @intFromEnum(cg);
+        }
+        inline fn u(cg: Group) u3 {
+            return @intFromEnum(cg);
+        }
+    };
+    const Self = @This();
+    pub inline fn tagbits(self: Self) u8 {
+        return @truncate(@as(u64, @bitCast(self)));
+    }
     pub inline fn cast(v: anytype) Object {
         // stored using little-endian order
         return @bitCast(v);
     }
-    const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
-    const Start_of_Heap_Objects: u64 = g(.heap);
     inline fn of(comptime v: u64) Object {
         return @bitCast(v);
     }
-    inline fn oImm(c: ClassIndex, h: u32) Object {
-        return @bitCast(imm(c, h));
+    inline fn oImm(c: ClassIndex.Compact, h: u56) Object {
+        return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    inline fn imm(c: ClassIndex, h: u32) u64 {
-        return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
+    inline fn imm(c: ClassIndex.Compact, h: u56) u64 {
+        return @bitCast(oImm(c, h));
     }
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    const nonIndexSymbol = 0xffffffffff0000ff;
+    const nonIndexSymbol = 0xffffffff000000ff;
     pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x00000ff | @as(u32, uniqueNumber) << 8);
+        return oImm(.Symbol, 0x000001f | @as(u32, uniqueNumber) << 5);
     }
     pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8);
+        return oImm(.Symbol, 0x100001f | @as(u32, uniqueNumber) << 5);
     }
     pub inline fn isIndexSymbol0(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
@@ -411,12 +430,12 @@ const TagObject = packed struct(u64) {
     pub inline fn isIndexSymbol1(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
     }
-    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
+    //    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
     pub const False = oImm(.False, 0x0);
     pub const True = oImm(.True, 0x1);
-    pub const Nil = oImm(.UndefinedObject, 0xffffffff);
-    pub const NotAnObject = oImm(.UndefinedObject, 0x3); // never a valid object... should never be visible to managed language
+    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
+    pub const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
     pub const u64_MINVAL = g(.smallInt);
     const u64_ZERO = g(.smallInt0);
     pub const u64_ZERO2 = u64_ZERO *% 2;
@@ -426,8 +445,8 @@ const TagObject = packed struct(u64) {
     pub inline fn indexNumber(self: Object) u24 {
         return @truncate(self.hash >> 8);
     }
-    pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
-        return .{ .tag = .immediates, .classIndex = cls, .hash = low32 };
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+        return oImm(cls, hash);
     }
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.hash);
@@ -444,26 +463,26 @@ const TagObject = packed struct(u64) {
     fn encode(x: f64) Object {
         const u = math.rotl(u64, @bitCast(x), 4);
         if (u & 7 >= 5) {
-            if (math.isNan(x)) return try Object.from(&nanMemObject);
-            if (math.inf(f64) == x) return try Object.from(&pInfMemObject);
-            if (math.inf(f64) == -x) return try Object.from(&nInfMemObject);
-            unreachable;
+            if (math.isNan(x)) return Object.from(&nanMemObject);
+            if (math.inf(f64) == x) return Object.from(&pInfMemObject);
+            if (math.inf(f64) == -x) return Object.from(&nInfMemObject);
+            return Object.Nil;
         }
-        return u +% 3;
+        return @bitCast(u +% 3);
     }
     fn decode(self: Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 3, 4));
     }
-    pub inline fn from(value: anytype) !Object {
+    pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .Int, .ComptimeInt => return cast(@as(u64, @bitCast(@as(i64, value))) << 3 +% @intFromEnum(Group.smallInteger)),
-            .Float => return try encode(value),
-            .ComptimeFloat => return try encode(@as(f64, value)),
-            .Bool => return if (value) Object.True else Object.False,
-            .Null => return Object.Nil,
-            .Pointer => |ptr_info| {
+            .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
+            .float => return encode(value),
+            .comptime_float => return encode(@as(f64, value)),
+            .bool => return if (value) Object.True else Object.False,
+            .null => return @bitCast(@intFromPtr(value)),
+            .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
                         return @bitCast(@intFromPtr(value));
@@ -478,8 +497,7 @@ const TagObject = packed struct(u64) {
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
             .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
-            .smallInteger => .SmallInteger,
-            .immediates => self.classIndex,
+            .immediates => self.class.classIndex(),
             else => .Float,
         };
     }
@@ -496,12 +514,6 @@ const ObjectFunctions = struct {
     pub inline fn equals(self: Object, other: Object) bool {
         return self.rawU() == other.rawU();
     }
-    pub inline fn asSymbol(self: Object) Object {
-        return Object.makeImmediate(.Symbol, self.hash32());
-    }
-    pub inline fn withImmClass(self: Object, cls: ClassIndex) Object {
-        return Object.makeImmediate(cls, self.hash32());
-    }
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
     }
@@ -513,21 +525,18 @@ const ObjectFunctions = struct {
             return ptr[field];
         return Nil;
     }
-    pub inline fn tagbits(self: Object) u16 {
-        return @intFromEnum(self.tag);
-    }
     pub inline fn indexEquals(self: Object, other: Object) bool {
-        return self.equals(other.withImmClass(.Symbol)); // may be false positive
+        return self.equals(other.makeImmediate(.Symbol, self.hash32())); // may be false positive
     }
     pub inline fn isSymbol(self: Object) bool {
-        return self.tagbitsL() == comptime Object.indexSymbol0(0).tagbitsL();
+        return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
-        const tag = self.tagbitsL();
-        return tag == Object.False.tagbitsL() or tag == Object.True.tagbitsL();
+        const tag = self.tagbits();
+        return tag == Object.False.tagbits() or tag == Object.True.tagbits();
     }
     pub inline fn isNil(self: Object) bool {
-        return self.tagbitsL() == Object.Nil.tagbitsL();
+        return self == Object.Nil;
     }
     pub inline fn isImmediate(self: Object) bool {
         return self.tag == .immediates;
@@ -578,7 +587,7 @@ const ObjectFunctions = struct {
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
                 switch (@typeInfo(T)) {
-                    .Pointer => |ptrInfo| {
+                    .pointer => |ptrInfo| {
                         if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                             if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                 return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));

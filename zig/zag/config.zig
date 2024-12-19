@@ -6,7 +6,7 @@ pub inline fn trace(format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
 pub const stdCall: std.builtin.CallingConvention = if (builtin.cpu.arch == .x86) .Stdcall else .C; //.AAPCS;
-pub const objectEncoding = Encoding.nan;
+pub const objectEncoding = Encoding.tag;
 
 const Encoding = enum {
     nan,

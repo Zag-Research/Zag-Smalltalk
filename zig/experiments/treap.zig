@@ -25,7 +25,7 @@ test "check inversePhi" {
 }
 fn noPriority() void {}
 pub fn Treap(comptime Key: type, comptime Index: type, comptime Value: type) type {
-    return FullTreap(Key,Index,Value,void,noPriority);
+    return FullTreap(Key, Index, Value, void, noPriority);
 }
 pub fn FullTreap(comptime Key: type, comptime Index: type, comptime Value: type, comptime PriorityType: type, comptime genPriority: fn () PriorityType) type {
     const Compare = *const fn (Key, Key) Order;
@@ -195,7 +195,7 @@ pub fn FullTreap(comptime Key: type, comptime Index: type, comptime Value: type,
                 return result;
             }
             const pos = try self.nextFree();
-            self.setKey(pos,key);
+            self.setKey(pos, key);
             self.setRoot(self.insertElement(pos, self.root()));
             return pos;
         }

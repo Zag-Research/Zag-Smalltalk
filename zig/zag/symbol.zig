@@ -7,28 +7,28 @@ const indexSymbol = object.Object.indexSymbol0;
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-const inversePhi24 = @import("utilities.zig").inversePhi(u24);
-const undoPhi24 = @import("utilities.zig").undoPhi(u24);
+const inversePhi32 = @import("utilities.zig").inversePhi(u32);
+const undoPhi32 = @import("utilities.zig").undoPhi(u32);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 pub inline fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
-inline fn symbol_of(index: u24, arity: u8) object.Object {
-    return fromHash32(@as(u32, index *% inversePhi24) << 8 | arity);
+inline fn symbol_of(index: u32, arity: u4) object.Object {
+    return fromHash32((index << 5 | @as(u32, arity) << 1 | 1) *% inversePhi32);
 }
-pub inline fn symbol0(index: u24) object.Object {
+pub inline fn symbol0(index: u32) object.Object {
     return symbol_of(index, 0);
 }
-pub inline fn symbol1(index: u24) object.Object {
+pub inline fn symbol1(index: u32) object.Object {
     return symbol_of(index, 1);
 }
-pub inline fn symbol2(index: u24) object.Object {
+pub inline fn symbol2(index: u32) object.Object {
     return symbol_of(index, 2);
 }
-pub inline fn symbol3(index: u24) object.Object {
+pub inline fn symbol3(index: u32) object.Object {
     return symbol_of(index, 3);
 }
-pub inline fn symbol4(index: u24) object.Object {
+pub inline fn symbol4(index: u32) object.Object {
     return symbol_of(index, 4);
 }
 pub const symbols = struct {
@@ -122,13 +122,13 @@ pub inline fn lookup(string: object.Object) object.Object {
 pub inline fn intern(string: object.Object) object.Object {
     return symbolTable.intern(string);
 }
-const ObjectTreap = Treap(object.Object, u24, u0);
-fn numArgs(obj: object.Object) u8 {
+const ObjectTreap = Treap(object.Object, u32, u0);
+fn numArgs(obj: object.Object) u4 {
     const string = obj.arrayAsSlice(u8);
     if (string.len == 0) return 0;
     const first = string[0];
     if (first < 'A' or (first > 'Z' and first < 'a') or first > 'z') return 1;
-    var count: u8 = 0;
+    var count: u4 = 0;
     for (string) |char| {
         if (char == ':') count += 1;
     }
@@ -168,8 +168,8 @@ pub const SymbolTable = struct {
         self.allocator.free(self.mem);
         self.* = undefined;
     }
-    fn unPhi(obj: object.Object) u24 {
-        return @as(u24, @truncate(obj.hash32() >> 8)) *% undoPhi24;
+    fn unPhi(obj: object.Object) u32 {
+        return @as(u32, @truncate(obj.hash32() >> 8)) *% undoPhi32;
     }
     fn asString(self: *Self, string: object.Object) object.Object {
         return self.theTreap(0).getKey(unPhi(string));
@@ -223,7 +223,7 @@ pub const noStrings = &[0]heap.HeapConstPtr{};
 //     const trp = symbol.theTreap(0);
 //     try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
 //     for (initialSymbolStrings, 0..) |string, idx|
-//         try expectEqual(symbol_of(@intCast(idx+1),0).hash24(), symbol.lookup(string.asObject()).hash24());
+//         try expectEqual(symbol_of(@intCast(idx+1),0).hash32(), symbol.lookup(string.asObject()).hash32());
 //     // test a few at random to verify arity
 //     try symbol.verify(symbols.@"cull:");
 //     try symbol.verify(symbols.@"cull:cull:");

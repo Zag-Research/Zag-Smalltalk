@@ -145,8 +145,8 @@ fn parseAddress(name: []const u8) u64 {
         index -= 1;
         address = (address << 8) +
             switch (name[index]) {
-                '0'...'9' => |c| c-'0',
-                else => 0,
+            '0'...'9' => |c| c - '0',
+            else => 0,
         };
     }
     return address;
@@ -162,15 +162,15 @@ fn runImage() !void {
     @panic("not implemented");
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
-    _ = .{file,address};
+    _ = .{ file, address };
     @panic("not implemented");
 }
 fn readLargeHeapObject(file: std.fs.File, address: u64) !void {
-    _ = .{file,address};
+    _ = .{ file, address };
     @panic("not implemented");
 }
 fn readProcess(file: std.fs.File, address: u64) !void {
-    _ = .{file,address};
+    _ = .{ file, address };
     @panic("not implemented");
 }
 fn loadAndRun(directory: [*:0]const u8) !void {
@@ -211,15 +211,15 @@ fn loadAndRun(directory: [*:0]const u8) !void {
             } else if (extensionMatches(name, ".heap")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readHeap(file,address);
+                try readHeap(file, address);
             } else if (extensionMatches(name, ".lho")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readLargeHeapObject(file,address);
+                try readLargeHeapObject(file, address);
             } else if (extensionMatches(name, ".process")) {
                 const file = try dir.openFile(name, .{});
                 defer file.close();
-                try readProcess(file,address);
+                try readProcess(file, address);
             }
         }
     }

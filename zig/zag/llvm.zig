@@ -36,7 +36,6 @@ pub fn @"defineLabel:"(pc: PC, sp: SP, process: TFProcess, context: TFContext, s
     const newSp = sp.dropPut(result); // or sp.drop() if returning self
     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
 }
-const @"CM_defineLabel:" = compiledZigMethod("defineLabel:",@"defineLabel:");
+const @"CM_defineLabel:" = compiledZigMethod("defineLabel:", @"defineLabel:");
 
-test "primitives" {
-}
+test "primitives" {}
