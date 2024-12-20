@@ -169,10 +169,10 @@ pub const SymbolTable = struct {
         self.* = undefined;
     }
     fn unPhi(obj: object.Object) u32 {
-        return @as(u32, @truncate(obj.hash32() >> 8)) *% undoPhi32;
+        return @as(u32, @truncate(obj.hash56())) *% undoPhi32;
     }
     fn asString(self: *Self, string: object.Object) object.Object {
-        return self.theTreap(0).getKey(unPhi(string));
+        return self.theTreap(0).getKey(unPhi(string)>>5);
     }
     pub fn lookup(self: *Self, string: object.Object) object.Object {
         return lookupDirect(self.theTreap(0), string);

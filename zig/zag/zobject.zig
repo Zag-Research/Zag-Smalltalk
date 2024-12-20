@@ -41,12 +41,14 @@ test "indexSymbol" {
     const e = std.testing.expect;
     const ee = std.testing.expectEqual;
     try e(Object.indexSymbol0(42).isSymbol());
+    try e(Object.indexSymbol0(42).isIndexSymbol0());
     try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff89);
-    try ee(Object.indexSymbol0(0x2a).rawU(), 0xfff0000700002aff);
-    try ee(Object.indexSymbol0(0x2a).indexNumber(), 42);
+    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a89);
+    try ee(Object.indexSymbol0(42).indexNumber(), 42);
     try e(Object.indexSymbol1(42).isSymbol());
-    try ee(Object.indexSymbol1(0x2a).rawU(), 0xfff0000701002aff);
-    try ee(Object.indexSymbol1(0x2a).indexNumber(), 0x1002a);
+    try e(Object.indexSymbol1(42).isIndexSymbol1());
+    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a89);
+    try ee(Object.indexSymbol1(42).indexNumber(), 42);
 }
 pub const ZERO = Object.ZERO;
 pub const False = Object.False;
@@ -204,18 +206,21 @@ const NanObject = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    const nonIndexSymbol = 0xffffffffff0000ff;
+    const nonIndexSymbol = 0xffffffff800000ff;
     pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x00000ff | @as(u32, uniqueNumber) << 8);
+        return oImm(.Symbol, 0xf000000 | @as(u32, uniqueNumber));
     }
     pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x10000ff | @as(u32, uniqueNumber) << 8);
+        return oImm(.Symbol, 0xf800000 | @as(u32, uniqueNumber));
     }
     pub inline fn isIndexSymbol0(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
     }
     pub inline fn isIndexSymbol1(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
+    }
+    pub inline fn indexNumber(self: Object) u24 {
+        return @truncate(self.rawU() & nonIndexSymbol >> 8);
     }
     pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
@@ -240,9 +245,6 @@ const NanObject = packed struct(u64) {
     }
     pub inline fn high16(self: Object) u16 {
         return @intFromEnum(self.classIndex);
-    }
-    pub inline fn indexNumber(self: Object) u24 {
-        return @truncate(self.rawU() >> 8);
     }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return @bitCast(Group.immediates.base() | (@as(u64, @intFromEnum(cls)) << 32) | low32);
@@ -417,18 +419,21 @@ const TagObject = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    const nonIndexSymbol = 0xffffffff000000ff;
+    const nonIndexSymbol = 0xffffffff800000ff;
     pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x000001f | @as(u32, uniqueNumber) << 5);
+        return oImm(.Symbol, 0xf000000 | @as(u32, uniqueNumber));
     }
     pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0x100001f | @as(u32, uniqueNumber) << 5);
+        return oImm(.Symbol, 0xf800000 | @as(u32, uniqueNumber));
     }
     pub inline fn isIndexSymbol0(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
     }
     pub inline fn isIndexSymbol1(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
+    }
+    pub inline fn indexNumber(self: Object) u24 {
+        return @truncate((self.rawU() & ~@as(u64,nonIndexSymbol)) >> 8);
     }
     //    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
@@ -442,8 +447,35 @@ const TagObject = packed struct(u64) {
     const u64_MAXVAL = g(.numericThunk) - 1;
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
-    pub inline fn indexNumber(self: Object) u24 {
-        return @truncate(self.hash >> 8);
+    pub inline fn isInt(self: Object) bool {
+        return self.which_class(false) == .SmallInteger;
+    }
+    pub inline fn isDouble(self:Object) bool {
+        return switch (self.tag) {
+            .float2,
+            .float3,
+            .float4,
+            .float5,
+            .float6,
+            .float7 => true,
+            .immediates => false,
+            .heap => false, // ToDo handle in-memory floats
+        };
+    }
+    pub inline fn toBoolNoCheck(self: Object) bool {
+        return self.rawU() == Object.True.rawU();
+    }
+    pub inline fn toIntNoCheck(self: Object) i64 {
+        return @as(i64, @bitCast(self))>>8;
+    }
+    // pub inline fn toNatNoCheck(self: Object) u64 {
+    //     return self.rawU() -% u64_ZERO;
+    // }
+    pub inline fn rawWordAddress(self: Object) u64 {
+        return self.rawU() & 0xffff_ffff_fff8;
+    }
+    pub inline fn toDoubleNoCheck(self: Object) f64 {
+        return decode(self);
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
@@ -451,8 +483,8 @@ const TagObject = packed struct(u64) {
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.hash);
     }
-    pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.hash);
+    pub inline fn hash56(self: Object) u56 {
+        return self.hash;
     }
     pub inline fn numArgs(self: Object) u8 {
         return @truncate(self.hash);
@@ -460,18 +492,17 @@ const TagObject = packed struct(u64) {
     const nanMemObject = simpleFloat(math.nan(f64), .static);
     const pInfMemObject = simpleFloat(math.inf(f64), .static);
     const nInfMemObject = simpleFloat(-math.inf(f64), .static);
-    fn encode(x: f64) Object {
-        const u = math.rotl(u64, @bitCast(x), 4);
-        if (u & 7 >= 5) {
-            if (math.isNan(x)) return Object.from(&nanMemObject);
-            if (math.inf(f64) == x) return Object.from(&pInfMemObject);
-            if (math.inf(f64) == -x) return Object.from(&nInfMemObject);
-            return Object.Nil;
-        }
-        return @bitCast(u +% 3);
+    inline fn encode(x: f64) Object {
+        const u = math.rotl(u64, @bitCast(x), 4)+2;
+        if (u & 6 != 0)
+            return @bitCast(u);
+        if (math.isNan(x)) return Object.from(&nanMemObject);
+        if (math.inf(f64) == x) return Object.from(&pInfMemObject);
+        if (math.inf(f64) == -x) return Object.from(&nInfMemObject);
+        return Object.Nil;
     }
-    fn decode(self: Object) f64 {
-        return @bitCast(math.rotr(u64, self.rawU() - 3, 4));
+    inline fn decode(self: Object) f64 {
+        return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
     pub inline fn from(value: anytype) Object {
         const T = @TypeOf(value);
@@ -481,7 +512,7 @@ const TagObject = packed struct(u64) {
             .float => return encode(value),
             .comptime_float => return encode(@as(f64, value)),
             .bool => return if (value) Object.True else Object.False,
-            .null => return @bitCast(@intFromPtr(value)),
+            .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .One => {
@@ -496,11 +527,20 @@ const TagObject = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
+            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else if (self.rawU()==0) .UndefinedObject else .Object,
             .immediates => self.class.classIndex(),
             else => .Float,
         };
     }
+    pub inline fn isMemoryAllocated(self: Object) bool {
+        return self.tag==.heap and self!=Object.Nil;
+    }
+    // pub inline fn isMemoryAllocated(self: Object) bool {
+    //     return switch (self.tag) {
+    //         .heapThunk, .nonLocalThunk, .heap => true,
+    //         else => false,
+    //     };
+    // }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
@@ -532,8 +572,10 @@ const ObjectFunctions = struct {
         return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
-        const tag = self.tagbits();
-        return tag == Object.False.tagbits() or tag == Object.True.tagbits();
+        return switch(self.rawU()) {
+            Object.False.rawU(),Object.True.rawU() => true,
+            else => false,
+        };
     }
     pub inline fn isNil(self: Object) bool {
         return self == Object.Nil;
@@ -709,6 +751,11 @@ const ObjectFunctions = struct {
 };
 
 test "testing doubles including NaN" {
+    switch (config.objectEncoding) {
+        .tag => return error.SkipZigTest,
+        .nan => {},
+    }
+    // only applicable to NaN encoding which is not currently well supported
     // test that all things that generate NaN generate positive ones
     // otherwise we'd need to check in any primitive that could create a NaN
     // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
@@ -783,13 +830,13 @@ test "order" {
         obj: Object,
     };
     const buf1 = (Buf{ .obj = Object.from(42) }).buf;
-    try ee(buf1[0], 42);
-    try ee(buf1[6], 252);
-    try ee(buf1[7], 255);
+    try ee(buf1[1], 42);
+    try ee(buf1[0], 129);
+    try ee(buf1[2], 0);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
     }).buf;
-    try ee(buf2[0], 0);
-    try ee(buf2[6], 69);
-    try ee(buf2[7], 64);
+    try ee(buf2[0], 6);
+    try ee(buf2[6], 80);
+    try ee(buf2[7], 4);
 }
