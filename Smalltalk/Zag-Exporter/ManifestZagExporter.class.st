@@ -48,7 +48,7 @@ ManifestZagExporter class >> ruleMinMaxRuleV1FalsePositive [
 ManifestZagExporter class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:15:57.925386-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:15:57.925386-05:00') #(#(#RGMethodDefinition #(#ASImageExporter #objectSymbol: #false)) #'2024-12-18T22:13:44.901327-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -62,5 +62,5 @@ ManifestZagExporter class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 ManifestZagExporter class >> ruleUsesTrueRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-12-14T12:15:02.427121-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #initialize #false)) #'2024-12-14T12:15:02.427121-05:00') #(#(#RGMethodDefinition #(#ASImageExporter #initClasses #false)) #'2024-12-20T08:34:15.162734-05:00') )
 ]

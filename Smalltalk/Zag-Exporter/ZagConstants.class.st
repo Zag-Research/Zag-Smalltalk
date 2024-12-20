@@ -111,11 +111,11 @@ ZagConstants class >> initialize [
 { #category : 'class initialization' }
 ZagConstants class >> initializeClassConstants [
 
-	ClassFalse := 12.
-	ClassTrue := 13.
-	ClassSmallInteger := 14.
-	ClassSymbol := 15.
-	ClassCharacter := 16.
+	ClassFalse := 14.
+	ClassTrue := 15.
+	ClassSmallInteger := 16.
+	ClassSymbol := 17.
+	ClassCharacter := 18.
 	ClassUndefinedObject := 32.
 	ClassFloat := 33.
 	ClassString := 40.

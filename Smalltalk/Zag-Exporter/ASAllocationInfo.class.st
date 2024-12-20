@@ -10,7 +10,8 @@ Class {
 		'footerLength',
 		'extra',
 		'instVars',
-		'format'
+		'format',
+		'targetHeap'
 	],
 	#classVars : [
 		'HashCounter'
@@ -106,10 +107,9 @@ ASAllocationInfo >> header: classNumber into: anImage [
 	| length |
 	length := instVars + extra + footerLength.
 	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
-	(anImage currentHeap hasSpaceFor: length) ifFalse: [
-		anImage addSubHeap ].
+	targetHeap := anImage findHeapWithSpaceFor: length + 1.
 	HashCounter := HashCounter + 1.
-	^ anImage currentHeap
+	^ targetHeap
 		  header:
 			  length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
 			  + classNumber
@@ -137,14 +137,14 @@ ASAllocationInfo >> put: anObject into: anImage [
 	| address class |
 	class := anImage class: anObject class.
 	address := self header: class into: anImage.
-	anImage currentHeap
+	targetHeap
 		at: address
-		with: ((1 to: instVars) collect: [ :i | anObject instVarAt: i ])
-		do: [ :v | v encodedBy: anImage ].
+		size: instVars
+		do: [ :i | (anObject instVarAt: i) encodedBy: anImage ].
 	extra > 0 ifTrue: [
-	anImage currentHeap
-		at: address + instVars
-		with: anObject
-		do: [ :v | v encodedBy: anImage ]].
+		targetHeap
+			at: address + instVars
+			size: anObject size
+			do: [ :i | (anObject at: i) encodedBy: anImage ] ].
 	^ anImage pointer: address
 ]

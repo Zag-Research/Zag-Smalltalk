@@ -20,21 +20,9 @@ ASImageTest >> image: aBlock equals: value [
 
 	| result image |
 	image := ASImageExporter test constants: constants.
-	result := ByteArray streamContents: [ :s |
-		          aBlock value: image.
-		          image currentHeap toStream: s ].
-	self
-		assert: result asU64Array first hexString
-		equals: image currentHeap address hexString.
-	value isInteger
-		ifTrue: [
-			self
-				assert: result asU64Array fourth hexString
-				equals: value hexString ]
-		ifFalse: [
-			self
-				assert: ((result asU64Array allButFirst: 3) collect: #hexString)
-				equals: (value collect: #hexString) ]
+	result := aBlock value: image.
+	self assert: result hexString equals: value hexString.
+
 ]
 
 { #category : 'running' }
