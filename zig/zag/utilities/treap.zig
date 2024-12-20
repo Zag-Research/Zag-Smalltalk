@@ -290,34 +290,36 @@ test "treap element sizes" {
     try expectEqual(@sizeOf(Treap(u32, u16, u8).Element), 12);
 }
 test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-insert-and-delete/" {
-    if (includeStdTest) {
-        const n = 20;
-        var memory = [_]Treap_u64.Element{undefined} ** (n + 1);
-        var treap = Treap_u64.init(memory[0..], compareU64, 0);
-        _ = try treap.insert(50);
-        _ = try treap.insert(30);
-        _ = try treap.insert(20);
-        _ = try treap.insert(40);
-        _ = try treap.insert(70);
-        _ = try treap.insert(60);
-        _ = try treap.insert(80);
-        std.debug.print("\nInorder traversal of the given tree \n", .{});
-        treap.inorderPrint();
-        treap.remove(20);
-        std.debug.print("Inorder traversal of the tree after remove 20 \n", .{});
-        treap.inorderPrint();
-        treap.remove(30);
-        std.debug.print("Inorder traversal of the tree after remove 20,30 \n", .{});
-        treap.inorderPrint();
-        treap.remove(50);
-        std.debug.print("Inorder traversal of the tree after remove 20,30,50 \n", .{});
-        treap.inorderPrint();
-        _ = try treap.insert(20);
-        _ = try treap.insert(30);
-        _ = try treap.insert(50);
-        std.debug.print("Inorder traversal of the tree after added back \n", .{});
-        treap.inorderPrint();
-    } else std.debug.print(" - Set includeStdTest=true to include this test ", .{});
+    if (!includeStdTest) {
+        std.debug.print(" - Set includeStdTest=true to include this test\n", .{});
+        return error.SkipZigTest;
+    }
+    const n = 20;
+    var memory = [_]Treap_u64.Element{undefined} ** (n + 1);
+    var treap = Treap_u64.init(memory[0..], compareU64, 0);
+    _ = try treap.insert(50);
+    _ = try treap.insert(30);
+    _ = try treap.insert(20);
+    _ = try treap.insert(40);
+    _ = try treap.insert(70);
+    _ = try treap.insert(60);
+    _ = try treap.insert(80);
+    std.debug.print("\nInorder traversal of the given tree \n", .{});
+    treap.inorderPrint();
+    treap.remove(20);
+    std.debug.print("Inorder traversal of the tree after remove 20 \n", .{});
+    treap.inorderPrint();
+    treap.remove(30);
+    std.debug.print("Inorder traversal of the tree after remove 20,30 \n", .{});
+    treap.inorderPrint();
+    treap.remove(50);
+    std.debug.print("Inorder traversal of the tree after remove 20,30,50 \n", .{});
+    treap.inorderPrint();
+    _ = try treap.insert(20);
+    _ = try treap.insert(30);
+    _ = try treap.insert(50);
+    std.debug.print("Inorder traversal of the tree after added back \n", .{});
+    treap.inorderPrint();
 }
 test "simple u64 treap alloc with nextFree" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -406,22 +408,22 @@ test "simple u64 treap alloc" {
 }
 test "full u64 treap alloc" {
     if (includeStdTest) {
-        std.debug.print(" - Set includeStdTest=false to include this test ", .{});
-    } else {
-        const expectEqual = @import("std").testing.expectEqual;
-        const n = 21;
-        var memory = [_]Treap_u64.Element{undefined} ** (n + 1);
-        var treap = Treap_u64.init(memory[0..], compareU64, 0);
-        var index: u64 = 1;
-        while (treap.hasRoom(1)) : (index += 1) {
-            _ = try treap.insert(index);
-        }
-        try expectEqual(treap.lookup(20), 20);
-        var depths = [_]u32{0} ** (n + 1);
-        treap.depths(depths[0..]);
-        // std.debug.print("depths={any}\n",.{depths});
-        // std.debug.print("treap={}\n",.{treap});
+        std.debug.print(" - Set includeStdTest=false to include this test\n", .{});
+        return error.SkipZigTest;
     }
+    const expectEqual = @import("std").testing.expectEqual;
+    const n = 21;
+    var memory = [_]Treap_u64.Element{undefined} ** (n + 1);
+    var treap = Treap_u64.init(memory[0..], compareU64, 0);
+    var index: u64 = 1;
+    while (treap.hasRoom(1)) : (index += 1) {
+        _ = try treap.insert(index);
+    }
+    try expectEqual(treap.lookup(20), 20);
+    var depths = [_]u32{0} ** (n + 1);
+    treap.depths(depths[0..]);
+    // std.debug.print("depths={any}\n",.{depths});
+    // std.debug.print("treap={}\n",.{treap});
 }
 test "simple u64 treap range" {
     const expectEqual = @import("std").testing.expectEqual;
