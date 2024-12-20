@@ -16,6 +16,16 @@ pub inline fn fromHash32(hash: u32) object.Object {
 inline fn symbol_of(index: u32, arity: u4) object.Object {
     return fromHash32((index << 5 | @as(u32, arity) << 1 | 1) *% inversePhi32);
 }
+inline fn unPhi(obj: object.Object) u32 {
+    return @as(u32, @truncate(obj.hash56())) *% undoPhi32;
+}
+pub inline fn symbolIndex(obj: object.Object) u32 {
+    return unPhi(obj)>>5;
+}
+pub inline fn symbolArity(obj: object.Object) u4 {
+    return @truncate(unPhi(obj) >> 1);
+}
+
 pub inline fn symbol0(index: u32) object.Object {
     return symbol_of(index, 0);
 }
@@ -86,7 +96,7 @@ pub const symbols = struct {
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
     pub const fibonacci = symbol3(53);
     // define any new symbols here
-    pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(54); // always have this the last initial symbol so the tests verify all the counts are correct
     pub const i_0 = indexSymbol(0);
     pub const i_1 = indexSymbol(1);
     pub const i_2 = indexSymbol(2);
@@ -168,11 +178,8 @@ pub const SymbolTable = struct {
         self.allocator.free(self.mem);
         self.* = undefined;
     }
-    fn unPhi(obj: object.Object) u32 {
-        return @as(u32, @truncate(obj.hash56())) *% undoPhi32;
-    }
     fn asString(self: *Self, string: object.Object) object.Object {
-        return self.theTreap(0).getKey(unPhi(string)>>5);
+        return self.theTreap(0).getKey(symbolIndex(string));
     }
     pub fn lookup(self: *Self, string: object.Object) object.Object {
         return lookupDirect(self.theTreap(0), string);
@@ -210,31 +217,35 @@ pub const SymbolTable = struct {
             _ = internDirect(trp, string.asObject());
     }
     fn verify(self: *Self, symbol: object.Object) !void {
-        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[unPhi(symbol) - 1].asObject()));
+        try std.testing.expectEqual(symbol, self.lookup(initialSymbolStrings[symbolIndex(symbol) - 1].asObject()));
     }
 };
 pub const noStrings = &[0]heap.HeapConstPtr{};
-// test "symbols match initialized symbol table" {
-//     const expectEqual = std.testing.expectEqual;
-//     const expect = std.testing.expect;
-//     var symbol = SymbolTable.init(&globalAllocator);
-//     defer symbol.deinit();
-//     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-//     const trp = symbol.theTreap(0);
-//     try expectEqual(symbols.Object, SymbolTable.internDirect(trp, initialSymbolStrings[initialSymbolStrings.len - 1].asObject()));
-//     for (initialSymbolStrings, 0..) |string, idx|
-//         try expectEqual(symbol_of(@intCast(idx+1),0).hash32(), symbol.lookup(string.asObject()).hash32());
-//     // test a few at random to verify arity
-//     try symbol.verify(symbols.@"cull:");
-//     try symbol.verify(symbols.@"cull:cull:");
-//     try symbol.verify(symbols.@"cull:cull:cull:");
-//     try symbol.verify(symbols.@"cull:cull:cull:cull:");
-//     try symbol.verify(symbols.value);
-//     try symbol.verify(symbols.@"+");
-//     try symbol.verify(symbols.size);
-//     try symbol.verify(symbols.Object);
-//     try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
-// }
+test "symbols match initialized symbol table" {
+    const expectEqual = std.testing.expectEqual;
+    const expect = std.testing.expect;
+    var symbol = SymbolTable.init(&globalAllocator);
+    defer symbol.deinit();
+    symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
+    try expectEqual(symbolIndex(symbols.@"="),1);
+    try expectEqual(symbolArity(symbols.@"="),1);
+    try expectEqual(symbolIndex(symbols.value),2);
+    try expectEqual(symbolArity(symbols.value),0);
+    try expectEqual(symbolIndex(symbols.Object),54);
+    try expectEqual(symbolArity(symbols.Object),0);
+    try expectEqual(symbols.Object.rawU(),0x94AD1A7989);
+    try expectEqual(symbols.@"value:value:".rawU(),0x8608D29D89);
+    // test a few at random to verify arity
+    try symbol.verify(symbols.@"cull:");
+    try symbol.verify(symbols.@"cull:cull:");
+    try symbol.verify(symbols.@"cull:cull:cull:");
+    try symbol.verify(symbols.@"cull:cull:cull:cull:");
+    try symbol.verify(symbols.value);
+    try symbol.verify(symbols.@"+");
+    try symbol.verify(symbols.size);
+    try symbol.verify(symbols.Object);
+    try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+}
 test "force second allocation of symbol treap" {
     const moreSymbolStrings = heap.compileStrings(.{
         "xxx00", "xxx01", "xxx02", "xxx03", "xxx04", "xxx05", "xxx06", "xxx07", "xxx08", "xxx09",

@@ -7,12 +7,12 @@ const config = @import("config.zig");
 // const std = @This().std;
 const debugError = false;
 const symbol = if (debugError) struct {
-    const inversePhi24 = @import("utilities.zig").inversePhi(u24);
+    const inversePhi32 = @import("utilities.zig").inversePhi(u32);
     pub inline fn fromHash32(hash: u32) Object {
         return Object.makeImmediate(.Symbol, hash);
     }
     inline fn symbol_of(index: u24, arity: u8) Object {
-        return fromHash32(@as(u32, index *% inversePhi24) << 8 | arity);
+        return fromHash32((index << 5 | @as(u32, arity) << 1 | 1) *% inversePhi32);
     }
     pub inline fn symbol0(index: u24) Object {
         return symbol_of(index, 0);
