@@ -4,6 +4,11 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Create a "update-submodules" step
+    const update_submodules_step = b.step("update-submodules", "Update git submodules");
+    const run_step = b.addSystemCommand(&[_][]const u8{ "git", "submodule", "update", "--init", "--recursive" });
+    update_submodules_step.dependOn(&run_step.step);
+
     // LLVM MODULE
     const llvm_module = b.addModule("llvm", .{
         .root_source_file = b.path("./libs/zig-llvm/src/llvm.zig"),
