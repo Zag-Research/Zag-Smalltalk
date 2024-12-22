@@ -3,7 +3,7 @@ Extension { #name : 'ASImageExporter' }
 { #category : '*Zag-Exporter-Tests' }
 ASImageExporter >> encodingOf: anObject [
 
-	^ currentHeap addU64: (anObject encodedBy: self)
+	^ anObject encodedBy: self
 ]
 
 { #category : '*Zag-Exporter-Tests' }

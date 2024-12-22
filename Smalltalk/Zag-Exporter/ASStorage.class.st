@@ -66,15 +66,6 @@ ASStorage >> add: size do: aBlock [
 	^ save * 8 + address
 ]
 
-{ #category : 'adding' }
-ASStorage >> addU64: anInteger [
-
-	freeIndex > storage size ifTrue: [ ^ nil ].
-	storage at: freeIndex put: anInteger.
-	freeIndex := freeIndex + 1.
-	^ anInteger 
-]
-
 { #category : 'accessing' }
 ASStorage >> address [
 

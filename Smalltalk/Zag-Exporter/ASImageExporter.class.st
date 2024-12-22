@@ -18,7 +18,8 @@ Class {
 		'classTableRef',
 		'currentHeap',
 		'constants',
-		'requireThreadedCode'
+		'requireThreadedCode',
+		'extraSymbols'
 	],
 	#pools : [
 		'ZagConstants'
@@ -209,18 +210,21 @@ ASImageExporter >> currentHeap [
 	^ currentHeap
 ]
 
-{ #category : 'initialization' }
-ASImageExporter >> initialize [
+{ #category : 'as yet unclassified' }
+ASImageExporter >> findHeapWithSpaceFor: size [
 
-	super initialize.
-	objects := IdentityDictionary new.
-	symbols := Dictionary new.
-	classes := Dictionary new.
-	methods := Dictionary new.
-	selectors := Set new.
-	newClasses := OrderedCollection new.
-	newSelectors := OrderedCollection new.
-	requireThreadedCode := false.
+	(currentHeap hasSpaceFor: size) ifFalse: [
+		self addSubHeap ].
+	^ currentHeap
+]
+
+{ #category : 'output' }
+ASImageExporter >> header: anInteger size: anInteger2 [ 
+	self shouldBeImplemented.
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> initClasses [
 	{
 		#ThunkReturnHeap.
 		#ThunkReturnLocal.
@@ -239,7 +243,20 @@ ASImageExporter >> initialize [
 		Symbol.
 		Character.
 		#ShortString.
-		#UnUsed18. #UnUsed19. #UnUsed20. #UnUsed21. #UnUsed22. #UnUsed23. #UnUsed24. #UnUsed25. #UnUsed26. #UnUsed27. #UnUsed28. #UnUsed29. #UnUsed30. #UnUsed31. 
+		#UnUsed18.
+		#UnUsed19.
+		#UnUsed20.
+		#UnUsed21.
+		#UnUsed22.
+		#UnUsed23.
+		#UnUsed24.
+		#UnUsed25.
+		#UnUsed26.
+		#UnUsed27.
+		#UnUsed28.
+		#UnUsed29.
+		#UnUsed30.
+		#UnUsed31.
 		UndefinedObject.
 		Float.
 		ProtoObject.
@@ -254,9 +271,39 @@ ASImageExporter >> initialize [
 		Process.
 		Class.
 		CompiledMethod.
-		#Dispatch
- } do: [ :class | self class: class ]. " has to match zobject.zig "
+		#Dispatch } do: [ :class | self class: class ] " has to match zobject.zig "
+]
 
+{ #category : 'initialization' }
+ASImageExporter >> initSymbols [
+
+	extraSymbols := OrderedCollection new: 500.
+	#( #= value value: cull: yourself doesNotUnderstand:
+	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	   negated new new: value:value:value: value:value:value:value:
+	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
+	   perform: perform:with: perform:with:with: perform:with:with:with:
+	   perform:withArguments: perform:withArguments:inSuperclass:
+	   fibonacci Object ) do: [ :aString | self objectSymbol: aString ].
+	extraSymbols removeLast: extraSymbols size.
+	(self objectSymbol: #Object) inspect
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> initialize [
+
+	super initialize.
+	objects := IdentityDictionary new.
+	classes := Dictionary new.
+	methods := Dictionary new.
+	selectors := Set new.
+	newClasses := OrderedCollection new.
+	newSelectors := OrderedCollection new.
+	requireThreadedCode := false.
+	self initClasses
 ]
 
 { #category : 'accessing' }
@@ -353,9 +400,10 @@ ASImageExporter >> objectSymbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self objectSymbol: aString asSymbol ].
 	^ constants
-		  literal:
-			  (symbols at: aString ifAbsentPut: [ symbols size + 1 ]) << 8
-			  + aString numArgs
+		  literal: (self symbols at: aString ifAbsentPut: [
+				   extraSymbols add: aString.
+				   symbols size + 1 << 5 + (aString numArgs << 1) + 1 * 2654435769
+					   bitAnd: 16rffffffff ])
 		  class: ClassSymbol
 ]
 
@@ -371,15 +419,6 @@ ASImageExporter >> pointer: p [
 	^ constants pointer: p
 ]
 
-{ #category : 'writing' }
-ASImageExporter >> putU64: anInteger [
-	"output in little-endian order"
-
-	(currentHeap hasSpaceFor: 1) ifFalse: [
-		  self addSubHeap].
-	^ currentHeap addU64: anInteger
-]
-
 { #category : 'enumerating' }
 ASImageExporter >> requiringThreadedCodeDo: aBlock [
 
@@ -392,6 +431,26 @@ ASImageExporter >> requiringThreadedCodeDo: aBlock [
 ASImageExporter >> selector: aSymbol [
 	^ selectors add: aSymbol andIfNewDo:  [ newSelectors add: aSymbol ].
 
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> symbols [
+
+	symbols ifNotNil: [ ^ symbols ].
+	symbols := Dictionary new.
+	extraSymbols := OrderedCollection new: 500.
+	#( #= value value: cull: yourself doesNotUnderstand:
+	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	   negated new new: value:value:value: value:value:value:value:
+	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
+	   perform: perform:with: perform:with:with: perform:with:with:with:
+	   perform:withArguments: perform:withArguments:inSuperclass:
+	   fibonacci Object ) do: [ :aString | self objectSymbol: aString ].
+	extraSymbols removeLast: extraSymbols size.
+	^ symbols
 ]
 
 { #category : 'writing' }

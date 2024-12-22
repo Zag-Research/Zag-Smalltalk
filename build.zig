@@ -1,73 +1,138 @@
-const std = @import("std"); 
+const std = @import("std");
 
-const debugPath = "zig/fibonacci.zig";
-// "JanTest.zig" "zig/fibonacci.zig";
-
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
-pub fn build(b: *std.Build) void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
-
-    // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "zig",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = debugPath },
+    // Create a "update-submodules" step
+    const update_submodules_step = b.step("update-submodules", "Update git submodules");
+    const run_step = b.addSystemCommand(&[_][]const u8{ "git", "submodule", "update", "--init", "--recursive" });
+    update_submodules_step.dependOn(&run_step.step);
+
+    // LLVM MODULE
+    const llvm_module = b.addModule("llvm", .{
+        .root_source_file = b.path("./libs/zig-llvm/src/llvm.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
+    llvm_module.addCMacro("_FILE_OFFSET_BITS", "64");
+    llvm_module.addCMacro("__STDC_CONSTANT_MACROS", "");
+    llvm_module.addCMacro("__STDC_FORMAT_MACROS", "");
+    llvm_module.addCMacro("__STDC_LIMIT_MACROS", "");
+    llvm_module.linkSystemLibrary("z", .{});
+
+    if (target.result.abi != .msvc)
+        llvm_module.link_libc = true
+    else
+        llvm_module.link_libcpp = true;
+
+    switch (target.result.os.tag) {
+        .linux => llvm_module.linkSystemLibrary("LLVM-18", .{}), // Ubuntu
+        .macos => {
+            llvm_module.addLibraryPath(.{
+                .cwd_relative = "/opt/homebrew/opt/llvm/lib",
+            });
+            llvm_module.linkSystemLibrary("LLVM", .{
+                .use_pkg_config = .no,
+            });
+        },
+        else => llvm_module.linkSystemLibrary("LLVM", .{
+            .use_pkg_config = .no,
+        }),
+    }
+
+    // CLANG MODULE
+    const clang_module = b.addModule("clang", .{
+        .root_source_file = b.path("./libs/zig-llvm/src/clang.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    switch (target.result.os.tag) {
+        .linux => clang_module.linkSystemLibrary("clang-18", .{}), // Ubuntu
+        .macos => {
+            clang_module.addLibraryPath(.{
+                .cwd_relative = "/opt/homebrew/opt/llvm/lib",
+            });
+            clang_module.linkSystemLibrary("clang", .{
+                .use_pkg_config = .no,
+            });
+        },
+        else => clang_module.linkSystemLibrary("clang", .{
+            .use_pkg_config = .no,
+        }),
+    }
+
+    if (target.result.abi != .msvc)
+        clang_module.link_libc = true
+    else
+        clang_module.link_libcpp = true;
+
+    // Instead of building examples from examples/, we now build a file from llvm/ directory
+    // If you want to conditionally build a specific llvm file, add logic here.
+    const examples = b.option(bool, "Examples", "Build all examples [default: false]") orelse false;
+    if (examples) {
+        buildExample(b, .{
+            .filepath = "./llvm/example.zig",
+            .target = target,
+            .optimize = optimize,
+        });
+    }
+
+    buildTests(b, target);
+}
+
+fn buildExample(b: *std.Build, i: BuildInfo) void {
+    const exe = b.addExecutable(.{
+        .name = i.filename(),
+        .root_source_file = b.path(i.filepath),
+        .target = i.target,
+        .optimize = i.optimize,
+    });
+    exe.root_module.addImport("llvm", b.modules.get("llvm").?);
+
     b.installArtifact(exe);
 
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
     const run_cmd = b.addRunArtifact(exe);
 
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
     run_cmd.step.dependOn(b.getInstallStep());
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
-    // This creates a build step. It will be visible in the `zig build --help` menu,
-    // and can be selected like this: `zig build run`
-    // This will evaluate the `run` step rather than the default, which is "install".
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step(i.filename(), b.fmt("Run the {s}", .{i.filename()}));
     run_step.dependOn(&run_cmd.step);
+}
 
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = debugPath },
+const BuildInfo = struct {
+    filepath: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+
+    fn filename(self: BuildInfo) []const u8 {
+        var split = std.mem.splitSequence(u8, std.fs.path.basename(self.filepath), ".");
+        return split.first();
+    }
+};
+
+fn buildTests(b: *std.Build, target: std.Build.ResolvedTarget) void {
+    const llvm_tests = b.addTest(.{
+        .root_source_file = b.path("./libs/zig-llvm/src/llvm.zig"),
         .target = target,
-        .optimize = optimize,
+        .optimize = .Debug,
+        .name = "llvm-tests",
     });
+    const clang_tests = b.addTest(.{
+        .root_source_file = b.path("./libs/zig-llvm/src/clang.zig"),
+        .target = target,
+        .optimize = .Debug,
+        .name = "clang-tests",
+    });
+    llvm_tests.root_module.addImport("llvm", b.modules.get("llvm").?);
+    clang_tests.root_module.addImport("clang", b.modules.get("clang").?);
 
-    const run_unit_tests = b.addRunArtifact(unit_tests);
-
-    // Similar to creating the run step earlier, this exposes a `test` step to
-    // the `zig build --help` menu, providing a way for the user to request
-    // running the unit tests.
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_unit_tests.step);
+    const run_llvm_tests = b.addRunArtifact(llvm_tests);
+    const test_llvm_step = b.step("test", "Run LLVM-binding tests");
+    test_llvm_step.dependOn(&run_llvm_tests.step);
 }
