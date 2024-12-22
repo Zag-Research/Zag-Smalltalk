@@ -56,9 +56,6 @@ zig/sieve
 *.a
 *-generated.zig
 
-# Additions
-/JanTest.zig
-.zig-cache/
-zig-cache/
+*zig-cache*
 zig-out/
 *.ll
