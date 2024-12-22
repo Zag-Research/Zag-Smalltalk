@@ -18,53 +18,46 @@ const TFContext = execute.TFContext;
 const tfAsContext = execute.tfAsContext;
 const MethodSignature = execute.MethodSignature;
 const compileMethod = execute.compileMethod;
-var Mfibonacci = compileMethod(Sym.fibonacci,0,4,.SmallInteger,.{
-    &e.pushContext,"^",
-    ":Mfibonacci:1",
-    &e.pushLocal,0,
-    &e.pushLiteral,Object.from(2),
-    &e.setupSend,Sym.@"<=",
-    &e.dynamicDispatch,
-    ":Mfibonacci:2",
-    &e.BlockClosure.fullClosure,"1mref",
-    &e.setupSend,Sym.@"ifTrue:",
-    &e.dynamicDispatch,
-    ":Mfibonacci:3",
-    &e.drop,
-    &e.pushLocal,0,
-    &e.pushLiteral,Object.from(1),
-    &e.setupSend,Sym.@"-",
-    &e.dynamicDispatch,
-    ":Mfibonacci:4",
-    &e.setupSend,Sym.fibonacci,
-    &e.dynamicDispatch,
-    ":Mfibonacci:5",
-    &e.pushLocal,0,
-    &e.pushLiteral,Object.from(2),
-    &e.setupSend,Sym.@"-",
-    &e.dynamicDispatch,
-    ":Mfibonacci:6",
-    &e.setupSend,Sym.fibonacci,
-    &e.dynamicDispatch,
-    ":Mfibonacci:7",
-    &e.setupSend,Sym.@"+",
-    &e.dynamicDispatch,
-    &e.returnTop,
+var Mfibonacci = compileMethod(Sym.fibonacci, 0, 4, .SmallInteger, .{
+    &e.pushContext,     "^",
+    ":Mfibonacci:1",    &e.pushLocal,
+    0,                  &e.pushLiteral,
+    Object.from(2),     &e.setupSend,
+    Sym.@"<=",          &e.dynamicDispatch,
+    ":Mfibonacci:2",    &e.BlockClosure.fullClosure,
+    "1mref",            &e.setupSend,
+    Sym.@"ifTrue:",     &e.dynamicDispatch,
+    ":Mfibonacci:3",    &e.drop,
+    &e.pushLocal,       0,
+    &e.pushLiteral,     Object.from(1),
+    &e.setupSend,       Sym.@"-",
+    &e.dynamicDispatch, ":Mfibonacci:4",
+    &e.setupSend,       Sym.fibonacci,
+    &e.dynamicDispatch, ":Mfibonacci:5",
+    &e.pushLocal,       0,
+    &e.pushLiteral,     Object.from(2),
+    &e.setupSend,       Sym.@"-",
+    &e.dynamicDispatch, ":Mfibonacci:6",
+    &e.setupSend,       Sym.fibonacci,
+    &e.dynamicDispatch, ":Mfibonacci:7",
+    &e.setupSend,       Sym.@"+",
+    &e.dynamicDispatch, &e.returnTop,
 });
-var Mfibonacci_1 = compileMethod(Sym.value,0,2,.BlockClosure,.{
+var Mfibonacci_1 = compileMethod(Sym.value, 0, 2, .BlockClosure, .{
     ":Mvalue:1",
-    &e.pushLiteral,Object.from(1),
+    &e.pushLiteral,
+    Object.from(1),
     &e.returnNonLocal,
 });
 const Sym = struct {
     fibonacci: Object,
     const ss = heap.compileStrings(.{
-	"fibonacci",
+        "fibonacci",
     });
     usingnamespace symbol.symbols;
     fn init() Sym {
         return .{
-	    .fibonacci = symbol.intern(ss[0].asObject()),
+            .fibonacci = symbol.intern(ss[0].asObject()),
         };
     }
 };
@@ -74,8 +67,8 @@ const p = primitives.primitives;
 fn initSmalltalk() void {
     primitives.init();
     sym = Sym.init();
-    Mfibonacci.setLiterals(&[_]Object{sym.fibonacci},&[_]Object{@bitCast(@intFromPtr(&Mfibonacci_1))});
-    Mfibonacci_1.setLiterals(&[_]Object{},&[_]Object{});
+    Mfibonacci.setLiterals(&[_]Object{sym.fibonacci}, &[_]Object{@bitCast(@intFromPtr(&Mfibonacci_1))});
+    Mfibonacci_1.setLiterals(&[_]Object{}, &[_]Object{});
 }
 pub fn main() !void {
     initSmalltalk();

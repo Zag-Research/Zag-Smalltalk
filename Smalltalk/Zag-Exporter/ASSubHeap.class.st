@@ -47,18 +47,25 @@ ASSubHeap class >> size: anExporter [
 ]
 
 { #category : 'output' }
-ASSubHeap >> at: location with: aCollection do: aBlock [
+ASSubHeap >> at: location size: size do: aBlock [
 
 	| offset |
 	offset := location - address / 8.
-	1 to: aCollection size do: [ :i |
-		storage at: offset + i put: (aBlock value: (aCollection at: i)) ]
+	1 to: size do: [ :i |
+		storage at: offset + i put: (aBlock value: i) ]
+]
+
+{ #category : 'output' }
+ASSubHeap >> at: location with: aCollection do: aBlock [
+
+	^ self at: location size: aCollection size do: [ : i | aBlock value: (aCollection at: i) ]
+
 ]
 
 { #category : 'testing' }
 ASSubHeap >> hasSpaceFor: anInteger [
 
-	^ freeIndex + anInteger < storage size
+	^ freeIndex + anInteger <= storage size
 ]
 
 { #category : 'output' }

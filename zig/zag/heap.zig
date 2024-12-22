@@ -397,9 +397,9 @@ pub const AllocationInfo = struct {
     pub fn of(comptime x: anytype) Self {
         const T = @TypeOf(x);
         return switch (@typeInfo(T)) {
-            .Array => |a| calc(0, a.len, a.child, false),
-            .Pointer => |p| calc(0, x.len, p.child, false),
-            .Struct => calc(@sizeOf(T) / @sizeOf(Object), null, Object, false),
+            .array => |a| calc(0, a.len, a.child, false),
+            .pointer => |p| calc(0, x.len, p.child, false),
+            .@"struct" => calc(@sizeOf(T) / @sizeOf(Object), null, Object, false),
             else => |unknown| @compileLog(unknown),
         };
     }
@@ -930,7 +930,7 @@ pub fn growSize(obj: anytype, comptime Target: type) !usize {
     const T = @TypeOf(obj);
     if (T == Object) return growSize(obj.arrayAsSlice(Target), Target);
     switch (@typeInfo(T)) {
-        .Pointer => |ptr| if (ptr.child != Target) @compileError("types must match " ++ @typeName(ptr.child) ++ " and " ++ @typeName(Target)),
+        .pointer => |ptr| if (ptr.child != Target) @compileError("types must match " ++ @typeName(ptr.child) ++ " and " ++ @typeName(Target)),
         else => @compileError("only pointer types: " ++ @typeName(T)),
     }
     var size = (obj.len * @sizeOf(Target) + @sizeOf(Object) - 1) / @sizeOf(Object);

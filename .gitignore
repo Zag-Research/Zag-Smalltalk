@@ -56,7 +56,6 @@ zig/sieve
 *.a
 *-generated.zig
 
-# Additions
 *zig-cache*
 zig-out/
 *.ll
