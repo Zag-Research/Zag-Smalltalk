@@ -34,8 +34,7 @@ We extend this slightly, by using all 8 possible tag values:
 | `xxxxxxxx`  | ...          | ...        | `xxxxxxxx` | `xxxxxxxx` | `10000001` | `SmallInteger`            |
 | `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `hhhhhhhh` | `10001001` | `Symbol`                  |
 | `00000000`  | ...          | `00000uuu` | `uuuuuuuu` | `uuuuuuuu` | `10010001` | `Character`               |
-| char7 or 0  | ...          | ...        | char2      | char1      | `10011001` | `ShortString`             |
-| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10100001` | reserved                  |
+| `xxxxxxxx`  | ...          | ...        | ...        | ...        | `10011001` | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | ...        | -          | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | ...        | `11111001` | reserved                  |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | ...        | `mmmmmmmm` | `mmmms010` | `Float`                   |
@@ -70,7 +69,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 15. `True`: This encodes the singleton value `true`.
 16. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
 17. `Symbol`: See [Symbols](Symbols.md) for detailed information on the format.
-18. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
+18. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
 19. to 31 unused
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits.
 33. `Float`: the bit patterns that encode double-precision IEEE floating point.

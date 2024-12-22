@@ -35,8 +35,8 @@ After all inlining is completed there will typically be push operations that are
 ## Optimizing local variable locations
 If we have block closures, we now determine the optimum location for each method-scoped variable. There are several possibilities:
 1. If a variable is only referenced in the method, it will be put in the `Context` (or just on the stack if no context is created).
-2. If the variable is only referenced in one `BlockClosure` then it will be created as a local variable there.
-3. If a variable isn't modified after a `BlockClosure` (in which it's referenced) is created, it can be copied to that closure as a read-only value and only exist as a local variable in the creating unit. Alternately, it could be only in that closure.
+2. If a variable is referenced only in a single `BlockClosure`, but is assigned to before it could be referenced, then it can be a local for the block rather then an instance variable, which is more efficient (saves a level of indirection; *can* save ever hitting memory). If the variable is referenced first, it must be created as an instance variable in the `BlockClosure`.
+3. If a variable isn't modified after any `BlockClosure`s (in which it's referenced) are created, it can be copied to those closures as a read-only value and only exist as a local variable in the creating unit. Alternately, if it is modified in the method, but not in any `BlockClosure`s, it will be placed in one of the closures that reference it.
 4. For values referenced in two or more places, modified in at least one, the default would be to put them in the `Context`.  However, if a `BlockClosure` has a reference to the `Context` and the closure gets moved to the heap, it will drag the entire stack with it. Therefore the only closures that reference the context will be ones with non-local returns (or that create closures that need a context reference). Variables referenced in non-local-return closures will be placed in the context.
 5. All other variables will be placed in a closure that modifies the variable.
 ## Non-structural inlining
