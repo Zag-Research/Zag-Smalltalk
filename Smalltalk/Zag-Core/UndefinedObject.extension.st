@@ -6,10 +6,6 @@ UndefinedObject >> astObject: anASImage [
 ]
 
 { #category : '*Zag-Core' }
-UndefinedObject >> isNonLocalThunkable [ ^ true
-]
-
-{ #category : '*Zag-Core' }
 UndefinedObject >> threadFormatOn: threadPrinter [
 
 	

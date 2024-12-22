@@ -23,12 +23,6 @@ SmallInteger >> fib [
 ]
 
 { #category : '*Zag-Core' }
-SmallInteger >> isNonLocalThunkable [
-
-	^ self between: -1 and: 2
-]
-
-{ #category : '*Zag-Core' }
 SmallInteger >> withIndex: anIndex [
 	(anIndex == 1) ifTrue: [ ^ self asString ] ifFalse: [ ^ ' + ( ', self asString, ' << ', (12* (anIndex-1)) asString, ' )' ]
 

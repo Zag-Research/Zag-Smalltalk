@@ -6,7 +6,6 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'symbols',
-		'classes',
 		'currentAddress',
 		'objects',
 		'process',
@@ -19,7 +18,10 @@ Class {
 		'currentHeap',
 		'constants',
 		'requireThreadedCode',
-		'extraSymbols'
+		'extraSymbols',
+		'classIndices',
+		'numberOfClasses',
+		'classes'
 	],
 	#pools : [
 		'ZagConstants'
@@ -123,26 +125,10 @@ ASImageExporter >> addSubHeap [
 	currentHeap := (currentHeap ifNil: [ ASSubHeap ]) addStorage: self
 ]
 
-{ #category : 'accessing' }
-ASImageExporter >> canonicalClasses: aClass [
-	| name side |
-	side := aClass isInstanceSide ifTrue: [ #instanceSide ] ifFalse: [ #classSide ].
-	name := aClass instanceSide name.
-	^ ((name beginsWith: 'AST') ifTrue: [
-			Smalltalk at: (name allButFirst: 3) ifPresent: [: c | { aClass . c } ] ifAbsent: [ { aClass } ]
-		] ifFalse: [
-			Smalltalk at: ('AST',name) asSymbol ifPresent: [: c | { c . aClass } ] ifAbsent: [ { aClass } ]
-		]) collect: side
-]
-
 { #category : 'adding' }
-ASImageExporter >> class: aClass [
+ASImageExporter >> classIndex: aClass [
 
-	| cc |
-	cc := aClass isClass ifFalse: [ aClass] ifTrue: [(self canonicalClasses: aClass) first].
-	^ classes at: cc ifAbsentPut: [
-		  aClass isClass ifTrue: [newClasses add: cc].
-		  classes size + 1 ]
+	^ classIndices at: aClass ifAbsentPut: [ numberOfClasses := numberOfClasses + 1 ]
 ]
 
 { #category : 'writing' }
@@ -162,7 +148,7 @@ ASImageExporter >> closeOverClassesAndSelectors [
 			cc first encodedBy: self.
 			selectors do: [ :selector | self addFirstMethod: selector in: cc ] ].
 		tempSelectors do: [ :selector |
-			classes keysDo: [ :class |
+			classIndices keysDo: [ :class |
 				self addFirstMethod: selector in: (self canonicalClasses: class) ] ] ]
 ]
 
@@ -198,9 +184,9 @@ ASImageExporter >> constants: constantsClass [
 ASImageExporter >> createClassTable [
 
 	| table |
-	table := Array new: classes size.
-	classes keysAndValuesDo: [ :class :number |
-		table at: number + 1 put: (class encodedBy: self) ].
+	table := Array new: numberOfClasses.
+	classIndices keysAndValuesDo: [ :class :number |
+		table at: number put: (class zagClass encodedBy: self) ].
 	^ table
 ]
 
@@ -218,23 +204,22 @@ ASImageExporter >> findHeapWithSpaceFor: size [
 	^ currentHeap
 ]
 
-{ #category : 'output' }
-ASImageExporter >> header: anInteger size: anInteger2 [ 
-	self shouldBeImplemented.
-]
-
 { #category : 'initialization' }
 ASImageExporter >> initClasses [
+
+	classIndices := Dictionary new.
 	{
-		#ThunkReturnHeap.
 		#ThunkReturnLocal.
 		#ThunkReturnInstance.
 		#ThunkReturnSmallInteger.
 		#ThunkReturnImmediate.
 		#ThunkReturnCharacter.
+		#ThunkReturnFloat.
+		#ThunkHeap.
+		#ThunkLocal.
+		#ThunkInstance.
 		#BlockAssignLocal.
 		#BlockAssignInstance.
-		#ThunkGetInstance.
 		#ThunkImmediate.
 		#ThunkFloat.
 		False.
@@ -242,21 +227,19 @@ ASImageExporter >> initClasses [
 		SmallInteger.
 		Symbol.
 		Character.
-		#ShortString.
-		#UnUsed18.
-		#UnUsed19.
-		#UnUsed20.
-		#UnUsed21.
-		#UnUsed22.
-		#UnUsed23.
-		#UnUsed24.
-		#UnUsed25.
-		#UnUsed26.
-		#UnUsed27.
-		#UnUsed28.
-		#UnUsed29.
-		#UnUsed30.
-		#UnUsed31.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
+		nil.
 		UndefinedObject.
 		Float.
 		ProtoObject.
@@ -271,25 +254,9 @@ ASImageExporter >> initClasses [
 		Process.
 		Class.
 		CompiledMethod.
-		#Dispatch } do: [ :class | self class: class ] " has to match zobject.zig "
-]
-
-{ #category : 'initialization' }
-ASImageExporter >> initSymbols [
-
-	extraSymbols := OrderedCollection new: 500.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass:
-	   fibonacci Object ) do: [ :aString | self objectSymbol: aString ].
-	extraSymbols removeLast: extraSymbols size.
-	(self objectSymbol: #Object) inspect
+		#Dispatch } withIndexDo: [ :class :index |
+		numberOfClasses := index.
+		class ifNotNil: [ classIndices at: class put: index ] ]
 ]
 
 { #category : 'initialization' }
@@ -297,18 +264,12 @@ ASImageExporter >> initialize [
 
 	super initialize.
 	objects := IdentityDictionary new.
-	classes := Dictionary new.
 	methods := Dictionary new.
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
 	requireThreadedCode := false.
 	self initClasses
-]
-
-{ #category : 'accessing' }
-ASImageExporter >> method: aCompiledMethod [
-	^ methods at: aCompiledMethod ifAbsentPut: [ self compileMethod: aCompiledMethod ]
 ]
 
 { #category : 'accessing' }
@@ -333,10 +294,17 @@ ASImageExporter >> objectCharacter: aCharacter [
 { #category : 'adding' }
 ASImageExporter >> objectClass: aClass [
 
-	| cc |
-	cc := (self canonicalClasses: aClass) first.
-	self shouldBeImplemented.
-	^ classes at: cc ifAbsentPut: [ classes size ]
+	| nInstVars ai class metaClass |
+	classes at: aClass ifPresent: [ :it | ^ it ].
+	class := aClass zagClass.
+	metaClass := class class.
+	nInstVars := metaClass allSlots size.
+	ai := ASAllocationInfo headerIVars: nInstVars.
+	classes at: aClass put: (ai reserve: aClass in: self).
+	^ ai
+		  put: class
+		  into: self
+		  ivBlock: [ :i | (i = 1 ifTrue: [ aClass name ]) encodedBy: self ]
 ]
 
 { #category : 'writing' }
@@ -351,24 +319,38 @@ ASImageExporter >> objectLiteral: hash class: class [
 	^ constants literal: hash class: class
 ]
 
-{ #category : 'adding' }
-ASImageExporter >> objectMethod: aMethod [
+{ #category : 'writing' }
+ASImageExporter >> objectMethod: aCompiledMethod [
 
-	self shouldBeImplemented
+	^ methods
+		  at: aCompiledMethod
+		  ifAbsentPut: [ self compileMethod: aCompiledMethod ]
+]
+
+{ #category : 'adding' }
+ASImageExporter >> objectNonObjectArray: anObject [
+
+	| ai |
+	objects at: anObject ifPresent: [ :it | ^ it ].
+	ai := ASAllocationInfo
+		      headerIVars: anObject class allSlots size
+		      indexed: anObject size.
+	objects at: anObject put: (ai reserve: anObject in: self).
+	^ ai put: anObject into: self indexBlock: [ : i | anObject at: i ]
 ]
 
 { #category : 'adding' }
 ASImageExporter >> objectObject: anObject [
 
 	| nInstVars nExtra ai class |
+	objects at: anObject ifPresent: [ :it | ^ it ].
 	class := anObject class.
 	nInstVars := class allSlots size.
 	nExtra := class isVariable ifTrue: [ anObject size ].
-	ai := ASAllocationInfo
-		      headerIVars: nInstVars
-		      indexed: nExtra
-		      element: nil
-		      weak: false.
+	ai := ASAllocationInfo headerIVars: nInstVars indexed: nExtra.
+	objects at: anObject put: (ai
+			 reserve: anObject in: self;
+			 pointer).
 	^ ai put: anObject into: self
 ]
 
@@ -381,18 +363,18 @@ ASImageExporter >> objectSmallInteger: anInteger [
 { #category : 'adding' }
 ASImageExporter >> objectString: aString [
 
-	| ai result |
-	ai := ASAllocationInfo
-		      headerIVars: 0
-		      indexed: aString size
-		      element: 1
-		      weak: false.
-	result := ai header: ClassString into: self.
-	currentHeap
-		at: result
-		with: aString asByteArray asU64Array
-		do: [ :chunk | chunk ].
-	^ self pointer: result
+	^ objects at: aString ifAbsentPut: [
+		  | ai |
+		  ai := ASAllocationInfo
+			        headerIVars: 0
+			        indexed: aString size
+			        element: Character.
+		  ai reserveClassIndex: ClassString in: self.
+		  currentHeap
+			  at: ai address
+			  with: aString asByteArray asU64Array
+			  do: [ :chunk | chunk ].
+		  ai pointer ]
 ]
 
 { #category : 'writing' }

@@ -12,11 +12,6 @@ Boolean >> astObject: anASImage [
 ]
 
 { #category : '*Zag-Core' }
-Boolean >> isNonLocalThunkable [ 
-^ true
-]
-
-{ #category : '*Zag-Core' }
 Boolean >> zigCompileObjectReference: anASZigCompileObjectGenerator [ 
 	^ nil
 ]

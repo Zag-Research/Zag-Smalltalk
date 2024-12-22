@@ -11,7 +11,9 @@ Class {
 		'extra',
 		'instVars',
 		'format',
-		'targetHeap'
+		'targetHeap',
+		'address',
+		'pointer'
 	],
 	#classVars : [
 		'HashCounter'
@@ -25,11 +27,37 @@ Class {
 }
 
 { #category : 'adding' }
+ASAllocationInfo class >> headerIVars: iVars [
+
+	^ self
+		  headerIVars: iVars
+		  indexed: nil
+		  element: Object
+		  weak: false
+]
+
+{ #category : 'adding' }
+ASAllocationInfo class >> headerIVars: iVars indexed: nElements [
+
+	^ self
+		  headerIVars: iVars
+		  indexed: nElements
+		  element: Object
+		  weak: false
+]
+
+{ #category : 'adding' }
+ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element [
+
+	^ self headerIVars: iVars indexed: nElements element: element weak: false
+]
+
+{ #category : 'adding' }
 ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element weak: makeWeak [
 
 	nElements ifNotNil: [
 		| arraySize |
-		arraySize := nElements * (element ifNil: [ 8 ]) + 7 // 8.
+		arraySize := nElements * (element = Character ifTrue: [ 1 ] ifFalse: [ 8 ]) + 7 // 8.
 		makeWeak ifTrue: [
 			iVars + arraySize + 3 > MaxHeaderLength ifTrue: [
 				^ self new
@@ -42,12 +70,12 @@ ASAllocationInfo class >> headerIVars: iVars indexed: nElements element: element
 				  extra: arraySize;
 				  footerLength: 3 ].
 		iVars == 0 ifTrue: [
-			(nElements == 0 or: [ element = 1 and: [ nElements < 110 ] ])
+			(nElements == 0 or: [ element = Character and: [ nElements < 110 ] ])
 				ifTrue: [
 					^ self new
 						  format: nElements;
 						  extra: arraySize ].
-			element ifNil: [
+			element = Object ifTrue: [
 				nElements <= MaxHeaderLength ifTrue: [
 					^ self new
 						  format: FormatDirectIndexed;
@@ -101,21 +129,6 @@ ASAllocationInfo >> format: fmt [
 	format := fmt
 ]
 
-{ #category : 'accessing' }
-ASAllocationInfo >> header: classNumber into: anImage [
-
-	| length |
-	length := instVars + extra + footerLength.
-	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
-	targetHeap := anImage findHeapWithSpaceFor: length + 1.
-	HashCounter := HashCounter + 1.
-	^ targetHeap
-		  header:
-			  length << 4 + AgeStatic << 8 + format << 24 + HashCounter << 16
-			  + classNumber
-		  size: length
-]
-
 { #category : 'initialization' }
 ASAllocationInfo >> initialize [
 
@@ -134,17 +147,56 @@ ASAllocationInfo >> instVars: n [
 { #category : 'accessing' }
 ASAllocationInfo >> put: anObject into: anImage [
 
-	| address class |
-	class := anImage class: anObject class.
-	address := self header: class into: anImage.
-	targetHeap
-		at: address
-		size: instVars
-		do: [ :i | (anObject instVarAt: i) encodedBy: anImage ].
+	^ self
+		  put: anObject
+		  ivBlock: [ :i | (anObject instVarAt: i) encodedBy: anImage ]
+		  indexBlock: [ :i | (anObject at: i) encodedBy: anImage ]
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> put: anObject into: anImage indexBlock: indexBlock [
+
+	^ self
+		  put: anObject
+		  ivBlock: [ :i | (anObject instVarAt: i) encodedBy: anImage ]
+		  indexBlock: indexBlock
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> put: anObject into: anImage ivBlock: ivBlock [
+
+	^ self put: anObject ivBlock: ivBlock indexBlock: nil
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> put: anObject ivBlock: ivBlock indexBlock: indexBlock [
+
+	targetHeap at: address size: instVars do: ivBlock.
 	extra > 0 ifTrue: [
-		targetHeap
-			at: address + instVars
-			size: anObject size
-			do: [ :i | (anObject at: i) encodedBy: anImage ] ].
-	^ anImage pointer: address
+		targetHeap at: address + instVars size: anObject size do: indexBlock ].
+	^ pointer
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> reserve: anObject in: anImage [
+
+	| classindex |
+	classindex := anImage classIndex: anObject class.
+	^ self reserveClassIndex: classindex in: anImage
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> reserveClassIndex: classindex in: anImage [
+
+	| length |
+	length := instVars + extra + footerLength.
+	length < MaxHeaderLength ifFalse: [ self error: 'header too big' ].
+	targetHeap := anImage findHeapWithSpaceFor: length + 1.
+	HashCounter := HashCounter + 1.
+	address := targetHeap
+		           header:
+			           length << 4 + AgeStatic << 8 + format << 24
+			           + HashCounter << 16 + classindex
+		           size: length.
+	^ pointer := anImage pointer: address
 ]

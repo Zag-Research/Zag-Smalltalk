@@ -13,7 +13,7 @@ Class {
 ManifestZagExporter class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASAllocationInfo #put:into: #false)) #'2024-12-05T13:54:10.100834-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASAllocationInfo #put:into: #false)) #'2024-12-05T13:54:10.100834-05:00') #(#(#RGMethodDefinition #(#ASAllocationInfo #put:into:indexBlock: #false)) #'2024-12-22T09:16:23.685897-05:00') )
 ]
 
 { #category : 'code-critics' }
