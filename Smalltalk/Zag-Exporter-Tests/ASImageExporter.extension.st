@@ -15,5 +15,5 @@ ASImageExporter class >> test [
 { #category : '*Zag-Exporter-Tests' }
 ASImageExporter >> testOutput [
 
-	currentHeap := ASSubHeap new: 1000 at: 16r100000 exporter: self
+	currentHeap := ASSubHeap new: 4096 at: 16r100000 exporter: self
 ]

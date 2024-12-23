@@ -64,6 +64,13 @@ ASImageExporter class >> image [
 ]
 
 { #category : 'export' }
+ASImageExporter class >> imageFolder [
+
+	imageFolder ifNil: [ self setUpImageFolder ].
+	^ imageFolder
+]
+
+{ #category : 'export' }
 ASImageExporter class >> imageFolder: anObject [
 	
 	imageFolder := anObject
@@ -97,12 +104,15 @@ ASImageExporter class >> primitiveNumbers: aCollection [
 
 { #category : 'initialization' }
 ASImageExporter class >> setUpImageFolder [
-	
+
 	| folder |
-	folder := UIManager default chooseDirectory: self setUpImageFolderPrompt.
-	self ifInvalidFolder: folder do: [  
-		^self error: 'Image: Invalid folder for exporting image'].
-	self imageFolder: folder.
+	<script>
+	folder := UIManager default chooseDirectory:
+		          self setUpImageFolderPrompt.
+	self
+		ifInvalidFolder: folder
+		do: [ ^ self error: 'Image: Invalid folder for exporting image' ].
+	self imageFolder: folder
 ]
 
 { #category : 'initialization' }
@@ -411,6 +421,7 @@ ASImageExporter >> selector: aSymbol [
 { #category : 'initialization' }
 ASImageExporter >> symbols [
 
+	" add these symbols to the dictionary, but then remove them from the extraSymbols collection because the zag runtime already knows about them "
 	symbols ifNotNil: [ ^ symbols ].
 	symbols := Dictionary new.
 	extraSymbols := OrderedCollection new: 500.

@@ -127,7 +127,7 @@ ZagConstants class >> initializeHeapConstants [
 
 	AgeStatic := 7.
 	BaseAddress := 16r100000.
-	MaxHeaderLength := 4093.
+	MaxHeaderLength := 4092.
 	FormatNotIndexable := 112.
 	FormatIndexedNonObject := 113.
 	FormatExternalNonObject := 114.
