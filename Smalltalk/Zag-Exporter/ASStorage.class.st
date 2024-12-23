@@ -23,7 +23,10 @@ Class {
 { #category : 'adding' }
 ASStorage class >> addStorage: anExporter [
 
-	^ self new: self defaultSize at: self defaultAddress exporter: anExporter
+	^ self
+		  new: self defaultSize
+		  at: self defaultAddress
+		  exporter: anExporter
 ]
 
 { #category : 'adding' }
@@ -72,6 +75,22 @@ ASStorage >> address [
 	^ address
 ]
 
+{ #category : 'output' }
+ASStorage >> at: location size: size do: aBlock [
+
+	| offset |
+	offset := location - address / 8.
+	1 to: size do: [ :i |
+		storage at: offset + i put: (aBlock value: i) ]
+]
+
+{ #category : 'output' }
+ASStorage >> at: location with: aCollection do: aBlock [
+
+	^ self at: location size: aCollection size do: [ : i | aBlock value: (aCollection at: i) ]
+
+]
+
 { #category : 'accessing' }
 ASStorage >> exporter: anImageExporter address: anInteger size: size [
 
@@ -81,17 +100,20 @@ ASStorage >> exporter: anImageExporter address: anInteger size: size [
 	self initializeStorage
 ]
 
-{ #category : 'accessing' }
-ASStorage >> formatClass: class ivSize: ivSize arraySize: arraySize [
+{ #category : 'testing' }
+ASStorage >> hasSpaceFor: anInteger [
 
-	self halt
+	^ freeIndex + anInteger <= storage size
 ]
 
-{ #category : 'accessing' }
-ASStorage >> headerSize: size format: format hash: hash class: class [
+{ #category : 'output' }
+ASStorage >> header: header size: size [
 
-	^ class + ((hash bitAnd: 16rffffff) bitShift: 16)
-	  + (format bitShift: 40) + 16r8000000000000 + (size bitShift: 52)
+	| headerLocation |
+	headerLocation := freeIndex.
+	freeIndex := freeIndex + size + 1.
+	storage at: headerLocation put: header.
+	^ headerLocation * 8 + address
 ]
 
 { #category : 'initialization' }
@@ -103,40 +125,6 @@ ASStorage >> initializeStorage [
 { #category : 'output' }
 ASStorage >> prepareForOutput [
 
-]
-
-{ #category : 'accessing' }
-ASStorage >> register: registerBlock ivBlock: iBlock arrayBlock: aBlock ivSize: ivSize arraySize: arraySize class: class [
-
-	| save size |
-	size := ivSize + (arraySize ifNil: [ 0 ]).
-	size >= MaxHeaderLength ifTrue: [
-		^ self
-			  registerBig: registerBlock
-			  ivBlock: iBlock
-			  arrayBlock: aBlock
-			  instVars: ivSize
-			  array: arraySize
-			  class: class ].
-	save := freeIndex.
-	freeIndex := freeIndex + size + 1.
-	storage at: save put: (self
-			 headerSize: size
-			 format:
-			 (self formatClass: class ivSize: ivSize arraySize: arraySize)
-			 hash: save - 1 * 8 + address
-			 class: class).
-	registerBlock value: save - 1 * 8 + address.
-	1 to: ivSize do: [ :i | storage at: save + i put: (iBlock cull: i) ].
-	1 to: arraySize do: [ :i |
-	storage at: save + i + ivSize put: (aBlock cull: i) ].
-	^ true
-]
-
-{ #category : 'accessing' }
-ASStorage >> registerBig: anObject ivBlock: iBlock arrayBlock: aBlock instVars: ivSize array: arraySize class: class [
-
-	self error: 'can''t handle big arrays yet'
 ]
 
 { #category : 'accessing' }

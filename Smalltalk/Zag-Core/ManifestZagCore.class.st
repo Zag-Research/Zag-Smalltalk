@@ -119,13 +119,6 @@ ManifestZagCore class >> ruleMissingSubclassResponsibilityRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
-ManifestZagCore class >> rulePrecedenceRuleV1FalsePositive [
-
-	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-11-28T23:36:08.577709-05:00') )
-]
-
-{ #category : 'code-critics' }
 ManifestZagCore class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
 
 	<ignoreForCoverage>

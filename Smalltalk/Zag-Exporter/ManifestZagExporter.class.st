@@ -20,7 +20,7 @@ ManifestZagExporter class >> ruleBadMessageRule2V1FalsePositive [
 ManifestZagExporter class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:16:07.550458-05:00') #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-12-08T22:22:53.410073-05:00') )
+	^ #( #(#(#RGMethodDefinition #(#'ASAllocationInfo class' #headerIVars:indexed:element:weak: #true)) #'2024-12-08T22:22:53.410073-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -48,7 +48,7 @@ ManifestZagExporter class >> ruleMinMaxRuleV1FalsePositive [
 ManifestZagExporter class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASStorage #register:ivBlock:arrayBlock:ivSize:arraySize:class: #false)) #'2024-12-05T13:15:57.925386-05:00') #(#(#RGMethodDefinition #(#ASImageExporter #objectSymbol: #false)) #'2024-12-18T22:13:44.901327-05:00') )
+	^ #( #(#(#RGMethodDefinition #(#ASImageExporter #objectSymbol: #false)) #'2024-12-18T22:13:44.901327-05:00') )
 ]
 
 { #category : 'code-critics' }

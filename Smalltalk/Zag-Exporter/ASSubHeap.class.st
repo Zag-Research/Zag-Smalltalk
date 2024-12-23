@@ -16,12 +16,6 @@ Class {
 	#tag : 'Exporting'
 }
 
-{ #category : 'instance creation' }
-ASSubHeap class >> address: anExporter [
-
-	^ anExporter nextSubheapAddress
-]
-
 { #category : 'adding' }
 ASSubHeap class >> defaultAddress [
 
@@ -40,67 +34,26 @@ ASSubHeap class >> extension [
 	^ '.heap'
 ]
 
-{ #category : 'instance creation' }
-ASSubHeap class >> size: anExporter [
+{ #category : 'adding' }
+ASSubHeap >> addStorage: anExporter [
 
-	^ 128 * 1024 / 8
-]
-
-{ #category : 'output' }
-ASSubHeap >> at: location size: size do: aBlock [
-
-	| offset |
-	offset := location - address / 8.
-	1 to: size do: [ :i |
-		storage at: offset + i put: (aBlock value: i) ]
-]
-
-{ #category : 'output' }
-ASSubHeap >> at: location with: aCollection do: aBlock [
-
-	^ self at: location size: aCollection size do: [ : i | aBlock value: (aCollection at: i) ]
-
-]
-
-{ #category : 'testing' }
-ASSubHeap >> hasSpaceFor: anInteger [
-
-	^ freeIndex + anInteger <= storage size
-]
-
-{ #category : 'output' }
-ASSubHeap >> header: header size: size [
-
-	| headerLocation |
-	headerLocation := freeIndex.
-	freeIndex := freeIndex + size + 1.
-	storage at: headerLocation put: header.
-	^ headerLocation * 8 + address
+	| size nextAddress |
+	size := storage size.
+	nextAddress := size * 8 + address.
+	storage at: 2 put: nextAddress.
+	^ self class new: size at: nextAddress exporter: anExporter
 ]
 
 { #category : 'initialization' }
 ASSubHeap >> initializeStorage [
 
 	storage at: 1 put: address.
-	freeIndex := 4.
-	largeHeapObjects := OrderedCollection new
-]
-
-{ #category : 'initialization' }
-ASSubHeap >> nextHeap: anAddress [
-
-	storage at: 2 put: anAddress
+	freeIndex := 4
 ]
 
 { #category : 'output' }
 ASSubHeap >> prepareForOutput [
 
-	largeHeapObjects size = 0 ifTrue: [ ^ self ].
-	self
-		register: [ : addr | storage at: 3 put: addr ]
-		ivBlock: [  ]
-		arrayBlock: [ :i | largeHeapObjects at: i ]
-		ivSize: 0
-		arraySize: largeHeapObjects size
-		class: ClassDoubleWordArray
+	largeHeapObjects ifNil: [ ^ self ].
+	self halt
 ]

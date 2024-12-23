@@ -20,8 +20,8 @@ Class {
 		'requireThreadedCode',
 		'extraSymbols',
 		'classIndices',
-		'numberOfClasses',
-		'classes'
+		'classes',
+		'lastClassIndex'
 	],
 	#pools : [
 		'ZagConstants'
@@ -128,7 +128,7 @@ ASImageExporter >> addSubHeap [
 { #category : 'adding' }
 ASImageExporter >> classIndex: aClass [
 
-	^ classIndices at: aClass ifAbsentPut: [ numberOfClasses := numberOfClasses + 1 ]
+	^ classIndices at: aClass ifAbsentPut: [ lastClassIndex := lastClassIndex + 1 ]
 ]
 
 { #category : 'writing' }
@@ -184,7 +184,7 @@ ASImageExporter >> constants: constantsClass [
 ASImageExporter >> createClassTable [
 
 	| table |
-	table := Array new: numberOfClasses.
+	table := Array new: lastClassIndex.
 	classIndices keysAndValuesDo: [ :class :number |
 		table at: number put: (class zagClass encodedBy: self) ].
 	^ table
@@ -255,7 +255,7 @@ ASImageExporter >> initClasses [
 		Class.
 		CompiledMethod.
 		#Dispatch } withIndexDo: [ :class :index |
-		numberOfClasses := index.
+		lastClassIndex := index.
 		class ifNotNil: [ classIndices at: class put: index ] ]
 ]
 
@@ -264,7 +264,8 @@ ASImageExporter >> initialize [
 
 	super initialize.
 	objects := IdentityDictionary new.
-	methods := Dictionary new.
+	classes := IdentityDictionary new.
+	methods := IdentityDictionary new.
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
@@ -286,9 +287,7 @@ ASImageExporter >> objectBoolean: value [
 { #category : 'writing' }
 ASImageExporter >> objectCharacter: aCharacter [
 
-	^ self
-		  objectLiteral: aCharacter asInteger
-		  class: ClassCharacter
+	^ constants literal: aCharacter asInteger class: ClassCharacter
 ]
 
 { #category : 'adding' }
@@ -311,12 +310,6 @@ ASImageExporter >> objectClass: aClass [
 ASImageExporter >> objectFloat: aFloat [
 
 	^ constants double: aFloat for: self
-]
-
-{ #category : 'writing' }
-ASImageExporter >> objectLiteral: hash class: class [
-
-	^ constants literal: hash class: class
 ]
 
 { #category : 'writing' }
@@ -381,12 +374,13 @@ ASImageExporter >> objectString: aString [
 ASImageExporter >> objectSymbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self objectSymbol: aString asSymbol ].
-	^ constants
-		  literal: (self symbols at: aString ifAbsentPut: [
-				   extraSymbols add: aString.
-				   symbols size + 1 << 5 + (aString numArgs << 1) + 1 * 2654435769
-					   bitAnd: 16rffffffff ])
-		  class: ClassSymbol
+	^ self symbols at: aString ifAbsentPut: [
+		  extraSymbols add: aString.
+		  constants
+			  literal:
+				  (symbols size + 1 << 5 + (aString numArgs << 1) + 1 * 2654435769
+					   bitAnd: 16rffffffff)
+			  class: ClassSymbol ]
 ]
 
 { #category : 'writing' }
@@ -405,8 +399,7 @@ ASImageExporter >> pointer: p [
 ASImageExporter >> requiringThreadedCodeDo: aBlock [
 
 	requireThreadedCode := true.
-	aBlock value.
-	requireThreadedCode := false
+	[aBlock value] ensure: [requireThreadedCode := false]
 ]
 
 { #category : 'adding' }

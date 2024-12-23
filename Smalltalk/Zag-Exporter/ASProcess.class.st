@@ -10,22 +10,10 @@ Class {
 	#tag : 'Exporting'
 }
 
-{ #category : 'instance creation' }
-ASProcess class >> address: anExporter [
-
-	^ anExporter nextProcessAddress
-]
-
 { #category : 'accessing' }
 ASProcess class >> extension [
 
 	^ '.process'
-]
-
-{ #category : 'instance creation' }
-ASProcess class >> size: anExporter [
-
-	^ 64 * 1024 / 8
 ]
 
 { #category : 'initialization' }

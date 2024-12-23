@@ -22,12 +22,6 @@ ASLargeHeapObject class >> new: words [
 	^ self new allocate: words
 ]
 
-{ #category : 'instance creation' }
-ASLargeHeapObject class >> size: anExporter [
-
-	^ self shouldNotBeRedefined
-]
-
 { #category : 'initialization' }
 ASLargeHeapObject >> initializeStorage [
 
