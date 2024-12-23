@@ -112,6 +112,11 @@ ASAllocationInfo class >> reset [
 ]
 
 { #category : 'accessing' }
+ASAllocationInfo >> address [
+	^ address
+]
+
+{ #category : 'accessing' }
 ASAllocationInfo >> extra: anObject [
 
 	extra := anObject
@@ -142,6 +147,12 @@ ASAllocationInfo >> initialize [
 ASAllocationInfo >> instVars: n [
 
 	instVars := n
+]
+
+{ #category : 'accessing' }
+ASAllocationInfo >> pointer [
+
+	^ pointer
 ]
 
 { #category : 'accessing' }
