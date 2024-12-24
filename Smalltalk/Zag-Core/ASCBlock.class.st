@@ -35,8 +35,8 @@ ASCBlock >> inferType: anASCodeGenerator [
 { #category : 'printing' }
 ASCBlock >> inspectZagASTOn: aStream [
 
-	"super inspectZagASTOn: aStream."
-	block inspectZagASTOn: aStream
+	super inspectZagASTOn: aStream
+	".block inspectZagASTOn: aStream"
 	"aStream << block asBlock body printString"
 ]
 
