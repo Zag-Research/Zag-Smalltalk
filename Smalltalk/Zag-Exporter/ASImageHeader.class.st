@@ -27,16 +27,28 @@ ASImageHeader class >> extension [
 	^ '.header'
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'initialization' }
 ASImageHeader >> codeAddresses: pointer [
 
-	storage at: 7 put: pointer
+	storage at: 6 put: pointer
 ]
 
-{ #category : 'as yet unclassified' }
-ASImageHeader >> dispatchTable: pointer [
+{ #category : 'initialization' }
+ASImageHeader >> dispatchTable: aCollection [
 
-	storage at: 6 put: pointer
+	| newStorage |
+	newStorage := DoubleWordArray new: 6 + aCollection size.
+	1 to: 6 do: [ :index | newStorage at: index put: (storage at: index) ].
+	storage := newStorage.
+	freeIndex := storage size + 1.
+	aCollection withIndexDo: [ :each :index |
+		storage at: index + 6 put: each ]
+]
+
+{ #category : 'output' }
+ASImageHeader >> filename [
+
+	^ 'zag.header'
 ]
 
 { #category : 'initialization' }
@@ -53,7 +65,7 @@ ASImageHeader >> send: selector to: object [
 	storage at: 3 put: selector
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'initialization' }
 ASImageHeader >> symbolTable: pointer [
 
 	storage at: 5 put: pointer

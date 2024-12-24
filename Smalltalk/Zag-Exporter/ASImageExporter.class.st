@@ -22,7 +22,8 @@ Class {
 		'classIndices',
 		'classes',
 		'lastClassIndex',
-		'subHeaps'
+		'subHeaps',
+		'dispatchTable'
 	],
 	#pools : [
 		'ZagConstants'
@@ -215,9 +216,9 @@ ASImageExporter >> imageSending: aSymbol to: anObject [
 	header send: (aSymbol encodedBy: self) to: (anObject encodedBy: self).
 	header symbolTable:
 		((extraSymbols asChunkedArraysOfSize: 127) encodedBy: self).
-	header dispatchTable: (nil encodedBy: self).
 	header codeAddresses:
 		(ZagConstants asDoubleWordArray encodedBy: self).
+	header dispatchTable: (dispatchTable collect: [ : each | each encodedBy: self]).
 	^ header
 ]
 
@@ -287,6 +288,7 @@ ASImageExporter >> initialize [
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
 	subHeaps := OrderedCollection new.
+	dispatchTable := OrderedCollection new.
 	requireThreadedCode := false.
 	self addSubHeap.
 	self initClasses
