@@ -21,6 +21,9 @@ $ make install
 - [Richard Eng's post on the power of symmetry](https://medium.com/smalltalk-talk/lisp-smalltalk-and-the-power-of-symmetry-8bd96aaa0c0c)
 - [Alan Kay's "Early History of Smalltalk"](https://worrydream.com/EarlyHistoryOfSmalltalk/)
 - [Graph Neural Networks](https://www.analyticsvidhya.com/blog/2022/03/what-are-graph-neural-networks-and-how-do-they-work/)
+- [YC thread on Smalltalk bare-metal on Raspberry PI](https://news.ycombinator.com/item?id=34208753)
+- [Hidden Heroes on Alan Kay and the Dynabook](https://hiddenheroes.netguru.com/alan-kay)
+- [Dynabook - the laptop manufacturer (name inspired by Kay) - previously Toshiba](https://ca.dynabook.com/company/about-dynabook/) [Wikipedia](https://en.wikipedia.org/wiki/Dynabook_Inc.#The_first_Dynabook)
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
@@ -40,7 +43,7 @@ $ make install
 
 ### User interface
 - [_Chromium_ Embedded Framework](https://github.com/chromiumembedded/cef)
-### Architectures
+## Architectures
 #### HPC and architectures (cache et al)
 - [Algorithmica](https://en.algorithmica.org/hpc/)
 - [What Every Programmer Should Know About Memory](http://people.freebsd.org/~lstewart/articles/cpumemory.pdf)
@@ -72,6 +75,9 @@ $ make install
 ### Zig
 - [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
 - [Zig 0.10.0 release notes](https://ziglang.org/download/0.10.0/release-notes.html#Function-Pointers)
+
+## Miscellaneous
+- [Hidden Heroes](https://hiddenheroes.netguru.com/)
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
