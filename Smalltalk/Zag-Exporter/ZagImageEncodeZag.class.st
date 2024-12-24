@@ -21,7 +21,7 @@ ZagImageEncodeZag class >> double: aFloat for: anImage [
 	| fullFloat tag |
 	fullFloat := ((aFloat at: 1) bitShift: 32) + (aFloat at: 2).
 	tag := fullFloat >> 60 + 2.
-	tag & 6 = 0 ifTrue: [ ^ anImage objectFloat: fullFloat ].
+	tag & 6 = 0 ifTrue: [ ^ anImage objectHeapFloat: fullFloat ].
 	^ fullFloat & 16rfffffffffffffff << 4 + tag
 ]
 

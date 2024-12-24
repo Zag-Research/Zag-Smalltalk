@@ -17,6 +17,13 @@ ManifestZagExporter class >> ruleBadMessageRule2V1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestZagExporter class >> ruleBooleanPrecedenceRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncodeZag class' #double:for: #true)) #'2024-12-24T09:07:17.412955-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestZagExporter class >> ruleExcessiveArgumentsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
@@ -48,7 +55,14 @@ ManifestZagExporter class >> ruleMinMaxRuleV1FalsePositive [
 ManifestZagExporter class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #(#(#RGMethodDefinition #(#ASImageExporter #objectSymbol: #false)) #'2024-12-18T22:13:44.901327-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ASImageExporter #objectSymbol: #false)) #'2024-12-18T22:13:44.901327-05:00') #(#(#RGMethodDefinition #(#ASStorage #header:size: #false)) #'2024-12-24T10:03:43.095798-05:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestZagExporter class >> ruleReCollectionAtCollectionSizeRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ZagImageEncodeZag class' #double:for: #true)) #'2024-12-24T09:07:29.02622-05:00') )
 ]
 
 { #category : 'code-critics' }

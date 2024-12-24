@@ -35,13 +35,13 @@ ASSubHeap class >> extension [
 ]
 
 { #category : 'adding' }
-ASSubHeap >> addStorage: anExporter [
+ASSubHeap >> addStorage [
 
 	| size nextAddress |
 	size := storage size.
 	nextAddress := size * 8 + address.
 	storage at: 2 put: nextAddress.
-	^ self class new: size at: nextAddress exporter: anExporter
+	^ self class new exporter: exporter
 ]
 
 { #category : 'initialization' }

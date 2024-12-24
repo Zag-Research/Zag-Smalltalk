@@ -21,15 +21,6 @@ Class {
 }
 
 { #category : 'adding' }
-ASStorage class >> addStorage: anExporter [
-
-	^ self
-		  new: self defaultSize
-		  at: self defaultAddress
-		  exporter: anExporter
-]
-
-{ #category : 'adding' }
 ASStorage class >> defaultAddress [
 
 	^ self subclassResponsibility
@@ -45,18 +36,6 @@ ASStorage class >> defaultSize [
 ASStorage class >> extension [
 
 	^ self subclassResponsibility
-]
-
-{ #category : 'instance creation' }
-ASStorage class >> new [
-
-	^ self error: 'use new:at:exporter:'
-]
-
-{ #category : 'instance creation' }
-ASStorage class >> new: size at: address exporter: anExporter [
-
-	^ self basicNew exporter: anExporter address: address size: size
 ]
 
 { #category : 'accessing' }
@@ -79,7 +58,7 @@ ASStorage >> address [
 ASStorage >> at: location size: size do: aBlock [
 
 	| offset |
-	offset := location - address / 8.
+	offset := location - address / 8 + 1.
 	1 to: size do: [ :i |
 		storage at: offset + i put: (aBlock value: i) ]
 ]
@@ -92,12 +71,15 @@ ASStorage >> at: location with: aCollection do: aBlock [
 ]
 
 { #category : 'accessing' }
-ASStorage >> exporter: anImageExporter address: anInteger size: size [
+ASStorage >> exporter: anImageExporter [
 
-	exporter := anImageExporter.
-	address := anInteger.
-	storage := DoubleWordArray new: size.
-	self initializeStorage
+	exporter := anImageExporter
+]
+
+{ #category : 'output' }
+ASStorage >> filename [
+
+	^ 'zag_', ((address +16r1000000000000) hexString allButFirst: 4), self class extension
 ]
 
 { #category : 'testing' }
@@ -113,7 +95,16 @@ ASStorage >> header: header size: size [
 	headerLocation := freeIndex.
 	freeIndex := freeIndex + size + 1.
 	storage at: headerLocation put: header.
-	^ headerLocation * 8 + address
+	^ headerLocation - 1 * 8 + address
+]
+
+{ #category : 'initialization' }
+ASStorage >> initialize [
+
+	super initialize.
+	address := self class defaultAddress.
+	storage := DoubleWordArray new: self class defaultSize.
+	self initializeStorage
 ]
 
 { #category : 'initialization' }
@@ -131,6 +122,18 @@ ASStorage >> prepareForOutput [
 ASStorage >> size [
 
 	^ storage size * 8
+]
+
+{ #category : 'output' }
+ASStorage >> toDirectory: aDirectorReference [
+
+	| stream |
+	stream := (aDirectorReference / self filename openWritable: true)
+		          binaryWriteStream.
+	[ self toStream: stream ] ensure: [
+		stream
+			flush;
+			close ]
 ]
 
 { #category : 'output' }

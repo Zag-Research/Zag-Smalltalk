@@ -23,21 +23,21 @@ ASZagImageTest >> testObjects [
 
 	self
 		image: [ :i | i encodingOf: 'Hello World!' ]
-		equals: 16r100020
+		equals: 16r100018
 		withHeap: #( 16r270C0000010028 16r6F57206F6C6C6548
 		   16r21646C72 ).
 	self
 		image: [ :i | i encodingOf: #( 4 2 ) ]
-		equals: 16r100020
+		equals: 16r100018
 		withHeap: #( 16r27730000020027 16r481 16r281 ).
 	self
 		image: [ :i | i encodingOf: 4 @ 2 ]
-		equals: 16r100020
+		equals: 16r100018
 		withHeap: #( 16r2770000003002F 16r481 16r281 ).
 	self
 		image: [ :i | i encodingOf: #( #( 4 2 ) 1 ) ]
-		equals: 16r100020
-		withHeap: #( 16r27730000040027 16r100038 16r181 16r27730000050027
+		equals: 16r100018
+		withHeap: #( 16r27730000040027 16r100030 16r181 16r27730000050027
 			   16r481 16r281 )
 ]
 

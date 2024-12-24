@@ -21,7 +21,8 @@ Class {
 		'extraSymbols',
 		'classIndices',
 		'classes',
-		'lastClassIndex'
+		'lastClassIndex',
+		'subHeaps'
 	],
 	#pools : [
 		'ZagConstants'
@@ -51,16 +52,16 @@ ASImageExporter class >> exportPackages [
 			  (package name endsWith: '-Tests') not ] ]
 ]
 
+{ #category : 'accessing' }
+ASImageExporter class >> heapClass [
+
+	^ ASSubHeap
+]
+
 { #category : 'export' }
 ASImageExporter class >> ifInvalidFolder: folder do: aBlock [
 	
 	(folder isNil or: [folder exists not]) ifTrue: aBlock
-]
-
-{ #category : 'instance creation' }
-ASImageExporter class >> image [
-
-	^ super new initHeapHeader
 ]
 
 { #category : 'export' }
@@ -74,32 +75,6 @@ ASImageExporter class >> imageFolder [
 ASImageExporter class >> imageFolder: anObject [
 	
 	imageFolder := anObject
-]
-
-{ #category : 'instance creation' }
-ASImageExporter class >> new [
-
-	^ self error: 'use "image" or "test" to create instances of ',self name
-]
-
-{ #category : 'image analysis' }
-ASImageExporter class >> primitiveNumber: n [
-
-	^ ((#primitive: senders flatCollect: [ :m | m pragmas ])
-		    select: [ :p | p selector = #primitive: and: [p arguments first = n] ])
-]
-
-{ #category : 'image analysis' }
-ASImageExporter class >> primitiveNumbers [
-^ (((#primitive: senders flatCollect: [ :m| m pragmas]) select: [:p| p selector = #primitive: ] thenCollect: [:p| p arguments first ]) asSet asArray select: #isInteger) asSortedCollection 
-]
-
-{ #category : 'image analysis' }
-ASImageExporter class >> primitiveNumbers: aCollection [
-
-	^ ((#primitive: senders flatCollect: [ :m | m pragmas ]) select: [ :p |
-		  p selector = #primitive: and: [
-			  aCollection includes: p arguments first ] ]) asSortedCollection: [ :l :r | l arguments first <= r arguments first ]
 ]
 
 { #category : 'initialization' }
@@ -122,6 +97,15 @@ ASImageExporter class >> setUpImageFolderPrompt [
 ]
 
 { #category : 'writing' }
+ASImageExporter class >> writeImage [
+
+	<script>
+	self new
+		constants: ZagImageEncodeZag;
+		writeImageSending: #size to: #writeImage:
+]
+
+{ #category : 'writing' }
 ASImageExporter >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |
 		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
@@ -132,7 +116,10 @@ ASImageExporter >> addFirstMethod: selector in: canonicalClasses [
 { #category : 'writing' }
 ASImageExporter >> addSubHeap [
 
-	currentHeap := (currentHeap ifNil: [ ASSubHeap ]) addStorage: self
+	currentHeap := currentHeap
+		               ifNil: [ self class heapClass new exporter: self ]
+		               ifNotNil: [ currentHeap addStorage ].
+	subHeaps add: currentHeap
 ]
 
 { #category : 'adding' }
@@ -206,12 +193,32 @@ ASImageExporter >> currentHeap [
 	^ currentHeap
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'adding' }
 ASImageExporter >> findHeapWithSpaceFor: size [
 
 	(currentHeap hasSpaceFor: size) ifFalse: [
 		self addSubHeap ].
 	^ currentHeap
+]
+
+{ #category : 'export' }
+ASImageExporter >> imageFolder [
+
+	^ self class imageFolder
+]
+
+{ #category : 'writing' }
+ASImageExporter >> imageSending: aSymbol to: anObject [
+
+	| header |
+	header := ASImageHeader new.
+	header send: (aSymbol encodedBy: self) to: (anObject encodedBy: self).
+	header symbolTable:
+		((extraSymbols asChunkedArraysOfSize: 127) encodedBy: self).
+	header dispatchTable: (nil encodedBy: self).
+	header codeAddresses:
+		(ZagConstants asDoubleWordArray encodedBy: self).
+	^ header
 ]
 
 { #category : 'initialization' }
@@ -279,7 +286,9 @@ ASImageExporter >> initialize [
 	selectors := Set new.
 	newClasses := OrderedCollection new.
 	newSelectors := OrderedCollection new.
+	subHeaps := OrderedCollection new.
 	requireThreadedCode := false.
+	self addSubHeap.
 	self initClasses
 ]
 
@@ -320,6 +329,12 @@ ASImageExporter >> objectClass: aClass [
 ASImageExporter >> objectFloat: aFloat [
 
 	^ constants double: aFloat for: self
+]
+
+{ #category : 'writing' }
+ASImageExporter >> objectHeapFloat: aFloat [
+
+	^ self shouldBeImplemented; flag: #todo
 ]
 
 { #category : 'writing' }
@@ -446,14 +461,11 @@ ASImageExporter >> writeClassTable [
 ]
 
 { #category : 'writing' }
-ASImageExporter >> writeHeap [
+ASImageExporter >> writeImageSending: aSymbol to: anObject [
 
-	self writeSymbolTable.
-	self writeClassTable
-]
+	| folder |
+	folder := self imageFolder.
+	(self imageSending: aSymbol to: anObject) toDirectory: folder.
+	subHeaps do: [ : subHeap | subHeap toDirectory: folder]
 
-{ #category : 'writing' }
-ASImageExporter >> writeSymbolTable [
-
-	self halt
 ]

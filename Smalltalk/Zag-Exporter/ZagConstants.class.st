@@ -86,18 +86,19 @@ Class {
 ZagConstants class >> asDoubleWordArray [
 
 	^ DoubleWordArray withAll:
-		  { #T_Branch. #T_Call. #T_CallRecursive. #T_Drop. #T_DropNext.
-		  #T_Dup. #T_DynamicDispatch. #T_Fallback. #T_IfFalse. #T_IfNil.
-		  #T_IfNotNil. #T_IfTrue. #T_Over. #T_PopLocal. #T_PopLocal0.
-		  #T_PopLocalData. #T_PopLocalField. #T_PrintStack. #T_PushContext.
-		  #T_PushLiteral. #T_PushLiteral0. #T_PushLiteral1. #T_PushLiteral2.
-		  #T_PushLiteralFalse. #T_PushLiteralIndirect. #T_PushLiteralNil.
-		  #T_PushLiteralTrue. #T_PushLiteral_1. #T_PushLocal. #T_PushLocal0.
-		  #T_PushLocalData. #T_PushLocalField. #T_PushThisContext.
-		  #T_ReplaceLiteral. #T_ReplaceLiteral0. #T_ReplaceLiteral1.
-		  #T_ReturnNoContext. #T_ReturnNonLocal. #T_ReturnTop. #T_ReturnWithContext.
-		  #T_SetupSend. #T_SetupTailSend. #T_SetupTailSend0.
-		  #T_StoreLocal. #T_Swap. #T_VerifyMethod } , ((1 to: maxPrimitive) collect: [ : p | p + primitiveOffset ])
+		  { T_Branch. T_Call. T_CallRecursive. T_Drop. T_DropNext.
+		  T_Dup. T_DynamicDispatch. T_Fallback. T_IfFalse. T_IfNil.
+		  T_IfNotNil. T_IfTrue. T_Over. T_PopLocal. T_PopLocal0.
+		  T_PopLocalData. T_PopLocalField. T_PrintStack. T_PushContext.
+		  T_PushLiteral. T_PushLiteral0. T_PushLiteral1. T_PushLiteral2.
+		  T_PushLiteralFalse. T_PushLiteralIndirect. T_PushLiteralNil.
+		  T_PushLiteralTrue. T_PushLiteral_1. T_PushLocal. T_PushLocal0.
+		  T_PushLocalData. T_PushLocalField. T_PushThisContext.
+		  T_ReplaceLiteral. T_ReplaceLiteral0. T_ReplaceLiteral1.
+		  T_ReturnNoContext. T_ReturnNonLocal. T_ReturnTop. T_ReturnWithContext.
+		  T_SetupSend. T_SetupTailSend. T_SetupTailSend0.
+		  T_StoreLocal. T_Swap. T_VerifyMethod }
+		  , ((1 to: maxPrimitive) collect: [ :p | p + primitiveOffset ])
 ]
 
 { #category : 'class initialization' }

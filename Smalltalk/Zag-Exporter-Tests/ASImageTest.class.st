@@ -19,26 +19,24 @@ ASImageTest >> encoderClass [
 ASImageTest >> image: aBlock equals: value [
 
 	| result image |
-	image := ASImageExporter test constants: constants.
+	image := ASImageExporterForTest new constants: constants.
 	result := aBlock value: image.
-	self assert: result hexString equals: value hexString.
-
+	self assert: result hexString equals: value hexString
 ]
 
 { #category : 'running' }
 ASImageTest >> image: aBlock equals: value withHeap: aHeap [
 
 	| result image heap |
-	image := ASImageExporter test constants: constants.
+	image := ASImageExporterForTest new constants: constants.
 	result := aBlock value: image.
-	heap := ByteArray streamContents: [ :s |
-		image currentHeap toStream: s ].
+	heap := image currentHeap array.
 	self
-		assert: heap asU64Array first hexString
+		assert: heap first hexString
 		equals: image currentHeap address hexString.
 	self assert: result hexString equals: value hexString.
 	self
-		assert: ((heap asU64Array allButFirst: 3) collect: #hexString)
+		assert: ((heap allButFirst: 3) collect: #hexString as: Array)
 		equals: (aHeap collect: #hexString)
 ]
 
@@ -51,13 +49,28 @@ ASImageTest >> setUp [
 ]
 
 { #category : 'tests' }
+ASImageTest >> testChunking [
+
+	| result |
+	result := #(hello there beautiful world) asChunkedArraysOfSize: 3.
+	self assert: result isArray.
+	self assert: result size equals: 3.
+	self assert: result last isArray.
+	self assert: result last size equals: 2.
+	self assert: result last last isString.
+	self assert: result last last equals: 'world'
+]
+
+{ #category : 'tests' }
 ASImageTest >> testObjects [
-	^ self subclassResponsibility
+
+	self class = ASImageTest ifFalse: [^ self subclassResponsibility]
 ]
 
 { #category : 'tests' }
 ASImageTest >> testSimple [
-	^ self subclassResponsibility
+
+	self class = ASImageTest ifFalse: [ ^ self subclassResponsibility ]
 ]
 
 { #category : 'tests' }
