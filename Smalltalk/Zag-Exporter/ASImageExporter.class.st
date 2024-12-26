@@ -404,9 +404,8 @@ ASImageExporter >> objectSymbol: aString [
 	^ self symbols at: aString ifAbsentPut: [
 		  extraSymbols add: aString.
 		  constants
-			  literal:
-				  (symbols size + 1 << 5 + (aString numArgs << 1) + 1 * 2654435769
-					   bitAnd: 16rffffffff)
+			  literal: aString numArgs << 24
+				  + (symbols size + 1 * 10368889 bitAnd: 16rffffff)
 			  class: ClassSymbol ]
 ]
 
