@@ -36,7 +36,7 @@ ASImageTest >> image: aBlock equals: value withHeap: aHeap [
 		equals: image currentHeap address hexString.
 	self assert: result hexString equals: value hexString.
 	self
-		assert: ((heap allButFirst: 3) collect: #hexString as: Array)
+		assert: ((heap allButFirst: 17) collect: #hexString as: Array)
 		equals: (aHeap collect: #hexString)
 ]
 
