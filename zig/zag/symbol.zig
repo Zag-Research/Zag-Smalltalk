@@ -7,23 +7,20 @@ const indexSymbol = object.Object.indexSymbol0;
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
-const inversePhi32 = @import("utilities.zig").inversePhi(u32);
-const undoPhi32 = @import("utilities.zig").undoPhi(u32);
+const inversePhi24 = @import("utilities.zig").inversePhi(u24);
+const undoPhi24 = @import("utilities.zig").undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 pub inline fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
-inline fn symbol_of(index: u32, arity: u4) object.Object {
-    return fromHash32((index << 5 | @as(u32, arity) << 1 | 1) *% inversePhi32);
+inline fn symbol_of(index: u24, arity: u4) object.Object {
+    return fromHash32(@as(u32,index *% inversePhi24) | (@as(u32, arity)<<24));
 }
-inline fn unPhi(obj: object.Object) u32 {
-    return @as(u32, @truncate(obj.hash56())) *% undoPhi32;
-}
-pub inline fn symbolIndex(obj: object.Object) u32 {
-    return unPhi(obj)>>5;
+pub inline fn symbolIndex(obj: object.Object) u24 {
+    return @as(u24, @truncate(obj.hash56())) *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate(unPhi(obj) >> 1);
+    return @truncate(obj.hash56() >> 24);
 }
 
 pub inline fn symbol0(index: u32) object.Object {
@@ -188,7 +185,7 @@ pub const SymbolTable = struct {
         const index = trp.lookup(string);
         if (index > 0) {
             const nArgs = numArgs(string);
-            return symbol_of(index, nArgs);
+            return symbol_of(@truncate(index), nArgs);
         }
         return Nil;
     }
@@ -209,7 +206,7 @@ pub const SymbolTable = struct {
         const str = string.promoteTo() catch return Nil;
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
-        return symbol_of(index, nArgs);
+        return symbol_of(@truncate(index), nArgs);
     }
     fn loadSymbols(self: *Self, strings: []const heap.HeapObjectConstPtr) void {
         const trp = self.theTreap(strings.len);
@@ -233,8 +230,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.value),0);
     try expectEqual(symbolIndex(symbols.Object),54);
     try expectEqual(symbolArity(symbols.Object),0);
-    try expectEqual(symbols.Object.rawU(),0x94AD1A7989);
-    try expectEqual(symbols.@"value:value:".rawU(),0x8608D29D89);
+    try expectEqual(symbols.Object.rawU(),0x5FB38689);
+    try expectEqual(symbols.@"value:value:".rawU(),0x2E3779089);
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");
@@ -245,6 +242,36 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.size);
     try symbol.verify(symbols.Object);
     try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+}
+// these selectors will have special handling in a dispatch table
+// if anding a selector with QuickSelectorsMask == QuickSelectorsMatch
+// then, with 98% probability, the selector is one of these 4
+// only useful for `perform:` and famiy and adding a CompiledMethod to a dispatch table
+// pretty low-frequency paths, so probably not worth it
+pub const QuickSelectors = [_]object.Object{symbols.@"=",symbols.value,symbols.@"value:",symbols.@"cull:"};
+pub const QuickSelectorsMask =  0x19046000;
+pub const QuickSelectorsMatch = 0x18046000;
+test "find key value for quick selectors" {
+    const printing = false;
+    var mask:u64 = 0;
+    var match:u64 = 0;
+    outer: for (8..32) |bit| {
+        const bitmask = @as(u64,1)<<@truncate(bit);
+        const bitmatch = QuickSelectors[0].rawU() & bitmask;
+        for (QuickSelectors) |obj| {
+            if ((obj.rawU() & bitmask) != bitmatch) continue :outer;
+        }
+        mask = mask | bitmask;
+        match = match | bitmatch;
+        if (printing)
+            std.debug.print("mask  = {b:0>64}\nmatch = {b:0>64}\n",.{mask,match});
+    }
+    if (printing)
+        std.debug.print("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n",.{symbols.@"=".rawU(),symbols.value.rawU(),symbols.@"value:".rawU(),symbols.@"cull:".rawU()});
+    if (printing)
+        std.debug.print("mask  = 0x{x:0>8} match = 0x{x:0>8}\n",.{mask,match});
+    try std.testing.expectEqual(mask,QuickSelectorsMask);
+    try std.testing.expectEqual(match,QuickSelectorsMatch);
 }
 test "force second allocation of symbol treap" {
     const moreSymbolStrings = heap.compileStrings(.{

@@ -24,6 +24,7 @@ $ make install
 - [YC thread on Smalltalk bare-metal on Raspberry PI](https://news.ycombinator.com/item?id=34208753)
 - [Hidden Heroes on Alan Kay and the Dynabook](https://hiddenheroes.netguru.com/alan-kay)
 - [Dynabook - the laptop manufacturer (name inspired by Kay) - previously Toshiba](https://ca.dynabook.com/company/about-dynabook/) [Wikipedia](https://en.wikipedia.org/wiki/Dynabook_Inc.#The_first_Dynabook)
+- [Bee Smalltalk](https://github.com/aucerna/bee-dmr) [video tour 2018](https://www.youtube.com/watch?v=WGalg2CZ_Ps)
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)

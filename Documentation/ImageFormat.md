@@ -3,15 +3,15 @@ An image is composed of a set of files in a directory.
 
 #### `.image` file
 
-| Name            | Value                | Description                                        |
-| --------------- | -------------------- | -------------------------------------------------- |
-| `magic`         | `0x6567616D4967615A` | endian flag with 'ZagImage' tag                    |
-| `target`        | `Object`             | after image loading, send a message to this object |
-| `selector`      | `Symbol`             | this is the unary message to send                  |
-| `classTable`    | `Array`              | all the class objects                              |
-| `symTable`      | `InternalHash`       | the hashed symbol table                            |
-| `dispatchTable` | `Array`              | a copy of the dispatch table                       |
-| `codeAddresses` | `DoubleWordArray`    | the addresses encoded in threaded methods          |
+| Name            | Value                   | Description                                        |
+| --------------- | ----------------------- | -------------------------------------------------- |
+| `magic`         | `0x6567616D4967615A`    | endian flag with 'ZagImage' tag                    |
+| `target`        | `Object`                | after image loading, send a message to this object |
+| `selector`      | `Symbol`                | this is the unary message to send                  |
+| `classTable`    | `Array`                 | all the class objects                              |
+| `symTable`      | `InternalHash`          | the hashed symbol table                            |
+| `codeAddresses` | `DoubleWordArray`       | the addresses encoded in threaded methods          |
+| `dispatchTable` | all the following words | a copy of the dispatch table                       |
 The `codeAddresses` array contains the code addresses encoded in the threaded portion of the `CompiledMethod` objects referenced in the dispatch tables. If they don't correspond with the current Zag runtime, then the `CompiledMethod` objects in the `dispatchTable` must be modified. There are 2 parts to this:
 1. any JITed code needs to be discarded (freed)
 2. any threaded code needs to be scanned and anything equal to one of the values needs to be replaced with the correct value from the current runtime.
