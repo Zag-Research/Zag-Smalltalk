@@ -23,9 +23,9 @@ ASSubHeap class >> defaultAddress [
 ]
 
 { #category : 'adding' }
-ASSubHeap class >> defaultSize [ 
+ASSubHeap class >> defaultSize [
 
-	^ 16r20000
+	^ 16r4000
 ]
 
 { #category : 'accessing' }
