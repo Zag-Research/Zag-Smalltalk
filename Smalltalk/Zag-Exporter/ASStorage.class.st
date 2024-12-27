@@ -79,7 +79,8 @@ ASStorage >> exporter: anImageExporter [
 { #category : 'output' }
 ASStorage >> filename [
 
-	^ 'zag_', ((address +16r1000000000000) hexString allButFirst: 4), self class extension
+	^ 'zag' , ((address + 16r1000000000000) hexString allButFirst: 4)
+	  , self class extension
 ]
 
 { #category : 'testing' }

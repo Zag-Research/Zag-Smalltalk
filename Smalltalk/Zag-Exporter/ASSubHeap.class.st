@@ -48,7 +48,7 @@ ASSubHeap >> addStorage [
 ASSubHeap >> initializeStorage [
 
 	storage at: 1 put: address.
-	freeIndex := 4
+	freeIndex := 18
 ]
 
 { #category : 'output' }
