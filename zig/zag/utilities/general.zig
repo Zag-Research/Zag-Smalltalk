@@ -120,10 +120,10 @@ pub inline fn bitsToRepresent(value: anytype) u7 {
 inline fn uType(bits: u16) type {
     return @Type(.{.int=.{.signedness=.unsigned,.bits=bits}});
 }
-pub inline fn largerPowerOf2(size: anytype) uType(bitsToRepresent(size-1)+1) {
+pub inline fn largerPowerOf2(size: anytype) u64 {
     if (size==1) return 1;
     const bits = bitsToRepresent(size-1);
-    return @as(uType(bits+1),1) << @as(uType(std.math.log2(bits)+1),@truncate(bits));
+    return @as(u64,1) << @as(u6,@truncate(bits));
 }
 test "checking bitsToRepresent" {
     const expectEqual = std.testing.expectEqual;
@@ -134,7 +134,7 @@ test "checking bitsToRepresent" {
     try expectEqual(bitsToRepresent(@as(u16, 17)), 5);
     try expectEqual(bitsToRepresent(@as(u16, 33)), 6);
     try expectEqual(bitsToRepresent(@as(u16, 255)), 8);
-    const t4092: u12 = 4092; // should work with u12
+    const t4092: u12 = 4092;
     try expectEqual(bitsToRepresent(t4092), 12);
 }
 test "check largerPowerOf2" {
@@ -146,10 +146,10 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2(@as(u16, 17)), 32);
     try expectEqual(largerPowerOf2(@as(u16, 33)), 64);
     try expectEqual(largerPowerOf2(@as(u16, 255)), 256);
-    const t4092: u12 = 4092; // should work with u12
+    const t4092: u12 = 4092;
     try expectEqual(largerPowerOf2(t4092), 4096);
 }
-pub inline fn smallerPowerOf2(size: anytype) uType(bitsToRepresent(size)) {
+pub inline fn smallerPowerOf2(size: anytype) u64 {
     return largerPowerOf2(size+1)/2;
 }
 test "check smallerPowerOf2" {
