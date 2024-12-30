@@ -19,7 +19,7 @@ const True = object.True;
 const ClassIndex = object.ClassIndex;
 const utilities = @import("utilities.zig");
 const largerPowerOf2 = utilities.largerPowerOf2;
-const inversePhi = utilities.inversePhi;
+const inversePhi24 = utilities.inversePhi24;
 const assert = std.debug.assert;
 //const compileObject = @import("execute.zig").compileObject;
 //const Sym = @import("symbol.zig").symbols;
@@ -237,7 +237,7 @@ const HeapOperations = struct {
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         if (elementSize != 1) return error.wrongElementSize;
-        return @as([*]Object, @constCast(@ptrCast(&obj.objects[0])))[0..format.asU7()];
+        return @as([*]Object, @constCast(@ptrCast(obj)))[1..format.asU7()+1];
     }
     fn byteSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return format.asU7();
@@ -643,6 +643,9 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn freeHeader(length: u12) Self {
         return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
     }
+    pub inline fn storeFreeHeader(self: *HeapHeader) void {
+        self.* = freeHeader(0);
+    }
     pub inline fn staticHeaderWithLengthX(length: u12) Self {
         return .{ .classIndex = @enumFromInt(0), .hash = 0, .format = .special, .age = .static, .length = length };
     }
@@ -738,7 +741,6 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = extern struct {
     header: HeapHeader,
-    objects: [1]Object,
     pub inline fn headerPtr(self: *const HeapObject) *HeapHeader {
         return @constCast(&self.header);
     }
@@ -933,7 +935,7 @@ pub fn growSize(obj: anytype, comptime Target: type) !usize {
         .pointer => |ptr| if (ptr.child != Target) @compileError("types must match " ++ @typeName(ptr.child) ++ " and " ++ @typeName(Target)),
         else => @compileError("only pointer types: " ++ @typeName(T)),
     }
-    var size = (obj.len * @sizeOf(Target) + @sizeOf(Object) - 1) / @sizeOf(Object);
+    var size: u64 = (obj.len * @sizeOf(Target) + @sizeOf(Object) - 1) / @sizeOf(Object);
     size = largerPowerOf2(size * 2);
     // ToDo: use Format to round down to fit - i.e. consider number of footer words
     const maxLength: usize = HeapHeader.maxLength;
@@ -942,15 +944,6 @@ pub fn growSize(obj: anytype, comptime Target: type) !usize {
 }
 test "growSize" {
     try std.testing.expectEqual(growSize(@as([]const u8, "foo"[0..]), u8), 16);
-}
-const inversePhi24: u32 = inversePhi(u24);
-fn hash24(str: []const u8) u24 {
-    var hash = inversePhi24 *% @as(u32, @truncate(str.len +% 1));
-    for (str, 0..) |c, idx| {
-        if (idx > 9) break;
-        hash +%= inversePhi24 *% c;
-    }
-    return @truncate(hash);
 }
 pub fn CompileTimeString(comptime str: []const u8) type {
     const size = str.len;
@@ -1011,7 +1004,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, (Object.from(abcde)).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, Object.from(abcde).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));

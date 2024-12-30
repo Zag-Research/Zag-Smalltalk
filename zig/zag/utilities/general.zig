@@ -121,7 +121,7 @@ inline fn uType(bits: u16) type {
     return @Type(.{.int=.{.signedness=.unsigned,.bits=bits}});
 }
 pub inline fn largerPowerOf2(size: anytype) u64 {
-    if (size==1) return 1;
+    if (size<=1) return 1;
     const bits = bitsToRepresent(size-1);
     return @as(u64,1) << @as(u6,@truncate(bits));
 }
