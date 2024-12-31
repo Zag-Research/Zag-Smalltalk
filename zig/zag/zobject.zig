@@ -433,7 +433,7 @@ const TagObject = packed struct(u64) {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
     }
     pub inline fn indexNumber(self: Object) u24 {
-        return @truncate((self.rawU() & ~@as(u64,nonIndexSymbol)) >> 8);
+        return @truncate((self.rawU() & ~@as(u64, nonIndexSymbol)) >> 8);
     }
     //    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
@@ -450,14 +450,9 @@ const TagObject = packed struct(u64) {
     pub inline fn isInt(self: Object) bool {
         return self.which_class(false) == .SmallInteger;
     }
-    pub inline fn isDouble(self:Object) bool {
+    pub inline fn isDouble(self: Object) bool {
         return switch (self.tag) {
-            .float2,
-            .float3,
-            .float4,
-            .float5,
-            .float6,
-            .float7 => true,
+            .float2, .float3, .float4, .float5, .float6, .float7 => true,
             .immediates => false,
             .heap => false, // ToDo handle in-memory floats
         };
@@ -466,7 +461,7 @@ const TagObject = packed struct(u64) {
         return self.rawU() == Object.True.rawU();
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
-        return @as(i64, @bitCast(self))>>8;
+        return @as(i64, @bitCast(self)) >> 8;
     }
     // pub inline fn toNatNoCheck(self: Object) u64 {
     //     return self.rawU() -% u64_ZERO;
@@ -493,7 +488,7 @@ const TagObject = packed struct(u64) {
     const pInfMemObject = simpleFloat(math.inf(f64), .static);
     const nInfMemObject = simpleFloat(-math.inf(f64), .static);
     inline fn encode(x: f64) Object {
-        const u = math.rotl(u64, @bitCast(x), 4)+2;
+        const u = math.rotl(u64, @bitCast(x), 4) + 2;
         if (u & 6 != 0)
             return @bitCast(u);
         if (math.isNan(x)) return Object.from(&nanMemObject);
@@ -527,13 +522,13 @@ const TagObject = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else if (self.rawU()==0) .UndefinedObject else .Object,
+            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else if (self.rawU() == 0) .UndefinedObject else .Object,
             .immediates => self.class.classIndex(),
             else => .Float,
         };
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return self.tag==.heap and self!=Object.Nil;
+        return self.tag == .heap and self != Object.Nil;
     }
     // pub inline fn isMemoryAllocated(self: Object) bool {
     //     return switch (self.tag) {
@@ -572,8 +567,8 @@ const ObjectFunctions = struct {
         return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
-        return switch(self.rawU()) {
-            Object.False.rawU(),Object.True.rawU() => true,
+        return switch (self.rawU()) {
+            Object.False.rawU(), Object.True.rawU() => true,
             else => false,
         };
     }

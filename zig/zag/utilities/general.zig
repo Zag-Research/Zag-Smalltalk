@@ -23,7 +23,7 @@ test "check inversePhi" {
 // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Computing_multiplicative_inverses_in_modular_structures
 // shows the Extended Eclidean algorithm can calculate in log time
 pub fn undoPhi(comptime T: type) T {
-    return inverse(T,inversePhi(T)) catch @panic("not invertible");
+    return inverse(T, inversePhi(T)) catch @panic("not invertible");
 }
 fn inverse(comptime T: type, a: T) !T {
     const n = 1 << @typeInfo(T).int.bits;
@@ -31,7 +31,7 @@ fn inverse(comptime T: type, a: T) !T {
     var newt: i128 = 1;
     var r: i128 = n;
     var newr: i128 = a;
-    while (newr!=0) {
+    while (newr != 0) {
         const quotient = @divTrunc(r, newr);
         var temp = newt;
         newt = t - quotient * newt;
@@ -40,18 +40,18 @@ fn inverse(comptime T: type, a: T) !T {
         newr = r - quotient * newr;
         r = temp;
     }
-    if (r>1) return error.NotInvertible;
-    if (t<0) t = t+n;
-    return @truncate(@as(u128,@intCast(t)));
+    if (r > 1) return error.NotInvertible;
+    if (t < 0) t = t + n;
+    return @truncate(@as(u128, @intCast(t)));
 }
- 
+
 test "check undoPhi is inverse" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(undoPhi(u64)*%inversePhi(u64), 1);
-    try expectEqual(undoPhi(u32)*%inversePhi(u32), 1);
-    try expectEqual(undoPhi(u24)*%inversePhi(u24), 1);
-    try expectEqual(undoPhi(u16)*%inversePhi(u16), 1);
-    try expectEqual(undoPhi(u8)*%inversePhi(u8), 1);
+    try expectEqual(undoPhi(u64) *% inversePhi(u64), 1);
+    try expectEqual(undoPhi(u32) *% inversePhi(u32), 1);
+    try expectEqual(undoPhi(u24) *% inversePhi(u24), 1);
+    try expectEqual(undoPhi(u16) *% inversePhi(u16), 1);
+    try expectEqual(undoPhi(u8) *% inversePhi(u8), 1);
 }
 test "check undoPhi" {
     const expectEqual = std.testing.expectEqual;
@@ -118,12 +118,12 @@ pub inline fn bitsToRepresent(value: anytype) u7 {
 }
 
 inline fn uType(bits: u16) type {
-    return @Type(.{.int=.{.signedness=.unsigned,.bits=bits}});
+    return @Type(.{ .int = .{ .signedness = .unsigned, .bits = bits } });
 }
 pub inline fn largerPowerOf2(size: anytype) u64 {
-    if (size<=1) return 1;
-    const bits = bitsToRepresent(size-1);
-    return @as(u64,1) << @as(u6,@truncate(bits));
+    if (size <= 1) return 1;
+    const bits = bitsToRepresent(size - 1);
+    return @as(u64, 1) << @as(u6, @truncate(bits));
 }
 test "checking bitsToRepresent" {
     const expectEqual = std.testing.expectEqual;
@@ -150,7 +150,7 @@ test "check largerPowerOf2" {
     try expectEqual(largerPowerOf2(t4092), 4096);
 }
 pub inline fn smallerPowerOf2(size: anytype) u64 {
-    return largerPowerOf2(size+1)/2;
+    return largerPowerOf2(size + 1) / 2;
 }
 test "check smallerPowerOf2" {
     const expectEqual = std.testing.expectEqual;

@@ -237,7 +237,7 @@ const HeapOperations = struct {
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         if (elementSize != 1) return error.wrongElementSize;
-        return @as([*]Object, @constCast(@ptrCast(obj)))[1..format.asU7()+1];
+        return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. format.asU7() + 1];
     }
     fn byteSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return format.asU7();

@@ -14,7 +14,7 @@ pub inline fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
-    return fromHash32(@as(u32,index *% inversePhi24) | (@as(u32, arity)<<24));
+    return fromHash32(@as(u32, index *% inversePhi24) | (@as(u32, arity) << 24));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return @as(u24, @truncate(obj.hash56())) *% undoPhi24;
@@ -224,14 +224,14 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    try expectEqual(symbolIndex(symbols.@"="),1);
-    try expectEqual(symbolArity(symbols.@"="),1);
-    try expectEqual(symbolIndex(symbols.value),2);
-    try expectEqual(symbolArity(symbols.value),0);
-    try expectEqual(symbolIndex(symbols.Object),54);
-    try expectEqual(symbolArity(symbols.Object),0);
-    try expectEqual(symbols.Object.rawU(),0x5FB38689);
-    try expectEqual(symbols.@"value:value:".rawU(),0x2E3779089);
+    try expectEqual(symbolIndex(symbols.@"="), 1);
+    try expectEqual(symbolArity(symbols.@"="), 1);
+    try expectEqual(symbolIndex(symbols.value), 2);
+    try expectEqual(symbolArity(symbols.value), 0);
+    try expectEqual(symbolIndex(symbols.Object), 54);
+    try expectEqual(symbolArity(symbols.Object), 0);
+    try expectEqual(symbols.Object.rawU(), 0x5FB38689);
+    try expectEqual(symbols.@"value:value:".rawU(), 0x2E3779089);
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");
@@ -248,15 +248,15 @@ test "symbols match initialized symbol table" {
 // then, with 98% probability, the selector is one of these 4
 // only useful for `perform:` and famiy and adding a CompiledMethod to a dispatch table
 // pretty low-frequency paths, so probably not worth it
-pub const QuickSelectors = [_]object.Object{symbols.@"=",symbols.value,symbols.@"value:",symbols.@"cull:"};
-pub const QuickSelectorsMask =  0x19046000;
+pub const QuickSelectors = [_]object.Object{ symbols.@"=", symbols.value, symbols.@"value:", symbols.@"cull:" };
+pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 test "find key value for quick selectors" {
     const printing = false;
-    var mask:u64 = 0;
-    var match:u64 = 0;
+    var mask: u64 = 0;
+    var match: u64 = 0;
     outer: for (8..32) |bit| {
-        const bitmask = @as(u64,1)<<@truncate(bit);
+        const bitmask = @as(u64, 1) << @truncate(bit);
         const bitmatch = QuickSelectors[0].rawU() & bitmask;
         for (QuickSelectors) |obj| {
             if ((obj.rawU() & bitmask) != bitmatch) continue :outer;
@@ -264,14 +264,14 @@ test "find key value for quick selectors" {
         mask = mask | bitmask;
         match = match | bitmatch;
         if (printing)
-            std.debug.print("mask  = {b:0>64}\nmatch = {b:0>64}\n",.{mask,match});
+            std.debug.print("mask  = {b:0>64}\nmatch = {b:0>64}\n", .{ mask, match });
     }
     if (printing)
-        std.debug.print("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n",.{symbols.@"=".rawU(),symbols.value.rawU(),symbols.@"value:".rawU(),symbols.@"cull:".rawU()});
+        std.debug.print("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n", .{ symbols.@"=".rawU(), symbols.value.rawU(), symbols.@"value:".rawU(), symbols.@"cull:".rawU() });
     if (printing)
-        std.debug.print("mask  = 0x{x:0>8} match = 0x{x:0>8}\n",.{mask,match});
-    try std.testing.expectEqual(mask,QuickSelectorsMask);
-    try std.testing.expectEqual(match,QuickSelectorsMatch);
+        std.debug.print("mask  = 0x{x:0>8} match = 0x{x:0>8}\n", .{ mask, match });
+    try std.testing.expectEqual(mask, QuickSelectorsMask);
+    try std.testing.expectEqual(match, QuickSelectorsMatch);
 }
 test "force second allocation of symbol treap" {
     const moreSymbolStrings = heap.compileStrings(.{
