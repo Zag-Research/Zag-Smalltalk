@@ -103,7 +103,7 @@ ASImageExporter class >> writeImage [
 	<script>
 	self new
 		constants: ZagImageEncodeZag;
-		writeImageSending: #size to: #writeImage:
+		writeImageSending: #inspect to: 42
 ]
 
 { #category : 'writing' }
@@ -436,21 +436,12 @@ ASImageExporter >> selector: aSymbol [
 
 { #category : 'initialization' }
 ASImageExporter >> symbols [
-
 	" add these symbols to the dictionary, but then remove them from the extraSymbols collection because the zag runtime already knows about them "
+
 	symbols ifNotNil: [ ^ symbols ].
 	symbols := Dictionary new.
 	extraSymbols := OrderedCollection new: 500.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass:
-	   fibonacci Object ) do: [ :aString | self objectSymbol: aString ].
+	ASZagSymbols symbols do: [ :aString | self objectSymbol: aString ].
 	extraSymbols removeLast: extraSymbols size.
 	^ symbols
 ]

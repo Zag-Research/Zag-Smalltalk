@@ -17,15 +17,25 @@ Class {
 
 { #category : 'class initialization' }
 ASZagSymbols class >> initialize [
+
+	Predefined := self symbols asSet
+]
+
+{ #category : 'class initialization' }
+ASZagSymbols class >> symbols [
 	"in future better to load sysmbols directly from symbol.zig, may need a config file so we know where symbol.zig is"
 
-	Predefined := #( #= value value: cull: yourself doesNotUnderstand: #+ #-#*
-size at: at:put: #~= #== #~~ value:value: negated new new: value:value:value: 
-value:value:value:value: valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-self name #< #<= #>= #> class Class Behavior ClassDescription Metaclass
-SmallInteger noFallback ifTrue: ifTrue:ifFalse ifFalse: ifFalse:ifTrue: ifNil: 
-ifNil:ifNotNil ifNotNil: ifNotNil:ifNil: perform: perform:with: perform:with:with: 
-perform:with:with:with: perform:withArguments: perform:withArguments:inSuperclass: fibonacci ) asSet
+	^ #( #= value value: cull: yourself doesNotUnderstand:
+	     #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
+	     negated new new: value:value:value: value:value:value:value:
+	     valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
+	     self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
+	     Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
+	     ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil:
+	     ifNotNil:ifNil: perform: perform:with: perform:with:with:
+	     perform:with:with:with: perform:withArguments:
+	     perform:withArguments:inSuperclass:
+	     inspect fibonacci Object)
 ]
 
 { #category : 'adding' }

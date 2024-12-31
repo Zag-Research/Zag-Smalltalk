@@ -19,7 +19,7 @@ Class {
 { #category : 'adding' }
 ASSubHeap class >> defaultAddress [
 
-	^ 16r100000000
+	^ 16r10000000000
 ]
 
 { #category : 'adding' }

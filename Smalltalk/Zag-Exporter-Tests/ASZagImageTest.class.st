@@ -51,7 +51,7 @@ ASZagImageTest >> testSimple [
 	self image: [ :i | i encodingOf: false ] equals: 16r0000000000000071.
 	self image: [ :i | i encodingOf: nil ] equals: 16r0000000000000000.
 	self image: [ :i | i encodingOf: $A ] equals: 16r0000000000004191.
-	self image: [ :i | i encodingOf: #Object ] equals: 16r5FB38689.
+	self image: [ :i | i encodingOf: #Object ] equals: 16rFDEAFF89.
 	self image: [ :i | i encodingOf: #value ] equals: 16r3C6EF289.
 	self image: [ :i | i encodingOf: #value: ] equals: 16r1DAA66B89.
 	self
