@@ -10,17 +10,32 @@ pub fn MemoryAllocator(comptime Block: type) type {
     return struct {
         prealloc: []align(@sizeOf(Block)) Block,
         const Self = @This();
-        pub fn new() Self {
-            return .{ .prealloc = &[0]Block{} };
+        pub fn new(baseAddress: usize) Self {
+            return .{ .prealloc = @as([*]Block,@ptrFromInt(baseAddress))[0..0] };
         }
         fn reset(self: *Self) void {
             self.prealloc = &[0]Block{};
         }
         pub fn allocBlock(self: *Self) !*align(@sizeOf(Block)) Block {
-            if (self.prealloc.len == 0) self.prealloc = try reserve(Block);
+            // this whole funtion should be locked
+            if (self.prealloc.len == 0) {
+                const newAlloc = try reserve(Block,@ptrCast(self.prealloc.ptr));
+                self.prealloc = newAlloc;
+            }
             const next = &self.prealloc[0];
             self.prealloc = self.prealloc[1..];
             return next;
+        }
+        pub fn allocBlockAtAddress(self: *Self, address: usize) !*align(@sizeOf(Block)) Block {
+            while (true) {
+                const next = try self.allocBlock();
+                if (@intFromPtr(next) == address) return next;
+                // if it's too low, discard, and loop
+                // if it's too high, we presumably already discarded it, so map directly
+                // but for now, it works
+                std.debug.print("next: {*} address: {}\n",.{next,address});
+                unreachable;
+            }
         }
         pub fn map(_: *Self, size: usize, alignment: ?u32) ![]u8 { // aligned to alignment
             if (alignment) |a|
@@ -36,20 +51,20 @@ pub fn MemoryAllocator(comptime Block: type) type {
     };
 }
 const allocMultiple = 16;
-var next_mmap_addr_hint: ?[*]align(page_size) u8 = null;
+const pageAddressType = [*]align(page_size) u8;
 
-fn mmap(hint: @TypeOf(next_mmap_addr_hint), size: usize, fd: os.fd_t) ![]align(page_size) u8 {
+fn mmap(hint: pageAddressType, size: usize, fd: os.fd_t) ![]align(page_size) u8 {
     if (builtin.os.tag == .windows) @compileError("no windows support"); // see PageAllocator for ideas
     return os.mmap(
         hint,
         size,
         os.PROT.READ | os.PROT.WRITE,
-        .{ .TYPE = .PRIVATE, .ANONYMOUS = true, .NORESERVE = true },
+        .{ .TYPE = .PRIVATE, .FIXED = true, .ANONYMOUS = true, .NORESERVE = true },
         fd,
         0,
     );
 }
-fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: usize) ![]u8 {
+fn alignedMap(hint: pageAddressType, allocation: usize, alignment: usize) ![]u8 {
     // may return alignment smaller than allocation so bump up if need
     assert(@as(usize, alignment) >> @as(u6, @truncate(@ctz(alignment))) == 1); // alignedMap must have a power-of-2 alignment
     assert(alignment >= page_size); // alignedMap must have a alignment >= than page_size
@@ -63,13 +78,11 @@ fn alignedMap(hint: @TypeOf(next_mmap_addr_hint), allocation: usize, alignment: 
     if (last < end) os.munmap(@as([*]align(page_size) u8, @ptrFromInt(last))[0 .. end - last]);
     return slice[first - addr .. last - addr];
 }
-fn reserve(comptime T: type) ![]align(@sizeOf(T)) T {
+fn reserve(comptime T: type, hint: pageAddressType) ![]align(@sizeOf(T)) T {
     const size = @sizeOf(T);
     const supersize = // if (os.MAP.NORESERVE>0) 1<<31 else
         size * allocMultiple;
-    const hint = @atomicLoad(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint, .unordered);
     const res = try alignedMap(hint, supersize, size);
-    _ = @cmpxchgStrong(@TypeOf(next_mmap_addr_hint), &next_mmap_addr_hint, hint, @as(@TypeOf(next_mmap_addr_hint), @ptrCast(@alignCast(res.ptr + res.len))), .monotonic, .monotonic);
     return @alignCast(@as([*]T, @ptrCast(@alignCast(res.ptr)))[0 .. res.len / size]);
 }
 

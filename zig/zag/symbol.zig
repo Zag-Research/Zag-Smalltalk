@@ -91,9 +91,10 @@ pub const symbols = struct {
     pub const @"perform:with:with:with:" = symbol4(50);
     pub const @"perform:withArguments:" = symbol2(51);
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
-    pub const fibonacci = symbol3(53);
+    pub const inspect = symbol0(53);
+    pub const fibonacci = symbol0(54); // should eventually go away
     // define any new symbols here
-    pub const Object = symbol0(54); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(55); // always have this the last initial symbol so the tests verify all the counts are correct
     pub const i_0 = indexSymbol(0);
     pub const i_1 = indexSymbol(1);
     pub const i_2 = indexSymbol(2);
@@ -107,12 +108,23 @@ pub const symbols = struct {
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "=",                        "value",                               "value:",     "cull:",           "yourself",             "doesNotUnderstand:", "+",            "-",             "*",                  "size",
-    "at:",                      "at:put:",                             "~=",         "==",              "~~",                   "value:value:",       "negated",      "new",           "new:",               "value:value:value:",
-    "value:value:value:value:", "valueWithArguments:",                 "cull:cull:", "cull:cull:cull:", "cull:cull:cull:cull:", "self",               "name",         "<",             "<=",                 ">=",
-    ">",                        "class",                               "Class",      "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger", "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
-    "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",     "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",     "perform:with:", "perform:with:with:", "perform:with:with:with:",
-    "perform:withArguments:",   "perform:withArguments:inSuperclass:", "fibonacci",
+    "=",                        "value",                               "value:",
+    "cull:",           "yourself",             "doesNotUnderstand:", "+",
+    "-",             "*",                  "size",
+    "at:",                      "at:put:",                             "~=",
+    "==",              "~~",                   "value:value:",       "negated",
+    "new",           "new:",               "value:value:value:",
+    "value:value:value:value:", "valueWithArguments:",                 "cull:cull:",
+    "cull:cull:cull:", "cull:cull:cull:cull:", "self",               "name",
+    "<",             "<=",                 ">=",
+    ">",                        "class",                               "Class",
+    "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger",
+    "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
+    "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",
+    "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",
+    "perform:with:", "perform:with:with:", "perform:with:with:with:",
+    "perform:withArguments:",   "perform:withArguments:inSuperclass:",
+    "inspect", "fibonacci",
     // add any new values here
      "Object",
 });
@@ -228,9 +240,9 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.@"="), 1);
     try expectEqual(symbolIndex(symbols.value), 2);
     try expectEqual(symbolArity(symbols.value), 0);
-    try expectEqual(symbolIndex(symbols.Object), 54);
+    try expectEqual(symbolIndex(symbols.Object), 55);
     try expectEqual(symbolArity(symbols.Object), 0);
-    try expectEqual(symbols.Object.rawU(), 0x5FB38689);
+    try expectEqual(symbols.Object.rawU(), 0xFDEAFF89);
     try expectEqual(symbols.@"value:value:".rawU(), 0x2E3779089);
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");

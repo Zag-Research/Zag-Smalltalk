@@ -127,15 +127,18 @@ fn parseAddress(name: []const u8) u64 {
     var index = name.len;
     var address: u64 = 0;
     var seenDot = false;
+    var shift:u6 = 0;
     while (index > 0) {
         index -= 1;
+        shift += 4;
         switch (name[index]) {
-            '0'...'9' => |c| address = (address << 8) + c - '0',
-            'a'...'f' => |c| address = (address << 8) + c - 'a' + 10,
-            'A'...'F' => |c| address = (address << 8) + c - 'A' + 10,
+            '0'...'9' => |c| address += @as(u64,c - '0') << (shift - 4),
+            'a'...'f' => |c| address += @as(u64,c - 'a' + 10) << (shift - 4),
+            'A'...'F' => |c| address += @as(u64,c - 'A' + 10) << (shift - 4),
             '.' => {
                 seenDot = true;
                 address = 0;
+                shift = 0;
             },
             else => if (seenDot) break,
         }
@@ -161,7 +164,7 @@ fn runImage() !void {
 fn readHeap(file: std.fs.File, address: u64) !void {
     const stat = try file.stat();
     std.debug.print("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
-    try globalArena.HeapAllocation.loadHeap(file, address, stat.size);
+    try globalArena.HeapAllocation.loadHeap(file, address);
 }
 fn readLargeHeapObject(file: std.fs.File, address: u64) !void {
     _ = .{ file, address };

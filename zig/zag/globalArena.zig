@@ -35,11 +35,13 @@ pub const StructObject = extern struct {
 };
 const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength) + 1;
 const heap_allocation_size = 128 * 1024;
+const heapStartAddress = 0x10000000000;
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
 comptime {
     std.testing.expectEqual(13, nFreeLists) catch unreachable;
     std.testing.expectEqual(0x4000, HeapAllocation.size) catch unreachable;
     std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch unreachable;
+    std.debug.assert(HeapAllocation.headerSize >= @sizeOf(HeapAllocation.HeapAllocationHeader) / @sizeOf(HeapObject));
 }
 pub const HeapAllocation = extern union {
     header: HeapAllocationHeader,
@@ -49,29 +51,27 @@ pub const HeapAllocation = extern union {
         loadAddress: *align(heap_allocation_size) HeapAllocation, // address that corresponds with the filename
         nextHeap: ?*align(heap_allocation_size) HeapAllocation, // link to next heap header
         freeLists: [nFreeLists]FreeList,
-        mutex: MutexType = mutex_init,
         allocators: u16,
         objectsNeedingScan: u16,
         marking: bool,
+        mutex: MutexType = mutex_init,
     };
     const size: usize = heap_allocation_size / @sizeOf(HeapObject);
-    const headerSize = @sizeOf(HeapAllocationHeader) / @sizeOf(HeapObject);
+    const headerSize = 32;
     const minFreeList = 1;
     const mutex_init = MutexType{};
     const MutexType = DummyMutex;
     const DummyMutex = extern struct {
+        lockField: i64 = -1,
         fn lock(_: *DummyMutex) void {}
         fn unlock(_: *DummyMutex) void {}
     };
-    var memoryAllocator = @import("os.zig").MemoryAllocator(HeapAllocation).new();
-    fn getAligned() *align(heap_allocation_size) HeapAllocation {
-        return @alignCast(memoryAllocator.allocBlock() catch @panic("page allocator failed"));
-    }
+    var memoryAllocator = @import("os.zig").MemoryAllocator(HeapAllocation).new(heapStartAddress);
     fn getIndex(ptr: [*]HeapObject) usize {
         return (@intFromPtr(ptr) & (heap_allocation_size - 1)) / @sizeOf(HeapObject);
     }
     fn init() SelfPtr {
-        var self = getAligned();
+        var self = memoryAllocator.allocBlock() catch @panic("page allocator failed");
         self.initHeader();
         self.putInFreeLists(headerSize, size);
         return self;
@@ -83,12 +83,15 @@ pub const HeapAllocation = extern union {
         self.header.nextHeap = null;
         self.header.freeLists = FreeList.init(nFreeLists);
     }
-    pub fn loadHeap(file: std.fs.File, address: usize, fSize: usize) !SelfPtr {
-        var self = getAligned(address);
+    pub fn loadHeap(file: std.fs.File, address: usize) !void {
+        var self = memoryAllocator.allocBlockAtAddress(address) catch @panic("page allocator failed");
+        const fSize =  try file.read(@as([*]u8, @ptrCast(self))[0..@sizeOf(HeapAllocation)]);
         self.initHeader();
-        _ = file;
         self.putInFreeLists(fSize, size);
-        return self;
+        return;
+    }
+    pub fn loadLargeHeapObject(file: std.fs.File, address: usize, fSize: usize) !SelfPtr {
+        _ = .{file,address,fSize};
     }
     fn freeAll(self: SelfPtr) void {
         var ptr: ?SelfPtr = self;
@@ -236,10 +239,7 @@ test "check HeapAllocations" {
 }
 const FreeList = extern struct {
     header: HeapHeader,
-    extra: extern union {
-        list: FreeListPtr,
-        count: usize,
-    },
+    list: FreeListPtr,
     const Self = @This();
     const FreeListPtr = ?*FreeListElement;
     const FreeListElement = struct {
@@ -260,13 +260,14 @@ const FreeList = extern struct {
         fle.header = self.header;
         if (self.header.length == 0) {
             HeapHeader.storeFreeHeader(@ptrFromInt(@intFromPtr(ptr)));
-            self.extra.count += 1;
+            @setRuntimeSafety(false);
+            self.list = @ptrFromInt(@intFromPtr(self.list)+1);
             return;
         }
-        var prev = self.extra.list;
+        var prev = self.list;
         while (true) {
             fle.next = prev;
-            if (@cmpxchgWeak(FreeListPtr, &self.extra.list, prev, fle, SeqCst, SeqCst)) |old| {
+            if (@cmpxchgWeak(FreeListPtr, &self.list, prev, fle, SeqCst, SeqCst)) |old| {
                 prev = old;
             } else return;
         }
@@ -286,7 +287,7 @@ const FreeList = extern struct {
         var initial_value: [n]FreeList = undefined;
         for (initial_value[0..], 0..) |*fl, index| {
             fl.header = HeapHeader.freeHeader(@truncate((@as(u16, 1) << @as(u4, @intCast(index))) - 1));
-            fl.extra.list = null;
+            fl.list = null;
         }
         return initial_value;
     }
