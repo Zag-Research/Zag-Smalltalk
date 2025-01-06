@@ -331,7 +331,7 @@ ASCodeGenerator >> name [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInline [
 
-	^ self addBlock: ASCJoinBlock new
+	^ self addBlock: ASCReturnBlock new
 ]
 
 { #category : 'private - testing' }
@@ -341,9 +341,9 @@ ASCodeGenerator >> newInlineBlockClosure [
 ]
 
 { #category : 'instance creation' }
-ASCodeGenerator >> newInlineMethod: aMethodAST [
+ASCodeGenerator >> newInlinedBlock: aMethodAST [
 
-	^ self addBlock: ASCInlineMethodBlock new
+	^ self addBlock: (code newInlinedBlock: aMethodAST)
 ]
 
 { #category : 'API' }

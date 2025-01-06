@@ -33,6 +33,11 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 	stack := stack nameStack: names offset: 0 forBlock: self
 ]
 
+{ #category : 'instance creation' }
+ASCInlineMethodBlock >> newInlinedBlock: aMethodAST [
+	^ ASCCompiledClosureBlock new
+]
+
 { #category : 'as yet unclassified' }
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 

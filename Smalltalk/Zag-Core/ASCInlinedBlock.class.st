@@ -15,6 +15,11 @@ ASCInlinedBlock >> blockClosureClass [
 	^ ASCInlineClosureBlock
 ]
 
+{ #category : 'instance creation' }
+ASCInlinedBlock >> newInlinedBlock: aMethodAST [
+	^ ASCInlineMethodBlock new
+]
+
 { #category : 'as yet unclassified' }
 ASCInlinedBlock >> selfElementClass [
 	^ self subclassResponsibility
