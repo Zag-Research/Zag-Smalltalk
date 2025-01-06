@@ -145,7 +145,7 @@ ASCBasicBlock >> classCase: aCollection exhaustive: isExhaustive genertor: gener
 		self removeLastOperation.
 		joinBlock becomeJoinBlock ].
 	case fillFrom: aCollection with: [ :methodAST |
-		(generator newInlineMethod: methodAST)
+		(generator newInlinedBlock: methodAST)
 			branchedToFrom: self;
 			returnBlock: joinBlock ].
 	self addOperation: case.

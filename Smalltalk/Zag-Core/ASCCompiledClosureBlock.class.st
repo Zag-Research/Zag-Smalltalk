@@ -64,6 +64,11 @@ ASCCompiledClosureBlock >> labelExtra: s [
 
 ]
 
+{ #category : 'instance creation' }
+ASCCompiledClosureBlock >> newInlinedBlock: aCompileMethod [ 
+	^ ASCInlineMethodBlock new
+]
+
 { #category : 'writing' }
 ASCCompiledClosureBlock >> outputTo: output [
 
