@@ -1422,6 +1422,11 @@ test "simple executable" {
     try expectEqual(result[0], Object.from(0));
 }
 
+pub fn mainSendTo(selector: Object, target: Object) !Object {
+    std.debug.print("Sending: {} to {}\n",.{selector,target});
+    return error.NotImplemented;
+}
+
 const max_classes = config.max_classes;
 const symbols = symbol.symbols;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
@@ -1433,6 +1438,8 @@ pub const lookupAddress = Dispatch.lookupAddressForClass;
 pub const dump = Dispatch.dump;
 pub fn init() void {
     //    _ = Dispatch.new();
+}
+pub fn loadIntrinsicsDispatch() void {
 }
 pub const addMethod = Dispatch.addMethod;
 const DispatchElement = extern struct {

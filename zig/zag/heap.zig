@@ -66,13 +66,15 @@ pub const Format = enum(u7) {
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
     }
-    pub inline fn operations(self: Self) *const HeapOperations {
+    pub //inline
+        fn operations(self: Self) *const HeapOperations {
         return &operationsArray[self.asU7()];
     }
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
         return self.operations().instVars(self, header, @constCast(obj));
     }
-    pub inline fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
+    pub //inline
+        fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
     pub inline fn mutableArray(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
@@ -236,7 +238,7 @@ const HeapOperations = struct {
         return false; // ToDo
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
-        if (elementSize != 1) return error.wrongElementSize;
+        if (format.asU7() > 0 and elementSize != 1) return error.wrongElementSize;
         return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. format.asU7() + 1];
     }
     fn byteSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
@@ -836,7 +838,8 @@ pub const HeapObject = extern struct {
         const self = maybeForwarded.forwarded();
         return self.start[1..self.length];
     }
-    pub inline fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
+    pub //inline
+        fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
         const array = if (head.forwardedTo()) |realSelf|
             try realSelf.header.array(realSelf, @sizeOf(T))

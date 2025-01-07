@@ -143,7 +143,7 @@ pub inline fn intern(string: object.Object) object.Object {
 }
 const ObjectTreap = Treap(object.Object, u32, u0);
 fn numArgs(obj: object.Object) u4 {
-    const string = obj.arrayAsSlice(u8);
+    const string = obj.arrayAsSlice(u8) catch return 0;
     if (string.len == 0) return 0;
     const first = string[0];
     if (first < 'A' or (first > 'Z' and first < 'a') or first > 'z') return 1;

@@ -527,6 +527,9 @@ const TagObject = packed struct(u64) {
             else => .Float,
         };
     }
+    pub inline fn isString(self: Object) bool {
+        return self.which_class(true) == .String;
+    }
     pub inline fn isMemoryAllocated(self: Object) bool {
         return self.tag == .heap and self != Object.Nil;
     }
@@ -661,9 +664,9 @@ const ObjectFunctions = struct {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars();
         return &[0]Object{};
     }
-    pub fn arrayAsSlice(self: Object, comptime T: type) []T {
-        if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T) catch return &[0]T{};
-        return &[0]T{};
+    pub fn arrayAsSlice(self: Object, comptime T: type) ![]T {
+        if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T);
+        return error.ObjectNotIndexable;
     }
     pub fn size(self: Object) !usize {
         if (!self.isHeapObject()) return error.NotIndexable;
@@ -689,8 +692,8 @@ const ObjectFunctions = struct {
             const u64o = other.rawU();
             return std.math.order(u64s, u64o);
         }
-        const sla = self.arrayAsSlice(u8);
-        const slb = other.arrayAsSlice(u8);
+        const sla = self.arrayAsSlice(u8) catch &[0]u8{};
+        const slb = other.arrayAsSlice(u8) catch &[0]u8{};
         for (sla[0..@min(sla.len, slb.len)], 0..) |va, index| {
             const vb = slb[index];
             if (va < vb) return ord.lt;
@@ -728,7 +731,7 @@ const ObjectFunctions = struct {
                 try writer.print("#symbols.i_{}", .{self.indexNumber()});
             } else if (self.isIndexSymbol1()) {
                 try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
-            } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8)}),
+            } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"}),
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),

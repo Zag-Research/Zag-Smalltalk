@@ -1,10 +1,12 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const object = @import("zobject.zig");
-const execute = @import("execute.zig");
 const Object = object.Object;
+const execute = @import("execute.zig");
 const ThreadedFn = execute.ThreadedFn;
 const primitives = @import("primitives.zig");
 const globalArena = @import("globalArena.zig");
+const symbol = @import("symbol.zig");
 // grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -nE 's;./\(.*\)[.]zig:[ \t]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
 const references = [_]ThreadedFn{
     &execute.embedded.branch, // T_Branch := 1.
@@ -147,23 +149,48 @@ fn parseAddress(name: []const u8) u64 {
 }
 fn checkHeader(file: std.fs.File) !void {
     const stat = try file.stat();
-    std.debug.print("header stat: {}\n", .{stat});
+    //std.debug.print("header stat: {}\n", .{stat});
     if (stat.size < @sizeOf(ZagImageHeader) or (stat.size & 7) != 0)
         return error.WrongImageFileSize;
     _ = try file.read(@as([*]u8, @ptrCast(&zagImageHeader))[0..@sizeOf(ZagImageHeader)]);
     if (zagImageHeader.magic != ZagImageHeader.magicTag)
         return error.BadImageMagic;
 }
+fn loadSymbols() !void {
+    var exportedSymbols = zagImageHeader.symTable;
+    outer:  while (!exportedSymbols.isNil()) {
+        for (try exportedSymbols.arrayAsSlice(Object)) |obj| {
+            std.debug.print("obj: 0x{x:0>16} ",.{obj.rawU()});
+            if (obj.isString()) {
+                std.debug.print("Loading symbol: {}\n",.{symbol.intern(obj)});
+            } else {
+                std.debug.print("next block: {}\n",.{obj});
+                exportedSymbols=obj;
+                continue :outer;
+            }
+        }
+        break;
+    }
+}
+fn loadClassTable() !void {
+    assert(zagImageHeader.classTable==object.Nil);
+}
+fn loadDispatchTable(file: std.fs.File) !void {
+    execute.loadIntrinsicsDispatch();
+    const stat = try file.stat();
+    assert(stat.size==@sizeOf(ZagImageHeader)); // no dispatch to read
+}
 fn processHeader(file: std.fs.File) !void {
-    _ = .{file};
-    @panic("not implemented");
+    //std.debug.print("Zag header: {}\n",.{zagImageHeader});
+    try loadSymbols();
+    try loadDispatchTable(file);
+    try loadClassTable();
 }
 fn runImage() !void {
-    @panic("not implemented");
+    _ = try execute.mainSendTo(zagImageHeader.selector,zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
-    const stat = try file.stat();
-    std.debug.print("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
+    //const stat = try file.stat();std.debug.print("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
     try globalArena.HeapAllocation.loadHeap(file, address);
 }
 fn readLargeHeapObject(file: std.fs.File, address: u64) !void {
