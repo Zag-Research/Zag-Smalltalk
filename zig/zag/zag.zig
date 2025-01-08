@@ -160,11 +160,9 @@ fn loadSymbols() !void {
     var exportedSymbols = zagImageHeader.symTable;
     outer:  while (!exportedSymbols.isNil()) {
         for (try exportedSymbols.arrayAsSlice(Object)) |obj| {
-            std.debug.print("obj: 0x{x:0>16} ",.{obj.rawU()});
             if (obj.isString()) {
-                std.debug.print("Loading symbol: {}\n",.{symbol.intern(obj)});
+                std.debug.print("LoadingSymbol: {}\n",.{symbol.intern(obj)});
             } else {
-                std.debug.print("next block: {}\n",.{obj});
                 exportedSymbols=obj;
                 continue :outer;
             }

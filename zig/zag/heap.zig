@@ -44,6 +44,9 @@ pub const Format = enum(u7) {
     externalWeakWithPointers, // only this and following have weak queue link
     indexedWeakWithPointers,
     _,
+    comptime {
+        assert(@intFromEnum(Format.notIndexable)==128-16);
+    }
     const Self = @This();
     const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
     const MutableOffset = NotObject;
@@ -66,8 +69,8 @@ pub const Format = enum(u7) {
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
     }
-    pub //inline
-        fn operations(self: Self) *const HeapOperations {
+    const operationsArray = HeapOperations.init();
+    pub fn operations(self: Self) *const HeapOperations {
         return &operationsArray[self.asU7()];
     }
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
@@ -96,7 +99,6 @@ pub const Format = enum(u7) {
     pub inline fn isExternal(self: Self) bool {
         return self.operations().isExternal();
     }
-    const operationsArray = HeapOperations.init();
     pub inline fn isByteSize(s: usize) bool {
         return s <= NumberOfBytes;
     }
@@ -179,56 +181,48 @@ test "isWeak formats" {
 //     try expect(!Format.indexedNonObject.isWeak());
 //     try expect(!Format.notObject.isWeak());
 // }
-const HeapOperationError = error{ immutable, notIndexable, invalidFormat, wrongElementSize };
+const HeapOperationError = error{ immutable, notIndexable, wrongElementSize };
 const HeapOperations = struct {
-    array: *const fn (Format, HeapHeader, *const HeapObject, usize) HeapOperationError![]Object,
-    instVars: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError![]Object,
-    size: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError!usize,
-    iterator: ?*const fn (HeapHeader, *const HeapObject) HeapObjectPtrIterator,
-    instVarWithPtr: Format,
+    array: *const fn (Format, HeapHeader, *const HeapObject, usize) HeapOperationError![]Object = notArray,
+    instVars: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError![]Object = noInstVars,
+    size: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError!usize = noSize,
+    iterator: ?*const fn (HeapHeader, *const HeapObject) HeapObjectPtrIterator = null,
+    instVarWithPtr: Format = .free,
+    inline fn set(ops: *[128]HeapOperations,format: Format, tuple: HeapOperations) void {
+        const idx = @intFromEnum(format);
+        const withPtr = if (idx>=@intFromEnum(Format.notIndexable) and idx<@intFromEnum(Format.free)) idx else idx+8;
+        ops[idx].array = tuple.array;
+        ops[idx].instVars = tuple.instVars;
+        ops[idx].size = tuple.size;
+        ops[idx].iterator = tuple.iterator;
+        ops[idx].instVarWithPtr = @enumFromInt(withPtr);
+        if (withPtr!=idx)
+            ops[withPtr] = ops[idx];
+    }
     fn init() [128]HeapOperations {
-        const ImmutableSizeZero = Format.ImmutableSizeZero;
-        const NotIndexable = Format.NotIndexable;
         var ops = [_]HeapOperations{undefined} ** 128;
-        for (ImmutableSizeZero..NotIndexable) |n| {
-            ops[n] = .{
+        for (ops[0..],0..) |*op,n| {
+            op.* = if (n<Format.NotIndexable) .{
                 .array = byteArray,
-                .instVars = noInstVars,
                 .size = byteSize,
-                .iterator = null,
                 .instVarWithPtr = @enumFromInt(n),
+            } else .{
+                .array = unimplementedArray,
+                .instVars = unimplementedInstVars,
+                .size = unimplementedSize,
             };
         }
-        ops[NotIndexable] = .{
-            .array = notArray,
-            .instVars = noInstVars,
-            .size = noSize,
-            .iterator = null,
-            .instVarWithPtr = .notIndexableWithPointers,
-        };
-        for (NotIndexable + 1..ops.len) |n| {
-            ops[n] = .{
-                .array = invalidArray,
-                .instVars = invalidInstVars,
-                .size = invalidSize,
-                .iterator = null,
-                .instVarWithPtr = @enumFromInt(n),
-            };
-        }
-        ops[@intFromEnum(Format.notIndexableWithPointers)] = .{
-            .array = notArray,
-            .instVars = noInstVars,
-            .size = noSize,
-            .iterator = null,
-            .instVarWithPtr = .notIndexableWithPointers,
-        };
-        // externalStruct, // this is a big allocated struct, not an Object
-        // externalNonObject,
-        // external,
-        // externalNonObjectWithPointers,
-        // externalWithPointers,
-        // externalWeakWithPointers,
-
+        set(&ops,.notIndexable,.{
+            .instVars = justInstVars,
+        });
+        //indexedNonObject,
+        //externalNonObject,
+        set(&ops,.directIndexed,.{
+            .array = directArray,
+            .size = directSize,
+        });
+        //indexed,
+        //external,
         return ops;
     }
     fn isIndexable(self: *const HeapOperations) bool {
@@ -236,6 +230,12 @@ const HeapOperations = struct {
     }
     fn isExternal(_: *const HeapOperations) bool {
         return false; // ToDo
+    }
+    fn directArray(_: Format, header: HeapHeader, obj: *const HeapObject, _: usize) HeapOperationError![]Object {
+             return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. header.length + 1];
+    }
+    fn directSize(_: Format, header: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
+        return header.length;
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         if (format.asU7() > 0 and elementSize != 1) return error.wrongElementSize;
@@ -250,17 +250,23 @@ const HeapOperations = struct {
     fn noInstVars(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
         return &[0]Object{};
     }
+    fn justInstVars(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
+        return &[0]Object{};
+    }
     fn noSize(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return error.notIndexable;
     }
-    fn invalidArray(_: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
-        return error.invalidFormat;
+    fn unimplementedArray(format: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
+        std.debug.print("format: {}\n",.{format});
+        @panic("unimplemented");
     }
-    fn invalidInstVars(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        return error.invalidFormat;
+    fn unimplementedInstVars(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
+        std.debug.print("format: {}\n",.{format});
+        @panic("unimplemented");
     }
-    fn invalidSize(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        return error.invalidFormat;
+    fn unimplementedSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
+        std.debug.print("format: {}\n",.{format});
+        @panic("unimplemented");
     }
 };
 pub const HeapObjectPtrIterator = struct {

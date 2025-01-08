@@ -87,15 +87,15 @@ pub const ClassIndex = enum(u16) {
     ProtoObject,
     Object,
     BlockClosure,
-    // BlockClosureValue,
-    // Context,
-    // Array,
+    BlockClosureValue,
+    Context,
+    Array,
     String,
-    // Utf8String,
-    // DoubleWordArray,
-    // Process,
-    // Class,
-    // CompiledMethod,
+    Utf8String,
+    DoubleWordArray,
+    Process,
+    Class,
+    CompiledMethod,
     Dispatch,
     max = 0xffff - 8,
     replace7,
@@ -722,7 +722,7 @@ const ObjectFunctions = struct {
     ) !void {
         _ = options;
         try switch (self.immediate_class()) {
-            .Object => writer.print("object:0x{x:0>16}", .{self.rawU()}), //,as_pointer(x));
+            .Object => writer.print("object:0x{x:0>16}=>{}", .{self.rawU(),@as(*heap.HeapHeader,@ptrFromInt(self.rawU())).*}),
             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
@@ -740,7 +740,7 @@ const ObjectFunctions = struct {
                 @panic("format for unknown class");
             },
         };
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:>16})", .{self.u()});
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{self.rawU()});
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
