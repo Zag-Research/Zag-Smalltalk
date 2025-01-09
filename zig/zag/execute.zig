@@ -1289,7 +1289,7 @@ pub const Execution = struct {
 
 pub fn mainSendTo(selector: Object, target: Object) !Object {
     std.debug.print("Sending: {} to {}\n",.{selector,target});
-    _ = Execution.new();
+//    _ = Execution.new();
      return error.NotImplemented;
 }
 

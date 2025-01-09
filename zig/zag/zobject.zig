@@ -419,6 +419,7 @@ const TagObject = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
+    const tagAndClass: u64 = 0xff;
     const nonIndexSymbol = 0xffffffff800000ff;
     pub inline fn indexSymbol0(uniqueNumber: u16) Object {
         return oImm(.Symbol, 0xf000000 | @as(u32, uniqueNumber));
@@ -450,8 +451,20 @@ const TagObject = packed struct(u64) {
     const u64_MAXVAL = g(.numericThunk) - 1;
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
+    pub inline fn untaggedI(self: Object) i64 {
+        return @bitCast(self.rawU()&~tagAndClass);
+    }
+    pub inline fn shiftI(n: i56) i64 {
+        return @as(i64,n)<<8;
+    }
     pub inline fn isInt(self: Object) bool {
-        return self.which_class(false) == .SmallInteger;
+        return self.isImmediateClass(.SmallInteger);
+    }
+    pub inline fn isNat(self: Object) bool {
+        return self.isInt() and self.rawI()>=0;
+    }
+    pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
+        return self.tagbits() == (@as(u8,@intFromEnum(class))<<3)+1;
     }
     pub inline fn isDouble(self: Object) bool {
         return switch (self.tag) {
@@ -546,12 +559,6 @@ const TagObject = packed struct(u64) {
     pub inline fn isMemoryAllocated(self: Object) bool {
         return self.tag == .heap and self != Object.Nil;
     }
-    // pub inline fn isMemoryAllocated(self: Object) bool {
-    //     return switch (self.tag) {
-    //         .heapThunk, .nonLocalThunk, .heap => true,
-    //         else => false,
-    //     };
-    // }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
