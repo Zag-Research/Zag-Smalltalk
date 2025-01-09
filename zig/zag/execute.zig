@@ -122,46 +122,47 @@ pub const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process:
 pub const fallback = controlPrimitives.fallback;
 const fallbackCode = Code.prim(&fallback);
 const fallbackPc = PC.init(&fallbackCode);
-pub const MethodSignature = extern struct {
-    selectorHash: u32,
-    class: ClassIndex,
-    pub fn from(selector: Object, class: ClassIndex) MethodSignature {
-        return .{ .selectorHash = selector.hash32(), .class = class };
-    }
-    fn equals(self: MethodSignature, other: MethodSignature) bool {
-        return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
-    }
-    fn numArgs(self: MethodSignature) u8 {
-        return @truncate(self.selectorHash & 0xff);
-    }
-    fn isIndexSymbol(self: MethodSignature) bool {
-        return self.numArgs() == 0xff;
-    }
-    fn indexNumber(self: MethodSignature) usize {
-        return self.selectorHash >> 8;
-    }
-    fn asSymbol(self: MethodSignature) Object {
-        return symbol.fromHash32(self.selectorHash);
-    }
-    pub fn format(
-        self: MethodSignature,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = .{ fmt, options };
-        try writer.print("MethodSignature({x},{})", .{ self.selectorHash, self.class });
-    }
-};
+pub const MethodSignature = Object;
+// extern struct {
+//     selectorHash: u32,
+//     class: ClassIndex,
+//     pub fn from(selector: Object, class: ClassIndex) MethodSignature {
+//         return .{ .selectorHash = selector.hash32(), .class = class };
+//     }
+//     fn equals(self: MethodSignature, other: MethodSignature) bool {
+//         return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
+//     }
+//     fn numArgs(self: MethodSignature) u8 {
+//         return @truncate(self.selectorHash & 0xff);
+//     }
+//     fn isIndexSymbol(self: MethodSignature) bool {
+//         return self.numArgs() == 0xff;
+//     }
+//     fn indexNumber(self: MethodSignature) usize {
+//         return self.selectorHash >> 8;
+//     }
+//     fn asSymbol(self: MethodSignature) Object {
+//         return symbol.fromHash32(self.selectorHash);
+//     }
+//     pub fn format(
+//         self: MethodSignature,
+//         comptime fmt: []const u8,
+//         options: std.fmt.FormatOptions,
+//         writer: anytype,
+//     ) !void {
+//         _ = .{ fmt, options };
+//         try writer.print("MethodSignature({x},{})", .{ self.selectorHash, self.class });
+//     }
+// };
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = extern struct {
     header: HeapHeader,
     stackStructure: Object, // number of local values beyond the parameters
     signature: MethodSignature,
-    verifier: ThreadedFn,
-    code: [codeSize]Code, // will typically be a lot more then 3, as it will be the processed version of the method
-    //references: [n]Object,
+    threaded: ThreadedFn,
+    jitted: ThreadedFn,
+    code: [codeSize]Code, // will typically be a lot more then 3, as it will be the threaded version of the method
     const Self = @This();
     const codeSize = 1;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
@@ -170,8 +171,9 @@ pub const CompiledMethod = extern struct {
         return Self{
             .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInUnits + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
             .stackStructure = Object.from(0),
-            .signature = .{ .selectorHash = name.hash32(), .class = .none },
-            .verifier = methodFn,
+            .signature = name.withClass(.none),
+            .threaded = methodFn,
+            .jitted = methodFn,
             .code = undefined,
         };
     }
@@ -181,7 +183,7 @@ pub const CompiledMethod = extern struct {
         return pc.prim()(pc.next(), sp, process, context, self.signature);
     }
     pub fn forDispatch(self: *Self, class: ClassIndex) void {
-        self.signature.class = class;
+        self.signature = self.signature.withClass(class);
         addMethod(self);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -197,10 +199,7 @@ pub const CompiledMethod = extern struct {
         return PC.init(@ptrCast(&self.code[0]));
     }
     pub inline fn selectorHash32(self: *const Self) u32 {
-        return self.signature.selectorHash;
-    }
-    pub inline fn selector(self: *const Self) Object {
-        return symbol.fromHash32(self.selectorHash32());
+        return @truncate(self.signature.rawU());
     }
     pub fn formatXXX(
         self: *const Self,
@@ -379,9 +378,9 @@ pub fn countNonLabels(comptime tup: anytype) CountSizes {
                 c += 1;
             },
             else => switch (@typeInfo(@TypeOf(field))) {
-                .Pointer => |pointer| {
+                .pointer => |pointer| {
                     switch (@typeInfo(pointer.child)) {
-                        .Array => switch (field[0]) {
+                        .array => switch (field[0]) {
                             ':' => {},
                             '0'...'9' => {
                                 r = comptime @max(r, intOf(field[0..]) + 1);
@@ -389,7 +388,7 @@ pub fn countNonLabels(comptime tup: anytype) CountSizes {
                             },
                             else => c += 1,
                         },
-                        .Fn => {
+                        .@"fn" => {
                             c += 1;
                         },
                         else => {
@@ -450,7 +449,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
             return .{
                 .header = header,
-                .signature = .{ .selectorHash = name.hash32(), .class = class },
+                .signature = name.withClass(class),
                 .verifier = verifier,
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
                 .code = undefined,
@@ -479,14 +478,15 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
             for (&self.code) |*c| {
                 if (c.object.isIndexSymbol0()) {
                     const index = c.object.indexNumber();
-                    c.* = Code.object(replacements[index]);
+                    c.* = Code.objectOf(replacements[index]);
                 }
             }
             if (self.signature.isIndexSymbol()) {
                 const index = self.signature.indexNumber();
                 const replacement = if (index < 0x10000) replacements[index] else refReplacements[index & 0xffff];
-                self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex) - (indexSymbol0(0).numArgs() - replacement.numArgs()));
-                self.signature.selectorHash = replacement.hash32();
+                _=replacement;unreachable;
+                // self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex) - (indexSymbol0(0).numArgs() - replacement.numArgs()));
+                // self.signature.selectorHash = replacement.hash32();
             }
             for (refReplacements, &self.references) |obj, *srefs|
                 srefs.* = obj;
@@ -494,7 +494,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 for (&self.code) |*c| {
                     if (c.object.isIndexSymbol1()) {
                         const newValue = (@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
-                        c.* = Code.uint(newValue);
+                        c.* = Code.uintOf(newValue);
                     }
                 }
             }
@@ -558,39 +558,39 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                 n = n + 1;
             },
             Object => {
-                code[n] = Code.object(field);
+                code[n] = Code.objectOf(field);
                 n = n + 1;
             },
             @TypeOf(null) => {
-                code[n] = Code.object(Nil);
+                code[n] = Code.objectOf(Nil);
                 n = n + 1;
             },
             comptime_int => {
-                code[n] = Code.int(field);
+                code[n] = Code.intOf(field);
                 n = n + 1;
             },
             ThreadedFn => {
-                code[n] = Code.prim(field);
+                code[n] = Code.primOf(field);
                 n = n + 1;
             },
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => |fPointer| {
+                    .pointer => |fPointer| {
                         switch (@typeInfo(fPointer.child)) {
-                            .Array => {
+                            .array => {
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len == 1 and field[0] == '^') {
-                                    code[n] = Code.uint(n);
+                                    code[n] = Code.uintOf(n);
                                     n = n + 1;
                                     found = true;
                                 } else if (field.len == 1 and field[0] == '*') {
-                                    code[n] = Code.int(-1);
+                                    code[n] = Code.intOf(-1);
                                     n = n + 1;
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                                    code[n] = Code.ref1(intOf(field[0..]));
+                                    code[n] = Code.ref1Of(intOf(field[0..]));
                                     n += 1;
                                     found = true;
                                 } else {
@@ -601,12 +601,12 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                                             if (t == &controlPrimitives.setupSend or
                                                 t == &controlPrimitives.setupTailSend) lp += 4;
                                         } else switch (@typeInfo(@TypeOf(t))) {
-                                            .Pointer => |tPointer| {
+                                            .pointer => |tPointer| {
                                                 switch (@typeInfo(tPointer.child)) {
-                                                    .Array => {
+                                                    .array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
-                                                                code[n] = Code.int(lp - n - 1);
+                                                                code[n] = Code.intOf(lp - n - 1);
                                                                 n = n + 1;
                                                                 found = true;
                                                                 break;
@@ -625,9 +625,9 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                                     if (!found) @compileError("missing label: \"" ++ field ++ "\"");
                                 }
                             },
-                            .Fn => {
+                            .@"fn" => {
                                 @compileLog(field);
-                                code[n] = Code.prim(field);
+                                code[n] = Code.primOf(field);
                                 n = n + 1;
                                 found = true;
                             },
@@ -739,9 +739,9 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
             else => {
                 comptime var found = false;
                 switch (@typeInfo(@TypeOf(field))) {
-                    .Pointer => |fPointer| {
+                    .pointer => |fPointer| {
                         switch (@typeInfo(fPointer.child)) {
-                            .Array => {
+                            .array => {
                                 if (field[0] == ':') {
                                     found = true;
                                 } else if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
@@ -752,9 +752,9 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
                                     comptime var lp = 0;
                                     inline for (tup) |t| {
                                         switch (@typeInfo(@TypeOf(t))) {
-                                            .Pointer => |tPointer| {
+                                            .pointer => |tPointer| {
                                                 switch (@typeInfo(tPointer.child)) {
-                                                    .Array => {
+                                                    .array => {
                                                         if (t[0] == ':') {
                                                             if (comptime std.mem.endsWith(u8, t, field)) {
                                                                 objects[n] = object.Object.indexSymbol1(lp);
@@ -803,7 +803,7 @@ test "compileObject" {
         ":second",
         c.replace0, // second HeapObject - runtime ClassIndex #0
         ":third",
-        c.Method, // third HeapObject
+        c.Dispatch, // third HeapObject
         True,
         "def",
     });
@@ -822,7 +822,7 @@ test "compileObject" {
     try expectEqual(@intFromEnum(h2.header.classIndex), 0xdead);
     try expectEqual(h2.header.length, 0);
     const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
-    try expectEqual(h3.header.classIndex, c.Method);
+    try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 2);
     try expectEqual(h3.header.age, .static);
     try expectEqual(h3.header.format, .notIndexable);
@@ -879,7 +879,7 @@ pub const controlPrimitives = struct {
         const selector = pc.object();
         const receiver = if (@TypeOf(offset) == @TypeOf(null)) sp.at(selector.numArgs()) else sp.at(offset);
         const class = receiver.get_class();
-        return MethodSignature{ .selectorHash = selector.hash32(), .class = class };
+        return selector.withClass(class);
     }
     pub fn setupSend(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
         const context = tfAsContext(_context);
@@ -1177,13 +1177,13 @@ pub const controlPrimitives = struct {
         const context = tfAsContext(_context);
         const method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc.back(pc.uint()).asCodePtr()) - CompiledMethod.codeOffset));
         const stackStructure = method.stackStructure;
-        const locals = stackStructure.low16() & 255;
-        const maxStackNeeded = stackStructure.mid16();
-        const selfOffset = stackStructure.high16();
+        const locals: u16 = @truncate(stackStructure.hash48() & 255);
+        const maxStackNeeded: u16 = @truncate((stackStructure.hash48()>>16) & 0xffff);
+        const selfOffset: u16 = @truncate((stackStructure.hash48()>>32) & 0xffff);
         trace("\npushContext: locals={} maxStack={} selfOffset={} signature={}", .{ locals, maxStackNeeded, selfOffset, method.signature });
         const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
         const newSp = ctxt.asNewSp();
-        trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.selector(), selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
+        trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.signature, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
         return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, undefined });
     }
     pub fn returnWithContext(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
@@ -1278,7 +1278,21 @@ pub const Execution = struct {
         trace("\nrun: {x} {x}", .{ &self.process, &self.ctxt });
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
+    fn mainSendTo(selector: Object, target: Object) !Object {
+        std.debug.print("Sending: {} to {}\n",.{selector,target});
+        // var exec = Self.new();
+        // exec.initStack(.{target});
+        // exec.ctxt.setReturn(Code.endThread);
+        return error.NotImplemented;
+    }
 };
+
+pub fn mainSendTo(selector: Object, target: Object) !Object {
+    std.debug.print("Sending: {} to {}\n",.{selector,target});
+    _ = Execution.new();
+     return error.NotImplemented;
+}
+
 const p = struct {
     usingnamespace controlPrimitives;
 };
@@ -1422,11 +1436,6 @@ test "simple executable" {
     try expectEqual(result[0], Object.from(0));
 }
 
-pub fn mainSendTo(selector: Object, target: Object) !Object {
-    std.debug.print("Sending: {} to {}\n",.{selector,target});
-    return error.NotImplemented;
-}
-
 const max_classes = config.max_classes;
 const symbols = symbol.symbols;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
@@ -1563,7 +1572,7 @@ const Dispatch = extern struct {
     pub fn addMethod(method: *CompiledMethod) void {
         const class = method.signature.class;
         const index = @intFromEnum(class);
-        trace("\naddMethod: {} {} {}", .{ index, method.selector(), method.codePtr() });
+//        trace("\naddMethod: {} {} {}", .{ index, method.selector(), method.codePtr() });
         if (dispatches[index].add(method)) return;
         var numMethods: usize = 3;
         while (true) {
@@ -1604,7 +1613,7 @@ const Dispatch = extern struct {
         self.state = .clean;
         return self;
     }
-    inline fn lookupAddress(self: *align(@sizeOf(DispatchElement)) const Self, selectorHash: u32) align(@sizeOf(DispatchElement)) *DispatchElement {
+    inline fn lookupAddress(self: *align(@sizeOf(DispatchElement)) const Self, selectorHash: u64) align(@sizeOf(DispatchElement)) *DispatchElement {
         const hash = doHash(selectorHash, self.hash);
         @setRuntimeSafety(false);
         return @constCast(&self.methods[hash]);
@@ -1613,8 +1622,8 @@ const Dispatch = extern struct {
         return selectorHash * size >> 32;
     }
     pub inline fn lookupAddressForClass(signature: MethodSignature) *DispatchElement {
-        trace(" (lookupAddressForClass) {}", .{signature.class});
-        const code = dispatches[@intFromEnum(signature.class)].lookupAddress(signature.selectorHash);
+        trace(" (lookupAddressForClass) {}", .{signature.classFromSymbolPlus()});
+        const code = dispatches[@intFromEnum(signature.classFromSymbolPlus())].lookupAddress(signature.hash56());
         return code;
     }
     fn lock(self: *Self) !void {

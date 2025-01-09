@@ -795,7 +795,7 @@ pub const HeapObject = extern struct {
         if (head.forwardedTo()) |target| { // already forwarded
             reference.* = switch (config.objectEncoding) {
                 .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .tag => {},
+                .tag => object.NotAnObject,
             };
             return hp;
         }
@@ -806,7 +806,7 @@ pub const HeapObject = extern struct {
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
             .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .tag => {},
+            .tag => object.NotAnObject,
         };
         return newHp;
     }
@@ -1013,7 +1013,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, Object.from(abcde).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, try Object.from(abcde).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));
