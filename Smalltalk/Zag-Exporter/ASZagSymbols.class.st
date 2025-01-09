@@ -35,7 +35,7 @@ ASZagSymbols class >> symbols [
 	     ifNotNil:ifNil: perform: perform:with: perform:with:with:
 	     perform:with:with:with: perform:withArguments:
 	     perform:withArguments:inSuperclass:
-	     inspect fibonacci Object)
+	     "inspect" Object )
 ]
 
 { #category : 'adding' }
