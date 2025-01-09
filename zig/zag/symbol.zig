@@ -252,7 +252,7 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.@"+");
     try symbol.verify(symbols.size);
     try symbol.verify(symbols.Object);
-    try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+    try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch

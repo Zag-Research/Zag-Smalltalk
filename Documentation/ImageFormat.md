@@ -9,7 +9,7 @@ An image is composed of a set of files in a directory.
 | `target`        | `Object`                | after image loading, send a message to this object |
 | `selector`      | `Symbol`                | this is the unary message to send                  |
 | `classTable`    | `Array`                 | all the class objects                              |
-| `symTable`      | `InternalHash`          | the hashed symbol table                            |
+| `symTable`      | `Array` of `String`     | the string (in order) to add to symbol table       |
 | `codeAddresses` | `DoubleWordArray`       | the addresses encoded in threaded methods          |
 | `dispatchTable` | all the following words | a copy of the dispatch table                       |
 The `codeAddresses` array contains the code addresses encoded in the threaded portion of the `CompiledMethod` objects referenced in the dispatch tables. If they don't correspond with the current Zag runtime, then the `CompiledMethod` objects in the `dispatchTable` must be modified. There are 2 parts to this:

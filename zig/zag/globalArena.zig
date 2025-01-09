@@ -273,7 +273,7 @@ const FreeList = extern struct {
         }
     }
     fn getSlice(self: *Self) ?[]HeapObject {
-        const myList = &self.extra.list;
+        const myList = &self.list;
         while (true) {
             if (myList.*) |fle| {
                 const next = fle.next;
@@ -292,8 +292,8 @@ const FreeList = extern struct {
         return initial_value;
     }
     fn freeCount(self: *const FreeList) usize {
-        if (self.header.length == 0) return @intFromPtr(self.extra.list);
-        if (self.extra.list) |fpe|
+        if (self.header.length == 0) return @intFromPtr(self.list);
+        if (self.list) |fpe|
             return fpe.count();
         return 0;
     }
@@ -318,7 +318,7 @@ fn newHeapAllocation() HeapAllocationPtr {
     const ha = HeapAllocation.init();
     var prev = heapAllocations;
     while (true) {
-        ha.nextHeap = prev;
+        ha.header.nextHeap = prev;
         if (@cmpxchgWeak(@TypeOf(heapAllocations), &heapAllocations, prev, ha, SeqCst, SeqCst)) |old| {
             prev = old;
             continue;
