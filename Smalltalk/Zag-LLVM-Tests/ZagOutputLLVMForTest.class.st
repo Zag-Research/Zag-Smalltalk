@@ -3,14 +3,21 @@ I set `gen` to myself, so I can produce a testable result.
 "
 Class {
 	#name : 'ZagOutputLLVMForTest',
-	#superclass : 'ZagOutputLLVM',
-	#category : 'Zag-LLVM-Tests',
-	#package : 'Zag-LLVM-Tests'
+	#superclass : 'ZagOutputLLVMTextual',
+	#category : 'Zag-LLVM-Tests-Tests',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Tests'
 }
+
+{ #category : 'accessing' }
+ZagOutputLLVMForTest >> contents [
+
+	^ stream contents
+]
 
 { #category : 'initialization' }
 ZagOutputLLVMForTest >> initialize [
 
 	super initialize.
-	gen := self
+	stream := WriteStream on: ''
 ]

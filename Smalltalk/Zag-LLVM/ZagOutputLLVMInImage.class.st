@@ -5,7 +5,10 @@ I am a connector to the Zag runtime code.
 "
 Class {
 	#name : 'ZagOutputLLVMInImage',
-	#superclass : 'Object',
+	#superclass : 'ZagOutputLLVMAPI',
+	#instVars : [
+		'builder'
+	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
@@ -14,4 +17,16 @@ Class {
 ZagOutputLLVMInImage class >> new [
 
 	<primitive: 'generatorObject' module: 'llvm'>
+]
+
+{ #category : 'adding' }
+ZagOutputLLVMInImage >> add: aNumber to: selfValue [
+
+	<primitive: 'add:to:' module: 'llvm'>
+]
+
+{ #category : 'instance creation' }
+ZagOutputLLVMInImage >> newLabel [
+
+	<primitive: 'newLabel' module: 'llvm'>
 ]

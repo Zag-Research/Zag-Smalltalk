@@ -78,7 +78,7 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	" ----- primitiveFail ----- "
 	gen defineLabel: primitiveFail.
-	self primitiveFail
+	"self primitiveFail"
 ]
 
 { #category : 'primitives' }

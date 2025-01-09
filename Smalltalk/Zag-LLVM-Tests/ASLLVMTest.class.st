@@ -1,8 +1,9 @@
 Class {
 	#name : 'ASLLVMTest',
 	#superclass : 'ASCodeTest',
-	#category : 'Zag-LLVM-Tests',
-	#package : 'Zag-LLVM-Tests'
+	#category : 'Zag-LLVM-Tests-Tests',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'running' }
