@@ -9,8 +9,9 @@ Class {
 		'nextRegister',
 		'nextLabel'
 	],
-	#category : 'Zag-LLVM',
-	#package : 'Zag-LLVM'
+	#category : 'Zag-LLVM-Tests-Support',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Support'
 }
 
 { #category : 'adding' }
@@ -63,6 +64,12 @@ ZagOutputLLVMTextual >> compare: valueRef1 is: comparison to: valueRef2 [
 	^ result.
 ]
 
+{ #category : 'accessing' }
+ZagOutputLLVMTextual >> contents [
+
+	^ stream contents
+]
+
 { #category : 'llvm interface' }
 ZagOutputLLVMTextual >> defineLabel: aLabel [
 
@@ -89,12 +96,12 @@ ZagOutputLLVMTextual >> if: condition isFalseThen: falseLabel isTrueThen: trueLa
 ZagOutputLLVMTextual >> initialize [
 
 	super initialize.
-	stream := Transcript.
+	stream := WriteStream on: ''.
 	nextRegister := 0.
 	nextLabel := 0
 ]
 
-{ #category : 'llvm interface' }
+{ #category : 'instance creation' }
 ZagOutputLLVMTextual >> newLabel [
 
 	nextLabel := nextLabel + 1.

@@ -1,3 +1,6 @@
+"
+This is deprecated - retained only because there might be examples here worth emulating.
+"
 Class {
 	#name : 'ASLLVMOutputTest',
 	#superclass : 'ASLLVMTest',

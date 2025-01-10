@@ -6,9 +6,7 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'symbols',
-		'currentAddress',
 		'objects',
-		'process',
 		'newClasses',
 		'selectors',
 		'newSelectors',
@@ -164,7 +162,6 @@ ASImageExporter >> constants [
 ASImageExporter >> constants: constantsClass [
 
 	constants := constantsClass.
-	currentAddress := BaseAddress.
 	#( #= value value: cull: yourself doesNotUnderstand:
 	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
 	   negated new new: value:value:value: value:value:value:value:
@@ -174,8 +171,7 @@ ASImageExporter >> constants: constantsClass [
 	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
 	   perform: perform:with: perform:with:with: perform:with:with:with:
 	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self objectSymbol: symbol ]. " has to match symbols.zig "
-
+		:symbol | self objectSymbol: symbol ] " has to match symbols.zig "
 ]
 
 { #category : 'writing' }

@@ -8,8 +8,11 @@ My subclasses simply set `gen` to an appropriate value.
 Class {
 	#name : 'ZagOutputLLVM',
 	#superclass : 'Object',
+	#traits : 'ZagImageOutputAPI',
+	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
-		'gen'
+		'gen',
+		'source'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
@@ -49,6 +52,22 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 	otherewise :=  self generateLabel.
 	self if: condition isFalseThen: otherewise isTrueThen: trueLabel.
 	gen defineLabel: otherewise
+
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> label [
+
+	| address |
+	address := source thatAddress.
+	" generate a label and keep track of the address of this  and the label so when we have a branch or other reference to this address we acan use the label that corresponds to it"
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> makeImmediateClosure [
+
+	| value |
+	value := source next
 
 ]
 
@@ -115,6 +134,59 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 	self returnWithSP: addressOfSelf.
 	self defineLabel: primitiveFail.
 	self primitiveFail
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> pushBlockNonlocalReturning [
+
+	| value |
+	value := source next.
+	" push an immediate block returning the next value. Determined at threaded-code-generation time to be one of the immediate-codable values "
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> pushContext [
+
+	source next. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
+
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> pushLiteral [
+
+	| literal |
+	literal := source next " need code to push this on stack "
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> pushLocal [
+
+	| localNumber |
+	localNumber := source next.
+	" push the value of this local in the context "
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> returnTop [
+
+	"generate the code to return TOS"
+]
+
+{ #category : 'threaded words' }
+ZagOutputLLVM >> send [
+	" the same as send0 and send1 except it uses the arity of the selector to find the target"
+
+	| selector threadedReturnPoint |
+	selector := source next.
+	"need code to extend selector with the class of the target of the send"
+	threadedReturnPoint := source addressOfLabel: 1
+	" we need to save this and the address of our return point in the context"
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> source: aZagOutputLLVM [
+
+	source := aZagOutputLLVM
 ]
 
 { #category : 'converting' }
