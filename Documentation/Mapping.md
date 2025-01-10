@@ -11,7 +11,7 @@ Both have immediate representations for symbols, characters, booleans, `nil`, an
 Defining a configuration flag allows choosing between these encodings. Once we can run real benchmarks, we will determine which is actually faster for particular workloads.
 
 ### [[Encoding-NaN]]
-### [[Encoding-Modified-Spur]]
+### [[Encoding]]
 
 ### Object in Memory
 This encoding was initially inspired by some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).

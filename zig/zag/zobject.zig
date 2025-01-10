@@ -42,12 +42,12 @@ test "indexSymbol" {
     const ee = std.testing.expectEqual;
     try e(Object.indexSymbol0(42).isSymbol());
     try e(Object.indexSymbol0(42).isIndexSymbol0());
-    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff89);
-    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a89);
+    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff71);
+    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a71);
     try ee(Object.indexSymbol0(42).indexNumber(), 42);
     try e(Object.indexSymbol1(42).isSymbol());
     try e(Object.indexSymbol1(42).isIndexSymbol1());
-    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a89);
+    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
     try ee(Object.indexSymbol1(42).indexNumber(), 42);
 }
 pub const ZERO = Object.ZERO;
@@ -77,10 +77,10 @@ pub const ClassIndex = enum(u16) {
     BlockAssignInstance,
     ThunkImmediate,
     ThunkFloat,
+    Symbol,
+    SmallInteger,
     False,
     True,
-    SmallInteger,
-    Symbol,
     Character,
     UndefinedObject = 32,
     Float,
@@ -130,10 +130,10 @@ pub const ClassIndex = enum(u16) {
         BlockAssignInstance,
         ThunkImmediate,
         ThunkFloat,
+        Symbol,
+        SmallInteger,
         False,
         True,
-        SmallInteger,
-        Symbol,
         Character,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
@@ -854,7 +854,7 @@ test "order" {
     };
     const buf1 = (Buf{ .obj = Object.from(42) }).buf;
     try ee(buf1[1], 42);
-    try ee(buf1[0], 129);
+    try ee(buf1[0], 121);
     try ee(buf1[2], 0);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
