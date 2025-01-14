@@ -30,28 +30,43 @@ pub fn init() void {}
 pub const inlines = struct {
     pub fn p1(self: Object, other: Object) !Object { // INLINED - Add
         if (other.isInt()) {
-            const result = switch (config.objectEncoding) {
-                .nan => @as(Object, @bitCast(self.rawI() +% other.toUnchecked(i64))),
-                .tag => {},
+            switch (config.objectEncoding) {
+                .nan => {
+                    const result = @as(Object, @bitCast(self.rawI() +% other.toUnchecked(i64)));
+                    if (result.isInt()) return result;
+                },
+                .tag => {
+                    const result = @addWithOverflow(self.rawI(),other.untaggedI());
+                    if (result[1] == 0) return result[0];
+                },
             };
-            if (result.isInt()) return result;
         }
         return error.primitiveError;
     }
     pub inline fn p1L(self: Object, other: i32) !Object { // Add a positive literal
-        const result = switch (config.objectEncoding) {
-            .nan => @as(Object, @bitCast(self.rawI() +% other)),
-            .tag => {},
-        };
-        if (result.atMostInt()) return result;
+        switch (config.objectEncoding) {
+            .nan => {
+                const result = @as(Object, @bitCast(self.rawI() +% other));
+                if (result.atMostInt()) return result;
+            },
+            .tag => {
+                const result = @addWithOverflow(self.rawI(),Object.shiftI(other));
+                if (result[1] == 0) return result[0];
+            },
+        }
         return error.primitiveError;
     }
     pub inline fn p_negated(self: Object) !Object { // Negate
-        const result = switch (config.objectEncoding) {
-            .nan => @as(Object, @bitCast(object.Object.u64_ZERO2 -% self.rawU())),
-            .tag => {},
-        };
-        if (result.isInt()) return result;
+        switch (config.objectEncoding) {
+            .nan => {
+                const result = @as(Object, @bitCast(object.Object.u64_ZERO2 -% self.rawU()));
+                if (result.isInt()) return result;
+            },
+            .tag => {
+                const result = @subWithOverflow(@as(i64,0),self.rawI());
+                if (result[1] == 0) return result[0];
+            },
+        }
         return error.primitiveError;
     }
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract

@@ -42,12 +42,12 @@ test "indexSymbol" {
     const ee = std.testing.expectEqual;
     try e(Object.indexSymbol0(42).isSymbol());
     try e(Object.indexSymbol0(42).isIndexSymbol0());
-    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff89);
-    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a89);
+    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff71);
+    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a71);
     try ee(Object.indexSymbol0(42).indexNumber(), 42);
     try e(Object.indexSymbol1(42).isSymbol());
     try e(Object.indexSymbol1(42).isIndexSymbol1());
-    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a89);
+    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
     try ee(Object.indexSymbol1(42).indexNumber(), 42);
 }
 pub const ZERO = Object.ZERO;
@@ -77,10 +77,10 @@ pub const ClassIndex = enum(u16) {
     BlockAssignInstance,
     ThunkImmediate,
     ThunkFloat,
+    Symbol,
+    SmallInteger,
     False,
     True,
-    SmallInteger,
-    Symbol,
     Character,
     UndefinedObject = 32,
     Float,
@@ -130,10 +130,10 @@ pub const ClassIndex = enum(u16) {
         BlockAssignInstance,
         ThunkImmediate,
         ThunkFloat,
+        Symbol,
+        SmallInteger,
         False,
         True,
-        SmallInteger,
-        Symbol,
         Character,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
@@ -419,12 +419,16 @@ const TagObject = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
+    const tagAndClass: u64 = 0xff;
     const nonIndexSymbol = 0xffffffff800000ff;
     pub inline fn indexSymbol0(uniqueNumber: u16) Object {
         return oImm(.Symbol, 0xf000000 | @as(u32, uniqueNumber));
     }
     pub inline fn indexSymbol1(uniqueNumber: u16) Object {
         return oImm(.Symbol, 0xf800000 | @as(u32, uniqueNumber));
+    }
+    pub inline fn isIndexSymbol(self: Object) bool {
+        return self.isIndexSymbol0() or self.isIndexSymbol1();
     }
     pub inline fn isIndexSymbol0(self: Object) bool {
         return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
@@ -447,8 +451,20 @@ const TagObject = packed struct(u64) {
     const u64_MAXVAL = g(.numericThunk) - 1;
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
+    pub inline fn untaggedI(self: Object) i64 {
+        return @bitCast(self.rawU()&~tagAndClass);
+    }
+    pub inline fn shiftI(n: i56) i64 {
+        return @as(i64,n)<<8;
+    }
     pub inline fn isInt(self: Object) bool {
-        return self.which_class(false) == .SmallInteger;
+        return self.isImmediateClass(.SmallInteger);
+    }
+    pub inline fn isNat(self: Object) bool {
+        return self.isInt() and self.rawI()>=0;
+    }
+    pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
+        return self.tagbits() == (@as(u8,@intFromEnum(class))<<3)+1;
     }
     pub inline fn isDouble(self: Object) bool {
         return switch (self.tag) {
@@ -466,6 +482,13 @@ const TagObject = packed struct(u64) {
     // pub inline fn toNatNoCheck(self: Object) u64 {
     //     return self.rawU() -% u64_ZERO;
     // }
+    pub inline fn withClass(self: Object, class: ClassIndex) Object {
+        if (!self.isSymbol()) @panic("not a Symbol");
+        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64,@intFromEnum(class)) << 40));
+    }
+    pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
+        return @enumFromInt(self.rawU()>>40);
+    }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & 0xffff_ffff_fff8;
     }
@@ -476,6 +499,9 @@ const TagObject = packed struct(u64) {
         return oImm(cls, hash);
     }
     pub inline fn hash24(self: Object) u24 {
+        return @truncate(self.hash);
+    }
+    pub inline fn hash48(self: Object) u48 {
         return @truncate(self.hash);
     }
     pub inline fn hash56(self: Object) u56 {
@@ -533,12 +559,6 @@ const TagObject = packed struct(u64) {
     pub inline fn isMemoryAllocated(self: Object) bool {
         return self.tag == .heap and self != Object.Nil;
     }
-    // pub inline fn isMemoryAllocated(self: Object) bool {
-    //     return switch (self.tag) {
-    //         .heapThunk, .nonLocalThunk, .heap => true,
-    //         else => false,
-    //     };
-    // }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
@@ -731,7 +751,12 @@ const ObjectFunctions = struct {
                 try writer.print("#symbols.i_{}", .{self.indexNumber()});
             } else if (self.isIndexSymbol1()) {
                 try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
-            } else writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"}),
+            } else {
+                try writer.print("#{s}", .{
+                    symbol.asString(self).arrayAsSlice(u8) catch "???"});
+                if ((self.hash56()>>32)>0)
+                    try writer.print("=>{}",.{self.classFromSymbolPlus()});
+            },
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
@@ -744,7 +769,7 @@ const ObjectFunctions = struct {
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object{ .tag = .smallInt0, .h0 = f0, .h1 = f1, .classIndex = @enumFromInt(f2) };
+        return Object.from(f0+(@as(i56,f1)<<16)+(@as(i56,f2)<<32));
     }
 };
 
@@ -829,7 +854,7 @@ test "order" {
     };
     const buf1 = (Buf{ .obj = Object.from(42) }).buf;
     try ee(buf1[1], 42);
-    try ee(buf1[0], 129);
+    try ee(buf1[0], 121);
     try ee(buf1[2], 0);
     const buf2 = (Buf{
         .obj = Object.from(42.0),

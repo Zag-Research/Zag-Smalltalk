@@ -239,10 +239,10 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.@"="), 1);
     try expectEqual(symbolIndex(symbols.value), 2);
     try expectEqual(symbolArity(symbols.value), 0);
-    try expectEqual(symbolIndex(symbols.Object), 55);
+    try expectEqual(symbolIndex(symbols.Object), 53);
     try expectEqual(symbolArity(symbols.Object), 0);
-    try expectEqual(symbols.Object.rawU(), 0xFDEAFF89);
-    try expectEqual(symbols.@"value:value:".rawU(), 0x2E3779089);
+    try expectEqual(symbols.Object.rawU(), 0xC17C0D71);
+    try expectEqual(symbols.@"value:value:".rawU(), 0x2E3779071);
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");
@@ -252,7 +252,7 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.@"+");
     try symbol.verify(symbols.size);
     try symbol.verify(symbols.Object);
-    try expect(mem.eql(u8, "valueWithArguments:"[0..], symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
+    try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch

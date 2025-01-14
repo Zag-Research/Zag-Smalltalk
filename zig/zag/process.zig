@@ -87,7 +87,7 @@ pub const Process = extern struct {
         self.trapContextNumber = 0;
     }
     const countType = u5;
-    const countMask: usize = math.maxInt(u16);
+    const countMask: usize = math.maxInt(u5);
     const countOverflowFlag = countMask + 1;
     const othersFlag = countOverflowFlag << 1;
     const checkFlags = othersFlag | countOverflowFlag;
@@ -293,13 +293,13 @@ test "check flag" {
     const origEOS = pr.endOfStack();
     pr = pr.maxCheck();
     try testing.expect(!pr.needsCheck());
-    var count = Process.checkMax - 1;
+    var count = Process.countMask - 1;
     while (count > 1) : (count -= 1) {
         pr = pr.checkBump();
     }
     try testing.expect(!pr.needsCheck());
     try testing.expectEqual(pr.endOfStack(), origEOS);
-    pr = pr.decCheck();
+    pr = pr.checkBump();
     try testing.expect(pr.needsCheck());
 }
 test "allocStack" {

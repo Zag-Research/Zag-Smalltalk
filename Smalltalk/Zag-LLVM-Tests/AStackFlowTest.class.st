@@ -7,8 +7,9 @@ Class {
 		'flowNew1',
 		'flowNew2'
 	],
-	#category : 'Zag-LLVM-Tests',
-	#package : 'Zag-LLVM-Tests'
+	#category : 'Zag-LLVM-Tests-Tests',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'running' }

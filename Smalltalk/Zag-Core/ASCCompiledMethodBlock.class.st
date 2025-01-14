@@ -1,5 +1,5 @@
 "
-I am an inline block, but I'm used to inline a Method at the top level - i.e. with a possible context
+I'm used to compile a Method at the top level - i.e. with a possible context
 Returns from me are real returns
 "
 Class {

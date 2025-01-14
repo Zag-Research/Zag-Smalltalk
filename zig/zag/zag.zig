@@ -9,52 +9,48 @@ const globalArena = @import("globalArena.zig");
 const symbol = @import("symbol.zig");
 // grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -nE 's;./\(.*\)[.]zig:[ \t]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
 const references = [_]ThreadedFn{
-    &execute.embedded.branch, // T_Branch := 1.
-    &execute.embedded.call, // T_Call := 2.
-    &execute.embedded.callRecursive, // T_CallRecursive := 3
-    &execute.embedded.drop, // T_Drop := 4
-    &execute.embedded.dropNext, // T_DropNext := 5
-    &execute.embedded.dup, // T_Dup := 6
-    &execute.embedded.dynamicDispatch, // T_DynamicDispatch := 7
-    &execute.embedded.fallback, // T_Fallback := 8
-    &execute.embedded.ifFalse, // T_IfFalse := 9
-    &execute.embedded.ifNil, // T_IfNil := 10
-    &execute.embedded.ifNotNil, // T_IfNotNil := 11
-    &execute.embedded.ifTrue, // T_IfTrue := 12
-    &execute.embedded.over, // T_Over := 13
-    &execute.embedded.popLocal, // T_PopLocal := 14
-    &execute.embedded.popLocal0, // T_PopLocal0 := 15
-    &execute.embedded.popLocalData, // T_PopLocalData := 16
-    &execute.embedded.popLocalField, // T_PopLocalField := 17
-    &execute.embedded.printStack, // T_PrintStack := 18
-    &execute.embedded.pushContext, // T_PushContext := 19
-    &execute.embedded.pushLiteral, // T_PushLiteral := 20
-    &execute.embedded.pushLiteral0, // T_PushLiteral0 := 21
-    &execute.embedded.pushLiteral1, // T_PushLiteral1 := 22
-    &execute.embedded.pushLiteral2, // T_PushLiteral2 := 23
-    &execute.embedded.pushLiteralFalse, // T_PushLiteralFalse := 24
-    &execute.embedded.pushLiteralIndirect, // T_PushLiteralIndirect := 25
-    &execute.embedded.pushLiteralNil, // T_PushLiteralNil := 26
-    &execute.embedded.pushLiteralTrue, // T_PushLiteralTrue := 27
-    &execute.embedded.pushLiteral_1, // T_PushLiteral_1 := 28
-    &execute.embedded.pushLocal, // T_PushLocal := 29
-    &execute.embedded.pushLocal0, // T_PushLocal0 := 30
-    &execute.embedded.pushLocalData, // T_PushLocalData := 31
-    &execute.embedded.pushLocalField, // T_PushLocalField := 32
-    &execute.embedded.pushThisContext, // T_PushThisContext := 33
-    &execute.embedded.replaceLiteral, // T_ReplaceLiteral := 34
-    &execute.embedded.replaceLiteral0, // T_ReplaceLiteral0 := 35
-    &execute.embedded.replaceLiteral1, // T_ReplaceLiteral1 := 36
-    &execute.embedded.returnNoContext, // T_ReturnNoContext := 37
-    &execute.embedded.returnNonLocal, // T_ReturnNonLocal := 38
-    &execute.embedded.returnTop, // T_ReturnTop := 39
-    &execute.embedded.returnWithContext, // T_ReturnWithContext := 40
-    &execute.embedded.setupSend, // T_SetupSend := 41
-    &execute.embedded.setupTailSend, // T_SetupTailSend := 42
-    &execute.embedded.setupTailSend0, // T_SetupTailSend0 := 43
-    &execute.embedded.storeLocal, // T_StoreLocal := 44
-    &execute.embedded.swap, // T_Swap := 45
-    &execute.embedded.verifyMethod, // T_VerifyMethod := 46
+    &execute.embedded.branch,
+    &execute.embedded.call,
+    &execute.embedded.classCase,
+    &execute.embedded.classCase28,
+    &execute.embedded.cullColon,
+    &execute.embedded.drop,
+    &execute.embedded.dropNext,
+    &execute.embedded.dup,
+    &execute.embedded.label,
+    &execute.embedded.makeImmediateClosure,
+    &execute.embedded.over,
+    &execute.embedded.popAssociationValue,
+    &execute.embedded.popIndirect,
+    &execute.embedded.popIndirectLocal,
+    &execute.embedded.popInstVar,
+    &execute.embedded.popLocal,
+    &execute.embedded.popLocalData,
+    &execute.embedded.popLocalField,
+    &execute.embedded.primitive,
+    &execute.embedded.primitiveFailed,
+    &execute.embedded.primitiveModule,
+    &execute.embedded.pushAssociationValue,
+    &execute.embedded.pushContext,
+    &execute.embedded.pushIndirect,
+    &execute.embedded.pushIndirectLocal,
+    &execute.embedded.pushInstVar,
+    &execute.embedded.pushLiteral,
+    &execute.embedded.pushLocal,
+    &execute.embedded.pushLocalData,
+    &execute.embedded.pushLocalField,
+    &execute.embedded.pushThisContext,
+    &execute.embedded.returnNoContext,
+    &execute.embedded.returnNonLocal,
+    &execute.embedded.returnTop,
+    &execute.embedded.returnWithContext,
+    &execute.embedded.send,
+    &execute.embedded.storeLocal,
+    &execute.embedded.swap,
+    &execute.embedded.tailCall,
+    &execute.embedded.tailSend,
+    &execute.embedded.value,
+    &execute.embedded.valueColon,
 };
 // &primitives.embedded.BlockClosure.closureData, // P_ClosureData := 47
 // &primitives.embedded.BlockClosure.fullClosure, // P_FullClosure := 48

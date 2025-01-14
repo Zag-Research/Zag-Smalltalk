@@ -1,11 +1,15 @@
+"
+This is deprecated - retained only because there might be examples here worth emulating.
+"
 Class {
 	#name : 'ASLLVMOutputTest',
 	#superclass : 'ASLLVMTest',
 	#instVars : [
 		'output'
 	],
-	#category : 'Zag-LLVM-Tests',
-	#package : 'Zag-LLVM-Tests'
+	#category : 'Zag-LLVM-Tests-Tests',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Tests'
 }
 
 { #category : 'running' }
