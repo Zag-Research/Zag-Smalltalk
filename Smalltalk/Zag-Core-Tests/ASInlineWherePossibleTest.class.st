@@ -7,6 +7,70 @@ Class {
 }
 
 { #category : 'tests' }
+ASInlineWherePossibleTest >> testEvaluateBlockValue [
+
+"
+blockValue
+
+	^ [ 4 ] value 
+"
+| cgNoInline cgInline |
+ASInliner reset.
+	cgNoInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #blockValue)
+		              inline: 0;
+		              finalAnalysis.
+	ASInliner reset.
+	cgInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #blockValue)
+		              inline: 1000;
+		              finalAnalysis.
+	cgInline inspect.
+	
+	self
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	self
+		assert: (cgInline basicBlocks size)
+		equals: 1
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> testEvaluateBlockValueNonlocal [
+
+"
+blockValueNonlocal
+
+	[ ^ 4 ] value
+"
+| cgNoInline cgInline |
+ASInliner reset.
+	cgNoInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #blockValueNonlocal)
+		              inline: 0;
+		              finalAnalysis.
+	ASInliner reset.
+	cgInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #blockValueNonlocal)
+		              inline: 1000;
+		              finalAnalysis.
+	cgInline inspect.
+	
+	self
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	self
+		assert: (cgInline basicBlocks size)
+		equals: 1
+]
+
+{ #category : 'tests' }
 ASInlineWherePossibleTest >> testFindMethodBlock [
 
 "
