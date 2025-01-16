@@ -14,7 +14,8 @@ BaselineOfZagSmalltalk >> baseline: spec [
 	<baseline>
 	spec for: #common do: [ "Packages"
 		spec
-			package: 'Zag-Core';
+			package: 'Zag-Substitutions';
+			package: 'Zag-Core' with: [ spec requires: #( 'Zag-Substitutions' ) ];
 			package: 'Zag-Core-Tests' with: [
 				spec requires:
 						#( 'Zag-Core' 'Zag-Compiler-Tests' 'Zag-Inlining' 'Zag-Output' ) ];

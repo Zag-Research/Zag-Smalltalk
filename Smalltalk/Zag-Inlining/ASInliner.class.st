@@ -166,15 +166,15 @@ ASInliner class >> reset [
 	self bothMatch: SmallInteger >> #> returns: Boolean.
 	self alwaysValid: Object selector: #'==' returns: Boolean.
 	self alwaysValid: Object selector: #'~~' returns: Boolean.
-"	self selfMatch: ASTBlockClosure >> #value.
-	self selfMatch: ASTBlockClosure >> #value:.
-	self selfMatch: ASTBlockClosure >> #value:value:.
-	self selfMatch: ASTBlockClosure >> #value:value:value:.
-	self selfMatch: ASTBlockClosure >> #value:value:value:value:.
-	self selfMatch: ASTSymbol >> #value:.
-	self selfMatch: ASTSymbol >> #value:value:.
-	self selfMatch: ASTSymbol >> #value:value:value:.
-	self selfMatch: ASTSymbol >> #value:value:value:value:"
+	self selfMatch: BlockClosure >> #value.
+	self selfMatch: BlockClosure >> #value:.
+	self selfMatch: BlockClosure >> #value:value:.
+	self selfMatch: BlockClosure >> #value:value:value:.
+	self selfMatch: BlockClosure >> #value:value:value:value:.
+"	self selfMatch: Symbol >> #value:.
+	self selfMatch: Symbol >> #value:value:.
+	self selfMatch: Symbol >> #value:value:value:.
+	self selfMatch: Symbol >> #value:value:value:value:"
 ]
 
 { #category : 'inlining' }
@@ -188,7 +188,7 @@ ASInliner class >> selfMatch: aCompiledMethod [
 
 { #category : 'inlining' }
 ASInliner class >> selfMatch: anInteger class: aClass numArgs: numArgs [
-
+self halt.
 	numArgs = 0 ifTrue: [
 		self
 			prim: anInteger

@@ -1,10 +1,11 @@
-"
-I am the superclass of Zag objects for the Semantic Interpreter
-"
 Class {
-	#name : 'ASIObject',
+	#name : 'ASIPrimitiveError',
 	#superclass : 'Object',
 	#category : 'Zag-Core-Tests-SemanticInterpreter',
 	#package : 'Zag-Core-Tests',
 	#tag : 'SemanticInterpreter'
 }
+
+{ #category : 'as yet unclassified' }
+ASIPrimitiveError class >> processPrimitiveResult: ignored [
+]
