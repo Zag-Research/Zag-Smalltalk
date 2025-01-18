@@ -12,7 +12,7 @@ The system is being developed on https://github.com/dvmason/Zag-Smalltalk
 
 ## More
 - [Execution](Execution.md) is described here, including message dispatch.
-- The [memory structure](Mapping.md) and [garbage collector](MemoryManagement.md) are described here.
+- The [memory structure](Mapping.md) and [garbage collector](Memory%20Management.md) are described here.
 - [Optimization opportunities](Optimizations.md) are described here.
 - [Experiments](Experiments.md)
 - [Hacking](Hacking.md) has some guidance on working with the code

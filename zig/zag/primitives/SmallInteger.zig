@@ -39,7 +39,7 @@ pub const inlines = struct {
                     const result = @addWithOverflow(self.rawI(),other.untaggedI());
                     if (result[1] == 0) return result[0];
                 },
-            };
+            }
         }
         return error.primitiveError;
     }

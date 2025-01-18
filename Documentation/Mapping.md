@@ -3,15 +3,7 @@
 
 ## Object encoding
 
-We use one of 2 object encodings with different properties:
-	1. NaN Encoding - which has the advantage of 64-bit floats being encoded with no change. This allows floating-point values to be directly used by other languages and potentially GPUs. This supports 50-bit SmallIntegers.
-	2. Modified Spur Encoding - which probably has faster class determination (hence dispatch), and 61-bit SmallIntegers. Most-used 64-bit floats are encoded as immediates, but some very large values (more than 2e77) will be heap-allocated.
-Both have immediate representations for symbols, characters, booleans, `nil`, and some special closures.
-
-Defining a configuration flag allows choosing between these encodings. Once we can run real benchmarks, we will determine which is actually faster for particular workloads.
-
-### [[Encoding-NaN]]
-### [[Encoding]]
+We use an immediate [[Encoding]] that is somewhat based on the  [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/)  encoding used by  [OpenSmalltalk VM](https://github.com/OpenSmalltalk), but with a strong bias toward immediate values. As such it supports immediate representations for many more immediate types as well as a larger range of 64-bit floats.  (The only trade off is 56-bit instead of 61-bit `SmallInteger`.)
 
 ### Object in Memory
 This encoding was initially inspired by some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
@@ -22,10 +14,8 @@ There are a few significant changes:
 	2. BlockClosure - this is a full block closure as described in [[Mapping#Thunks and Closures]]
 2. We are using a pure generational copying collector for the nursery arenas. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
 3. `become:` will be implemented with similar forwarding.... When the objects are collected, the references will be updated.
-4. References from old-generation to new generation will use forwarding as well (the new object will be copied to the older space, and leave a forwarding pointer behind - note if there is no space for this copy, this could force a collection on an older generation without collecting newer generations)
-
 #### Object addresses
-All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existiing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move.
+All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move.
 
 ##### HeapObject word format:
 | Bits | What         | Characteristics                         |
@@ -40,7 +30,6 @@ All object addresses point to a HeapObject word.  Every object has a HeapHeader 
 The length field encodes the total size of the heap allocation except for the HeapObject word itself.
 
 There are a number of special length values:
-- 4095 - this isn't a header, it would be an object (see [[Mapping#Object encoding]], so it is never used, just reserved.
 - 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The rest of the original object will be described by a dummy object defined by the next word (a HeapHeader).
 - 0-4093 - normal object 
 Note that the total heap space for an object (including any footer fields) can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as an external object.
@@ -52,9 +41,9 @@ The age field encodes where the object is, and the number of times the object ha
 | 0     | on Stack     | only Context, or BlockClosure                   |
 | 1-5   | nursery heap | incremented on each copy                        |
 | 6     | nursery heap | will be promoted to global heap on next collect |
-| 7-15  | global heap  | see [[MemoryManagement#Object age fields]]      |
+| 7-15  | global heap  | see [[Memory Management#Object age fields]]      |
 
-Not necessarily just age 6 objects will be copied. While a copy is happening, the space occupied by each age is accumulated, so if more space is required, it knows what ages need to be promoted to the global heap.
+Not necessarily just age 6 objects will be promoted. While a copy is happening, the space occupied by each age is accumulated, so if more space is required, it knows what ages need to be promoted to the global heap.
 #### Format
 The format field encodes whether there are instance variables, indexable portions, pointers. Ignoring the high bit, which says the object is immutable, the object format tag is coded as follows:
 

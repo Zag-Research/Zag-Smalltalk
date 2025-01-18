@@ -173,6 +173,7 @@ fn loadDispatchTable(file: std.fs.File) !void {
     execute.loadIntrinsicsDispatch();
     const stat = try file.stat();
     assert(stat.size==@sizeOf(ZagImageHeader)); // no dispatch to read
+//    _ = references;
 }
 fn processHeader(file: std.fs.File) !void {
     //std.debug.print("Zag header: {}\n",.{zagImageHeader});

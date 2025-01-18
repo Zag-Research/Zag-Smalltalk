@@ -28,7 +28,7 @@ When we dispatch to a method, we always treat it as threaded code. This may seem
 The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be spilled to the heap.
 
 There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
-## Dispatch and Polymorphic Inline Caches
+## Sends and Polymorphic Inline Caches
 When a message send is encountered a sequence of threaded words are output:
 1. Either a `SetupReturn` for a normal send, or a `SetupNoReturn` for a tail send. These both get the class from the receiver and the selector from the following word. `SetupReturn` also saves the return address (the address after the `DispatchDynamic` - the offset of which is also in that argument word) in the `Context`. `SetupNoReturn` doesn't save the return, but does restructure the stack (the parameters of which are also in that argument word). There are versions of both of these for unary and binary selectors as well as the general case, and there are versions of `SetupNoReturn` for with/without `Context` for the current method.
 2. A sequence of `DispatchDirect` words, each followed by a `nil`.
@@ -38,34 +38,48 @@ When a message send is encountered a sequence of threaded words are output:
 3. Finally a `DispatchDynamic`. This is the fallback and is never replaced. It does the same lookup of the class and hashing, but rather than probing for a match, it jumps indirectly through the dispatch table which is laid out the same way: a code address to execute followed by the `CompiledMethod` address.
 4. This sequence will also be directly used for dispatch by any JIT code (although step 1 will be done in the JIT code with the native PC pointing to the return point in the JIT code, and the threaded PC pointing to the word after the `DynamicDispatch`). This means that: a) the JIT code benefits from the same PIC as the threaded code; b) no code addresses (other than the current method) are embedded in native code and would have to be invalidated; c) JIT dispatch is a little more expensive than it would otherwise be.
 If a send is to a known method of a known class, then only one `DirectDispatch` need be generated and no `DynamicDIspatch`. If the send is to this method (after inlining) steps 2-3 will be replaced by a `Branch`.
+## Dispatch
+To find a compiled method from a signature, we need to get the dispatch table for the class, and then hash into that to find the actual method.
+
+The signature is an augmented [[Symbol]] that has the class number in the top 24 bits of the word (which are zero in the `Symbol` encoding). So the first step is to extract the class number and index through a static table to the `Dispatch` table for the class. The number of classes is a compile-time configuration parameter to the Zag runtime, but the individual `Dispatch` tables are dynamically allocated.
+
+Each `Dispatch` object has an array of `DispatchElement` structs. Each has a signature and a pointer to a `CompiledMethod`.
+
+We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, we end up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
+
+Starting from that position we check each `DispatchElement` for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, if the `DispatchElement` has a non-`nil` signature, we look at the next one, etc. This loop is guaranteed to finish because we will either find a match, a gap (because the hash table is generated with a loading factor of about 70%), or we will get to the end and there is an extra `nil` value at the end of the array.
+
+If the `DispatchElement` has a `nil` signature, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if this `nil` is a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
+
+The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMeethod`.
 #### Stack example
 
 When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
 
-| Stack  | Description              | Pointers                                                  |
-| ------ | ------------------------ | --------------------------------------------------------- |
-| ...    |               | space for stack growth                                                   |
-| object | m0 parameters            |  <--- sp                                                         |
-| object | m0 self                  |                                                           |
-| ...    | m1 stack                 |                                                           |
-| header | m1 header                | <--- aContext                                             |
-| tpc    | m1 threaded pc to return to       |                                                           |
-| npc    | m1 native pc to return to       |                                                           |
-| ctxt   | m1 ContextPtr            | ---> m2 header                                            |
-| method | m1 method                |                                                           |
-| object | m1 locals |     allocated by pushContext                                                      |
-| object | m1 parameters  | pushed by m2                                                          |
-| object | m1 self                  | pushed by m2                                                          |
-| ...    | m2 stack                 |                                                           |
-| header | m2 header                | <--- m1 ctxt                                              |
-| tpc    | m2 threaded pc to return to       |                                                           |
-| npc    | m2 native pc to return to       |                                                           |
-| ctxt   | m2 ContextPtr            | ---> m3 Context header (see example below on the heap) |
-| method | m2 method                |                                                           |
-| object | m2 locals |                                                           |
-| object | m2 parameters |                                                           |
-| object | m2 self                  |                                                           |
-| ...    | m3 stack                 |                                                           |
+| Stack  | Description                 | Pointers                                               |
+| ------ | --------------------------- | ------------------------------------------------------ |
+| ...    |                             | space for stack growth                                 |
+| object | m0 parameters               | <--- sp                                                |
+| object | m0 self                     |                                                        |
+| ...    | m1 stack                    |                                                        |
+| header | m1 header                   | <--- aContext                                          |
+| tpc    | m1 threaded pc to return to |                                                        |
+| npc    | m1 native pc to return to   |                                                        |
+| ctxt   | m1 ContextPtr               | ---> m2 header                                         |
+| method | m1 method                   |                                                        |
+| object | m1 locals                   | allocated by pushContext                               |
+| object | m1 parameters               | pushed by m2                                           |
+| object | m1 self                     | pushed by m2                                           |
+| ...    | m2 stack                    |                                                        |
+| header | m2 header                   | <--- m1 ctxt                                           |
+| tpc    | m2 threaded pc to return to |                                                        |
+| npc    | m2 native pc to return to   |                                                        |
+| ctxt   | m2 ContextPtr               | ---> m3 Context header (see example below on the heap) |
+| method | m2 method                   |                                                        |
+| object | m2 locals                   |                                                        |
+| object | m2 parameters               |                                                        |
+| object | m2 self                     |                                                        |
+| ...    | m3 stack                    |                                                        |
 
 
 | m3 Context | Description | Pointers |

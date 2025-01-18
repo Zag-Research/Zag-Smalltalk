@@ -1,6 +1,6 @@
 Supporting all the I/O components that provide the UI in Pharo, Cuis, or Squeak seems like a lot of work for limited value - or more accurately, it isn't where we see our contribution to Smalltalk.
 
-Instead, we are looking for interfaces that will run remotely, so all we need to provide isthe network support, and the API for the external interface to be able to talk to Zag.
+Instead, we are looking for interfaces that will run remotely, so all we need to provide is the network support, and the API for the external interface to be able to talk to Zag.
 
 #### [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) [spec 3.18](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.18/specification.md) [Wikipedia](https://en.wikipedia.org/wiki/Language_Server_Protocol)
 

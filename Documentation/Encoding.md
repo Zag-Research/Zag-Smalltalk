@@ -3,7 +3,7 @@ This is an encoding that tags the low bits of a word to represent various immedi
 
 Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk) and was designed by Elliot Miranda and Clement Bera. They tagged only a few kinds of immediate values because their philosophy is that most objects should be in memory (i.e. heap) whereas our philosophy is that as many objects as possible should be immediate values. This reduces memory traffic, allows for more efficient dispatch, and encodes a significant set of block closures to not require any memory allocation.
 
-This is evolved from an earlier attempt [[Encoding-Modified-Spur-Old]] and a departure from [[Encoding-NaN]] which was promising (and there is still a switch to enable it, but it's not been kept up to date, and there are optimizations that depend on this encoding instead).
+This is evolved from an earlier attempt [[Encoding-Modified-Spur-Old]] and a departure from [[Encoding-NaN]] which was promising (there is still a switch to enable it, but it's not been kept up to date, and there are optimizations that depend on this encoding instead - so it's essentially a dead end).
 
 Spur uses the [following format](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/):
 ![[Pasted image 20240115082827.png]]
@@ -70,7 +70,7 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 14. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
 15. `True`: This encodes the singleton value `true`.
 16. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
-17. `Symbol`: See [Symbols](Symbols.md) for detailed information on the format.
+17. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
 18. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
 19. to 31 unused
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits.

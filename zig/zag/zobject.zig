@@ -846,16 +846,23 @@ test "printing" {
     try stream.print("{}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
-test "order" {
-    const ee = std.testing.expectEqual;
-    const Buf = extern union {
+const Buf =  blk: {
+    @setRuntimeSafety(false);
+    break :blk union {
         buf: [8]u8,
         obj: Object,
     };
-    const buf1 = (Buf{ .obj = Object.from(42) }).buf;
-    try ee(buf1[1], 42);
-    try ee(buf1[0], 121);
-    try ee(buf1[2], 0);
+};
+const buf1: [1]Buf = .{Buf{ .obj = Object.from(42) }};
+fn slice1() []const Buf {
+    return &buf1;
+}
+test "order" {
+    const ee = std.testing.expectEqual;
+    const sl1 = slice1()[0].buf;
+    try ee(sl1[1], 42);
+    try ee(sl1[0], 121);
+    try ee(sl1[2], 0);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
     }).buf;
