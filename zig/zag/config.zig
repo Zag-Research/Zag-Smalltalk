@@ -15,6 +15,6 @@ const Encoding = enum {
 
 const debugging = false;
 const show_error_stack = debugging;
-const show_trace = false;
+const show_trace = true;
 pub const picSize = 0;
 pub const max_classes = 100;

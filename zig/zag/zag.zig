@@ -8,71 +8,7 @@ const primitives = @import("primitives.zig");
 const globalArena = @import("globalArena.zig");
 const symbol = @import("symbol.zig");
 // grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -nE 's;./\(.*\)[.]zig:[ \t]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
-const references = [_]ThreadedFn{
-    &execute.embedded.branch,
-    &execute.embedded.call,
-    &execute.embedded.classCase,
-    &execute.embedded.classCase28,
-    &execute.embedded.cullColon,
-    &execute.embedded.drop,
-    &execute.embedded.dropNext,
-    &execute.embedded.dup,
-    &execute.embedded.label,
-    &execute.embedded.makeImmediateClosure,
-    &execute.embedded.over,
-    &execute.embedded.popAssociationValue,
-    &execute.embedded.popIndirect,
-    &execute.embedded.popIndirectLocal,
-    &execute.embedded.popInstVar,
-    &execute.embedded.popLocal,
-    &execute.embedded.popLocalData,
-    &execute.embedded.popLocalField,
-    &execute.embedded.primitive,
-    &execute.embedded.primitiveFailed,
-    &execute.embedded.primitiveModule,
-    &execute.embedded.pushAssociationValue,
-    &execute.embedded.pushContext,
-    &execute.embedded.pushIndirect,
-    &execute.embedded.pushIndirectLocal,
-    &execute.embedded.pushInstVar,
-    &execute.embedded.pushLiteral,
-    &execute.embedded.pushLocal,
-    &execute.embedded.pushLocalData,
-    &execute.embedded.pushLocalField,
-    &execute.embedded.pushThisContext,
-    &execute.embedded.returnNoContext,
-    &execute.embedded.returnNonLocal,
-    &execute.embedded.returnTop,
-    &execute.embedded.returnWithContext,
-    &execute.embedded.send,
-    &execute.embedded.storeLocal,
-    &execute.embedded.swap,
-    &execute.embedded.tailCall,
-    &execute.embedded.tailSend,
-    &execute.embedded.value,
-    &execute.embedded.valueColon,
-};
-// &primitives.embedded.BlockClosure.closureData, // P_ClosureData := 47
-// &primitives.embedded.BlockClosure.fullClosure, // P_FullClosure := 48
-// &primitives.embedded.BlockClosure.generalClosure, // P_GeneralClosure := 49
-// &primitives.embedded.BlockClosure.immutableClosure, // P_ImmutableClosure := 50
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_false, // P_PushNonlocalBlock_false := 51
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_minusOne, // P_PushNonlocalBlock_minusOne := 52
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_nil, // P_PushNonlocalBlock_nil := 53
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_one, // P_PushNonlocalBlock_one := 54
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_self, // P_PushNonlocalBlock_self := 55
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_true, // P_PushNonlocalBlock_true := 56
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_two, // P_PushNonlocalBlock_two := 57
-// &primitives.embedded.BlockClosure.pushNonlocalBlock_zero, // P_PushNonlocalBlock_zero := 58
-// &primitives.primitives.p201, // P_P201 := 59
-// &primitives.primitives.p202, // P_P202 := 60
-// &primitives.primitives.p203, // P_P203 := 61
-// &primitives.primitives.p204, // P_P204 := 62
-// &primitives.primitives.p205, // P_P205 := 63
-// &primitives.embedded.BlockClosure.@"value:", // P_value_ := 64
-// &execute.embedded.perform, // P_Perform := 65
-// &execute.embedded.performWith, // P_PerformWith := 66
-
+const references = execute.ebmedded.references;
 fn format_timestamp(seconds: u64, out_buffer: []u8) void {
     if (std.debug.runtime_safety) std.debug.assert(out_buffer.len >= 27);
     const epoch_seconds: std.time.epoch.EpochSeconds = .{ .secs = seconds };
