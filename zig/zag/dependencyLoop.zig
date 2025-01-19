@@ -1,9 +1,12 @@
 const std = @import("std");
-const builtin = @import("builtin");
-const stdCall: std.builtin.CallingConvention = if (builtin.cpu.arch == .x86) .Stdcall else .C;
 
 const execute = struct {
-    const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP;
+    const ThreadedFn = *const fn (
+//        programCounter: PC, stackPointer: SP,
+        process: *Process,
+        context: *Context,
+        signature: MethodSignature
+    ) SP;
     const CompiledMethodPtr = *CompiledMethod;
     const CompiledMethod = struct {
 //        executeFn: ThreadedFn,
@@ -20,7 +23,7 @@ const execute = struct {
         top: u64,
     };
     const SP = *Stack;
-    const MethodSignature = struct {
+    const MethodSignature = extern struct {
         int: u64,
     };
 };
