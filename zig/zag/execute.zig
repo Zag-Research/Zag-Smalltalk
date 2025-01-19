@@ -295,63 +295,64 @@ pub const PC = extern struct {
         return @ptrCast(self.code);
     }
 };
-pub const Code =  blk: {
-    @setRuntimeSafety(false);
-    break :blk union {
-        prim: ThreadedFn,
-        int: i64,
-        uint: u64,
-        object: Object,
-        header: heap.HeapObject,
-        method: *const CompiledMethod,
-        const refFlag = 1024;
-        pub inline fn methodOf(m: *const CompiledMethod) Code {
-            return Code{ .method = m };
-        }
-        pub inline fn primOf(pp: ThreadedFn) Code {
-            return Code{ .prim = pp };
-        }
-        inline fn intOf(i: i64) Code {
-            return Code{ .int = i };
-        }
-        pub inline fn uintOf(u: u64) Code {
-            return Code{ .uint = u };
-        }
-        pub inline fn objectOf(o: Object) Code {
-            return Code{ .object = o };
-        }
-        inline fn ref1Of(comptime u: u12) Code {
-            return Code{ .object = indexSymbol1(u) };
-        }
-        inline fn headerOf(h: heap.HeapObject) Code {
-            return Code{ .header = h };
-        }
-        pub inline fn codeRefOf(c: [*]const Code) Code {
-            return Code{ .uint = @intFromPtr(@constCast(c)) };
-        }
-        pub fn end(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
-            return sp;
-        }
-        pub fn panic(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
-            @panic("not implemented");
-        }
-        var endCode = [CompiledMethod.codeSize]Code{.{ .prim = &end }};
-        pub const endThread = PC.init(@ptrCast(&endCode));
-        pub fn format(
-            self: *const Code,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) !void {
-            _ = fmt;
-            _ = options;
-            if (!self.object.isDouble()) {
-                try writer.print("{}", .{self.object});
-            } else if (self.int >= -100 and self.int < 100) {
-                try writer.print("({})", .{self.int});
-            } else try writer.print("0x{x}", .{self.uint});
-        }
-    };
+pub const Code = union {
+    prim: ThreadedFn,
+    int: i64,
+    uint: u64,
+    object: Object,
+    header: heap.HeapObject,
+    method: *const CompiledMethod,
+    const refFlag = 1024;
+    pub inline fn methodOf(m: *const CompiledMethod) Code {
+        return Code{ .method = m };
+    }
+    pub inline fn primOf(pp: ThreadedFn) Code {
+        return Code{ .prim = pp };
+    }
+    inline fn intOf(i: i64) Code {
+        return Code{ .int = i };
+    }
+    pub inline fn uintOf(u: u64) Code {
+        return Code{ .uint = u };
+    }
+    pub inline fn asObject(self: Code) Object {
+        @setRuntimeSafety(false);
+        return self.object;
+    }
+    pub inline fn objectOf(o: Object) Code {
+        return Code{ .object = o };
+    }
+    inline fn ref1Of(comptime u: u12) Code {
+        return Code{ .object = indexSymbol1(u) };
+    }
+    inline fn headerOf(h: heap.HeapObject) Code {
+        return Code{ .header = h };
+    }
+    pub inline fn codeRefOf(c: [*]const Code) Code {
+        return Code{ .uint = @intFromPtr(@constCast(c)) };
+    }
+    pub fn end(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
+        return sp;
+    }
+    pub fn panic(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
+        @panic("not implemented");
+    }
+    var endCode = [CompiledMethod.codeSize]Code{.{ .prim = &end }};
+    pub const endThread = PC.init(@ptrCast(&endCode));
+    pub fn format(
+        self: *const Code,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        if (!self.object.isDouble()) {
+            try writer.print("{}", .{self.object});
+        } else if (self.int >= -100 and self.int < 100) {
+            try writer.print("({})", .{self.int});
+        } else try writer.print("0x{x}", .{self.uint});
+    }
 };
 pub fn intOf(comptime str: []const u8) u12 {
     comptime var n: u12 = 0;
@@ -489,8 +490,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
         pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
             //trace("\nsetLiterals: 0x{x:0>16} {any}", .{ self.selector.u(), replacements });
             for (&self.code) |*c| {
-                if (c.object.isIndexSymbol0()) {
-                    const index = c.object.indexNumber();
+                if (c.asObject().isIndexSymbol0()) {
+                    const index = c.asObject().indexNumber();
                     c.* = Code.objectOf(replacements[index]);
                 }
             }
@@ -505,8 +506,8 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 srefs.* = obj;
             if (self.references.len > 0) {
                 for (&self.code) |*c| {
-                    if (c.object.isIndexSymbol1()) {
-                        const newValue = (@intFromPtr(&self.references[c.object.indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
+                    if (c.asObject().isIndexSymbol1()) {
+                        const newValue = (@intFromPtr(&self.references[c.asObject().indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
                         c.* = Code.uintOf(newValue);
                     }
                 }
@@ -673,7 +674,7 @@ test "compiling method" {
     try expectEqual(t[3].object, Object.from(42));
     try expectEqual(t[4].int, -5);
     try expectEqual(t[5].int, -1);
-    try expectEqual(t[6].int, 6);
+    try expectEqual(t[6].uint, 6);
     try expectEqual(t[7].int, 3);
     //   try expectEqual(t[8].int,1+Code.refFlag);
     try expectEqual(t[9].object, Sym.value);
