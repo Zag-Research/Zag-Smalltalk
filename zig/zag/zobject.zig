@@ -149,17 +149,21 @@ comptime {
     std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
     std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
 }
-const MemoryFloat = extern struct {
-    header: HeapHeader,
-    value: f64,
+const MemoryFloat = union {
+    m: [@sizeOf(Internal)] u8,
+    i: Internal,
+    const Internal = extern struct {
+        header: HeapHeader,
+        value: f64,
+    };
 };
 pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
     const u: u64 = @bitCast(v);
     const hash: u24 = @truncate(u ^ (u >> 24) ^ (u >> 48));
-    return .{
+    return .{ .i = .{
         .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
         .value = v,
-    };
+    }};
 }
 pub const Object = switch (config.objectEncoding) {
     .nan => unreachable, //@import("nanObject.zig"),

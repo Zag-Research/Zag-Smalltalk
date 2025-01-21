@@ -5,7 +5,7 @@ const config = @import("config.zig");
 const debugError = false;
 const object = if (debugError) struct {
     const ClassIndex = enum(u16) { String };
-    const Object = extern struct {
+    const Object = struct {
         field: u64,
         const Self = @This();
         fn asObject(self: *Self) Self {
@@ -458,9 +458,13 @@ pub const AllocationInfo = struct {
             setup(self, theHeapObject);
     }
 };
-pub const IndexedFooter = extern struct {
-    arrayPtr: [*]Object,
-    arrayLen: usize,
+pub const IndexedFooter = union {
+    m: [@sizeOf(Internal)] u8,
+    i: Internal,
+    const Internal = extern struct {
+        arrayPtr: [*]Object,
+        arrayLen: usize,
+    };
     const nObjects = @sizeOf(@This()) / @sizeOf(Object);
     inline fn init(self: AllocationInfo) AllocationInfo {
         var result = self;
@@ -471,14 +475,18 @@ pub const IndexedFooter = extern struct {
     fn indexedFooter(self: AllocationInfo, theHeapObject: HeapObjectPtr) void {
         const base = theHeapObject.asObjectArray() + self.nInstVars;
         const footers: *IndexedFooter = @ptrCast(base + self.nIndexed);
-        footers.arrayPtr = base;
-        footers.arrayLen = self.size;
+        footers.i.arrayPtr = base;
+        footers.i.arrayLen = self.size;
     }
 };
-pub const WeakIndexedFooter = extern struct {
-    weakLink: ?HeapObjectConstPtr,
-    arrayPtr: [*]Object,
-    arrayLen: usize,
+pub const WeakIndexedFooter = union {
+    m: [@sizeOf(Internal)] u8,
+    i: Internal,
+    const Internal = extern struct {
+        weakLink: ?HeapObjectConstPtr,
+        arrayPtr: [*]Object,
+        arrayLen: usize,
+    };
     inline fn init(self: AllocationInfo) AllocationInfo {
         var result = self;
         result.footerLength = @sizeOf(@This()) / @sizeOf(Object);
@@ -488,9 +496,9 @@ pub const WeakIndexedFooter = extern struct {
     fn weakIndexedFooter(self: AllocationInfo, theHeapObject: HeapObjectPtr) void {
         const base = theHeapObject.asObjectArray() + self.nInstVars;
         const footers: *WeakIndexedFooter = @ptrCast(base + self.nIndexed);
-        footers.weakLink = null;
-        footers.arrayPtr = base;
-        footers.arrayLen = self.size;
+        footers.i.weakLink = null;
+        footers.i.arrayPtr = base;
+        footers.i.arrayLen = self.size;
     }
 };
 

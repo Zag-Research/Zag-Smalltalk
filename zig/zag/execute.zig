@@ -4,8 +4,8 @@ const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
-const Process = @import("process.zig").Process;
-const ProcessPtr = @import("process.zig").ProcessPtr;
+const Process = @import("process.zig");
+const ProcessPtr = *Process;
 const object = @import("zobject.zig");
 const Object = object.Object;
 const ClassIndex = object.ClassIndex;
@@ -16,7 +16,7 @@ const False = object.False;
 const u64_MINVAL = object.u64_MINVAL;
 const indexSymbol0 = object.Object.indexSymbol0;
 const indexSymbol1 = object.Object.indexSymbol1;
-pub const Context = @import("context.zig").Context;
+const Context = @import("context.zig");
 const heap = @import("heap.zig");
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
@@ -32,11 +32,15 @@ const Sym = symbol.symbols;
 const phi32 = @import("utilities.zig").inversePhi(u32);
 
 pub const SP = *Stack;
-const Stack = extern struct {
+const Stack = struct {
     top: Object,
     next: Object,
     third: Object,
-    fourth: Object,
+    comptime {
+        std.debug.assert(@offsetOf(Stack,"top")==0);
+        std.debug.assert(@offsetOf(Stack,"next")==@sizeOf(Object));
+        std.debug.assert(@offsetOf(Stack,"third")==@sizeOf(Object)*2);
+    }
     pub inline fn lessThan(self: SP, other: SP) bool {
         return @intFromPtr(self) < @intFromPtr(other);
     }
@@ -95,7 +99,7 @@ pub fn check(pc: PC, sp: SP, _process: TFProcess, context: TFContext, _: MethodS
         return @call(tailCall, debugger, .{ pc, sp, process, context, undefined });
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
 }
-const zigBugWorkaround = true;
+const zigBugWorkaround = false;
 pub const TFProcess = if (zigBugWorkaround) *anyopaque else *Process;
 pub const TFContext = if (zigBugWorkaround) *anyopaque else *Context;
 pub inline fn tfAsProcess(_process: TFProcess) *Process {
@@ -105,11 +109,11 @@ pub inline fn tfAsProcess(_process: TFProcess) *Process {
 pub inline fn tfAsContext(_context: TFContext) *Context {
     return @alignCast(@ptrCast(_context));
 }
-pub const ThreadedFn = *const fn (programCounter: PC, stackPointer: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP;
-pub const fallback = controlPrimitives.fallback;
-const fallbackCode = Code.prim(&fallback);
-const fallbackPc = PC.init(&fallbackCode);
-pub const MethodSignature = struct {
+pub const ThreadedFn = extern struct {
+    f: Fn,
+    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP;
+};
+pub const MethodSignature = extern struct {
     int: u64,
     const Internal = packed struct {
         selector: u40,
@@ -182,7 +186,7 @@ pub const CompiledMethod = struct {
             .signature = MethodSignature.from(name,.none),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{.{.prim = Code.panic}},
+            .code = .{.{.prim = .{.f = Code.panic}}},
         };
     }
     pub fn execute(self: *Self, sp: SP, process: TFProcess, context: TFContext) callconv(stdCall) SP {
@@ -232,14 +236,26 @@ pub const CompiledMethod = struct {
         return @as(Object, @bitCast(@intFromPtr(self)));
     }
 };
-pub const PC = struct {
+pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
     pub inline fn init(code: *const Code) PC {
         return .{ .code = code };
     }
-    pub inline fn prim(self: PC) ThreadedFn {
+    pub inline fn method(self: PC) CompiledMethodPtr {
+        return @constCast(self.code.method);
+    }
+    pub inline fn codeAddress(self: PC) *const Code {
+        return self.code.codeAddress;
+    }
+    pub inline fn targetPC(self: PC) PC {
+        return .{ .code = self.code.codeAddress};
+    }
+    pub inline fn prim(self: PC) ThreadedFn.Fn {
+        return self.code.prim.f;
+    }
+    pub inline fn justPrim(self: PC) ThreadedFn {
         return self.code.prim;
     }
     pub inline fn uint(self: PC) u64 {
@@ -250,9 +266,6 @@ pub const PC = struct {
     }
     pub inline fn object(self: PC) Object {
         return self.code.object;
-    }
-    pub inline fn method(self: PC) *const CompiledMethod {
-        return self.code.method;
     }
     pub inline fn asCode(self: PC) Code {
         return self.code.*;
@@ -266,8 +279,8 @@ pub const PC = struct {
     pub inline fn prev(self: PC) PC {
         return asPC(self.array() - 1);
     }
-    pub inline fn prim2(self: PC) ThreadedFn {
-        return self.array()[1].prim;
+    pub inline fn prim2(self: PC) ThreadedFn.Fn {
+        return self.array()[1].prim.f;
     }
     pub inline fn next2(self: PC) PC {
         return asPC(self.array() + 2);
@@ -305,10 +318,8 @@ pub const Code = union {
     object: Object,
     header: heap.HeapObject,
     method: *const CompiledMethod,
+    codeAddress: *const Code,
     const refFlag = 1024;
-    pub inline fn methodOf(m: *const CompiledMethod) Code {
-        return Code{ .method = m };
-    }
     pub inline fn primOf(pp: ThreadedFn) Code {
         return Code{ .prim = pp };
     }
@@ -340,7 +351,7 @@ pub const Code = union {
     pub fn panic(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
         @panic("not implemented");
     }
-    var endCode = [CompiledMethod.codeSize]Code{.{ .prim = &end }};
+    var endCode = [CompiledMethod.codeSize]Code{.{ .prim = .{.f = end }}};
     pub const endThread = PC.init(@ptrCast(&endCode));
     pub fn format(
         self: *const Code,
@@ -441,6 +452,9 @@ test "countNonLabels" {
     try expectEqual(r1.refs, 2);
     try expectEqual(r1.objects, 3);
 }
+fn noOp(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    }
 
 pub fn CompileTimeMethod(comptime counts: CountSizes) type {
     const codes = counts.codes;
@@ -461,15 +475,16 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ThreadedFn, class: ClassIndex) Self {
+        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex) Self {
             const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
+            const f = function orelse &noOp;  
             return .{
                 .header = header,
                 .signature = MethodSignature.from(name,class),
                 .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
-                .executeFn = function,
-                .jitted = function,
+                .executeFn = .{ .f = f},
+                .jitted = .{ .f = f},
                 .code = undefined,
                 .references = [_]Object{object.NotAnObject} ** refs,
             };
@@ -553,7 +568,7 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, &controlPrimitives.verifyMethod, .none);
+    var r1 = c1.init(Sym.value, 2, 3, null, .none);
     var r1r = [_]Object{ Nil, True };
     r1.setLiterals(empty, &r1r);
     try expectEqual(r1.getCodeSize(), 10);
@@ -562,9 +577,9 @@ pub fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
 pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    return compileMethodWith(name, locals, maxStack, class, &controlPrimitives.verifyMethod, tup);
+    return compileMethodWith(name, locals, maxStack, class, null, tup);
 }
-pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ThreadedFn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     var method = methodType.init(name, locals, maxStack, verifier, class);
@@ -572,24 +587,16 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
     comptime var n = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            Code => {
-                code[n] = field;
-                n = n + 1;
-            },
-            Object => {
-                code[n] = Code.objectOf(field);
-                n = n + 1;
-            },
-            @TypeOf(null) => {
-                code[n] = Code.objectOf(Nil);
-                n = n + 1;
-            },
-            comptime_int => {
-                code[n] = Code.intOf(field);
-                n = n + 1;
-            },
             ThreadedFn => {
-                code[n] = Code.primOf(field);
+                code[n] = .{.prim =field};
+                n = n + 1;
+            },
+            Object,bool,@TypeOf(null),comptime_int => {
+                code[n] = .{.object = Object.from(field)};
+                n = n + 1;
+            },
+            ClassIndex => {
+                code[n] = .{.object = Object.from(@intFromEnum(field))};
                 n = n + 1;
             },
             else => {
@@ -617,8 +624,7 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                                     inline for (tup) |t| {
                                         if (@TypeOf(t) == ThreadedFn) {
                                             lp += 1;
-                                            if (t == &controlPrimitives.setupSend or
-                                                t == &controlPrimitives.setupTailSend) lp += 4;
+                                            if (t == null) lp += 4;
                                         } else switch (@typeInfo(@TypeOf(t))) {
                                             .pointer => |tPointer| {
                                                 switch (@typeInfo(tPointer.child)) {
@@ -632,7 +638,7 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                                                             }
                                                         } else lp = lp + 1;
                                                     },
-                                                    //                                                .Fn => |fun| @compileLog(fun),
+                                                    // .Fn => |fun| @compileLog(fun),
                                                     else => lp += 1,
                                                 }
                                             },
@@ -645,8 +651,8 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
                                 }
                             },
                             .@"fn" => {
-                                @compileLog(field);
-                                code[n] = Code.primOf(field);
+                                //@compileLog(field);
+                                code[n] = Code.primOf(.{.f = field});
                                 n = n + 1;
                                 found = true;
                             },
@@ -663,17 +669,18 @@ pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, c
 }
 // const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows
 const print = std.io.getStdOut().writer().print;
+const p = @import("controlPrimitives.zig");
 test "compiling method" {
     std.debug.print("Test: compiling method\n",.{});
     const expectEqual = std.testing.expectEqual;
-    var m = compileMethod(Sym.yourself, 0, 0, .none, .{ ":abc", //&p.setupSend,
+    var m = compileMethod(Sym.yourself, 0, 0, .none, .{ ":abc", 0,//&p.setupSend,
                                                        "def", True, comptime Object.from(42), ":def", "abc", "*", "^", 3, "0mref", Sym.i_0, null });
     m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
     //    for (t,0..) |tv,idx|
     //        trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.uint});
     //    try expectEqual(t.prim,controlPrimitives.noop);
-    try expectEqual(t[0].prim, p.setupSend);
+    try expectEqual(t[0].prim.f, p.send);
     //try expectEqual(t[1].int, 2);
     try expectEqual(t[2].object, True);
     try expectEqual(t[3].object, Object.from(42));
@@ -892,7 +899,7 @@ test "compileObject" {
 //     const method = o.asObject();
 //     _ = method;
 // }
-pub const embedded = controlPrimitives;
+pub const embedded = @import("controlPrimitives.zig");
 pub const controlPrimitivesX = struct {
     const ContextPtr = CodeContextPtr;
     inline fn getMethodSignature(pc: PC, sp: SP, comptime offset: anytype) MethodSignature {
@@ -960,7 +967,7 @@ pub const controlPrimitivesX = struct {
     //     if (Nil.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
     //     return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
     // }
-    pub fn primFailure(_: PC, _: SP, _: *Process, _: ContextPtr, _: MethodSignature) callconv(stdCall) SP {
+    pub fn primFailure(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
         @panic("primFailure");
     }
     pub fn replaceLiteral(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
@@ -1092,273 +1099,6 @@ pub const controlPrimitivesX = struct {
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
 };
-    // the following are the only primitives and Smalltalk compiler code depends on them
-pub const controlPrimitives = struct {
-    fn branch(pc: PC, sp: SP, _process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const offset = pc.int();
-        trace("\nbranch offset: {}", .{offset});
-        if (offset >= 0) {
-            const target = pc.skip(@as(u64, @intCast(offset)) + 1);
-            if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined });
-            return @call(tailCall, target.prim(), .{ target.next(), sp, process, context, undefined });
-        }
-        const target = pc.next().back(@as(u64, @intCast(-offset)));
-        if (process.needsCheck()) return @call(tailCall, check, .{ target, sp, process, context, undefined });
-        return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
-    }
-    fn call(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
-        context.setReturn(pc.next());
-        const offset = pc.uint();
-        const method = pc.skip(offset + 1).method();
-        const newPc = PC.init(method.codePtr());
-        trace("\ncall: {} {} {}", .{ offset, method, newPc });
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
-    }
-    fn classCase(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn classCase24(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn cullColon(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn drop(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.drop(), process, context, undefined });
-    }
-    pub fn dropNext(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        trace("\ndropNext: {}", .{sp.top});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(sp.top), process, context, undefined });
-    }
-    pub fn dup(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const newSp = sp.push(sp.top);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    fn label(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn makeImmediateClosure(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn over(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const newSp = sp.push(sp.next);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    fn popAssociationValue(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn popIndirect(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn popIndirectLocal(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn popInstVar(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn popLocal(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
-        trace("\npopIntoLocal: {} {}", .{ pc.uint(), sp.top });
-        context.setLocal(pc.uint(), sp.top);
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
-    }
-    fn popLocalData(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
-        const ref = pc.uint();
-        const local = context.getLocal(ref & 0xff);
-        trace("\npopLocalData: {} {}", .{ ref, sp.top });
-        local.setField(ref >> 12, sp.top);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
-    }
-    pub fn popLocalField(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
-        const ref = pc.uint();
-        const local = context.getLocal(ref & 0xfff);
-        trace("\npopLocalField: {} {}", .{ ref, sp.top });
-        local.setField(ref >> 12, sp.top);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
-    }
-    fn primitive(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn primitiveFailed(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn primitiveModule(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn pushAssociationValue(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn pushContext(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        const method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc.back(pc.uint()).asCodePtr()) - CompiledMethod.codeOffset));
-        const stackStructure = method.stackStructure;
-        const locals: u16 = @truncate(stackStructure.hash48() & 255);
-        const maxStackNeeded: u16 = @truncate((stackStructure.hash48()>>16) & 0xffff);
-        const selfOffset: u16 = @truncate((stackStructure.hash48()>>32) & 0xffff);
-        trace("\npushContext: locals={} maxStack={} selfOffset={} signature={}", .{ locals, maxStackNeeded, selfOffset, method.signature });
-        const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
-        const newSp = ctxt.asNewSp();
-        trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.signature, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, undefined });
-    }
-    fn pushIndirect(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn pushIndirectLocal(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn pushInstVar(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn pushLiteral(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        const newSp = sp.push(pc.object());
-        trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
-    }
-    pub fn pushThisContext(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const newSp = sp.push(Object.from(context));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    fn pushLocal(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        const newSp = sp.push(context.getLocal(pc.uint()));
-        trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
-    }
-    fn pushLocalField(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        const ref = pc.uint();
-        const local = context.getLocal(ref & 0xff);
-        const newSp = sp.push(local.getField(ref >> 12));
-        trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
-    }
-    fn pushLocalData(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        const ref = pc.uint();
-        const local = context.getLocal(ref & 0xfff);
-        const newSp = sp.push(local.getField(ref >> 12));
-        trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
-    }
-    fn returnNoContext(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
-        return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, undefined });
-    }
-    fn returnNonLocal(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        unreachable;
-    }
-    fn returnTop(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        trace("\nreturnTop: {} ", .{sp.top});
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        trace("{any} ", .{context.stack(sp, process)});
-        const top = sp.top;
-        const result = context.pop(process);
-        const newSp = result.sp;
-        newSp.top = top;
-        const callerContext = result.ctxt;
-        trace("-> {x}", .{@intFromPtr(newSp)});
-        trace("-> {any}", .{callerContext.stack(newSp, process)});
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
-    }
-    fn returnWithContext(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
-        trace("\nreturnWithContext: {any} -> ", .{context.stack(sp, process)});
-        const result = context.pop(process);
-        const newSp = result.sp;
-        var callerContext = result.ctxt;
-        const stack = callerContext.stack(newSp, process);
-        if (stack.len < 20) {
-            trace("{any}", .{stack});
-        } else trace("{}", .{stack.len});
-        trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
-        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
-    }
-    fn send(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn storeLocal(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
-        trace("\nstoreIntoLocal: {} {}", .{ pc.uint(), sp.top });
-        context.setLocal(pc.uint(), sp.top);
-        return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp, process, context, undefined });
-    }
-    fn swap(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const saved = sp.top;
-        sp.top = sp.next;
-        sp.next = saved;
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
-    }
-    fn tailSend(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn value(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    fn valueColon(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        _ = .{pc,sp,_process,_context,signature,unreachable};
-    }
-    pub const references = [_]ThreadedFn{
-        &branch,
-        &call,
-        &classCase,
-        &classCase24,
-        &cullColon,
-        &drop,
-        &dropNext,
-        &dup,
-        &label,
-        &makeImmediateClosure,
-        &over,
-        &popAssociationValue,
-        &popIndirect,
-        &popIndirectLocal,
-        &popInstVar,
-        &popLocal,
-        &popLocalData,
-        &popLocalField,
-        &primitive,
-        &primitiveFailed,
-        &primitiveModule,
-        &pushAssociationValue,
-        &pushContext,
-        &pushIndirect,
-        &pushIndirectLocal,
-        &pushInstVar,
-        &pushLiteral,
-        &pushLocal,
-        &pushLocalData,
-        &pushLocalField,
-        &pushThisContext,
-        &returnNoContext,
-        &returnNonLocal,
-        &returnTop,
-        &returnWithContext,
-        &send,
-        &storeLocal,
-        &swap,
-        &tailCall,
-        &tailSend,
-        &value,
-        &valueColon,
-        // &perform, // P_Perform := 65
-        // &performWith, // P_PerformWith := 66
-    };
-};
 pub const Execution = struct {
     process: Process align(1024),
     ctxt: Context,
@@ -1376,7 +1116,7 @@ pub const Execution = struct {
         self.ctxt.method = &yourself;
         self.sp = self.process.endOfStack();
     }
-    var yourself = CompiledMethod.init(Sym.noFallback, Code.end);
+    var yourself = CompiledMethod.init(Sym.noFallback, .{.f = Code.end});
     pub fn initStack(self: *Self, source: []const Object) void {
         self.sp = self.process.endOfStack().reserve(source.len);
         self.process.setSp(self.sp);
@@ -1411,155 +1151,6 @@ pub fn mainSendTo(selector: Object, target: Object) !Object {
      return error.NotImplemented;
 }
 
-const p = struct {
-    usingnamespace controlPrimitives;
-};
-fn push42(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
-    const newSp = sp.push(Object.from(42));
-    return newSp;
-}
-test "send with dispatch direct" {
-    std.debug.print("Test: send with dispatch direct\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        &p.pushContext,     "^",
-        &p.setupSend,       Sym.value,
-        &p.dynamicDispatch, &p.returnWithContext,
-    });
-    const methodV = compileMethod(Sym.value, 0, 0, .none, .{
-        &push42,
-        &p.returnNoContext,
-    });
-    init();
-    methodV.asCompiledMethodPtr().forDispatch(.UndefinedObject);
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    method.asCompiledMethodPtr().forDispatch(.UndefinedObject);
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 3);
-    try expectEqual(result[0], Object.from(42));
-}
-test "simple return via Execution" {
-    std.debug.print("Test: simple return via Execution\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        &p.pushLiteral,     comptime Object.from(42),
-        &p.returnNoContext,
-    });
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 3);
-    try expectEqual(result[0], Object.from(42));
-    try expectEqual(result[1], Nil);
-    try expectEqual(result[2], True);
-}
-test "context return via Execution" {
-    std.debug.print("Test: context return via Execution\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    var method = compileMethod(Sym.@"at:", 0, 0, .none, .{
-        &p.pushContext,       "^",
-        &p.pushLiteral,       comptime Object.from(42),
-        &p.returnWithContext,
-    });
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 1);
-    try expectEqual(result[0], True);
-}
-test "context returnTop via Execution" {
-    std.debug.print("Test: context returnTop via Execution\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 3, 0, .none, .{
-        &p.pushContext, "^",
-        &p.pushLiteral, comptime Object.from(42),
-        &p.returnTop,
-    });
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 2);
-    try expectEqual(result[0], Object.from(42));
-}
-// test "context returnTop twice via Execution" {
-// std.debug.print("Test: context returnTop twice via Execution\n",.{});
-//     const expectEqual = std.testing.expectEqual;
-//     Process.resetForTest();
-//     const empty = Object.empty;
-//     var method1 = compileMethod(Sym.yourself, 3, 0, .{
-//         &p.pushContext, "^",
-//         &p.pushLiteral, comptime Object.from(1),
-//         &p.call,        "0Obj",
-//         &p.returnTop,
-//     });
-//     var method2 = compileMethod(Sym.name, 3, 0, .{
-//         &p.pushContext, "^",
-//         &p.pushLiteral, comptime Object.from(42),
-//         &p.returnTop,
-//     });
-//     method1.setLiterals(empty, &[_]Object{Object.from(&method2)});
-//     var te = Execution.new();
-//     te.init();
-//     var objs = [_]Object{ Nil, True };
-//     const result = te.run(objs[0..], &method1);
-//     try expectEqual(result.len, 2);
-//     try expectEqual(result[0], Object.from(42));
-// }
-test "context returnTop with indirect via Execution" {
-    std.debug.print("Test: context returnTop with indirect via Execution\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const empty = Object.empty;
-    var method = compileMethod(Sym.yourself, 3, 0, .none, .{
-        //        &p.noop,
-        &p.pushContext,
-        "^",
-        &p.pushLiteralIndirect,
-        "0Obj",
-        &p.returnTop,
-    });
-    method.setLiterals(empty, &[_]Object{Object.from(42)});
-    var te = Execution.new();
-    te.init();
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 2);
-    try expectEqual(result[0], Object.from(42));
-}
-test "simple executable" {
-    std.debug.print("Test: simple executable\n",.{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
-        &p.pushContext,           "^",
-        ":label1",                &p.pushLiteral,
-        comptime Object.from(42), &p.popLocal,
-        0,                        &p.pushLocal0,
-        &p.pushLiteral0,          &p.pushLiteralTrue,
-        &p.ifFalse,               "label3",
-        &p.branch,                "label2",
-        ":label3",                &p.pushLocal,
-        0,                        ":label4",
-        &p.returnTop,             ":label2",
-        &p.pushLiteral0,          &p.branch,
-        "label4",
-    });
-    var objs = [_]Object{Nil};
-    var te = Execution.new();
-    te.init();
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 1);
-    try expectEqual(result[0], Object.from(0));
-}
 
 const max_classes = config.max_classes;
 const symbols = symbol.symbols;
@@ -1936,8 +1527,8 @@ test "llvm external" {
         ":label1",                &p.pushLiteral,
         comptime Object.from(42), &p.popLocal,
         0,                        &p.pushLocal, 0,
-        pl, 0,                     &p.pushLiteralTrue,
-        &p.ifFalse,               "label3",
+        pl, 0,                     &p.pushLiteral, true,
+        &p.classCase, ClassIndex.False, "label3",
         &p.branch,                "label2",
         ":label3",                &p.pushLocal,
         0,                        ":label4",

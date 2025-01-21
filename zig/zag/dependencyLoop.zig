@@ -1,12 +1,14 @@
 const std = @import("std");
 
 const execute = struct {
-    const ThreadedFn = *const fn (
-        process: *Process,
-        context: *Context,
-    ) void;
+    const ThreadedFn = struct {
+        f: *const fn (
+            process: *Process,
+            context: *Context,
+        ) void,
+    };
 };
-const Process = extern struct {
+const Process = struct {
     debugFn: ?execute.ThreadedFn,
 };
 const Context = struct {
@@ -15,6 +17,6 @@ const Context = struct {
 
 test "die" {
     _ = Process{
-        .debugFn=null,
+        .debugFn = null,
     };
 }

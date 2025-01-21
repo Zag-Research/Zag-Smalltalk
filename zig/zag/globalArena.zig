@@ -27,10 +27,10 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const AllocErrors = heap.AllocErrors;
 const os = @import("os.zig");
 
-pub const WeakObject = extern struct {
+pub const WeakObject = struct {
     object: Object,
 };
-pub const StructObject = extern struct {
+pub const StructObject = struct {
     object: Object,
 };
 const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength) + 1;
@@ -43,8 +43,7 @@ comptime {
     std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch unreachable;
     std.debug.assert(HeapAllocation.headerSize >= @sizeOf(HeapAllocation.HeapAllocationHeader) / @sizeOf(HeapObject));
 }
-pub const HeapAllocation = extern union {
-    header: HeapAllocationHeader,
+pub const HeapAllocation = struct {
     mem: [size]HeapObject,
     const SelfPtr = *align(heap_allocation_size) HeapAllocation;
     const HeapAllocationHeader = extern struct {
@@ -61,7 +60,7 @@ pub const HeapAllocation = extern union {
     const minFreeList = 1;
     const mutex_init = MutexType{};
     const MutexType = DummyMutex;
-    const DummyMutex = extern struct {
+    const DummyMutex = struct {
         lockField: i64 = -1,
         fn lock(_: *DummyMutex) void {}
         fn unlock(_: *DummyMutex) void {}
@@ -237,9 +236,12 @@ test "check HeapAllocations" {
     // });
     try ee(fullHeapSize - 9 - 51 - 128 - 128 - 129 - big - 1, ha.freeSpace());
 }
-const FreeList = extern struct {
-    header: HeapHeader,
-    list: FreeListPtr,
+const FreeList = struct {
+    mem: [@sizeOf(Internal)] u8,
+    const Internal = extern struct {
+        header: HeapHeader,
+        list: FreeListPtr,
+    };
     const Self = @This();
     const FreeListPtr = ?*FreeListElement;
     const FreeListElement = struct {
