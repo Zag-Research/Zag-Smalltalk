@@ -16,10 +16,13 @@ Class {
 
 { #category : 'initialization' }
 ASInlineSingleton class >> method: aCompiledMethod class: aClass [
-
-	^ (aCompiledMethod isRealPrimitive
+	| method |
+	method := aCompiledMethod.
+	ZagSubstitutions substitutionMap at: aCompiledMethod ifPresent: [ :m | method := m ].
+	
+	^ (method isRealPrimitive
 		   ifTrue: [ ASInlinePrimitive ]
-		   ifFalse: [ self ]) new method: aCompiledMethod class: aClass
+		   ifFalse: [ self ]) new method: method class: aClass
 ]
 
 { #category : 'inlining' }

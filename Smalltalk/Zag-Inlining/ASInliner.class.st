@@ -180,15 +180,17 @@ ASInliner class >> reset [
 { #category : 'inlining' }
 ASInliner class >> selfMatch: aCompiledMethod [
 
+	| method |
+	method := aCompiledMethod.
+	ZagSubstitutions substitutionMap at: aCompiledMethod ifPresent: [ :m | method := m ].
 	self
-		selfMatch: aCompiledMethod primitive
-		class: aCompiledMethod methodClass
-		numArgs: aCompiledMethod numArgs
+		selfMatch: method primitive
+		class: method methodClass
+		numArgs: method numArgs
 ]
 
 { #category : 'inlining' }
 ASInliner class >> selfMatch: anInteger class: aClass numArgs: numArgs [
-self halt.
 	numArgs = 0 ifTrue: [
 		self
 			prim: anInteger
