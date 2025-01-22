@@ -8,16 +8,21 @@ Class {
 	#package : 'Zag-Substitutions'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'adding' }
 ZagSubstitutions class >> addMappingsTo: map [
 
-	self methods do: [ : method | map at: method put: (self mirroredClass methodNamed: method selector) ]
+	self methods do: [ : method | map at: (self mirroredClass methodNamed: method selector) put: method ]
 ]
 
 { #category : 'class initialization' }
 ZagSubstitutions class >> initialize [
 
 	substitutionMap := self substitutionMap
+]
+
+{ #category : 'as yet unclassified' }
+ZagSubstitutions class >> mirroredClass [
+	self subclassResponsibility 
 ]
 
 { #category : 'as yet unclassified' }
