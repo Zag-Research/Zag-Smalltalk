@@ -12,7 +12,8 @@ Class {
 	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
 		'gen',
-		'source'
+		'source',
+		'sp'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
@@ -155,7 +156,10 @@ ZagOutputLLVM >> pushContext [
 ZagOutputLLVM >> pushLiteral [
 
 	| literal |
-	literal := source next " need code to push this on stack "
+	literal := source next.
+	sp := gen register: sp plus: -8.
+	gen store: literal at: sp
+
 ]
 
 { #category : 'threaded words' }

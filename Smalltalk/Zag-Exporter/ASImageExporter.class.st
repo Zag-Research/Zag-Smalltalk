@@ -96,15 +96,6 @@ ASImageExporter class >> setUpImageFolderPrompt [
 ]
 
 { #category : 'writing' }
-ASImageExporter class >> writeImage [
-
-	<script>
-	self new
-		constants: ZagImageEncodeZag;
-		writeImageSending: #inspect to: 42
-]
-
-{ #category : 'writing' }
 ASImageExporter >> addFirstMethod: selector in: canonicalClasses [
 	canonicalClasses do: [: class |
 		class methodDict at: selector ifPresent: [: method | self method: method. ^ self ]
@@ -161,17 +152,7 @@ ASImageExporter >> constants [
 { #category : 'initialization' }
 ASImageExporter >> constants: constantsClass [
 
-	constants := constantsClass.
-	#( #= value value: cull: yourself doesNotUnderstand:
-	   #+ #- #* size at: at:put: #'~=' #'==' #'~~' value:value:
-	   negated new new: value:value:value: value:value:value:value:
-	   valueWithArguments: cull:cull: cull:cull:cull: cull:cull:cull:cull:
-	   self name #< #'<=' #'>=' #> class Class Behavior ClassDescription
-	   Metaclass SmallInteger noFallback ifTrue: ifTrue:ifFalse
-	   ifFalse: ifFalse:ifTrue: ifNil: ifNil:ifNotNil ifNotNil: ifNotNil:ifNil:
-	   perform: perform:with: perform:with:with: perform:with:with:with:
-	   perform:withArguments: perform:withArguments:inSuperclass: ) do: [
-		:symbol | self objectSymbol: symbol ] " has to match symbols.zig "
+	constants := constantsClass
 ]
 
 { #category : 'writing' }
@@ -277,6 +258,7 @@ ASImageExporter >> initClasses [
 ASImageExporter >> initialize [
 
 	super initialize.
+	constants := ZagImageEncodeZag.
 	objects := IdentityDictionary new.
 	classes := IdentityDictionary new.
 	methods := IdentityDictionary new.
@@ -287,6 +269,7 @@ ASImageExporter >> initialize [
 	dispatchTable := OrderedCollection new.
 	requireThreadedCode := false.
 	self addSubHeap.
+	self symbols.
 	self initClasses
 ]
 

@@ -28,7 +28,7 @@ Class {
 		'T_Branch',
 		'T_Call',
 		'T_ClassCase',
-		'T_ClassCase28',
+		'T_ClassCase24',
 		'T_CullColon',
 		'T_Drop',
 		'T_DropNext',
@@ -51,24 +51,20 @@ Class {
 		'T_PushInstVar',
 		'T_PushLiteral',
 		'T_PushLocal',
+		'T_PushLocalData',
+		'T_PushLocalField',
 		'T_PushThisContext',
 		'T_ReturnNoContext',
 		'T_ReturnNonLocal',
 		'T_ReturnTop',
 		'T_ReturnWithContext',
 		'T_Send',
-		'T_Send0',
-		'T_Send1',
 		'T_StoreLocal',
 		'T_Swap',
-		'T_TailCall',
+		'T_TailCallMethod',
 		'T_TailSend',
 		'T_Value',
 		'T_ValueColon'
-	],
-	#classInstVars : [
-		'primitiveOffset',
-		'maxPrimitive'
 	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
@@ -83,7 +79,7 @@ ZagConstants class >> asDoubleWordArray [
 		T_Branch.
 		T_Call.
 		T_ClassCase.
-		T_ClassCase28.
+		T_ClassCase24.
 		T_CullColon.
 		T_Drop.
 		T_DropNext.
@@ -106,22 +102,21 @@ ZagConstants class >> asDoubleWordArray [
 		T_PushInstVar.
 		T_PushLiteral.
 		T_PushLocal.
+		T_PushLocalData.
+		T_PushLocalField.
 		T_PushThisContext.
 		T_ReturnNoContext.
 		T_ReturnNonLocal.
 		T_ReturnTop.
 		T_ReturnWithContext.
 		T_Send.
-		T_Send0.
-		T_Send1.
 		T_StoreLocal.
 		T_Swap.
-		T_TailCall.
+		T_TailCallMethod.
 		T_TailSend.
 		T_Value.
 		T_ValueColon.
-	},
-		  ((1 to: maxPrimitive) collect: [ :p | p + primitiveOffset ])
+	}
 
 ]
 
@@ -187,17 +182,9 @@ ZagConstants class >> generateInitializeThreadedConstants [
 			<< variableName;
 			<< $.;
 			cr ].
-	itc
-		tab;
-		<< 'primitiveOffset := ';
-		<< next asString;
-		<< $.;
-		cr.
-	itc << 'maxPrimitive := 0'.
 	adwa
 		tab;
-		<< '},
-		  ((1 to: maxPrimitive) collect: [ :p | p + primitiveOffset ])';
+		<< '}';
 		cr.
 	self class compile: itc contents.
 	self class compile: adwa contents.
@@ -249,7 +236,7 @@ ZagConstants class >> initializeThreadedConstants [
 	T_Branch := 8.
 	T_Call := 16.
 	T_ClassCase := 24.
-	T_ClassCase28 := 32.
+	T_ClassCase24 := 32.
 	T_CullColon := 40.
 	T_Drop := 48.
 	T_DropNext := 56.
@@ -272,27 +259,19 @@ ZagConstants class >> initializeThreadedConstants [
 	T_PushInstVar := 192.
 	T_PushLiteral := 200.
 	T_PushLocal := 208.
-	T_PushThisContext := 216.
-	T_ReturnNoContext := 224.
-	T_ReturnNonLocal := 232.
-	T_ReturnTop := 240.
-	T_ReturnWithContext := 248.
-	T_Send := 256.
-	T_Send0 := 264.
-	T_Send1 := 272.
+	T_PushLocalData := 216.
+	T_PushLocalField := 224.
+	T_PushThisContext := 232.
+	T_ReturnNoContext := 240.
+	T_ReturnNonLocal := 248.
+	T_ReturnTop := 256.
+	T_ReturnWithContext := 264.
+	T_Send := 272.
 	T_StoreLocal := 280.
 	T_Swap := 288.
-	T_TailCall := 296.
+	T_TailCallMethod := 296.
 	T_TailSend := 304.
 	T_Value := 312.
 	T_ValueColon := 320.
-	primitiveOffset := 328.
-maxPrimitive := 0
-]
 
-{ #category : 'writing' }
-ZagConstants class >> primitive: anInteger [
-
-	maxPrimitive < anInteger ifTrue: [ maxPrimitive := anInteger ].
-	^ primitiveOffset + (anInteger * 8)
 ]

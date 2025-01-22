@@ -44,7 +44,7 @@ ZagImageOutputAPI >> classCase [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> classCase28 [
+ZagImageOutputAPI >> classCase24 [
 	" jump to one of a series of addresses based on the class of the TOS.
 	reserved in case we have a system with more than 16K classes
 	- uses 28 bits to encode a class, so works with millions of classes "
@@ -193,6 +193,18 @@ ZagImageOutputAPI >> pushLocal [
 ]
 
 { #category : 'threaded words' }
+ZagImageOutputAPI >> pushLocalData [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> pushLocalField [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
 ZagImageOutputAPI >> pushThisContext [
 	" push the address of the current context "
 
@@ -230,18 +242,6 @@ ZagImageOutputAPI >> send [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> send0 [
-
-	^ self send
-]
-
-{ #category : 'threaded words' }
-ZagImageOutputAPI >> send1 [
-
-	^ self send
-]
-
-{ #category : 'threaded words' }
 ZagImageOutputAPI >> storeLocal [
 
 	^ self explicitRequirement
@@ -254,7 +254,7 @@ ZagImageOutputAPI >> swap [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> tailCall [
+ZagImageOutputAPI >> tailCallMethod [
 	" call to the method at the address in the next field.
 	Exactly a tailSend without the dispatch.
 	Because there is no dispatch, there is no PIC, and no selector.

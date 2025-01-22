@@ -16,46 +16,36 @@ Class {
 { #category : 'tests' }
 ZagOutputLLVMTest class >> fibWithPIC [
 
-	^ #( #( label ) pushContext 16r0 pushLocal 0 pushLiteral 2 send1
-	     #'<=' nil nil nil nil #( label ) #pushThisContext
-	     #makeImmediateClosure 16r119 send1 ifTrue: nil nil nil nil #( label )
-	     drop pushLocal 0 pushLiteral 1 send1 #- nil nil nil nil #( label )
-	     call #( method ) pushLocal 0 pushLiteral 2 send1 #- nil nil nil
-	     nil #( label ) call #( method ) send1 #+ nil nil nil nil #( label )
-	     returnTop )
+	^ #( #( label ) pushContext 16r0 pushLocal 0 pushLiteral 2 send #'<='
+	     nil nil nil nil #( label ) #pushThisContext #makeImmediateClosure
+	     16r119 send ifTrue: nil nil nil nil #( label ) drop pushLocal
+	     0 pushLiteral 1 send #- nil nil nil nil #( label ) call #( method )
+	     pushLocal 0 pushLiteral 2 send #- nil nil nil nil #( label )
+	     call #( method ) send #+ nil nil nil nil #( label ) returnTop )
 ]
 
 { #category : 'tests' }
 ZagOutputLLVMTest class >> fibWithoutPIC [
 
-	^ #( #( label ) pushContext 16r0 pushLocal 0 pushLiteral 2 send1
-	     #'<=' #( label ) #pushThisContext #makeImmediateClosure
-	     16r119 send1 ifTrue: #( label ) drop pushLocal 0 pushLiteral
-	     1 send1 #- #( label ) call #( method ) pushLocal 0 pushLiteral
-	     2 send1 #- #( label ) call #( method ) send1 #+ #( label )
-	     returnTop )
+	^ #( #( label ) pushContext #( method ) pushLocal 0 pushLiteral
+	     2 send #'<=' #( label ) #pushThisContext #makeImmediateClosure
+	     16r119 send ifTrue: #( label ) drop pushLocal 0 pushLiteral
+	     1 send #- #( label ) call #( method ) #( label ) pushLocal
+	     0 pushLiteral 2 send #- #( label ) call #( method ) #( label )
+	     send #+ #( label ) returnTop )
 ]
 
 { #category : 'tests' }
 ZagOutputLLVMTest class >> return42 [
 
-	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send1 #+ #( label )
+	^ #( pushLiteral 42 returnTop )
+]
+
+{ #category : 'tests' }
+ZagOutputLLVMTest class >> returnAdd42 [
+
+	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send #+ label
 	     returnTop )
-]
-
-{ #category : 'tests' }
-ZagOutputLLVMTest >> fibWithPIC [
-	^ self class fibWithPIC
-]
-
-{ #category : 'tests' }
-ZagOutputLLVMTest >> fibWithoutPIC [
-	^ self class fibWithoutPIC
-]
-
-{ #category : 'tests' }
-ZagOutputLLVMTest >> return42 [
-	^ self class return42
 ]
 
 { #category : 'running' }
@@ -78,11 +68,12 @@ ZagOutputLLVMTest >> testAdd [
 { #category : 'tests' }
 ZagOutputLLVMTest >> testFibFromArray [
 
-	output genFrom: self fibWithoutPIC
+	output genFrom: self class fibWithoutPIC
 ]
 
 { #category : 'tests' }
 ZagOutputLLVMTest >> testFromArray [
 
-	output genFrom: self return42
+	output halt; genFrom: self class return42.
+	textOut contents inspect
 ]
