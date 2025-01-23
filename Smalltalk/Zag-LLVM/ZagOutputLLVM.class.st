@@ -183,14 +183,15 @@ ZagOutputLLVM >> send [
 	| selector threadedReturnPoint |
 	selector := source next.
 	"need code to extend selector with the class of the target of the send"
-	threadedReturnPoint := source addressOfLabel: 1
+	threadedReturnPoint := source offset: 0
 	" we need to save this and the address of our return point in the context"
 ]
 
 { #category : 'accessing' }
 ZagOutputLLVM >> source: aZagOutputLLVM [
 
-	source := aZagOutputLLVM
+	source := aZagOutputLLVM.
+	sp := gen getSPRegister
 ]
 
 { #category : 'converting' }

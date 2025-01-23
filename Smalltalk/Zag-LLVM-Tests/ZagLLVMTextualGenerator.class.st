@@ -2,8 +2,8 @@
 I am a mock connection that somewhat documents how `ZagOutputLLVM` generates the JIT code.
 "
 Class {
-	#name : 'ZagOutputLLVMTextual',
-	#superclass : 'ZagOutputLLVMAPI',
+	#name : 'ZagLLVMTextualGenerator',
+	#superclass : 'ZagLLVMGeneratorAPI',
 	#instVars : [
 		'stream',
 		'nextRegister',
@@ -14,8 +14,8 @@ Class {
 	#tag : 'Support'
 }
 
-{ #category : 'adding' }
-ZagOutputLLVMTextual >> add: aNumber to: selfValue [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> add: aNumber to: selfValue [
 	
 	| result |
 	result := self newRegister.
@@ -30,8 +30,8 @@ ZagOutputLLVMTextual >> add: aNumber to: selfValue [
 	
 ]
 
-{ #category : 'llvm interface' }
-ZagOutputLLVMTextual >> and: valueRef1 with: valueRef2 [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> and: valueRef1 with: valueRef2 [
 	"may need to create constant"
    "on the zig side, if we have an Object x, then x.isInt() will return a (zig) boolean"
    "Update: if either operands = variable, then result = variable, else result = constant"
@@ -48,8 +48,8 @@ ZagOutputLLVMTextual >> and: valueRef1 with: valueRef2 [
 	^ result
 ]
 
-{ #category : 'llvm interface' }
-ZagOutputLLVMTextual >> compare: valueRef1 is: comparison to: valueRef2 [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> compare: valueRef1 is: comparison to: valueRef2 [
 
 	| result |
 	result := self newRegister. "result will be an i1"
@@ -65,21 +65,26 @@ ZagOutputLLVMTextual >> compare: valueRef1 is: comparison to: valueRef2 [
 ]
 
 { #category : 'accessing' }
-ZagOutputLLVMTextual >> contents [
+ZagLLVMTextualGenerator >> contents [
 
 	^ stream contents
 ]
 
-{ #category : 'llvm interface' }
-ZagOutputLLVMTextual >> defineLabel: aLabel [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> defineLabel: aLabel [
 
 	(stream << 'L' << aLabel asString)
 		<< ':';
 		cr
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> getSPRegister [
+	^ '%stack'
+]
+
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
 	
 	stream 
 	<< 'LLVMBuildCondBr(*, '
@@ -93,7 +98,7 @@ ZagOutputLLVMTextual >> if: condition isFalseThen: falseLabel isTrueThen: trueLa
 ]
 
 { #category : 'initialization' }
-ZagOutputLLVMTextual >> initialize [
+ZagLLVMTextualGenerator >> initialize [
 
 	super initialize.
 	stream := WriteStream on: ''.
@@ -101,8 +106,8 @@ ZagOutputLLVMTextual >> initialize [
 	nextLabel := 0
 ]
 
-{ #category : 'instance creation' }
-ZagOutputLLVMTextual >> newLabel [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> newLabel [
 
 	nextLabel := nextLabel + 1.
 	stream 
@@ -113,15 +118,15 @@ ZagOutputLLVMTextual >> newLabel [
 	^ nextLabel
 ]
 
-{ #category : 'llvm interface' }
-ZagOutputLLVMTextual >> newRegister [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> newRegister [
 
 	nextRegister := nextRegister + 1.
 	^ '%',nextRegister asString
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> or: int1 with: int2 [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> or: int1 with: int2 [
 	
 	| result | 
 	result := self newRegister.
@@ -135,8 +140,8 @@ ZagOutputLLVMTextual >> or: int1 with: int2 [
 	^ result. 
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> register: register plus: offset [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> register: register plus: offset [
 	
 	| newRegister |
 	newRegister := self newRegister.
@@ -148,8 +153,8 @@ ZagOutputLLVMTextual >> register: register plus: offset [
 	
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> returnWith: addressOfValue [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> returnWith: addressOfValue [
 	
 	stream
 	<< 'LLVMBuildRet(*, '
@@ -158,8 +163,8 @@ ZagOutputLLVMTextual >> returnWith: addressOfValue [
 	cr. 
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> shiftLeftArithmeticly: num1 by: num2 [ 
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> shiftLeftArithmeticly: num1 by: num2 [ 
 	
 	| result |
 	result := self newRegister.
@@ -173,8 +178,8 @@ ZagOutputLLVMTextual >> shiftLeftArithmeticly: num1 by: num2 [
 	^ result.
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> shiftRightArithmeticly: num1 by: num2 [ 
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> shiftRightArithmeticly: num1 by: num2 [ 
 	
 	| result |
 	result := self newRegister.
@@ -189,8 +194,8 @@ ZagOutputLLVMTextual >> shiftRightArithmeticly: num1 by: num2 [
 	
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> store: result at: addressOfSelf [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> store: result at: addressOfSelf [
 	
 	stream 
 	<< 'LLVMBuildStore(*, '
@@ -201,8 +206,8 @@ ZagOutputLLVMTextual >> store: result at: addressOfSelf [
 	
 ]
 
-{ #category : 'as yet unclassified' }
-ZagOutputLLVMTextual >> tagSmallInteger: untaggedInt [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> tagSmallInteger: untaggedInt [
 
 	| result res1 res2 |
 	result := self newRegister.
@@ -214,8 +219,8 @@ ZagOutputLLVMTextual >> tagSmallInteger: untaggedInt [
 	
 ]
 
-{ #category : 'llvm interface' }
-ZagOutputLLVMTextual >> valueAt: aString [
+{ #category : 'API' }
+ZagLLVMTextualGenerator >> valueAt: aString [
 
 	| result |
 	result :=  self newRegister.

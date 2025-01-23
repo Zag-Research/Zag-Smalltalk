@@ -7,8 +7,8 @@ That is, I send messages to the generator for each of the threaded codes in the 
 I also implement several helper functions required by such a generator.
 "
 Class {
-	#name : 'ZagOutputLLVMForTest',
-	#superclass : 'Object',
+	#name : 'ZagOutputLLVMFromTestArray',
+	#superclass : 'ZagOutputSourceAPI',
 	#instVars : [
 		'index',
 		'array',
@@ -18,31 +18,25 @@ Class {
 	#classVars : [
 		'HeaderSize'
 	],
-	#category : 'Zag-Core-Tests-Output',
-	#package : 'Zag-Core-Tests',
-	#tag : 'Output'
+	#category : 'Zag-LLVM-Tests-Support',
+	#package : 'Zag-LLVM-Tests',
+	#tag : 'Support'
 }
 
 { #category : 'class initialization' }
-ZagOutputLLVMForTest class >> initialize [
+ZagOutputLLVMFromTestArray class >> initialize [
 
 	HeaderSize := 40
 ]
 
-{ #category : 'initialization' }
-ZagOutputLLVMForTest >> address: anObject [
-
-	address := anObject
-]
-
 { #category : 'private' }
-ZagOutputLLVMForTest >> addressOf: offset [
+ZagOutputLLVMFromTestArray >> addressOf: offset [
 
 	^ address + HeaderSize + (offset - 1 * 8)
 ]
 
-{ #category : 'accessing' }
-ZagOutputLLVMForTest >> addressOfLabel: anInteger [
+{ #category : 'private' }
+ZagOutputLLVMFromTestArray >> addressOfLabel: anInteger [
 
 	| target offset element |
 	offset := anInteger.
@@ -56,15 +50,15 @@ ZagOutputLLVMForTest >> addressOfLabel: anInteger [
 	^ self addressOf: target
 ]
 
-{ #category : 'initialization' }
-ZagOutputLLVMForTest >> codeGen: anObject [
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> codeGen: anObject [
 
 	codeGen := anObject.
 	anObject source: self
 ]
 
-{ #category : 'generation' }
-ZagOutputLLVMForTest >> genFrom: collection [
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> genFrom: collection [
 
 	index := 1.
 	array := collection.
@@ -72,7 +66,7 @@ ZagOutputLLVMForTest >> genFrom: collection [
 ]
 
 { #category : 'private' }
-ZagOutputLLVMForTest >> iterate [
+ZagOutputLLVMFromTestArray >> iterate [
 
 	| selector |
 	index > array size ifTrue: [ ^ nil ].
@@ -82,8 +76,14 @@ ZagOutputLLVMForTest >> iterate [
 	^ self iterate
 ]
 
-{ #category : 'accessing' }
-ZagOutputLLVMForTest >> next [
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> methodAddress: anObject [
+
+	address := anObject
+]
+
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> next [
 
 	| object |
 	object := self valueOf.
@@ -91,14 +91,14 @@ ZagOutputLLVMForTest >> next [
 	^ object
 ]
 
-{ #category : 'accessing' }
-ZagOutputLLVMForTest >> thatAddress [
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> thatAddress [
 
 	^ self addressOf: index - 1
 ]
 
 { #category : 'private' }
-ZagOutputLLVMForTest >> valueOf [
+ZagOutputLLVMFromTestArray >> valueOf [
 
 	| object |
 	object := array at: index.

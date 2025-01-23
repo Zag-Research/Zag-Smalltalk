@@ -13,7 +13,7 @@ Class {
 ManifestZagCoreTests class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #interpret #false)) #'2024-08-29T09:17:23.777197-04:00') #(#(#RGMethodDefinition #(#ASCPrimitive2 #interpretFor: #false)) #'2024-11-16T10:20:12.238148-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive1 #interpretFor: #false)) #'2024-11-16T10:20:28.724663-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive #interpretFor: #false)) #'2024-11-16T10:20:34.696857-05:00') #(#(#RGMethodDefinition #(#ZagOutputLLVMForTest #iterate #false)) #'2025-01-10T17:30:03.178927-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ASTimings class' #updateBenchmarks #true)) #'2022-08-25T20:02:32.671305+02:00') #(#(#RGMethodDefinition #(#ASemanticInterpreter #interpret #false)) #'2024-08-29T09:17:23.777197-04:00') #(#(#RGMethodDefinition #(#ASCPrimitive2 #interpretFor: #false)) #'2024-11-16T10:20:12.238148-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive1 #interpretFor: #false)) #'2024-11-16T10:20:28.724663-05:00') #(#(#RGMethodDefinition #(#ASCPrimitive #interpretFor: #false)) #'2024-11-16T10:20:34.696857-05:00') #(#(#RGMethodDefinition #(#ZagOutputLLVMFromTestArray #iterate #false)) #'2025-01-10T17:30:03.178927-05:00') )
 ]
 
 { #category : 'code-critics' }

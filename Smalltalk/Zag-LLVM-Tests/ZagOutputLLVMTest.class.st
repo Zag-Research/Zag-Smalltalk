@@ -16,23 +16,21 @@ Class {
 { #category : 'tests' }
 ZagOutputLLVMTest class >> fibWithPIC [
 
-	^ #( #( label ) pushContext 16r0 pushLocal 0 pushLiteral 2 send #'<='
-	     nil nil nil nil #( label ) #pushThisContext #makeImmediateClosure
-	     16r119 send ifTrue: nil nil nil nil #( label ) drop pushLocal
-	     0 pushLiteral 1 send #- nil nil nil nil #( label ) call #( method )
-	     pushLocal 0 pushLiteral 2 send #- nil nil nil nil #( label )
-	     call #( method ) send #+ nil nil nil nil #( label ) returnTop )
+	^ #( pushContext 16r0 pushLocal 0 pushLiteral 2 sendPIC2 #'<=' nil
+	     nil nil nil pushThisContext makeImmediateClosure
+	     16r119 sendPIC2 ifTrue: nil nil nil nil drop pushLocal 0 pushLiteral
+	     1 sendPIC2 #- nil nil nil nil call #( method ) pushLocal
+	     0 pushLiteral 2 sendPIC2 #- nil nil nil nil call #( method )
+	     sendPIC2 #+ nil nil nil nil returnTop )
 ]
 
 { #category : 'tests' }
 ZagOutputLLVMTest class >> fibWithoutPIC [
 
-	^ #( #( label ) pushContext #( method ) pushLocal 0 pushLiteral
-	     2 send #'<=' #( label ) #pushThisContext #makeImmediateClosure
-	     16r119 send ifTrue: #( label ) drop pushLocal 0 pushLiteral
-	     1 send #- #( label ) call #( method ) #( label ) pushLocal
-	     0 pushLiteral 2 send #- #( label ) call #( method ) #( label )
-	     send #+ #( label ) returnTop )
+	^ #( pushContext #( method ) pushLocal 0 pushLiteral 2 send #'<='
+	     pushThisContext makeImmediateClosure 16r119 send ifTrue:
+	     drop pushLocal 0 pushLiteral 1 send #- call #( method )
+	     pushLocal 0 pushLiteral 2 send #- call #( method ) send #+ returnTop )
 ]
 
 { #category : 'tests' }
@@ -44,17 +42,22 @@ ZagOutputLLVMTest class >> return42 [
 { #category : 'tests' }
 ZagOutputLLVMTest class >> returnAdd42 [
 
-	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send #+ label
-	     returnTop )
+	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send #+ returnTop )
+]
+
+{ #category : 'tests' }
+ZagOutputLLVMTest class >> returnAdd42Tail [
+
+	^ #( pushLiteral 25 pushLiteral 7 tailSend #+ )
 ]
 
 { #category : 'running' }
 ZagOutputLLVMTest >> setUp [
 
 	super setUp.
-	textOut := ZagOutputLLVMTextual new.
-	output := ZagOutputLLVMForTest new
-		          address: 16r10000;
+	textOut := ZagLLVMTextualGenerator new.
+	output := ZagOutputLLVMFromTestArray new
+		          methodAddress: 16r10000;
 		          codeGen: (ZagOutputLLVM new generator: textOut)
 ]
 

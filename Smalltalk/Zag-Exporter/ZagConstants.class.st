@@ -41,6 +41,8 @@ Class {
 		'T_PopIndirectLocal',
 		'T_PopInstVar',
 		'T_PopLocal',
+		'T_PopLocalData',
+		'T_PopLocalField',
 		'T_Primitive',
 		'T_PrimitiveFailed',
 		'T_PrimitiveModule',
@@ -92,6 +94,8 @@ ZagConstants class >> asDoubleWordArray [
 		T_PopIndirectLocal.
 		T_PopInstVar.
 		T_PopLocal.
+		T_PopLocalData.
+		T_PopLocalField.
 		T_Primitive.
 		T_PrimitiveFailed.
 		T_PrimitiveModule.
@@ -249,29 +253,31 @@ ZagConstants class >> initializeThreadedConstants [
 	T_PopIndirectLocal := 112.
 	T_PopInstVar := 120.
 	T_PopLocal := 128.
-	T_Primitive := 136.
-	T_PrimitiveFailed := 144.
-	T_PrimitiveModule := 152.
-	T_PushAssociationValue := 160.
-	T_PushContext := 168.
-	T_PushIndirect := 176.
-	T_PushIndirectLocal := 184.
-	T_PushInstVar := 192.
-	T_PushLiteral := 200.
-	T_PushLocal := 208.
-	T_PushLocalData := 216.
-	T_PushLocalField := 224.
-	T_PushThisContext := 232.
-	T_ReturnNoContext := 240.
-	T_ReturnNonLocal := 248.
-	T_ReturnTop := 256.
-	T_ReturnWithContext := 264.
-	T_Send := 272.
-	T_StoreLocal := 280.
-	T_Swap := 288.
-	T_TailCallMethod := 296.
-	T_TailSend := 304.
-	T_Value := 312.
-	T_ValueColon := 320.
+	T_PopLocalData := 136.
+	T_PopLocalField := 144.
+	T_Primitive := 152.
+	T_PrimitiveFailed := 160.
+	T_PrimitiveModule := 168.
+	T_PushAssociationValue := 176.
+	T_PushContext := 184.
+	T_PushIndirect := 192.
+	T_PushIndirectLocal := 200.
+	T_PushInstVar := 208.
+	T_PushLiteral := 216.
+	T_PushLocal := 224.
+	T_PushLocalData := 232.
+	T_PushLocalField := 240.
+	T_PushThisContext := 248.
+	T_ReturnNoContext := 256.
+	T_ReturnNonLocal := 264.
+	T_ReturnTop := 272.
+	T_ReturnWithContext := 280.
+	T_Send := 288.
+	T_StoreLocal := 296.
+	T_Swap := 304.
+	T_TailCallMethod := 312.
+	T_TailSend := 320.
+	T_Value := 328.
+	T_ValueColon := 336.
 
 ]

@@ -132,6 +132,18 @@ ZagImageOutputAPI >> popLocal [
 ]
 
 { #category : 'threaded words' }
+ZagImageOutputAPI >> popLocalData [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> popLocalField [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
 ZagImageOutputAPI >> primitive [
 
 	^ self explicitRequirement

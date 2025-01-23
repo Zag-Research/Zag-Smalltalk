@@ -13,7 +13,7 @@ Class {
 ManifestZagLLVMTests class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ZagOutputLLVMForTest #iterate #false)) #'2025-01-09T19:06:50.440792-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagOutputLLVMFromTestArray #iterate #false)) #'2025-01-09T19:06:50.440792-05:00') )
 ]
 
 { #category : 'code-critics' }
@@ -27,6 +27,6 @@ ManifestZagLLVMTests class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive [
 ManifestZagLLVMTests class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGClassDefinition #( #ZagOutputLLVMForTest ) )
+	^ #( #( #( #RGClassDefinition #( #ZagOutputLLVMFromTestArray ) )
 	        #'2025-01-09T19:10:32.346021-05:00' ) )
 ]
