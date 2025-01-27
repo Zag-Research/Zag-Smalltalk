@@ -56,8 +56,8 @@ AStBlock >> couldMergeIn: other [
 	^ self == other
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
 AStBlock >> dataClass [
 
-	^ BlockClosure
+	^ ZagBlockClosure
 ]
