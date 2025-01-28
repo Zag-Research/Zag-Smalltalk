@@ -33,3 +33,15 @@ ASLocalNamed >> mergeWith: aStackElement [
 
 	location stackValue: (location stackValue mergeWith: aStackElement stackValue)
 ]
+
+{ #category : 'code generation' }
+ASLocalNamed >> popTheVariable: output stackOffset: anInteger [
+
+	^ output visitPopLocal: anInteger
+]
+
+{ #category : 'code generation' }
+ASLocalNamed >> storeTheVariable: output stackOffset: anInteger [
+
+	^ output visitStoreLocal: anInteger
+]

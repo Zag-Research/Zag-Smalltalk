@@ -25,8 +25,15 @@ ZagArrayThreadedOutputTest >> test_addTwoNumbers [
 	self
 		assert: output contents
 		equals:
-		'&e.verifySelector,&e.pushContext,"^",":MaddTwoNumbers:1",&e.pushLiteral,Object.from(4),&e.pushLiteral,Object.from(5),&e.send1,Sym.@"+",":MaddTwoNumbers:2",&e.storeLocal,1,&e.popLocal,0,&e.pushLocal,1,&e.pushLocal,0,&e.send1tail,Sym.@"+",'
+		#(#(label #'ASCompileTestClass1.addTwoNumbers') pushContext #(method) pushLiteral 4 pushLiteral 5 send #+ #(label #'ASCompileTestClass1.addTwoNumbers.1') storeLocal 2 popLocal 1 pushLocal 2 pushLocal 1 tailSend #+)
+]
 
+{ #category : 'tests' }
+ZagArrayThreadedOutputTest >> test_fib [
+
+	| ast |
+	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
+	self assert: output contents equals: '&p.p1,&e.pushLiteral,False,&e.returnTop,' 
 ]
 
 { #category : 'tests' }

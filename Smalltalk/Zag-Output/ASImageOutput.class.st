@@ -85,6 +85,14 @@ ASImageOutput >> visitBranch: aBasicBlock [
 ]
 
 { #category : 'API' }
+ASImageOutput >> visitPopLocal: offset [
+
+	^ self
+		  popLocal;
+		  literal: offset
+]
+
+{ #category : 'API' }
 ASImageOutput >> visitPushLiteral: aLiteral [
 
 	self
@@ -93,7 +101,39 @@ ASImageOutput >> visitPushLiteral: aLiteral [
 ]
 
 { #category : 'API' }
+ASImageOutput >> visitPushLocal: offset [
+
+	^ self
+		  pushLocal;
+		  literal: offset
+]
+
+{ #category : 'API' }
 ASImageOutput >> visitReturnTop: anObject [
 
 	self returnTop
+]
+
+{ #category : 'API' }
+ASImageOutput >> visitSend: aSelector returnIndex: index receiver: aClass [
+
+	^ self
+		  send;
+		  literal: aSelector
+]
+
+{ #category : 'API' }
+ASImageOutput >> visitStoreLocal: offset [
+
+	^ self
+		  storeLocal;
+		  literal: offset
+]
+
+{ #category : 'API' }
+ASImageOutput >> visitTailSend: aSelector receiver: aClass [
+
+	^ self
+		  tailSend;
+		  literal: aSelector
 ]

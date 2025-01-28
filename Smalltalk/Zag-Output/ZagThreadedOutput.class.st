@@ -67,6 +67,12 @@ ZagThreadedOutput >> primitive: anInteger [
 	^ stream nextPut: { #primitive . anInteger }
 ]
 
+{ #category : 'threaded words' }
+ZagThreadedOutput >> pushContext [
+
+	^ stream nextPut: #pushContext; nextPut: #(method)
+]
+
 { #category : 'accessing' }
 ZagThreadedOutput >> reference: aString [
 

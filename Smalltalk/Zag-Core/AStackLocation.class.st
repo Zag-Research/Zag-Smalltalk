@@ -73,6 +73,12 @@ AStackLocation >> printOn: stream [
 	stream nextPutAll: flowValue asString.
 ]
 
+{ #category : 'output' }
+AStackLocation >> pushFromContext: anInteger with: output [
+
+	^ output visitPushLocal: anInteger
+]
+
 { #category : 'accessing' }
 AStackLocation >> pushFromStack: anInteger with: anOutput [
 

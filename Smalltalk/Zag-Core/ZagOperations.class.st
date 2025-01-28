@@ -85,9 +85,9 @@ ZagOperations >> nextBasicBlocks [
 ]
 
 { #category : 'code generation' }
-ZagOperations >> outputTo: aCodeEmitter [
+ZagOperations >> outputTo: output [
 
-	self subclassResponsibility
+	^ output pushContext
 ]
 
 { #category : 'stack' }

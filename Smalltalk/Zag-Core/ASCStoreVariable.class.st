@@ -14,3 +14,10 @@ ASCStoreVariable >> outputTo: anOutput [
 
 	^ variableLocation storeTheVariable: anOutput stackOffset: stack offset
 ]
+
+{ #category : 'stack' }
+ASCStoreVariable >> resultStack: anASStack basicBlock: aBasicBlock [
+
+	^ stack := anASStack.
+
+]
