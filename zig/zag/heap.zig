@@ -755,7 +755,7 @@ pub const HeapObjectArray = [*]align(@alignOf(u64)) HeapObject;
 pub const HeapObjectSlice = []align(@alignOf(u64)) HeapObject;
 pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
-pub const HeapObject = extern struct {
+pub const HeapObject = packed struct {
     header: HeapHeader,
     pub inline fn headerPtr(self: *const HeapObject) *HeapHeader {
         return @constCast(&self.header);

@@ -111,9 +111,22 @@ fn loadDispatchTable(file: std.fs.File) !void {
     assert(stat.size==@sizeOf(ZagImageHeader)); // no dispatch to read
 //    _ = references;
 }
+fn loadCodeAddresses() !void {
+    const controlPrimitives = @import("controlPrimitives.zig");
+    const Element = struct {files: u64, ours: u64, };
+    var map: [controlPrimitives.references.len]Element = undefined;
+    const codeAddresses = try zagImageHeader.codeAddresses.arrayAsSlice(u64);
+    if (controlPrimitives.references.len!=codeAddresses.len)
+        std.debug.print("my primitives length: {} file:{}\n",.{controlPrimitives.references.len,codeAddresses.len});
+    for (&map,&controlPrimitives.references,codeAddresses) |*element,o,f| {
+        element.files = f;
+        element.ours = @intFromPtr(o.f);
+    }
+}
 fn processHeader(file: std.fs.File) !void {
     //std.debug.print("Zag header: {}\n",.{zagImageHeader});
     try loadSymbols();
+    try loadCodeAddresses();
     try loadDispatchTable(file);
     try loadClassTable();
 }

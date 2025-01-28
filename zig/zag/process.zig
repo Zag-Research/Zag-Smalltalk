@@ -29,10 +29,6 @@ const ContextPtr = *Context;
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
 const Code = execute.Code;
-const TFProcess = execute.TFProcess;
-const TFContext = execute.TFContext;
-const tfAsProcess = execute.tfAsProcess;
-const tfAsContext = execute.tfAsContext;
 const PC = execute.PC;
 const SP = execute.SP;
 const MethodSignature = execute.MethodSignature;
@@ -110,7 +106,7 @@ const nonFlags = ~flagMask;
 pub inline fn needsCheck(self: *const align(1) Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-pub fn check(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 pub inline fn checkBump(self: *align(1) Self) *align(1) Self {

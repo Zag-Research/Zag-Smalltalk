@@ -26,10 +26,10 @@ This is a special case of a primitive method send. This is very similar to the f
 If there are only a few classes that have access to an implementation of a particular message (i.e they have it themselves or a superclass has an implementation), we emit a class-case instruction and inline the method for each of them, with each of them branching to the original return block on "return". To have the correct/conservative semantics, we need to retain a fall-back of doing the original send, unless we can prove that the list is exhaustive.
 #### Send where the target is the result of a comparison primitive - safe
 As a special case of the previous case, we know that comparison primitives always return `true` or `false` (or an error if the values are incomparable), so we have an exhaustive list. But more, we now know something about the relationship of these values. So, for example, we might know that a value is in the range of 1 to the size of an array, which means that we can safely use that value to index into the array.
-## Removal of redundant `BlockClosure`s
+## Removal of redundant `BlockClosure`s 
 After all inlining is completed there will typically be pushes of `BlockClosure`s that are subsequently inlined so that the block itself need never be created. These are turned into pushes of `nil`.
-## Compiling required `BlockClosure`s
-Any `BlockClosure`s that remain after the previous step must be compiled, and the above inlining operations performed.
+##  Compiling required `BlockClosure`s
+Any `BlockClosure`s that are referenced must be compiled, and the above inlining operations (and probably remove redundant and compile block closures) performed. This entails compiling the block AST into an ASCCompiledClosureBlock (and subsequent values)
 ## Removal of redundant operations
 After all inlining is completed there will typically be push operations that are unnecessary, such as pushing an integer constant where the value is propagated so the push is no longer required. There may also be cleanup operations (typically dropping values off the stack) that are simplified or eliminated. Some sends will be required even if the result is unused because sends to unknown methods may have side-effects. Note that `self` values may need at least nil pushed into the location so there is space to return a value.
 ## Optimizing local variable locations

@@ -79,6 +79,7 @@ $ make install
 
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)
+- [Probability Theory: The Logic of Science](https://www.lesswrong.com/posts/KN3BYDkWei9ADXnBy/e-t-jaynes-probability-theory-the-logic-of-science-i)
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)

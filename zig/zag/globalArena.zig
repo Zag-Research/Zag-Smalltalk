@@ -43,8 +43,9 @@ comptime {
     std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch unreachable;
     std.debug.assert(HeapAllocation.headerSize >= @sizeOf(HeapAllocation.HeapAllocationHeader) / @sizeOf(HeapObject));
 }
-pub const HeapAllocation = struct {
+pub const HeapAllocation = extern union {
     mem: [size]HeapObject,
+    header: HeapAllocationHeader,
     const SelfPtr = *align(heap_allocation_size) HeapAllocation;
     const HeapAllocationHeader = extern struct {
         loadAddress: *align(heap_allocation_size) HeapAllocation, // address that corresponds with the filename
@@ -60,7 +61,7 @@ pub const HeapAllocation = struct {
     const minFreeList = 1;
     const mutex_init = MutexType{};
     const MutexType = DummyMutex;
-    const DummyMutex = struct {
+    const DummyMutex = packed struct {
         lockField: i64 = -1,
         fn lock(_: *DummyMutex) void {}
         fn unlock(_: *DummyMutex) void {}
@@ -236,12 +237,9 @@ test "check HeapAllocations" {
     // });
     try ee(fullHeapSize - 9 - 51 - 128 - 128 - 129 - big - 1, ha.freeSpace());
 }
-const FreeList = struct {
-    mem: [@sizeOf(Internal)] u8,
-    const Internal = extern struct {
-        header: HeapHeader,
-        list: FreeListPtr,
-    };
+const FreeList = extern struct {
+    header: HeapHeader,
+    list: FreeListPtr,
     const Self = @This();
     const FreeListPtr = ?*FreeListElement;
     const FreeListElement = struct {

@@ -23,6 +23,7 @@ const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
+const ThreadedFn = execute.ThreadedFn;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
@@ -35,7 +36,6 @@ prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to h
 trapContextNumber: u64,
 temps: [nLocals]Object,
 const Self = @This();
-const ThreadedFn = execute.ThreadedFn;
 const nLocals = 1;
 const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
 pub fn init() Self {

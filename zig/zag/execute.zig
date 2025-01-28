@@ -93,35 +93,24 @@ test "Stack" {
     _ = sp1.drop().push(Object.from(42));
     try ee(stack[9].to(i64), 42);
 }
-pub fn check(pc: PC, sp: SP, _process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
-    const process = tfAsProcess(_process);
+pub fn check(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP { // not embedded
     if (process.debugger()) |debugger|
         return @call(tailCall, debugger, .{ pc, sp, process, context, undefined });
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
 }
-const zigBugWorkaround = false;
-pub const TFProcess = if (zigBugWorkaround) *anyopaque else *Process;
-pub const TFContext = if (zigBugWorkaround) *anyopaque else *Context;
-pub inline fn tfAsProcess(_process: TFProcess) *Process {
-    @setRuntimeSafety(false);
-    return @alignCast(@ptrCast(_process));
-}
-pub inline fn tfAsContext(_context: TFContext) *Context {
-    return @alignCast(@ptrCast(_context));
-}
-pub const ThreadedFn = extern struct {
+pub const ThreadedFn = packed struct {
     f: Fn,
-    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP;
+    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP;
 };
-pub const MethodSignature = extern struct {
+pub const MethodSignature = union {
     int: u64,
     const Internal = packed struct {
         selector: u40,
         class: ClassIndex,
     };
-    const nil: MethodSignature = @bitCast(@as(u64,0));
+    const nil: MethodSignature = .{.int = @bitCast(Nil)};
     pub fn isNil(self: MethodSignature) bool {
-        return self.int==0;
+        return self.int==Nil.rawU();
     }
     pub fn hash(self: MethodSignature) u32 {
         return @truncate(self.int);
@@ -189,7 +178,7 @@ pub const CompiledMethod = struct {
             .code = .{.{.prim = .{.f = Code.panic}}},
         };
     }
-    pub fn execute(self: *Self, sp: SP, process: TFProcess, context: TFContext) callconv(stdCall) SP {
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
         const pc = PC.init(&self.code[0]);
         trace("\nexecute: {} {} {}", .{ pc, sp, self.signature });
         return pc.prim()(pc.next(), sp, process, context, self.signature);
@@ -345,10 +334,10 @@ pub const Code = union {
     pub inline fn codeRefOf(c: [*]const Code) Code {
         return Code{ .uint = @intFromPtr(@constCast(c)) };
     }
-    pub fn end(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
+    pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP { // not embedded
         return sp;
     }
-    pub fn panic(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP { // not embedded
+    pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP { // not embedded
         @panic("not implemented");
     }
     var endCode = [CompiledMethod.codeSize]Code{.{ .prim = .{.f = end }}};
@@ -452,7 +441,7 @@ test "countNonLabels" {
     try expectEqual(r1.refs, 2);
     try expectEqual(r1.objects, 3);
 }
-fn noOp(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
     }
 
@@ -475,7 +464,7 @@ pub fn CompileTimeMethod(comptime counts: CountSizes) type {
                 @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex) Self {
+        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ?ThreadedFn, class: ClassIndex) Self {
             const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes + refs, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
             const f = function orelse &noOp;  
@@ -579,7 +568,7 @@ pub fn compiledMethodType(comptime codeSize: comptime_int) type {
 pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     return compileMethodWith(name, locals, maxStack, class, null, tup);
 }
-pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     var method = methodType.init(name, locals, maxStack, verifier, class);
@@ -908,27 +897,26 @@ pub const controlPrimitivesX = struct {
         const class = receiver.get_class();
         return MethodSignature.from(selector,class);
     }
- fn setupSend(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
+ fn setupSend(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const ms = getMethodSignature(pc, sp, null);
         const returnPc = pc.next().returnOffset();
         context.setReturn(returnPc);
         return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, ms });
     }
- fn setupTailSend(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+ fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getMethodSignature(pc, sp, null) });
     }
-    pub fn setupTailSend0(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getMethodSignature(pc, sp, 0) });
     }
-    pub fn dynamicDispatch(_: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         const cM = lookupMethod(signature);
         trace("\ndynamicDispatch: {any} {}", .{ cM, signature });
         const pc = cM.codePc();
         return @call(tailCall, cM.executeFn, .{ pc, sp, process, context, signature });
     }
 
-    pub fn verifyMethod(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    pub fn verifyMethod(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         const method = pc.method();
         trace("\nverifyMethod: {*} {} {}", .{ method, signature, method.signature });
         if (!method.signature.equals(signature)) {
@@ -939,7 +927,7 @@ pub const controlPrimitivesX = struct {
         trace(" newPc={} {}", .{ newPc, newPc.prim() });
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    // pub fn ifTrue(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const process = tfAsProcess(_process);
     //     const context = tfAsContext(_context);
     //     trace("\nifTrue: {any}", .{context.stack(sp, process)});
@@ -948,7 +936,7 @@ pub const controlPrimitivesX = struct {
     //     if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
     //     @panic("non boolean");
     // }
-    // pub fn ifFalse(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const process = tfAsProcess(_process);
     //     const context = tfAsContext(_context);
     //     trace("\nifFalse: {any}", .{context.stack(sp, process)});
@@ -957,83 +945,72 @@ pub const controlPrimitivesX = struct {
     //     if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
     //     @panic("non boolean");
     // }
-    // pub fn ifNil(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn ifNil(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const v = sp.top;
     //     if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
     //     return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
     // }
-    // pub fn ifNotNil(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const v = sp.top;
     //     if (Nil.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
     //     return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
     // }
-    pub fn primFailure(_: PC, _: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn primFailure(_: PC, _: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
         @panic("primFailure");
     }
-    pub fn replaceLiteral(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         sp.top = pc.object();
         trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
         return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, undefined });
     }
-    pub fn replaceLiteral0(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         sp.top = Object.from(0);
         trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn replaceLiteral1(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         sp.top = Object.from(1);
         trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn pushLiteral0(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(0));
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
         trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral1(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(1));
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral2(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(2));
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteral_1(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Object.from(-1));
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(pc.literalIndirect());
         return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralNil(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(Nil);
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralTrue(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(True);
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn pushLiteralFalse(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         const newSp = sp.push(False);
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn printStack(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn printStack(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         trace("\nstack: {any}", .{context.stack(sp, process)});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
     }
-    pub fn fallback(pc: PC, sp: SP, process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        const context = tfAsContext(_context);
+    pub fn fallback(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         const self = sp.at(signature.numArgs());
         context.setReturn(pc);
         const class = self.get_class();
@@ -1041,16 +1018,14 @@ pub const controlPrimitivesX = struct {
         trace("\nfallback: {} {} {} {}", .{ signature, class, pc, cM });
         return @call(tailCall, cM.executeFn, .{ cM.codePc(), sp, process, context, undefined });
     }
-    pub fn callRecursive(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         context.setReturn(pc.next());
         const offset = pc.int();
         const newPc = pc.next().back(@intCast(-offset));
         trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    // pub fn send1(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature, prevCache: SendCache) callconv(stdCall) SP {
+    // pub fn send1(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature, prevCache: SendCache) callconv(stdCall) SP {
     //     const self = sp.next;
     //     context.setReturn(pc.next().skip(sendCacheSize));
     //     const class = self.get_class();
@@ -1061,9 +1036,9 @@ pub const controlPrimitivesX = struct {
     //     trace(" {} {any}", .{ newPc, process.getStack(sp) });
     //     return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, signature });
     // }
-    //    pub fn tailSend1(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //    }
-    // pub fn perform(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn perform(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const context = tfAsContext(_context);
     //     const selector = sp.top;
     //     const numArgs = selector.numArgs();
@@ -1072,7 +1047,7 @@ pub const controlPrimitivesX = struct {
     //     context.setReturn(pc);
     //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
     // }
-    // pub fn performWith(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    // pub fn performWith(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     //     const context = tfAsContext(_context);
     //     const selector = sp.next;
     //     sp.next = sp.top;
@@ -1081,17 +1056,13 @@ pub const controlPrimitivesX = struct {
     //     context.setTPc(pc + 1);
     //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
     // }
-    pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
         return @call(tailCall, nPc, .{ tPc, sp, process, context, undefined });
     }
-    pub fn isCallerInThreadedMode(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
-        const process = tfAsProcess(_process);
-        const context = tfAsContext(_context);
+    pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
         trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
@@ -1266,11 +1237,11 @@ const Dispatch = struct {
     fn methodSlice(self: *const Self) []const DispatchElement {
         return self.methods()[0..self.nMethods];
     }
-    pub fn forceDnu(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // not embedded
+    pub fn forceDnu(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP { // not embedded
         std.debug.print("\nforceDnu: 0x{x} {} {}", .{ signature.selectorHash, signature.classIndex, signature.asSymbol() });
         _ = .{ pc, sp, process, context, signature, @panic("forceDnu unimplemented") };
     }
-    pub fn growDispatch(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // not embedded
+    pub fn growDispatch(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP { // not embedded
         std.debug.print("\ngrowDispatch: 0x{x} {} {}", .{ signature.selectorHash, signature.class, signature.asSymbol() });
         _ = .{ pc, sp, process, context, signature, @panic("growDispatch unimplemented") };
     }
@@ -1370,21 +1341,21 @@ const Dispatch = struct {
         trace(" - no free space", .{});
         return false;
     }
-    fn fail(programCounter: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         _ = .{ programCounter, sp, process, context, signature };
         if (programCounter.uint() == 0)
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
-    fn testDnu(programCounter: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         _ = .{ programCounter, sp, process, context, signature, @panic("testDnu") };
         //        return sp.push(object.NotAnObject);
     }
-    fn testGrow(programCounter: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    fn testGrow(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         _ = .{ programCounter, sp, process, context, signature, @panic("testGrow") };
         //        return sp.push(object.NotAnObject);
     }
-    fn testIncrement(programCounter: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
+    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
         _ = .{ process, context, signature };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
@@ -1427,13 +1398,13 @@ fn eo(lDe: *const DispatchElement, rDe: *const DispatchElement) !void {
 //     Process.resetForTest();
 //     const empty = Object.empty;
 //     const fns = struct {
-//         fn push1(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
+//         fn push1(_: PC, sp: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
 //             return sp.push(Object.from(1));
 //         }
-//         fn push2(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
+//         fn push2(_: PC, sp: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
 //             return sp.push(Object.from(2));
 //         }
-//         fn push3(_: PC, sp: SP, _: TFProcess, _: TFContext, _: MethodSignature) callconv(stdCall) SP {
+//         fn push3(_: PC, sp: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
 //             return sp.push(Object.from(3));
 //         }
 //     };
