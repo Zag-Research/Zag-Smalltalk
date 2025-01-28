@@ -44,14 +44,21 @@ ASCPrimitive class >> initialize [
 
 { #category : 'instance creation' }
 ASCPrimitive class >> with: anInteger [
-
-	| primitive numArgs |
+	"	| primitive numArgs |
 	primitive := Primitives at: anInteger.
 	numArgs := primitive numArgs.
 	numArgs = 2 ifTrue: [ ^ ASCPrimitive2 new with: primitive ].
 	numArgs = 1 ifTrue: [ ^ ASCPrimitive1 new with: primitive ].
-	numArgs = 0 ifTrue: [ ^ self new with: primitive ].
-	self error: 'only support 0, 1 and 2 arg primitives'
+	numArgs = 0 ifTrue: [ "
+
+	^ self new with: anInteger "primitive ].
+	self error: 'only support 0, 1 and 2 arg primitives'"
+]
+
+{ #category : 'code generation' }
+ASCPrimitive >> outputTo: output [
+
+	^ output primitive: primitive
 ]
 
 { #category : 'stack' }

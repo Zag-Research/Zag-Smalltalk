@@ -3,7 +3,7 @@ I document the API that any translator from threaded representation of a Compile
 
 Currently this is only used by the LLVM jitter
 
-The methods defined in this trait must exactly correspond with the `references` array in zag.zig
+The methods defined in this trait must exactly correspond with the `references` array in controlPrimitives.zig
 They are used to automatically generate the shared variables in `ZagConstants`
 "
 Trait {
@@ -145,12 +145,6 @@ ZagImageOutputAPI >> popLocalField [
 
 { #category : 'threaded words' }
 ZagImageOutputAPI >> primitive [
-
-	^ self explicitRequirement
-]
-
-{ #category : 'threaded words' }
-ZagImageOutputAPI >> primitiveFailed [
 
 	^ self explicitRequirement
 ]

@@ -37,15 +37,6 @@ ASOutput >> blockClass [
 	^ self class blockClass
 ]
 
-{ #category : 'as yet unclassified' }
-ASOutput >> blockGenerator [
-
-	^ self blockClass new
-		  testing: testing;
-		  context: context;
-		  methodGenerator: self methodGenerator block: self blockNumber
-]
-
 { #category : 'API' }
 ASOutput >> blockNumber [
 
@@ -100,9 +91,7 @@ ASOutput >> generateCode [
 { #category : 'API' }
 ASOutput >> generateCode: anASNode [
 
-	context for: anASNode generatorIs: self.
-	ourObject := anASNode.
-	context processComponents
+	^ self generateCode: anASNode for: anASNode methodClass
 ]
 
 { #category : 'API' }

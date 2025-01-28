@@ -69,16 +69,6 @@ ASCCompiledClosureBlock >> newInlinedBlock: aCompileMethod [
 	^ ASCInlineMethodBlock new
 ]
 
-{ #category : 'writing' }
-ASCCompiledClosureBlock >> outputTo: output [
-
-	output
-		outputMethodDefinition: self label
-		methods: { self } , returnBlocks keys.
-	output outputMethodStart: self.
-	^ self outputRestTo: output
-]
-
 { #category : 'printing' }
 ASCCompiledClosureBlock >> printOn: aStream [
 

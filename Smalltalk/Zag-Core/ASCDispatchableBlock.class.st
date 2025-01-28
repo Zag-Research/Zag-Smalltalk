@@ -49,6 +49,16 @@ ASCDispatchableBlock >> locals: locals parameters: arguments [
 ASCDispatchableBlock >> methodBlock [
 ]
 
+{ #category : 'writing' }
+ASCDispatchableBlock >> outputTo: output [
+
+	output
+		outputMethodDefinition: self label
+		methods: { self } , returnBlocks keys.
+	output outputMethodStart: self.
+	^ self outputRestTo: output
+]
+
 { #category : 'accessing' }
 ASCDispatchableBlock >> owns [
 

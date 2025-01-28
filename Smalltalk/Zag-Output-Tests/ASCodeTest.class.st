@@ -1,9 +1,6 @@
 Class {
 	#name : 'ASCodeTest',
 	#superclass : 'TestCase',
-	#instVars : [
-		'file'
-	],
 	#category : 'Zag-Output-Tests-Tests',
 	#package : 'Zag-Output-Tests',
 	#tag : 'Tests'

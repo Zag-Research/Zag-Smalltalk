@@ -469,7 +469,7 @@ ASCBasicBlock >> outputRestTo: output [
 { #category : 'writing' }
 ASCBasicBlock >> outputTo: output [
 
-	^ self subclassResponsibility
+	^ self outputRestTo: output
 ]
 
 { #category : 'stack' }

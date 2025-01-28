@@ -82,12 +82,6 @@ ASImageThreadedOutput >> pushLocal: localNumber [
 		comma
 ]
 
-{ #category : 'code generation' }
-ASImageThreadedOutput >> verifySelector: anObject [
-
-	^ image putU64: ZfVerifySelector
-]
-
 { #category : 'API' }
 ASImageThreadedOutput >> visitPopLocal: anASCLocal [
 
