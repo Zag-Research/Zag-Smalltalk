@@ -246,7 +246,7 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 	primitive := aCompiledMethod primitive.
 	returnBlock := self getOrMakeReturnBlock.
 	self halt.
-	(primitive between: 201 and: 210) ifTrue: [ ^ self inlineValue: primitive for: aClass next: returnBlock ].
+	(primitive between: 201 and: 210) ifTrue: [ ^ self inlineValue: (aCompiledMethod numArgs) for: aClass next: returnBlock ].
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
 			 primitive: primitive).
@@ -263,9 +263,9 @@ ASCodeGenerator >> inlineRecursiveMethod: aCompileMethod block: anASCInlinedMeth
 ]
 
 { #category : 'inlining' }
-ASCodeGenerator >> inlineValue: anInteger for: aClass next: aBasicBlock [
+ASCodeGenerator >> inlineValue: anOffset for: aClass next: aBasicBlock [
 
-	aClass == BlockClosure ifTrue: [ ^ self inlineBlock: anInteger - 201 next: aBasicBlock ].
+	aClass == ZagBlockClosure ifTrue: [ ^ self inlineBlock: anOffset next: aBasicBlock ].
 	self halt " handle Symbol value: "
 ]
 
@@ -338,7 +338,7 @@ ASCodeGenerator >> newInline [
 { #category : 'private - testing' }
 ASCodeGenerator >> newInlineBlockClosure [
 
-	^ self addBlock: currentCodeUnit blockClosureClass
+	^ self addBlock: (currentCodeUnit newInlinedBlock: nil)
 ]
 
 { #category : 'instance creation' }
