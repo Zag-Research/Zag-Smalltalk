@@ -108,5 +108,5 @@ ASBlockNode >> zigWalkMethod: aGenerator [
 ASBlockNode >> zigWalkTarget: aGenerator [
 
 	self zigWalk: aGenerator.
-	^ BlockClosure 
+	^ ZagBlockClosure 
 ]
