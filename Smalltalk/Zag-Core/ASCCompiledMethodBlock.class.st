@@ -69,16 +69,6 @@ ASCCompiledMethodBlock >> newInlinedBlock: aMethodAST [
 	^ ASCInlineMethodBlock new
 ]
 
-{ #category : 'writing' }
-ASCCompiledMethodBlock >> outputTo: output [
-
-	output
-		outputMethodDefinition: self label
-		methods: { self } , returnBlocks keys.
-	output outputMethodStart: self.
-	^ self outputRestTo: output
-]
-
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> propagateContextFreeFor [
 

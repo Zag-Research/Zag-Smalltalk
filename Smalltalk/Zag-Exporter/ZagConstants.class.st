@@ -44,7 +44,6 @@ Class {
 		'T_PopLocalData',
 		'T_PopLocalField',
 		'T_Primitive',
-		'T_PrimitiveFailed',
 		'T_PrimitiveModule',
 		'T_PushAssociationValue',
 		'T_PushContext',
@@ -74,10 +73,10 @@ Class {
 }
 
 { #category : 'converting' }
-ZagConstants class >> asDoubleWordArray [
+ZagConstants class >> asArray [
 " - do not edit - instead `do` the following comment "
 " self generateInitializeThreadedConstants "
-	^ DoubleWordArray withAll: {
+	^ {
 		T_Branch.
 		T_Call.
 		T_ClassCase.
@@ -97,7 +96,6 @@ ZagConstants class >> asDoubleWordArray [
 		T_PopLocalData.
 		T_PopLocalField.
 		T_Primitive.
-		T_PrimitiveFailed.
 		T_PrimitiveModule.
 		T_PushAssociationValue.
 		T_PushContext.
@@ -124,16 +122,22 @@ ZagConstants class >> asDoubleWordArray [
 
 ]
 
+{ #category : 'converting' }
+ZagConstants class >> asDoubleWordArray [
+
+	^ DoubleWordArray withAll: self asArray
+]
+
 { #category : 'class initialization' }
 ZagConstants class >> generateInitializeThreadedConstants [
 
 	<script>
-	| next itc adwa |
-	self class compile: 'asDoubleWordArray'.
+	| itc adwa ltc |
+	self class compile: 'asArray'.
 	self class compile: 'initializeThreadedConstants'.
+	self class compile: 'loadThreadedConstants: array'.
 	self classVariables do: [ :variable |
 		variable isReferenced ifFalse: [ self removeClassVariable: variable ] ].
-	next := 8.
 	itc := WriteStream on: ''.
 	itc
 		<< 'initializeThreadedConstants';
@@ -150,7 +154,7 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		cr.
 	adwa := WriteStream on: ''.
 	adwa
-		<< 'asDoubleWordArray';
+		<< 'asArray';
 		cr.
 	adwa
 		<< $";
@@ -164,9 +168,25 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		cr.
 	adwa
 		tab;
-		<< '^ DoubleWordArray withAll: {';
+		<< '^ {';
 		cr.
-	ZagImageOutputAPI methodDictionary keys sorted do: [ :key |
+	ltc := WriteStream on: ''.
+	ltc
+		<< 'loadThreadedConstants: array';
+		cr.
+	ltc
+		<< $";
+		<< ' - do not edit - instead `do` the following comment ';
+		<< $";
+		cr.
+	ltc
+		<< $";
+		<< ' self generateInitializeThreadedConstants ';
+		<< $";
+		cr.
+	ZagImageOutputAPI methodDictionary keys sorted withIndexDo: [
+		:key
+		:index |
 		| variableName |
 		variableName := ('T_' , key first asUppercase asString
 		                 , key allButFirst) asSymbol.
@@ -176,14 +196,19 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		itc tab.
 		(itc << variableName)
 			<< ' := ';
-			<< next asString;
+			<< (index * 8) asString;
 			<< $.;
 			cr.
-		next := next + 8.
 		adwa
 			tab;
 			tab;
 			<< variableName;
+			<< $.;
+			cr.
+		ltc tab.
+		(ltc << variableName)
+			<< ' := array at: ';
+			<< index asString;
 			<< $.;
 			cr ].
 	adwa
@@ -192,6 +217,7 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		cr.
 	self class compile: itc contents.
 	self class compile: adwa contents.
+	self class compile: ltc contents.
 	self initializeThreadedConstants
 ]
 
@@ -256,28 +282,75 @@ ZagConstants class >> initializeThreadedConstants [
 	T_PopLocalData := 136.
 	T_PopLocalField := 144.
 	T_Primitive := 152.
-	T_PrimitiveFailed := 160.
-	T_PrimitiveModule := 168.
-	T_PushAssociationValue := 176.
-	T_PushContext := 184.
-	T_PushIndirect := 192.
-	T_PushIndirectLocal := 200.
-	T_PushInstVar := 208.
-	T_PushLiteral := 216.
-	T_PushLocal := 224.
-	T_PushLocalData := 232.
-	T_PushLocalField := 240.
-	T_PushThisContext := 248.
-	T_ReturnNoContext := 256.
-	T_ReturnNonLocal := 264.
-	T_ReturnTop := 272.
-	T_ReturnWithContext := 280.
-	T_Send := 288.
-	T_StoreLocal := 296.
-	T_Swap := 304.
-	T_TailCallMethod := 312.
-	T_TailSend := 320.
-	T_Value := 328.
-	T_ValueColon := 336.
+	T_PrimitiveModule := 160.
+	T_PushAssociationValue := 168.
+	T_PushContext := 176.
+	T_PushIndirect := 184.
+	T_PushIndirectLocal := 192.
+	T_PushInstVar := 200.
+	T_PushLiteral := 208.
+	T_PushLocal := 216.
+	T_PushLocalData := 224.
+	T_PushLocalField := 232.
+	T_PushThisContext := 240.
+	T_ReturnNoContext := 248.
+	T_ReturnNonLocal := 256.
+	T_ReturnTop := 264.
+	T_ReturnWithContext := 272.
+	T_Send := 280.
+	T_StoreLocal := 288.
+	T_Swap := 296.
+	T_TailCallMethod := 304.
+	T_TailSend := 312.
+	T_Value := 320.
+	T_ValueColon := 328.
+
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> loadThreadedConstants: array [
+" - do not edit - instead `do` the following comment "
+" self generateInitializeThreadedConstants "
+	T_Branch := array at: 1.
+	T_Call := array at: 2.
+	T_ClassCase := array at: 3.
+	T_ClassCase24 := array at: 4.
+	T_CullColon := array at: 5.
+	T_Drop := array at: 6.
+	T_DropNext := array at: 7.
+	T_Dup := array at: 8.
+	T_Label := array at: 9.
+	T_MakeImmediateClosure := array at: 10.
+	T_Over := array at: 11.
+	T_PopAssociationValue := array at: 12.
+	T_PopIndirect := array at: 13.
+	T_PopIndirectLocal := array at: 14.
+	T_PopInstVar := array at: 15.
+	T_PopLocal := array at: 16.
+	T_PopLocalData := array at: 17.
+	T_PopLocalField := array at: 18.
+	T_Primitive := array at: 19.
+	T_PrimitiveModule := array at: 20.
+	T_PushAssociationValue := array at: 21.
+	T_PushContext := array at: 22.
+	T_PushIndirect := array at: 23.
+	T_PushIndirectLocal := array at: 24.
+	T_PushInstVar := array at: 25.
+	T_PushLiteral := array at: 26.
+	T_PushLocal := array at: 27.
+	T_PushLocalData := array at: 28.
+	T_PushLocalField := array at: 29.
+	T_PushThisContext := array at: 30.
+	T_ReturnNoContext := array at: 31.
+	T_ReturnNonLocal := array at: 32.
+	T_ReturnTop := array at: 33.
+	T_ReturnWithContext := array at: 34.
+	T_Send := array at: 35.
+	T_StoreLocal := array at: 36.
+	T_Swap := array at: 37.
+	T_TailCallMethod := array at: 38.
+	T_TailSend := array at: 39.
+	T_Value := array at: 40.
+	T_ValueColon := array at: 41.
 
 ]

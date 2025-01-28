@@ -21,7 +21,7 @@ ASNoOutput >> compileMethod: aCompiledMethod [
 ASNoOutput >> initialize [
 
 	super initialize.
-	self context: ASFileContext new
+	self error: 'do not use ASNoOutput' "context: ASFileContext new"
 ]
 
 { #category : 'accessing' }

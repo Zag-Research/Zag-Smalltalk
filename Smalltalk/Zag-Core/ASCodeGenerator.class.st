@@ -406,6 +406,12 @@ ASCodeGenerator >> optimizeLocalVariableLocations [
 					ifFalse: [ nonLocalReturnBlock value: varsReferenced value: var ] ] ]
 ]
 
+{ #category : 'code generation' }
+ASCodeGenerator >> outputTo: output [
+
+	self methodBlock outputTo: output
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> parentCodeGenerator: aCodeGenerator [
 
@@ -422,11 +428,7 @@ ASCodeGenerator >> popVariable: aSymbol [
 { #category : 'API' }
 ASCodeGenerator >> primitive: primitiveNumber [
 
-	| new |
-	code primitive: primitiveNumber.
-	new := self addBlock: ASCBasicBlock new.
-	code branch: new.
-	code := new
+	code primitive: primitiveNumber
 ]
 
 { #category : 'API' }
