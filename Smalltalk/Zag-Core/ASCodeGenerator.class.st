@@ -246,7 +246,7 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 	primitive := aCompiledMethod primitive.
 	returnBlock := self getOrMakeReturnBlock.
 	self halt.
-	(primitive between: 201 and: 205) ifTrue: [ ^ self inlineValue: primitive for: aClass next: returnBlock ].
+	(primitive between: 201 and: 210) ifTrue: [ ^ self inlineValue: primitive for: aClass next: returnBlock ].
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
 			 primitive: primitive).
@@ -283,7 +283,8 @@ ASCodeGenerator >> inlineWherePossible [
 		temp do: [ :block |
 			code := block.
 			block inlineIfPossible: self ] ].
-	basicBlocks do: [ :block | block inlineWithFixedCFG: self ]
+	"Daniel remove this for now"
+	"basicBlocks do: [ :block | block inlineWithFixedCFG: self ]"
 ]
 
 { #category : 'accessing' }

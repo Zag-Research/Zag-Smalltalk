@@ -30,7 +30,6 @@ ASInlinePrimitive >> isPrimitive [
 
 { #category : 'testing' }
 ASInlinePrimitive >> validate: aStack [
-
 	^ (self validator value: aStack) ifTrue: [ self ] ifFalse: [ nil ]
 ]
 
