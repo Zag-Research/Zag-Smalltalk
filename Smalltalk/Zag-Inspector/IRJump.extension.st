@@ -1,6 +1,6 @@
 Extension { #name : 'IRJump' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRJump >> threadFormatOn: threadPrinter [
 
 	^ self destination

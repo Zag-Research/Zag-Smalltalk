@@ -1,6 +1,6 @@
 Extension { #name : 'IRPopIntoRemoteTemp' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPopIntoRemoteTemp >> threadFormatOn: threadPrinter [
 
 	threadPrinter printOn: threadPrinter.

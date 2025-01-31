@@ -1,6 +1,6 @@
 Extension { #name : 'IRPushInstVar' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPushInstVar >> threadFormatOn: anASTThreadFormat [
 
 	anASTThreadFormat

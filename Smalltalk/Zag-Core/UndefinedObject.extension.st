@@ -6,12 +6,6 @@ UndefinedObject >> astObject: anASImage [
 ]
 
 { #category : '*Zag-Core' }
-UndefinedObject >> threadFormatOn: threadPrinter [
-
-	
-]
-
-{ #category : '*Zag-Core' }
 UndefinedObject >> validate: aStackElement [
 
 	^ self

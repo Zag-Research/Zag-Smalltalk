@@ -1,6 +1,6 @@
 Extension { #name : 'IRSequence' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRSequence >> threadFormatOn: threadPrinter [
 
 	threadPrinter

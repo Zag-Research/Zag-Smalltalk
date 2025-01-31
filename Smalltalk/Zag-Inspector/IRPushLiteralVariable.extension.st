@@ -1,6 +1,6 @@
 Extension { #name : 'IRPushLiteralVariable' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPushLiteralVariable >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

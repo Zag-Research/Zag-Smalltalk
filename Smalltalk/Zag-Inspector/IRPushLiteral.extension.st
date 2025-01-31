@@ -1,6 +1,6 @@
 Extension { #name : 'IRPushLiteral' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPushLiteral >> threadFormatOn: stream [
 
 	stream nextPutAll: 'p.pushLiteral,'.

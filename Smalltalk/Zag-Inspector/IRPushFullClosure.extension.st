@@ -1,6 +1,6 @@
 Extension { #name : 'IRPushFullClosure' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPushFullClosure >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

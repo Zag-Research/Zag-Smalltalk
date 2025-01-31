@@ -84,6 +84,12 @@ ASImageOutput >> visitBranch: aBasicBlock [
 		reference: aBasicBlock label
 ]
 
+{ #category : 'visiting' }
+ASImageOutput >> visitDrop [
+
+	^ self drop
+]
+
 { #category : 'API' }
 ASImageOutput >> visitPopLocal: offset [
 
@@ -106,6 +112,12 @@ ASImageOutput >> visitPushLocal: offset [
 	^ self
 		  pushLocal;
 		  literal: offset
+]
+
+{ #category : 'API' }
+ASImageOutput >> visitReturnSelf: anOperator [
+
+	^ self returnSelf
 ]
 
 { #category : 'API' }

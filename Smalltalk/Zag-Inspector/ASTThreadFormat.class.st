@@ -1,5 +1,26 @@
 "
 I format an IRMethod to generate Zig code to create a method thread.
+
+The Opal compiler changed the classes I extend, so the following method has to be run class-side for `OCIRInstruction`:
+```smalltalk
+makeDeprecatedClassAliases
+
+    <script>
+    self withAllSubclassesDo: [ :class |
+        | deprecatedClass |
+        deprecatedClass := (class name allButFirst: 2) asSymbol.
+        class deprecatedAliases: { deprecatedClass } ]
+```
+Similarly for `OCIRSequence` and maybe for `OCIRMethod` (though that one is weird as of 2025.01.31):
+```smalltalk
+makeDeprecatedClassAlias
+
+    <script>
+    | deprecatedClass |
+    deprecatedClass := (self name allButFirst: 2) asSymbol.
+    self deprecatedAliases: { deprecatedClass } ]
+```
+
 "
 Class {
 	#name : 'ASTThreadFormat',

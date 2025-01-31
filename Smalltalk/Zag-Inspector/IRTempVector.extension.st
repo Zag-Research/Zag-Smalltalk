@@ -1,6 +1,6 @@
 Extension { #name : 'IRTempVector' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRTempVector >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

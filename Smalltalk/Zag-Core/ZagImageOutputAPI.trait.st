@@ -218,13 +218,19 @@ ZagImageOutputAPI >> pushThisContext [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> returnNoContext [
+ZagImageOutputAPI >> returnNonLocal [
 
 	^ self explicitRequirement
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> returnNonLocal [
+ZagImageOutputAPI >> returnSelf [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> returnSelfNoContext [
 
 	^ self explicitRequirement
 ]
@@ -236,7 +242,7 @@ ZagImageOutputAPI >> returnTop [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> returnWithContext [
+ZagImageOutputAPI >> returnTopNoContext [
 
 	^ self explicitRequirement
 ]
@@ -271,6 +277,12 @@ ZagImageOutputAPI >> tailCallMethod [
 
 { #category : 'threaded words' }
 ZagImageOutputAPI >> tailSend [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> tailSendNoContext [
 
 	^ self explicitRequirement
 ]

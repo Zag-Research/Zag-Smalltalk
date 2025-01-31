@@ -1,6 +1,6 @@
 Extension { #name : 'IRPushReceiver' }
 
-{ #category : '*Zag-Core' }
+{ #category : '*Zag-Inspector' }
 IRPushReceiver >> threadFormatOn: threadPrinter [
 
 	self printOn: threadPrinter.

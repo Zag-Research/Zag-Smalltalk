@@ -58,3 +58,17 @@ ZagArrayThreadedOutputTest >> test_simple1 [
 	output generateCode: ast.
 	self assert: output contents equals: #( pushLiteral 42 returnTop )
 ]
+
+{ #category : 'tests' }
+ZagArrayThreadedOutputTest >> test_simple1_noreturn [
+
+	| ast |
+	ast := self astFor: ASCompileTestClass1 >> #simple1_noreturn.
+	output
+		halt;
+		generateCode: ast.
+	self
+		assert: output contents
+		equals: #( #( label #'ASCompileTestClass1.simple1_noreturn' )
+			    pushLiteral 42 drop returnSelf )
+]
