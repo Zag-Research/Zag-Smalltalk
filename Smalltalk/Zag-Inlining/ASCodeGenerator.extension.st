@@ -3,17 +3,19 @@ Extension { #name : 'ASCodeGenerator' }
 { #category : '*Zag-Inlining' }
 ASCodeGenerator >> inlineBlock: offset next: common [
 
-	| savedReturn savedTargetClass |
+	| savedReturn savedTargetClass blockClosure |
 	savedTargetClass := targetClass.
 	savedReturn := returnBlock.
 	[
 	| inlineBlock |
 	returnBlock := common.
 	inlineBlock := self newInlineBlockClosure.
+	code removeLastOperation.
 	self branch: inlineBlock.
 	code := inlineBlock.
-	self halt.
-	(code stackBelow: offset) stackValue block zigWalkMethod: self.
+	blockClosure := (code stackBelow: offset) stackValue.
+	blockClosures remove: blockClosure.
+	blockClosure ast zigWalkMethod: self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]

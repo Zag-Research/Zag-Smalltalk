@@ -35,7 +35,7 @@ ASInliner reset.
 		
 	self
 		assert: (cgInline basicBlocks size)
-		equals: 1
+		equals: 3
 ]
 
 { #category : 'tests' }
