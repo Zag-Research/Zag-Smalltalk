@@ -14,6 +14,7 @@ Class {
 
 { #category : 'adding' }
 ASCInlineMethodBlock >> initParameterNamed: aSymbol [
+
 	stack := stack initParameterNamed: aSymbol.
 	^ stack data: (AStSubClass new dataClass: Object)
 ]

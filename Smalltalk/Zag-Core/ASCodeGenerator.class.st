@@ -245,7 +245,6 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 	| primitive |
 	primitive := aCompiledMethod primitive.
 	returnBlock := self getOrMakeReturnBlock.
-	self halt.
 	(primitive between: 201 and: 210) ifTrue: [ ^ self inlineValue: (aCompiledMethod numArgs) for: aClass next: returnBlock ].
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
@@ -603,8 +602,5 @@ targetClass:= anObject
 { #category : 'post processing' }
 ASCodeGenerator >> zagBlocks [
 
-	| zagBlocks |
-	zagBlocks := OrderedCollection newFrom: basicBlocks.
-	zagBlocks addAll: (blockClosures "collect: #codeGenerator").
-	^ zagBlocks
+	^ basicBlocks
 ]
