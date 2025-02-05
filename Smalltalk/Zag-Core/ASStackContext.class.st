@@ -81,6 +81,12 @@ self halt.
 	extra := extra + anInteger
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackContext >> indirectElement [
+
+	^ next indirectElement
+]
+
 { #category : 'initialization' }
 ASStackContext >> initialize [
 

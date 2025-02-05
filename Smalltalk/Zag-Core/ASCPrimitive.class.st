@@ -62,7 +62,7 @@ ASCPrimitive >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCPrimitive >> resultStack: aStack basicBlock: aBasicBlock [
+ASCPrimitive >> resultStack: aStack [
 
 	^ stack := aStack
 ]

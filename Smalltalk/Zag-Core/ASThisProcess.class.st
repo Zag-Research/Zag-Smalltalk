@@ -1,8 +1,8 @@
 "
-I represent a reference to `thisContext`
+I represent a reference to `thisProcess`
 "
 Class {
-	#name : 'ASThisContext',
+	#name : 'ASThisProcess',
 	#superclass : 'ASExpression',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
@@ -10,7 +10,7 @@ Class {
 }
 
 { #category : 'compiling' }
-ASThisContext >> zigWalk: aGenerator [
+ASThisProcess >> zigWalk: aGenerator [
 
 	self error
 ]

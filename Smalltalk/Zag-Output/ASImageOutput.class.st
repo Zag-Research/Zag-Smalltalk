@@ -27,6 +27,14 @@ ASImageOutput >> codeGenerator [
 	^ ASCodeGenerator new
 ]
 
+{ #category : 'as yet unclassified' }
+ASImageOutput >> contentsForMethod: aMethod [ 
+
+	^ self
+		generateCode: (ASPharoCompiler new astFor: aMethod);
+		contents
+]
+
 { #category : 'register' }
 ASImageOutput >> for: anASNode generatorIs: anASGenerator [
 

@@ -21,7 +21,7 @@ ASCCreateContext >> dotStringOn: aStream [
 ]
 
 { #category : 'stack' }
-ASCCreateContext >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCCreateContext >> resultStack: anASStack [
 
 	context := anASStack context.
 	stack := anASStack.

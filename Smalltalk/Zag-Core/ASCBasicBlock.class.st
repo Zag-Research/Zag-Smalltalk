@@ -68,8 +68,9 @@ ASCBasicBlock >> addFlow [
 
 { #category : 'initialization' }
 ASCBasicBlock >> addOperation: anOperation [
+
 	operations add: anOperation.
-	stack := anOperation resultStack: stack basicBlock: self.
+	stack := anOperation resultStack: stack.
 	^ false
 ]
 
@@ -306,15 +307,14 @@ ASCBasicBlock >> inlineWithFixedCFG: anASCodeGenerator [
 { #category : 'API' }
 ASCBasicBlock >> insertContext [
 
-	contextStartsAt ifNotNil: [ contextStartsAt = NoContext ifFalse: [ ^ self ]].
+	contextStartsAt ifNotNil: [
+		contextStartsAt = NoContext ifFalse: [ ^ self ] ].
 	operations withIndexDo: [ :operation :index |
 		operation shrinksStack ifFalse: [
 			operations
-				add:
-				(ASCCreateContext new
-					 resultStack: operation stack
-					 basicBlock: self;
-					yourself)
+				add: (ASCCreateContext new
+						 resultStack: operation stack;
+						 yourself)
 				beforeIndex: index.
 			contextStartsAt := index.
 			^ self ] ]
@@ -532,7 +532,7 @@ ASCBasicBlock >> pushLiteral: aLiteral [
 { #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
-	self addOperation: (ASCPushVariable with: (stack at: aSymbol))
+	self addOperation: (stack at: aSymbol) pushOperation
 ]
 
 { #category : 'testing' }
@@ -550,7 +550,7 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 { #category : 'removing' }
 ASCBasicBlock >> removeLastOperation [
 
-	operations removeLast
+	stack := operations removeLast stack
 ]
 
 { #category : 'removing' }

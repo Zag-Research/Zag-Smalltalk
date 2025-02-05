@@ -48,13 +48,6 @@ ASTextOutput >> comma [
 ASTextOutput >> comment: aString [
 ]
 
-{ #category : 'accessing' }
-ASTextOutput >> context: anASFileContext [
-
-	context := anASFileContext.
-	anASFileContext addComponent: self
-]
-
 { #category : 'printing' }
 ASTextOutput >> cr [
 

@@ -31,7 +31,7 @@ ASCSends >> markReferences [
 ]
 
 { #category : 'stack' }
-ASCSends >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCSends >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ self

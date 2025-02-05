@@ -56,7 +56,7 @@ ASCTailSend >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCTailSend >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCTailSend >> resultStack: anASStack [
 
 	| nArgs |
 	nArgs := selector numArgs + 1.
@@ -64,5 +64,5 @@ ASCTailSend >> resultStack: anASStack basicBlock: aBasicBlock [
 	restructure := 0.
 	1 to: nArgs do: [ :n |
 		restructure := restructure bitOr: (nArgs + 1 - n bitShift: 8 * n) ].
-	^ super resultStack: anASStack basicBlock: aBasicBlock
+	^ super resultStack: anASStack
 ]

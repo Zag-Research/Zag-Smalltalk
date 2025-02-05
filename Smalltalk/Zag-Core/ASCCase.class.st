@@ -84,7 +84,7 @@ ASCCase >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCCase >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCCase >> resultStack: anASStack [
 
 	self halt.
 	stack := anASStack.

@@ -16,7 +16,7 @@ ASCPopVariable >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCPopVariable >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCPopVariable >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ anASStack drop

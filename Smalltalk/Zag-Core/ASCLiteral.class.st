@@ -35,7 +35,7 @@ ASCLiteral >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCLiteral >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCLiteral >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ self createsTemporary: anASStack data:

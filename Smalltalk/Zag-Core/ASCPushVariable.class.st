@@ -59,7 +59,7 @@ ASCPushVariable >> printOn: aStream [
 ]
 
 { #category : 'stack' }
-ASCPushVariable >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCPushVariable >> resultStack: anASStack [
 
 	stack := anASStack.
 	stackOffset := anASStack offset.

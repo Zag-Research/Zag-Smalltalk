@@ -97,6 +97,12 @@ ASStackElement >> id [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'as yet unclassified' }
+ASStackElement >> indirectElement [
+
+	^ next indirectElement
+]
+
 { #category : 'initialization' }
 ASStackElement >> initialize [
 
@@ -192,6 +198,12 @@ ASStackElement >> offset: anInteger to: aStackElement [
 ASStackElement >> offsetToSelf: anInteger [
 
 	^ next offsetToSelf: anInteger + 1
+]
+
+{ #category : 'as yet unclassified' }
+ASStackElement >> pushOperation [
+
+	^ ASCPushVariable with: self
 ]
 
 { #category : 'stack' }

@@ -3,7 +3,7 @@ I reperesent an empty stack of values within a method.
 "
 Class {
 	#name : 'ASStack',
-	#superclass : 'Collection',
+	#superclass : 'ASVariable',
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'

@@ -91,7 +91,7 @@ ZagOperations >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ZagOperations >> resultStack: anASStack basicBlock: aBasicBlock [
+ZagOperations >> resultStack: anASStack [
 
 	^ self subclassResponsibility
 ]

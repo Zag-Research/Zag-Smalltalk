@@ -19,7 +19,6 @@ Class {
 		'numLocals',
 		'componentName',
 		'blockNumber',
-		'converter',
 		'inline'
 	],
 	#category : 'Zag-Core-Output',
@@ -69,8 +68,7 @@ ASOutput >> codeGeneratorClass [ ^ ASCodeGenerator
 ASOutput >> context: anASContext [
 
 	context := anASContext.
-	anASContext addComponent: self.
-	converter := nil "anASContext converter"
+	anASContext addComponent: self
 ]
 
 { #category : 'API' }

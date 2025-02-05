@@ -3,7 +3,7 @@ I am a stack element for the `self` position on the stack. This let's code be si
 "
 Class {
 	#name : 'ASStackSelf',
-	#superclass : 'ASParameterNamed',
+	#superclass : 'ASStackNamedIndirect',
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'
@@ -13,6 +13,13 @@ Class {
 ASStackSelf >> addFlow: aBasicBlock [
 
 	self location flowValue: ASFlowOnDemand new
+]
+
+{ #category : 'accessing' }
+ASStackSelf >> at: aSymbol [
+
+	#self = aSymbol ifTrue: [ ^ self ].
+	^ myScope at: aSymbol
 ]
 
 { #category : 'accessing' }

@@ -46,7 +46,7 @@ ASCReturnTop >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnTop >> resultStack: aStack basicBlock: aBasicBlock [
+ASCReturnTop >> resultStack: aStack [
 
 	stack := aStack.
 	stackElement := aStack at: #self.

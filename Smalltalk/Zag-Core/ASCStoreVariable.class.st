@@ -16,7 +16,7 @@ ASCStoreVariable >> outputTo: anOutput [
 ]
 
 { #category : 'stack' }
-ASCStoreVariable >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCStoreVariable >> resultStack: anASStack [
 
 	^ stack := anASStack.
 

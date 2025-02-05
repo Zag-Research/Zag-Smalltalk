@@ -62,7 +62,7 @@ ASCBranch >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCBranch >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCBranch >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ anASStack

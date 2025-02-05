@@ -20,7 +20,7 @@ ASCReturnSelf >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnSelf >> resultStack: aStack basicBlock: aBasicBlock [
+ASCReturnSelf >> resultStack: aStack [
 
 	| stackElement |
 	stack := aStack.

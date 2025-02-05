@@ -41,7 +41,7 @@ ASCCopyVariablesCleanStack >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCCopyVariablesCleanStack >> resultStack: aStack basicBlock: aBasicBlock [
+ASCCopyVariablesCleanStack >> resultStack: aStack [
 
 	stack := aStack.
 	^ target

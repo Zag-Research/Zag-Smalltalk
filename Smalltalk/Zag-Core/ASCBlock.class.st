@@ -59,7 +59,7 @@ ASCBlock >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCBlock >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCBlock >> resultStack: anASStack [
 	"	block parent: aBasicBlock."
 
 	stack := anASStack.

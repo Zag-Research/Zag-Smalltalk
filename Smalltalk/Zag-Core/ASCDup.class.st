@@ -34,7 +34,7 @@ ASCDup >> outputTo: aCodeEmitter [
 ]
 
 { #category : 'stack' }
-ASCDup >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCDup >> resultStack: anASStack [
 
 	stack := anASStack.
 	^ self

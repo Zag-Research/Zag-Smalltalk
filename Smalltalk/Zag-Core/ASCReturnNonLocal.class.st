@@ -16,7 +16,7 @@ ASCReturnNonLocal >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCReturnNonLocal >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCReturnNonLocal >> resultStack: anASStack [
 
 	self flag:
 		'needs to know where self is and cleanup stack to that point'.

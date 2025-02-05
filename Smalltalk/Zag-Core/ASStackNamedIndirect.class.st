@@ -3,7 +3,7 @@ I am a named stack variable but am found in a parents stack.
 "
 Class {
 	#name : 'ASStackNamedIndirect',
-	#superclass : 'ASStackSelf',
+	#superclass : 'ASParameterNamed',
 	#instVars : [
 		'myScope'
 	],
@@ -16,6 +16,12 @@ Class {
 ASStackNamedIndirect >> at: aSymbol [
 
 	^ myScope at: aSymbol
+]
+
+{ #category : 'as yet unclassified' }
+ASStackNamedIndirect >> indirectElement [
+
+	^ self
 ]
 
 { #category : 'accessing' }

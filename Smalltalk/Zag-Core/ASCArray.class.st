@@ -28,7 +28,7 @@ ASCArray >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCArray >> resultStack: anASStack basicBlock: aBasicBlock [
+ASCArray >> resultStack: anASStack [
 
 	| resultStack |
 	resultStack := stack := anASStack.

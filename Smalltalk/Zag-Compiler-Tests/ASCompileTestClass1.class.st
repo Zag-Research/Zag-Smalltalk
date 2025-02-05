@@ -15,6 +15,12 @@ Class {
 	#tag : 'Code'
 }
 
+{ #category : 'testing - examples' }
+ASCompileTestClass1 class >> classVar: anObject [
+
+	Foo := anObject
+]
+
 { #category : 'starting' }
 ASCompileTestClass1 class >> start42 [
 
@@ -248,7 +254,7 @@ ASCompileTestClass1 >> prim [
 	^ false
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> recursiveMethod [
 
 	self recursiveMethod.
@@ -294,7 +300,7 @@ ASCompileTestClass1 >> simpleBlock [
 	  temp + 3 ] value: 42
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> tailRecursiveMethod [
 
 	^ self tailRecursiveMethod
@@ -329,7 +335,7 @@ ASCompileTestClass1 >> whileTrue [
 	[ false ] whileTrue
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> whileTrueHarder [
 
 	| dirty |
