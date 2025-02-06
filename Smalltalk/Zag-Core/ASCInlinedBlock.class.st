@@ -15,13 +15,6 @@ ASCInlinedBlock >> blockClosureClass [
 	^ ASCInlineClosureBlock
 ]
 
-{ #category : 'adding' }
-ASCInlinedBlock >> copyStackFrom: aBasicBlock [
-"restore stack for inlining"
-aBasicBlock children do: [ :op | self addOperation: op ].
-self children removeAll
-]
-
 { #category : 'instance creation' }
 ASCInlinedBlock >> newInlinedBlock: aMethodAST [
 	^ ASCInlineMethodBlock new

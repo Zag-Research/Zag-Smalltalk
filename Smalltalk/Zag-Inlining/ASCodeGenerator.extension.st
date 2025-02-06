@@ -27,10 +27,10 @@ ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCS
 	| inlineBlock savedTargetClass |
 	savedTargetClass := targetClass.
 	inlineBlock := self newInlinedBlock: aMethodAST.
+	code removeLastOperation.
 	inlineBlock copyStackFrom: code.
 	[
 	targetClass := inlinedTargetClass.
-	code removeLastOperation.
 	self branch: inlineBlock.
 	returnBlock := self getOrMakeReturnBlock.
 	code := inlineBlock.
