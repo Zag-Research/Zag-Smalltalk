@@ -71,6 +71,38 @@ ASInliner reset.
 ]
 
 { #category : 'tests' }
+ASInlineWherePossibleTest >> testEvaluatefib [
+
+"
+blockValue
+
+	^ [ 4 ] value 
+"
+| cgNoInline cgInline |
+ASInliner reset.
+	cgNoInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #fib:)
+		              inline: 0;
+		              finalAnalysis.
+	ASInliner reset.
+	cgInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #fib:)
+		              inline: 1000;
+		              finalAnalysis.
+	cgInline inspect.
+	
+	self
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	self
+		assert: (cgInline basicBlocks size)
+		equals: 3
+]
+
+{ #category : 'tests' }
 ASInlineWherePossibleTest >> testFindMethodBlock [
 
 "
