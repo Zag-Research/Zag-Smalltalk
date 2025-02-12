@@ -75,7 +75,7 @@ pub fn build(b: *std.Build) !void {
         buildExample(b, .{
             .filepath = "./llvm/example.zig",
             .target = target,
-            .optimize = optimize,
+            .optimize = .Debug,
         });
     }
 

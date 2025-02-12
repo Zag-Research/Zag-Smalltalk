@@ -6,52 +6,70 @@ const core = llvm.core;
 const analysis = llvm.analysis;
 const orc = llvm.orc;
 const lljit = llvm.jit;
+const engine = llvm.engine;
+const target_machine = llvm.target_machine;
 
 // Build: `zig build -DExamples=true`
 // Run: `./zig-out/bin/example`
 
 pub fn main() void {
 
-    // Create downward growing stack - smaller indices for more pushes
-    var stack: [5]i64 = .{ 0, 0, 0, 4, 5 };
-    std.debug.print("Stack before: {any}\n", .{stack});
-    _ = &stack[3]; // top is at index 3 -> 4
-
-    // Create our module
-    _ = try createModule();
-
-    // Build an LLJIT instance (Orc)
-    _ = try createLLJIT();
-
-    // -------- WIP ---------
-    // // Wrap our module in a ThreadSafeModule and add it to LLJIT
-    // try addModuleToLLJIT(lljit, module_ref);
-
-    // // Look up the symbol "stack_add_top_two"
-    // const fn_ptr = try lookupAddTopTwo(jit, "stack_add_top_two");
-
-    // // Call the JIT'd function from Zig
-    // const new_sp = fn_ptr(sp);
-
-    // // Inspect results
-    // std.debug.print("After call:\n", .{});
-    // std.debug.print("  sp offset = {d}\n", .{new_sp - &stack[0]});
-    // std.debug.print("  stack = {any}\n", .{stack});
-}
-
-pub fn createModule() !types.LLVMModuleRef {
-
     // LLVM setup logic
     _ = target.LLVMInitializeNativeTarget();
     _ = target.LLVMInitializeNativeAsmPrinter();
     _ = target.LLVMInitializeNativeAsmParser();
 
-    const i64Type: types.LLVMTypeRef = core.LLVMInt64Type();
-    const i64PtrType: types.LLVMTypeRef = core.LLVMPointerType(i64Type, 0);
+    // Create downward growing stack - smaller indices for more pushes
+    var stack: [5]i64 = .{ 0, 0, 0, 4, 5 };
+    std.debug.print("Stack before: {any}\n", .{stack});
+    _ = &stack[3]; // top is at index 3 = value 4
 
     // Create LLVM module (context created by default)
     const module: types.LLVMModuleRef = core.LLVMModuleCreateWithName("module");
     const builder: types.LLVMBuilderRef = core.LLVMCreateBuilder();
+
+    // Create our module
+    _ = try createModule(module, builder);
+
+    // Create the LLJIT Builder
+    const jitBuilder = lljit.LLVMOrcCreateLLJITBuilder();
+
+    // Create the LLJIT Instance
+    var jit: types.LLVMOrcLLJITRef = undefined;
+    if (lljit.LLVMOrcCreateLLJIT(&jit, jitBuilder) != null) {
+        std.debug.print("Failed to create LLJIT\n", .{});
+        return;
+    }
+
+    // Add IR module to JIT instance
+    const dylib = lljit.LLVMOrcLLJITGetMainJITDylib(jit);
+    if (dylib == null) {
+        std.debug.print("Failed to get the main JIT dylib.\n", .{});
+    }
+    const threadRef = orc.LLVMOrcCreateNewThreadSafeContext();
+    const threadSafeModule = orc.LLVMOrcCreateNewThreadSafeModule(module, threadRef);
+
+    if (lljit.LLVMOrcLLJITAddLLVMIRModule(jit, dylib, threadSafeModule) != null) {
+        std.debug.print("Failed to add module to JIT\n", .{});
+        return;
+    }
+
+    // Look up synbol to execute
+    var result: orc.LLVMOrcExecutorAddress = 0;
+    if (lljit.LLVMOrcLLJITLookup(jit, &result, "stack_add_top_two") != null) {
+        std.debug.print("Failed to lookup symbol\n", .{});
+        return;
+    }
+
+    const stackAddTopTwoFn: *const fn (*i64) callconv(.C) *i64 = @ptrFromInt(result);
+    const newSp = stackAddTopTwoFn(&stack[3]);
+    const valueAtNewSp: *const i64 = @ptrCast(newSp);
+    std.debug.print("Value at stack pointer: {}\n", .{valueAtNewSp.*});
+}
+
+pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
+    const i64Type: types.LLVMTypeRef = core.LLVMInt64Type();
+    const i64PtrType: types.LLVMTypeRef = core.LLVMPointerType(i64Type, 0);
 
     // Create the addition_func function
     var paramTypes: [1]types.LLVMTypeRef = .{i64PtrType};
@@ -111,42 +129,4 @@ inline fn buildGEP(builder: types.LLVMBuilderRef, elementType: types.LLVMTypeRef
     const idx = [_]types.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
     const idx_ptr: [*c]types.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
     return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
-}
-
-pub fn printTextualIR(module: types.LLVMModuleRef) void {
-    const llvm_ir_c_str = core.LLVMPrintModuleToString(module);
-
-    // Find the length of the null-terminated C string
-    var length: usize = 0;
-    while (llvm_ir_c_str[length] != 0) : (length += 1) {}
-
-    // Create a Zig slice from the C string
-    const llvm_ir_zig_str = llvm_ir_c_str[0..length];
-    std.debug.print("Current LLVM IR:\n{s}\n", .{llvm_ir_zig_str});
-
-    // Free the memory allocated for the IR string
-    core.LLVMDisposeMessage(llvm_ir_c_str);
-}
-
-fn createLLJIT() !types.LLVMOrcLLJITRef {
-
-    // Create an LLJITBuilder
-    const builder = lljit.LLVMOrcCreateLLJITBuilder();
-    if (builder == null) {
-        return error.OOM;
-    }
-
-    // Optionally configure the builder (e.g., set target triple)...
-
-    // Actually create the JIT
-    var outJIT: types.LLVMOrcLLJITRef = undefined;
-
-    const retCode = lljit.LLVMOrcCreateLLJIT(&outJIT, builder);
-    if (retCode != 0) {
-        // We failed building the LLJIT. Usually you’d retrieve an error string,
-        // but the older c-api might not provide one easily.
-        return error.JITError;
-    }
-
-    return outJIT;
 }
