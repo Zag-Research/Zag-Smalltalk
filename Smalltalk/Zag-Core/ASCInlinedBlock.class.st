@@ -4,6 +4,9 @@ I am the superclass of Code Units that are inlined, contrasted with ones that ar
 Class {
 	#name : 'ASCInlinedBlock',
 	#superclass : 'ASCCompilableUnitBlock',
+	#instVars : [
+		'branchBlock'
+	],
 	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
 	#tag : 'BasicBlocks'
@@ -15,16 +18,23 @@ ASCInlinedBlock >> blockClosureClass [
 	^ ASCInlineClosureBlock
 ]
 
+{ #category : 'API' }
+ASCInlinedBlock >> branch: aBasicBlock [
+
+	branchBlock := aBasicBlock.
+	aBasicBlock branchedToFrom: self.
+	^ aBasicBlock
+]
+
 { #category : 'instance creation' }
 ASCInlinedBlock >> newInlinedBlock: aMethodAST [
 	^ ASCInlineMethodBlock new
 ]
 
 { #category : 'API' }
-ASCInlinedBlock >> returnTopFor: aBasicBlock [
-"self halt.
-^ aBasicBlock returnTop"
+ASCInlinedBlock >> returnTopFor: aBasicBlock [ 
 
+	^ aBasicBlock branchReturnTop: branchBlock 
 ]
 
 { #category : 'as yet unclassified' }

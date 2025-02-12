@@ -15,6 +15,7 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 	code := inlineBlock.
 	blockClosure := (code stackBelow: offset) stackValue.
 	blockClosures remove: blockClosure.
+	inlineBlock branch: returnBlock.
 	blockClosure ast zigWalkMethod: self.
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
