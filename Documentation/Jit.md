@@ -7,6 +7,7 @@ We choose for the default to be threaded code. A threaded method has its first "
 
 If a method is jit'ed or built-in, the first word will point to the jit'ed or built-in code directly, and it will be responsible for verifying the selector before proceeding.
 
+[Discussion by Clement Bera about OpenSmalltalkVM and LLVM](https://clementbera.wordpress.com/2014/05/28/the-sista-chronicles-viii-integrating-llvm-in-cog/)
 #### Details
 
 
