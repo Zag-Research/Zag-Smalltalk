@@ -642,6 +642,7 @@ pub const HeapHeader = packed struct(u64) {
     pub const includesHeader = true;
     comptime {
         assert(@sizeOf(Self) == 8);
+        std.debug.assert(std.meta.hasUniqueRepresentation(Self));
     }
     pub inline fn array(self: HeapHeader, obj: HeapObjectConstPtr, elementSize: usize) ![]Object {
         return self.format.array(self, obj, elementSize);

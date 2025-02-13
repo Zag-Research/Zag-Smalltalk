@@ -107,10 +107,16 @@ fn popLocalField(pc: PC, sp: SP, process: *Process, context: *Context, _: Method
 fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
+fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, signature, unreachable };
+}
 fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn primitiveModule(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, signature, unreachable };
+}
+fn primitiveModuleError(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn pushAssociationValue(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
@@ -267,7 +273,9 @@ pub const references = convertFn(.{
     &popLocalData,
     &popLocalField,
     &primitive,
+    &primitiveError,
     &primitiveModule,
+    &primitiveModuleError,
     &pushAssociationValue,
     &pushContext,
     &pushIndirect,

@@ -149,6 +149,7 @@ comptime {
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
     std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
+    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
 }
 const MemoryFloat = union {
     m: [@sizeOf(Internal)]u8,
