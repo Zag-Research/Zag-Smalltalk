@@ -33,7 +33,7 @@ pub const WeakObject = struct {
 pub const StructObject = struct {
     object: Object,
 };
-const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength) + 1;
+const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength + 1) + 1;
 const heap_allocation_size = 128 * 1024;
 const heapStartAddress = 0x10000000000;
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
@@ -85,13 +85,13 @@ pub const HeapAllocation = extern union {
     }
     pub fn loadHeap(file: std.fs.File, address: usize) !void {
         var self = memoryAllocator.allocBlockAtAddress(address) catch @panic("page allocator failed");
-        const fSize =  try file.read(@as([*]u8, @ptrCast(self))[0..@sizeOf(HeapAllocation)]);
+        const fSize = try file.read(@as([*]u8, @ptrCast(self))[0..@sizeOf(HeapAllocation)]);
         self.initHeader();
         self.putInFreeLists(fSize, size);
         return;
     }
     pub fn loadLargeHeapObject(file: std.fs.File, address: usize, fSize: usize) !SelfPtr {
-        _ = .{file,address,fSize};
+        _ = .{ file, address, fSize };
     }
     fn freeAll(self: SelfPtr) void {
         var ptr: ?SelfPtr = self;
@@ -261,7 +261,7 @@ const FreeList = extern struct {
         if (self.header.length == 0) {
             HeapHeader.storeFreeHeader(@ptrFromInt(@intFromPtr(ptr)));
             @setRuntimeSafety(false);
-            self.list = @ptrFromInt(@intFromPtr(self.list)+1);
+            self.list = @ptrFromInt(@intFromPtr(self.list) + 1);
             return;
         }
         var prev = self.list;

@@ -38,7 +38,7 @@ const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 //    dispatch.forTest();
 //}
 const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
-m: [@sizeOf(Process)] u8,
+m: [@sizeOf(Process)]u8,
 const Process = extern struct {
     stack: [stack_size]Object,
     h: Fields,
@@ -68,10 +68,10 @@ const Process = extern struct {
 };
 const Self = @This();
 var allProcesses: ?*Self = null;
-pub inline fn ptr(self: *const align(1) Self) *align(alignment) Process {
+pub inline fn ptr(self: *align(1) const Self) *align(alignment) Process {
     return @ptrFromInt(@intFromPtr(self) & nonFlags);
 }
-pub inline fn header(self: *const align(1) Self) *Process.Fields {
+pub inline fn header(self: *align(1) const Self) *Process.Fields {
     return &self.ptr().h;
 }
 pub fn new() align(alignment) Self {
@@ -81,7 +81,7 @@ pub fn init(origin: *align(1) Self) void {
     const self = origin.ptr();
     const h = @as(HeapObjectArray, @alignCast(@ptrCast(&self.stack[0])));
     const stack_end = h + Process.stack_size;
-    std.debug.assert(@as(*Process,@alignCast(@ptrCast(self))) == origin.ptr());
+    std.debug.assert(@as(*Process, @alignCast(@ptrCast(self))) == origin.ptr());
     self.h.sp = @ptrCast(stack_end);
     self.h.currHeap = stack_end;
     self.h.otherHeap = self.h.currHeap + Process.nursery_size;
@@ -103,7 +103,7 @@ const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const alignment = flagMask + 1;
 const nonFlags = ~flagMask;
-pub inline fn needsCheck(self: *const align(1) Self) bool {
+pub inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
 pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
@@ -114,23 +114,23 @@ pub inline fn checkBump(self: *align(1) Self) *align(1) Self {
     @setRuntimeSafety(false);
     return @as(*align(1) Self, @ptrFromInt(@intFromPtr(self) + 1));
 }
-pub inline fn maxCheck(self: *const align(1) Self) *align(1) Self {
+pub inline fn maxCheck(self: *align(1) const Self) *align(1) Self {
     @setRuntimeSafety(false);
     return @as(*Self, @ptrFromInt(@intFromPtr(self) | countMask));
 }
 pub fn deinit(self: *align(1) Self) void {
     self.ptr().* = undefined;
 }
-pub inline fn endOfStack(self: *const align(1) Self) SP {
+pub inline fn endOfStack(self: *align(1) const Self) SP {
     return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + Process.stack_size);
 }
 pub inline fn setSp(self: *align(1) Self, sp: SP) void {
     self.header().sp = sp;
 }
-pub inline fn freeStack(self: *const align(1) Self, sp: SP) usize {
+pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline fn getStack(self: *const align(1) Self, sp: SP) []Object {
+pub inline fn getStack(self: *align(1) const Self, sp: SP) []Object {
     return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
 }
 pub inline fn allocStackSpace(self: *align(1) Self, sp: SP, words: usize) !SP {
@@ -138,10 +138,10 @@ pub inline fn allocStackSpace(self: *align(1) Self, sp: SP, words: usize) !SP {
     if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
     return error.NoSpace;
 }
-pub inline fn getHeap(self: *const align(1) Self) []HeapObject {
+pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
     return self.header().currHeap[0..((@intFromPtr(self.header().currHp) - @intFromPtr(self.header().currHeap)) / @sizeOf(Object))];
 }
-pub inline fn freeNursery(self: *const align(1) Self) usize {
+pub inline fn freeNursery(self: *align(1) const Self) usize {
     return (@intFromPtr(self.header().currEnd) - @intFromPtr(self.header().currHp)) / 8;
 }
 pub fn spillStack(self: *align(1) Self, sp: SP, contextMutable: *ContextPtr) SP {

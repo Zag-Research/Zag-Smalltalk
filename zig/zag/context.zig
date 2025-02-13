@@ -31,7 +31,7 @@ const Context = @This();
 header: HeapHeader,
 method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
 tpc: PC, // threaded PC
-npc: ThreadedFn,//*anyopaque, // native PC - in Continuation Passing Style
+npc: ThreadedFn, //*anyopaque, // native PC - in Continuation Passing Style
 prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to handle specially
 trapContextNumber: u64,
 temps: [nLocals]Object,
@@ -42,7 +42,7 @@ pub fn init() Self {
     var result: Self align(@alignOf(Context)) = undefined;
     const s: *Context = @ptrCast(&result);
     s.header = comptime HeapHeader.calc(.Context, baseSize + nLocals, 0, .static, null, Object, false) catch unreachable;
-    s.npc = .{.f = Code.end};//@constCast(@ptrCast(&Code.end));
+    s.npc = .{ .f = Code.end }; //@constCast(@ptrCast(&Code.end));
     return result;
 }
 pub fn format(
@@ -53,7 +53,7 @@ pub fn format(
 ) !void {
     _ = fmt;
     _ = options;
-    
+
     try writer.print("context: {}", .{self.header});
     if (self.prevCtxt) |ctxt|
         try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
@@ -209,14 +209,14 @@ const e = struct {
     usingnamespace execute.controlPrimitives;
 };
 test "init context" {
-//    const expectEqual = std.testing.expectEqual;
-//    const objs = comptime [_]Object{True,Object.from(42)};
+    //    const expectEqual = std.testing.expectEqual;
+    //    const objs = comptime [_]Object{True,Object.from(42)};
     var result = execute.Execution.new();
     var c = result.ctxt;
     var process = &result.process;
     c.print(process);
-//    try expectEqual(result.o()[3].u(),4);
-//    try expectEqual(result.o()[6],True);
+    //    try expectEqual(result.o()[3].u(),4);
+    //    try expectEqual(result.o()[6],True);
     const sp = process.endOfStack();
     const newC = c.moveToHeap(sp, process);
     newC.print(process);

@@ -11,7 +11,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
         prealloc: []align(@sizeOf(Block)) Block,
         const Self = @This();
         pub fn new(baseAddress: usize) Self {
-            return .{ .prealloc = @as([*]Block,@ptrFromInt(baseAddress))[0..0] };
+            return .{ .prealloc = @as([*]Block, @ptrFromInt(baseAddress))[0..0] };
         }
         fn reset(self: *Self) void {
             self.prealloc = &[0]Block{};
@@ -19,7 +19,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
         pub fn allocBlock(self: *Self) !*align(@sizeOf(Block)) Block {
             // this whole funtion should be locked
             if (self.prealloc.len == 0) {
-                const newAlloc = try reserve(Block,@ptrCast(self.prealloc.ptr));
+                const newAlloc = try reserve(Block, @ptrCast(self.prealloc.ptr));
                 self.prealloc = newAlloc;
             }
             const next = &self.prealloc[0];
@@ -33,7 +33,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
                 // if it's too low, discard, and loop
                 // if it's too high, we presumably already discarded it, so map directly
                 // but for now, it works
-                std.debug.print("next: {*} address: {}\n",.{next,address});
+                std.debug.print("next: {*} address: {}\n", .{ next, address });
                 unreachable;
             }
         }

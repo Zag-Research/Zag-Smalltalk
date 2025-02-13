@@ -36,7 +36,7 @@ pub const inlines = struct {
                     if (result.isInt()) return result;
                 },
                 .tag => {
-                    const result = @addWithOverflow(self.rawI(),other.untaggedI());
+                    const result = @addWithOverflow(self.rawI(), other.untaggedI());
                     if (result[1] == 0) return result[0];
                 },
             }
@@ -50,7 +50,7 @@ pub const inlines = struct {
                 if (result.atMostInt()) return result;
             },
             .tag => {
-                const result = @addWithOverflow(self.rawI(),Object.shiftI(other));
+                const result = @addWithOverflow(self.rawI(), Object.shiftI(other));
                 if (result[1] == 0) return result[0];
             },
         }
@@ -63,7 +63,7 @@ pub const inlines = struct {
                 if (result.isInt()) return result;
             },
             .tag => {
-                const result = @subWithOverflow(@as(i64,0),self.rawI());
+                const result = @subWithOverflow(@as(i64, 0), self.rawI());
                 if (result[1] == 0) return result[0];
             },
         }
