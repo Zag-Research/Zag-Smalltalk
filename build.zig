@@ -73,7 +73,7 @@ pub fn build(b: *std.Build) !void {
     const examples = b.option(bool, "Examples", "Build all examples [default: false]") orelse false;
     if (examples) {
         buildExample(b, .{
-            .filepath = "./llvm/example.zig",
+            .filepath = "./llvm/threadedFn.zig",
             .target = target,
             .optimize = .Debug,
         });
