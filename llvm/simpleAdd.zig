@@ -114,7 +114,7 @@ pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) 
         std.debug.print("Module verification passed.\n", .{});
     }
 
-    std.debug.print("\n--- ORC JIT IR DUMP ---\n", .{});
+    std.debug.print("\n--- IR DUMP ---\n", .{});
     core.LLVMDumpModule(module);
     std.debug.print("--- END IR ---\n\n", .{});
 
