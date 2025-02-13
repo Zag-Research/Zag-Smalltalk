@@ -12,6 +12,11 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
+{ #category : 'API' }
+ASCInlineMethodBlock >> branchReturnTop: aBasicBlock [ 
+	self addOperation: (ASCBranchReturnTop with: branchBlock)
+]
+
 { #category : 'adding' }
 ASCInlineMethodBlock >> initParameterNamed: aSymbol [
 

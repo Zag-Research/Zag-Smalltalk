@@ -9,5 +9,8 @@ The Language Server Protocol is one way to get a GUI for Zag. It is supported by
 
 Another possibility for Zag GUI.
 
+There is also - [_Chromium_ Embedded Framework](https://github.com/chromiumembedded/cef)
+Also - [Pharo-Webview](https://github.com/eftomi/Pharo-Webview)
+Also - [Photino](https://www.tryphotino.io/)
 #### Home-grown UI
 Mohammed had been working on an interface based on PharoJS and talking directly to the standard Pharo UI code. Unfortunately this code has been lost.

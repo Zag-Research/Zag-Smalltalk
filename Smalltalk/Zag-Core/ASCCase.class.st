@@ -59,12 +59,6 @@ ASCCase >> inspectZagASTOn: aStream [
 	map printElementsOn: aStream
 ]
 
-{ #category : 'data flow instructions' }
-ASCCase >> markReferences [
-
-	(stack at: numArgs) markReferenced
-]
-
 { #category : 'testing' }
 ASCCase >> needsContext: aStackContext [
 

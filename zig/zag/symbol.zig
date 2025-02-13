@@ -91,7 +91,6 @@ pub const symbols = struct {
     pub const @"perform:with:with:with:" = symbol4(50);
     pub const @"perform:withArguments:" = symbol2(51);
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
-//    pub const inspect = symbol0(53);
     // define any new symbols here
     pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
     pub const i_0 = indexSymbol(0);
@@ -107,25 +106,27 @@ pub const symbols = struct {
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "=",                        "value",                               "value:",
-    "cull:",           "yourself",             "doesNotUnderstand:", "+",
-    "-",             "*",                  "size",
-    "at:",                      "at:put:",                             "~=",
-    "==",              "~~",                   "value:value:",       "negated",
-    "new",           "new:",               "value:value:value:",
-    "value:value:value:value:", "valueWithArguments:",                 "cull:cull:",
-    "cull:cull:cull:", "cull:cull:cull:cull:", "self",               "name",
-    "<",             "<=",                 ">=",
-    ">",                        "class",                               "Class",
-    "Behavior",        "ClassDescription",     "Metaclass",          "SmallInteger",
-    "noFallback",    "ifTrue:",            "ifTrue:ifFalse",
-    "ifFalse:",                 "ifFalse:ifTrue:",                     "ifNil:",
-    "ifNil:ifNotNil",  "ifNotNil:",            "ifNotNil:ifNil:",    "perform:",
-    "perform:with:", "perform:with:with:", "perform:with:with:with:",
-    "perform:withArguments:",   "perform:withArguments:inSuperclass:",
-//    "inspect",
+    "=",                                   "value",                   "value:",
+    "cull:",                               "yourself",                "doesNotUnderstand:",
+    "+",                                   "-",                       "*",
+    "size",                                "at:",                     "at:put:",
+    "~=",                                  "==",                      "~~",
+    "value:value:",                        "negated",                 "new",
+    "new:",                                "value:value:value:",      "value:value:value:value:",
+    "valueWithArguments:",                 "cull:cull:",              "cull:cull:cull:",
+    "cull:cull:cull:cull:",                "self",                    "name",
+    "<",                                   "<=",                      ">=",
+    ">",                                   "class",                   "Class",
+    "Behavior",                            "ClassDescription",        "Metaclass",
+    "SmallInteger",                        "noFallback",              "ifTrue:",
+    "ifTrue:ifFalse",                      "ifFalse:",                "ifFalse:ifTrue:",
+    "ifNil:",                              "ifNil:ifNotNil",          "ifNotNil:",
+    "ifNotNil:ifNil:",                     "perform:",                "perform:with:",
+    "perform:with:with:",                  "perform:with:with:with:", "perform:withArguments:",
+    "perform:withArguments:inSuperclass:",
+    //    "inspect",
     // add any new values here
-     "Object",
+    "Object",
 });
 pub var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: object.Object) object.Object {

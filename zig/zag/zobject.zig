@@ -97,6 +97,7 @@ pub const ClassIndex = enum(u16) {
     Class,
     CompiledMethod,
     Dispatch,
+    Association,
     max = 0xffff - 8,
     replace7,
     replace6,
@@ -148,9 +149,10 @@ comptime {
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
     std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
+    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
 }
 const MemoryFloat = union {
-    m: [@sizeOf(Internal)] u8,
+    m: [@sizeOf(Internal)]u8,
     i: Internal,
     const Internal = extern struct {
         header: HeapHeader,
@@ -163,7 +165,7 @@ pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
     return .{ .i = .{
         .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
         .value = v,
-    }};
+    } };
 }
 pub const Object = switch (config.objectEncoding) {
     .nan => unreachable, //@import("nanObject.zig"),
@@ -242,19 +244,19 @@ const TagObject = packed struct(u64) {
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
     pub inline fn untaggedI(self: Object) i64 {
-        return @bitCast(self.rawU()&~tagAndClass);
+        return @bitCast(self.rawU() & ~tagAndClass);
     }
     pub inline fn shiftI(n: i56) i64 {
-        return @as(i64,n)<<8;
+        return @as(i64, n) << 8;
     }
     pub inline fn isInt(self: Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
     pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI()>=0;
+        return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
-        return self.tagbits() == (@as(u8,@intFromEnum(class))<<3)+1;
+        return self.tagbits() == (@as(u8, @intFromEnum(class)) << 3) + 1;
     }
     pub inline fn isDouble(self: Object) bool {
         return switch (self.tag) {
@@ -274,10 +276,10 @@ const TagObject = packed struct(u64) {
     // }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         if (!self.isSymbol()) @panic("not a Symbol");
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64,@intFromEnum(class)) << 40));
+        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
-        return @enumFromInt(self.rawU()>>40);
+        return @enumFromInt(self.rawU() >> 40);
     }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & 0xffff_ffff_fff8;
@@ -532,7 +534,7 @@ const ObjectFunctions = struct {
     ) !void {
         _ = options;
         try switch (self.immediate_class()) {
-            .Object => writer.print("object:0x{x:0>16}=>{}", .{self.rawU(),@as(*heap.HeapHeader,@ptrFromInt(self.rawU())).*}),
+            .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
@@ -542,10 +544,9 @@ const ObjectFunctions = struct {
             } else if (self.isIndexSymbol1()) {
                 try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
             } else {
-                try writer.print("#{s}", .{
-                    symbol.asString(self).arrayAsSlice(u8) catch "???"});
-                if ((self.hash56()>>32)>0)
-                    try writer.print("=>{}",.{self.classFromSymbolPlus()});
+                try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
+                if ((self.hash56() >> 32) > 0)
+                    try writer.print("=>{}", .{self.classFromSymbolPlus()});
             },
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
@@ -559,7 +560,7 @@ const ObjectFunctions = struct {
     }
     pub const alignment = @alignOf(u64);
     pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object.from(f0+(@as(i56,f1)<<16)+(@as(i56,f2)<<32));
+        return Object.from(f0 + (@as(i56, f1) << 16) + (@as(i56, f2) << 32));
     }
 };
 
@@ -636,7 +637,7 @@ test "printing" {
     try stream.print("{}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
-const Buf =  blk: {
+const Buf = blk: {
     @setRuntimeSafety(false);
     break :blk union {
         buf: [8]u8,

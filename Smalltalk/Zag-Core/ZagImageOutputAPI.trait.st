@@ -150,7 +150,19 @@ ZagImageOutputAPI >> primitive [
 ]
 
 { #category : 'threaded words' }
+ZagImageOutputAPI >> primitiveError [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
 ZagImageOutputAPI >> primitiveModule [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> primitiveModuleError [
 
 	^ self explicitRequirement
 ]
@@ -211,8 +223,22 @@ ZagImageOutputAPI >> pushLocalField [
 ]
 
 { #category : 'threaded words' }
+ZagImageOutputAPI >> pushStack [
+	" like pushLocal, except stack offset rather than context index "
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
 ZagImageOutputAPI >> pushThisContext [
 	" push the address of the current context "
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> pushThisProcess [
+	" push the address of the current process "
 
 	^ self explicitRequirement
 ]

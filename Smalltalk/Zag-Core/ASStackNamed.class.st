@@ -101,7 +101,7 @@ ASStackNamed >> pushTheVariable: anOutput stackOffset: stackOffset [
 
 	isInContext ifTrue: [
 		^ location pushFromContext: offset with: anOutput ].
-	^ location pushFromStack: stackOffset - offset with: anOutput
+	^ location pushFromStack: stackOffset offset: offset with: anOutput
 ]
 
 { #category : 'API' }

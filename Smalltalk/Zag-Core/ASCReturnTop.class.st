@@ -33,12 +33,6 @@ ASCReturnTop >> inlineWithFixedCFG: anASCodeGenerator [
 
 ]
 
-{ #category : 'data flow instructions' }
-ASCReturnTop >> markReferences [
-
-	stack markReferenced
-]
-
 { #category : 'code generation' }
 ASCReturnTop >> outputTo: output [
 
@@ -50,5 +44,7 @@ ASCReturnTop >> resultStack: aStack [
 
 	stack := aStack.
 	stackElement := aStack at: #self.
-	^ self createsTemporary: stackElement next data: aStack data
+	^ self
+		  consumes: aStack;
+		  createsTemporary: stackElement next data: aStack data
 ]

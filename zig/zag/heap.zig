@@ -24,7 +24,7 @@ const assert = std.debug.assert;
 //const compileObject = @import("execute.zig").compileObject;
 //const Sym = @import("symbol.zig").symbols;
 pub const Format = enum(u7) {
-    immutableSizeZero,
+    immutableSizeZero = 0,
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
     externalStruct, // this is a big allocated struct, not an Object
     notIndexable, // this is an Object with no indexable values
@@ -45,7 +45,7 @@ pub const Format = enum(u7) {
     indexedWeakWithPointers,
     _,
     comptime {
-        assert(@intFromEnum(Format.notIndexable)==128-16);
+        assert(@intFromEnum(Format.notIndexable) == 128 - 16);
     }
     const Self = @This();
     const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
@@ -77,7 +77,7 @@ pub const Format = enum(u7) {
         return self.operations().instVars(self, header, @constCast(obj));
     }
     pub //inline
-        fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
+    fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
     pub inline fn mutableArray(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
@@ -188,21 +188,21 @@ const HeapOperations = struct {
     size: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError!usize = noSize,
     iterator: ?*const fn (HeapHeader, *const HeapObject) HeapObjectPtrIterator = null,
     instVarWithPtr: Format = .free,
-    inline fn set(ops: *[128]HeapOperations,format: Format, tuple: HeapOperations) void {
+    inline fn set(ops: *[128]HeapOperations, format: Format, tuple: HeapOperations) void {
         const idx = @intFromEnum(format);
-        const withPtr = if (idx>=@intFromEnum(Format.notIndexable) and idx<@intFromEnum(Format.free)) idx else idx+8;
+        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx else idx + 8;
         ops[idx].array = tuple.array;
         ops[idx].instVars = tuple.instVars;
         ops[idx].size = tuple.size;
         ops[idx].iterator = tuple.iterator;
         ops[idx].instVarWithPtr = @enumFromInt(withPtr);
-        if (withPtr!=idx)
+        if (withPtr != idx)
             ops[withPtr] = ops[idx];
     }
     fn init() [128]HeapOperations {
         var ops = [_]HeapOperations{undefined} ** 128;
-        for (ops[0..],0..) |*op,n| {
-            op.* = if (n<Format.NotIndexable) .{
+        for (ops[0..], 0..) |*op, n| {
+            op.* = if (n < Format.NotIndexable) .{
                 .array = byteArray,
                 .size = byteSize,
                 .instVarWithPtr = @enumFromInt(n),
@@ -212,12 +212,12 @@ const HeapOperations = struct {
                 .size = unimplementedSize,
             };
         }
-        set(&ops,.notIndexable,.{
+        set(&ops, .notIndexable, .{
             .instVars = justInstVars,
         });
         //indexedNonObject,
         //externalNonObject,
-        set(&ops,.directIndexed,.{
+        set(&ops, .directIndexed, .{
             .array = directArray,
             .size = directSize,
         });
@@ -232,7 +232,7 @@ const HeapOperations = struct {
         return false; // ToDo
     }
     fn directArray(_: Format, header: HeapHeader, obj: *const HeapObject, _: usize) HeapOperationError![]Object {
-             return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. header.length + 1];
+        return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. header.length + 1];
     }
     fn directSize(_: Format, header: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return header.length;
@@ -257,15 +257,15 @@ const HeapOperations = struct {
         return error.notIndexable;
     }
     fn unimplementedArray(format: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
-        std.debug.print("format: {}\n",.{format});
+        std.debug.print("format: {}\n", .{format});
         @panic("unimplemented");
     }
     fn unimplementedInstVars(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        std.debug.print("format: {}\n",.{format});
+        std.debug.print("format: {}\n", .{format});
         @panic("unimplemented");
     }
     fn unimplementedSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        std.debug.print("format: {}\n",.{format});
+        std.debug.print("format: {}\n", .{format});
         @panic("unimplemented");
     }
 };
@@ -459,7 +459,7 @@ pub const AllocationInfo = struct {
     }
 };
 pub const IndexedFooter = union {
-    m: [@sizeOf(Internal)] u8,
+    m: [@sizeOf(Internal)]u8,
     i: Internal,
     const Internal = extern struct {
         arrayPtr: [*]Object,
@@ -480,7 +480,7 @@ pub const IndexedFooter = union {
     }
 };
 pub const WeakIndexedFooter = union {
-    m: [@sizeOf(Internal)] u8,
+    m: [@sizeOf(Internal)]u8,
     i: Internal,
     const Internal = extern struct {
         weakLink: ?HeapObjectConstPtr,
@@ -636,12 +636,13 @@ pub const HeapHeader = packed struct(u64) {
     age: Age,
     length: u12,
     const Self = @This();
-    const immediateLength: u12 = 4095; // all immediate objects (except doubles) have this as top 12 bits in NaN encoding
-    const forwardLength: u12 = 4094;
-    pub const maxLength: u12 = 4093;
+    //const immediateLength: u12 = 4095; // all immediate objects (except doubles) have this as top 12 bits in NaN encoding
+    const forwardLength: u12 = 2048; // makes whole word negative
+    pub const maxLength: u12 = 2047;
     pub const includesHeader = true;
     comptime {
         assert(@sizeOf(Self) == 8);
+        std.debug.assert(std.meta.hasUniqueRepresentation(Self));
     }
     pub inline fn array(self: HeapHeader, obj: HeapObjectConstPtr, elementSize: usize) ![]Object {
         return self.format.array(self, obj, elementSize);
@@ -652,7 +653,7 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn size(self: HeapHeader, obj: HeapObjectConstPtr) !usize {
         return self.format.size(self, obj);
     }
-    const contextHeader = @as(u64, @bitCast(Self{ .classIndex = @enumFromInt(0), .hash = 0, .format = .special, .age = .onStack, .length = 0 }));
+    const contextHeader: u64 = @bitCast(Self{ .classIndex = .Context, .hash = 0, .format = .special, .age = .onStack, .length = 0 });
     pub inline fn contextHeaderOnStack(selfOffset: u16) Self {
         return @as(Self, @bitCast(contextHeader | @as(u64, selfOffset) << 16));
     }
@@ -853,7 +854,7 @@ pub const HeapObject = packed struct {
         return self.start[1..self.length];
     }
     pub //inline
-        fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
+    fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
         const array = if (head.forwardedTo()) |realSelf|
             try realSelf.header.array(realSelf, @sizeOf(T))

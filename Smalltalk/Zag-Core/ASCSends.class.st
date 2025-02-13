@@ -24,12 +24,6 @@ ASCSends >> isSend [
 	^ true
 ]
 
-{ #category : 'data flow instructions' }
-ASCSends >> markReferences [
-
-	stack markReferenced: selector numArgs
-]
-
 { #category : 'stack' }
 ASCSends >> resultStack: anASStack [
 

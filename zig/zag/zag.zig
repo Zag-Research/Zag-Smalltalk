@@ -61,14 +61,14 @@ fn parseAddress(name: []const u8) u64 {
     var index = name.len;
     var address: u64 = 0;
     var seenDot = false;
-    var shift:u6 = 0;
+    var shift: u6 = 0;
     while (index > 0) {
         index -= 1;
         shift += 4;
         switch (name[index]) {
-            '0'...'9' => |c| address += @as(u64,c - '0') << (shift - 4),
-            'a'...'f' => |c| address += @as(u64,c - 'a' + 10) << (shift - 4),
-            'A'...'F' => |c| address += @as(u64,c - 'A' + 10) << (shift - 4),
+            '0'...'9' => |c| address += @as(u64, c - '0') << (shift - 4),
+            'a'...'f' => |c| address += @as(u64, c - 'a' + 10) << (shift - 4),
+            'A'...'F' => |c| address += @as(u64, c - 'A' + 10) << (shift - 4),
             '.' => {
                 seenDot = true;
                 address = 0;
@@ -90,12 +90,12 @@ fn checkHeader(file: std.fs.File) !void {
 }
 fn loadSymbols() !void {
     var exportedSymbols = zagImageHeader.symTable;
-    outer:  while (!exportedSymbols.isNil()) {
+    outer: while (!exportedSymbols.isNil()) {
         for (try exportedSymbols.arrayAsSlice(Object)) |obj| {
             if (obj.isString()) {
-                std.debug.print("LoadingSymbol: {}\n",.{symbol.intern(obj)});
+                std.debug.print("LoadingSymbol: {}\n", .{symbol.intern(obj)});
             } else {
-                exportedSymbols=obj;
+                exportedSymbols = obj;
                 continue :outer;
             }
         }
@@ -103,22 +103,25 @@ fn loadSymbols() !void {
     }
 }
 fn loadClassTable() !void {
-    assert(zagImageHeader.classTable==object.Nil);
+    assert(zagImageHeader.classTable == object.Nil);
 }
 fn loadDispatchTable(file: std.fs.File) !void {
     execute.loadIntrinsicsDispatch();
     const stat = try file.stat();
-    assert(stat.size==@sizeOf(ZagImageHeader)); // no dispatch to read
-//    _ = references;
+    assert(stat.size == @sizeOf(ZagImageHeader)); // no dispatch to read
+    //    _ = references;
 }
 fn loadCodeAddresses() !void {
     const controlPrimitives = @import("controlPrimitives.zig");
-    const Element = struct {files: u64, ours: u64, };
+    const Element = struct {
+        files: u64,
+        ours: u64,
+    };
     var map: [controlPrimitives.references.len]Element = undefined;
     const codeAddresses = try zagImageHeader.codeAddresses.arrayAsSlice(u64);
-    if (controlPrimitives.references.len!=codeAddresses.len)
-        std.debug.print("my primitives length: {} file:{}\n",.{controlPrimitives.references.len,codeAddresses.len});
-    for (&map,&controlPrimitives.references,codeAddresses) |*element,o,f| {
+    if (controlPrimitives.references.len != codeAddresses.len)
+        std.debug.print("my primitives length: {} file:{}\n", .{ controlPrimitives.references.len, codeAddresses.len });
+    for (&map, &controlPrimitives.references, codeAddresses) |*element, o, f| {
         element.files = f;
         element.ours = @intFromPtr(o.f);
     }
@@ -131,7 +134,7 @@ fn processHeader(file: std.fs.File) !void {
     try loadClassTable();
 }
 fn runImage() !void {
-    _ = try execute.mainSendTo(zagImageHeader.selector,zagImageHeader.target);
+    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
     //const stat = try file.stat();std.debug.print("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });

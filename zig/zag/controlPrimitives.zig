@@ -38,13 +38,13 @@ fn call(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature
     return @call(tailCall, method.executeFn.f, .{ newPc.next(), sp, process, context, method.signature });
 }
 pub fn classCase(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn classCase24(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn cullColon(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn drop(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     const newSp = sp.drop();
@@ -65,7 +65,7 @@ fn label(pc: PC, sp: SP, process: *Process, context: *Context, signature: Method
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 fn makeImmediateClosure(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn over(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     const newSp = sp.push(sp.next);
@@ -73,16 +73,16 @@ fn over(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature
     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
 }
 fn popAssociationValue(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn popIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn popIndirectLocal(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn popInstVar(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 pub fn popLocal(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     context.setLocal(pc.uint(), sp.top);
@@ -105,23 +105,29 @@ fn popLocalField(pc: PC, sp: SP, process: *Process, context: *Context, _: Method
     return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
+}
+fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn primitiveModule(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
+}
+fn primitiveModuleError(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn pushAssociationValue(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 pub fn pushContext(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     const method = pc.method();
     const stackStructure = method.stackStructure.hash56();
     const locals: u8 = @truncate(stackStructure);
-    const maxStackNeeded: u16 = @truncate(stackStructure>>16);
-    const selfOffset: u16 = @truncate(stackStructure>>32);
+    const maxStackNeeded: u16 = @truncate(stackStructure >> 16);
+    const selfOffset: u16 = @truncate(stackStructure >> 32);
     trace("\npushContext: locals={} maxStack={} selfOffset={} signature={}", .{ locals, maxStackNeeded, selfOffset, method.signature });
     const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
     const newSp = ctxt.asNewSp();
@@ -129,22 +135,18 @@ pub fn pushContext(pc: PC, sp: SP, process: *Process, context: *Context, _: Meth
     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, undefined });
 }
 fn pushIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn pushIndirectLocal(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn pushInstVar(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 pub fn pushLiteral(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     const newSp = sp.push(pc.object());
     trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
     return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
-}
-fn pushThisContext(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
-    const newSp = sp.push(Object.from(context));
-    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
 }
 pub fn pushLocal(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     const newSp = sp.push(context.getLocal(pc.uint()));
@@ -165,12 +167,28 @@ fn pushLocalData(pc: PC, sp: SP, process: *Process, context: *Context, _: Method
     trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
 }
+fn pushStack(pc: PC, sp: SP, process: *Process, context: *Context, extra: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, extra, unreachable };
+}
+fn pushThisContext(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
+    const newSp = sp.push(Object.from(context));
+    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+}
+fn pushThisProcess(pc: PC, sp: SP, process: *Process, context: *Context, extra: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, extra, unreachable };
+}
+fn returnNonLocal(_: PC, _: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
+    unreachable;
+}
 pub fn returnNoContext(_: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
     return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, undefined });
 }
-fn returnNonLocal(_: PC, _: SP, _: *Process, _: *Context, _: MethodSignature) callconv(stdCall) SP {
-    unreachable;
+pub fn returnSelf(pc: PC, sp: SP, process: *Process, context: *Context, extra: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, extra, unreachable };
+}
+pub fn returnSelfNoContext(pc: PC, sp: SP, process: *Process, context: *Context, extra: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, extra, unreachable };
 }
 pub fn returnTop(_: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     trace("\nreturnTop: {} ", .{sp.top});
@@ -183,6 +201,9 @@ pub fn returnTop(_: PC, sp: SP, process: *Process, context: *Context, _: MethodS
     trace("-> {x}", .{@intFromPtr(newSp)});
     trace("-> {any}", .{callerContext.stack(newSp, process)});
     return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
+}
+pub fn returnTopNoContext(_: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
+    _ = .{ sp, process, context, unreachable };
 }
 fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     trace("\nreturnWithContext: {any} -> ", .{context.stack(sp, process)});
@@ -197,7 +218,7 @@ fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, _: Met
     return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
 }
 pub fn send(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn storeLocal(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature) callconv(stdCall) SP {
     context.setLocal(pc.uint(), sp.top);
@@ -211,24 +232,27 @@ fn swap(pc: PC, sp: SP, process: *Process, context: *Context, _: MethodSignature
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
 }
 fn tailSend(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
+}
+pub fn tailSendNoContext(pc: PC, sp: SP, process: *Process, context: *Context, extra: MethodSignature) callconv(stdCall) SP {
+    _ = .{ pc, sp, process, context, extra, unreachable };
 }
 fn tailCallMethod(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn value(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn valueColon(pc: PC, sp: SP, process: *Process, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,signature,unreachable};
+    _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn convertFn(comptime source: anytype) [source.len]ThreadedFn {
     var result: [source.len]ThreadedFn = undefined;
-    inline for (source,&result) |src,*dst|
-        dst.* = .{.f = src};
+    inline for (source, &result) |src, *dst|
+        dst.* = .{ .f = src };
     return result;
 }
-    
+
 pub const references = convertFn(.{
     &branch,
     &call,
@@ -249,26 +273,32 @@ pub const references = convertFn(.{
     &popLocalData,
     &popLocalField,
     &primitive,
+    &primitiveError,
     &primitiveModule,
+    &primitiveModuleError,
     &pushAssociationValue,
     &pushContext,
     &pushIndirect,
     &pushIndirectLocal,
-    &pushInstVar,
+    &pushInstVar, // encode offset (if any) in the object in higher bits, and the index to self in the low bits
     &pushLiteral,
     &pushLocal,
     &pushLocalData,
     &pushLocalField,
+    &pushStack, // encode offset (if any) in the object in higher bits, and index to self in the low bits
     &pushThisContext,
-    &returnNoContext,
+    &pushThisProcess,
     &returnNonLocal,
+    &returnSelf,
+    &returnSelfNoContext,
     &returnTop,
-    &returnWithContext,
+    &returnTopNoContext,
     &send,
     &storeLocal,
     &swap,
     &tailCallMethod,
     &tailSend,
+    &tailSendNoContext,
     &value,
     &valueColon,
 });
@@ -283,12 +313,12 @@ fn push42(_: PC, sp: SP, _: *Process, _: *Context, _: MethodSignature) callconv(
 }
 test "send with dispatch direct" {
     if (true) return error.SkipZigTest;
-    std.debug.print("Test: send with dispatch direct\n",.{});
+    std.debug.print("Test: send with dispatch direct\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        &pushContext,     "^",
-        &send,       Sym.value,
+        &pushContext,       "^",
+        &send,              Sym.value,
         &returnWithContext,
     });
     const methodV = compileMethod(Sym.value, 0, 0, .none, .{
@@ -306,7 +336,7 @@ test "send with dispatch direct" {
     try expectEqual(result[0], Object.from(42));
 }
 test "simple return via Execution" {
-    std.debug.print("Test: simple return via Execution\n",.{});
+    std.debug.print("Test: simple return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 0, 0, .none, .{
@@ -323,7 +353,7 @@ test "simple return via Execution" {
     try expectEqual(result[2], True);
 }
 test "context return via Execution" {
-    std.debug.print("Test: context return via Execution\n",.{});
+    std.debug.print("Test: context return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.@"at:", 0, 0, .none, .{
@@ -339,7 +369,7 @@ test "context return via Execution" {
     try expectEqual(result[0], True);
 }
 test "context returnTop via Execution" {
-    std.debug.print("Test: context returnTop via Execution\n",.{});
+    std.debug.print("Test: context returnTop via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 3, 0, .none, .{
@@ -379,22 +409,24 @@ test "context returnTop via Execution" {
 //     try expectEqual(result[0], Object.from(42));
 // }
 test "simple executable" {
-    std.debug.print("Test: simple executable\n",.{});
+    std.debug.print("Test: simple executable\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 1, 0, .none, .{
-        &pushContext,           "^",
+        &pushContext,             "^",
         ":label1",                &pushLiteral,
         comptime Object.from(42), &popLocal,
-        0,                        &pushLocal, 0,
-        &pushLiteral, 0,          &pushLiteral, true,
-        &classCase, ClassIndex.False,               "label3",
-        &branch,                "label2",
+        0,                        &pushLocal,
+        0,                        &pushLiteral,
+        0,                        &pushLiteral,
+        true,                     &classCase,
+        ClassIndex.False,         "label3",
+        &branch,                  "label2",
         ":label3",                &pushLocal,
         0,                        ":label4",
-        &returnTop,             ":label2",
-        &pushLiteral,0,          &branch,
-        "label4",
+        &returnTop,               ":label2",
+        &pushLiteral,             0,
+        &branch,                  "label4",
     });
     var objs = [_]Object{Nil};
     var te = Execution.new();

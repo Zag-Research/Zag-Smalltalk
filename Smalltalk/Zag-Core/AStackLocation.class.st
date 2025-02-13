@@ -80,9 +80,9 @@ AStackLocation >> pushFromContext: anInteger with: output [
 ]
 
 { #category : 'accessing' }
-AStackLocation >> pushFromStack: anInteger with: anOutput [
+AStackLocation >> pushFromStack: stackOffset offset: offset with: anOutput [
 
-		^ anOutput visitPushFromStack: anInteger
+	^ anOutput visitPushFromStack: stackOffset offset: offset
 ]
 
 { #category : 'accessing' }

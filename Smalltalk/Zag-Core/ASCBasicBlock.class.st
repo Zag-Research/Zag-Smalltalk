@@ -395,12 +395,6 @@ ASCBasicBlock >> llvmLabel [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'data flow instructions' }
-ASCBasicBlock >> markReferences [
-
-	operations do: #markReferences
-]
-
 { #category : 'accessing' }
 ASCBasicBlock >> maxDepth [
 	^ maxDepth
@@ -532,7 +526,7 @@ ASCBasicBlock >> pushLiteral: aLiteral [
 { #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
-	self addOperation: (stack at: aSymbol) pushOperation
+	self addOperation: ((stack at: aSymbol) basicBlock: self; pushOperation)
 ]
 
 { #category : 'testing' }

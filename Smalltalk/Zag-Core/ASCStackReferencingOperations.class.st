@@ -15,25 +15,13 @@ ASCStackReferencingOperations >> consumes: aStackElement [
 	^ aStackElement location consumer: self
 ]
 
-{ #category : 'data flow instructions' }
-ASCStackReferencingOperations >> markReferences [
+{ #category : 'stack' }
+ASCStackReferencingOperations >> consumes: n at: anASStack [
 
-	^ stack markReferenced
-]
-
-{ #category : 'output' }
-ASCStackReferencingOperations >> offsetOfSelf [
-
-	^ (stack at: #self) offset - stack offset
-]
-
-{ #category : 'accessing' }
-ASCStackReferencingOperations >> stack [
-	^ stack
-]
-
-{ #category : 'as yet unclassified' }
-ASCStackReferencingOperations >> theSelf [
-
-	^ stack at: #self
+	| resultStack |
+	resultStack := stack := anASStack.
+	n timesRepeat: [
+		self consumes: resultStack.
+		resultStack := resultStack next ].
+	^ resultStack
 ]
