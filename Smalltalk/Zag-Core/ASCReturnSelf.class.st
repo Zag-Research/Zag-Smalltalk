@@ -25,5 +25,7 @@ ASCReturnSelf >> resultStack: aStack [
 	| stackElement |
 	stack := aStack.
 	stackElement := aStack at: #self.
-	^ self createsTemporary: stackElement next data: stackElement data
+	^ self
+		  consumes: stackElement;
+		  createsTemporary: stackElement next data: stackElement data
 ]

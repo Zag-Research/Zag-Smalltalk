@@ -50,7 +50,7 @@ ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
 ASCCompiledMethodBlock >> initSelf: targetClass [
 
 	stack := stack initSelf.
-	^ stack data: (AStackValue fromClass: targetClass)
+	^ stack class: targetClass; data: (AStackValue fromClass: targetClass)
 ]
 
 { #category : 'initialization' }

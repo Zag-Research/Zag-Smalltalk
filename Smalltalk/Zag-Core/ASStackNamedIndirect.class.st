@@ -15,7 +15,14 @@ Class {
 { #category : 'accessing' }
 ASStackNamedIndirect >> at: aSymbol [
 
-	^ myScope at: aSymbol
+	self halt.
+	^ (myScope at: aSymbol) referenceVariable: self
+]
+
+{ #category : 'instance creation' }
+ASStackNamedIndirect >> class: aClass [
+
+	self myScope: (ZagScope new class: aClass)
 ]
 
 { #category : 'as yet unclassified' }
@@ -25,9 +32,9 @@ ASStackNamedIndirect >> indirectElement [
 ]
 
 { #category : 'accessing' }
-ASStackNamedIndirect >> myScope: aStackContext [
+ASStackNamedIndirect >> myScope: aScope [
 
-	myScope := aStackContext
+	myScope := aScope
 ]
 
 { #category : 'as yet unclassified' }

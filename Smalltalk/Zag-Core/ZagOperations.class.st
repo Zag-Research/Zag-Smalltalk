@@ -112,6 +112,12 @@ ZagOperations >> stack [
 	^ stack
 ]
 
+{ #category : 'as yet unclassified' }
+ZagOperations >> theSelf [
+
+	^ stack at: #self
+]
+
 { #category : 'finalAnalysis' }
 ZagOperations >> variableReferences: aCollection modifies: aCollection2 block: aBasicBlock [ 
 ]

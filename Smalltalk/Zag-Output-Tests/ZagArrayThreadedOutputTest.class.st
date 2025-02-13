@@ -50,6 +50,18 @@ ZagArrayThreadedOutputTest >> test_fib [
 ]
 
 { #category : 'tests' }
+ZagArrayThreadedOutputTest >> test_instVar [
+
+	self halt;
+		assert: (output contentsForMethod: ASCompileTestClass1 >> #instVar)
+		equals: {
+				#( label #'ASCompileTestClass1.instVar' ).
+				#pushInstVar.
+				1.
+				#returnTop }
+]
+
+{ #category : 'tests' }
 ZagArrayThreadedOutputTest >> test_prim [
 
 	self

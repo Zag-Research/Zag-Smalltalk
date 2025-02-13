@@ -8,8 +8,3 @@ Class {
 	#package : 'Zag-Core',
 	#tag : 'Operations'
 }
-
-{ #category : 'data flow instructions' }
-ASCNonStackReferencingOperations >> markReferences [
-
-]

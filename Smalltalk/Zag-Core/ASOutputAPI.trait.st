@@ -73,7 +73,7 @@ ASOutputAPI >> visitPushContext: anUndefinedObject [
 ]
 
 { #category : 'API' }
-ASOutputAPI >> visitPushFromStack: anInteger [
+ASOutputAPI >> visitPushFromStack: anInteger offset: offset [
 
 	^ self explicitRequirement
 ]

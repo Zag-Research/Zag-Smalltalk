@@ -18,6 +18,6 @@ ASCStoreVariable >> outputTo: anOutput [
 { #category : 'stack' }
 ASCStoreVariable >> resultStack: anASStack [
 
-	^ stack := anASStack.
-
+	stack := anASStack.
+	^ self consumes: anASStack
 ]

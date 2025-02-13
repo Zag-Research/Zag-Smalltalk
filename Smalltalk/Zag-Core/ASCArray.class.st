@@ -3,7 +3,7 @@ I create an array and push the address on the stack
 "
 Class {
 	#name : 'ASCArray',
-	#superclass : 'ASCNonStackReferencingOperations',
+	#superclass : 'ASCStackReferencingOperations',
 	#instVars : [
 		'size'
 	],
@@ -28,12 +28,9 @@ ASCArray >> outputTo: output [
 ]
 
 { #category : 'stack' }
-ASCArray >> resultStack: anASStack [
+ASCArray >> resultStack: aStack [
 
-	| resultStack |
-	resultStack := stack := anASStack.
-	size timesRepeat: [ resultStack := resultStack next ].
-	^ self creates: (resultStack pushClass: Array)
+	^ self creates: ((self consumes: size at: aStack) pushClass: Array)
 ]
 
 { #category : 'instance creation' }

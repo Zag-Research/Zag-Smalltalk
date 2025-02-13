@@ -20,12 +20,6 @@ ASCVariableOperations >> inspectZagASTOn: aStream [
 	
 ]
 
-{ #category : 'data flow instructions' }
-ASCVariableOperations >> markReferences [
-
-	stack markReferenced
-]
-
 { #category : 'testing' }
 ASCVariableOperations >> needsContext: aStackContext [
 	" this should be removed when reifyLocals is to work "

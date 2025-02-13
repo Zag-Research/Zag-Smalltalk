@@ -44,7 +44,9 @@ Class {
 		'T_PopLocalData',
 		'T_PopLocalField',
 		'T_Primitive',
+		'T_PrimitiveError',
 		'T_PrimitiveModule',
+		'T_PrimitiveModuleError',
 		'T_PushAssociationValue',
 		'T_PushContext',
 		'T_PushIndirect',
@@ -54,16 +56,20 @@ Class {
 		'T_PushLocal',
 		'T_PushLocalData',
 		'T_PushLocalField',
+		'T_PushStack',
 		'T_PushThisContext',
-		'T_ReturnNoContext',
+		'T_PushThisProcess',
 		'T_ReturnNonLocal',
+		'T_ReturnSelf',
+		'T_ReturnSelfNoContext',
 		'T_ReturnTop',
-		'T_ReturnWithContext',
+		'T_ReturnTopNoContext',
 		'T_Send',
 		'T_StoreLocal',
 		'T_Swap',
 		'T_TailCallMethod',
 		'T_TailSend',
+		'T_TailSendNoContext',
 		'T_Value',
 		'T_ValueColon'
 	],
@@ -71,6 +77,12 @@ Class {
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
 }
+
+{ #category : 'class initialization' }
+ZagConstants class >> api [
+
+	^ ZagImageOutputAPI
+]
 
 { #category : 'converting' }
 ZagConstants class >> asArray [
@@ -96,7 +108,9 @@ ZagConstants class >> asArray [
 		T_PopLocalData.
 		T_PopLocalField.
 		T_Primitive.
+		T_PrimitiveError.
 		T_PrimitiveModule.
+		T_PrimitiveModuleError.
 		T_PushAssociationValue.
 		T_PushContext.
 		T_PushIndirect.
@@ -106,16 +120,20 @@ ZagConstants class >> asArray [
 		T_PushLocal.
 		T_PushLocalData.
 		T_PushLocalField.
+		T_PushStack.
 		T_PushThisContext.
-		T_ReturnNoContext.
+		T_PushThisProcess.
 		T_ReturnNonLocal.
+		T_ReturnSelf.
+		T_ReturnSelfNoContext.
 		T_ReturnTop.
-		T_ReturnWithContext.
+		T_ReturnTopNoContext.
 		T_Send.
 		T_StoreLocal.
 		T_Swap.
 		T_TailCallMethod.
 		T_TailSend.
+		T_TailSendNoContext.
 		T_Value.
 		T_ValueColon.
 	}
@@ -184,7 +202,7 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		<< ' self generateInitializeThreadedConstants ';
 		<< $";
 		cr.
-	ZagImageOutputAPI methodDictionary keys sorted withIndexDo: [
+	self api methodDictionary keys sorted withIndexDo: [
 		:key
 		:index |
 		| variableName |
@@ -282,28 +300,34 @@ ZagConstants class >> initializeThreadedConstants [
 	T_PopLocalData := 136.
 	T_PopLocalField := 144.
 	T_Primitive := 152.
-	T_PrimitiveModule := 160.
-	T_PushAssociationValue := 168.
-	T_PushContext := 176.
-	T_PushIndirect := 184.
-	T_PushIndirectLocal := 192.
-	T_PushInstVar := 200.
-	T_PushLiteral := 208.
-	T_PushLocal := 216.
-	T_PushLocalData := 224.
-	T_PushLocalField := 232.
-	T_PushThisContext := 240.
-	T_ReturnNoContext := 248.
-	T_ReturnNonLocal := 256.
-	T_ReturnTop := 264.
-	T_ReturnWithContext := 272.
-	T_Send := 280.
-	T_StoreLocal := 288.
-	T_Swap := 296.
-	T_TailCallMethod := 304.
-	T_TailSend := 312.
-	T_Value := 320.
-	T_ValueColon := 328.
+	T_PrimitiveError := 160.
+	T_PrimitiveModule := 168.
+	T_PrimitiveModuleError := 176.
+	T_PushAssociationValue := 184.
+	T_PushContext := 192.
+	T_PushIndirect := 200.
+	T_PushIndirectLocal := 208.
+	T_PushInstVar := 216.
+	T_PushLiteral := 224.
+	T_PushLocal := 232.
+	T_PushLocalData := 240.
+	T_PushLocalField := 248.
+	T_PushStack := 256.
+	T_PushThisContext := 264.
+	T_PushThisProcess := 272.
+	T_ReturnNonLocal := 280.
+	T_ReturnSelf := 288.
+	T_ReturnSelfNoContext := 296.
+	T_ReturnTop := 304.
+	T_ReturnTopNoContext := 312.
+	T_Send := 320.
+	T_StoreLocal := 328.
+	T_Swap := 336.
+	T_TailCallMethod := 344.
+	T_TailSend := 352.
+	T_TailSendNoContext := 360.
+	T_Value := 368.
+	T_ValueColon := 376.
 
 ]
 
@@ -330,27 +354,33 @@ ZagConstants class >> loadThreadedConstants: array [
 	T_PopLocalData := array at: 17.
 	T_PopLocalField := array at: 18.
 	T_Primitive := array at: 19.
-	T_PrimitiveModule := array at: 20.
-	T_PushAssociationValue := array at: 21.
-	T_PushContext := array at: 22.
-	T_PushIndirect := array at: 23.
-	T_PushIndirectLocal := array at: 24.
-	T_PushInstVar := array at: 25.
-	T_PushLiteral := array at: 26.
-	T_PushLocal := array at: 27.
-	T_PushLocalData := array at: 28.
-	T_PushLocalField := array at: 29.
-	T_PushThisContext := array at: 30.
-	T_ReturnNoContext := array at: 31.
-	T_ReturnNonLocal := array at: 32.
-	T_ReturnTop := array at: 33.
-	T_ReturnWithContext := array at: 34.
-	T_Send := array at: 35.
-	T_StoreLocal := array at: 36.
-	T_Swap := array at: 37.
-	T_TailCallMethod := array at: 38.
-	T_TailSend := array at: 39.
-	T_Value := array at: 40.
-	T_ValueColon := array at: 41.
+	T_PrimitiveError := array at: 20.
+	T_PrimitiveModule := array at: 21.
+	T_PrimitiveModuleError := array at: 22.
+	T_PushAssociationValue := array at: 23.
+	T_PushContext := array at: 24.
+	T_PushIndirect := array at: 25.
+	T_PushIndirectLocal := array at: 26.
+	T_PushInstVar := array at: 27.
+	T_PushLiteral := array at: 28.
+	T_PushLocal := array at: 29.
+	T_PushLocalData := array at: 30.
+	T_PushLocalField := array at: 31.
+	T_PushStack := array at: 32.
+	T_PushThisContext := array at: 33.
+	T_PushThisProcess := array at: 34.
+	T_ReturnNonLocal := array at: 35.
+	T_ReturnSelf := array at: 36.
+	T_ReturnSelfNoContext := array at: 37.
+	T_ReturnTop := array at: 38.
+	T_ReturnTopNoContext := array at: 39.
+	T_Send := array at: 40.
+	T_StoreLocal := array at: 41.
+	T_Swap := array at: 42.
+	T_TailCallMethod := array at: 43.
+	T_TailSend := array at: 44.
+	T_TailSendNoContext := array at: 45.
+	T_Value := array at: 46.
+	T_ValueColon := array at: 47.
 
 ]

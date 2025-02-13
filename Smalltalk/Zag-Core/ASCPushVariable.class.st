@@ -8,8 +8,7 @@ Class {
 	#classTraits : 'ASCContextDependentOperations classTrait',
 	#instVars : [
 		'stackOffset',
-		'variableLocation',
-		'needsContext'
+		'variableLocation'
 	],
 	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
@@ -79,6 +78,5 @@ ASCPushVariable >> variableReferences: referenced modifies: ignore block: aDispa
 ASCPushVariable >> with: target [
 
 
-	needsContext := target isLocal.
 	variableLocation := target
 ]

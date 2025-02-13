@@ -58,12 +58,6 @@ ASCEmbed >> inspectZagASTOn: aStream [
 		print: selector.
 ]
 
-{ #category : 'data flow instructions' }
-ASCEmbed >> markReferences [
-
-	stack markReferenced: selector numArgs
-]
-
 { #category : 'instance creation' }
 ASCEmbed >> nextBasicBlocks [
 	^nil

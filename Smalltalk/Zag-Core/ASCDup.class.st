@@ -21,12 +21,6 @@ ASCDup >> inspectZagASTOn: aStream [
 	aStream << $)
 ]
 
-{ #category : 'data flow instructions' }
-ASCDup >> markReferences [
-
-	^ stack markReferenced
-]
-
 { #category : 'code generation' }
 ASCDup >> outputTo: aCodeEmitter [
 

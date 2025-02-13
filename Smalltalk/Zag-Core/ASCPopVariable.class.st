@@ -19,6 +19,7 @@ ASCPopVariable >> outputTo: anOutput [
 ASCPopVariable >> resultStack: anASStack [
 
 	stack := anASStack.
+	self consumes: anASStack.
 	^ anASStack drop
 ]
 
