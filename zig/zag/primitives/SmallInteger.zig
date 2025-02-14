@@ -303,6 +303,18 @@ test "embedded add" {
     const result = testExecute(&prog);
     try expectEqual(result[0].toInt(), 42);
 }
+test "embedded add for LLVM experiment" {
+    const expectEqual = std.testing.expectEqual;
+    var prog = compileMethod(Sym.value, 0, 0, .none, .{
+        &e.pushLiteral,       Object.from(3),
+        &e.pushLiteral,       Object.from(40),
+        &e.SmallInteger.@"+", &e.pushLiteral,
+        Object.from(-1),      &e.SmallInteger.@"+",
+        &e.returnTopNoContext, Object.from(0),
+    });
+    const result = testExecute(&prog);
+    try expectEqual(result[0].toInt(), 42);
+}
 test "simple add with overflow" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Sym.value, 0, 2, .none, .{

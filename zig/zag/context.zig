@@ -29,9 +29,9 @@ pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 const Context = @This();
 header: HeapHeader,
-method: CompiledMethodPtr, // note this is not an Object, so access and GC need to handle specially
+method: CompiledMethodPtr,
 tpc: PC, // threaded PC
-npc: ThreadedFn, //*anyopaque, // native PC - in Continuation Passing Style
+npc: ThreadedFn, // native PC - in Continuation Passing Style
 prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to handle specially
 trapContextNumber: u64,
 temps: [nLocals]Object,
@@ -146,8 +146,8 @@ pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: PC) void {
 pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
     self.setReturnBoth(tpc.justPrim(), tpc.next());
 }
-pub inline fn getNPc(self: *const Context) ThreadedFn.Fn {
-    return self.npc.f;
+pub inline fn getNPc(self: *const Context) ThreadedFn {
+    return self.npc;
 }
 pub inline fn setNPc(self: *Context, npc: ThreadedFn) void {
     self.npc = npc;
