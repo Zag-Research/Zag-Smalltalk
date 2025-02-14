@@ -14,10 +14,8 @@ const target_machine = llvm.target_machine;
 
 pub fn main() void {
 
-    // LLVM setup logic
-    _ = target.LLVMInitializeNativeTarget();
-    _ = target.LLVMInitializeNativeAsmPrinter();
-    _ = target.LLVMInitializeNativeAsmParser();
+    // LLVM target specific setup logic
+    target.initNativeTarget();
 
     // Create downward growing stack - smaller indices for more pushes
     var stack: [5]i64 = .{ 0, 0, 0, 4, 5 };
