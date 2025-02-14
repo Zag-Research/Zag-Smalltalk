@@ -17,10 +17,8 @@ const target_machine = llvm.target_machine;
 
 pub fn main() void {
 
-    // LLVM setup logic
-    _ = target.LLVMInitializeNativeTarget();
-    _ = target.LLVMInitializeNativeAsmPrinter();
-    _ = target.LLVMInitializeNativeAsmParser();
+    // LLVM target specific setup logic
+    target.initNativeTarget();
 
     // Create LLVM module (context created by default)
     const module: types.LLVMModuleRef = core.LLVMModuleCreateWithName("module");
