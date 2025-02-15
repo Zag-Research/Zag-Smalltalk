@@ -1210,6 +1210,15 @@ const Dispatch = struct {
         std.debug.assert(numberOfFixed == 0);
         //        std.debug.assert(@offsetOf(Self, "methods") & 0xf == 0);
     }
+    fn init(array: []Object) *Self {
+        var self: *Self = @ptrCast(array.ptr);
+        self.state = .clean;
+        self.nMethods = @divExact(array.len * @sizeOf(Object) - @sizeOf(Self), @sizeOf(DispatchElement)) - overAllocate;
+        std.debug.print("nMethods: {}\n", .{self.nMethods});
+        for (self.methodSlice()) |*de|
+            de.* = DispatchElement.empty;
+        return self;
+    }
     const Self = @This();
     const Fixed = enum {
         // value,
@@ -1227,7 +1236,7 @@ const Dispatch = struct {
     };
     const numberOfFixed: usize = @typeInfo(Fixed).@"enum".fields.len;
     const matchSize: usize = 5;
-    const overAllocate = numberOfFixed + matchSize - 1;
+    const overAllocate = numberOfFixed + (matchSize - 1) - 1; // extra -1 is for space used by methodStart
     const loadFactor = 70; // hashing load factor
     const DispatchState = enum(u64) { clean, beingUpdated, dead };
     var empty = Self{
@@ -1236,8 +1245,8 @@ const Dispatch = struct {
         .state = .clean,
         .methodStart = DispatchElement.empty,
     };
-    fn allocationSize(nMethods: usize) usize {
-        return @sizeOf(Self) + @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5,nMethods)) + overAllocate) - @sizeOf(@TypeOf(empty.methodStart));
+    fn allocationSize(nMethods: usize) usize { // includes the header, so may need to subtract 1
+        return @divExact(@sizeOf(Self) + @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate), @sizeOf(Object));
     }
     var dispatches = [_]*Self{&empty} ** max_classes;
     inline fn methods(self: *const Self) [*]const DispatchElement {
@@ -1306,7 +1315,7 @@ const Dispatch = struct {
     inline fn lookupMethod(self: *const Self, signature: Signature) *const CompiledMethod {
         const index = getIndex(signature, self.nMethods);
         const des: [*]const DispatchElement = self.methods() + index;
-        if (DispatchElement.match(des,matchSize,signature)) |method|
+        if (DispatchElement.match(des, matchSize, signature)) |method|
             return method;
         unreachable;
     }
@@ -1372,9 +1381,10 @@ const Dispatch = struct {
     }
 };
 test "dispatch" {
-    var array align(@alignOf(Dispatch)) = [_]u8{undefined} ** Dispatch.allocationSize(0);
-    const dispatch: *Dispatch = @ptrCast(&array);
-    const selector = Signature.from(Sym.value,.SmallInteger);
+    var array align(@alignOf(Dispatch)) = [_]Object{undefined} ** Dispatch.allocationSize(0);
+    std.debug.print("target: {}\n", .{smallestPrimeAtLeast(@max(5, 0))});
+    const dispatch = Dispatch.init(&array);
+    const selector = Signature.from(Sym.value, .SmallInteger);
     try std.testing.expectEqual(null, dispatch.lookupMethod(selector));
 }
 pub fn PolymorphicInlineCache(comptime picSize: usize) type {

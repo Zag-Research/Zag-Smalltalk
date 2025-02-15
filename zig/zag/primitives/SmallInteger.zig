@@ -306,10 +306,10 @@ test "embedded add" {
 test "embedded add for LLVM experiment" {
     const expectEqual = std.testing.expectEqual;
     var prog = compileMethod(Sym.value, 0, 0, .none, .{
-        &e.pushLiteral,       Object.from(3),
-        &e.pushLiteral,       Object.from(40),
-        &e.SmallInteger.@"+", &e.pushLiteral,
-        Object.from(-1),      &e.SmallInteger.@"+",
+        &e.pushLiteral,        Object.from(3),
+        &e.pushLiteral,        Object.from(40),
+        &e.SmallInteger.@"+",  &e.pushLiteral,
+        Object.from(-1),       &e.SmallInteger.@"+",
         &e.returnTopNoContext, Object.from(0),
     });
     const result = testExecute(&prog);

@@ -35,7 +35,7 @@ fn call(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv
     const method = pc.method();
     const newPc = PC.init(method.codePtr());
     if (process.needsCheck()) return @call(tailCall, Process.check, .{ newPc, sp, process, context, undefined });
-    return @call(tailCall, method.executeFn.f, .{ newPc.next(), sp, process, context, Extra.from(method)});
+    return @call(tailCall, method.executeFn.f, .{ newPc.next(), sp, process, context, Extra.from(method) });
 }
 pub fn classCase(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
@@ -326,7 +326,8 @@ test "send with dispatch direct" {
     });
     const methodV = compileMethod(Sym.value, 0, 0, .none, .{
         &push42,
-        &returnTopNoContext, 1,
+        &returnTopNoContext,
+        1,
     });
     execute.init();
     methodV.asCompiledMethodPtr().forDispatch(.UndefinedObject);
@@ -343,7 +344,7 @@ test "simple return via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        &pushLiteral,     42,
+        &pushLiteral,        42,
         &returnTopNoContext, 1,
     });
     var te = Execution.new();
