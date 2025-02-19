@@ -146,7 +146,7 @@ fib: anInt
 		  ifTrue: [ 1 ]
 		  ifFalse: [ (self fib: anInt - 1) + (self fib: anInt - 2) ]
 "
-
+"see version in Integer"
 	| cgNoInline cgInline |
 	ASInliner reset.
 	cgNoInline := (ASCodeGenerator
@@ -234,6 +234,8 @@ ASInlineWherePossibleTest >> test_new_inline_block [
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
+	self assert: newInlineBlock returnTop equals: ASCReturnTop.
+	"create a new test that determines when a context should be created and when after inlining the context is no longer required"
 
 	blockAST := ASBlockNode
 		            arguments: #(  )
@@ -243,6 +245,8 @@ ASInlineWherePossibleTest >> test_new_inline_block [
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCTopClosureBlock.
+
+
 
 	blockAST := ASBlockNode
 		            arguments: #(  )
@@ -258,6 +262,25 @@ ASInlineWherePossibleTest >> test_new_inline_block [
 		            locals: #(  )
 		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
 	methodBlock := ASCInlineClosureBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCTopClosureBlock.
+	
+	
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { ASLiteral literal: 4 }.
+	methodBlock := ASCInlineMethodBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
+	
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
+	methodBlock := ASCInlineMethodBlock new.
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCTopMethodClosureBlock
