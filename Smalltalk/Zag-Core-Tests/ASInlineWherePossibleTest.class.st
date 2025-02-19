@@ -72,15 +72,50 @@ blockValueNonlocal
 ]
 
 { #category : 'tests' }
+ASInlineWherePossibleTest >> testEvaluateBlockValueWithBlock [
+	"
+blockValueWithBlock
+
+	^ [ [ 4 ] value ] value
+"
+
+	| cgNoInline cgInline |
+	"ASInliner reset.
+	cgNoInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #blockValueWithBlock)
+		              inline: 0;
+		              finalAnalysis.
+	ASInliner reset.
+	
+	self
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	"
+	cgInline := (ASCodeGenerator
+		             targetClass: ASCompileTestClass1
+		             selector: #blockValueWithBlock)
+		            inline: 1000;
+		            finalAnalysis.
+	cgInline inspect.
+
+
+	self assert: cgInline basicBlocks size equals: 3
+]
+
+{ #category : 'tests' }
 ASInlineWherePossibleTest >> testEvaluatefib [
+	"
+fib: anInt
 
+	^ anInt < 2
+		  ifTrue: [ 1 ]
+		  ifFalse: [ (self fib: anInt - 1) + (self fib: anInt - 2) ]
 "
-blockValue
 
-	^ [ 4 ] value 
-"
-| cgNoInline cgInline |
-ASInliner reset.
+	| cgNoInline cgInline |
+	ASInliner reset.
 	cgNoInline := (ASCodeGenerator
 		               targetClass: ASCompileTestClass1
 		               selector: #fib:)
@@ -88,19 +123,15 @@ ASInliner reset.
 		              finalAnalysis.
 	ASInliner reset.
 	cgInline := (ASCodeGenerator
-		               targetClass: ASCompileTestClass1
-		               selector: #fib:)
-		              inline: 1000;
-		              finalAnalysis.
+		             targetClass: ASCompileTestClass1
+		             selector: #fib:)
+		            inline: 1000;
+		            finalAnalysis.
 	cgInline inspect.
-	
-	self
-		assert: (cgNoInline basicBlocks size)
-		equals: 1.
-		
-	self
-		assert: (cgInline basicBlocks size)
-		equals: 3
+
+	self assert: cgNoInline basicBlocks size equals: 1.
+
+	self assert: cgInline basicBlocks size equals: 3
 ]
 
 { #category : 'tests' }
@@ -141,7 +172,11 @@ ASInliner reset.
 
 { #category : 'tests' }
 ASInlineWherePossibleTest >> testNewInlineMethod [
+"
+fooBarBlock
 
+	^ self bar: [ 42 ]
+"
 	| cgNoInline inlineBlock |
 	ASInliner reset.
 	cgNoInline := (ASCodeGenerator
@@ -149,9 +184,9 @@ ASInlineWherePossibleTest >> testNewInlineMethod [
 		               selector: #fooBarBlock)
 		              inline: 0;
 		              finalAnalysis.
-	
-	inlineBlock := cgNoInline newInlineMethod: ASCompileTestClass1 >> #fooBarBlock.
-	
+
+	inlineBlock := cgNoInline newInlineMethod:
+		               ASCompileTestClass1 >> #fooBarBlock
 ]
 
 { #category : 'tests' }

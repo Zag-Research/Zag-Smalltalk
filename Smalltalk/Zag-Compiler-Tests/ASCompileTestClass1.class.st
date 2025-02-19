@@ -97,6 +97,12 @@ ASCompileTestClass1 >> blockValueNonlocal [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockValueWithBlock [
+
+	^ [ [ 4 ] value ] value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> bracketSend [ 
 
 	5 + (self fib: 2)
