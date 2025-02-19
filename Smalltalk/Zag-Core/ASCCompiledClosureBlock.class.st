@@ -64,11 +64,6 @@ ASCCompiledClosureBlock >> labelExtra: s [
 
 ]
 
-{ #category : 'instance creation' }
-ASCCompiledClosureBlock >> newInlinedBlock: aCompileMethod [ 
-	^ ASCInlineMethodBlock new
-]
-
 { #category : 'printing' }
 ASCCompiledClosureBlock >> printOn: aStream [
 

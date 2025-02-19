@@ -6,6 +6,8 @@ const stdout = std.io.getStdOut().writer();
 const treap = @import("treap.zig");
 const stats = @import("stats.zig");
 
+// better primality tests can be found described at: https://t5k.org/prove/prove2_3.html (and generally more about primes at t5k.org)
+
 const bits = init: {
     var initial_value: [0x10000]bool = undefined;
     init_bits(initial_value[0..]);
@@ -32,63 +34,102 @@ fn init_bits(array: []bool) void {
     }
 }
 inline fn isPrime(p: anytype) bool {
-    if (p % 2 == 0) return p == 2;
     if (p < bits.len) return bits[p];
     return isPrimeSearch(p);
 }
 fn isPrimeSearch(p: anytype) bool {
+    if (p & 1 == 0) return false;
     var i: usize = 3;
     while (i * i < p) : (i += 2) {
+        if (i < bits.len and bits[i]) {
+            if (p % i == 0) return false;
+        } else if (isPrime(i)) {
+            if (p % i == 0) return false;
+        }
+    }
+    return true;
+}
+fn isProbablyPrime(p: anytype) bool {
+    if (p < bits.len) return bits[p];
+    if (p & 1 == 0) return false;
+    var i: usize = 3;
+    while (i < bits.len and i * i < p) : (i += 2) {
         if (bits[i]) {
             if (p % i == 0) return false;
         }
     }
     return true;
 }
-test "prime diffs" {
-    var prev: usize = 0;
-    var sum: usize = 0;
-    var n: usize = 0;
-    var p: usize = 16;
-    for (&bits, 0..) |b, i| {
-        if (b) {
-            sum += i - prev;
-            prev = i;
-            n += 1;
-        }
-        if (i + 1 == p) {
-            //            std.debug.print("\naverage diff - first {}: {d:.2} ", .{ p, @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(n)) });
-            p *= 16;
-        }
-    }
-}
-pub fn smallestPrimeAtLeast(min: anytype) @TypeOf(min) {
-    var i = (min & ~@as(@TypeOf(min), 1)) + 1;
+pub fn smallestPrimeAtLeast(min: usize) usize {
+    var i = (min & ~@as(usize, 1)) + 1;
     while (!isPrime(i)) : (i += 2) {}
     return i;
 }
-pub fn largestPrimeLessThan(max: u32) u32 {
+pub fn largestPrimeLessThan(max: usize) usize {
     if (max <= 4) return max - 1;
-    var i = (max & ~@as(u32, 1)) - 1;
+    var i = (max & ~@as(usize, 1)) - 1;
     while (!isPrime(i)) : (i -= 2) {}
     return i;
 }
-test "primes1" {
+test "primes" {
     try std.testing.expect(!isPrime(1));
     try std.testing.expect(isPrime(2));
     try std.testing.expect(isPrime(3));
     try std.testing.expect(!isPrime(4));
     try std.testing.expect(isPrime(5));
     try std.testing.expect(!isPrime(6));
+    try std.testing.expect(!isPrime(3215031751));
+    try std.testing.expect(isPrime(4294836197));
+    try std.testing.expect(!isPrime(4294836198));
+    try std.testing.expect(!isPrime(4294836199));
+    try std.testing.expect(isPrime(8589934583));
+}
+test "probable primes" {
+    try std.testing.expect(isProbablyPrime(9223372036854775783));
+    // 9223372036854775783 is actually prime, but isPrime is too slow for such a large number
+    try std.testing.expect(!isProbablyPrime(9223372036854775784));
+    try std.testing.expect(!isProbablyPrime(9223372036854775785));
+    try std.testing.expect(!isProbablyPrime(9223372036854775787));
+    try std.testing.expect(isProbablyPrime(9223372036854775777));
+    try std.testing.expect(!isPrime(9223372036854775777));
+}
+test "primes less than" {
     try std.testing.expectEqual(largestPrimeLessThan(3), 2);
     try std.testing.expectEqual(largestPrimeLessThan(4), 3);
     try std.testing.expectEqual(largestPrimeLessThan(5), 3);
     try std.testing.expectEqual(largestPrimeLessThan(6), 5);
     try std.testing.expectEqual(largestPrimeLessThan(7), 5);
     try std.testing.expectEqual(largestPrimeLessThan(65535), 65521);
-    const c32 = largestPrimeLessThan(65535 * 65535);
-    try std.testing.expectEqual(c32, 4294836197);
-    try std.testing.expectEqual(smallestPrimeAtLeast(c32 - 13), 4294836197);
+    try std.testing.expectEqual(largestPrimeLessThan(65535 * 65535), 4294836197);
+    try std.testing.expectEqual(largestPrimeLessThan(0x100000000), 4294967291);
+    try std.testing.expectEqual(largestPrimeLessThan(0x100000001), 4294967291);
+    try std.testing.expectEqual(largestPrimeLessThan(0x200000001), 8589934583);
+//    try std.testing.expectEqual(largestPrimeLessThan(0x7fffffffffffffff), 4294836197);
+}
+test "primes at least" {
+    try std.testing.expectEqual(smallestPrimeAtLeast(5), 5);
+    try std.testing.expectEqual(smallestPrimeAtLeast(6), 7);
+    try std.testing.expectEqual(smallestPrimeAtLeast(4294836197 - 13), 4294836197);
+}
+test "prime diffs" {
+    if (true) return error.SkipZigTest;
+    var tests: usize = 0;
+    var n: usize = 0;
+    var p: usize = 16;
+    for (&bits, 0..) |b, i| {
+        if (b) {
+            n += 1;
+            tests += 1;
+        }
+        else if (i & 1 == 1) {
+            tests += 1;
+        }
+        if (i + 1 == p) {
+            std.debug.print("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)) , n});
+            p *= 16;
+            tests = 0;
+        }
+    }
 }
 
 var prime: u32 = 0;

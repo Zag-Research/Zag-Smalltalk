@@ -105,6 +105,11 @@ ASStatement >> maxDepth [
 ]
 
 { #category : 'compiling' }
+ASStatement >> newInlineBlock: aDispatchableBlock [
+	^ aDispatchableBlock newInlineBlockReturnSelf
+]
+
+{ #category : 'compiling' }
 ASStatement >> zigWalk: aGenerator [
 
 	self subclassResponsibility 

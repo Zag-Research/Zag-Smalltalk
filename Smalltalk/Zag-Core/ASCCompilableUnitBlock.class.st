@@ -23,6 +23,16 @@ ASCCompilableUnitBlock >> locals: locals parameters: arguments [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'instance creation' }
+ASCCompilableUnitBlock >> newInlinedBlock: aBlockAST [
+	"What are we trying to inline? 
+		- send that assigns to a variable?
+		- send that returns value?
+	"
+
+	^ aBlockAST newInlineBlock: self
+]
+
 { #category : 'API' }
 ASCCompilableUnitBlock >> returnEmpty [
 

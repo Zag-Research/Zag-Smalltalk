@@ -31,7 +31,7 @@ const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
-const MethodSignature = execute.MethodSignature;
+const Extra = execute.Extra;
 const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 
 //test "force dispatch load" {
@@ -50,6 +50,7 @@ const Process = extern struct {
         trapContextNumber: u64,
         debugFn: execute.ThreadedFn,
         sp: SP,
+        process: Object,
         currHeap: HeapObjectArray,
         currHp: HeapObjectArray,
         currEnd: HeapObjectArray,
@@ -106,7 +107,7 @@ const nonFlags = ~flagMask;
 pub inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: MethodSignature) callconv(stdCall) SP {
+pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) callconv(stdCall) SP {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 pub inline fn checkBump(self: *align(1) Self) *align(1) Self {

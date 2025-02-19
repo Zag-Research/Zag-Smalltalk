@@ -497,6 +497,11 @@ ASCodeGenerator >> returnEmpty [
 	^ currentCodeUnit returnEmpty
 ]
 
+{ #category : 'threaded words' }
+ASCodeGenerator >> returnNonLocal [
+	code returnNonLocal 
+]
+
 { #category : 'API' }
 ASCodeGenerator >> returnSelf [
 

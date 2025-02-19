@@ -117,14 +117,6 @@ pub inline fn bitsToRepresent(value: anytype) u7 {
     @compileError("bitsToRepresent not implemented for " ++ @typeName(T));
 }
 
-inline fn uType(bits: u16) type {
-    return @Type(.{ .int = .{ .signedness = .unsigned, .bits = bits } });
-}
-pub inline fn largerPowerOf2(size: anytype) u64 {
-    if (size <= 1) return 1;
-    const bits = bitsToRepresent(size - 1);
-    return @as(u64, 1) << @as(u6, @truncate(bits));
-}
 test "checking bitsToRepresent" {
     const expectEqual = std.testing.expectEqual;
     try expectEqual(bitsToRepresent(15), 4);
@@ -136,6 +128,11 @@ test "checking bitsToRepresent" {
     try expectEqual(bitsToRepresent(@as(u16, 255)), 8);
     const t4092: u12 = 4092;
     try expectEqual(bitsToRepresent(t4092), 12);
+}
+pub inline fn largerPowerOf2(value: anytype) u64 {
+    if (value <= 1) return 1;
+    const bits = bitsToRepresent(value - 1);
+    return @as(u64, 1) << @as(u6, @truncate(bits));
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
@@ -149,8 +146,8 @@ test "check largerPowerOf2" {
     const t4092: u12 = 4092;
     try expectEqual(largerPowerOf2(t4092), 4096);
 }
-pub inline fn smallerPowerOf2(size: anytype) u64 {
-    return largerPowerOf2(size + 1) / 2;
+pub inline fn smallerPowerOf2(value: anytype) u64 {
+    return largerPowerOf2(value + 1) / 2;
 }
 test "check smallerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
@@ -161,4 +158,21 @@ test "check smallerPowerOf2" {
     try expectEqual(smallerPowerOf2(@as(u16, 17)), 16);
     try expectEqual(smallerPowerOf2(@as(u16, 33)), 32);
     try expectEqual(smallerPowerOf2(@as(u16, 255)), 128);
+}
+pub inline fn sqrtPowerOf2(value: anytype) u64 {
+    if (value <= 1) return 1;
+    const bits = @divTrunc(bitsToRepresent(value-1)+1,2);
+    return @as(u64, 1) << @as(u6, @truncate(bits));
+}
+test "check sqrtPowerOf2" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(sqrtPowerOf2(@as(u16, 1)), 1);
+    try expectEqual(sqrtPowerOf2(@as(u16, 2)), 2);
+    try expectEqual(sqrtPowerOf2(@as(u16, 15)), 4);
+    try expectEqual(sqrtPowerOf2(@as(u16, 16)), 4);
+    try expectEqual(sqrtPowerOf2(@as(u16, 17)), 8);
+    try expectEqual(sqrtPowerOf2(@as(u16, 33)), 8);
+    try expectEqual(sqrtPowerOf2(@as(u16, 64)), 8);
+    try expectEqual(sqrtPowerOf2(@as(u16, 65)), 16);
+    try expectEqual(sqrtPowerOf2(@as(u16, 255)), 16);
 }

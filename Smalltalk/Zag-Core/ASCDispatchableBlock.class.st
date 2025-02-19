@@ -49,6 +49,16 @@ ASCDispatchableBlock >> locals: locals parameters: arguments [
 ASCDispatchableBlock >> methodBlock [
 ]
 
+{ #category : 'accessing' }
+ASCDispatchableBlock >> newInlineBlockNonLocalReturn [
+	^ ASCTopClosureBlock new
+]
+
+{ #category : 'accessing' }
+ASCDispatchableBlock >> newInlineBlockReturnSelf [
+	^ ASCInlineClosureBlock new
+]
+
 { #category : 'writing' }
 ASCDispatchableBlock >> outputTo: output [
 

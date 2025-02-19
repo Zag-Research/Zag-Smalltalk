@@ -26,15 +26,23 @@ ASCInlinedBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
-{ #category : 'instance creation' }
-ASCInlinedBlock >> newInlinedBlock: aMethodAST [
-	^ ASCInlineMethodBlock new
+{ #category : 'adding' }
+ASCInlinedBlock >> initParameterNamed: aSymbol [
+
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
 ]
 
 { #category : 'API' }
 ASCInlinedBlock >> returnTopFor: aBasicBlock [ 
 
 	^ aBasicBlock branchReturnTop: branchBlock 
+]
+
+{ #category : 'initialization' }
+ASCInlinedBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
+	
+	label := aClass name,'.',aString
 ]
 
 { #category : 'as yet unclassified' }

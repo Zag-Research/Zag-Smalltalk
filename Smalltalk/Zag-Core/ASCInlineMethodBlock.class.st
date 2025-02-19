@@ -13,18 +13,6 @@ Class {
 }
 
 { #category : 'API' }
-ASCInlineMethodBlock >> branchReturnTop: aBasicBlock [ 
-	self addOperation: (ASCBranchReturnTop with: branchBlock)
-]
-
-{ #category : 'adding' }
-ASCInlineMethodBlock >> initParameterNamed: aSymbol [
-
-	stack := stack initParameterNamed: aSymbol.
-	^ stack data: (AStSubClass new dataClass: Object)
-]
-
-{ #category : 'API' }
 ASCInlineMethodBlock >> locals: locals parameters: arguments [ 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
@@ -39,27 +27,16 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 	stack := stack nameStack: names offset: 0 forBlock: self
 ]
 
-{ #category : 'instance creation' }
-ASCInlineMethodBlock >> newInlinedBlock: aMethodAST [
-	^ ASCCompiledClosureBlock new
-]
-
 { #category : 'as yet unclassified' }
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 
 	returnBlock := aBasicBlock
 ]
 
-{ #category : 'initialization' }
-ASCInlineMethodBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
-	
-	label := aClass name,'.',aString
-]
-
 { #category : 'API' }
 ASCInlineMethodBlock >> selfElementClass [
 
-	^ ASStackSelf
+	^ ASStackNamedIndirect 
 ]
 
 { #category : 'API' }

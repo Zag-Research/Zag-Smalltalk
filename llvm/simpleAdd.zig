@@ -14,10 +14,8 @@ const target_machine = llvm.target_machine;
 
 pub fn main() void {
 
-    // LLVM setup logic
-    _ = target.LLVMInitializeNativeTarget();
-    _ = target.LLVMInitializeNativeAsmPrinter();
-    _ = target.LLVMInitializeNativeAsmParser();
+    // LLVM target specific setup logic
+    target.initNativeTarget();
 
     // Create downward growing stack - smaller indices for more pushes
     var stack: [5]i64 = .{ 0, 0, 0, 4, 5 };
@@ -114,7 +112,7 @@ pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) 
         std.debug.print("Module verification passed.\n", .{});
     }
 
-    std.debug.print("\n--- ORC JIT IR DUMP ---\n", .{});
+    std.debug.print("\n--- IR DUMP ---\n", .{});
     core.LLVMDumpModule(module);
     std.debug.print("--- END IR ---\n\n", .{});
 
