@@ -55,6 +55,11 @@ ASReturn >> maxDepth [
 	^expression maxDepth
 ]
 
+{ #category : 'compiling' }
+ASReturn >> newInlineBlock: aDispatchableBlock [
+	^ aDispatchableBlock newInlineBlockNonLocalReturn
+]
+
 { #category : 'printing' }
 ASReturn >> printOn: s [
 
@@ -78,7 +83,8 @@ ASReturn >> zigWalk: aGenerator [
 { #category : 'compiling' }
 ASReturn >> zigWalkBlockFinal: aGenerator [
 
-	(expression zigWalkForNonLocal: aGenerator) ifFalse: [
+	"(expression zigWalkForNonLocal: aGenerator) ifFalse: ["
+	(expression zigWalkForReturn: aGenerator) ifFalse: [
 		^ aGenerator returnNonLocal ]
 ]
 

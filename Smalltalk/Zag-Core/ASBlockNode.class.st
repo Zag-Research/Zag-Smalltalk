@@ -36,6 +36,11 @@ ASBlockNode >> maxDepth [
 	^locals size
 ]
 
+{ #category : 'compiling' }
+ASBlockNode >> newInlineBlock: aDispatchableBlock [
+  ^ body last newInlineBlock: aDispatchableBlock 
+]
+
 { #category : 'accessing' }
 ASBlockNode >> pragmas [
 

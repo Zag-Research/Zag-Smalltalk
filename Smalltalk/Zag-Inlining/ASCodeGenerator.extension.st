@@ -9,14 +9,21 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 	[
 	| inlineBlock |
 	returnBlock := common.
-	inlineBlock := self newInlineBlockClosure.
+	
 	code removeLastOperation.
-	self branch: inlineBlock.
-	code := inlineBlock.
+	
 	blockClosure := (code stackBelow: offset) stackValue.
 	blockClosures remove: blockClosure.
+	
+	inlineBlock := self newInlinedBlock: blockClosure ast.
+	
+	
+	self branch: inlineBlock.
+	code := inlineBlock.
+	
 	inlineBlock branch: returnBlock.
 	blockClosure ast zigWalkMethod: self.
+	
 	code := returnBlock ] ensure: [
 		returnBlock := savedReturn.
 		targetClass := savedTargetClass ]

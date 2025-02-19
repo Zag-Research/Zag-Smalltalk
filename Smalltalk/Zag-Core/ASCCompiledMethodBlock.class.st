@@ -60,15 +60,6 @@ ASCCompiledMethodBlock >> initialize [
 	methodBlock := self.
 ]
 
-{ #category : 'instance creation' }
-ASCCompiledMethodBlock >> newInlinedBlock: aMethodAST [
-	"What are we trying to inline? 
-		- send that assigns to a variable?
-		- send that returns value?
-	"
-	^ ASCInlineMethodBlock new
-]
-
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> propagateContextFreeFor [
 

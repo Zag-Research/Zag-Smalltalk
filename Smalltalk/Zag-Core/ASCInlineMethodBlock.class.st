@@ -12,11 +12,6 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
-{ #category : 'API' }
-ASCInlineMethodBlock >> branchReturnTop: aBasicBlock [ 
-	self addOperation: (ASCBranchReturnTop with: branchBlock)
-]
-
 { #category : 'adding' }
 ASCInlineMethodBlock >> initParameterNamed: aSymbol [
 
@@ -39,21 +34,10 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 	stack := stack nameStack: names offset: 0 forBlock: self
 ]
 
-{ #category : 'instance creation' }
-ASCInlineMethodBlock >> newInlinedBlock: aMethodAST [
-	^ ASCCompiledClosureBlock new
-]
-
 { #category : 'as yet unclassified' }
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 
 	returnBlock := aBasicBlock
-]
-
-{ #category : 'initialization' }
-ASCInlineMethodBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
-	
-	label := aClass name,'.',aString
 ]
 
 { #category : 'API' }

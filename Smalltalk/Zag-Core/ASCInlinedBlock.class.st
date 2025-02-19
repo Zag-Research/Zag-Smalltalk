@@ -26,15 +26,45 @@ ASCInlinedBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
+{ #category : 'API' }
+ASCInlinedBlock >> branchReturnTop: aBasicBlock [ 
+	self addOperation: (ASCBranchReturnTop with: branchBlock)
+]
+
 { #category : 'instance creation' }
-ASCInlinedBlock >> newInlinedBlock: aMethodAST [
-	^ ASCInlineMethodBlock new
+ASCInlinedBlock >> locals: locals parameters: arguments [
+	locals do: [ :each | self initLocalNamed: each ]
+]
+
+{ #category : 'instance creation' }
+ASCInlinedBlock >> newInlineBlockNonLocalReturn [
+
+	^ ASCTopMethodClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCInlinedBlock >> newInlineBlockReturnSelf [
+
+	^ self class new
+]
+
+{ #category : 'API' }
+ASCInlinedBlock >> returnNonLocal [
+
+	"hasNonLocalReturn := true."
+	^ self addOperation: ASCReturnNonLocal new
 ]
 
 { #category : 'API' }
 ASCInlinedBlock >> returnTopFor: aBasicBlock [ 
 
 	^ aBasicBlock branchReturnTop: branchBlock 
+]
+
+{ #category : 'initialization' }
+ASCInlinedBlock >> selector: aString class: aClass generator: anASCodeGenerator [ 
+	
+	label := aClass name,'.',aString
 ]
 
 { #category : 'as yet unclassified' }
