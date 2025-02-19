@@ -59,11 +59,12 @@ Class {
 		'T_PushStack',
 		'T_PushThisContext',
 		'T_PushThisProcess',
-		'T_ReturnNonLocal',
 		'T_ReturnSelf',
 		'T_ReturnSelfNoContext',
 		'T_ReturnTop',
 		'T_ReturnTopNoContext',
+		'T_ReturnTopNonLocal',
+		'T_ReturnTopNonLocalNoContext',
 		'T_Send',
 		'T_StoreLocal',
 		'T_Swap',
@@ -123,11 +124,12 @@ ZagConstants class >> asArray [
 		T_PushStack.
 		T_PushThisContext.
 		T_PushThisProcess.
-		T_ReturnNonLocal.
 		T_ReturnSelf.
 		T_ReturnSelfNoContext.
 		T_ReturnTop.
 		T_ReturnTopNoContext.
+		T_ReturnTopNonLocal.
+		T_ReturnTopNonLocalNoContext.
 		T_Send.
 		T_StoreLocal.
 		T_Swap.
@@ -315,19 +317,20 @@ ZagConstants class >> initializeThreadedConstants [
 	T_PushStack := 256.
 	T_PushThisContext := 264.
 	T_PushThisProcess := 272.
-	T_ReturnNonLocal := 280.
-	T_ReturnSelf := 288.
-	T_ReturnSelfNoContext := 296.
-	T_ReturnTop := 304.
-	T_ReturnTopNoContext := 312.
-	T_Send := 320.
-	T_StoreLocal := 328.
-	T_Swap := 336.
-	T_TailCallMethod := 344.
-	T_TailSend := 352.
-	T_TailSendNoContext := 360.
-	T_Value := 368.
-	T_ValueColon := 376.
+	T_ReturnSelf := 280.
+	T_ReturnSelfNoContext := 288.
+	T_ReturnTop := 296.
+	T_ReturnTopNoContext := 304.
+	T_ReturnTopNonLocal := 312.
+	T_ReturnTopNonLocalNoContext := 320.
+	T_Send := 328.
+	T_StoreLocal := 336.
+	T_Swap := 344.
+	T_TailCallMethod := 352.
+	T_TailSend := 360.
+	T_TailSendNoContext := 368.
+	T_Value := 376.
+	T_ValueColon := 384.
 
 ]
 
@@ -369,18 +372,19 @@ ZagConstants class >> loadThreadedConstants: array [
 	T_PushStack := array at: 32.
 	T_PushThisContext := array at: 33.
 	T_PushThisProcess := array at: 34.
-	T_ReturnNonLocal := array at: 35.
-	T_ReturnSelf := array at: 36.
-	T_ReturnSelfNoContext := array at: 37.
-	T_ReturnTop := array at: 38.
-	T_ReturnTopNoContext := array at: 39.
-	T_Send := array at: 40.
-	T_StoreLocal := array at: 41.
-	T_Swap := array at: 42.
-	T_TailCallMethod := array at: 43.
-	T_TailSend := array at: 44.
-	T_TailSendNoContext := array at: 45.
-	T_Value := array at: 46.
-	T_ValueColon := array at: 47.
+	T_ReturnSelf := array at: 35.
+	T_ReturnSelfNoContext := array at: 36.
+	T_ReturnTop := array at: 37.
+	T_ReturnTopNoContext := array at: 38.
+	T_ReturnTopNonLocal := array at: 39.
+	T_ReturnTopNonLocalNoContext := array at: 40.
+	T_Send := array at: 41.
+	T_StoreLocal := array at: 42.
+	T_Swap := array at: 43.
+	T_TailCallMethod := array at: 44.
+	T_TailSend := array at: 45.
+	T_TailSendNoContext := array at: 46.
+	T_Value := array at: 47.
+	T_ValueColon := array at: 48.
 
 ]

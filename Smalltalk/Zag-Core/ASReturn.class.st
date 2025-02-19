@@ -79,7 +79,7 @@ ASReturn >> zigWalk: aGenerator [
 ASReturn >> zigWalkBlockFinal: aGenerator [
 
 	(expression zigWalkForNonLocal: aGenerator) ifFalse: [
-		^ aGenerator returnNonLocal ]
+		^ aGenerator returnTopNonLocal ]
 ]
 
 { #category : 'compiling' }

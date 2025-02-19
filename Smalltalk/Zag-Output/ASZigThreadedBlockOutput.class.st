@@ -120,7 +120,7 @@ ASZigThreadedBlockOutput >> visitPushLocalOrBlock: anASVariable [
 { #category : 'visiting' }
 ASZigThreadedBlockOutput >> visitReturnNonLocalTop [
 
-	self putEmbedded: #returnNonLocal;
+	self putEmbedded: #returnTopNonLocal;
 	lf
 ]
 

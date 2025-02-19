@@ -95,7 +95,7 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReference [
 	"  element1 is referenced by both bb1 and bb2 but since bb1 is a nonlocal return the method owns the element1"
 
 	bb1 addOperation: (ASCPushVariable new with: element1).
-	bb1 returnNonLocal.
+	bb1 returnTopNonLocal.
 	bb2 addOperation: (ASCPushVariable new with: element1).
 
 	cg optimizeLocalVariableLocations.
@@ -150,7 +150,7 @@ ASOptimizingVariableOwnershipTest >> testMultipleBlockReferenceOneBlockModifiesW
 	bb1 addOperation: (ASCPushVariable new with: element1).
 	bb1 addOperation: (ASCPopVariable new with: element1).
 	bb1 addOperation: (ASCPushVariable new with: element3).
-	bb1 returnNonLocal.
+	bb1 returnTopNonLocal.
 
 	cg optimizeLocalVariableLocations.
 

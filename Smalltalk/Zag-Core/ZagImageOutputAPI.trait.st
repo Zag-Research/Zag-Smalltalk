@@ -244,12 +244,6 @@ ZagImageOutputAPI >> pushThisProcess [
 ]
 
 { #category : 'threaded words' }
-ZagImageOutputAPI >> returnNonLocal [
-
-	^ self explicitRequirement
-]
-
-{ #category : 'threaded words' }
 ZagImageOutputAPI >> returnSelf [
 
 	^ self explicitRequirement
@@ -269,6 +263,18 @@ ZagImageOutputAPI >> returnTop [
 
 { #category : 'threaded words' }
 ZagImageOutputAPI >> returnTopNoContext [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> returnTopNonLocal [
+
+	^ self explicitRequirement
+]
+
+{ #category : 'threaded words' }
+ZagImageOutputAPI >> returnTopNonLocalNoContext [
 
 	^ self explicitRequirement
 ]

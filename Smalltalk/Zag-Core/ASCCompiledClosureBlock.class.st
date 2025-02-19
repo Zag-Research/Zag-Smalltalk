@@ -76,15 +76,15 @@ ASCCompiledClosureBlock >> printOn: aStream [
 ]
 
 { #category : 'API' }
-ASCCompiledClosureBlock >> returnNonLocal [
-	hasNonLocalReturn := true.
-	^ self addOperation: ASCReturnNonLocal new
-]
-
-{ #category : 'API' }
 ASCCompiledClosureBlock >> returnTopFor: aBasicBlock [
 
 	aBasicBlock returnTop
+]
+
+{ #category : 'API' }
+ASCCompiledClosureBlock >> returnTopNonLocal [
+	hasNonLocalReturn := true.
+	^ self addOperation: ASCReturnNonLocal new
 ]
 
 { #category : 'initialization' }
