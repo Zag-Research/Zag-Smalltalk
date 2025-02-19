@@ -12,7 +12,37 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
-{ #category : 'as yet unclassified' }
+{ #category : 'API' }
+ASCInlineClosureBlock >> branchReturnTop: aBasicBlock [ 
+	self addOperation: (ASCBranchReturnTop with: branchBlock)
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> locals: locals parameters: arguments [
+	arguments do: [ :each | self initParameterNamed: each ].
+	locals do: [ :each | self initLocalNamed: each ].
+	stack := sourceElements := ASStackContext fromStack: stack
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> newInlineBlockNonLocalReturn [
+
+	^ ASCTopMethodClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> newInlineBlockReturnSelf [
+
+	^ self class new
+]
+
+{ #category : 'API' }
+ASCInlineClosureBlock >> returnNonLocal [
+
+	^ self addOperation: (ASCBranchReturnNonLocal with: branchBlock)
+]
+
+{ #category : 'API' }
 ASCInlineClosureBlock >> selfElementClass [
 
 	^ ASStackNamedIndirect

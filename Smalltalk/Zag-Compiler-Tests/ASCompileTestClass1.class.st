@@ -109,6 +109,11 @@ ASCompileTestClass1 >> bracketSend [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> bracketWithValue [
+	^ [ :x | x + 5 ] value: 10
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |

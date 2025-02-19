@@ -12,13 +12,6 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
-{ #category : 'adding' }
-ASCInlineMethodBlock >> initParameterNamed: aSymbol [
-
-	stack := stack initParameterNamed: aSymbol.
-	^ stack data: (AStSubClass new dataClass: Object)
-]
-
 { #category : 'API' }
 ASCInlineMethodBlock >> locals: locals parameters: arguments [ 
 	arguments do: [ :each | self initParameterNamed: each ].
@@ -43,7 +36,7 @@ ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 { #category : 'API' }
 ASCInlineMethodBlock >> selfElementClass [
 
-	^ ASStackSelf
+	^ ASStackNamedIndirect 
 ]
 
 { #category : 'API' }

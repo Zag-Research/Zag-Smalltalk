@@ -26,33 +26,11 @@ ASCInlinedBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
-{ #category : 'API' }
-ASCInlinedBlock >> branchReturnTop: aBasicBlock [ 
-	self addOperation: (ASCBranchReturnTop with: branchBlock)
-]
+{ #category : 'adding' }
+ASCInlinedBlock >> initParameterNamed: aSymbol [
 
-{ #category : 'instance creation' }
-ASCInlinedBlock >> locals: locals parameters: arguments [
-	locals do: [ :each | self initLocalNamed: each ]
-]
-
-{ #category : 'instance creation' }
-ASCInlinedBlock >> newInlineBlockNonLocalReturn [
-
-	^ ASCTopMethodClosureBlock new
-]
-
-{ #category : 'instance creation' }
-ASCInlinedBlock >> newInlineBlockReturnSelf [
-
-	^ self class new
-]
-
-{ #category : 'API' }
-ASCInlinedBlock >> returnNonLocal [
-
-	"hasNonLocalReturn := true."
-	^ self addOperation: ASCReturnNonLocal new
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
 ]
 
 { #category : 'API' }

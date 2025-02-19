@@ -49,24 +49,24 @@ blockValueNonlocal
 
 	| cgNoInline cgInline |
 	ASInliner reset.
-	"
+	
 	cgNoInline := (ASCodeGenerator
 		               targetClass: ASCompileTestClass1
 		               selector: #blockValueNonlocal)
 		              inline: 0;
 		              finalAnalysis.
+	
+	cgNoInline inspect.
+	
+	self assert: cgNoInline basicBlocks size equals: 2.
+	
 	ASInliner reset.
-
-	self assert: cgNoInline basicBlocks size equals: 1.
-"
 	cgInline := (ASCodeGenerator
 		             targetClass: ASCompileTestClass1
 		             selector: #blockValueNonlocal)
 		            inline: 1000;
 		            finalAnalysis.
 	cgInline inspect.
-
-
 
 	self assert: cgInline basicBlocks size equals: 3
 ]
@@ -96,6 +96,39 @@ blockValueWithBlock
 	cgInline := (ASCodeGenerator
 		             targetClass: ASCompileTestClass1
 		             selector: #blockValueWithBlock)
+		            inline: 1000;
+		            finalAnalysis.
+	cgInline inspect.
+
+
+	self assert: cgInline basicBlocks size equals: 3
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> testEvaluateBlockValueWithValue [
+	"
+blockValue
+
+	^ [ 4 ] value 
+"
+
+	| cgNoInline cgInline |
+	"ASInliner reset.
+	cgNoInline := (ASCodeGenerator
+		               targetClass: ASCompileTestClass1
+		               selector: #bracketWithValue)
+		              inline: 0;
+		              finalAnalysis.
+	ASInliner reset.
+	
+	self
+		assert: (cgNoInline basicBlocks size)
+		equals: 1.
+		
+	"
+	cgInline := (ASCodeGenerator
+		             targetClass: ASCompileTestClass1
+		             selector: #bracketWithValue)
 		            inline: 1000;
 		            finalAnalysis.
 	cgInline inspect.
@@ -215,16 +248,16 @@ ASInlineWherePossibleTest >> test_new_inline_block [
 		            arguments: #(  )
 		            locals: #(  )
 		            body: { (ASLiteral literal: 4) }.
-	methodBlock := ASCInlinedBlock new.
+	methodBlock := ASCInlineClosureBlock new.
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
-	self assert: newInlineBlock class equals: ASCInlinedBlock.
+	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
 
 	blockAST := ASBlockNode
 		            arguments: #(  )
 		            locals: #(  )
 		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
-	methodBlock := ASCInlinedBlock new.
+	methodBlock := ASCInlineClosureBlock new.
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCTopMethodClosureBlock
