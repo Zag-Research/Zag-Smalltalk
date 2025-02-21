@@ -108,7 +108,10 @@ ManifestZagCore class >> ruleLongMethodsRuleV1FalsePositive [
 ManifestZagCore class >> ruleMinMaxRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASTThreadFormat #temporaryNames #false)) #'2022-08-30T18:32:18.834631-03:00') #(#(#RGMethodDefinition #(#AStExactClass #value: #false)) #'2023-10-06T17:33:14.213283-04:00') #(#(#RGMethodDefinition #(#AStExactClass #store: #false)) #'2023-10-06T21:44:23.963698-04:00') )
+	^ #( #( #( #RGMethodDefinition #( #AStExactClass #value: #false ) )
+	        #'2023-10-06T17:33:14.213283-04:00' )
+	     #( #( #RGMethodDefinition #( #AStExactClass #store: #false ) )
+	        #'2023-10-06T21:44:23.963698-04:00' ) )
 ]
 
 { #category : 'code-critics' }
