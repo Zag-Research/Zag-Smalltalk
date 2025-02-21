@@ -4,8 +4,3 @@ Extension { #name : 'ArrayedCollection' }
 ArrayedCollection >> astFields [
 	^ self
 ]
-
-{ #category : '*Zag-Core' }
-ArrayedCollection >> astFormat [
-	^ self subclassResponsibility
-]

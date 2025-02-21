@@ -36,6 +36,13 @@ SmallInteger >> siPrim2: aNumber [
 ]
 
 { #category : '*Zag-Core-Tests' }
+SmallInteger >> siPrimZ: aNumber [
+
+	<primitive: 'foo' module: 'zag-none'>
+	^ 42
+]
+
+{ #category : '*Zag-Core-Tests' }
 SmallInteger >> testDiv: aNumber [
 	"Primitive. Divide the receiver by the argument and return the result if the division is exact. 
 	Used in Zag tests"

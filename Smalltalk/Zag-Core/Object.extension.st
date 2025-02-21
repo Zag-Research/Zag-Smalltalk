@@ -18,11 +18,6 @@ Object >> astFields [
 ]
 
 { #category : '*Zag-Core' }
-Object >> astFormat [
-	^ 1
-]
-
-{ #category : '*Zag-Core' }
 Object >> children [
 "return and empty list as the default children of any element"
  ^  {  }
