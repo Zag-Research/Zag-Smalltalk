@@ -27,9 +27,9 @@ ASZigInspectionTest >> testInspectionOfZagBlocksForFib [
 	| ast output |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #fib:.
 
-	output := ASZigCPSOutput testing
+	output := ASTextOutput testing
 		          context: file;
 		          generateCode: ast.
 
-	output codeGenerator methodBlock inspect
+	output codeGenerator inspect
 ]

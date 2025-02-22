@@ -16,7 +16,9 @@ Class {
 ASStackNamedIndirect >> at: aSymbol [
 
 	self halt.
-	^ (myScope at: aSymbol) referenceVariable: self
+	"Dave I'm not sure what referenceVariable is suppose to do."
+	"^ (myScope at: aSymbol) referenceVariable: self"
+	^ myScope at: aSymbol
 ]
 
 { #category : 'instance creation' }

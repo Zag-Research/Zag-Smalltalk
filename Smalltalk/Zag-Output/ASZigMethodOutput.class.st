@@ -16,7 +16,7 @@ ASZigMethodOutput >> codeGenerator [
 	^ codeGenerator ifNil: [
 		  codeGenerator := self codeGeneratorClass new
 			                   parentCodeGenerator: parentCodeGenerator;
-			                   output: self;
+			                   outputTo: self;
 			                   inline: inline;
 			                   targetClass: forClass;
 			                   enclosingScope: parentCodeGenerator ]

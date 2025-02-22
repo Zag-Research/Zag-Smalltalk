@@ -526,7 +526,9 @@ ASCBasicBlock >> pushLiteral: aLiteral [
 { #category : 'API' }
 ASCBasicBlock >> pushVariable: aSymbol [
 
-	self addOperation: ((stack at: aSymbol) basicBlock: self; pushOperation)
+	"self addOperation: ((stack at: aSymbol) basicBlock: self; pushOperation)"
+	"Dave do we need to set the basic block here? Should this affect the flow?"
+self addOperation: ((stack at: aSymbol) pushOperation)
 ]
 
 { #category : 'testing' }
