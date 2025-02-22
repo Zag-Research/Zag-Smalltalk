@@ -73,14 +73,15 @@ pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) 
     // Return it directly
     _ = core.LLVMBuildRet(builder, param_sp);
 
-    // Verify the module
+    // Verify the module and capture the message
     var errorMessage: ?[*:0]u8 = null;
-    if (analysis.LLVMVerifyModule(module, .LLVMPrintMessageAction, &errorMessage) != 0) {
+    if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, &errorMessage) != 0) {
         if (errorMessage) |msg| {
+            defer core.LLVMDisposeMessage(msg); // ensures cleanup
             std.debug.print("Verification failed: {s}\n", .{msg});
-            core.LLVMDisposeMessage(msg);
+            return error.ModuleVerificationFailure;
         } else {
-            std.debug.print("Verification failed, but no message was provided.\n", .{});
+            return error.UnknownCauseModuleVerificationFailure;
         }
     } else {
         std.debug.print("Module verification passed.\n", .{});

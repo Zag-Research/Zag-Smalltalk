@@ -12,7 +12,7 @@ const target_machine = llvm.target_machine;
 // Build: `zig build -DExamples=true`
 // Run: `./zig-out/bin/example`
 
-pub fn main() void {
+pub fn main() !void {
 
     // LLVM target specific setup logic
     target.initNativeTarget();
@@ -26,8 +26,8 @@ pub fn main() void {
     const module: types.LLVMModuleRef = core.LLVMModuleCreateWithName("module");
     const builder: types.LLVMBuilderRef = core.LLVMCreateBuilder();
 
-    // Create our module
-    _ = try createModule(module, builder);
+    // Fill module with IR
+    _ = try populateModule(module, builder);
 
     // Create the LLJIT Builder
     const jitBuilder = lljit.LLVMOrcCreateLLJITBuilder();
@@ -35,28 +35,25 @@ pub fn main() void {
     // Create the LLJIT Instance
     var jit: types.LLVMOrcLLJITRef = undefined;
     if (lljit.LLVMOrcCreateLLJIT(&jit, jitBuilder) != null) {
-        std.debug.print("Failed to create LLJIT\n", .{});
-        return;
+        return error.LLJITCreationFailure;
     }
 
     // Add IR module to JIT instance
     const dylib = lljit.LLVMOrcLLJITGetMainJITDylib(jit);
     if (dylib == null) {
-        std.debug.print("Failed to get the main JIT dylib.\n", .{});
+        return error.JITDylibRetrievalFailure;
     }
     const threadRef = orc.LLVMOrcCreateNewThreadSafeContext();
     const threadSafeModule = orc.LLVMOrcCreateNewThreadSafeModule(module, threadRef);
 
     if (lljit.LLVMOrcLLJITAddLLVMIRModule(jit, dylib, threadSafeModule) != null) {
-        std.debug.print("Failed to add module to JIT\n", .{});
-        return;
+        return error.AddModuleToJITFailure;
     }
 
     // Look up synbol to execute
     var result: orc.LLVMOrcExecutorAddress = 0;
     if (lljit.LLVMOrcLLJITLookup(jit, &result, "stack_add_top_two") != null) {
-        std.debug.print("Failed to lookup symbol\n", .{});
-        return;
+        return error.SymbolLookupFailure;
     }
 
     const stackAddTopTwoFn: *const fn (*i64) callconv(.C) *i64 = @ptrFromInt(result);
@@ -65,7 +62,7 @@ pub fn main() void {
     std.debug.print("Value at stack pointer: {}\n", .{valueAtNewSp.*});
 }
 
-pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
+pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
     const i64Type: types.LLVMTypeRef = core.LLVMInt64Type();
     const i64PtrType: types.LLVMTypeRef = core.LLVMPointerType(i64Type, 0);
 
@@ -103,10 +100,11 @@ pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) 
     var errorMessage: ?[*:0]u8 = null;
     if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, &errorMessage) != 0) {
         if (errorMessage) |msg| {
+            defer core.LLVMDisposeMessage(msg); // ensures cleanup
             std.debug.print("Verification failed: {s}\n", .{msg});
-            core.LLVMDisposeMessage(msg); // Free the error message
+            return error.ModuleVerificationFailure;
         } else {
-            std.debug.print("Verification failed, but no message was provided.\n", .{});
+            return error.UnknownCauseModuleVerificationFailure;
         }
     } else {
         std.debug.print("Module verification passed.\n", .{});
