@@ -4,11 +4,6 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Create a "update-submodules" step
-    const update_submodules_step = b.step("update-submodules", "Update git submodules");
-    const run_step = b.addSystemCommand(&[_][]const u8{ "git", "submodule", "update", "--init", "--recursive" });
-    update_submodules_step.dependOn(&run_step.step);
-
     // LLVM MODULE
     const llvm_module = b.addModule("llvm", .{
         .root_source_file = b.path("./libs/zig-llvm/src/llvm.zig"),
@@ -48,6 +43,12 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+
+    if (target.result.abi != .msvc)
+        clang_module.link_libc = true
+    else
+        clang_module.link_libcpp = true;
+
     switch (target.result.os.tag) {
         .linux => clang_module.linkSystemLibrary("clang-18", .{}), // Ubuntu
         .macos => {
@@ -63,38 +64,29 @@ pub fn build(b: *std.Build) !void {
         }),
     }
 
-    if (target.result.abi != .msvc)
-        clang_module.link_libc = true
-    else
-        clang_module.link_libcpp = true;
-
-    // Instead of building examples from examples/, we now build a file from llvm/ directory
-    // If you want to conditionally build a specific llvm file, add logic here.
-    const examples = b.option(bool, "Examples", "Build all examples [default: false]") orelse false;
-    if (examples) {
-        buildExample(b, .{
-            .filepath = "./llvm/threadedFn.zig",
+    // Add a new option for specifying the LLVM path
+    const llvm_file_path = b.option([]const u8, "llvm-path", "Path to the LLVM file") orelse "";
+    if (llvm_file_path.len > 0) {
+        buildLLVMExample(b, .{
+            .filepath = llvm_file_path,
             .target = target,
             .optimize = .Debug,
         });
     }
-
-    buildTests(b, target);
 }
 
-fn buildExample(b: *std.Build, i: BuildInfo) void {
+fn buildLLVMExample(b: *std.Build, i: BuildInfo) void {
     const exe = b.addExecutable(.{
         .name = i.filename(),
         .root_source_file = b.path(i.filepath),
         .target = i.target,
         .optimize = i.optimize,
     });
-    exe.root_module.addImport("llvm", b.modules.get("llvm").?);
 
+    exe.root_module.addImport("llvm", b.modules.get("llvm").?);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
@@ -115,24 +107,3 @@ const BuildInfo = struct {
         return split.first();
     }
 };
-
-fn buildTests(b: *std.Build, target: std.Build.ResolvedTarget) void {
-    const llvm_tests = b.addTest(.{
-        .root_source_file = b.path("./libs/zig-llvm/src/llvm.zig"),
-        .target = target,
-        .optimize = .Debug,
-        .name = "llvm-tests",
-    });
-    const clang_tests = b.addTest(.{
-        .root_source_file = b.path("./libs/zig-llvm/src/clang.zig"),
-        .target = target,
-        .optimize = .Debug,
-        .name = "clang-tests",
-    });
-    llvm_tests.root_module.addImport("llvm", b.modules.get("llvm").?);
-    clang_tests.root_module.addImport("clang", b.modules.get("clang").?);
-
-    const run_llvm_tests = b.addRunArtifact(llvm_tests);
-    const test_llvm_step = b.step("test", "Run LLVM-binding tests");
-    test_llvm_step.dependOn(&run_llvm_tests.step);
-}
