@@ -17,11 +17,11 @@ ASCInlineClosureBlock >> branchReturnTop: aBasicBlock [
 	self addOperation: (ASCBranchReturnTop with: branchBlock)
 ]
 
-{ #category : 'instance creation' }
+{ #category : 'accessing' }
 ASCInlineClosureBlock >> locals: locals parameters: arguments [
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
-	stack := sourceElements := ASStackContext fromStack: stack
+	stack := sourceElements := ASStackNamedIndirect fromStack: stack
 ]
 
 { #category : 'instance creation' }
@@ -32,6 +32,23 @@ ASCInlineClosureBlock >> newInlineBlockNonLocalReturn [
 
 { #category : 'instance creation' }
 ASCInlineClosureBlock >> newInlineBlockReturnSelf [
+
+	^ self class new
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> newInlineMethodBlock: anInlineMethodBlock [
+	^ ASCTopMethodClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> newInlineMethodBlockNonLocalReturn [
+
+	^ ASCTopMethodClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCInlineClosureBlock >> newInlineMethodBlockReturnSelf [
 
 	^ self class new
 ]

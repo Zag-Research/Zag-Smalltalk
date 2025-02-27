@@ -110,6 +110,11 @@ ASStatement >> newInlineBlock: aDispatchableBlock [
 ]
 
 { #category : 'compiling' }
+ASStatement >> newInlineMethodBlock: anInlineMethodBlock [
+	^ anInlineMethodBlock newInlineMethodBlockReturnSelf
+]
+
+{ #category : 'compiling' }
 ASStatement >> zigWalk: aGenerator [
 
 	self subclassResponsibility 

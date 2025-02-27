@@ -60,6 +60,16 @@ ASCCompiledMethodBlock >> initialize [
 	methodBlock := self.
 ]
 
+{ #category : 'instance creation' }
+ASCCompiledMethodBlock >> newInlineMethodBlockNonLocalReturn [
+	^ ASCTopClosureBlock new
+]
+
+{ #category : 'instance creation' }
+ASCCompiledMethodBlock >> newInlineMethodBlockReturnSelf [
+	^ ASCInlineClosureBlock new
+]
+
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> propagateContextFreeFor [
 

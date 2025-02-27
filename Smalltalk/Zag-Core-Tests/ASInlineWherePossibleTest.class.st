@@ -223,6 +223,100 @@ fooBarBlock
 ]
 
 { #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forClosureBlockAndNonLocalReturn [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
+	methodBlock := ASCInlineClosureBlock new.
+	methodBlock locals: #() parameters: #().
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCTopMethodClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forClosureBlockAndReturnTop [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASLiteral literal: 4) }.
+	methodBlock := ASCInlineClosureBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forInlineMethodAndNonLocalReturn [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
+	methodBlock := ASCInlineMethodBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCTopMethodClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forInlineMethodAndReturnTop [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { ASLiteral literal: 4 }.
+	methodBlock := ASCInlineMethodBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forMethodAndNonLocalReturn [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASReturn expression: (ASLiteral literal: 4)) }.
+	methodBlock := ASCCompiledMethodBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCTopClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+
+]
+
+{ #category : 'tests' }
+ASInlineWherePossibleTest >> test_newInlineBlock_forMethodAndReturnTop [
+
+	| methodBlock newInlineBlock blockAST |
+	blockAST := ASBlockNode
+		            arguments: #(  )
+		            locals: #(  )
+		            body: { (ASLiteral literal: 4) }.
+	methodBlock := ASCCompiledMethodBlock new.
+	newInlineBlock := methodBlock newInlinedBlock: blockAST.
+
+	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
+	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+	"create a new test that determines when a context should be created and when after inlining the context is no longer required"
+
+]
+
+{ #category : 'tests' }
 ASInlineWherePossibleTest >> test_new_inline_block [
 
 	| methodBlock newInlineBlock blockAST |

@@ -30,7 +30,7 @@ ASCCompilableUnitBlock >> newInlinedBlock: aBlockAST [
 		- send that returns value?
 	"
 
-	^ aBlockAST newInlineBlock: self
+	^ aBlockAST newInlineMethodBlock: self
 ]
 
 { #category : 'API' }

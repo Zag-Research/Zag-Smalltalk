@@ -170,7 +170,7 @@ ASStack >> makeStackTheSource [
 
 { #category : 'instance creation' }
 ASStack >> newElementFor: anASCInlineBlock [ 
-
+	
 ]
 
 { #category : 'accessing' }

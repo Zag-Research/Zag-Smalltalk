@@ -115,7 +115,6 @@ ASCBasicBlock >> branch: aBasicBlock [
 
 { #category : 'adding' }
 ASCBasicBlock >> branchedToFrom: aBasicBlock [
-
 	(sourceBlocks includes: aBasicBlock) ifTrue: [ 
 		self error: 're-adding edge' ].
 	sourceBlocks add: aBasicBlock andIfNewDo: [
@@ -162,7 +161,6 @@ ASCBasicBlock >> copyOfStackFor: aBasicBlock [
 
 { #category : 'adding' }
 ASCBasicBlock >> copyStackFrom: aBasicBlock [
-
 	^ stack := aBasicBlock copyOfStackFor: self
 ]
 

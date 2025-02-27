@@ -27,6 +27,21 @@ ASCInlineMethodBlock >> nameStack: parameterNamesLeftToRight [
 	stack := stack nameStack: names offset: 0 forBlock: self
 ]
 
+{ #category : 'adding' }
+ASCInlineMethodBlock >> newInlineBlock: aBlockAST [
+	^ aBlockAST newInlineBlock: self
+]
+
+{ #category : 'adding' }
+ASCInlineMethodBlock >> newInlineMethodBlockNonLocalReturn [
+	^ ASCTopMethodClosureBlock new
+]
+
+{ #category : 'adding' }
+ASCInlineMethodBlock >> newInlineMethodBlockReturnSelf [
+	^ ASCInlineClosureBlock new
+]
+
 { #category : 'as yet unclassified' }
 ASCInlineMethodBlock >> returnBlock: aBasicBlock [
 

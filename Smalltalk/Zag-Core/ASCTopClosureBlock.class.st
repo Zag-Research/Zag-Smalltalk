@@ -11,3 +11,8 @@ Class {
 	#package : 'Zag-Core',
 	#tag : 'BasicBlocks'
 }
+
+{ #category : 'instance creation' }
+ASCTopClosureBlock >> newInlineBlock: aBlockAST [
+	^ aBlockAST newInlineTopClosureBlock: self
+]

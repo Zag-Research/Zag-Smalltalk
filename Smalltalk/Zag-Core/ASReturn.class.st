@@ -60,6 +60,11 @@ ASReturn >> newInlineBlock: aDispatchableBlock [
 	^ aDispatchableBlock newInlineBlockNonLocalReturn
 ]
 
+{ #category : 'compiling' }
+ASReturn >> newInlineMethodBlock: anInlineMethodBlock [
+	^ anInlineMethodBlock newInlineMethodBlockNonLocalReturn
+]
+
 { #category : 'printing' }
 ASReturn >> printOn: s [
 
