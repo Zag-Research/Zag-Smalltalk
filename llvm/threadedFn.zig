@@ -51,19 +51,49 @@ pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef
 
     // Create a `Code` union struct
     const namedUnionTy = core.LLVMStructCreateNamed(ctx, "CodeUnion");
-    const namedUnionField = core.LLVMArrayType(core.LLVMInt8TypeInContext(ctx), 8);
-    var fields = [_]types.LLVMTypeRef{namedUnionField};
-    core.LLVMStructSetBody(namedUnionTy, &fields[0], 1, 0);
+    const namedUnionField = core.LLVMArrayType(core.LLVMInt8TypeInContext(ctx), 8); // max size of union is 64-bits
+    var namedUnionFields = [_]types.LLVMTypeRef{namedUnionField};
+    core.LLVMStructSetBody(namedUnionTy, &namedUnionFields[0], 1, 0);
+    const codeUnionPtr = core.LLVMPointerType(namedUnionTy, 0);
 
-    // `ThreadedFn` sp parameter
+    // Create a `PC` packed struct
+    const namedPcTy = core.LLVMStructCreateNamed(ctx, "PC");
+    var namedPcFields = [_]types.LLVMTypeRef{codeUnionPtr}; // supposed to hold const codeUnionPtr*
+    core.LLVMStructSetBody(namedPcTy, &namedPcFields[0], 1, 1);
+
+    // Defining ThreadedFn
+
+    // Defining CompiledMethod
+    // - header: HeapHeader,
+    // - stackStructure: Object, // number of local values beyond the parameters
+    // - signature: Signature,
+    // - executeFn: ThreadedFn,
+    // - jitted: ThreadedFn,
+    // - code: [codeSize]Code
+
+    // Create the `Context`
+    // const namedContextTy = core.LLVMStructCreateNamed(ctx, "Context");
+    // const namedContextFields = [_]types.LLVMTypeRef{
+    //     core.LLVMInt64TypeInContext, // header
+    //     // method (CompiledMethodPtr = *CompiledMethod)
+    //     namedPcTy, // tpc
+    //     // npc - ThreadedFn
+    //     namedContextTy, // prevContext
+    //     core.LLVMInt64TypeInContext, // trapContextNumber
+    //     // temps - [nLocals]Object
+    // };
+
+    // `ThreadedFn` sp parameter (*Stack)
     const spTy = core.LLVMPointerType(namedStackTy, 0);
 
-    // Create `ThreadedFn` PC
-    const pcTy = core.LLVMPointerType(namedUnionTy, 0);
+    // `ThreadedFn` process parameter (opaque pointer)
+    const processTy = core.LLVMPointerType(core.LLVMVoidType(), 0);
+
+    // `ThreadedFn` context parameter
 
     // ----- Create the `ThreadedFn` ------
-    var paramTypes: [2]types.LLVMTypeRef = .{ pcTy, spTy };
-    const funcType = core.LLVMFunctionType(spTy, &paramTypes[0], 2, 0);
+    var paramTypes: [4]types.LLVMTypeRef = .{ namedPcTy, spTy, processTy, core.LLVMInt64TypeInContext(ctx) };
+    const funcType = core.LLVMFunctionType(spTy, &paramTypes[0], 4, 0);
     const myThreadedFn: types.LLVMValueRef = core.LLVMAddFunction(module, "pushLiteral", funcType);
 
     // Set pc name
@@ -73,6 +103,14 @@ pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef
     // Set sp name
     const spParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 1);
     core.LLVMSetValueName(spParam, "sp");
+
+    // Set process name (opque pointer)
+    const processParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 2);
+    core.LLVMSetValueName(processParam, "process");
+
+    // Set process name (opque pointer)
+    const sigParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 3);
+    core.LLVMSetValueName(sigParam, "signature");
 
     // Setup function body
     const entryBB: types.LLVMBasicBlockRef = core.LLVMAppendBasicBlock(myThreadedFn, "entry");
