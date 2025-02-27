@@ -12,10 +12,10 @@ const lljit = llvm.jit;
 const engine = llvm.engine;
 const target_machine = llvm.target_machine;
 
-// Build: `zig build -DExamples=true`
-// Run: `./zig-out/bin/example`
+// Build: zig build -Dllvm-path="./libs/threadedFn.zig"
+// Run: ./zig-out/bin/threadedFn
 
-pub fn main() void {
+pub fn main() !void {
 
     // LLVM target specific setup logic
     target.initNativeTarget();
@@ -24,54 +24,65 @@ pub fn main() void {
     const module: types.LLVMModuleRef = core.LLVMModuleCreateWithName("module");
     const builder: types.LLVMBuilderRef = core.LLVMCreateBuilder();
 
-    // Create our module
-    _ = try createModule(module, builder);
+    // Create a ThreadedFn in IR
+    _ = try populateModule(module, builder);
 }
 
-pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
+pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
     const ctx = core.LLVMGetGlobalContext();
 
-    // Build the Stack parameter type
-    const stackName = "Stack";
-    const namedStackTy = core.LLVMStructCreateNamed(ctx, stackName);
-
-    const i64Ty = core.LLVMInt64TypeInContext(ctx);
-    var stackFields = [_]types.LLVMTypeRef{
-        i64Ty, // top
-        i64Ty, // next
-        i64Ty, // third
+    // Create a `TagObject` packed struct type
+    const namedTagObjectTy = core.LLVMStructCreateNamed(ctx, "TagObject");
+    var tagObjectFields = [_]types.LLVMTypeRef{
+        core.LLVMIntTypeInContext(ctx, 3), // tag
+        core.LLVMIntTypeInContext(ctx, 5), // group
+        core.LLVMIntTypeInContext(ctx, 56), // hash
     };
-    // false => not packed
-    core.LLVMStructSetBody(namedStackTy, stackFields[0..], 3, 0);
+    core.LLVMStructSetBody(namedTagObjectTy, &tagObjectFields[0], 3, 1);
 
-    // Create a global variable of type %Stack
-    const zeroStruct = core.LLVMConstNull(namedStackTy);
-    const globalVarName = "stackGlobal";
-    const globalVar = core.LLVMAddGlobal(module, namedStackTy, globalVarName);
-    core.LLVMSetLinkage(globalVar, types.LLVMLinkage.LLVMExternalLinkage);
-    core.LLVMSetInitializer(globalVar, zeroStruct);
-    core.LLVMSetAlignment(globalVar, 8);
+    // Create a `Stack` non-packed struct type
+    const namedStackTy = core.LLVMStructCreateNamed(ctx, "Stack");
+    var namedStackFields = [_]types.LLVMTypeRef{
+        namedTagObjectTy, // top
+        namedTagObjectTy, // next
+        namedTagObjectTy, // third
+    };
+    core.LLVMStructSetBody(namedStackTy, &namedStackFields[0], 3, 0);
 
-    // Create a function: (SP) -> SP
+    // Create a `Code` union struct
+    const namedUnionTy = core.LLVMStructCreateNamed(ctx, "CodeUnion");
+    const namedUnionField = core.LLVMArrayType(core.LLVMInt8TypeInContext(ctx), 8);
+    var fields = [_]types.LLVMTypeRef{namedUnionField};
+    core.LLVMStructSetBody(namedUnionTy, &fields[0], 1, 0);
+
+    // `ThreadedFn` sp parameter
     const spTy = core.LLVMPointerType(namedStackTy, 0);
-    const fnReturnTy = spTy;
-    var paramTypes = [_]types.LLVMTypeRef{spTy};
 
-    const fnTy = core.LLVMFunctionType(fnReturnTy, paramTypes[0..], 1, 0);
-    const fnName = "";
-    const fnVal = core.LLVMAddFunction(module, fnName, fnTy);
+    // Create `ThreadedFn` PC
+    const pcTy = core.LLVMPointerType(namedUnionTy, 0);
 
-    // Optionally set calling convention here
-    // core.LLVMSetFunctionCallConv(fnVal, llvm.LLVMX86StdcallCallConv);
+    // ----- Create the `ThreadedFn` ------
+    var paramTypes: [2]types.LLVMTypeRef = .{ pcTy, spTy };
+    const funcType = core.LLVMFunctionType(spTy, &paramTypes[0], 2, 0);
+    const myThreadedFn: types.LLVMValueRef = core.LLVMAddFunction(module, "pushLiteral", funcType);
 
-    const entryBB = core.LLVMAppendBasicBlockInContext(ctx, fnVal, "entry");
+    // Set pc name
+    const pcParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 0);
+    core.LLVMSetValueName(pcParam, "pc");
+
+    // Set sp name
+    const spParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 1);
+    core.LLVMSetValueName(spParam, "sp");
+
+    // Setup function body
+    const entryBB: types.LLVMBasicBlockRef = core.LLVMAppendBasicBlock(myThreadedFn, "entry");
     core.LLVMPositionBuilderAtEnd(builder, entryBB);
 
-    // Parameter 0 is the incoming pointer
-    const param_sp = core.LLVMGetParam(fnVal, 0);
-
-    // Return it directly
-    _ = core.LLVMBuildRet(builder, param_sp);
+    // Only for testing purposes - enables emission of types textually in the IR
+    _ = core.LLVMBuildAlloca(builder, namedStackTy, "test-stack");
+    _ = core.LLVMBuildAlloca(builder, namedTagObjectTy, "test-tagObject");
+    _ = core.LLVMBuildAlloca(builder, namedUnionTy, "test-union");
+    _ = core.LLVMBuildRet(builder, spParam); // only to adhere to the return type
 
     // Verify the module and capture the message
     var errorMessage: ?[*:0]u8 = null;
@@ -87,10 +98,12 @@ pub fn createModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) 
         std.debug.print("Module verification passed.\n", .{});
     }
 
-    // Dump the IR
     std.debug.print("\n--- IR DUMP ---\n", .{});
     core.LLVMDumpModule(module);
     std.debug.print("--- END IR ---\n\n", .{});
+
+    // Cleanup builder
+    core.LLVMDisposeBuilder(builder);
 
     return module;
 }
