@@ -50,6 +50,17 @@
 // ASTFloat basicIdentityHash - 2171
 
 const execute = @import("execute.zig");
+pub fn findPrimitive(module: Object, primitive: Object) ThreadedFn {
+    unreachable;
+}
+const modules = [_]ModuleMap{
+    @import("primitives/Object.zig").module,
+    @import("primitives/Smallinteger.zig").modules;
+    @import("primitives/Behavior.zig").modules;
+    @import("primitives/BlockClosure.zig").modules;
+    @import("primitives/Boolean.zig").modules;
+    @import("primitives/llvm.zig").modules;
+};
 pub const inlines = struct {
     pub usingnamespace @import("primitives/Object.zig").inlines;
     pub usingnamespace @import("primitives/Smallinteger.zig").inlines;

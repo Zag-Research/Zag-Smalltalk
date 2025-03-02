@@ -33,8 +33,8 @@ We extend this slightly, by using all 8 possible tag values:
 | `eeeeeeee`  | `mmmmmmmm`   | `mmmmmmmm` | `mmmmseee` | `01101001` | `ThunkFloat`              |
 | `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `01110001` | `Symbol`                  |
 | `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `01111001` | `SmallInteger`            |
-| `00000000`  | ...          | `00000000` | `00000000` | `10000001` | `false`                   |
-| `00000000`  | ...          | `00000000` | `00000000` | `10001001` | `true`                    |
+| `00000000`  | ...          | `00000000` | `00000000` | `10000001` | `False`                   |
+| `00000000`  | ...          | `00000000` | `00000000` | `10001001` | `True`                    |
 | `00000000`  | ...          | `uuuuuuuu` | `uuuuuuuu` | `10010001` | `Character`               |
 | `xxxxxxxx`  | ...          | ...        | ...        | `10011001` | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | -          | reserved                  |

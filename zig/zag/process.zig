@@ -38,7 +38,7 @@ const CodeContextPtr = @import("execute.zig").CodeContextPtr;
 //    dispatch.forTest();
 //}
 const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
-m: [@sizeOf(Process)]u8,
+m: [process_total_size]u8,
 const Process = extern struct {
     stack: [stack_size]Object,
     h: Fields,
@@ -48,7 +48,7 @@ const Process = extern struct {
         next: ?*Self,
         id: u64,
         trapContextNumber: u64,
-        debugFn: execute.ThreadedFn,
+        debugFn: ?execute.ThreadedFn.Fn,
         sp: SP,
         process: Object,
         currHeap: HeapObjectArray,
@@ -58,8 +58,8 @@ const Process = extern struct {
     };
     const headerSize = @sizeOf(Fields);
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
-    const stack_size = processAvail / 9;
-    const nursery_size = (processAvail - stack_size) / 2;
+    const nursery_size = (processAvail - processAvail / 9) / 2;
+    const stack_size = processAvail - nursery_size * 2;
     comptime {
         assert(stack_size <= nursery_size);
     }
@@ -67,6 +67,9 @@ const Process = extern struct {
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
     const maxStackObjectSize = @min(HeapHeader.maxLength, stack_size / 4);
 };
+comptime {
+    assert(process_total_size == @sizeOf(Process));
+}
 const Self = @This();
 var allProcesses: ?*Self = null;
 pub inline fn ptr(self: *align(1) const Self) *align(alignment) Process {

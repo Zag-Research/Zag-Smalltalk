@@ -5,7 +5,6 @@ const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
 const checkEqual = zag.utilities.checkEqual;
-const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
@@ -67,13 +66,12 @@ inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
 pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
-    _ = process;
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
     if (self.isOnStack())
         return .{ .sp = self.asNewSp().unreserve(wordsToDiscard), .ctxt = self.previous() };
     trace("\npop: {*}", .{self});
-    @panic("incomplete");
+    _ = .{process, @panic("incomplete")};
     // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
     // const newSp = process.endOfStack() - itemsToKeep.len;
     // for (itemsToKeep,0..) | obj,index | {
@@ -145,10 +143,10 @@ pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: PC) void {
     self.tpc = tpc;
 }
 pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
-    self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
+    self.setReturnBoth(tpc.justPrim(), tpc.next());
 }
-pub inline fn getNPc(self: *const Context) ThreadedFn.Fn {
-    return self.npc.f;
+pub inline fn getNPc(self: *const Context) ThreadedFn {
+    return self.npc;
 }
 pub inline fn setNPc(self: *Context, npc: ThreadedFn) void {
     self.npc = npc;
