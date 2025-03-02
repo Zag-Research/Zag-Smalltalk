@@ -367,7 +367,7 @@ test "simple return via Execution" {
         &returnTopNoContext, 1,
     });
     var te = Execution.new();
-    te.init();
+    te.init(null);
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
@@ -385,7 +385,7 @@ test "context return via Execution" {
         &returnWithContext,
     });
     var te = Execution.new();
-    te.init();
+    te.init(null);
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
@@ -401,7 +401,7 @@ test "context returnTop via Execution" {
         &returnTop,
     });
     var te = Execution.new();
-    te.init();
+    te.init(null);
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 2);
@@ -453,7 +453,7 @@ test "simple executable" {
     });
     var objs = [_]Object{Nil};
     var te = Execution.new();
-    te.init();
+    te.init(null);
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));

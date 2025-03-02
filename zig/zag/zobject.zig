@@ -202,7 +202,7 @@ const TagObject = packed struct(u64) {
     comptime {
         assert(tagAndClassBits == @bitSizeOf(tagAndClassType));
     }
-    const tagAndClass = (@as(u64,1) << tagAndClassBits) - 1;
+    const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     pub inline fn untaggedI(self: Object) i64 {
         return @bitCast(self.rawU() & ~tagAndClass);
     }
@@ -217,7 +217,7 @@ const TagObject = packed struct(u64) {
         const value: i64 = @bitCast(o);
         const shifted = value >> 55;
         if (shifted == 0 or shifted == -1)
-            return oImm(.ThunkImmediate,@bitCast(@as(i56,@truncate(value))));
+            return oImm(.ThunkImmediate, @bitCast(@as(i56, @truncate(value))));
         return null;
     }
     pub inline fn isThunkImmediate(self: Self) bool {
@@ -225,20 +225,20 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn thunkImmediateValue(self: Self) ?Object {
         if (self.isThunkImmediate())
-            return @bitCast(@as(i64,@bitCast(self)) >> 8);
+            return @bitCast(@as(i64, @bitCast(self)) >> 8);
         return null;
     }
     test "ThunkImmediate" {
-        std.debug.print("Test: ThunkImmediate\n",.{});
+        std.debug.print("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
         if (thunkImmediate(Object.from(42))) |value|
-            try ee(Object.from(42),value.thunkImmediateValue());
+            try ee(Object.from(42), value.thunkImmediateValue());
         if (thunkImmediate(Object.from(-42))) |value|
-            try ee(Object.from(-42),value.thunkImmediateValue());
-        try ee(null,thunkImmediate(Object.from(@as(u64,1)<<47)));
+            try ee(Object.from(-42), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(Object.from(@as(u64, 1) << 47)));
     }
     pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
-        return self.tagbits() == oImm(class,0).tagbits();
+        return self.tagbits() == oImm(class, 0).tagbits();
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -282,8 +282,8 @@ const TagObject = packed struct(u64) {
     pub inline fn toIntNoCheck(self: Object) i64 {
         return @as(i56, @bitCast(self.hash));
     }
-     pub inline fn toNatNoCheck(self: Object) u64 {
-         return self.hash;
+    pub inline fn toNatNoCheck(self: Object) u64 {
+        return self.hash;
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         if (!self.isSymbol()) @panic("not a Symbol");
@@ -670,4 +670,3 @@ test "order" {
     try ee(buf2[6], 80);
     try ee(buf2[7], 4);
 }
-    

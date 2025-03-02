@@ -41,7 +41,7 @@ const Stack = struct {
         std.debug.assert(@offsetOf(Stack, "next") == @sizeOf(Object));
         std.debug.assert(@offsetOf(Stack, "third") == @sizeOf(Object) * 2);
     }
-    pub inline fn lessThan(self: SP, other: SP) bool {
+    pub inline fn lessThan(self: SP, other: anytype) bool {
         return @intFromPtr(self) < @intFromPtr(other);
     }
     pub inline fn push(self: SP, v: Object) SP {
@@ -72,6 +72,9 @@ const Stack = struct {
     }
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
+    }
+    pub inline fn sliceTo(self: SP, ptr: anytype) []Object {
+        return self.slice((@intFromPtr(ptr) - @intFromPtr(self)) / @sizeOf(Object));
     }
     pub inline fn at(self: SP, n: usize) Object {
         return self.array()[n];
@@ -118,9 +121,7 @@ pub const Signature = struct {
         return @truncate(self.int);
     }
     pub fn from(selector: Object, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{
-            .selector = @truncate(selector.rawU()),
-            .class =class})};
+        return .{ .int = @bitCast(Internal{ .selector = @truncate(selector.rawU()), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -144,7 +145,7 @@ pub const Signature = struct {
         return self.int >> 40;
     }
     fn getClass(self: Signature) ClassIndex {
-        return @as(Internal,@bitCast(self.int)).class;
+        return @as(Internal, @bitCast(self.int)).class;
     }
     fn setClass(self: *Signature, class: ClassIndex) void {
         self.int = (self.int & 0xffffffffff) + (@as(u64, @intFromEnum(class)) << 40);
@@ -182,7 +183,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, .none),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf( methodFn )},
+            .code = .{Code.primOf(methodFn)},
         };
     }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
@@ -240,7 +241,7 @@ pub const PC = packed struct {
         return .{ .code = code };
     }
     pub //inline
-        fn method(self: PC) CompiledMethodPtr {
+    fn method(self: PC) CompiledMethodPtr {
         return self.code.method;
     }
     pub inline fn codeAddress(self: PC) *const Code {
@@ -253,11 +254,11 @@ pub const PC = packed struct {
         return self.code.asThreadedFn();
     }
     pub //inline
-        fn prim(self: PC) ThreadedFn.Fn {
+    fn prim(self: PC) ThreadedFn.Fn {
         return self.code.threadedFn;
     }
     pub //inline
-        fn object(self: PC) Object {
+    fn object(self: PC) Object {
         return self.code.object;
     }
     pub inline fn asCode(self: PC) Code {
@@ -266,11 +267,11 @@ pub const PC = packed struct {
     pub inline fn asCodePtr(self: PC) *const Code {
         return self.code;
     }
-   pub inline fn uint(self: PC) u64 {
-       return self.code.object.to(u64);
+    pub inline fn uint(self: PC) u64 {
+        return self.code.object.to(u64);
     }
     pub inline fn int(self: PC) i64 {
-       return self.code.object.to(i64);
+        return self.code.object.to(i64);
     }
     pub inline fn next(self: PC) PC {
         return asPC(self.array() + 1);
@@ -318,8 +319,8 @@ pub const Code = union {
         return result;
     }
     pub //inline
-        fn asObject(self: Code) Object {
-//        @setRuntimeSafety(false);
+    fn asObject(self: Code) Object {
+        //        @setRuntimeSafety(false);
         return self.object;
     }
     pub inline fn objectOf(o: anytype) Code {
@@ -329,8 +330,8 @@ pub const Code = union {
         return Code{ .method = method };
     }
     pub inline fn codePtrOf(code: *Code, offs: i64) Code {
-        const addr = @as([*]Code,@ptrCast(code)) + 1;
-        return Code{ .codePtr = @ptrCast(addr + @as(u64,@bitCast(offs)))};
+        const addr = @as([*]Code, @ptrCast(code)) + 1;
+        return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
     pub inline fn offset(o: i56) Code {
         return Code{ .object = Object.thunkImmediate(Object.from(o)).? };
@@ -339,14 +340,8 @@ pub const Code = union {
         return self.threadedFn;
     }
     pub inline fn asThreadedFn(self: Code) ThreadedFn {
-        return .{.f = self.threadedFn};
+        return .{ .f = self.threadedFn };
     }
-    // pub inline fn intOf(i: i64) Code {
-    //     return objectOf(Object.from(i));
-    // }
-    // pub inline fn uintOf(u: u64) Code {
-    //     return objectOf(Object.from(u));
-    // }
     pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP { // not embedded
         return sp;
     }
@@ -426,7 +421,7 @@ test "countNonLabels" {
         comptime Object.from(42),
         ":def",
         "abc",
-         "^",
+        "^",
         3,
         "1mref",
         null,
@@ -434,29 +429,29 @@ test "countNonLabels" {
     }));
 }
 pub fn combine(size: type, tup: anytype) comptime_int {
-    comptime var n:u56 = 0;
+    comptime var n: u56 = 0;
     comptime var shift = 0;
     inline for (tup) |field| {
         switch (@TypeOf(field)) {
-            comptime_int => n |= @as(u56,@as(size,field)) << shift,
-            else => n |= @as(u56,@as(size,@intFromEnum(field))) << shift,
+            comptime_int => n |= @as(u56, @as(size, field)) << shift,
+            else => n |= @as(u56, @as(size, @intFromEnum(field))) << shift,
         }
         shift += @typeInfo(size).int.bits;
     }
     return n;
 }
 pub fn combine14(tup: anytype) comptime_int {
-    return combine(u14,tup);
+    return combine(u14, tup);
 }
 pub fn combine24(tup: anytype) comptime_int {
-    return combine(u24,tup);
+    return combine(u24, tup);
 }
 test "combiners" {
     std.debug.print("Test: combiners\n", .{});
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(16384+2, combine14(.{2,1}));
-    try expectEqual(229391, combine14([_]ClassIndex{.SmallInteger, .Symbol}));
-    try expectEqual(16777216+2, combine24(.{2,1}));
+    try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
+    try expectEqual(229391, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+    try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
 }
 pub fn CompileTimeMethod(comptime counts: usize) type {
     const codes = counts;
@@ -512,7 +507,7 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
                             method.offsets[n] = true;
                             n = n + 1;
                         } else if (field[0] != ':') {
-                            code[n] = Code.offset(lookupLabel(tup,field) - n - 1);
+                            code[n] = Code.offset(lookupLabel(tup, field) - n - 1);
                             method.offsets[n] = true;
                             n = n + 1;
                         }
@@ -531,13 +526,13 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
             };
         }
         fn cacheOffset(_: *Self, codeOffs: usize, cacheOffs: usize) u32 {
-            return @truncate((codes - codeOffs)  + (cacheOffs * cacheSize));
+            return @truncate((codes - codeOffs) + (cacheOffs * cacheSize));
         }
         pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
-            _ = .{self,replacements,refReplacements,unreachable};
+            _ = .{ self, replacements, refReplacements, unreachable };
             // //trace("\nsetLiterals: 0x{x:0>16} {any}", .{ self.selector.u(), replacements });
             // for (&self.code) |*c| {
             //     if (c.asObject().isIndexSymbol0()) {
@@ -565,14 +560,14 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
             // }
         }
         pub fn resolve(self: *Self) void {
-            for (&self.code,&self.offsets) |*c,isOffset| {
-                 if (isOffset) {
-                     const offset = c.object.thunkImmediateValue().?.to(i64);
-                     if (offset == 0) {
-                         c.* = Code.methodOf(@ptrCast(self));
-                     } else {
-                         c.* = Code.codePtrOf(c,offset);
-                     }
+            for (&self.code, &self.offsets) |*c, isOffset| {
+                if (isOffset) {
+                    const offset = c.object.thunkImmediateValue().?.to(i64);
+                    if (offset == 0) {
+                        c.* = Code.methodOf(@ptrCast(self));
+                    } else {
+                        c.* = Code.codePtrOf(c, offset);
+                    }
                 }
             }
             // if (self.signature.isIndexSymbol()) {
@@ -619,8 +614,8 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, null, .none,.{});
-//TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
+    var r1 = c1.init(Sym.value, 2, 3, null, .none, .{});
+    //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
     try expectEqual(r1.getCodeSize(), 9);
 }
 pub fn compiledMethodType(comptime codeSize: comptime_int) type {
@@ -663,7 +658,7 @@ fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
 test "LookupLabel" {
     std.debug.print("Test: LookupLabel\n", .{});
     const expectEqual = std.testing.expectEqual;
-    const def:[]const u8 = "def";
+    const def: []const u8 = "def";
     const c1 = lookupLabel(.{
         ":abc",
         //        &p.setupSend,
@@ -677,8 +672,8 @@ test "LookupLabel" {
         3,
         //"1mref",
         null,
-        },def);
-    try expectEqual(3,c1);
+    }, def);
+    try expectEqual(3, c1);
 }
 // const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows
 const print = std.io.getStdOut().writer().print;
@@ -688,27 +683,27 @@ test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, 0, .none, .{
-        ":abc",       &p.send,
-        "def",        True,
-        42,           ":def",
-        "abc",        "^",
-        3,            null,
+        ":abc", &p.send,
+        "def",  True,
+        42,     ":def",
+        "abc",  "^",
+        3,      null,
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
-    try expectEqual(8,t.len);
+    try expectEqual(8, t.len);
     const debugging = false;
     if (debugging) {
         @setRuntimeSafety(false);
-        trace("\nm: 0x{x:0>16}",.{@intFromPtr(&m)});
-        for (t,0..) |tv,idx|
-            trace("\nt[{}]: 0x{x:0>16}",.{idx,tv.object.rawU()});
+        trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
+        for (t, 0..) |tv, idx|
+            trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.rawU() });
     }
     m.resolve();
     if (debugging) {
         @setRuntimeSafety(false);
-        for (t,0..) |*tv,idx|
-            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}",.{idx,@intFromPtr(tv),tv.object.rawU()});
+        for (t, 0..) |*tv, idx|
+            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
     }
     //    try expectEqual(t.prim,controlPrimitives.noop);
     try expectEqual(t[0].prim(), &p.send);
@@ -752,7 +747,7 @@ pub fn CompileTimeObject(comptime counts: usize) type {
                             objects[n] = Object.thunkImmediate(symbol.fromHash32(comptime intOf(field[0..]))).?;
                             n += 1;
                         } else if (field[0] != ':') {
-                            objects[n] = Object.thunkImmediate(Object.from(lookupLabel(tup,field))).?;
+                            objects[n] = Object.thunkImmediate(Object.from(lookupLabel(tup, field))).?;
                             n += 1;
                         }
                     },
@@ -774,8 +769,7 @@ pub fn CompileTimeObject(comptime counts: usize) type {
                         if (obj.isMemoryAllocated()) includesPointer = true;
                         o.* = obj;
                     }
-                } else
-                    { // there is a miniscule chance of false-positive
+                } else { // there is a miniscule chance of false-positive
                     var header: HeapHeader = @bitCast(o.*);
                     if (header.length < 1024 and
                         header.hash == 0xffffff and
@@ -807,7 +801,7 @@ pub fn CompileTimeObject(comptime counts: usize) type {
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const objType = CompileTimeObject(countNonLabels(tup));
-    return  objType.init(tup);
+    return objType.init(tup);
 }
 test "compileObject" {
     std.debug.print("Test: compileObject\n", .{});
@@ -830,13 +824,13 @@ test "compileObject" {
     });
     const debugging = false;
     if (debugging) {
-        for (&o.objects,0..) |*ob,idx|
-            trace("\no[{}]: 0x{x:0>16}",.{idx,ob.rawU()});
+        for (&o.objects, 0..) |*ob, idx|
+            trace("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
     }
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     if (debugging) {
-        for (&o.objects,0..) |*ob,idx|
-            trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}",.{idx,@intFromPtr(ob),ob.rawU()});
+        for (&o.objects, 0..) |*ob, idx|
+            trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.rawU() });
     }
 
     try expect(o.asObject().isHeapObject());
@@ -903,8 +897,8 @@ test "compileObject" {
 // }
 pub const embedded = @import("controlPrimitives.zig");
 fn callMethod(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    _ = .{pc,sp,process,context,unreachable};
-    }
+    _ = .{ pc, sp, process, context, unreachable };
+}
 pub const controlPrimitivesX = struct {
     const ContextPtr = CodeContextPtr;
 
@@ -1028,17 +1022,20 @@ pub const Execution = struct {
             .sp = undefined,
         };
     }
-    pub fn init(self: *Self) void {
-        self.process.init();
-        self.ctxt.method = &yourself;
-        self.sp = self.process.endOfStack();
-    }
     var yourself = CompiledMethod.init(Sym.noFallback, Code.end);
-    pub fn initStack(self: *Self, source: []const Object) void {
+    pub fn init(self: *Self, stackObjects: ?[]const Object) void {
+        self.ctxt.method = &yourself;
+        self.process.init();
+        if (stackObjects) |source| {
+            self.initStack(source);
+        } else
+            self.sp = self.process.endOfStack();
+    }
+    fn initStack(self: *Self, source: []const Object) void {
         self.sp = self.process.endOfStack().reserve(source.len);
         self.process.setSp(self.sp);
-        for (source, self.sp.slice(source.len)) |src, *dst|
-            dst.* = src;
+        for (source, self.sp.slice(source.len)) |src, *stck|
+            stck.* = src;
         trace("\ninitial-stack: {any}", .{self.process.getStack(self.sp)});
     }
     pub fn stack(self: *Self, sp: SP) []Object {
@@ -1067,54 +1064,56 @@ pub const mainSendTo = Execution.mainSendTo;
 
 extern fn llvmPL(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
 const llvmPLCM = CompiledMethod.init(Sym.yourself, @ptrCast(&llvmPL));
-test "llvm external" {
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const pl = if (true) &p.pushLiteral else llvmPLCM;
-    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
-        &p.pushContext,           "^",
-        ":label1",                &p.pushLiteral,
-        42,                       &p.popLocal,
-        0,                        &p.pushLocal,
-        0,                        pl,
-        0,                        &p.pushLiteral,
-        true,                     &p.classCase,
-        ClassIndex.False,         "label3",
-        &p.branch,                "label2",
-        ":label3",                &p.pushLocal,
-        0,                        ":label4",
-        &p.returnTop,             ":label2",
-        pl,                       0,
-        &p.branch,                "label4",
-    });
-    method.resolve();
-    const debugging = false;
-    if (debugging) {
-        @setRuntimeSafety(false);
-        for (&method.code,0..) |*tv,idx|
-            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}",.{idx,@intFromPtr(tv),tv.object.rawU()});
-    }
-    var objs = [_]Object{Nil,Nil,Nil};
-    var te = Execution.new();
-    te.init();
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 1);
-    try expectEqual(result[0], Object.from(0));
-}
 test "simple llvm" {
+    std.debug.print("Test: simple llvm\n",.{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl = if (true) &p.pushLiteral else llvmPLCM;
     var method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        pl,                 0,
+        pl,                    0,
         &p.returnTopNoContext,
     });
     var te = Execution.new();
-    te.init();
+    te.init(null);
     var objs = [_]Object{ Nil, True };
     const result = te.run(objs[0..], &method);
     try expectEqual(result.len, 3);
     try expectEqual(result[0], Object.from(0));
     try expectEqual(result[1], Nil);
     try expectEqual(result[2], True);
+}
+test "llvm external" {
+    std.debug.print("Test: llvm external\n",.{});
+    const expectEqual = std.testing.expectEqual;
+    Process.resetForTest();
+    const pl = if (true) &p.pushLiteral else llvmPLCM;
+    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
+        &p.pushContext,   "^",
+        ":label1",        &p.pushLiteral,
+        42,               &p.popLocal,
+        0,                &p.pushLocal,
+        0,                pl,
+        0,                &p.pushLiteral,
+        true,             &p.classCase,
+        ClassIndex.False, "label3",
+        &p.branch,        "label2",
+        ":label3",        &p.pushLocal,
+        0,                ":label4",
+        &p.returnTop,     ":label2",
+        pl,               0,
+        &p.branch,        "label4",
+    });
+    method.resolve();
+    const debugging = false;
+    if (debugging) {
+        @setRuntimeSafety(false);
+        for (&method.code, 0..) |*tv, idx|
+            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
+    }
+    var objs = [_]Object{ Nil, Nil, Nil };
+    var te = Execution.new();
+    te.init(null);
+    const result = te.run(objs[0..], &method);
+    try expectEqual(result.len, 1);
+    try expectEqual(result[0], Object.from(0));
 }

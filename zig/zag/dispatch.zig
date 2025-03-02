@@ -46,18 +46,15 @@ const Dispatch = struct {
         .methodStart = DispatchElement.empty,
     };
     fn allocationSize(nMethods: usize) usize { // includes the header, so may need to subtract 1
-        return @divExact(
-            @sizeOf(Self) +
-                @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate),
-            @sizeOf(Object));
+        return @divExact(@sizeOf(Self) +
+            @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate), @sizeOf(Object));
     }
     var dispatches = [_]*Self{&empty} ** max_classes;
     inline fn methods(self: *Self) [*]DispatchElement {
         return @as([*]DispatchElement, @ptrCast(@alignCast(&self.methodStart))) + numberOfFixed;
     }
     fn isUpdateable(self: *const Self, methodPtr: *const DispatchElement) bool {
-        return @intFromPtr(methodPtr) < @intFromPtr(self.methods() + self.nMethods + matchSize - 1)
-            and methodPtr.isNil();
+        return @intFromPtr(methodPtr) < @intFromPtr(self.methods() + self.nMethods + matchSize - 1) and methodPtr.isNil();
     }
     fn methodSlice(self: *Self) []DispatchElement {
         return self.methods()[0..self.nMethods];
@@ -184,7 +181,7 @@ const Dispatch = struct {
 };
 test "dispatch" {
     var array align(@alignOf(Dispatch)) = [_]Object{undefined} ** Dispatch.allocationSize(0);
-    
+
     try struct {
         const selector = Signature.from(Sym.value, .SmallInteger);
         fn t(dispatch: *Dispatch) !void {
@@ -373,7 +370,7 @@ pub fn init() void {
 }
 pub fn loadIntrinsicsDispatch() void {}
 pub const addMethod = Dispatch.addMethod;
-const DispatchElementType = enum {method, signature, function};
+const DispatchElementType = enum { method, signature, function };
 const dispatchElementType = DispatchElementType.method;
 const DispatchElement = switch (dispatchElementType) {
     .method => execute.CompiledMethod,
