@@ -1028,8 +1028,7 @@ pub const Execution = struct {
         self.process.init();
         if (stackObjects) |source| {
             self.initStack(source);
-        } else
-            self.sp = self.process.endOfStack();
+        } else self.sp = self.process.endOfStack();
     }
     fn initStack(self: *Self, source: []const Object) void {
         self.sp = self.process.endOfStack().reserve(source.len);
@@ -1065,7 +1064,7 @@ pub const mainSendTo = Execution.mainSendTo;
 extern fn llvmPL(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
 const llvmPLCM = CompiledMethod.init(Sym.yourself, @ptrCast(&llvmPL));
 test "simple llvm" {
-    std.debug.print("Test: simple llvm\n",.{});
+    std.debug.print("Test: simple llvm\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl = if (true) &p.pushLiteral else llvmPLCM;
@@ -1083,7 +1082,7 @@ test "simple llvm" {
     try expectEqual(result[2], True);
 }
 test "llvm external" {
-    std.debug.print("Test: llvm external\n",.{});
+    std.debug.print("Test: llvm external\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl = if (true) &p.pushLiteral else llvmPLCM;

@@ -55,11 +55,11 @@ pub fn findPrimitive(module: Object, primitive: Object) ThreadedFn {
 }
 const modules = [_]ModuleMap{
     @import("primitives/Object.zig").module,
-    @import("primitives/Smallinteger.zig").modules;
-    @import("primitives/Behavior.zig").modules;
-    @import("primitives/BlockClosure.zig").modules;
-    @import("primitives/Boolean.zig").modules;
-    @import("primitives/llvm.zig").modules;
+    @import("primitives/Smallinteger.zig").modules,
+    @import("primitives/Behavior.zig").modules,
+    @import("primitives/BlockClosure.zig").modules,
+    @import("primitives/Boolean.zig").modules,
+    @import("primitives/llvm.zig").modules,
 };
 pub const inlines = struct {
     pub usingnamespace @import("primitives/Object.zig").inlines;
