@@ -30,58 +30,100 @@ pub fn main() !void {
 
 pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
     const ctx = core.LLVMGetGlobalContext();
+    const typeInt64 = core.LLVMInt64TypeInContext(ctx);
 
     // Create a `TagObject` packed struct type
-    const namedTagObjectTy = core.LLVMStructCreateNamed(ctx, "TagObject");
+    const tagObjectTy = core.LLVMStructCreateNamed(ctx, "TagObject");
     var tagObjectFields = [_]types.LLVMTypeRef{
         core.LLVMIntTypeInContext(ctx, 3), // tag
-        core.LLVMIntTypeInContext(ctx, 5), // group
+        core.LLVMIntTypeInContext(ctx, 5), // class
         core.LLVMIntTypeInContext(ctx, 56), // hash
     };
-    core.LLVMStructSetBody(namedTagObjectTy, &tagObjectFields[0], 3, 1);
+    core.LLVMStructSetBody(tagObjectTy, &tagObjectFields[0], 3, 1);
 
     // Create a `Stack` non-packed struct type
-    const namedStackTy = core.LLVMStructCreateNamed(ctx, "Stack");
-    var namedStackFields = [_]types.LLVMTypeRef{
-        namedTagObjectTy, // top
-        namedTagObjectTy, // next
-        namedTagObjectTy, // third
+    const stackTy = core.LLVMStructCreateNamed(ctx, "Stack");
+    var stackFields = [_]types.LLVMTypeRef{
+        tagObjectTy, // top
+        tagObjectTy, // next
+        tagObjectTy, // third
     };
-    core.LLVMStructSetBody(namedStackTy, &namedStackFields[0], 3, 0);
+    core.LLVMStructSetBody(stackTy, &stackFields[0], 3, 0);
+    const stackPtrTy = core.LLVMPointerType(stackTy, 0);
 
     // Create a `Code` union struct
-    const namedUnionTy = core.LLVMStructCreateNamed(ctx, "CodeUnion");
-    const namedUnionField = core.LLVMArrayType(core.LLVMInt8TypeInContext(ctx), 8);
-    var fields = [_]types.LLVMTypeRef{namedUnionField};
-    core.LLVMStructSetBody(namedUnionTy, &fields[0], 1, 0);
+    const codeUnionTy = core.LLVMStructCreateNamed(ctx, "CodeUnion");
+    const codeUntionField = core.LLVMArrayType(core.LLVMInt8TypeInContext(ctx), 8); // max size of union is 64-bits
+    var codeUnionFields = [_]types.LLVMTypeRef{codeUntionField};
+    core.LLVMStructSetBody(codeUnionTy, &codeUnionFields[0], 1, 0);
+    const codeUnionPtr = core.LLVMPointerType(codeUnionTy, 0);
 
-    // `ThreadedFn` sp parameter
-    const spTy = core.LLVMPointerType(namedStackTy, 0);
+    // Create a `PC` packed struct
+    const pcTy = core.LLVMStructCreateNamed(ctx, "PC");
+    var pcFields = [_]types.LLVMTypeRef{codeUnionPtr}; // codeUnionPtr is a 'const' at the declaration site
+    core.LLVMStructSetBody(pcTy, &pcFields[0], 1, 1);
 
-    // Create `ThreadedFn` PC
-    const pcTy = core.LLVMPointerType(namedUnionTy, 0);
+    // 'Forward declaration' using opaque pointers
+    const contextTy = core.LLVMStructCreateNamed(ctx, "Context");
+    const contextPtrTy = core.LLVMPointerType(contextTy, 0);
+
+    const compiledMethodTy = core.LLVMStructCreateNamed(ctx, "CompiledMethod");
+    const compiledMethodPtrTy = core.LLVMPointerType(compiledMethodTy, 0);
+
+    const processPtrTy = core.LLVMPointerType(core.LLVMVoidType(), 0);
 
     // ----- Create the `ThreadedFn` ------
-    var paramTypes: [2]types.LLVMTypeRef = .{ pcTy, spTy };
-    const funcType = core.LLVMFunctionType(spTy, &paramTypes[0], 2, 0);
-    const myThreadedFn: types.LLVMValueRef = core.LLVMAddFunction(module, "pushLiteral", funcType);
+    var paramTypes: [5]types.LLVMTypeRef = .{ pcTy, stackPtrTy, processPtrTy, contextPtrTy, typeInt64 }; // missing context
+    const threadedFnTy = core.LLVMFunctionType(stackPtrTy, &paramTypes[0], 5, 0);
+    const threadedFnPtrTy = core.LLVMPointerType(threadedFnTy, 0);
+    const threadedFn: types.LLVMValueRef = core.LLVMAddFunction(module, "pushLiteral", threadedFnTy);
 
-    // Set pc name
-    const pcParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 0);
+    // Add the `CompiledMethod` fields
+    var compiledMethodFields = [_]types.LLVMTypeRef{
+        typeInt64, // heap header
+        tagObjectTy, // stack structure
+        typeInt64, // signature
+        threadedFnPtrTy, // executionFn
+        threadedFnPtrTy, // jitted
+        core.LLVMArrayType(codeUnionTy, 1), // code
+    };
+    core.LLVMStructSetBody(compiledMethodTy, &compiledMethodFields[0], 6, 0);
+
+    // Add the `Context fields`
+    var contextFields = [_]types.LLVMTypeRef{
+        typeInt64, // heapHeader
+        compiledMethodPtrTy, // method
+        pcTy, // tpc
+        threadedFnPtrTy, // npc - represent as ptr (since threadedFn is NOT a datatype but a LLVM function definition + npc is represented internally as a pointer to a threadedFn on the zig side too
+        contextPtrTy, // prevContext
+        typeInt64, // trapContextNumber
+        core.LLVMArrayType(tagObjectTy, 1), // temps
+    };
+    core.LLVMStructSetBody(contextTy, &contextFields[0], 7, 0);
+
+    // Get the parameters
+    const pcParam = core.LLVMGetParam(threadedFn, 0);
+    const spParam = core.LLVMGetParam(threadedFn, 1);
+    const processParam = core.LLVMGetParam(threadedFn, 2);
+    const ctxParam = core.LLVMGetParam(threadedFn, 3);
+    const sigParam = core.LLVMGetParam(threadedFn, 4);
+
+    // Set the parameter names
     core.LLVMSetValueName(pcParam, "pc");
-
-    // Set sp name
-    const spParam: types.LLVMValueRef = core.LLVMGetParam(myThreadedFn, 1);
     core.LLVMSetValueName(spParam, "sp");
+    core.LLVMSetValueName(processParam, "process");
+    core.LLVMSetValueName(ctxParam, "context");
+    core.LLVMSetValueName(sigParam, "signature");
 
     // Setup function body
-    const entryBB: types.LLVMBasicBlockRef = core.LLVMAppendBasicBlock(myThreadedFn, "entry");
+    const entryBB: types.LLVMBasicBlockRef = core.LLVMAppendBasicBlock(threadedFn, "entry");
     core.LLVMPositionBuilderAtEnd(builder, entryBB);
 
     // Only for testing purposes - enables emission of types textually in the IR
-    _ = core.LLVMBuildAlloca(builder, namedStackTy, "test-stack");
-    _ = core.LLVMBuildAlloca(builder, namedTagObjectTy, "test-tagObject");
-    _ = core.LLVMBuildAlloca(builder, namedUnionTy, "test-union");
+    _ = core.LLVMBuildAlloca(builder, stackTy, "test-stack");
+    _ = core.LLVMBuildAlloca(builder, tagObjectTy, "test-tagObject");
+    _ = core.LLVMBuildAlloca(builder, codeUnionTy, "test-union");
+    _ = core.LLVMBuildAlloca(builder, contextTy, "test-context");
     _ = core.LLVMBuildRet(builder, spParam); // only to adhere to the return type
 
     // Verify the module and capture the message
