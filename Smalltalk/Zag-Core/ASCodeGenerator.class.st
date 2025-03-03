@@ -514,6 +514,11 @@ ASCodeGenerator >> returnTop [
 	^ currentCodeUnit returnTopFor: code
 ]
 
+{ #category : 'threaded words' }
+ASCodeGenerator >> returnTopNonLocal [
+	code returnTopNonLocal 
+]
+
 { #category : 'accessing' }
 ASCodeGenerator >> selector [
 

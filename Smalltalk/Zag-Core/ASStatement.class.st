@@ -138,6 +138,12 @@ ASStatement >> zigWalkFinal: aGenerator [
 	self subclassResponsibility
 ]
 
+{ #category : 'testing' }
+ASStatement >> zigWalkForNonLocal: aGenerator [
+	self zigWalk: aGenerator.
+	^ false
+]
+
 { #category : 'compiling' }
 ASStatement >> zigWalkForReturn: aGenerator [
 

@@ -16,3 +16,9 @@ Class {
 ASCTopClosureBlock >> newInlineBlock: aBlockAST [
 	^ aBlockAST newInlineTopClosureBlock: self
 ]
+
+{ #category : 'instance creation' }
+ASCTopClosureBlock >> returnTopNonLocal [
+	"self alert: 'this is less than what the original does, 	hasNonLocalReturn := true.'."
+	^ self addOperation: ASCReturnNonLocal new
+]

@@ -26,6 +26,12 @@ ASCInlinedBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
+{ #category : 'initialization' }
+ASCInlinedBlock >> initNamedIndirect: aBasicBlock [
+
+	stack := stack initNamedIndirect myScope: aBasicBlock sourceElements
+]
+
 { #category : 'adding' }
 ASCInlinedBlock >> initParameterNamed: aSymbol [
 
