@@ -26,7 +26,7 @@ pub fn main() !void {
 
     // Create a ThreadedFn in IR
     const threadedFnSig = try createThreadedFnSig(module, "pushLiteral");
-    _ = try createPushLiteralFn(threadedFnSig, builder);
+    _ = try createPushLiteralFn(threadedFnSig, module, builder);
     _ = try verifyModule(module);
 
     // Cleanup builder
@@ -35,15 +35,35 @@ pub fn main() !void {
     printModule(module);
 }
 
-pub fn createPushLiteralFn(threadedFn: types.LLVMValueRef, builder: types.LLVMBuilderRef) !void {
+pub fn createPushLiteralFn(threadedFn: types.LLVMValueRef, module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !void {
 
     // Setup function body
     const entryBB: types.LLVMBasicBlockRef = core.LLVMAppendBasicBlock(threadedFn, "entry");
     core.LLVMPositionBuilderAtEnd(builder, entryBB);
 
-    // To be implemented.
-
+    // Get the parameters that will be modified
+    const pcParam = core.LLVMGetParam(threadedFn, 0);
     const spParam = core.LLVMGetParam(threadedFn, 1);
+
+    // Get references to the types we need
+    const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
+    const tagObjectPtrTy = core.LLVMPointerType(tagObjectTy, 0);
+    const pcTy = core.LLVMGetTypeByName(module, "PC");
+    const codeUnionTy = core.LLVMGetTypeByName(module, "CodeUnion");
+    const codeUnionPtrTy = core.LLVMPointerType(codeUnionTy, 0);
+
+    // Calculate &(pc->code) => CodeUnion**
+    const codeUnionPtrField = core.LLVMBuildStructGEP2(builder, pcTy, pcParam, 0, "pc_code_ptr_field");
+    // Load the value pointed at by codeUnionPtrField (CodeUnion**), which is CodeUnion*
+    const codeUnionPtr = core.LLVMBuildLoad2(builder, codeUnionPtrTy, codeUnionPtrField, "pc_code_ptr_val");
+
+    // Cast the CodeUnion* to a TagObject*
+    const tagObjectPtr = core.LLVMBuildBitCast(builder, codeUnionPtr, tagObjectPtrTy, "tag_object_ptr");
+
+    // Load the TagObject from that pointer
+    _ = core.LLVMBuildLoad2(builder, tagObjectTy, tagObjectPtr, "object_val");
+
+    // Return the tack pointer
     _ = core.LLVMBuildRet(builder, spParam);
 }
 
@@ -81,6 +101,7 @@ pub fn createThreadedFnSig(module: types.LLVMModuleRef, fnName: [:0]const u8) !?
     const pcTy = core.LLVMStructCreateNamed(ctx, "PC");
     var pcFields = [_]types.LLVMTypeRef{codeUnionPtr}; // codeUnionPtr is a 'const' at the declaration site
     core.LLVMStructSetBody(pcTy, &pcFields[0], 1, 1);
+    const pcPtrTy = core.LLVMPointerType(pcTy, 0);
 
     // 'Forward declaration' using opaque pointers
     const contextTy = core.LLVMStructCreateNamed(ctx, "Context");
@@ -92,7 +113,7 @@ pub fn createThreadedFnSig(module: types.LLVMModuleRef, fnName: [:0]const u8) !?
     const processPtrTy = core.LLVMPointerType(core.LLVMVoidType(), 0);
 
     // ----- Create the `ThreadedFn` ------
-    var paramTypes: [5]types.LLVMTypeRef = .{ pcTy, stackPtrTy, processPtrTy, contextPtrTy, typeInt64 }; // missing context
+    var paramTypes: [5]types.LLVMTypeRef = .{ pcPtrTy, stackPtrTy, processPtrTy, contextPtrTy, typeInt64 }; // change pcTy to pcPtrTy
     const threadedFnTy = core.LLVMFunctionType(stackPtrTy, &paramTypes[0], 5, 0);
     const threadedFnPtrTy = core.LLVMPointerType(threadedFnTy, 0);
     const threadedFn: types.LLVMValueRef = core.LLVMAddFunction(module, fnName, threadedFnTy);
@@ -166,7 +187,8 @@ pub fn printModule(module: types.LLVMModuleRef) void {
     std.debug.print("--- END IR ---\n\n", .{});
 }
 
-inline fn buildGEP(builder: types.LLVMBuilderRef, elementType: types.LLVMTypeRef, base: types.LLVMValueRef, offset: i64, name: []const u8) types.LLVMValueRef {
+inline fn singleIndexGEP(builder: types.LLVMBuilderRef, elementType: types.LLVMTypeRef, base: types.LLVMValueRef, offset: i64, name: []const u8) types.LLVMValueRef {
+    // singleIndex - for pointer and integer offsets
     const offset_bits: u64 = @bitCast(offset);
     const signExtend = offset < 0;
     const idx = [_]types.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
