@@ -454,7 +454,7 @@ test "combiners" {
     try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
 }
 pub fn CompileTimeMethod(comptime counts: usize) type {
-    const codes = counts;
+    const codes = counts + (if (config.is_test) 1 else 0);
     return struct { // structure must exactly match CompiledMethod
         header: HeapHeader,
         stackStructure: Object, // number of local values beyond the parameters
@@ -514,6 +514,7 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
                     },
                 }
             }
+            if (config.is_test) code[n] = Code.primOf(&Code.end);
             return method;
         }
         pub fn withCodeX(name: Object, locals: u16, maxStack: u16, code: [codes]Code) Self {
