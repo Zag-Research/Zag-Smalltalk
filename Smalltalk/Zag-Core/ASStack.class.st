@@ -128,7 +128,6 @@ ASStack >> initParameterNamed: name [
 
 { #category : 'API' }
 ASStack >> initSelf [
-
 	^ ASStackSelf fromStack: self
 ]
 

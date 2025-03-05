@@ -37,11 +37,6 @@ ASBlockNode >> maxDepth [
 ]
 
 { #category : 'compiling' }
-ASBlockNode >> newInlineBlock: aDispatchableBlock [
-  ^ body last newInlineBlock: aDispatchableBlock 
-]
-
-{ #category : 'compiling' }
 ASBlockNode >> newInlineMethodBlock: anInlineMethodBlock [
   ^ body last newInlineMethodBlock: anInlineMethodBlock 
 ]

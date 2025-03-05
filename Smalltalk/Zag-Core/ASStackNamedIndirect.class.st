@@ -14,10 +14,6 @@ Class {
 
 { #category : 'accessing' }
 ASStackNamedIndirect >> at: aSymbol [
-
-	self halt.
-	"Dave I'm not sure what referenceVariable is suppose to do."
-	"^ (myScope at: aSymbol) referenceVariable: self"
 	^ myScope at: aSymbol
 ]
 
@@ -25,6 +21,11 @@ ASStackNamedIndirect >> at: aSymbol [
 ASStackNamedIndirect >> class: aClass [
 
 	self myScope: (ZagScope new class: aClass)
+]
+
+{ #category : 'displaying' }
+ASStackNamedIndirect >> displayStringOn: stream [
+	stream << #ASStackNamedIndirect 
 ]
 
 { #category : 'as yet unclassified' }

@@ -142,6 +142,8 @@ ASInlineWherePossibleTest >> testEvaluatefib [
 	"
 fib: anInt
 
+
+
 	^ anInt < 2
 		  ifTrue: [ 1 ]
 		  ifFalse: [ (self fib: anInt - 1) + (self fib: anInt - 2) ]
@@ -155,6 +157,7 @@ fib: anInt
 		              inline: 0;
 		              finalAnalysis.
 	ASInliner reset.
+	cgNoInline inspect.
 	cgInline := (ASCodeGenerator
 		             targetClass: ASCompileTestClass1
 		             selector: #fib:)
@@ -235,7 +238,7 @@ ASInlineWherePossibleTest >> test_newInlineBlock_forClosureBlockAndNonLocalRetur
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCTopMethodClosureBlock.
-	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+	self assert: newInlineBlock returnTop equals: ASCReturnTop.
 ]
 
 { #category : 'tests' }
@@ -250,7 +253,8 @@ ASInlineWherePossibleTest >> test_newInlineBlock_forClosureBlockAndReturnTop [
 	newInlineBlock := methodBlock newInlinedBlock: blockAST.
 
 	self assert: newInlineBlock class equals: ASCInlineClosureBlock.
-	"self assert: newInlineBlock returnTop equals: ASCReturnTop."
+	self assert: newInlineBlock returnTop equals: ASCReturnTop.
+	self assert: newInlineBlock returnSelf equals: ASCReturnTop.
 ]
 
 { #category : 'tests' }

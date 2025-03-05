@@ -145,7 +145,6 @@ ASCompilerInlineTest >> assert: aMethod inlinesTo: ast [
 
 { #category : 'asserting' }
 ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject [
-
 	self
 		assert: (interpreter send: selecter with: aCollection to: anObject)
 		equals: (anObject perform: selecter withArguments: aCollection).
@@ -274,6 +273,12 @@ ASCompilerInlineTest >> testBlockValueNonlocal [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibWith3 [
+	"3 fib: 3"
+	self assertEquivalentSending: #fib: arguments: #(3) to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci [
 	"
 fibonacci
@@ -336,7 +341,6 @@ ASCompilerInlineTest >> testFoo [
 
 	"bar
 	^ 42"
-
 	self assertEquivalentSending: #foo to: ASCompileTestClass1 new.
 	self assert: interpreter codeSize equals: 2.
 	interpreter inspect.
