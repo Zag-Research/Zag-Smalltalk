@@ -23,9 +23,8 @@ const Extra = execute.Extra;
 const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
 
-pub const foo = 42;
-
 pub const branch = struct {
+    pub const order = 0;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
         const target = pc.targetPC();
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
@@ -33,6 +32,7 @@ pub const branch = struct {
     }
 };
 pub const call = struct {
+    pub const order = 0;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
         context.setReturn(pc.next2());
         const method = pc.method();

@@ -81,7 +81,7 @@ pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: Cont
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: *Context, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
+pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
     const newSp = (process.allocStackSpace(sp, baseSize + 1 + locals + maxStackNeeded) catch {
         var contextMutable = self;
         const newerSp = process.spillStack(sp, &contextMutable);
