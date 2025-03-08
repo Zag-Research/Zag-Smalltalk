@@ -1,6 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const zag = @import("zag.zig");
+const is_test = zag.config.is_test;
 const object = zag.object;
 const Object = object.Object;
 const execute = zag.execute;
@@ -31,6 +32,14 @@ const symbol = zag.symbol;
 
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
+    pub usingnamespace @import("primitives.zig");
+    pub usingnamespace if (is_test) struct {
+        // these are just for testing to  verify that we can filter them out
+        // pub const T = u32; // don't know how to filter these out
+        pub const ignoreCTInt = 42;
+        pub const ignoreInt: usize = 42;
+        pub fn ignore() void {}
+    } else struct {};
 };
 
 fn enumLessThan(_: void, lhs:EnumSort, rhs:EnumSort) bool {
@@ -44,24 +53,36 @@ const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
 };
-const ThreadedFnEnum =
+fn hasFn(comptime T: type, comptime name: []const u8) bool {
+    switch (@typeInfo(T)) {
+        .@"struct", .@"union", .@"enum", .@"opaque" => {},
+        else => return false,
+    }
+    if (!@hasDecl(T, name))
+        return false;
+
+    return @typeInfo(@TypeOf(@field(T, name))) == .@"fn";
+}
+pub const Enum =
     blk: {
         const decls = @typeInfo(structures).@"struct".decls;
         var array: [decls.len]EnumSort = undefined;
         var n = 0;
         for (decls) |decl| {
             const ds = @field(structures,decl.name);
-            switch (@TypeOf(ds)) {
-                type => {
-                    if (@hasDecl(ds,("threadedFn"))) {
-                        if (@hasDecl(ds,("order"))) {
+            switch (@typeInfo(@TypeOf(ds))) {
+                .comptime_int,
+                .int,
+                .@"fn" => {},
+                else => {
+                    if (@hasDecl(ds,"threadedFn")) {
+                        if (@hasDecl(ds,"order")) {
                             array[n] = .{.field = &decl, .order = @field(ds,"order")};
                         } else
                             array[n] = .{.field = &decl, .order = 0};
                         n += 1;
                     }
                 },
-                else => {},
             }
         }
         const enums = array[0..n];
@@ -73,6 +94,7 @@ const ThreadedFnEnum =
                 .value = i,
             }};
         }
+        //@compileLog(fields);
         break :blk @Type(.{ .@"enum" = .{
             .tag_type = usize,
             .is_exhaustive = false,
@@ -83,8 +105,8 @@ const ThreadedFnEnum =
 
 const functions = 
     blk: {
-        var array: [@typeInfo(ThreadedFnEnum).@"enum".fields.len]ThreadedFn.Fn = undefined;
-        for (@typeInfo(ThreadedFnEnum).@"enum".fields) |d| {
+        var array: [@typeInfo(Enum).@"enum".fields.len]ThreadedFn.Fn = undefined;
+        for (@typeInfo(Enum).@"enum".fields) |d| {
             const ds = @field(structures,d.name);
             array[d.value] = &@field(ds,"threadedFn");
         }
@@ -93,12 +115,19 @@ const functions =
 
 pub fn initialize() void {
 }
-pub fn threadedFn(key: ThreadedFnEnum) ThreadedFn.Fn {
+pub fn threadedFn(key: Enum) ThreadedFn.Fn {
     return functions[@intFromEnum(key)];
 }
 
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
-    
+test "logging" {   
+    for (@import("builtin").test_functions) |f| {
+        std.debug.print("tests: {s}\n",.{f.name});
+    }
+    inline for (std.meta.fields(Enum)) |f| {
+        std.debug.print("{s}\n", .{f.name});
+    }
+}
                                     

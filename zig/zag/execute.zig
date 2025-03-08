@@ -3,33 +3,33 @@ const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
-const checkEqual = @import("utilities.zig").checkEqual;
-const Process = @import("process.zig");
+const zag = @import("zag.zig");
+const checkEqual = zag.utilities.checkEqual;
+const Process = zag.Process;
 const ProcessPtr = *Process;
-const object = @import("zobject.zig");
+const object = zag.object;
 const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
 const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
-const indexSymbol0 = object.Object.indexSymbol0;
-const indexSymbol1 = object.Object.indexSymbol1;
-const Context = @import("context.zig");
-const heap = @import("heap.zig");
+const Context = zag.context;
+const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Format = heap.Format;
 const Age = heap.Age;
-const globalArena = @import("globalArena.zig");
+const globalArena = zag.globalArena;
 const HeapAllocationPtr = globalArena.HeapAllocationPtr;
-//const class = @import("class.zig");
-const symbol = @import("symbol.zig");
+//const class = zag.class;
+const symbol = zag.symbol;
 const Sym = symbol.symbols;
-const phi32 = @import("utilities.zig").inversePhi(u32);
+const phi32 = zag.utilities.inversePhi(u32);
+const threadedFn = zag.threadedFn;
+const tf = threadedFn.Enum;
 
 pub const SP = *Stack;
 const Stack = struct {
@@ -96,12 +96,24 @@ test "Stack" {
     _ = sp1.drop().push(Object.from(42));
     try ee(stack[9].to(i64), 42);
 }
-pub fn check(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP { // not embedded
-    if (process.debugger()) |debugger|
-        return @call(tailCall, debugger, .{ pc, sp, process, context, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
-}
-pub const Extra = Object;
+pub const Extra = union {
+    method: *CompiledMethod,
+    object: Object,
+    signature: Signature,
+    pub fn encoded(self: Extra) Extra {
+        return .{.object = Object.from(self.method).thunkImmediate().?};
+    }
+    pub fn decoded(self: Extra) Extra {
+        return .{.object = self.object.thunkImmediateValue()};
+    }
+    pub fn isEncoded(self: Extra) bool {
+        @setRuntimeSafety(false);
+        return self.object.isThunkImmediate();
+    }
+    pub fn threadedFn(self: Extra) ThreadedFn.Fn {
+        return self.method.code[0];
+    }
+};
 pub const ThreadedFn = packed struct {
     f: Fn,
     pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP;
@@ -158,79 +170,6 @@ pub const Signature = struct {
     ) !void {
         _ = .{ fmt, options };
         try writer.print("Signature({},{})", .{ self.asSymbol(), self.getClass() });
-    }
-};
-pub const CodeContextPtr = *Context;
-pub const CompiledMethodPtr = *CompiledMethod;
-pub const CompiledMethod = struct {
-    header: HeapHeader,
-    stackStructure: Object, // number of local values beyond the parameters
-    signature: Signature,
-    executeFn: ThreadedFn.Fn,
-    jitted: ?ThreadedFn.Fn,
-    code: [codeSize]Code, // will typically be a lot more then 1, as it will be the threaded version of the method
-    const Self = @This();
-    const codeSize = 1;
-    pub const codeOffset = @offsetOf(CompiledMethod, "code");
-    comptime {
-        std.debug.assert(@offsetOf(Self, "header") == 0);
-    }
-    const codeOffsetInObjects = codeOffset / 8;
-    pub fn init(name: Object, methodFn: ThreadedFn.Fn) Self {
-        return Self{
-            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
-            .stackStructure = Object.from(0),
-            .signature = Signature.from(name, .none),
-            .executeFn = methodFn,
-            .jitted = methodFn,
-            .code = .{Code.primOf(methodFn)},
-        };
-    }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
-        const pc = PC.init(&self.code[0]);
-        trace("\nexecute: {} {} {}", .{ pc, sp, self.signature });
-        return pc.prim()(pc.next(), sp, process, context, self.signature.asObject());
-    }
-    // pub fn forDispatch(self: *Self, class: ClassIndex) void {
-    //     self.signature.setClass(class);
-    //     addMethod(self);
-    // }
-    inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
-        return @ptrCast(self);
-    }
-    pub inline fn codePtr(self: *const Self) *const Code {
-        return &self.code[0];
-    }
-    pub inline fn codePc(self: *const Self) PC {
-        return PC.init(@ptrCast(&self.code[0]));
-    }
-    pub inline fn selectorHash32X(self: *const Self) u32 {
-        return @truncate(self.signature.rawU());
-    }
-    pub fn formatXXX(
-        self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = fmt;
-        _ = options;
-        return self.write(writer);
-    }
-    pub fn write(
-        self: *const Self,
-        writer: anytype,
-    ) !void {
-        const realHO = self.header().realHeapObject();
-        const all = @as([]Code, @ptrCast(realHO.asSlice() catch unreachable));
-        const refs = realHO.arrayAsSlice(Object) catch unreachable;
-        const locals = self.stackStructure.h0;
-        const maxStackNeeded = self.stackStructure.h1;
-        const selfOffset = @intFromEnum(self.stackStructure.classIndex);
-        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} realHO:{} {any} ({any})", .{ self.selector, locals, maxStackNeeded, selfOffset, realHO, all[codeOffsetInObjects .. all.len - refs.len], refs });
-    }
-    pub fn asFakeObject(self: *const Self) Object {
-        return @as(Object, @bitCast(@intFromPtr(self)));
     }
 };
 pub const PC = packed struct {
@@ -370,7 +309,80 @@ pub const Code = union {
         } else try writer.print("0x{x}", .{self.object.toNatNoCheck()});
     }
 };
-pub fn intOf(comptime str: []const u8) u12 {
+pub const CodeContextPtr = *Context;
+pub const CompiledMethodPtr = *CompiledMethod;
+pub const CompiledMethod = struct {
+    header: HeapHeader,
+    stackStructure: Object, // number of local values beyond the parameters
+    signature: Signature,
+    executeFn: ThreadedFn.Fn,
+    jitted: ?ThreadedFn.Fn,
+    code: [codeSize]Code, // will typically be a lot more then 1, as it will be the threaded version of the method
+    const Self = @This();
+    const codeSize = 1;
+    pub const codeOffset = @offsetOf(CompiledMethod, "code");
+    comptime {
+        std.debug.assert(@offsetOf(Self, "header") == 0);
+    }
+    const codeOffsetInObjects = codeOffset / 8;
+    pub fn init(name: Object, methodFn: ThreadedFn.Fn) Self {
+        return Self{
+            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
+            .stackStructure = Object.from(0),
+            .signature = Signature.from(name, .none),
+            .executeFn = methodFn,
+            .jitted = methodFn,
+            .code = .{Code.primOf(methodFn)},
+        };
+    }
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
+        const pc = PC.init(&self.code[0]);
+        trace("\nexecute: {} {} {}", .{ pc, sp, self.signature });
+        return pc.prim()(pc.next(), sp, process, context, self.signature.asObject());
+    }
+    // pub fn forDispatch(self: *Self, class: ClassIndex) void {
+    //     self.signature.setClass(class);
+    //     addMethod(self);
+    // }
+    inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
+        return @ptrCast(self);
+    }
+    pub inline fn codePtr(self: *const Self) *const Code {
+        return &self.code[0];
+    }
+    pub inline fn codePc(self: *const Self) PC {
+        return PC.init(@ptrCast(&self.code[0]));
+    }
+    pub inline fn selectorHash32X(self: *const Self) u32 {
+        return @truncate(self.signature.rawU());
+    }
+    pub fn formatXXX(
+        self: *const Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        return self.write(writer);
+    }
+    pub fn write(
+        self: *const Self,
+        writer: anytype,
+    ) !void {
+        const realHO = self.header().realHeapObject();
+        const all = @as([]Code, @ptrCast(realHO.asSlice() catch unreachable));
+        const refs = realHO.arrayAsSlice(Object) catch unreachable;
+        const locals = self.stackStructure.h0;
+        const maxStackNeeded = self.stackStructure.h1;
+        const selfOffset = @intFromEnum(self.stackStructure.classIndex);
+        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} realHO:{} {any} ({any})", .{ self.selector, locals, maxStackNeeded, selfOffset, realHO, all[codeOffsetInObjects .. all.len - refs.len], refs });
+    }
+    pub fn asFakeObject(self: *const Self) Object {
+        return @as(Object, @bitCast(@intFromPtr(self)));
+    }
+};
+fn intOf(comptime str: []const u8) u12 {
     comptime var n: u12 = 0;
     inline for (str) |c| {
         if (c > '9') return n;
@@ -384,7 +396,7 @@ test "intOf" {
     try expectEqual(comptime intOf("012Abc"), 12);
     try expectEqual(comptime intOf("1230Abc"), 1230);
 }
-pub fn countNonLabels(comptime tup: anytype) usize {
+fn countNonLabels(comptime tup: anytype) usize {
     comptime var c = 0;
     inline for (tup) |field| {
         switch (@typeInfo(@TypeOf(field))) {
@@ -428,32 +440,34 @@ test "countNonLabels" {
         ClassIndex.True,
     }));
 }
-pub fn combine(size: type, tup: anytype) comptime_int {
-    comptime var n: u56 = 0;
-    comptime var shift = 0;
-    inline for (tup) |field| {
-        switch (@TypeOf(field)) {
-            comptime_int => n |= @as(u56, @as(size, field)) << shift,
-            else => n |= @as(u56, @as(size, @intFromEnum(field))) << shift,
+pub const combiners = struct {
+    fn combine(size: type, tup: anytype) comptime_int {
+        comptime var n: u56 = 0;
+        comptime var shift = 0;
+        inline for (tup) |field| {
+            switch (@TypeOf(field)) {
+                comptime_int => n |= @as(u56, @as(size, field)) << shift,
+                else => n |= @as(u56, @as(size, @intFromEnum(field))) << shift,
+            }
+            shift += @typeInfo(size).int.bits;
         }
-        shift += @typeInfo(size).int.bits;
+        return n;
     }
-    return n;
-}
-pub fn combine14(tup: anytype) comptime_int {
-    return combine(u14, tup);
-}
-pub fn combine24(tup: anytype) comptime_int {
-    return combine(u24, tup);
-}
-test "combiners" {
-    std.debug.print("Test: combiners\n", .{});
-    const expectEqual = std.testing.expectEqual;
-    try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-    try expectEqual(229391, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
-    try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
-}
-pub fn CompileTimeMethod(comptime counts: usize) type {
+    pub fn combine14(tup: anytype) comptime_int {
+        return combine(u14, tup);
+    }
+    pub fn combine24(tup: anytype) comptime_int {
+        return combine(u24, tup);
+    }
+    test "combiners" {
+        std.debug.print("Test: combiners\n", .{});
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
+        try expectEqual(229391, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
+    }
+};
+fn CompileTimeMethod(comptime counts: usize) type {
     const codes = counts + (if (config.is_test) 1 else 0);
     return struct { // structure must exactly match CompiledMethod
         header: HeapHeader,
@@ -491,6 +505,11 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
                     ThreadedFn.Fn => {
                         //@compileLog(field);
                         code[n] = Code.primOf(field);
+                        n = n + 1;
+                    },
+                    threadedFn.Enum => {
+                        //@compileLog(field);
+                        code[n] = Code.primOf(threadedFn.threadedFn(field));
                         n = n + 1;
                     },
                     Object, bool, @TypeOf(null), comptime_int => {
@@ -563,7 +582,7 @@ pub fn CompileTimeMethod(comptime counts: usize) type {
         pub fn resolve(self: *Self) void {
             for (&self.code, &self.offsets) |*c, isOffset| {
                 if (isOffset) {
-                    const offset = c.object.thunkImmediateValue().?.to(i64);
+                    const offset = c.object.thunkImmediateValue().to(i64);
                     if (offset == 0) {
                         c.* = Code.methodOf(@ptrCast(self));
                     } else {
@@ -617,15 +636,15 @@ test "CompileTimeMethod" {
     }));
     var r1 = c1.init(Sym.value, 2, 3, null, .none, .{});
     //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
-    try expectEqual(r1.getCodeSize(), 9);
+    try expectEqual(10, r1.getCodeSize());
 }
-pub fn compiledMethodType(comptime codeSize: comptime_int) type {
+fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
-pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     return compileMethodWith(name, locals, maxStack, class, null, tup);
 }
-pub fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     return methodType.init(name, locals, maxStack, verifier, class, tup);
@@ -678,13 +697,13 @@ test "LookupLabel" {
 }
 // const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows
 const print = std.io.getStdOut().writer().print;
-const p = @import("controlPrimitives.zig");
+const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
     std.debug.print("Test: compiling method\n", .{});
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, 0, .none, .{
-        ":abc", &p.send,
+        ":abc", p.branch,
         "def",  True,
         42,     ":def",
         "abc",  "^",
@@ -692,7 +711,7 @@ test "compiling method" {
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
-    try expectEqual(8, t.len);
+    try expectEqual(9, t.len);
     const debugging = false;
     if (debugging) {
         @setRuntimeSafety(false);
@@ -707,7 +726,7 @@ test "compiling method" {
             trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
     }
     //    try expectEqual(t.prim,controlPrimitives.noop);
-    try expectEqual(t[0].prim(), &p.send);
+    try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True);
     try expectEqual(t[3].object, Object.from(42));
@@ -717,7 +736,7 @@ test "compiling method" {
     try expectEqual(t[7].object, Nil);
 }
 
-pub fn CompileTimeObject(comptime counts: usize) type {
+fn CompileTimeObject(comptime counts: usize) type {
     const codes = counts;
     return struct {
         objects: [codes]Object,
@@ -761,7 +780,8 @@ pub fn CompileTimeObject(comptime counts: usize) type {
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
             var includesPointer = false;
             for (&self.objects) |*o| {
-                if (o.thunkImmediateValue()) |ob| {
+                if (o.isThunkImmediate()) {
+                    const ob = o.thunkImmediateValue();
                     if (ob.isInt()) {
                         o.* = Object.from(&self.objects[ob.hash]);
                         includesPointer = true;
@@ -799,7 +819,7 @@ pub fn CompileTimeObject(comptime counts: usize) type {
         }
     };
 }
-pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
+fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(20000);
     const objType = CompileTimeObject(countNonLabels(tup));
     return objType.init(tup);
@@ -853,164 +873,9 @@ test "compileObject" {
     try expectEqual(h3.header.age, .static);
     try expectEqual(h3.header.format, .notIndexable);
 }
-// test "method object" {
-// std.debug.print("Test: method object\n",.{});
-//     // + aNumber
-//     //     "Primitive. Add the receiver to the argument and answer with the result
-//     //     if it is a SmallInteger. Fail if the argument or the result is not a
-//     //     SmallInteger  Essential  No Lookup. See Object documentation whatIsAPrimitive."
-
-//     //     <primitive: 1>
-//     //     ^ super + aNumber
-//     const c = ClassIndex;
-//     var o = compileObject(.{
-//         ":super1",
-//         c.ASSuper,
-
-//         0,
-//         ":aNumber",
-//         c.ASArg,
-
-//         "super1",
-//         Sym.@"+",
-//         "aNumber",
-//         ":send1",
-//         c.ASSend,
-
-//         "send1",
-//         ":return1",
-//         c.ASReturn,
-
-//         "return1",
-//         // another statement
-//         ":body",
-//         c.ASSequence,
-
-//         "body",
-//         1,
-//         Sym.@"+",
-//         ":first",
-//         c.Method, // first HeapObject
-//     });
-//     o.setLiterals(&[_]Object{}, &[_]ClassIndex{});
-//     const method = o.asObject();
-//     _ = method;
-// }
-pub const embedded = @import("controlPrimitives.zig");
 fn callMethod(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, unreachable };
 }
-pub const controlPrimitivesX = struct {
-    const ContextPtr = CodeContextPtr;
-
-    pub fn verifyMethod(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
-        const method = pc.method();
-        trace("\nverifyMethod: {*} {} {}", .{ method, signature, method.signature });
-        if (!method.signature.equals(signature)) {
-            trace(" failed match", .{});
-            return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, signature });
-        }
-        const newPc = PC.init(@ptrCast(&method.code));
-        trace(" newPc={} {}", .{ newPc, newPc.prim() });
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
-    }
-    // pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    //     const process = tfAsProcess(_process);
-    //     const context = tfAsContext(_context);
-    //     trace("\nifTrue: {any}", .{context.stack(sp, process)});
-    //     const v = sp.top;
-    //     if (True.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
-    //     @panic("non boolean");
-    // }
-    // pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    //     const process = tfAsProcess(_process);
-    //     const context = tfAsContext(_context);
-    //     trace("\nifFalse: {any}", .{context.stack(sp, process)});
-    //     const v = sp.top;
-    //     if (False.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
-    //     @panic("non boolean");
-    // }
-    // pub fn ifNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    //     const v = sp.top;
-    //     if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
-    // }
-    // pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    //     const v = sp.top;
-    //     if (Nil.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
-    //     return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    // }
-    pub fn primFailure(_: PC, _: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP {
-        @panic("primFailure");
-    }
-    pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        sp.top = pc.object();
-        trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, undefined });
-    }
-    pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        sp.top = Object.from(0);
-        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
-    }
-    pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        sp.top = Object.from(1);
-        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
-    }
-    pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(Object.from(0));
-        trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(Object.from(1));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(Object.from(2));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(Object.from(-1));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(pc.literalIndirect());
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(Nil);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(True);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        const newSp = sp.push(False);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-    pub fn printStack(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        trace("\nstack: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
-    }
-    pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
-        const tPc = context.getTPc();
-        const nPc = tPc.prev().prim();
-        return @call(tailCall, nPc, .{ tPc, sp, process, context, undefined });
-    }
-    pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
-        const tPc = context.getTPc();
-        const nPc = tPc.prev().prim();
-        const newSp = sp.push(if (nPc == context.getNPc()) True else False);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-};
 pub const Execution = struct {
     process: Process align(1024),
     ctxt: Context,
@@ -1050,6 +915,28 @@ pub const Execution = struct {
         trace("\nrun: {x} {x}", .{ &self.process, &self.ctxt });
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
+    pub fn runTest(title: []const u8, tup: anytype,source: []const Object, expected: []const Object) !void {
+        _ = .{tup,source,expected};
+        std.debug.print("ExecutionTest: {s}\n", .{title});
+        const expectEqual = std.testing.expectEqual;
+        _ = expectEqual;
+        var m = compileMethod(Sym.yourself, 0, 0, .none, tup);
+        //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
+        const t = m.code[0..];
+        const debugging = false;
+        if (debugging) {
+            @setRuntimeSafety(false);
+            trace("m: 0x{x:0>16}\n", .{@intFromPtr(&m)});
+            for (t, 0..) |tv, idx|
+                trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
+        }
+        m.resolve();
+        if (debugging) {
+            @setRuntimeSafety(false);
+            for (t, 0..) |*tv, idx|
+                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
+        }
+    }
     fn mainSendTo(selector: Object, target: Object) !void {
         std.debug.print("Sending: {} to {}\n", .{ selector, target });
         var exec = Self.new();
@@ -1059,61 +946,4 @@ pub const Execution = struct {
         return error.NotImplemented;
     }
 };
-
-pub const mainSendTo = Execution.mainSendTo;
-
-extern fn llvmPL(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
-const llvmPLCM = CompiledMethod.init(Sym.yourself, @ptrCast(&llvmPL));
-test "simple llvm" {
-    std.debug.print("Test: simple llvm\n", .{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const pl = if (true) &p.pushLiteral else llvmPLCM;
-    var method = compileMethod(Sym.yourself, 0, 0, .none, .{
-        pl,                    0,
-        &p.returnTopNoContext,
-    });
-    var te = Execution.new();
-    te.init(null);
-    var objs = [_]Object{ Nil, True };
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 3);
-    try expectEqual(result[0], Object.from(0));
-    try expectEqual(result[1], Nil);
-    try expectEqual(result[2], True);
-}
-test "llvm external" {
-    std.debug.print("Test: llvm external\n", .{});
-    const expectEqual = std.testing.expectEqual;
-    Process.resetForTest();
-    const pl = if (true) &p.pushLiteral else llvmPLCM;
-    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
-        &p.pushContext,   "^",
-        ":label1",        &p.pushLiteral,
-        42,               &p.popLocal,
-        0,                &p.pushLocal,
-        0,                pl,
-        0,                &p.pushLiteral,
-        true,             &p.classCase,
-        ClassIndex.False, "label3",
-        &p.branch,        "label2",
-        ":label3",        &p.pushLocal,
-        0,                ":label4",
-        &p.returnTop,     ":label2",
-        pl,               0,
-        &p.branch,        "label4",
-    });
-    method.resolve();
-    const debugging = false;
-    if (debugging) {
-        @setRuntimeSafety(false);
-        for (&method.code, 0..) |*tv, idx|
-            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
-    }
-    var objs = [_]Object{ Nil, Nil, Nil };
-    var te = Execution.new();
-    te.init(null);
-    const result = te.run(objs[0..], &method);
-    try expectEqual(result.len, 1);
-    try expectEqual(result[0], Object.from(0));
-}
+    

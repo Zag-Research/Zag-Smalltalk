@@ -1,9 +1,10 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const zag = @import("zag.zig");
 const config = zag.config;
+const trace = config.trace;
 const tailCall = config.tailCall;
 const stdCall = config.stdCall;
-const zag = @import("zag.zig");
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
@@ -22,13 +23,25 @@ const SP = execute.SP;
 const Extra = execute.Extra;
 const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
-
+const tf = zag.threadedFn.Enum;
 pub const branch = struct {
-    pub const order = 0;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
         const target = pc.targetPC();
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
         return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
+    }
+    test "branch" {
+        try Execution.runTest(
+            "branch",
+            .{
+                &threadedFn,
+                tf.branch,
+                "label",
+                ":label",
+            },
+            &[_]Object{},
+            &[_]Object{},
+        );
     }
 };
 pub const call = struct {
@@ -38,7 +51,7 @@ pub const call = struct {
         const method = pc.method();
         const newPc = PC.init(method.codePtr());
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ newPc, sp, process, context, undefined });
-        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.from(method) });
+        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra{.method = method} });
     }
 };
 pub const classCase = struct {
@@ -64,5 +77,44 @@ pub const classCase = struct {
                 newPc = newPc.next();
             }
         }
+    }
+};
+pub const pushLiteral = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(pc.object());
+        trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
+        return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+    }
+    test "pushLiteral" {
+        try Execution.runTest(
+            "pushLiteral",
+            .{
+                tf.pushLiteral,
+                42,
+            },
+            &[_]Object{},
+            &[_]Object{Object.from(42)},
+        );
+    }
+};
+pub const pushStack = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
+        const offset = pc.object().to(u64);
+        const newSp = sp.push(sp.at(offset));
+        trace("\npushStack: {any}", .{context.stack(newSp, process)});
+        return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+    }
+    test "pushStack" {
+        try Execution.runTest(
+            "pushStack",
+            .{
+                tf.pushStack,
+                1,
+                tf.pushStack,
+                4
+            },
+            &[_]Object{Object.from(42),Object.from(17),Object.from(2),Object.from(3),},
+            &[_]Object{Object.from(3),Object.from(17),Object.from(42),Object.from(17),Object.from(2),Object.from(3),},
+        );
     }
 };

@@ -223,10 +223,8 @@ const TagObject = packed struct(u64) {
     pub inline fn isThunkImmediate(self: Self) bool {
         return self.isImmediateClass(.ThunkImmediate);
     }
-    pub inline fn thunkImmediateValue(self: Self) ?Object {
-        if (self.isThunkImmediate())
-            return @bitCast(@as(i64, @bitCast(self)) >> 8);
-        return null;
+    pub inline fn thunkImmediateValue(self: Self) Object {
+        return @bitCast(@as(i64, @bitCast(self)) >> 8);
     }
     test "ThunkImmediate" {
         std.debug.print("Test: ThunkImmediate\n", .{});

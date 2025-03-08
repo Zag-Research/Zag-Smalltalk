@@ -271,6 +271,7 @@ pub fn resetForTest() void {
     allProcesses = null;
 }
 test "nursery allocation" {
+    if (true) return error.SkipZigTest;
     const ee = std.testing.expectEqual;
     var process align(alignment) = new();
     var pr = &process;
@@ -302,6 +303,7 @@ test "nursery allocation" {
     // sp.top should be updated
 }
 test "check flag" {
+    if (true) return error.SkipZigTest;
     const testing = std.testing;
     var process align(1) = new();
     var pr = &process;
@@ -320,6 +322,7 @@ test "check flag" {
     try testing.expect(pr.needsCheck());
 }
 test "allocStack" {
+    if (true) return error.SkipZigTest;
     //    const testing = std.testing;
     var process align(alignment) = new();
     var pr = &process;

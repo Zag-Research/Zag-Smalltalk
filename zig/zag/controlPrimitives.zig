@@ -159,11 +159,6 @@ fn pushIndirectLocal(pc: PC, sp: SP, process: *Process, context: *Context, signa
 fn pushInstVar(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
-pub fn pushLiteral(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-    const newSp = sp.push(pc.object());
-    trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
-    return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, undefined });
-}
 pub fn pushLocal(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
     const newSp = sp.push(context.getLocal(pc.uint()));
     trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
@@ -182,9 +177,6 @@ fn pushLocalField(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra
     const newSp = sp.push(local.getField(ref >> 12));
     trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
-}
-fn pushStack(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
-    _ = .{ pc, sp, process, context, extra, unreachable };
 }
 fn pushThisContext(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
     const newSp = sp.push(Object.from(context));
@@ -458,3 +450,114 @@ test "simple executable" {
     try expectEqual(result.len, 1);
     try expectEqual(result[0], Object.from(0));
 }
+pub const controlPrimitivesX = struct {
+    const ContextPtr = CodeContextPtr;
+
+    pub fn verifyMethod(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+        const method = pc.method();
+        trace("\nverifyMethod: {*} {} {}", .{ method, signature, method.signature });
+        if (!method.signature.equals(signature)) {
+            trace(" failed match", .{});
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, signature });
+        }
+        const newPc = PC.init(@ptrCast(&method.code));
+        trace(" newPc={} {}", .{ newPc, newPc.prim() });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
+    }
+    // pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    //     const process = tfAsProcess(_process);
+    //     const context = tfAsContext(_context);
+    //     trace("\nifTrue: {any}", .{context.stack(sp, process)});
+    //     const v = sp.top;
+    //     if (True.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+    //     if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
+    //     @panic("non boolean");
+    // }
+    // pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    //     const process = tfAsProcess(_process);
+    //     const context = tfAsContext(_context);
+    //     trace("\nifFalse: {any}", .{context.stack(sp, process)});
+    //     const v = sp.top;
+    //     if (False.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+    //     if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    //     @panic("non boolean");
+    // }
+    // pub fn ifNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    //     const v = sp.top;
+    //     if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+    //     return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    // }
+    // pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    //     const v = sp.top;
+    //     if (Nil.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    //     return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+    // }
+    pub fn primFailure(_: PC, _: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP {
+        @panic("primFailure");
+    }
+    pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        sp.top = pc.object();
+        trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, undefined });
+    }
+    pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        sp.top = Object.from(0);
+        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    }
+    pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        sp.top = Object.from(1);
+        trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    }
+    pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(Object.from(0));
+        trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(Object.from(1));
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(Object.from(2));
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(Object.from(-1));
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(pc.literalIndirect());
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(Nil);
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(True);
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        const newSp = sp.push(False);
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+    pub fn printStack(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        trace("\nstack: {any}", .{context.stack(sp, process)});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    }
+    pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        const tPc = context.getTPc();
+        const nPc = tPc.prev().prim();
+        return @call(tailCall, nPc, .{ tPc, sp, process, context, undefined });
+    }
+    pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        const tPc = context.getTPc();
+        const nPc = tPc.prev().prim();
+        const newSp = sp.push(if (nPc == context.getNPc()) True else False);
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    }
+};

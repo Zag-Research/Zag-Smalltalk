@@ -219,42 +219,46 @@ pub const embedded = struct {
         }
     };
 };
-pub const primitives = struct {
-    pub fn p1(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#+
-        trace("\n+: {any}", .{context.stack(sp, process)});
-        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
-        trace("\np1: {any}", .{context.stack(sp, process)});
-        const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
-        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+pub const primitive1 = struct {
+    pub const number = 1;
+    pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP { // SmallInteger>>#+
+        if (inlines.p1(sp.next, sp.top)) | result| {
+            const newSp = sp.dropPut(result);
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+        } else |_| {};
+        return @call(tailCall, extra.threadedFn(), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn p2(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#-
+};
+pub const primitive2 = struct {
+    pub const number = 2;
+    pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP { // SmallInteger>>#-
         trace("\n-: {any}", .{context.stack(sp, process)});
         if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np2: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
-        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
-    }
-    pub fn p7(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // at:
-        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
-        @panic("p7 unimplemented");
-    }
-    pub fn p5(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#<=
-        trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), signature.u() });
-        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
-        trace("\np5: {any}", .{context.stack(sp, process)});
-        const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
-        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
-    }
-    pub fn p9(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#*
-        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
-        const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, signature }));
+                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
         return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
     }
 };
+pub fn p7(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // at:
+    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    @panic("p7 unimplemented");
+}
+pub fn p5(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#<=
+    trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), signature.u() });
+    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    trace("\np5: {any}", .{context.stack(sp, process)});
+    const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
+                                             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
+    return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+}
+pub fn p9(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // SmallInteger>>#*
+    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
+                                 return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, signature }));
+    return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+}
+
 const e = struct {
     usingnamespace execute.controlPrimitives;
     usingnamespace embedded;
