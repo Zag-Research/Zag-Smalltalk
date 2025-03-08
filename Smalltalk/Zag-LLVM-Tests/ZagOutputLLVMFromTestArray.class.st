@@ -83,7 +83,17 @@ ZagOutputLLVMFromTestArray >> methodAddress: anObject [
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> next [
+ZagOutputLLVMFromTestArray >> nextAddress [
+" returns the next word as a Code address "
+
+	| object |
+	object := self valueOf.
+	index := index + 1.
+	^ object
+]
+
+{ #category : 'API' }
+ZagOutputLLVMFromTestArray >> nextObject [
 
 	| object |
 	object := self valueOf.

@@ -28,7 +28,14 @@ ZagOutputSourceAPI >> methodAddress: anObject [
 ]
 
 { #category : 'API' }
-ZagOutputSourceAPI >> next [
+ZagOutputSourceAPI >> nextAddress [
+" returns the next word as a Code address "
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'API' }
+ZagOutputSourceAPI >> nextObject [
 
 	^ self subclassResponsibility
 ]
