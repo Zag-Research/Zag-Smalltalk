@@ -101,10 +101,10 @@ pub const Extra = union {
     object: Object,
     signature: Signature,
     pub fn encoded(self: Extra) Extra {
-        return .{.object = Object.from(self.method).thunkImmediate().?};
+        return .{ .object = Object.from(self.method).thunkImmediate().? };
     }
     pub fn decoded(self: Extra) Extra {
-        return .{.object = self.object.thunkImmediateValue()};
+        return .{ .object = self.object.thunkImmediateValue() };
     }
     pub fn isEncoded(self: Extra) bool {
         @setRuntimeSafety(false);
@@ -183,10 +183,12 @@ pub const PC = packed struct {
     fn method(self: PC) CompiledMethodPtr {
         return self.code.method;
     }
-    pub inline fn codeAddress(self: PC) *const Code {
+    pub //inline
+    fn codeAddress(self: PC) *const Code {
         return self.code.codePtr;
     }
-    pub inline fn targetPC(self: PC) PC {
+    pub //inline
+    fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
     pub inline fn asThreadedFn(self: PC) ThreadedFn {
@@ -337,8 +339,8 @@ pub const CompiledMethod = struct {
     }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
         const pc = PC.init(&self.code[0]);
-        trace("\nexecute: {} {} {}", .{ pc, sp, self.signature });
-        return pc.prim()(pc.next(), sp, process, context, self.signature.asObject());
+        trace("\nexecute: {} {} {}\n", .{ pc, sp, self.signature });
+        return pc.prim()(pc.next(), sp, process, context, .{ .method = self });
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
     //     self.signature.setClass(class);
@@ -425,7 +427,7 @@ fn countNonLabels(comptime tup: anytype) usize {
 test "countNonLabels" {
     std.debug.print("Test: countNonLabels\n", .{});
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(10, countNonLabels(.{
+    try expectEqual(9, countNonLabels(.{
         ":abc",
         &Code.noOp,
         "def",
@@ -433,7 +435,6 @@ test "countNonLabels" {
         comptime Object.from(42),
         ":def",
         "abc",
-        "^",
         3,
         "1mref",
         null,
@@ -521,11 +522,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         n = n + 1;
                     },
                     else => {
-                        if (field.len == 1 and field[0] == '^') {
-                            code[n] = Code.offset(0);
-                            method.offsets[n] = true;
-                            n = n + 1;
-                        } else if (field[0] != ':') {
+                        if (field[0] != ':') {
                             code[n] = Code.offset(lookupLabel(tup, field) - n - 1);
                             method.offsets[n] = true;
                             n = n + 1;
@@ -583,11 +580,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
             for (&self.code, &self.offsets) |*c, isOffset| {
                 if (isOffset) {
                     const offset = c.object.thunkImmediateValue().to(i64);
-                    if (offset == 0) {
-                        c.* = Code.methodOf(@ptrCast(self));
-                    } else {
-                        c.* = Code.codePtrOf(c, offset);
-                    }
+                    std.debug.print("offset: {}\n", .{offset});
+                    c.* = Code.codePtrOf(c, offset);
                 }
             }
             // if (self.signature.isIndexSymbol()) {
@@ -629,14 +623,13 @@ test "CompileTimeMethod" {
         ":def",
         "abc",
         "*",
-        "^",
         3,
         "1mref",
         null,
     }));
     var r1 = c1.init(Sym.value, 2, 3, null, .none, .{});
     //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
-    try expectEqual(10, r1.getCodeSize());
+    try expectEqual(9, r1.getCodeSize());
 }
 fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
@@ -681,16 +674,12 @@ test "LookupLabel" {
     const def: []const u8 = "def";
     const c1 = lookupLabel(.{
         ":abc",
-        //        &p.setupSend,
         "def",
         True,
         comptime Object.from(42),
         ":def",
         "abc",
-        //"*",
-        "^",
         3,
-        //"1mref",
         null,
     }, def);
     try expectEqual(3, c1);
@@ -706,8 +695,8 @@ test "compiling method" {
         ":abc", p.branch,
         "def",  True,
         42,     ":def",
-        "abc",  "^",
-        3,      null,
+        "abc",  3,
+        null,
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
@@ -731,9 +720,8 @@ test "compiling method" {
     try expectEqual(t[2].object, True);
     try expectEqual(t[3].object, Object.from(42));
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].method, m.asCompiledMethodPtr());
-    try expectEqual(t[6].object, Object.from(3));
-    try expectEqual(t[7].object, Nil);
+    try expectEqual(t[5].object, Object.from(3));
+    try expectEqual(t[6].object, Nil);
 }
 
 fn CompileTimeObject(comptime counts: usize) type {
@@ -915,15 +903,13 @@ pub const Execution = struct {
         trace("\nrun: {x} {x}", .{ &self.process, &self.ctxt });
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
-    pub fn runTest(title: []const u8, tup: anytype,source: []const Object, expected: []const Object) !void {
-        _ = .{tup,source,expected};
+    pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
+        _ = .{ tup, source, expected };
         std.debug.print("ExecutionTest: {s}\n", .{title});
-        const expectEqual = std.testing.expectEqual;
-        _ = expectEqual;
         var m = compileMethod(Sym.yourself, 0, 0, .none, tup);
         //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
         const t = m.code[0..];
-        const debugging = false;
+        const debugging = true;
         if (debugging) {
             @setRuntimeSafety(false);
             trace("m: 0x{x:0>16}\n", .{@intFromPtr(&m)});
@@ -936,6 +922,11 @@ pub const Execution = struct {
             for (t, 0..) |*tv, idx|
                 trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
         }
+        var self = new();
+        const result = self.run(source, &m);
+        std.debug.print("\nexpected: {any}\n", .{expected});
+        std.debug.print("result: {any}\n", .{result});
+        try std.testing.expectEqualSlices(Object, expected, result);
     }
     fn mainSendTo(selector: Object, target: Object) !void {
         std.debug.print("Sending: {} to {}\n", .{ selector, target });
@@ -946,4 +937,3 @@ pub const Execution = struct {
         return error.NotImplemented;
     }
 };
-    

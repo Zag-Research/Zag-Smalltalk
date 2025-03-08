@@ -86,15 +86,15 @@ pub const Module = struct {
         return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
     }
     pub fn init(M: anytype) Module {
-        return Module{.name = M.name, .primitives = findPrimitives(M)};
+        return Module{ .name = M.name, .primitives = findPrimitives(M) };
     }
     fn countPrimitives(M: anytype) usize {
         const decls = @typeInfo(M).@"struct".decls;
         var n: usize = 0;
         for (decls) |decl| {
-            const ds = @field(M,decl.name);
-            if (std.meta.hasFn(ds,"primitive")) {
-                if (!@hasDecl(ds,"number"))
+            const ds = @field(M, decl.name);
+            if (std.meta.hasFn(ds, "primitive")) {
+                if (!@hasDecl(ds, "number"))
                     n += 1;
             }
         }
@@ -106,12 +106,12 @@ pub const Module = struct {
             var mm: [countPrimitives(M)]Module = undefined;
             var n = 0;
             for (decls) |decl| {
-                const ds = @field(M,decl.name);
-                if (std.meta.hasFn(ds,"primitive")) {
-                    if (@hasDecl(ds,"number")) {
-                        numberedPrimitives[@field(ds,"number")] = &@field(ds,"primitive");
+                const ds = @field(M, decl.name);
+                if (std.meta.hasFn(ds, "primitive")) {
+                    if (@hasDecl(ds, "number")) {
+                        numberedPrimitives[@field(ds, "number")] = &@field(ds, "primitive");
                     } else {
-                        mm[n] = Primitive{.name = @field(ds,"name"), .primitive = &@field(ds,"primitive")};
+                        mm[n] = Primitive{ .name = @field(ds, "name"), .primitive = &@field(ds, "primitive") };
                         n += 1;
                     }
                 }
@@ -145,7 +145,7 @@ pub const primitive = struct {
         {
             const newPc = pc.next();
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra });
-        }   
+        }
     }
     test "primitive found" {
         try Execution.runTest(
@@ -154,8 +154,13 @@ pub const primitive = struct {
                 tf.primitive,
                 110,
             },
-            &[_]Object{Object.from(42),Object.from(17),},
-            &[_]Object{False,},
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                False,
+            },
         );
     }
     test "primitive not found" {
@@ -165,24 +170,30 @@ pub const primitive = struct {
                 tf.primitive,
                 999,
             },
-            &[_]Object{Object.from(42),Object.from(17),},
-            &[_]Object{Object.from(42),Object.from(17),},
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
         );
     }
 };
 pub const primitiveError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{pc,sp,process,context,extra,unreachable};
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };
 pub const primitiveModule = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{pc,sp,process,context,extra,unreachable};
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };
 pub const primitiveModuleError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{pc,sp,process,context,extra,unreachable};
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };
 

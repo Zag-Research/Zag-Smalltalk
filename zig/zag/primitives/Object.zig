@@ -85,7 +85,7 @@ const embedded = struct {
 pub const primitive60 = struct {
     pub const number = 60;
     pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP { // basicAt:
-        if (inlines.p60(sp.next, sp.top)) | result| {
+        if (inlines.p60(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
             return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
@@ -96,7 +96,7 @@ pub const primitive110 = struct {
     pub const number = 110;
     pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP { // ==
         const newSp = sp.dropPut(inlines.p110(sp.next, sp.top));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra  });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
     }
 };
 const primitives = struct {

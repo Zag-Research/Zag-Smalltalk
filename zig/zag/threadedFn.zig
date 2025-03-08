@@ -42,8 +42,8 @@ const structures = struct {
     } else struct {};
 };
 
-fn enumLessThan(_: void, lhs:EnumSort, rhs:EnumSort) bool {
-    switch (std.math.order(lhs.order,rhs.order)) {
+fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
+    switch (std.math.order(lhs.order, rhs.order)) {
         .eq => return std.mem.lessThan(u8, lhs.field.name, rhs.field.name),
         .lt => return true,
         else => return false,
@@ -65,56 +65,52 @@ fn hasFn(comptime T: type, comptime name: []const u8) bool {
 }
 pub const Enum =
     blk: {
-        const decls = @typeInfo(structures).@"struct".decls;
-        var array: [decls.len]EnumSort = undefined;
-        var n = 0;
-        for (decls) |decl| {
-            const ds = @field(structures,decl.name);
-            switch (@typeInfo(@TypeOf(ds))) {
-                .comptime_int,
-                .int,
-                .@"fn" => {},
-                else => {
-                    if (@hasDecl(ds,"threadedFn")) {
-                        if (@hasDecl(ds,"order")) {
-                            array[n] = .{.field = &decl, .order = @field(ds,"order")};
-                        } else
-                            array[n] = .{.field = &decl, .order = 0};
-                        n += 1;
-                    }
-                },
-            }
+    const decls = @typeInfo(structures).@"struct".decls;
+    var array: [decls.len]EnumSort = undefined;
+    var n = 0;
+    for (decls) |decl| {
+        const ds = @field(structures, decl.name);
+        switch (@typeInfo(@TypeOf(ds))) {
+            .comptime_int, .int, .@"fn" => {},
+            else => {
+                if (@hasDecl(ds, "threadedFn")) {
+                    if (@hasDecl(ds, "order")) {
+                        array[n] = .{ .field = &decl, .order = @field(ds, "order") };
+                    } else array[n] = .{ .field = &decl, .order = 0 };
+                    n += 1;
+                }
+            },
         }
-        const enums = array[0..n];
-        std.mem.sort(EnumSort, enums, {}, enumLessThan);
-        var fields = @typeInfo(enum{}).@"enum".fields;
-        for (enums,0..) |d,i| {
-            fields = fields ++ [_]std.builtin.Type.EnumField{.{
-                .name = d.field.name,
-                .value = i,
-            }};
-        }
-        //@compileLog(fields);
-        break :blk @Type(.{ .@"enum" = .{
-            .tag_type = usize,
-            .is_exhaustive = false,
-            .fields = fields,
-            .decls = &.{},
-            }});
+    }
+    const enums = array[0..n];
+    std.mem.sort(EnumSort, enums, {}, enumLessThan);
+    var fields = @typeInfo(enum {}).@"enum".fields;
+    for (enums, 0..) |d, i| {
+        fields = fields ++ [_]std.builtin.Type.EnumField{.{
+            .name = d.field.name,
+            .value = i,
+        }};
+    }
+    //@compileLog(fields);
+    break :blk @Type(.{ .@"enum" = .{
+        .tag_type = usize,
+        .is_exhaustive = false,
+        .fields = fields,
+        .decls = &.{},
+    } });
 };
 
-const functions = 
+const functions =
     blk: {
-        var array: [@typeInfo(Enum).@"enum".fields.len]ThreadedFn.Fn = undefined;
-        for (@typeInfo(Enum).@"enum".fields) |d| {
-            const ds = @field(structures,d.name);
-            array[d.value] = &@field(ds,"threadedFn");
-        }
-        break :blk array;
+    var array: [@typeInfo(Enum).@"enum".fields.len]ThreadedFn.Fn = undefined;
+    for (@typeInfo(Enum).@"enum".fields) |d| {
+        const ds = @field(structures, d.name);
+        array[d.value] = &@field(ds, "threadedFn");
+    }
+    break :blk array;
 };
 
-pub fn initialize() void {
-}
+pub fn initialize() void {}
 pub fn threadedFn(key: Enum) ThreadedFn.Fn {
     return functions[@intFromEnum(key)];
 }
@@ -122,12 +118,11 @@ pub fn threadedFn(key: Enum) ThreadedFn.Fn {
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
-test "logging" {   
-    for (@import("builtin").test_functions) |f| {
-        std.debug.print("tests: {s}\n",.{f.name});
-    }
-    inline for (std.meta.fields(Enum)) |f| {
-        std.debug.print("{s}\n", .{f.name});
-    }
-}
-                                    
+// test "logging" {
+//     for (@import("builtin").test_functions) |f| {
+//         std.debug.print("tests: {s}\n",.{f.name});
+//     }
+//     inline for (std.meta.fields(Enum)) |f| {
+//         std.debug.print("{s}\n", .{f.name});
+//     }
+// }

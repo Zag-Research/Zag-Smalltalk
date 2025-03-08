@@ -26,6 +26,7 @@ const Execution = execute.Execution;
 const tf = zag.threadedFn.Enum;
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+        std.debug.print("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
         return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
@@ -34,7 +35,6 @@ pub const branch = struct {
         try Execution.runTest(
             "branch",
             .{
-                &threadedFn,
                 tf.branch,
                 "label",
                 ":label",
@@ -51,7 +51,7 @@ pub const call = struct {
         const method = pc.method();
         const newPc = PC.init(method.codePtr());
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ newPc, sp, process, context, undefined });
-        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra{.method = method} });
+        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra{ .method = method } });
     }
 };
 pub const classCase = struct {
@@ -107,14 +107,21 @@ pub const pushStack = struct {
     test "pushStack" {
         try Execution.runTest(
             "pushStack",
-            .{
-                tf.pushStack,
-                1,
-                tf.pushStack,
-                4
+            .{ tf.pushStack, 1, tf.pushStack, 4 },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+                Object.from(2),
+                Object.from(3),
             },
-            &[_]Object{Object.from(42),Object.from(17),Object.from(2),Object.from(3),},
-            &[_]Object{Object.from(3),Object.from(17),Object.from(42),Object.from(17),Object.from(2),Object.from(3),},
+            &[_]Object{
+                Object.from(3),
+                Object.from(17),
+                Object.from(42),
+                Object.from(17),
+                Object.from(2),
+                Object.from(3),
+            },
         );
     }
 };

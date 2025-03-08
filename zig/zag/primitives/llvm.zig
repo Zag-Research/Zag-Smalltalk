@@ -25,21 +25,21 @@ const execute = @import("execute.zig");
 
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
-        _ = .{pc,sp,process,context,extra};
-       return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
+        _ = .{ pc, sp, process, context, extra };
+        return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"literalToRegister:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
         const valueToPush = sp.top;
-        _ = .{valueToPush,pc,sp,process,context,extra};
-       return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
+        _ = .{ valueToPush, pc, sp, process, context, extra };
+        return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"add:to:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
-        _ = .{pc,sp,process,context,extra};
-       return @call(tailCall, context.nPc(), .{ context.tPc(), newSp, process, context, undefined });
+        _ = .{ pc, sp, process, context, extra };
+        return @call(tailCall, context.nPc(), .{ context.tPc(), newSp, process, context, undefined });
     }
 };
 
