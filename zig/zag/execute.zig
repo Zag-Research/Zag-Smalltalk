@@ -175,7 +175,7 @@ pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
-    pub inline fn init(code: *const Code) PC {
+    pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
     pub //inline
@@ -248,6 +248,15 @@ pub const PC = packed struct {
     inline fn array(self: PC) [*]const Code {
         return @ptrCast(self.code);
     }
+    pub fn format(
+        self: PC,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = .{ fmt, options };
+        try writer.print("{{PC {x}}}", .{ @intFromPtr(self.code) });
+    }
 };
 pub const Code = union {
     object: Object,
@@ -293,9 +302,7 @@ pub const Code = union {
     fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
     }
-    const endCode = [CompiledMethod.codeSize]Code{Code.primOf(end)};
-    pub const endThread = PC.init(@ptrCast(&endCode));
-    pub fn format(
+    pub fn formatX(
         self: *const Code,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
@@ -896,10 +903,12 @@ pub const Execution = struct {
         return self.ctxt.stack(self.sp, &self.process);
     }
     pub fn run(self: *Self, source: []const Object, ptr: anytype) []Object {
+        const endCode: [1]Code align(8) = [1]Code{Code.primOf(Code.end)};
         const method: CompiledMethodPtr = @constCast(@ptrCast(ptr));
         self.initStack(source);
-        self.ctxt.setReturn(Code.endThread);
+        self.ctxt.setReturn(PC.init(@ptrCast(&endCode)));
         trace("\nrun: {x} {x}", .{ &self.process, &self.ctxt });
+        trace("\nreturn: npc:{} tpc:{}", .{ self.ctxt.npc, self.ctxt.tpc });
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {

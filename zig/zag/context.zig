@@ -140,10 +140,12 @@ pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
 pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: PC) void {
+    trace("\nsetReturnBoth: {} {}",.{npc,tpc});
     self.npc = npc;
     self.tpc = tpc;
 }
 pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
+    trace("\nsetReturn: {}",.{tpc});
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
 pub inline fn getNPc(self: *const Context) ThreadedFn.Fn {

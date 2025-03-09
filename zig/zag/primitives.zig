@@ -69,24 +69,25 @@ const Process = zag.Process;
 const Context = zag.context;
 const Extra = execute.Extra;
 const tf = zag.threadedFn.Enum;
+const Sym = zag.symbol.symbols;
 
-pub const Module = struct {
+const Module = struct {
     name: []const u8,
     primitives: []const Primitive,
     const Primitive = struct {
         name: []const u8,
         number: u32,
-        hasError: bool,
         primitive: ThreadedFn.Fn,
+        primitiveError: ThreadedFn.Fn,
     };
-    pub fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.push(Nil);
         return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
     }
-    pub fn init(M: anytype) Module {
+    fn init(M: anytype) Module {
         return Module{ .name = M.moduleName, .primitives = &findPrimitives(M) };
     }
     fn countPrimitives(M: anytype) usize {
@@ -97,14 +98,14 @@ pub const Module = struct {
             switch (@typeInfo(@TypeOf(ds))) {
                 .comptime_int, .int, .@"fn", .pointer => {},
                 else => {
-                    if (std.meta.hasFn(ds, "primitive"))
+                    if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError"))
                         n += 1;
                 },
             }
         }
         return n;
     }
-    pub fn findPrimitives(M: anytype) [countPrimitives(M)]Primitive {
+    fn findPrimitives(M: anytype) [countPrimitives(M)]Primitive {
         return blk: {
             const decls = @typeInfo(M).@"struct".decls;
             var mm: [countPrimitives(M)]Primitive = undefined;
@@ -114,8 +115,13 @@ pub const Module = struct {
                 switch (@typeInfo(@TypeOf(ds))) {
                     .comptime_int, .int, .@"fn", .pointer => {},
                     else => {
-                        if (std.meta.hasFn(ds, "primitive")) {
-                            mm[n] = Primitive{ .name = if (@hasDecl(ds, "name")) @field(ds, "name") else decl.name, .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0, .hasError = if (@hasDecl(ds, "hasError")) @field(ds, "hasError") else false, .primitive = &@field(ds, "primitive") };
+                        if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError")) {
+                            mm[n] = Primitive{
+                                .name = if (@hasDecl(ds, "name")) @field(ds, "name") else decl.name,
+                                .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0,
+                                .primitive = if (@hasDecl(ds, "primitive")) &@field(ds, "primitive") else noPrim,
+                                .primitiveError = if (@hasDecl(ds, "primitiveError")) &@field(ds, "primitiveError") else noPrimWithError,
+                            };
                             n += 1;
                         }
                     },
@@ -127,14 +133,41 @@ pub const Module = struct {
     fn findNumberedPrimitive(primNumber: usize, hasError: bool) ThreadedFn.Fn {
         for (&modules) |m| {
             for (m.primitives) |p| {
-                if (p.number == primNumber and p.hasError == hasError)
-                    return p.primitive;
+                if (p.number == primNumber)
+                    return if (hasError) p.primitiveError else p.primitive;
             }
         }
-        return noPrim;
+        return if (hasError) noPrimWithError else noPrim;
     }
 };
-pub const modules = [_]Module{
+const testModule = if (config.is_test) struct {
+    const moduleName = "test module";
+    pub const primitive998 = struct {
+        pub const number = 998;
+        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+            if (sp.next.tagbits() != sp.top.tagbits()) {
+                return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
+            } else {
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top));
+                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+            }
+        }
+        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+            if (sp.next.tagbits() != sp.top.tagbits()) {
+                const newSp = sp.push(Sym.value);
+                return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
+            } else {
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top));
+                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+            }
+        }
+};
+
+} else struct {
+    const moduleName = "test module";
+};
+const modules = [_]Module{
+    Module.init(testModule),
     Module.init(@import("primitives/Object.zig")),
     // @import("primitives/Smallinteger.zig").module,
     // @import("primitives/Behavior.zig").module,
@@ -160,7 +193,9 @@ pub const primitive = struct {
             "primitive found",
             .{
                 tf.primitive,
-                110,
+                998,
+                tf.pushLiteral,
+                99,
             },
             &[_]Object{
                 Object.from(42),
@@ -171,18 +206,41 @@ pub const primitive = struct {
             },
         );
     }
+    test "primitive with error" {
+        try Execution.runTest(
+            "primitive with error",
+            .{
+                tf.primitive,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                True,
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                True,
+                Object.from(17),
+            },
+        );
+    }
     test "primitive not found" {
         try Execution.runTest(
             "primitive not found",
             .{
                 tf.primitive,
                 999,
+                tf.pushLiteral,
+                99,
             },
             &[_]Object{
                 Object.from(42),
                 Object.from(17),
             },
             &[_]Object{
+                Object.from(99),
                 Object.from(42),
                 Object.from(17),
             },
@@ -191,7 +249,76 @@ pub const primitive = struct {
 };
 pub const primitiveError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+        if (extra.isEncoded()) {
+            const newPc = pc.next();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
+        }
+        const primNumber = pc.uint();
+        const prim = Module.findNumberedPrimitive(primNumber, true);
+        const method = extra.method;
+        method.executeFn = prim;
+        method.jitted = prim;
+        return @call(tailCall, prim, .{ pc, sp, process, context, extra });
+    }
+    test "primitiveError found" {
+        try Execution.runTest(
+            "primitiveError found",
+            .{
+                tf.primitiveError,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                False,
+            },
+        );
+    }
+    test "primitiveError with error" {
+        try Execution.runTest(
+            "primitiveError with error",
+            .{
+                tf.primitiveError,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                True,
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                Sym.value,
+                True,
+                Object.from(17),
+            },
+        );
+    }
+    test "primitiveError not found" {
+        try Execution.runTest(
+            "primitive not found",
+            .{
+                tf.primitiveError,
+                999,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                Nil,
+                Object.from(42),
+                Object.from(17),
+            },
+        );
     }
 };
 pub const primitiveModule = struct {

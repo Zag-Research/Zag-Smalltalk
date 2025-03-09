@@ -57,28 +57,6 @@ pub const inlines = struct {
         return !self.equals(other);
     }
 };
-const fallback = execute.fallback;
-const embedded = struct {
-    pub fn @"basicAt:"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-        sp[1] = inlines.p60(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, undefined, undefined });
-    }
-    pub fn @"basicAt:put:"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-        sp[1] = inlines.p61(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"basicAt:put:" });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, undefined, undefined });
-    }
-    pub fn p110(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP { // ProtoObject>>#==
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p110(sp.next, sp.top))), process, context, undefined });
-    }
-    pub fn p169(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP { // ProtoObject>>#~~
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p169(sp.next, sp.top))), process, context, undefined });
-    }
-    // pub inline fn p111(pc: PC, sp: SP, heap: Hp, rpc: PC, process: *Process, caller: Context) Object { // ProtoObject>>class
-    pub fn p145(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP { // atAllPut:
-        const newSp = sp.dropPut(inlines.p145(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"atAllPut:" }));
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-    }
-};
 pub const primitive60 = struct {
     pub const number = 60;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // basicAt:
