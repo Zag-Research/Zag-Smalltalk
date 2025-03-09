@@ -50,6 +50,7 @@
 // ASTFloat basicIdentityHash - 2171
 
 const std = @import("std");
+const assert = std.debug.assert;
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
@@ -74,10 +75,10 @@ pub const Module = struct {
     primitives: []const Primitive,
     const Primitive = struct {
         name: []const u8,
+        number: u32,
+        hasError: bool,
         primitive: ThreadedFn.Fn,
     };
-    var numberedPrimitives = [_]ThreadedFn.Fn{&noPrim} ** 1000;
-    var numberedPrimitivesWithError = [_]ThreadedFn.Fn{&noPrimWithError} ** 1000;
     pub fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
     }
@@ -86,41 +87,54 @@ pub const Module = struct {
         return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
     }
     pub fn init(M: anytype) Module {
-        return Module{ .name = M.name, .primitives = findPrimitives(M) };
+        return Module{ .name = M.moduleName, .primitives = &findPrimitives(M) };
     }
     fn countPrimitives(M: anytype) usize {
         const decls = @typeInfo(M).@"struct".decls;
         var n: usize = 0;
         for (decls) |decl| {
             const ds = @field(M, decl.name);
-            if (std.meta.hasFn(ds, "primitive")) {
-                if (!@hasDecl(ds, "number"))
-                    n += 1;
+            switch (@typeInfo(@TypeOf(ds))) {
+                .comptime_int, .int, .@"fn", .pointer => {},
+                else => {
+                    if (std.meta.hasFn(ds, "primitive"))
+                        n += 1;
+                },
             }
         }
         return n;
     }
-    pub fn findPrimitives(M: anytype) [countPrimitives(M)]Module {
+    pub fn findPrimitives(M: anytype) [countPrimitives(M)]Primitive {
         return blk: {
             const decls = @typeInfo(M).@"struct".decls;
-            var mm: [countPrimitives(M)]Module = undefined;
+            var mm: [countPrimitives(M)]Primitive = undefined;
             var n = 0;
             for (decls) |decl| {
                 const ds = @field(M, decl.name);
-                if (std.meta.hasFn(ds, "primitive")) {
-                    if (@hasDecl(ds, "number")) {
-                        numberedPrimitives[@field(ds, "number")] = &@field(ds, "primitive");
-                    } else {
-                        mm[n] = Primitive{ .name = @field(ds, "name"), .primitive = &@field(ds, "primitive") };
-                        n += 1;
-                    }
+                switch (@typeInfo(@TypeOf(ds))) {
+                    .comptime_int, .int, .@"fn", .pointer => {},
+                    else => {
+                        if (std.meta.hasFn(ds, "primitive")) {
+                            mm[n] = Primitive{ .name = if (@hasDecl(ds, "name")) @field(ds, "name") else decl.name, .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0, .hasError = if (@hasDecl(ds, "hasError")) @field(ds, "hasError") else false, .primitive = &@field(ds, "primitive") };
+                            n += 1;
+                        }
+                    },
                 }
             }
             break :blk mm;
         };
     }
+    fn findNumberedPrimitive(primNumber: usize, hasError: bool) ThreadedFn.Fn {
+        for (&modules) |m| {
+            for (m.primitives) |p| {
+                if (p.number == primNumber and p.hasError == hasError)
+                    return p.primitive;
+            }
+        }
+        return noPrim;
+    }
 };
-const modules = [_]Module{
+pub const modules = [_]Module{
     Module.init(@import("primitives/Object.zig")),
     // @import("primitives/Smallinteger.zig").module,
     // @import("primitives/Behavior.zig").module,
@@ -135,17 +149,11 @@ pub const primitive = struct {
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
         }
         const primNumber = pc.uint();
-        if (primNumber < Module.numberedPrimitives.len) {
-            const prim = Module.numberedPrimitives[primNumber];
-            const method = extra.method;
-            method.executeFn = prim;
-            method.jitted = prim;
-            return @call(tailCall, prim, .{ pc, sp, process, context, extra });
-        }
-        {
-            const newPc = pc.next();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra });
-        }
+        const prim = Module.findNumberedPrimitive(primNumber, false);
+        const method = extra.method;
+        method.executeFn = prim;
+        method.jitted = prim;
+        return @call(tailCall, prim, .{ pc, sp, process, context, extra });
     }
     test "primitive found" {
         try Execution.runTest(

@@ -71,7 +71,7 @@ pub const Enum =
     for (decls) |decl| {
         const ds = @field(structures, decl.name);
         switch (@typeInfo(@TypeOf(ds))) {
-            .comptime_int, .int, .@"fn" => {},
+            .comptime_int, .int, .@"fn", .array => {},
             else => {
                 if (@hasDecl(ds, "threadedFn")) {
                     if (@hasDecl(ds, "order")) {

@@ -111,7 +111,7 @@ pub const Extra = union {
         return self.object.isThunkImmediate();
     }
     pub fn threadedFn(self: Extra) ThreadedFn.Fn {
-        return self.method.code[0];
+        return self.method.code[0].threadedFn;
     }
 };
 pub const ThreadedFn = packed struct {
@@ -208,10 +208,12 @@ pub const PC = packed struct {
     pub inline fn asCodePtr(self: PC) *const Code {
         return self.code;
     }
-    pub inline fn uint(self: PC) u64 {
+    pub //inline
+    fn uint(self: PC) u64 {
         return self.code.object.to(u64);
     }
-    pub inline fn int(self: PC) i64 {
+    pub //inline
+    fn int(self: PC) i64 {
         return self.code.object.to(i64);
     }
     pub inline fn next(self: PC) PC {
@@ -580,7 +582,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
             for (&self.code, &self.offsets) |*c, isOffset| {
                 if (isOffset) {
                     const offset = c.object.thunkImmediateValue().to(i64);
-                    std.debug.print("offset: {}\n", .{offset});
                     c.* = Code.codePtrOf(c, offset);
                 }
             }
@@ -700,16 +701,15 @@ test "compiling method" {
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
-    try expectEqual(9, t.len);
-    const debugging = false;
-    if (debugging) {
+    try expectEqual(8, t.len);
+    if (config.debugging) {
         @setRuntimeSafety(false);
         trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
         for (t, 0..) |tv, idx|
             trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.rawU() });
     }
     m.resolve();
-    if (debugging) {
+    if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
             trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
@@ -904,28 +904,26 @@ pub const Execution = struct {
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
-        _ = .{ tup, source, expected };
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var m = compileMethod(Sym.yourself, 0, 0, .none, tup);
         //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
         const t = m.code[0..];
-        const debugging = true;
-        if (debugging) {
+        if (config.debugging) {
             @setRuntimeSafety(false);
             trace("m: 0x{x:0>16}\n", .{@intFromPtr(&m)});
             for (t, 0..) |tv, idx|
                 trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
         }
         m.resolve();
-        if (debugging) {
+        if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
                 trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
         }
         var self = new();
         const result = self.run(source, &m);
-        std.debug.print("\nexpected: {any}\n", .{expected});
-        std.debug.print("result: {any}\n", .{result});
+        trace("expected: {any}\n", .{expected});
+        trace("result: {any}\n", .{result});
         try std.testing.expectEqualSlices(Object, expected, result);
     }
     fn mainSendTo(selector: Object, target: Object) !void {

@@ -26,7 +26,7 @@ const Execution = execute.Execution;
 const tf = zag.threadedFn.Enum;
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
-        std.debug.print("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
+        trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
         return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
