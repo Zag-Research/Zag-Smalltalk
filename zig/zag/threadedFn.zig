@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const expectEqual = std.testing.expectEqual;
 const zag = @import("zag.zig");
 const is_test = zag.config.is_test;
 const object = zag.object;
@@ -33,6 +34,8 @@ const symbol = zag.symbol;
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
     pub usingnamespace @import("primitives.zig");
+    pub usingnamespace @import("context.zig").threadedFunctions;
+    pub usingnamespace @import("process.zig").threadedFunctions;
     pub usingnamespace if (is_test) struct {
         // these are just for testing to  verify that we can filter them out
         // pub const T = u32; // don't know how to filter these out
@@ -118,11 +121,16 @@ pub fn threadedFn(key: Enum) ThreadedFn.Fn {
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
-// test "logging" {
+test "function size" {
+    expectEqual(43,functions.len) catch |err| {
+        inline for (std.meta.fields(Enum)) |f| {
+            std.debug.print("{s}\n", .{f.name});
+        }
+        return err;
+};
+}
+// test "test list" {
 //     for (@import("builtin").test_functions) |f| {
 //         std.debug.print("tests: {s}\n",.{f.name});
-//     }
-//     inline for (std.meta.fields(Enum)) |f| {
-//         std.debug.print("{s}\n", .{f.name});
 //     }
 // }

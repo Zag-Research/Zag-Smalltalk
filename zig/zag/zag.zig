@@ -1,7 +1,7 @@
 pub const object = @import("zobject.zig");
 pub const config = @import("config.zig");
 pub const execute = @import("execute.zig");
-pub const context = @import("context.zig");
+pub const Context = @import("context.zig");
 pub const Process = @import("process.zig");
 pub const heap = @import("heap.zig");
 pub const globalArena = @import("globalArena.zig");

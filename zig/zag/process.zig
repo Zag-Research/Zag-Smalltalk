@@ -327,3 +327,10 @@ test "allocStack" {
     var pr = &process;
     pr.init();
 }
+pub const threadedFunctions = struct {
+    pub const pushThisProcess = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) SP {
+            _ = .{ pc, sp, process, context, extra, unreachable };
+        }
+    };
+};

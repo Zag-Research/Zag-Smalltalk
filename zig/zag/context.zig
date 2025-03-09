@@ -23,11 +23,13 @@ const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
+const Extra = execute.Extra;
 const ThreadedFn = execute.ThreadedFn;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
-const Context = @This();
+const Self = @This();
+const Context = Self;
 header: HeapHeader,
 method: CompiledMethodPtr,
 tpc: PC, // threaded PC
@@ -35,7 +37,6 @@ npc: ThreadedFn, // native PC - in Continuation Passing Style
 prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to handle specially
 trapContextNumber: u64,
 temps: [nLocals]Object,
-const Self = @This();
 const nLocals = 1;
 const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
 pub fn init() Self {
@@ -232,3 +233,11 @@ test "init context" {
     newC.print(process);
     std.debug.print("init: 8\n", .{});
 }
+pub const threadedFunctions = struct {
+    pub const pushThisContext = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Self, extra: Extra) SP {
+            const newSp = sp.push(Object.from(context));
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
+        }
+    };
+};
