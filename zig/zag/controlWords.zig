@@ -4,7 +4,6 @@ const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
 const tailCall = config.tailCall;
-const stdCall = config.stdCall;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
@@ -25,7 +24,7 @@ const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
 const tf = zag.threadedFn.Enum;
 pub const branch = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
         if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
@@ -46,7 +45,7 @@ pub const branch = struct {
 };
 pub const call = struct {
     pub const order = 0;
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         context.setReturn(pc.next2());
         const method = pc.method();
         const newPc = PC.init(method.codePtr());
@@ -55,7 +54,7 @@ pub const call = struct {
     }
 };
 pub const classCase = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         var newPc = pc;
         const top = sp.top;
         const match = @intFromEnum(top.get_class());
@@ -80,7 +79,7 @@ pub const classCase = struct {
     }
 };
 pub const pushLiteral = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.push(pc.object());
         trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
         return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
@@ -98,7 +97,7 @@ pub const pushLiteral = struct {
     }
 };
 pub const pushStack = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) callconv(stdCall) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const offset = pc.object().to(u64);
         const newSp = sp.push(sp.at(offset));
         trace("\npushStack: {any}", .{context.stack(newSp, process)});

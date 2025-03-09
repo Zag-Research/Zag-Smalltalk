@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const checkEqual = @import("utilities.zig").checkEqual;
 const object = @import("zobject.zig");
 const Object = object.Object;
@@ -24,20 +23,20 @@ const phi32 = @import("utilities.zig").inversePhi(u32);
 const execute = @import("execute.zig");
 
 pub const newLabel = struct {
-    pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         _ = .{ pc, sp, process, context, extra };
         return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"literalToRegister:" = struct {
-    pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const valueToPush = sp.top;
         _ = .{ valueToPush, pc, sp, process, context, extra };
         return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"add:to:" = struct {
-    pub fn primitive(pc: PC, sp: SP, process: TFProcess, context: TFContext, extra: Extra) callconv(stdCall) SP {
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         _ = .{ pc, sp, process, context, extra };
         return @call(tailCall, context.nPc(), .{ context.tPc(), newSp, process, context, undefined });
     }

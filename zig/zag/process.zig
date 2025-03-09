@@ -6,7 +6,6 @@ const builtin = @import("builtin");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const object = @import("zobject.zig");
 const Object = object.Object;
@@ -110,7 +109,7 @@ const nonFlags = ~flagMask;
 pub inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) callconv(stdCall) SP {
+pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) SP {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 pub inline fn checkBump(self: *align(1) Self) *align(1) Self {

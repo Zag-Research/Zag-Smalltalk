@@ -6,7 +6,6 @@ pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inli
 pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
-pub const stdCall: std.builtin.CallingConvention = .auto; //if (builtin.cpu.arch == .x86) .Stdcall else .C; //.AAPCS;
 pub const objectEncoding = Encoding.tag;
 
 const Encoding = enum {

@@ -159,21 +159,21 @@ const Dispatch = struct {
         trace(" - no free space", .{});
         return false;
     }
-    fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         _ = .{ programCounter, sp, process, context, signature };
         if (programCounter.uint() == 0)
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
-    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         _ = .{ programCounter, sp, process, context, signature, @panic("testDnu") };
         //        return sp.push(object.NotAnObject);
     }
-    fn testGrow(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    fn testGrow(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         _ = .{ programCounter, sp, process, context, signature, @panic("testGrow") };
         //        return sp.push(object.NotAnObject);
     }
-    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         _ = .{ process, context, signature };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
@@ -187,7 +187,7 @@ test "dispatch" {
         fn t(dispatch: *Dispatch) !void {
             try std.testing.expectEqual(null, dispatch.lookupMethod(selector));
         }
-        fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+        fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
             _ = .{ process, context, signature };
             @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
             return sp;
@@ -200,13 +200,13 @@ test "dispatch" {
 //     Process.resetForTest();
 //     const empty = Object.empty;
 //     const fns = struct {
-//         fn push1(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP {
+//         fn push1(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) SP {
 //             return sp.push(Object.from(1));
 //         }
-//         fn push2(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP {
+//         fn push2(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) SP {
 //             return sp.push(Object.from(2));
 //         }
-//         fn push3(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP {
+//         fn push3(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) SP {
 //             return sp.push(Object.from(3));
 //         }
 //     };
@@ -255,12 +255,12 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, signature: Extra) []Object {
 //     var temp: usize = 0;
 //     const methodType = compiledMethodType(2);
 //     const fns = struct {
-//         fn testYourself(_: PC, sp: SP, _: *Process, _: CodeContextPtr, signature: Extra) callconv(stdCall) SP {
+//         fn testYourself(_: PC, sp: SP, _: *Process, _: CodeContextPtr, signature: Extra) SP {
 //             if (!selector.equals(symbols.yourself)) @panic("hash doesn't match");
 //             sp.top = Object.cast(sp.top.u() + 2);
 //             return sp;
 //         }
-//         fn testAt(_: PC, sp: SP, _: *Process, _: CodeContextPtr, signature: Extra) callconv(stdCall) SP {
+//         fn testAt(_: PC, sp: SP, _: *Process, _: CodeContextPtr, signature: Extra) SP {
 //             if (!selector.equals(symbols.@"at:")) @panic("hash doesn't match");
 //             sp.top = Object.cast(sp.top.u() + 4);
 //             return sp;
@@ -292,25 +292,25 @@ const threadedWords = struct {
         const class = receiver.get_class();
         return Signature.from(selector, class);
     }
-    fn setupSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    fn setupSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         const ms = getSignature(pc, sp, null);
         const returnPc = pc.next().returnOffset();
         context.setReturn(returnPc);
         return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, ms });
     }
-    fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getSignature(pc, sp, null) });
     }
-    pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getSignature(pc, sp, 0) });
     }
-    pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         const cM = Dispatch.lookupMethodForClass(signature);
         trace("\ndynamicDispatch: {any} {}", .{ cM, signature });
         const pc = cM.codePc();
         return @call(tailCall, cM.executeFn, .{ pc, sp, process, context, signature });
     }
-    pub fn fallback(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    pub fn fallback(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         const self = sp.at(signature.numArgs());
         context.setReturn(pc);
         const class = self.get_class();
@@ -318,14 +318,14 @@ const threadedWords = struct {
         trace("\nfallback: {} {} {} {}", .{ signature, class, pc, cM });
         return @call(tailCall, cM.executeFn, .{ cM.codePc(), sp, process, context, undefined });
     }
-    pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
         context.setReturn(pc.next());
         const offset = pc.int();
         const newPc = pc.next().back(@intCast(-offset));
         trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
         return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
     }
-    // pub fn send1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra, prevCache: SendCache) callconv(stdCall) SP {
+    // pub fn send1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra, prevCache: SendCache) SP {
     //     const self = sp.next;
     //     context.setReturn(pc.next().skip(sendCacheSize));
     //     const class = self.get_class();
@@ -336,9 +336,9 @@ const threadedWords = struct {
     //     trace(" {} {any}", .{ newPc, process.getStack(sp) });
     //     return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, signature });
     // }
-    //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
     //    }
-    // pub fn perform(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    // pub fn perform(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
     //     const context = tfAsContext(_context);
     //     const selector = sp.top;
     //     const numArgs = selector.numArgs();
@@ -347,7 +347,7 @@ const threadedWords = struct {
     //     context.setReturn(pc);
     //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
     // }
-    // pub fn performWith(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+    // pub fn performWith(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
     //     const context = tfAsContext(_context);
     //     const selector = sp.next;
     //     sp.next = sp.top;

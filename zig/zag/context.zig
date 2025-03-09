@@ -3,7 +3,6 @@ const zag = @import("zag.zig");
 const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const checkEqual = zag.utilities.checkEqual;
 const Process = zag.Process;
 const object = zag.object;
@@ -197,7 +196,7 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object) callconv(stdCall) SP {
+pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object) SP {
     self.tpc = oldPc + 1;
     self.npc = oldPc[0].prim;
     trace("\ncall: N={} T={} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });

@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const zag = @import("zag.zig");
 const checkEqual = zag.utilities.checkEqual;
 const Process = zag.Process;
@@ -116,7 +115,7 @@ pub const Extra = union {
 };
 pub const ThreadedFn = packed struct {
     f: Fn,
-    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP;
+    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) SP;
 };
 pub const Signature = struct {
     int: u64,
@@ -285,13 +284,13 @@ pub const Code = union {
     pub inline fn asThreadedFn(self: Code) ThreadedFn {
         return .{ .f = self.threadedFn };
     }
-    pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP { // not embedded
+    pub fn end(_: PC, sp: SP, _: *Process, _: *Context, _: Extra) SP { // not embedded
         return sp;
     }
-    pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: Extra) callconv(stdCall) SP { // not embedded
+    pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: Extra) SP { // not embedded
         @panic("not implemented");
     }
-    fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) callconv(stdCall) SP {
+    fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
     }
     const endCode = [CompiledMethod.codeSize]Code{Code.primOf(end)};
@@ -339,7 +338,7 @@ pub const CompiledMethod = struct {
             .code = .{Code.primOf(methodFn)},
         };
     }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) callconv(stdCall) SP {
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) SP {
         const pc = PC.init(&self.code[0]);
         trace("\nexecute: {} {} {}\n", .{ pc, sp, self.signature });
         return pc.prim()(pc.next(), sp, process, context, .{ .method = self });
@@ -861,7 +860,7 @@ test "compileObject" {
     try expectEqual(h3.header.age, .static);
     try expectEqual(h3.header.format, .notIndexable);
 }
-fn callMethod(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) callconv(stdCall) SP {
+fn callMethod(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
     _ = .{ pc, sp, process, context, unreachable };
 }
 pub const Execution = struct {

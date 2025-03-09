@@ -9,7 +9,6 @@ const primitives = zag.primitives;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
 
-// grep -r ': *PC,.*: *SP,.*:.*Process,.*:.*Context,.*: *MethodSignature)' .|grep -v 'not embedded'|sed -nE 's;./\(.*\)[.]zig:[ \t]*pub fn \([^(]*\)(.*;"\2",\&\1.\2,;p'|sed 's;\(&[^/.]*\).;\1.embedded.;'|sed 's;@"\([^"]*\)";\1;'|sed '/^"p[0-9]/s/embedded[.][^.]*/primitives/'|sort
 const references = execute.ebmedded.references;
 fn format_timestamp(seconds: u64, out_buffer: []u8) void {
     if (std.debug.runtime_safety) std.debug.assert(out_buffer.len >= 27);
