@@ -122,12 +122,12 @@ comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
 test "function size" {
-    expectEqual(43,functions.len) catch |err| {
+    expectEqual(43, functions.len) catch |err| {
         inline for (std.meta.fields(Enum)) |f| {
             std.debug.print("{s}\n", .{f.name});
         }
         return err;
-};
+    };
 }
 // test "test list" {
 //     for (@import("builtin").test_functions) |f| {

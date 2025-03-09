@@ -161,8 +161,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
             }
         }
-};
-
+    };
 } else struct {
     const moduleName = "test module";
 };

@@ -255,7 +255,7 @@ pub const PC = packed struct {
         writer: anytype,
     ) !void {
         _ = .{ fmt, options };
-        try writer.print("{{PC {x}}}", .{ @intFromPtr(self.code) });
+        try writer.print("{{PC {x}}}", .{@intFromPtr(self.code)});
     }
 };
 pub const Code = union {
