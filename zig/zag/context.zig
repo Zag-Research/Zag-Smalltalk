@@ -234,10 +234,68 @@ test "init context" {
     std.debug.print("init: 8\n", .{});
 }
 pub const threadedFunctions = struct {
+    pub const makeImmediateClosure = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
+            _ = .{ pc, sp, process, context, signature, unreachable };
+        }
+    };
+    pub const popLocal = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            context.setLocal(pc.uint(), sp.top);
+            const newSp = sp.drop();
+            return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+        }
+    };
+    pub const pushContext = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            const method = pc.method();
+            const stackStructure = method.stackStructure.hash56();
+            const locals: u8 = @truncate(stackStructure);
+            const maxStackNeeded: u16 = @truncate(stackStructure >> 16);
+            const selfOffset: u16 = @truncate(stackStructure >> 32);
+            trace("\npushContext: locals={} maxStack={} selfOffset={} signature={}", .{ locals, maxStackNeeded, selfOffset, method.signature });
+            const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
+            const newSp = ctxt.asNewSp();
+            trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.signature, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, extra });
+        }
+    };
+    pub const pushLocal = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            const newSp = sp.push(context.getLocal(pc.uint()));
+            trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
+            return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, extra });
+        }
+    };
+    pub const pushLocalData = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            const ref = pc.uint();
+            const local = context.getLocal(ref & 0xfff);
+            const newSp = sp.push(local.getField(ref >> 12));
+            trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
+        }
+    };
+    pub const pushLocalField = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            const ref = pc.uint();
+            const local = context.getLocal(ref & 0xff);
+            const newSp = sp.push(local.getField(ref >> 12));
+            trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
+        }
+    };
     pub const pushThisContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Self, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             const newSp = sp.push(Object.from(context));
             return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
+        }
+    };
+    pub const storeLocal = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+            context.setLocal(pc.uint(), sp.top);
+            if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc.next(), sp, process, context, undefined });
+            return @call(tailCall, pc.prim2(), .{ pc.skip(2), sp, process, context, extra });
         }
     };
 };

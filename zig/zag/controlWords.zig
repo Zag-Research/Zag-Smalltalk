@@ -24,11 +24,11 @@ const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
 const tf = zag.threadedFn.Enum;
 pub const branch = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
-        if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, undefined });
-        return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, undefined });
+        if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, extra });
+        return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
         try Execution.runTest(
@@ -41,16 +41,6 @@ pub const branch = struct {
             &[_]Object{},
             &[_]Object{},
         );
-    }
-};
-pub const call = struct {
-    pub const order = 0;
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-        context.setReturn(pc.next2());
-        const method = pc.method();
-        const newPc = PC.init(method.codePtr());
-        if (process.needsCheck()) return @call(tailCall, Process.check, .{ newPc, sp, process, context, undefined });
-        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra{ .method = method } });
     }
 };
 pub const classCase = struct {

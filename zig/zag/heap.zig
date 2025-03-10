@@ -1001,7 +1001,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
     };
 }
 pub fn compileStrings(comptime tup: anytype) [tup.len]HeapObjectConstPtr {
-    @setEvalBranchQuota(3000);
+    @setEvalBranchQuota(100000);
     comptime var result: [tup.len]HeapObjectConstPtr = undefined;
     inline for (tup, 0..) |name, idx| {
         result[idx] = comptime @as(HeapObjectConstPtr, CompileTimeString(name).init().obj());

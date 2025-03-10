@@ -645,7 +645,7 @@ fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime 
     return compileMethodWith(name, locals, maxStack, class, null, tup);
 }
 fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    @setEvalBranchQuota(20000);
+    @setEvalBranchQuota(100000);
     const methodType = CompileTimeMethod(countNonLabels(tup));
     return methodType.init(name, locals, maxStack, verifier, class, tup);
 }
@@ -814,7 +814,7 @@ fn CompileTimeObject(comptime counts: usize) type {
     };
 }
 fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
-    @setEvalBranchQuota(20000);
+    @setEvalBranchQuota(100000);
     const objType = CompileTimeObject(countNonLabels(tup));
     return objType.init(tup);
 }
@@ -866,9 +866,6 @@ test "compileObject" {
     try expectEqual(h3.header.length, 2);
     try expectEqual(h3.header.age, .static);
     try expectEqual(h3.header.format, .notIndexable);
-}
-fn callMethod(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-    _ = .{ pc, sp, process, context, unreachable };
 }
 pub const Execution = struct {
     process: Process align(1024),

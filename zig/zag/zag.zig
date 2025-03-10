@@ -8,3 +8,6 @@ pub const globalArena = @import("globalArena.zig");
 pub const symbol = @import("symbol.zig");
 pub const utilities = @import("utilities.zig");
 pub const threadedFn = @import("threadedFn.zig");
+comptime {
+    @setEvalBranchQuota(100000);
+}

@@ -33,6 +33,7 @@ const symbol = zag.symbol;
 
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
+//    pub usingnamespace @import("dispatch.zig");
     pub usingnamespace @import("primitives.zig");
     pub usingnamespace @import("context.zig").threadedFunctions;
     pub usingnamespace @import("process.zig").threadedFunctions;
@@ -68,6 +69,7 @@ fn hasFn(comptime T: type, comptime name: []const u8) bool {
 }
 pub const Enum =
     blk: {
+    @setEvalBranchQuota(100000);
     const decls = @typeInfo(structures).@"struct".decls;
     var array: [decls.len]EnumSort = undefined;
     var n = 0;
