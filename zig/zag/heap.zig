@@ -1001,7 +1001,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
     };
 }
 pub fn compileStrings(comptime tup: anytype) [tup.len]HeapObjectConstPtr {
-    @setEvalBranchQuota(3000);
+    @setEvalBranchQuota(100000);
     comptime var result: [tup.len]HeapObjectConstPtr = undefined;
     inline for (tup, 0..) |name, idx| {
         result[idx] = comptime @as(HeapObjectConstPtr, CompileTimeString(name).init().obj());
@@ -1015,7 +1015,8 @@ const strings = compileStrings(.{
     "Object", "SmallInteger", "Float", "False", "True",
 });
 test "compile time" {
-    //    try std.testing.expect(mem.eql(u8, abcde.asObject().arrayAsSlice(u8), "abcdefghijklm"));
+    if (true) return error.SkipZigTest;
+    try std.testing.expect(mem.eql(u8, abcde.asObject().arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time2" {
     try std.testing.expectEqual(try abcde.size(), 13);

@@ -3,8 +3,7 @@ const builtin = @import("builtin");
 const mem = std.mem;
 const math = std.math;
 const config = @import("config.zig");
-// usingnamespace @import("config.zig");
-// const std = @This().std;
+const assert = std.debug.assert;
 const debugError = false;
 const symbol = if (debugError) struct {
     const inversePhi32 = @import("utilities.zig").inversePhi(u32);
@@ -37,19 +36,19 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 pub usingnamespace if (!builtin.is_test) struct {} else struct {
     pub const SelfObject: Object = Object.oImm(.Symbol, 0xf0000ff);
 };
-test "indexSymbol" {
-    const e = std.testing.expect;
-    const ee = std.testing.expectEqual;
-    try e(Object.indexSymbol0(42).isSymbol());
-    try e(Object.indexSymbol0(42).isIndexSymbol0());
-    try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff71);
-    try ee(Object.indexSymbol0(42).rawU(), 0xf00002a71);
-    try ee(Object.indexSymbol0(42).indexNumber(), 42);
-    try e(Object.indexSymbol1(42).isSymbol());
-    try e(Object.indexSymbol1(42).isIndexSymbol1());
-    try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
-    try ee(Object.indexSymbol1(42).indexNumber(), 42);
-}
+// test "indexSymbol" {
+//     const e = std.testing.expect;
+//     const ee = std.testing.expectEqual;
+//     try e(Object.indexSymbol0(42).isSymbol());
+//     try e(Object.indexSymbol0(42).isIndexSymbol0());
+//     try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff71);
+//     try ee(Object.indexSymbol0(42).rawU(), 0xf00002a71);
+//     try ee(Object.indexSymbol0(42).indexNumber(), 42);
+//     try e(Object.indexSymbol1(42).isSymbol());
+//     try e(Object.indexSymbol1(42).isIndexSymbol1());
+//     try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
+//     try ee(Object.indexSymbol1(42).indexNumber(), 42);
+// }
 pub const ZERO = Object.ZERO;
 pub const False = Object.False;
 pub const True = Object.True;
@@ -192,17 +191,54 @@ const TagObject = packed struct(u64) {
         }
     };
     const Self = @This();
-    pub inline fn tagbits(self: Self) u8 {
+    const tagAndClassType = u8;
+    pub inline fn tagbits(self: Self) tagAndClassType {
         return @truncate(@as(u64, @bitCast(self)));
     }
-    pub inline fn cast(v: anytype) Object {
-        // stored using little-endian order
-        return @bitCast(v);
+    fn enumBits(T: type) usize {
+        return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
     }
+    const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
+    comptime {
+        assert(tagAndClassBits == @bitSizeOf(tagAndClassType));
+    }
+    const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
+    pub inline fn untaggedI(self: Object) i64 {
+        return @bitCast(self.rawU() & ~tagAndClass);
+    }
+    // pub inline fn cast(v: anytype) Object {
+    //     // stored using little-endian order
+    //     return @bitCast(v);
+    // }
     inline fn of(comptime v: u64) Object {
         return @bitCast(v);
     }
-    inline fn oImm(c: ClassIndex.Compact, h: u56) Object {
+    pub inline fn thunkImmediate(o: Object) ?Object {
+        const value: i64 = @bitCast(o);
+        const shifted = value >> 55;
+        if (shifted == 0 or shifted == -1)
+            return oImm(.ThunkImmediate, @bitCast(@as(i56, @truncate(value))));
+        return null;
+    }
+    pub inline fn isThunkImmediate(self: Self) bool {
+        return self.isImmediateClass(.ThunkImmediate);
+    }
+    pub inline fn thunkImmediateValue(self: Self) Object {
+        return @bitCast(@as(i64, @bitCast(self)) >> 8);
+    }
+    test "ThunkImmediate" {
+        std.debug.print("Test: ThunkImmediate\n", .{});
+        const ee = std.testing.expectEqual;
+        if (thunkImmediate(Object.from(42))) |value|
+            try ee(Object.from(42), value.thunkImmediateValue());
+        if (thunkImmediate(Object.from(-42))) |value|
+            try ee(Object.from(-42), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(Object.from(@as(u64, 1) << 47)));
+    }
+    pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
+        return self.tagbits() == oImm(class, 0).tagbits();
+    }
+    inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
     inline fn imm(c: ClassIndex.Compact, h: u56) u64 {
@@ -211,30 +247,9 @@ const TagObject = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    const tagAndClass: u64 = 0xff;
-    const nonIndexSymbol = 0xffffffff800000ff;
-    pub inline fn indexSymbol0(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0xf000000 | @as(u32, uniqueNumber));
-    }
-    pub inline fn indexSymbol1(uniqueNumber: u16) Object {
-        return oImm(.Symbol, 0xf800000 | @as(u32, uniqueNumber));
-    }
-    pub inline fn isIndexSymbol(self: Object) bool {
-        return self.isIndexSymbol0() or self.isIndexSymbol1();
-    }
-    pub inline fn isIndexSymbol0(self: Object) bool {
-        return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol0(0).rawU() & nonIndexSymbol);
-    }
-    pub inline fn isIndexSymbol1(self: Object) bool {
-        return (self.rawU() & nonIndexSymbol) == (comptime indexSymbol1(0).rawU() & nonIndexSymbol);
-    }
-    pub inline fn indexNumber(self: Object) u24 {
-        return @truncate((self.rawU() & ~@as(u64, nonIndexSymbol)) >> 8);
-    }
-    //    pub const invalidHeapPointer = of(Start_of_Heap_Objects);
     pub const ZERO = of(0);
-    pub const False = oImm(.False, 0x0);
-    pub const True = oImm(.True, 0x1);
+    pub const False = oImm(.False, 0);
+    pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
     pub const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
     pub const u64_MINVAL = g(.smallInt);
@@ -243,9 +258,6 @@ const TagObject = packed struct(u64) {
     const u64_MAXVAL = g(.numericThunk) - 1;
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
-    pub inline fn untaggedI(self: Object) i64 {
-        return @bitCast(self.rawU() & ~tagAndClass);
-    }
     pub inline fn shiftI(n: i56) i64 {
         return @as(i64, n) << 8;
     }
@@ -254,9 +266,6 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
-        return self.tagbits() == (@as(u8, @intFromEnum(class)) << 3) + 1;
     }
     pub inline fn isDouble(self: Object) bool {
         return switch (self.tag) {
@@ -269,11 +278,11 @@ const TagObject = packed struct(u64) {
         return self.rawU() == Object.True.rawU();
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
-        return @as(i64, @bitCast(self)) >> 8;
+        return @as(i56, @bitCast(self.hash));
     }
-    // pub inline fn toNatNoCheck(self: Object) u64 {
-    //     return self.rawU() -% u64_ZERO;
-    // }
+    pub inline fn toNatNoCheck(self: Object) u64 {
+        return self.hash;
+    }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         if (!self.isSymbol()) @panic("not a Symbol");
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
@@ -382,10 +391,7 @@ const ObjectFunctions = struct {
         return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
-        return switch (self.rawU()) {
-            Object.False.rawU(), Object.True.rawU() => true,
-            else => false,
-        };
+        return self == Object.False or self == Object.True;
     }
     pub inline fn isNil(self: Object) bool {
         return self == Object.Nil;
@@ -422,7 +428,7 @@ const ObjectFunctions = struct {
         return error.wrongType;
     }
 
-    pub inline fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
+    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
                 if (!check or self.isDouble()) return self.toDoubleNoCheck();
@@ -440,12 +446,18 @@ const ObjectFunctions = struct {
             else => {
                 switch (@typeInfo(T)) {
                     .pointer => |ptrInfo| {
-                        if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
-                            if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));
-                            } else {
-                                return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16)) + @sizeOf(HeapHeader)));
-                            }
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16)) + @sizeOf(HeapHeader)));
+                                    }
+                                }
+                            },
+                            else => {},
                         }
                     },
                     else => {},
@@ -539,11 +551,7 @@ const ObjectFunctions = struct {
             .False => writer.print("false", .{}),
             .True => writer.print("true", .{}),
             .UndefinedObject => writer.print("nil", .{}),
-            .Symbol => if (self.isIndexSymbol0()) {
-                try writer.print("#symbols.i_{}", .{self.indexNumber()});
-            } else if (self.isIndexSymbol1()) {
-                try writer.print("#symbols.m_{}", .{@as(u16, @truncate(self.indexNumber()))});
-            } else {
+            .Symbol => {
                 try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
                 if ((self.hash56() >> 32) > 0)
                     try writer.print("=>{}", .{self.classFromSymbolPlus()});
@@ -552,7 +560,7 @@ const ObjectFunctions = struct {
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
             else => {
-                try writer.print("0x{x:0>16}", .{self.rawU()});
+                try writer.print("\nobject: 0x{x:0>16}", .{self.rawU()});
                 @panic("format for unknown class");
             },
         };
@@ -615,7 +623,6 @@ test "to conversion" {
     try ee((Object.from(42)).toInt(), 42);
     try std.testing.expect((Object.from(42)).isInt());
     try ee((Object.from(true)).to(bool), true);
-    //    try ee(of(u64_MAXVAL).toUnchecked(i64), 0x3_ffffffffffff);
     try ee((Object.from(-0x400000)).toUnchecked(i64), -0x400000);
 }
 test "immediate_class" {

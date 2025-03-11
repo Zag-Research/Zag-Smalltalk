@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("../config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const Context = @import("../context.zig").Context;
 const execute = @import("../execute.zig");
 const ContextPtr = execute.CodeContextPtr;
@@ -12,12 +11,9 @@ const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const MethodSignature = execute.MethodSignature;
-const TFProcess = execute.TFProcess;
-const tfAsProcess = execute.tfAsProcess;
-const TFContext = execute.TFContext;
-const tfAsContext = execute.tfAsContext;
-const Process = @import("../process.zig").Process;
+const Extra = execute.Extra;
+const Process = zag.rocess;
+const Context = zag.Context;
 const object = @import("../zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
@@ -102,12 +98,12 @@ pub const inlines = struct {
         // return sp;
         @panic("fullClosure");
     }
-    fn pushValue(_: PC, sp: SP, _: TFProcess, _: TFContext, _: Object) callconv(stdCall) SP {
+    fn pushValue(_: PC, sp: SP, _: *Process, _: *Context, _: Object) SP {
         const closure = sp.top.to(heap.HeapObjectPtr);
         sp.top = closure.prevPrev();
         @panic("unfinished");
     }
-    fn nonLocalReturn(_: PC, sp: SP, process: TFProcess, targetContext: TFContext, _: Object) callconv(stdCall) SP {
+    fn nonLocalReturn(_: PC, sp: SP, process: *Process, targetContext: *Context, _: Object) SP {
         const val = sp.top;
         const result = targetContext.pop(process);
         const newSp = result.sp;
@@ -122,7 +118,7 @@ pub const embedded = struct {
     const fallback = execute.fallback;
     const literalNonLocalReturn = enum(u3) { self = 0, true_, false_, nil, minusOne, zero, one, two };
     const nonLocalValues = [_]Object{ object.NotAnObject, True, False, Nil, Object.from(-1), Object.from(0), Object.from(1), Object.from(2) };
-    pub fn value(pc: PC, sp: SP, process: TFProcess, context: TFContext, _: Object) callconv(stdCall) SP {
+    pub fn value(pc: PC, sp: SP, process: *Process, context: *Context, _: Object) SP {
         const val = sp.top;
         trace("\nvalue: {}", .{val});
 
@@ -161,7 +157,7 @@ pub const embedded = struct {
         }
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined, undefined });
     }
-    pub fn @"value:"(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn @"value:"(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         const val = sp.next;
         switch (val.tag) {
@@ -179,26 +175,26 @@ pub const embedded = struct {
         }
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, undefined, undefined });
     }
-    pub fn immutableClosure(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn immutableClosure(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         const newSp = inlines.immutableClosure(sp, process);
         return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
-    pub fn generalClosure(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn generalClosure(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         const newSp = inlines.generalClosure(sp.drop(), process, sp.top);
         return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
     }
-    pub fn fullClosure(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn fullClosure(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         const block = pc.literalIndirect();
         const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.rawU()), context);
         return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
     }
-    pub fn closureData(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn closureData(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
@@ -209,43 +205,43 @@ pub const embedded = struct {
         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
         return sp.push(Object.tagged(.nonLocalThunk, @intFromEnum(tag), context.cleanAddress()));
     }
-    pub fn pushNonlocalBlock_self(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_self(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .self, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_true(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_true(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .true_, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_false(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_false(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .false_, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_nil(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_nil(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .nil, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_minusOne(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_minusOne(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .minusOne, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_zero(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_zero(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .zero, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_one(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_one(pc: PC, sp: SP, _process: *Process, _context: *Context, _: Extra) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         trace("\npushNonLocalBlock_one: {} {x} {x} {}", .{ sp.top, @intFromPtr(sp), @intFromPtr(nonLocalBlock(sp, .one, context)), nonLocalBlock(sp, .one, context).top });
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .one, context), process, context, undefined });
     }
-    pub fn pushNonlocalBlock_two(pc: PC, sp: SP, process: TFProcess, _context: TFContext, _: MethodSignature) callconv(stdCall) SP {
+    pub fn pushNonlocalBlock_two(pc: PC, sp: SP, process: *Process, _context: *Context, _: Extra) SP {
         const context = tfAsContext(_context);
         return @call(tailCall, pc.prim(), .{ pc.next(), nonLocalBlock(sp, .two, context), process, context, undefined });
     }
 };
-// fn testImmutableClosure(process: TFProcess, value: MethodSignature) !object.Group {
+// fn testImmutableClosure(process: *Process, value: Extra) !object.Group {
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
@@ -275,7 +271,7 @@ pub const embedded = struct {
 //     try ee(try testImmutableClosure(&process, Object.from(-0x4000_0000_0001)), .heapClosure);
 //     try ee(try testImmutableClosure(&process, Object.from(1000.3)), .heapClosure);
 // }
-// fn testNonlocalClosure(process: TFProcess, value: MethodSignature) !object.Group {
+// fn testNonlocalClosure(process: *Process, value: Extra) !object.Group {
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
@@ -312,19 +308,19 @@ pub const embedded = struct {
 //     try ee(try testNonlocalClosure(&process, Object.from(1000.3)), .nonLocalClosure);
 // }
 pub const primitives = struct {
-    pub fn p201(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value
+    pub fn p201(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // value
         _ = .{ pc, sp, process, context, signature, @panic("prim201") };
     }
-    pub fn p202(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:
+    pub fn p202(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // value:
         _ = .{ pc, sp, process, context, signature, @panic("prim202") };
     }
-    pub fn p203(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:
+    pub fn p203(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // value:value:
         _ = .{ pc, sp, process, context, signature, @panic("prim203") };
     }
-    pub fn p204(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:value:
+    pub fn p204(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // value:value:value:
         _ = .{ pc, sp, process, context, signature, @panic("prim204") };
     }
-    pub fn p205(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP { // value:value:value:value:
+    pub fn p205(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // value:value:value:value:
         _ = .{ pc, sp, process, context, signature, @panic("prim205") };
     }
 };

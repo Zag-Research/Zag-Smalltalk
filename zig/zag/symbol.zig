@@ -3,7 +3,6 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 const builtin = @import("builtin");
 const object = @import("zobject.zig");
-const indexSymbol = object.Object.indexSymbol0;
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
@@ -93,16 +92,6 @@ pub const symbols = struct {
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
     // define any new symbols here
     pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
-    pub const i_0 = indexSymbol(0);
-    pub const i_1 = indexSymbol(1);
-    pub const i_2 = indexSymbol(2);
-    pub const i_3 = indexSymbol(3);
-    pub const i_4 = indexSymbol(4);
-    pub const i_5 = indexSymbol(5);
-    pub const i_6 = indexSymbol(6);
-    pub const i_7 = indexSymbol(7);
-    pub const i_8 = indexSymbol(8);
-    pub const i_9 = indexSymbol(9);
 };
 pub const predefinedSymbols = 47;
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above

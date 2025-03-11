@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("zag/config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const debug = std.debug;
 const math = std.math;
 // const stdout = std.io.getStdOut().writer(); // outside of a functions, stdout causes error on Windows

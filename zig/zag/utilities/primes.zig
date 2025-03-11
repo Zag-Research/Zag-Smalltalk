@@ -104,7 +104,7 @@ test "primes less than" {
     try std.testing.expectEqual(largestPrimeLessThan(0x100000000), 4294967291);
     try std.testing.expectEqual(largestPrimeLessThan(0x100000001), 4294967291);
     try std.testing.expectEqual(largestPrimeLessThan(0x200000001), 8589934583);
-//    try std.testing.expectEqual(largestPrimeLessThan(0x7fffffffffffffff), 4294836197);
+    //    try std.testing.expectEqual(largestPrimeLessThan(0x7fffffffffffffff), 4294836197);
 }
 test "primes at least" {
     try std.testing.expectEqual(smallestPrimeAtLeast(5), 5);
@@ -120,12 +120,11 @@ test "prime diffs" {
         if (b) {
             n += 1;
             tests += 1;
-        }
-        else if (i & 1 == 1) {
+        } else if (i & 1 == 1) {
             tests += 1;
         }
         if (i + 1 == p) {
-            std.debug.print("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)) , n});
+            std.debug.print("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)), n });
             p *= 16;
             tests = 0;
         }

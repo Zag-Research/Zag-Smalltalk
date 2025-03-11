@@ -2,7 +2,6 @@ const std = @import("std");
 const config = @import("../config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const stdCall = config.stdCall;
 const execute = @import("../execute.zig");
 const SendCache = execute.SendCache;
 const Context = execute.Context;
@@ -51,7 +50,7 @@ fn ignore() !void {
     try stdout.print("The user entered: {s}\n", .{input});
 }
 pub const primitives = struct {
-    pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) callconv(stdCall) SP { // SmallInteger>>#+
+    pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#+
         trace("\n+: {any}", .{context.stack(sp, process)});
         if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();

@@ -49,51 +49,299 @@
 // ASTBehavour basicIdentityHash - 2075
 // ASTFloat basicIdentityHash - 2171
 
-const execute = @import("execute.zig");
-pub const inlines = struct {
-    pub usingnamespace @import("primitives/Object.zig").inlines;
-    pub usingnamespace @import("primitives/Smallinteger.zig").inlines;
-    pub usingnamespace @import("primitives/Behavior.zig").inlines;
-    pub usingnamespace @import("primitives/BlockClosure.zig").inlines;
-    pub usingnamespace @import("primitives/Boolean.zig").inlines;
+const std = @import("std");
+const assert = std.debug.assert;
+const config = @import("config.zig");
+const tailCall = config.tailCall;
+const trace = config.trace;
+const stdCall = config.stdCall;
+const zag = @import("zag.zig");
+const Object = zag.object.Object;
+const Nil = zag.object.Nil;
+const True = zag.object.True;
+const False = zag.object.False;
+const execute = zag.execute;
+const ThreadedFn = execute.ThreadedFn;
+const PC = execute.PC;
+const SP = execute.SP;
+const Execution = execute.Execution;
+const Process = zag.Process;
+const Context = zag.Context;
+const Extra = execute.Extra;
+const tf = zag.threadedFn.Enum;
+const Sym = zag.symbol.symbols;
+
+const Module = struct {
+    name: []const u8,
+    primitives: []const Primitive,
+    const Primitive = struct {
+        name: []const u8,
+        number: u32,
+        primitive: ThreadedFn.Fn,
+        primitiveError: ThreadedFn.Fn,
+    };
+    fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
+    }
+    fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        const newSp = sp.push(Nil);
+        return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
+    }
+    fn init(M: anytype) Module {
+        return Module{ .name = M.moduleName, .primitives = &findPrimitives(M) };
+    }
+    fn countPrimitives(M: anytype) usize {
+        const decls = @typeInfo(M).@"struct".decls;
+        var n: usize = 0;
+        for (decls) |decl| {
+            const ds = @field(M, decl.name);
+            switch (@typeInfo(@TypeOf(ds))) {
+                .comptime_int, .int, .@"fn", .pointer => {},
+                else => {
+                    if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError"))
+                        n += 1;
+                },
+            }
+        }
+        return n;
+    }
+    fn findPrimitives(M: anytype) [countPrimitives(M)]Primitive {
+        return blk: {
+            const decls = @typeInfo(M).@"struct".decls;
+            var mm: [countPrimitives(M)]Primitive = undefined;
+            var n = 0;
+            for (decls) |decl| {
+                const ds = @field(M, decl.name);
+                switch (@typeInfo(@TypeOf(ds))) {
+                    .comptime_int, .int, .@"fn", .pointer => {},
+                    else => {
+                        if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError")) {
+                            mm[n] = Primitive{
+                                .name = if (@hasDecl(ds, "name")) @field(ds, "name") else decl.name,
+                                .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0,
+                                .primitive = if (@hasDecl(ds, "primitive")) &@field(ds, "primitive") else noPrim,
+                                .primitiveError = if (@hasDecl(ds, "primitiveError")) &@field(ds, "primitiveError") else noPrimWithError,
+                            };
+                            n += 1;
+                        }
+                    },
+                }
+            }
+            break :blk mm;
+        };
+    }
+    fn findNumberedPrimitive(primNumber: usize, hasError: bool) ThreadedFn.Fn {
+        for (&modules) |m| {
+            for (m.primitives) |p| {
+                if (p.number == primNumber)
+                    return if (hasError) p.primitiveError else p.primitive;
+            }
+        }
+        return if (hasError) noPrimWithError else noPrim;
+    }
 };
-pub const embedded = struct {
-    pub const Object = struct {
-        pub usingnamespace @import("primitives/Object.zig").embedded;
+const testModule = if (config.is_test) struct {
+    const moduleName = "test module";
+    pub const primitive998 = struct {
+        pub const number = 998;
+        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+            if (sp.next.tagbits() != sp.top.tagbits()) {
+                return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
+            } else {
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top));
+                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+            }
+        }
+        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+            if (sp.next.tagbits() != sp.top.tagbits()) {
+                const newSp = sp.push(Sym.value);
+                return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
+            } else {
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top));
+                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+            }
+        }
     };
-    pub usingnamespace @import("primitives/Smallinteger.zig").embedded;
-    pub const Behavior = struct {
-        pub usingnamespace @import("primitives/Behavior.zig").embedded;
-    };
-    pub const BlockClosure = struct {
-        pub usingnamespace @import("primitives/BlockClosure.zig").embedded;
-    };
-    pub const Boolean = struct {
-        pub usingnamespace @import("primitives/Boolean.zig").embedded;
-    };
-    pub usingnamespace @import("execute.zig").controlPrimitives;
+} else struct {
+    const moduleName = "test module";
 };
-pub const primitives = struct {
-    pub usingnamespace @import("primitives/Object.zig").primitives;
-    pub usingnamespace @import("primitives/Smallinteger.zig").primitives;
-    pub usingnamespace @import("primitives/Behavior.zig").primitives;
-    pub usingnamespace @import("primitives/BlockClosure.zig").primitives;
-    pub usingnamespace @import("primitives/Boolean.zig").primitives;
+const modules = [_]Module{
+    Module.init(testModule),
+    Module.init(@import("primitives/Object.zig")),
+    // @import("primitives/Smallinteger.zig").module,
+    // @import("primitives/Behavior.zig").module,
+    // @import("primitives/BlockClosure.zig").module,
+    // @import("primitives/Boolean.zig").module,
+    // @import("primitives/llvm.zig").module,
+};
+pub const primitive = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        if (extra.isEncoded()) {
+            const newPc = pc.next();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
+        }
+        const primNumber = pc.uint();
+        const prim = Module.findNumberedPrimitive(primNumber, false);
+        const method = extra.method;
+        method.executeFn = prim;
+        method.jitted = prim;
+        return @call(tailCall, prim, .{ pc, sp, process, context, extra });
+    }
+    test "primitive found" {
+        try Execution.runTest(
+            "primitive found",
+            .{
+                tf.primitive,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                False,
+            },
+        );
+    }
+    test "primitive with error" {
+        try Execution.runTest(
+            "primitive with error",
+            .{
+                tf.primitive,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                True,
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                True,
+                Object.from(17),
+            },
+        );
+    }
+    test "primitive not found" {
+        try Execution.runTest(
+            "primitive not found",
+            .{
+                tf.primitive,
+                999,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                Object.from(42),
+                Object.from(17),
+            },
+        );
+    }
+};
+pub const primitiveError = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        if (extra.isEncoded()) {
+            const newPc = pc.next();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
+        }
+        const primNumber = pc.uint();
+        const prim = Module.findNumberedPrimitive(primNumber, true);
+        const method = extra.method;
+        method.executeFn = prim;
+        method.jitted = prim;
+        return @call(tailCall, prim, .{ pc, sp, process, context, extra });
+    }
+    test "primitiveError found" {
+        try Execution.runTest(
+            "primitiveError found",
+            .{
+                tf.primitiveError,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                False,
+            },
+        );
+    }
+    test "primitiveError with error" {
+        try Execution.runTest(
+            "primitiveError with error",
+            .{
+                tf.primitiveError,
+                998,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                True,
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                Sym.value,
+                True,
+                Object.from(17),
+            },
+        );
+    }
+    test "primitiveError not found" {
+        try Execution.runTest(
+            "primitive not found",
+            .{
+                tf.primitiveError,
+                999,
+                tf.pushLiteral,
+                99,
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(99),
+                Nil,
+                Object.from(42),
+                Object.from(17),
+            },
+        );
+    }
+};
+pub const primitiveModule = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        _ = .{ pc, sp, process, context, extra, unreachable };
+    }
+};
+pub const primitiveModuleError = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        _ = .{ pc, sp, process, context, extra, unreachable };
+    }
+};
+
+pub const threadedFns = struct {
+    pub usingnamespace @import("primitives/Object.zig");
+    // pub usingnamespace @import("primitives/Smallinteger.zig").threadedFns;
+    // pub usingnamespace @import("primitives/Behavior.zig").threadedFns;
+    // pub usingnamespace @import("primitives/BlockClosure.zig").threadedFns;
+    // pub usingnamespace @import("primitives/Boolean.zig").threadedFns;
 };
 pub fn init() void {
     @import("primitives/Object.zig").init();
-    @import("primitives/Smallinteger.zig").init();
-    @import("primitives/Behavior.zig").init();
-    @import("primitives/BlockClosure.zig").init();
-    @import("primitives/Boolean.zig").init();
-    //    @import("execute.zig").init();
-}
-
-test "primitives" {
-    @import("std").debug.print(" - testing primitives ", .{});
-    _ = @import("primitives/Smallinteger.zig").inlines;
-    _ = @import("primitives/Object.zig").inlines;
-    _ = @import("primitives/Behavior.zig").inlines;
-    _ = @import("primitives/BlockClosure.zig").inlines;
-    _ = @import("primitives/Boolean.zig").inlines;
+    // @import("primitives/Smallinteger.zig").init();
+    // @import("primitives/Behavior.zig").init();
+    // @import("primitives/BlockClosure.zig").init();
+    // @import("primitives/Boolean.zig").init();
 }

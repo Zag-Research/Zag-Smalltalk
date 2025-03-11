@@ -161,7 +161,7 @@ test "check smallerPowerOf2" {
 }
 pub inline fn sqrtPowerOf2(value: anytype) u64 {
     if (value <= 1) return 1;
-    const bits = @divTrunc(bitsToRepresent(value-1)+1,2);
+    const bits = @divTrunc(bitsToRepresent(value - 1) + 1, 2);
     return @as(u64, 1) << @as(u6, @truncate(bits));
 }
 test "check sqrtPowerOf2" {
