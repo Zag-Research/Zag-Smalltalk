@@ -100,7 +100,7 @@ ZagOperations >> resultStack: anASStack [
 ZagOperations >> setInContext: aBoolean [
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'finalAnalysis' }
 ZagOperations >> shrinksStack [
 
 	^ false

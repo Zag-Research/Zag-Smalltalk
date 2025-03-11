@@ -54,7 +54,7 @@ ASemanticInterpreter >> basicBlocks [
 ASemanticInterpreter >> binary: aBlock [
 
 	primitiveSuccessStackPointer := stackPointer + 1.
-	^ (aBlock value: (stackArray at: primitiveSuccessStackPointer + 1) value: (stackArray at: primitiveSuccessStackPointer))
+	^ (aBlock value: (stackArray at: stackPointer + 1) value: (stackArray at: stackPointer))
 		  processPrimitiveResult: self
 ]
 
@@ -91,7 +91,7 @@ ASemanticInterpreter >> copiledUnitAt: anInteger [
 	self shouldBeImplemented.
 ]
 
-{ #category : 'menu morph' }
+{ #category : 'interpreting' }
 ASemanticInterpreter >> createContext: aStackContext [
 
 	| contextPtr size locals extra |
@@ -111,7 +111,7 @@ ASemanticInterpreter >> createContext: aStackContext [
 	stackArray at: idx put: nil ]
 ]
 
-{ #category : 'menu morph' }
+{ #category : 'interpreting' }
 ASemanticInterpreter >> createContext: locals extra: extra [
 
 	| contextPtr size |

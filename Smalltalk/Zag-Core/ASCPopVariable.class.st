@@ -23,7 +23,7 @@ ASCPopVariable >> resultStack: anASStack [
 	^ anASStack drop
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'finalAnalysis' }
 ASCPopVariable >> shrinksStack [
 
 	^ true
