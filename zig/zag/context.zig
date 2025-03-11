@@ -100,8 +100,6 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodP
         }
     }
     ctxt.header = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
-    trace("\npush: {}", .{ctxt.header});
-    if (process.needsCheck()) @panic("process needsCheck");
     return ctxt;
 }
 pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) ContextPtr {
@@ -206,7 +204,7 @@ pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, s
     const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
     const pc = @as([*]const Code, @ptrCast(&method.code));
     _ = .{ pc, oldPc, sp, process, selector, @panic("call unimplemented") };
-    //        return @call(tailCall,pc[0].prim,.{pc+1,sp,process,self,method.selector});
+    //        return @call(tailCall,process.check(pc.prim()),.{pc+1,sp,process,self,method.selector});
 }
 const e = struct {
     usingnamespace execute.controlPrimitives;
@@ -243,7 +241,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             context.setLocal(pc.uint(), sp.top);
             const newSp = sp.drop();
-            return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
         }
     };
     pub const pushContext = struct {
@@ -257,14 +255,14 @@ pub const threadedFunctions = struct {
             const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
             const newSp = ctxt.asNewSp();
             trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.signature, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
-            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, ctxt, extra });
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, ctxt, extra });
         }
     };
     pub const pushLocal = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             const newSp = sp.push(context.getLocal(pc.uint()));
             trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
-            return @call(tailCall, pc.next().prim(), .{ pc.skip(2), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.next().prim2()), .{ pc.next2(), newSp, process, context, extra });
         }
     };
     pub const pushLocalData = struct {
@@ -273,7 +271,7 @@ pub const threadedFunctions = struct {
             const local = context.getLocal(ref & 0xfff);
             const newSp = sp.push(local.getField(ref >> 12));
             trace("\npushLocalData: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         }
     };
     pub const pushLocalField = struct {
@@ -282,20 +280,19 @@ pub const threadedFunctions = struct {
             const local = context.getLocal(ref & 0xff);
             const newSp = sp.push(local.getField(ref >> 12));
             trace("\npushLocalField: {} {} {any} {any}", .{ ref, local, context.stack(newSp, process), context.allLocals(process) });
-            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         }
     };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             const newSp = sp.push(Object.from(context));
-            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         }
     };
     pub const storeLocal = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             context.setLocal(pc.uint(), sp.top);
-            if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc.next(), sp, process, context, undefined });
-            return @call(tailCall, pc.prim2(), .{ pc.skip(2), sp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), sp, process, context, extra });
         }
     };
 };

@@ -24,29 +24,6 @@ const SP = execute.SP;
 const Extra = execute.Extra;
 const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
-fn drop(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-    const newSp = sp.drop();
-    if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc, newSp, process, context, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-}
-fn dropNext(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-    const newSp = sp.dropPut(sp.top);
-    if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc, newSp, process, context, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-}
-fn dup(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-    const newSp = sp.dropPut(sp.top);
-    if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc, newSp, process, context, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-}
-fn over(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-    const newSp = sp.push(sp.next);
-    if (process.needsCheck()) return @call(tailCall, Process.check, .{ pc, newSp, process, context, undefined });
-    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
-}
-fn popAssociationValue(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
-    _ = .{ pc, sp, process, context, signature, unreachable };
-}
 fn popIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
@@ -61,17 +38,14 @@ fn popLocalData(pc: PC, sp: SP, process: *Process, context: *Context, extra: Ext
     const local = context.getLocal(ref & 0xff);
     trace("\npopLocalData: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
-    return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
+    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn popLocalField(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     const ref = pc.uint();
     const local = context.getLocal(ref & 0xfff);
     trace("\npopLocalField: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
-    return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
-}
-fn pushAssociationValue(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
-    _ = .{ pc, sp, process, context, signature, unreachable };
+    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn pushIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
     _ = .{ pc, sp, process, context, signature, unreachable };
@@ -154,7 +128,7 @@ fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, extra:
         trace("{any}", .{stack});
     } else trace("{}", .{stack.len});
     trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
-    return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
+    return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
 }
 
 test "definitions" {
@@ -298,19 +272,19 @@ pub const controlPrimitivesX = struct {
     //     trace("\nverifyMethod: {*} {} {}", .{ method, signature, method.signature });
     //     if (!method.signature.equals(signature)) {
     //         trace(" failed match", .{});
-    //         return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, signature });
+    //         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, signature });
     //     }
     //     const newPc = PC.init(@ptrCast(&method.code));
     //     trace(" newPc={} {}", .{ newPc, newPc.prim() });
-    //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
+    //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, undefined });
     // }
     // pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const process = tfAsProcess(_process);
     //     const context = tfAsContext(_context);
     //     trace("\nifTrue: {any}", .{context.stack(sp, process)});
     //     const v = sp.top;
-    //     if (True.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     if (False.equals(v)) return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
+    //     if (True.equals(v)) return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
+    //     if (False.equals(v)) return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
     //     @panic("non boolean");
     // }
     // pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
@@ -318,19 +292,19 @@ pub const controlPrimitivesX = struct {
     //     const context = tfAsContext(_context);
     //     trace("\nifFalse: {any}", .{context.stack(sp, process)});
     //     const v = sp.top;
-    //     if (False.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     if (True.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    //     if (False.equals(v)) return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
+    //     if (True.equals(v)) return @call(tailCall, process.check(pc.next().prim()), .{ pc.skip(2), sp.drop(), process, context, undefined });
     //     @panic("non boolean");
     // }
     // pub fn ifNil(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const v = sp.top;
-    //     if (Nil.equals(v)) return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
-    //     return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    //     if (Nil.equals(v)) return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
+    //     return @call(tailCall, process.check(pc.next().prim()), .{ pc.skip(2), sp.drop(), process, context, undefined });
     // }
     // pub fn ifNotNil(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const v = sp.top;
-    //     if (Nil.equals(v)) return @call(tailCall, pc.next().prim(), .{ pc.skip(2), sp.drop(), process, context, undefined });
-    //     return @call(tailCall, branch, .{ pc, sp.drop(), process, context, undefined });
+    //     if (Nil.equals(v)) return @call(tailCall, process.check(pc.next().prim()), .{ pc.skip(2), sp.drop(), process, context, undefined });
+    //     return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
     // }
     // pub fn primFailure(_: PC, _: SP, _: *Process, _: *Context, extra: Extra) SP {
     //     @panic("primFailure");
@@ -338,66 +312,66 @@ pub const controlPrimitivesX = struct {
     // pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     sp.top = pc.object();
     //     trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
-    //     return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, undefined });
     // }
     // pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     sp.top = Object.from(0);
     //     trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     // pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     sp.top = Object.from(1);
     //     trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     // pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(Object.from(0));
     //     trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(Object.from(1));
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteral2(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(Object.from(2));
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteral_1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(Object.from(-1));
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.push(pc.literalIndirect());
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
     }
     // pub fn pushLiteralNil(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(Nil);
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteralTrue(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(True);
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteralFalse(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const newSp = sp.push(False);
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn printStack(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     trace("\nstack: {any}", .{context.stack(sp, process)});
-    //     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+    //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
-        return @call(tailCall, nPc, .{ tPc, sp, process, context, undefined });
+        return @call(tailCall, process.check(nPc), .{ tPc, sp, process, context, undefined });
     }
     pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
         const newSp = sp.push(if (nPc == context.getNPc()) True else False);
-        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     }
 };

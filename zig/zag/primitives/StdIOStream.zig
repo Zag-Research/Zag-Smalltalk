@@ -54,12 +54,12 @@ pub const primitives = struct {
         trace("\n+: {any}", .{context.stack(sp, process)});
         if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc.prim(), .{ dPc.next(), sp, process, context, selector, cache.next() });
+            return @call(tailCall, process.check(dPc.prim()), .{ dPc.next(), sp, process, context, selector, cache.next() });
         }
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector, cache }));
-        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined, undefined });
+                                     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, selector, cache }));
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined, undefined });
     }
 };
 const e = struct {

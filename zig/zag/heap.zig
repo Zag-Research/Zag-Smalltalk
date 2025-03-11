@@ -969,8 +969,8 @@ pub fn CompileTimeString(comptime str: []const u8) type {
     const fill = words * @sizeOf(Object) - size;
     const T = [size + fill]u8;
     return extern struct {
-        header: HeapHeader,
-        chars: T,
+        header: HeapHeader align(8),
+        chars: T align(8),
         const Self = @This();
         fn hash() u64 {
             var hsh: u64 = 0;

@@ -113,7 +113,7 @@ pub const Extra = union {
         return self.method.code[0].threadedFn;
     }
 };
-pub const ThreadedFn = packed struct {
+pub const ThreadedFn = struct {
     f: Fn,
     pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) SP;
 };
@@ -485,7 +485,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         executeFn: ThreadedFn.Fn,
         jitted: ThreadedFn.Fn,
         code: [codes]Code,
-        offsets: [codes]bool,
+        offsets: [codes]bool align(8),
         const codeOffsetInUnits = CompiledMethod.codeOffsetInObjects;
         const Self = @This();
         // comptime {
@@ -733,7 +733,7 @@ test "compiling method" {
 fn CompileTimeObject(comptime counts: usize) type {
     const codes = counts;
     return struct {
-        objects: [codes]Object,
+        objects: [codes]Object align(8),
         const Self = @This();
         pub fn init(comptime tup: anytype) Self {
             var obj = Self{

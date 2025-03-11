@@ -169,51 +169,50 @@ pub const embedded = struct {
     const minus = Extra.from(symbols.@"-", .SmallInteger);
     pub const SmallInteger = struct {
         pub fn @"+"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, process, context, plus }));
-            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
+            const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, plus }));
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
         }
         pub fn @"+_L1"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
             sp.top = inlines.p1L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, plus });
+                return @call(tailCall, process.check(fallback), .{ pc, newSp, process, context, plus });
             };
-            return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim), .{ pc.next(), sp, process, context, undefined });
         }
         pub fn @"-"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, minus });
-            return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, undefined });
+            sp[1] = inlines.p2(sp[1], sp[0]) catch return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, minus });
+            return @call(tailCall, process.check(pc[0].prim), .{ pc, sp + 1, process, context, undefined });
         }
         pub fn @"-_L1"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
             trace("\n-_L1: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 1) catch {
                 const newSp = sp.push(Object.from(1));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, minus });
+                return @call(tailCall, process.check(fallback), .{ pc, newSp, process, context, minus });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
         }
         pub fn @"-_L2"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
             trace("\n-_L2: {any}", .{context.stack(sp, process)});
             sp.top = inlines.p2L(sp.top, 2) catch {
                 const newSp = sp.push(Object.from(2));
-                return @call(tailCall, fallback, .{ pc, newSp, process, context, minus });
+                return @call(tailCall, process.check(fallback), .{ pc, newSp, process, context, minus });
             };
             trace(" -> {any}", .{context.stack(sp, process)});
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
         }
         pub fn @"<="(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
             const newSp = sp.dropPut(Object.from(inlines.p5(sp[1], sp[0]) catch {
-                return @call(tailCall, fallback, .{ pc, sp, process, context, symbols.@"<=", undefined });
+                return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, symbols.@"<=", undefined });
             }));
-            return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim), .{ pc.next(), newSp, process, context, undefined });
         }
         pub fn @"<=_N"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
-            sp.next =
-                return @call(tailCall, pc.prim(), .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, undefined });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp.dropPut(Object.from(inlines.p5N(sp.next, sp.top))), process, context, undefined });
         }
         pub fn @"*"(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) SP {
             const newSp = sp.dropPut(inlines.p9Orig(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, Extra.from(symbols.@"*", .SmallInteger) }));
-            return @call(tailCall, pc.prim, .{ pc.next(), newSp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim), .{ pc.next(), newSp, process, context, undefined });
         }
     };
 };
@@ -222,7 +221,7 @@ pub const primitive1 = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // SmallInteger>>#+
         if (inlines.p1(sp.next, sp.top)) | result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
         } else |_| {};
         return @call(tailCall, extra.threadedFn(), .{ pc, sp, process, context, extra.encoded() });
     }
@@ -231,30 +230,29 @@ pub const primitive2 = struct {
     pub const number = 2;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // SmallInteger>>#-
         trace("\n-: {any}", .{context.stack(sp, process)});
-        if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
         trace("\np2: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top) catch
-                                     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
-        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+                                     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, signature }));
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
     }
 };
 pub fn p7(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // at:
-    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    if (pc.verifyMethod(signature)) return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, signature });
     @panic("p7 unimplemented");
 }
 pub fn p5(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // SmallInteger>>#<=
     trace("\n<=: {any} 0x{x} 0x{x}", .{ context.stack(sp, process), Sym.@"<=".withClass(.SmallInteger).u(), signature.u() });
-    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    if (pc.verifyMethod(signature)) return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, signature });
     trace("\np5: {any}", .{context.stack(sp, process)});
     const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-                                             return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature })));
-    return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+                                             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, signature })));
+    return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
 }
 pub fn p9(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP { // SmallInteger>>#*
-    if (pc.verifyMethod(signature)) return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    if (pc.verifyMethod(signature)) return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, signature });
     const newSp = sp.dropPut(inlines.p9(sp.next, sp.top) catch
-                                 return @call(tailCall, pc.prim, .{ pc.next(), sp, process, context, signature }));
-    return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+                                 return @call(tailCall, process.check(pc.prim), .{ pc.next(), sp, process, context, signature }));
+    return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
 }
 
 const e = struct {

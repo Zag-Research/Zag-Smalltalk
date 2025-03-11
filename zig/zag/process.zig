@@ -106,10 +106,13 @@ const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const alignment = flagMask + 1;
 const nonFlags = ~flagMask;
-pub inline fn needsCheck(self: *align(1) const Self) bool {
+pub inline fn check(self: *align(1) const Self, next: execute.ThreadedFn.Fn) execute.ThreadedFn.Fn {
+    return if (self.needsCheck()) &fullCheck else next;
+}
+inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-pub fn check(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) SP {
+fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) SP {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 pub inline fn checkBump(self: *align(1) Self) *align(1) Self {

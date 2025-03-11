@@ -312,8 +312,8 @@ const threadedWords = struct {
             context.setReturn(pc.next2());
             const method = pc.method();
             const newPc = PC.init(method.codePtr());
-            if (process.needsCheck()) return @call(tailCall, Process.check, .{ newPc, sp, process, context, extra });
-            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra{ .method = method } });
+            if (process.needsCheck()) return @call(tailCall, process.check(Process.check), .{ newPc, sp, process, context, extra });
+            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra{ .method = method } });
         }
     };
     pub const cullColon = struct {
@@ -342,7 +342,7 @@ const threadedWords = struct {
             const callerContext = result.ctxt;
             trace("-> {x}", .{@intFromPtr(newSp)});
             trace("-> {any}", .{callerContext.stack(newSp, process)});
-            return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), extra });
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), extra });
         }
     };
     pub const returnTopNoContext = struct {
@@ -358,7 +358,7 @@ const threadedWords = struct {
     pub const returnTopNonLocalNoContext = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
             trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
-            return @call(tailCall, context.getNPc(), .{ context.getTPc(), sp, process, context, extra });
+            return @call(tailCall, process.check(context.getNPc()), .{ context.getTPc(), sp, process, context, extra });
         }
     };
     pub const send = struct {
@@ -371,7 +371,7 @@ const threadedWords = struct {
             const saved = sp.top;
             sp.top = sp.next;
             sp.next = saved;
-            return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, undefined });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
         }
     };
     pub const tailCallMethod = struct {
@@ -411,19 +411,19 @@ const oldFns = struct {
         const ms = getSignature(pc, sp, null);
         const returnPc = pc.next().returnOffset();
         context.setReturn(returnPc);
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, ms });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, ms });
     }
     fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getSignature(pc, sp, null) });
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, getSignature(pc, sp, null) });
     }
     pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, getSignature(pc, sp, 0) });
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, getSignature(pc, sp, 0) });
     }
     pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         const cM = Dispatch.lookupMethodForClass(signature);
         trace("\ndynamicDispatch: {any} {}", .{ cM, signature });
         const pc = cM.codePc();
-        return @call(tailCall, cM.executeFn, .{ pc, sp, process, context, signature });
+        return @call(tailCall, process.check(cM.executeFn), .{ pc, sp, process, context, signature });
     }
     pub fn fallback(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
         const self = sp.at(signature.numArgs());
@@ -431,14 +431,14 @@ const oldFns = struct {
         const class = self.get_class();
         const cM = Dispatch.lookupMethodForClass(signature);
         trace("\nfallback: {} {} {} {}", .{ signature, class, pc, cM });
-        return @call(tailCall, cM.executeFn, .{ cM.codePc(), sp, process, context, undefined });
+        return @call(tailCall, process.check(cM.executeFn), .{ cM.codePc(), sp, process, context, undefined });
     }
     pub fn callRecursive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         context.setReturn(pc.next());
         const offset = pc.int();
         const newPc = pc.next().back(@intCast(-offset));
         trace("\ncallRecursive: {any}", .{context.stack(sp, process)});
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, undefined });
+        return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, undefined });
     }
     // pub fn send1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra, prevCache: SendCache) SP {
     //     const self = sp.next;
@@ -449,7 +449,7 @@ const oldFns = struct {
     //     const cache = if (dispatchCache) @as(SendCache, @constCast(@ptrCast(pc + 1))) else prevCache;
     //     const newPc = if (dispatchCache) cache.current() else lookupAddress(selector, class);
     //     trace(" {} {any}", .{ newPc, process.getStack(sp) });
-    //     return @call(tailCall, newPc.*.prim(), .{ newPc.*.next(), sp, process, context, signature });
+    //     return @call(tailCall, process.check(newPc.*.prim()), .{ newPc.*.next(), sp, process, context, signature });
     // }
     //    pub fn tailSend1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //    }
@@ -460,7 +460,7 @@ const oldFns = struct {
     //     if (numArgs != 0) @panic("wrong number of args");
     //     const newPc = lookupAddress(selector);//, sp.next.get_class());
     //     context.setReturn(pc);
-    //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
+    //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
     // }
     // pub fn performWith(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
     //     const context = tfAsContext(_context);
@@ -469,7 +469,7 @@ const oldFns = struct {
     //     if (selector.numArgs() != 1) @panic("wrong number of args");
     //     const newPc = lookupAddress(selector);//, sp.third.get_class());
     //     context.setTPc(pc + 1);
-    //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
+    //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
     // }
 };
 const max_classes = config.max_classes;

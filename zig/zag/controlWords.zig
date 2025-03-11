@@ -27,8 +27,7 @@ pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
-        if (process.needsCheck()) return @call(tailCall, Process.check, .{ target, sp, process, context, extra });
-        return @call(tailCall, target.prim(), .{ target.next(), sp, process.checkBump(), context, extra });
+        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
         try Execution.runTest(
@@ -56,23 +55,57 @@ pub const classCase = struct {
                 const class: u14 = @truncate(classes);
                 if (class == match) {
                     newPc = newPc.targetPC();
-                    return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, context, extra });
+                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), newSp, process, context, extra });
                 }
                 if (class == 0)
-                    return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, context, extra });
+                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), newSp, process, context, extra });
                 if (class == 0x3FFF)
-                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra });
+                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 classes >>= 14;
                 newPc = newPc.next();
             }
         }
     }
 };
+pub const drop = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        const newSp = sp.drop();
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+};
+pub const dropNext = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        const newSp = sp.dropPut(sp.top);
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+};
+pub const dup = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        const newSp = sp.push(sp.top);
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+};
+pub const over = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        const newSp = sp.push(sp.next);
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+};
+pub const popAssociationValue = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        _ = .{ pc, sp, process, context, extra, unreachable };
+    }
+};
+pub const pushAssociationValue = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        _ = .{ pc, sp, process, context, extra, unreachable };
+    }
+};
 pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.push(pc.object());
         trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
     }
     test "pushLiteral" {
         try Execution.runTest(
@@ -91,7 +124,7 @@ pub const pushStack = struct {
         const offset = pc.object().to(u64);
         const newSp = sp.push(sp.at(offset));
         trace("\npushStack: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, pc.prim2(), .{ pc.skip(2), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
     }
     test "pushStack" {
         try Execution.runTest(

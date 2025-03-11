@@ -36,49 +36,49 @@ pub const embedded = struct {
         const v = sp[1];
         if (True.equals(v)) {
             sp[1] = sp[0];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 1, process, context, undefined, undefined });
         }
         if (False.equals(v)) {
             sp[1] = Nil;
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, undefined, undefined });
+            return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined, undefined });
         }
-        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifTrue:", undefined });
+        return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, Sym.@"ifTrue:", undefined });
     }
     pub fn @"ifFalse:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) SP {
         const v = sp[1];
         if (False.equals(v)) {
             sp[1] = sp[0];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 1, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 1, process, context, undefined, undefined });
         }
         if (True.equals(v)) {
             sp[1] = Nil;
-            return @call(tailCall, pc[0].prim, .{ pc, sp + 1, process, context, undefined, undefined });
+            return @call(tailCall, process.check(pc[0].prim), .{ pc, sp + 1, process, context, undefined, undefined });
         }
-        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifFalse:", undefined });
+        return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, Sym.@"ifFalse:", undefined });
     }
     pub fn @"ifTrue:ifFalse:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) SP {
         const v = sp[2];
         if (True.equals(v)) {
             sp[2] = sp[1];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 2, process, context, undefined, undefined });
         }
         if (False.equals(v)) {
             sp[2] = sp[0];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 2, process, context, undefined, undefined });
         }
-        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifTrue:ifFalse:", undefined });
+        return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, Sym.@"ifTrue:ifFalse:", undefined });
     }
     pub fn @"ifFalse:ifTrue:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, cache: SendCache) SP {
         const v = sp[2];
         if (False.equals(v)) {
             sp[2] = sp[1];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 2, process, context, undefined, undefined });
         }
         if (True.equals(v)) {
             sp[2] = sp[0];
-            return @call(tailCall, blockClosure.embedded.value, .{ pc, sp + 2, process, context, undefined, undefined });
+            return @call(tailCall, process.check(blockClosure.embedded.value), .{ pc, sp + 2, process, context, undefined, undefined });
         }
-        return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"ifFalse:ifTrue:", cache });
+        return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, Sym.@"ifFalse:ifTrue:", cache });
     }
 };
 const dnu = execute.controlPrimitives.dnu;

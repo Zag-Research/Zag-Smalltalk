@@ -25,20 +25,20 @@ const execute = @import("execute.zig");
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         _ = .{ pc, sp, process, context, extra };
-        return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"literalToRegister:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const valueToPush = sp.top;
         _ = .{ valueToPush, pc, sp, process, context, extra };
-        return @call(tailCall, context.nPc(), .{ context.tPc(), sp, process, context, undefined });
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 pub const @"add:to:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         _ = .{ pc, sp, process, context, extra };
-        return @call(tailCall, context.nPc(), .{ context.tPc(), newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), newSp, process, context, undefined });
     }
 };
 

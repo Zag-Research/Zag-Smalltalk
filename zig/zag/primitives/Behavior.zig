@@ -36,8 +36,8 @@ pub const inlines = struct {
 pub const embedded = struct {
     const fallback = execute.fallback;
     pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) SP {
-        sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, fallback, .{ pc, sp, process, context, undefined, undefined });
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, undefined, undefined });
+        sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, undefined, undefined });
+        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined, undefined });
     }
 };
 pub const primitives = struct {

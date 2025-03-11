@@ -146,19 +146,19 @@ const testModule = if (config.is_test) struct {
         pub const number = 998;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
             if (sp.next.tagbits() != sp.top.tagbits()) {
-                return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
+                return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top));
-                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 const newSp = sp.push(Sym.value);
-                return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
+                return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top));
-                return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }
     };
@@ -178,7 +178,7 @@ pub const primitive = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         if (extra.isEncoded()) {
             const newPc = pc.next();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
+            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
         }
         const primNumber = pc.uint();
         const prim = Module.findNumberedPrimitive(primNumber, false);
@@ -250,7 +250,7 @@ pub const primitiveError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         if (extra.isEncoded()) {
             const newPc = pc.next();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
+            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
         }
         const primNumber = pc.uint();
         const prim = Module.findNumberedPrimitive(primNumber, true);

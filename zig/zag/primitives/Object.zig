@@ -62,16 +62,16 @@ pub const primitive60 = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // basicAt:
         if (inlines.p60(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
-        return @call(tailCall, extra.threadedFn(), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, process.check(extra.threadedFn()), .{ pc, sp, process, context, extra.encoded() });
     }
 };
 pub const primitive110 = struct {
     pub const number = 110;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
         const newSp = sp.dropPut(Object.from(inlines.p110(sp.next, sp.top)));
-        return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
 const primitives = struct {
@@ -94,13 +94,13 @@ const primitives = struct {
     pub fn p145(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // atAllPut:
         _ = (.{ pc, sp, process, context, extra });
         inlines.p1(sp[0]) catch
-            return @call(tailCall, pc[0].prim, .{ pc + 1, sp, process, context, undefined });
-        return @call(tailCall, context.npc, .{ context.tpc, sp + 1, process, context, undefined });
+            return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, sp + 1, process, context, undefined });
     }
     pub fn p169(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ProtoObject>>#~~
         _ = (.{ pc, sp, process, context, extra });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
-        return @call(tailCall, pc[0].prim, .{ pc + 1, sp + 1, process, context, undefined });
+        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined });
     }
     // pub inline fn p111(pc: PC, sp: SP, heap: Hp, rpc: PC, process: *Process, caller: Context) Object { // ProtoObject>>class
 };
