@@ -33,7 +33,7 @@ const symbol = zag.symbol;
 
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
-//    pub usingnamespace @import("dispatch.zig");
+    // pub usingnamespace @import("dispatch.zig");
     pub usingnamespace @import("primitives.zig");
     pub usingnamespace @import("context.zig").threadedFunctions;
     pub usingnamespace @import("process.zig").threadedFunctions;
@@ -57,16 +57,6 @@ const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
 };
-fn hasFn(comptime T: type, comptime name: []const u8) bool {
-    switch (@typeInfo(T)) {
-        .@"struct", .@"union", .@"enum", .@"opaque" => {},
-        else => return false,
-    }
-    if (!@hasDecl(T, name))
-        return false;
-
-    return @typeInfo(@TypeOf(@field(T, name))) == .@"fn";
-}
 pub const Enum =
     blk: {
     @setEvalBranchQuota(100000);
@@ -119,7 +109,13 @@ pub fn initialize() void {}
 pub fn threadedFn(key: Enum) ThreadedFn.Fn {
     return functions[@intFromEnum(key)];
 }
-
+pub fn find(f: ThreadedFn.Fn) Enum {
+    for (&functions, 0..) |func,index| {
+        if (func == f) return @enumFromInt(index);
+    }
+    return .branch;
+    // @panic("function not found");
+}
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }

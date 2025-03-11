@@ -58,7 +58,7 @@ pub const primitives = struct {
         }
         trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-                                     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, selector, cache }));
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined, undefined });
     }
 };

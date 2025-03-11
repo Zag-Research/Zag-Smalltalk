@@ -1,5 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
+const expectEqual = std.testing.expectEqual;
 const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
@@ -21,8 +22,10 @@ const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
 const compileMethod = execute.compileMethod;
+const compileObject = execute.compileObject;
 const Execution = execute.Execution;
 const tf = zag.threadedFn.Enum;
+const c = object.ClassIndex;
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
@@ -72,11 +75,37 @@ pub const drop = struct {
         const newSp = sp.drop();
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
+    test "drop" {
+        try Execution.runTest(
+            "drop",
+            .{ tf.drop },
+            &[_]Object{
+                Object.from(17),
+                Object.from(42),
+            },
+            &[_]Object{
+                Object.from(42),
+            },
+        );
+    }
 };
 pub const dropNext = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.dropPut(sp.top);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+    test "dropNext" {
+        try Execution.runTest(
+            "dropNext",
+            .{ tf.dropNext },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(42),
+            },
+        );
     }
 };
 pub const dup = struct {
@@ -84,16 +113,72 @@ pub const dup = struct {
         const newSp = sp.push(sp.top);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
+    test "dup" {
+        try Execution.runTest(
+            "dup",
+            .{ tf.dup },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(42),
+                Object.from(17),
+            },
+        );
+    }
 };
 pub const over = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
         const newSp = sp.push(sp.next);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
+    test "over" {
+        try Execution.runTest(
+            "over",
+            .{ tf.over },
+            &[_]Object{
+                Object.from(17),
+                Object.from(42),
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+                Object.from(42),
+            },
+        );
+    }
 };
 pub const popAssociationValue = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+        const ref = pc.object();
+        ref.setField(2,sp.top);
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+    }
+    test "popAssociationValue" {
+        var association = compileObject(.{
+            ":def",
+            c.Association,
+            Nil,
+            0,
+        });
+        try Execution.runTestWithObjects(
+            "popAssociationValue",
+            .{
+                tf.popAssociationValue,
+                "0object",
+            },
+            &.{
+                association.asObject(),
+            },
+            &[_]Object{
+                Object.from(42),
+            },
+            &[_]Object{
+            },
+        );
+        try expectEqual(Object.from(42), association.objects[2]);
     }
 };
 pub const pushAssociationValue = struct {

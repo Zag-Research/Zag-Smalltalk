@@ -175,15 +175,18 @@ pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
+    const logging = false;
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
     pub //inline
-    fn method(self: PC) CompiledMethodPtr {
+        fn method(self: PC) CompiledMethodPtr {
+        if (logging) std.debug.print("PC_method: {}\n", .{ self.code.method });
         return self.code.method;
     }
     pub //inline
     fn codeAddress(self: PC) *const Code {
+        if (logging) std.debug.print("PC_codeAddress: {}\n", .{ self.code.codePtr });
         return self.code.codePtr;
     }
     pub //inline
@@ -195,6 +198,7 @@ pub const PC = packed struct {
     }
     pub //inline
     fn prim(self: PC) ThreadedFn.Fn {
+        if (logging) std.debug.print("PC_prim: {}\n", .{ @import("threadedFn.zig").find(self.code.threadedFn) });
         return self.code.threadedFn;
     }
     pub //inline
@@ -283,9 +287,6 @@ pub const Code = union {
     pub inline fn codePtrOf(code: *Code, offs: i64) Code {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
-    }
-    pub inline fn offset(o: i56) Code {
-        return Code{ .object = Object.thunkImmediate(Object.from(o)).? };
     }
     pub inline fn prim(self: Code) ThreadedFn.Fn {
         return self.threadedFn;
@@ -496,7 +497,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
         pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
             const header = HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, name.hash24(), Age.static, null, Object, false) catch @compileError("method too big");
-            //  @compileLog(codes,refs,footer,heap.Format.allocationInfo(5,null,0,false));
             const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
@@ -531,7 +531,11 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     else => {
                         if (field[0] != ':') {
-                            code[n] = Code.offset(lookupLabel(tup, field) - n - 1);
+                            code[n] = Code.objectOf(
+                                if (field[0] >= '0' and field[0] <= '9')
+                                    symbol.fromHash32(comptime intOf(field[0..]))
+                                else
+                                    lookupLabel(tup, field) - n - 1);
                             method.offsets[n] = true;
                             n = n + 1;
                         }
@@ -541,69 +545,26 @@ fn CompileTimeMethod(comptime counts: usize) type {
             if (config.is_test) code[n] = Code.primOf(&Code.end);
             return method;
         }
-        pub fn withCodeX(name: Object, locals: u16, maxStack: u16, code: [codes]Code) Self {
-            const footer = HeapHeader.calcHeapHeader(ClassIndex.CompiledMethod, codeOffsetInUnits + codes, name.hash24(), Age.static, null, Object, false) catch @compileError("method too big");
-            return .{
-                .header = footer.asHeader(),
-                .selector = name,
-                .stackStructure = Object.packedInt(locals, maxStack, locals + name.numArgs()),
-                .code = code,
-            };
-        }
         fn cacheOffset(_: *Self, codeOffs: usize, cacheOffs: usize) u32 {
             return @truncate((codes - codeOffs) + (cacheOffs * cacheSize));
         }
         pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
-        pub fn setLiterals(self: *Self, replacements: []const Object, refReplacements: []const Object) void {
-            _ = .{ self, replacements, refReplacements, unreachable };
-            // //trace("\nsetLiterals: 0x{x:0>16} {any}", .{ self.selector.u(), replacements });
-            // for (&self.code) |*c| {
-            //     if (c.asObject().isIndexSymbol0()) {
-            //         const index = c.asObject().indexNumber();
-            //         c.* = Code.objectOf(replacements[index]);
-            //     }
-            // }
-            // if (self.signature.isIndexSymbol()) {
-            //     const index = self.signature.indexNumber();
-            //     const replacement = if (index < 0x10000) replacements[index] else refReplacements[index & 0xffff];
-            //     _ = replacement;
-            //     unreachable;
-            //     // self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex) - (indexSymbol0(0).numArgs() - replacement.numArgs()));
-            //     // self.signature.selectorHash = replacement.hash32();
-            // }
-            // for (refReplacements, &self.references) |obj, *srefs|
-            //     srefs.* = obj;
-            // if (self.references.len > 0) {
-            //     for (&self.code) |*c| {
-            //         if (c.asObject().isIndexSymbol1()) {
-            //             const newValue = (@intFromPtr(&self.references[c.asObject().indexNumber() & (Code.refFlag - 1)]) - @intFromPtr(c)) / @sizeOf(Object) - 1;
-            //             c.* = Code.uintOf(newValue);
-            //         }
-            //     }
-            // }
-        }
-        pub fn resolve(self: *Self) void {
+        pub fn resolve(self: *Self, literals: []const Object) void {
             for (&self.code, &self.offsets) |*c, isOffset| {
                 if (isOffset) {
-                    const offset = c.object.thunkImmediateValue().to(i64);
-                    c.* = Code.codePtrOf(c, offset);
+                    if (c.object.isInt()) {
+                        c.* = Code.codePtrOf(c, c.object.to(i64));
+                    } else
+                        c.object = literals[c.object.toUnchecked(u64)];
                 }
             }
-            // if (self.signature.isIndexSymbol()) {
-            //     const index = self.signature.indexNumber();
-            //     const replacement = if (index < 0x10000) replacements[index] else refReplacements[index & 0xffff];
-            //     _ = replacement;
-            //     unreachable;
-            //     // self.stackStructure.classIndex = @enumFromInt(@intFromEnum(self.stackStructure.classIndex) - (indexSymbol0(0).numArgs() - replacement.numArgs()));
-            //     // self.signature.selectorHash = replacement.hash32();
-            // }
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
         }
-        pub fn findObject(self: *Self, search: Object) usize {
+        pub fn findObjectX(self: *Self, search: Object) usize {
             var index = self.references.len - 1;
             while (index >= 0) : (index -= 1) {
                 const v = self.references[index];
@@ -714,7 +675,7 @@ test "compiling method" {
         for (t, 0..) |tv, idx|
             trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.rawU() });
     }
-    m.resolve();
+    m.resolve(Object.empty);
     if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
@@ -813,7 +774,7 @@ fn CompileTimeObject(comptime counts: usize) type {
         }
     };
 }
-fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
+pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const objType = CompileTimeObject(countNonLabels(tup));
     return objType.init(tup);
@@ -909,6 +870,9 @@ pub const Execution = struct {
         return self.stack(method.execute(self.sp, &self.process, &self.ctxt));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
+        return runTestWithObjects(title,tup,Object.empty,source,expected);
+    }
+    pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: [] const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var m = compileMethod(Sym.yourself, 0, 0, .none, tup);
         //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
@@ -919,7 +883,7 @@ pub const Execution = struct {
             for (t, 0..) |tv, idx|
                 trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
         }
-        m.resolve();
+        m.resolve(objects);
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
