@@ -28,7 +28,7 @@ ASCDrop >> resultStack: anASStack [
 	^ anASStack drop
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'finalAnalysis' }
 ASCDrop >> shrinksStack [
 
 	^ true

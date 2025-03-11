@@ -67,6 +67,13 @@ ASCPrimitive >> resultStack: aStack [
 	^ stack := aStack
 ]
 
+{ #category : 'finalAnalysis' }
+ASCPrimitive >> shrinksStack [
+" doesn't really shrink stack, but contexts shouldn't move before this "
+
+	^ true
+]
+
 { #category : 'instance creation' }
 ASCPrimitive >> with: aSymbol [
 
