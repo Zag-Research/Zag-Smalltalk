@@ -36,6 +36,13 @@ SmallInteger >> siPrim2: aNumber [
 ]
 
 { #category : '*Zag-Core-Tests' }
+SmallInteger >> siPrim3: aNumber [
+
+	<primitive: 3>
+	^ ASIPrimitiveError
+]
+
+{ #category : '*Zag-Core-Tests' }
 SmallInteger >> siPrimZ: aNumber [
 
 	<primitive: 'foo' module: 'zag-none'>

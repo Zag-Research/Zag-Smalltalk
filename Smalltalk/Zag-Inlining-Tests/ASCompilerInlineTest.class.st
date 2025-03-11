@@ -274,8 +274,16 @@ ASCompilerInlineTest >> testBlockValueNonlocal [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFibWith3 [
-	"3 fib: 3"
-	self assertEquivalentSending: #fib: arguments: #(3) to: ASCompileTestClass1 new
+
+"fib: anInt
+
+	^ anInt < 2
+		  ifTrue: [ 1 ]
+		  ifFalse: [ (self fib: anInt - 1) + (self fib: anInt - 2) ]"
+	self
+		assertEquivalentSending: #fib:
+		arguments: #( 3 )
+		to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }

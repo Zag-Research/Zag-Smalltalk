@@ -54,7 +54,7 @@ ASemanticInterpreter >> basicBlocks [
 ASemanticInterpreter >> binary: aBlock [
 
 	primitiveSuccessStackPointer := stackPointer + 1.
-	^ (aBlock value: (stackArray at: primitiveSuccessStackPointer) value: (stackArray at: stackPointer))
+	^ (aBlock value: (stackArray at: primitiveSuccessStackPointer + 1) value: (stackArray at: primitiveSuccessStackPointer))
 		  processPrimitiveResult: self
 ]
 
@@ -353,6 +353,17 @@ ASemanticInterpreter >> stackSize: stackSize [
 
 	stackArray := Array new: stackSize.
 	stackPointer := stackSize + 1
+]
+
+{ #category : 'primitive execution' }
+ASemanticInterpreter >> ternary: aBlock [
+
+	primitiveSuccessStackPointer := stackPointer + 2.
+	^ (aBlock
+		   value: (stackArray at: primitiveSuccessStackPointer)
+			value: (stackArray at: stackPointer + 1)
+		   value: (stackArray at: stackPointer)) processPrimitiveResult:
+		  self
 ]
 
 { #category : 'accessing' }
