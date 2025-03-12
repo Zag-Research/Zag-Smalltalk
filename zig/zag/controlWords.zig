@@ -10,6 +10,7 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const class = object.ClassIndex;
 //const primitives = zag.primitives;
 //const globalArena = zag.globalArena;
 const symbol = zag.symbol;
@@ -24,6 +25,8 @@ const Extra = execute.Extra;
 const compileMethod = execute.compileMethod;
 const compileObject = execute.compileObject;
 const Execution = execute.Execution;
+const combine14asObject = execute.combiners.combine14asObject;
+const classes14  = execute.combiners.classes14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 pub const branch = struct {
@@ -55,19 +58,77 @@ pub const classCase = struct {
             var classes = pc.object().to(u64);
             newPc = newPc.next();
             for (0..4) |_| {
-                const class: u14 = @truncate(classes);
-                if (class == match) {
+                const currentClass: u14 = @truncate(classes);
+                if (currentClass == match) {
                     newPc = newPc.targetPC();
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), newSp, process, context, extra });
                 }
-                if (class == 0)
+                if (currentClass == 0)
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), newSp, process, context, extra });
-                if (class == 0x3FFF)
+                if (currentClass == 0x3FFF)
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 classes >>= 14;
                 newPc = newPc.next();
             }
         }
+    }
+    test "classCase match" {
+        try Execution.runTest(
+            "classCase match",
+            .{
+                tf.classCase,
+                comptime combine14asObject(.{class.True}),
+                "true",
+                tf.pushLiteral,
+                17,
+                tf.branch,
+                "end",
+                ":true",
+                tf.pushLiteral,
+                42,
+                ":end",
+            },
+            &[_]Object{True},
+            &[_]Object{Object.from(42)},
+        );
+    }
+    test "classCase no match" {
+        try Execution.runTest(
+            "classCase no match",
+            .{
+                tf.classCase,
+                comptime classes14(.{class.True}),
+                "true",
+                tf.pushLiteral,
+                42,
+                tf.branch,
+                "end",
+                ":true",
+                tf.pushLiteral,
+                17,
+                ":end",
+            },
+            &[_]Object{False},
+            &[_]Object{Object.from(42)},
+        );
+    }
+    test "classCase no match - leave" {
+        try Execution.runTest(
+            "classCase no match - leave",
+            .{
+                tf.classCase,
+                comptime combine14asObject(.{class.True,0x3fff}),
+                "true",
+                tf.branch,
+                "end",
+                ":true",
+                tf.pushLiteral,
+                17,
+                ":end",
+            },
+            &[_]Object{False},
+            &[_]Object{False},
+        );
     }
 };
 pub const drop = struct {
@@ -152,8 +213,7 @@ pub const over = struct {
 };
 pub const popAssociationValue = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        const ref = pc.object();
-        ref.setField(2,sp.top);
+        pc.object().setField(2,sp.top);
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
@@ -183,7 +243,31 @@ pub const popAssociationValue = struct {
 };
 pub const pushAssociationValue = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+        const value = pc.object().getField(2);
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.push(value), process, context, extra });
+    }
+    test "pushAssociationValue" {
+        var association = compileObject(.{
+            ":def",
+            c.Association,
+            Nil,
+            42,
+        });
+        try Execution.runTestWithObjects(
+            "pushAssociationValue",
+            .{
+                tf.pushAssociationValue,
+                "0object",
+            },
+            &.{
+                association.asObject(),
+            },
+            &[_]Object{
+            },
+            &[_]Object{
+                Object.from(42),
+            },
+        );
     }
 };
 pub const pushLiteral = struct {

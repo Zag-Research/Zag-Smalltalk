@@ -466,6 +466,12 @@ pub const combiners = struct {
     pub fn combine14(tup: anytype) comptime_int {
         return combine(u14, tup);
     }
+    pub fn combine14asObject(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
+    pub fn classes14(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
     pub fn combine24(tup: anytype) comptime_int {
         return combine(u24, tup);
     }
