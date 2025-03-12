@@ -25,6 +25,19 @@ ZagLLVMInImageGenerator >> add: aNumber to: selfValue [
 	<primitive: 'add:to:' module: 'llvm'>
 ]
 
+{ #category : 'initialization' }
+ZagLLVMInImageGenerator >> initialize [
+
+	super initialize.
+	builder := self initializeLLVM
+]
+
+{ #category : 'initialization' }
+ZagLLVMInImageGenerator >> initializeLLVM [
+
+	<primitive: 'initializeLLVM' module: 'llvm'>
+]
+
 { #category : 'API' }
 ZagLLVMInImageGenerator >> newLabel [
 

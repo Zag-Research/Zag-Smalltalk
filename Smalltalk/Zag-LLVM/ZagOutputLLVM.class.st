@@ -12,8 +12,8 @@ Class {
 	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
 		'gen',
-		'source',
-		'sp'
+		'sp',
+		'pc'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
@@ -60,7 +60,7 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 ZagOutputLLVM >> label [
 
 	| address |
-	address := source thatAddress.
+	address := pc thatAddress.
 	" generate a label and keep track of the address of this  and the label so when we have a branch or other reference to this address we acan use the label that corresponds to it"
 ]
 
@@ -68,8 +68,20 @@ ZagOutputLLVM >> label [
 ZagOutputLLVM >> makeImmediateClosure [
 
 	| value |
-	value := source next
+	value := pc next
 
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> pc [
+
+	^ pc
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> pc: anObject [
+
+	pc := anObject
 ]
 
 { #category : 'primitives' }
@@ -141,14 +153,14 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 ZagOutputLLVM >> pushBlockNonlocalReturning [
 
 	| value |
-	value := source next.
+	value := pc next.
 	" push an immediate block returning the next value. Determined at threaded-code-generation time to be one of the immediate-codable values "
 ]
 
 { #category : 'threaded words' }
 ZagOutputLLVM >> pushContext [
 
-	source next. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
+	pc next. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
 
 ]
 
@@ -156,17 +168,16 @@ ZagOutputLLVM >> pushContext [
 ZagOutputLLVM >> pushLiteral [
 
 	| literal |
-	literal := source next.
+	literal := pc nextObject.
 	sp := gen register: sp plus: -8.
 	gen store: literal at: sp
-
 ]
 
 { #category : 'threaded words' }
 ZagOutputLLVM >> pushLocal [
 
 	| localNumber |
-	localNumber := source next.
+	localNumber := pc next.
 	" push the value of this local in the context "
 ]
 
@@ -181,17 +192,10 @@ ZagOutputLLVM >> send [
 	" the same as send0 and send1 except it uses the arity of the selector to find the target"
 
 	| selector threadedReturnPoint |
-	selector := source next.
+	selector := pc next.
 	"need code to extend selector with the class of the target of the send"
-	threadedReturnPoint := source offset: 0
+	threadedReturnPoint := pc offset: 0
 	" we need to save this and the address of our return point in the context"
-]
-
-{ #category : 'accessing' }
-ZagOutputLLVM >> source: aZagOutputLLVM [
-
-	source := aZagOutputLLVM.
-	sp := gen getSPRegister
 ]
 
 { #category : 'converting' }
