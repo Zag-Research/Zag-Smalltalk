@@ -578,7 +578,7 @@ pub const PackedObject = packed struct {
     f3: u14,
     f4: u14,
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
-        return .{.tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3, .f4 = 0};
+        return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3, .f4 = 0 };
     }
     pub inline fn from(o: Object) PackedObject {
         return @bitCast(o);

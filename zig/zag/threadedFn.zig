@@ -110,7 +110,7 @@ pub fn threadedFn(key: Enum) ThreadedFn.Fn {
     return functions[@intFromEnum(key)];
 }
 pub fn find(f: ThreadedFn.Fn) Enum {
-    for (&functions, 0..) |func,index| {
+    for (&functions, 0..) |func, index| {
         if (func == f) return @enumFromInt(index);
     }
     return .branch;

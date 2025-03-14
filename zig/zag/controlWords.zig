@@ -27,7 +27,7 @@ const compileMethod = execute.compileMethod;
 const compileObject = execute.compileObject;
 const Execution = execute.Execution;
 const combine14asObject = object.PackedObject.combine14asObject;
-const classes14  = object.PackedObject.classes14;
+const classes14 = object.PackedObject.classes14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 pub const branch = struct {
@@ -37,17 +37,15 @@ pub const branch = struct {
         return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
-        var exe = Execution.initTest(
-            "branch",
-            .{
-                tf.branch,
-                "label",
-                tf.pushLocal,
-                17,
-                ":label",
+        var exe = Execution.initTest("branch", .{
+            tf.branch,
+            "label",
+            tf.pushLocal,
+            17,
+            ":label",
         });
-        try exe.execute(Object.empty).
-            matchStack(Object.empty);
+        try exe.execute(Object.empty)
+            .matchStack(Object.empty);
     }
 };
 pub const classCase = struct {
@@ -119,7 +117,7 @@ pub const classCase = struct {
             "classCase no match - leave",
             .{
                 tf.classCase,
-                comptime combine14asObject(.{class.True,0x3fff}),
+                comptime combine14asObject(.{ class.True, 0x3fff }),
                 "true",
                 tf.branch,
                 "end",
@@ -141,7 +139,7 @@ pub const drop = struct {
     test "drop" {
         try Execution.runTest(
             "drop",
-            .{ tf.drop },
+            .{tf.drop},
             &[_]Object{
                 Object.from(17),
                 Object.from(42),
@@ -160,7 +158,7 @@ pub const dropNext = struct {
     test "dropNext" {
         try Execution.runTest(
             "dropNext",
-            .{ tf.dropNext },
+            .{tf.dropNext},
             &[_]Object{
                 Object.from(42),
                 Object.from(17),
@@ -179,7 +177,7 @@ pub const dup = struct {
     test "dup" {
         try Execution.runTest(
             "dup",
-            .{ tf.dup },
+            .{tf.dup},
             &[_]Object{
                 Object.from(42),
                 Object.from(17),
@@ -200,7 +198,7 @@ pub const over = struct {
     test "over" {
         try Execution.runTest(
             "over",
-            .{ tf.over },
+            .{tf.over},
             &[_]Object{
                 Object.from(17),
                 Object.from(42),
@@ -215,7 +213,7 @@ pub const over = struct {
 };
 pub const popAssociationValue = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        pc.object().setField(2,sp.top);
+        pc.object().setField(2, sp.top);
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
@@ -237,8 +235,7 @@ pub const popAssociationValue = struct {
             &[_]Object{
                 Object.from(42),
             },
-            &[_]Object{
-            },
+            &[_]Object{},
         );
         try expectEqual(Object.from(42), association.objects[2]);
     }
@@ -264,8 +261,7 @@ pub const pushAssociationValue = struct {
             &.{
                 association.asObject(),
             },
-            &[_]Object{
-            },
+            &[_]Object{},
             &[_]Object{
                 Object.from(42),
             },
@@ -288,7 +284,7 @@ pub const pushLiteral = struct {
                 42,
             },
             &[_]Object{},
-            &[_]Object{Object.from(42),Object.from(17)},
+            &[_]Object{ Object.from(42), Object.from(17) },
         );
     }
 };

@@ -73,9 +73,9 @@ const Stack = struct {
         return self.array()[0..n];
     }
     pub //inline
-        fn sliceTo(self: SP, ptr: anytype) []Object {
-            const i_ptr = @intFromPtr(ptr);
-            return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
+    fn sliceTo(self: SP, ptr: anytype) []Object {
+        const i_ptr = @intFromPtr(ptr);
+        return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
     }
     pub inline fn at(self: SP, n: usize) Object {
         return self.array()[n];
@@ -183,13 +183,13 @@ pub const PC = packed struct {
         return .{ .code = code };
     }
     pub //inline
-        fn method(self: PC) CompiledMethodPtr {
-        if (logging) std.debug.print("PC_method: {}\n", .{ self.code.method });
+    fn method(self: PC) CompiledMethodPtr {
+        if (logging) std.debug.print("PC_method: {}\n", .{self.code.method});
         return self.code.method;
     }
     pub //inline
     fn codeAddress(self: PC) *const Code {
-        if (logging) std.debug.print("PC_codeAddress: {}\n", .{ self.code.codePtr });
+        if (logging) std.debug.print("PC_codeAddress: {}\n", .{self.code.codePtr});
         return self.code.codePtr;
     }
     pub //inline
@@ -201,7 +201,7 @@ pub const PC = packed struct {
     }
     pub //inline
     fn prim(self: PC) ThreadedFn.Fn {
-        if (logging) std.debug.print("PC_prim: {}\n", .{ @import("threadedFn.zig").find(self.code.threadedFn) });
+        if (logging) std.debug.print("PC_prim: {}\n", .{@import("threadedFn.zig").find(self.code.threadedFn)});
         return self.code.threadedFn;
     }
     pub //inline
@@ -509,11 +509,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     else => {
                         if (field[0] != ':') {
-                            code[n] = Code.objectOf(
-                                if (field[0] >= '0' and field[0] <= '9')
-                                    symbol.fromHash32(comptime intOf(field[0..]))
-                                else
-                                    lookupLabel(tup, field) - n - 1);
+                            code[n] = Code.objectOf(if (field[0] >= '0' and field[0] <= '9')
+                                symbol.fromHash32(comptime intOf(field[0..]))
+                            else
+                                lookupLabel(tup, field) - n - 1);
                             method.offsets[n] = true;
                             n = n + 1;
                         }
@@ -534,8 +533,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                 if (isOffset.*) {
                     if (c.object.isInt()) {
                         c.* = Code.codePtrOf(c, c.object.to(i64));
-                    } else
-                        c.object = literals[c.object.toUnchecked(u64)];
+                    } else c.object = literals[c.object.toUnchecked(u64)];
                     isOffset.* = false;
                 }
             }
@@ -834,7 +832,7 @@ pub const Execution = struct {
                 for (source, sp.slice(source.len)) |src, *stck|
                     stck.* = src;
             }
-            pub fn resolve(self: *Self, objects: [] const Object) void {
+            pub fn resolve(self: *Self, objects: []const Object) void {
                 self.method.resolve(objects);
                 self.process.setContext(&self.ctxt);
             }
@@ -869,8 +867,7 @@ pub const Execution = struct {
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
     }
-    pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: [] const Object, source: []const Object, expected: []const Object) !void {
-
+    pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe = init(tup);
         const t = exe.method.code[0..];

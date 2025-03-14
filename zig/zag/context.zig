@@ -97,8 +97,7 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodP
         const newerSp = process.spillStack(sp, &contextMutable);
         return contextMutable.push(newerSp, process, method);
     }).unreserve(maxStackNeeded);
-    const ctxt = @as(*align(@alignOf(Self)) Context,
-                     @ptrCast(@alignCast(newSp.unreserve(1))));
+    const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp.unreserve(1))));
     ctxt.prevCtxt = self;
     ctxt.trapContextNumber = process.header().trapContextNumber;
     ctxt.method = method;
@@ -262,15 +261,13 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, ctxt, extra });
         }
         test "pushContext" {
-            var exe = Execution.initTest(
-                "pushContext",
-                .{
-                    tf.pushContext,
-                    tf.pushLiteral,
-                    42,
+            var exe = Execution.initTest("pushContext", .{
+                tf.pushContext,
+                tf.pushLiteral,
+                42,
             });
-            try exe.execute(&[_]Object{Object.from(17)}).
-                matchStack(&[_]Object{Object.from(42)});
+            try exe.execute(&[_]Object{Object.from(17)})
+                .matchStack(&[_]Object{Object.from(42)});
         }
     };
     pub const pushLocal = struct {
