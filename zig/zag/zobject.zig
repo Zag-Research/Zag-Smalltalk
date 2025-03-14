@@ -191,8 +191,8 @@ const TagObject = packed struct(u64) {
         }
     };
     const Self = @This();
-    const tagAndClassType = u8;
-    pub inline fn tagbits(self: Self) tagAndClassType {
+    const TagAndClassType = u8;
+    pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(@as(u64, @bitCast(self)));
     }
     fn enumBits(T: type) usize {
@@ -200,7 +200,7 @@ const TagObject = packed struct(u64) {
     }
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
-        assert(tagAndClassBits == @bitSizeOf(tagAndClassType));
+        assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     pub inline fn untaggedI(self: Object) i64 {
@@ -567,8 +567,52 @@ const ObjectFunctions = struct {
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{self.rawU()});
     }
     pub const alignment = @alignOf(u64);
-    pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object.from(f0 + (@as(i56, f1) << 16) + (@as(i56, f2) << 32));
+    // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {
+    //     return @bitCast(PackedObject.from3(f1,f2,f3));
+    // }
+};
+pub const PackedObject = packed struct {
+    tag: Object.TagAndClassType,
+    f1: u14,
+    f2: u14,
+    f3: u14,
+    f4: u14,
+    pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
+        return .{.tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3, .f4 = 0};
+    }
+    pub inline fn from(o: Object) PackedObject {
+        return @bitCast(o);
+    }
+    fn combine(size: type, tup: anytype) comptime_int {
+        comptime var n: u56 = 0;
+        comptime var shift = 0;
+        inline for (tup) |field| {
+            switch (@TypeOf(field)) {
+                comptime_int => n |= @as(u56, @as(size, field)) << shift,
+                else => n |= @as(u56, @as(size, @intFromEnum(field))) << shift,
+            }
+            shift += @typeInfo(size).int.bits;
+        }
+        return n;
+    }
+    pub fn combine14(tup: anytype) comptime_int {
+        return combine(u14, tup);
+    }
+    pub fn combine14asObject(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
+    pub fn classes14(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
+    pub fn combine24(tup: anytype) comptime_int {
+        return combine(u24, tup);
+    }
+    test "combiners" {
+        std.debug.print("Test: combiners\n", .{});
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
+        try expectEqual(229391, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
 

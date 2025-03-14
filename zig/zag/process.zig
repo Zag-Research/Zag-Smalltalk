@@ -31,7 +31,8 @@ const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
-const CodeContextPtr = @import("execute.zig").CodeContextPtr;
+const Result = execute.Result;
+const CodeContextPtr = execute.CodeContextPtr;
 
 //test "force dispatch load" {
 //    dispatch.forTest();
@@ -41,14 +42,15 @@ m: [process_total_size]u8,
 const Process = extern struct {
     stack: [stack_size]Object,
     h: Fields,
-    nursery0: [nursery_size]Object,
-    nursery1: [nursery_size]Object,
+    nursery0: [nursery_size]HeapObject,
+    nursery1: [nursery_size]HeapObject,
     const Fields = extern struct {
         next: ?*Self,
         id: u64,
         trapContextNumber: u64,
         debugFn: ?execute.ThreadedFn.Fn,
         sp: SP,
+        context: *Context,
         process: Object,
         currHeap: HeapObjectArray,
         currHp: HeapObjectArray,
@@ -66,6 +68,18 @@ const Process = extern struct {
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
     const maxStackObjectSize = @min(HeapHeader.maxLength, stack_size / 4);
 };
+pub fn format(
+    orig: *const @This(),
+    comptime fmt: []const u8,
+    options: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    _ = fmt;
+    _ = options;
+    const self = orig.ptr();
+    try writer.print("process: {} .stack = {any}", .{ orig.header().id, orig.getStack(self.h.sp) });
+    try writer.print(" .heap = {any}", .{orig.getHeap()});
+}
 comptime {
     assert(process_total_size == @sizeOf(Process));
 }
@@ -82,14 +96,11 @@ pub fn new() align(alignment) Self {
 }
 pub fn init(origin: *align(1) Self) void {
     const self = origin.ptr();
-    const h = @as(HeapObjectArray, @alignCast(@ptrCast(&self.stack[0])));
-    const stack_end = h + Process.stack_size;
-    std.debug.assert(@as(*Process, @alignCast(@ptrCast(self))) == origin.ptr());
-    self.h.sp = @ptrCast(stack_end);
-    self.h.currHeap = stack_end;
-    self.h.otherHeap = self.h.currHeap + Process.nursery_size;
-    self.h.currEnd = stack_end + Process.nursery_size;
+    self.h.sp = self.stack.ptr + Process.stack_size;
+    self.h.currHeap = self.nursery0.ptr;
+    self.h.currEnd = self.nursery0.ptr + Process.nursery_size;
     self.h.currHp = self.h.currHeap;
+    self.h.otherHeap = self.nursery1.ptr;
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
@@ -112,7 +123,7 @@ pub inline fn check(self: *align(1) const Self, next: execute.ThreadedFn.Fn) exe
 inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) SP {
+fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) Result {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
 pub inline fn checkBump(self: *align(1) Self) *align(1) Self {
@@ -133,10 +144,20 @@ pub inline fn endOfStack(self: *align(1) const Self) SP {
 pub inline fn setSp(self: *align(1) Self, sp: SP) void {
     self.header().sp = sp;
 }
+pub inline fn getContext(self: *align(1) const Self) *Context {
+    return self.header().context;
+}
+pub inline fn setContext(self: *align(1) Self, context: *Context) void {
+    self.header().context = context;
+}
+pub inline fn getSp(self: *align(1) const Self) SP {
+    return self.header().sp;
+}
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline fn getStack(self: *align(1) const Self, sp: SP) []Object {
+pub //inline
+    fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
 }
@@ -256,19 +277,6 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
     h.currEnd = tempHeap - Process.nursery_size;
     @panic("assumes heap grows down");
 }
-pub fn format(
-    orig: *const @This(),
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
-    writer: anytype,
-) !void {
-    _ = fmt;
-    _ = options;
-    const self = orig.ptr();
-    try writer.print("process: {} .stack = {any}", .{ orig.header().id, orig.getStack(self.h.sp) });
-    try writer.print(" .heap = {any}", .{orig.getHeap()});
-}
-//};
 pub fn resetForTest() void {
     allProcesses = null;
 }
@@ -332,7 +340,7 @@ test "allocStack" {
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
             _ = .{ pc, sp, process, context, extra, unreachable };
         }
     };

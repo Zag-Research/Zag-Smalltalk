@@ -68,6 +68,7 @@ const Execution = execute.Execution;
 const Process = zag.Process;
 const Context = zag.Context;
 const Extra = execute.Extra;
+const Result = execute.Result;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 
@@ -80,10 +81,10 @@ const Module = struct {
         primitive: ThreadedFn.Fn,
         primitiveError: ThreadedFn.Fn,
     };
-    fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
     }
-    fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(Nil);
         return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
     }
@@ -144,7 +145,7 @@ const testModule = if (config.is_test) struct {
     const moduleName = "test module";
     pub const primitive998 = struct {
         pub const number = 998;
-        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
             } else {
@@ -152,7 +153,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }
-        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 const newSp = sp.push(Sym.value);
                 return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
@@ -175,7 +176,7 @@ const modules = [_]Module{
     // @import("primitives/llvm.zig").module,
 };
 pub const primitive = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next();
             return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
@@ -247,7 +248,7 @@ pub const primitive = struct {
     }
 };
 pub const primitiveError = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next();
             return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
@@ -321,12 +322,12 @@ pub const primitiveError = struct {
     }
 };
 pub const primitiveModule = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };
 pub const primitiveModuleError = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };

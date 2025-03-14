@@ -8,6 +8,7 @@ const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
+const Result = execute.Result;
 const Process = zag.Process;
 const Context = zag.Context;
 const object = zag.object;
@@ -59,7 +60,7 @@ pub const inlines = struct {
 };
 pub const primitive60 = struct {
     pub const number = 60;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // basicAt:
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicAt:
         if (inlines.p60(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
@@ -69,35 +70,35 @@ pub const primitive60 = struct {
 };
 pub const primitive110 = struct {
     pub const number = 110;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ==
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
         const newSp = sp.dropPut(Object.from(inlines.p110(sp.next, sp.top)));
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
 const primitives = struct {
-    pub fn p61(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // basicAt:put:
+    pub fn p61(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicAt:put:
         _ = (.{ pc, sp, process, context, extra });
         unreachable;
     }
-    pub fn p83(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // perform: perform:with: perform:with:with: perform:with:with:with:
+    pub fn p83(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform: perform:with: perform:with:with: perform:with:with:with:
         _ = (.{ pc, sp, process, context, extra });
         unreachable;
     }
-    pub fn p84(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // perform:withArguments:
+    pub fn p84(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform:withArguments:
         _ = (.{ pc, sp, process, context, extra });
         unreachable;
     }
-    pub fn p100(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // perform:withArguments:inSuperclass:
+    pub fn p100(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform:withArguments:inSuperclass:
         _ = (.{ pc, sp, process, context, extra });
         unreachable;
     }
-    pub fn p145(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // atAllPut:
+    pub fn p145(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // atAllPut:
         _ = (.{ pc, sp, process, context, extra });
         inlines.p1(sp[0]) catch
             return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined });
         return @call(tailCall, process.check(context.npc), .{ context.tpc, sp + 1, process, context, undefined });
     }
-    pub fn p169(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP { // ProtoObject>>#~~
+    pub fn p169(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ProtoObject>>#~~
         _ = (.{ pc, sp, process, context, extra });
         sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
         return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined });
