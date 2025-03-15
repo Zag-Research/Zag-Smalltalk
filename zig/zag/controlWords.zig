@@ -316,3 +316,25 @@ pub const pushStack = struct {
         );
     }
 };
+pub const swap = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const saved = sp.top;
+        sp.top = sp.next;
+        sp.next = saved;
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+    }
+    test "swap" {
+        try Execution.runTest(
+            "swap",
+            .{tf.swap},
+            &[_]Object{
+                Object.from(17),
+                Object.from(42),
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
+            },
+        );
+    }
+};

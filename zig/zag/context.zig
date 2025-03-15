@@ -205,15 +205,6 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object) SP {
-    self.tpc = oldPc + 1;
-    self.npc = oldPc[0].prim;
-    trace("\ncall: N={} T={} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
-    const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
-    const pc = @as([*]const Code, @ptrCast(&method.code));
-    _ = .{ pc, oldPc, sp, process, selector, @panic("call unimplemented") };
-    //        return @call(tailCall,process.check(pc.prim()),.{pc+1,sp,process,self,method.selector});
-}
 const e = struct {
     usingnamespace execute.controlPrimitives;
 };

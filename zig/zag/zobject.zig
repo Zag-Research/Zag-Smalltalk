@@ -384,11 +384,8 @@ const ObjectFunctions = struct {
             return ptr[field];
         return Nil;
     }
-    pub inline fn indexEquals(self: Object, other: Object) bool {
-        return self.equals(other.makeImmediate(.Symbol, self.hash32())); // may be false positive
-    }
     pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
+        return self.tagbits() == comptime Object.makeImmediate(.Symbol, 0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
         return self == Object.False or self == Object.True;

@@ -33,7 +33,7 @@ const symbol = zag.symbol;
 
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
-    // pub usingnamespace @import("dispatch.zig");
+    pub usingnamespace @import("dispatch.zig").threadedFunctions;
     pub usingnamespace @import("primitives.zig");
     pub usingnamespace @import("context.zig").threadedFunctions;
     pub usingnamespace @import("process.zig").threadedFunctions;

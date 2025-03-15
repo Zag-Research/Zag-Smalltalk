@@ -26,82 +26,110 @@ const MaxSmallInteger: i64 = object.MaxSmallInteger;
 pub fn init() void {}
 pub const moduleName = "object";
 pub const inlines = struct {
-    pub inline fn p60(self: Object, other: Object) !Object { // basicAt:
+    pub inline fn @"basicAt:"(self: Object, other: Object) !Object {
         _ = self;
         _ = other;
         return error.primitiveError;
     }
-    pub inline fn p61(self: Object, other: Object) !Object { // basicAt:put:
+    pub inline fn @"basicAt:put:"(self: Object, other: Object) !Object {
         _ = self;
         _ = other;
         return error.primitiveError;
     }
-    pub inline fn p70(self: Object, other: Object) !Object { // basicNew
+    pub inline fn basicNew(self: Object, other: Object) !Object {
         _ = self;
         _ = other;
         return error.primitiveError;
     }
-    pub inline fn p71(self: Object, other: Object) !Object { // basicNew:
+    pub inline fn @"basicNew:"(self: Object, other: Object) !Object {
         _ = self;
         _ = other;
         return error.primitiveError;
     }
-    pub inline fn p110(self: Object, other: Object) bool { // Identical - can't fail
+    pub inline fn @"=="(self: Object, other: Object) bool { // Identical - can't fail
         return self == other;
     }
-    pub inline fn p145(self: Object, other: Object) !Object { // atAllPut:
+    pub inline fn @"atAllPut:"(self: Object, other: Object) !Object {
         _ = self;
         _ = other;
         return error.primitiveError;
     }
-    pub inline fn p169(self: Object, other: Object) bool { // NotIdentical - can't fail
+    pub inline fn @"~~"(self: Object, other: Object) bool { // NotIdentical - can't fail
         return !self.equals(other);
     }
 };
-pub const primitive60 = struct {
+pub const @"basicAt:" = struct {
     pub const number = 60;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicAt:
-        if (inlines.p60(sp.next, sp.top)) |result| {
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (inlines.@"basicAt:"(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
         return @call(tailCall, process.check(extra.threadedFn()), .{ pc, sp, process, context, extra.encoded() });
     }
 };
-pub const primitive110 = struct {
+pub const @"==" = struct {
     pub const number = 110;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
-        const newSp = sp.dropPut(Object.from(inlines.p110(sp.next, sp.top)));
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top)));
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
-const primitives = struct {
-    pub fn p61(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicAt:put:
-        _ = (.{ pc, sp, process, context, extra });
-        unreachable;
+pub const @"~~" = struct {
+    pub const number = 169;
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top)));
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
-    pub fn p83(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform: perform:with: perform:with:with: perform:with:with:with:
-        _ = (.{ pc, sp, process, context, extra });
-        unreachable;
+};
+pub const @"perform:" = struct { // perform: perform:with: perform:with:with: perform:with:with:with:
+    pub const number = 83;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const arity = extra.method.signature.numArgs() - 1;
+        const selector = sp.at(arity);
+        const numArgs = selector.numArgs();
+        if (selector.isSymbol() and numArgs == arity) {
+            //     const newPc = lookupAddress(selector);//, sp.next.get_class());
+            unreachable;
+        }
+        return @call(tailCall, process.check(extra.threadedFn()), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn p84(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform:withArguments:
-        _ = (.{ pc, sp, process, context, extra });
-        unreachable;
+};
+pub const @"perform:withArguments:" = struct {
+    pub const number = 84;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        //     const context = tfAsContext(_context);
+        //     const selector = sp.next;
+        //     sp.next = sp.top;
+        //     if (selector.numArgs() != 1) @panic("wrong number of args");
+        //     const newPc = lookupAddress(selector);//, sp.third.get_class());
+        //     context.setTPc(pc + 1);
+        //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
-    pub fn p100(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // perform:withArguments:inSuperclass:
-        _ = (.{ pc, sp, process, context, extra });
-        unreachable;
+};
+pub const @"perform:withArguments:inSuperclass:" = struct {
+    pub const number = 100;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
-    pub fn p145(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // atAllPut:
-        _ = (.{ pc, sp, process, context, extra });
-        inlines.p1(sp[0]) catch
-            return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined });
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, sp + 1, process, context, undefined });
+};
+
+pub const @"basicAt:put:" = struct {
+    pub const number = 61;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
-    pub fn p169(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ProtoObject>>#~~
-        _ = (.{ pc, sp, process, context, extra });
-        sp[1] = Object.from(inlines.p169(sp[1], sp[0]));
-        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined });
+};
+pub const @"atAllPut:" = struct {
+    pub const number = 145;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, process, context, extra, unreachable };
     }
-    // pub inline fn p111(pc: PC, sp: SP, heap: Hp, rpc: PC, process: *Process, caller: Context) Object { // ProtoObject>>class
+};
+pub const @"ProtoObject>>class" = struct {
+    pub const number = 111;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, process, context, extra, unreachable };
+    }
 };

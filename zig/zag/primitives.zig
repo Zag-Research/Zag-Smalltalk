@@ -145,7 +145,7 @@ const testModule = if (config.is_test) struct {
     const moduleName = "test module";
     pub const primitive998 = struct {
         pub const number = 998;
-        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
+        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
             } else {
@@ -153,7 +153,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }
-        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // ==
+        pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 const newSp = sp.push(Sym.value);
                 return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
@@ -169,11 +169,12 @@ const testModule = if (config.is_test) struct {
 const modules = [_]Module{
     Module.init(testModule),
     Module.init(@import("primitives/Object.zig")),
-    // @import("primitives/Smallinteger.zig").module,
+    Module.init(@import("primitives/Smallinteger.zig")),
     // @import("primitives/Behavior.zig").module,
     // @import("primitives/BlockClosure.zig").module,
     // @import("primitives/Boolean.zig").module,
     // @import("primitives/llvm.zig").module,
+    // @import("dispatch.zig").module,
 };
 pub const primitive = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {

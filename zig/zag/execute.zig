@@ -140,7 +140,7 @@ pub const Signature = struct {
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
     }
-    fn numArgs(self: Signature) u8 {
+    pub fn numArgs(self: Signature) u8 {
         return @truncate(self.int >> 32);
     }
     fn isIndexSymbol(self: Signature) bool {
