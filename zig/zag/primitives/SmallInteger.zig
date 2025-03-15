@@ -64,15 +64,20 @@ pub const inlines = struct {
                 if (result.isInt()) return result;
             },
             .tag => {
-                const result, const overflow = @subWithOverflow(@as(i64, 0), self.rawI());
-                if (overflow == 0) return @bitCast(result);
+                const result, const overflow = @addWithOverflow(@as(u64, 256), self.rawU() ^ 0xffff_ffff_ffff_ff00 );
+                if (overflow == 0) {
+                    const obj: Object = @bitCast(result);
+                    if (obj != self)
+                        return obj;
+                } else if (self == Object.makeImmediate(.SmallInteger,0))
+                    return self;
             },
         }
         return error.primitiveError;
     }
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract
         if (other.isInt()) {
-            const result = @as(Object, @bitCast(self.rawI() -% other.toUnchecked(i64)));
+            const result = @as(Object, @bitCast(self.rawI() -% other.untaggedI()));
             if (result.isInt()) return result;
         }
         return error.primitiveError;
@@ -118,10 +123,10 @@ pub const inlines = struct {
     }
     pub inline fn p9(self: Object, other: Object) !Object { // Multiply
         if (other.isInt()) {
-            const s = @as(i51, @truncate(self.toUnchecked(i64)));
-            const o = @as(i51, @truncate(other.toUnchecked(i64)));
-            const result = @mulWithOverflow(s, o);
-            if (result.@"1" == 0) return Object.from(result.@"0");
+            const s = @as(i56, @truncate(self.toUnchecked(i64)));
+            const o = @as(i56, @truncate(other.toUnchecked(i64)));
+            const result, const overflow = @mulWithOverflow(s, o);
+            if (overflow == 0) return Object.from(result);
         }
         return error.primitiveError;
     }
@@ -143,28 +148,26 @@ pub const inlines = struct {
 
 test "inline primitives" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual((try inlines.p9(Object.from(3), Object.from(4))).toInt(), 12);
-    try expectEqual(inlines.p9(Object.from(0x10000000), Object.from(0x1000000)), error.primitiveError);
-    try expectEqual(inlines.p9(Object.from(0x10000000), Object.from(0x800000)), error.primitiveError);
-    try expectEqual((try inlines.p9(Object.from(0x1000_0000), Object.from(0x20_0000))).toInt(), 0x2_0000_0000_0000);
-    try expectEqual((try inlines.p9(Object.from(0x1000_0000), Object.from(0x3f_ffff))).toInt(), 0x3_ffff_f000_0000);
-    try expectEqual((try inlines.p9(Object.from(0x1000_0010), Object.from(0x3f_ffff))).toInt(), 0x3_ffff_f3ff_fff0);
-    try expectEqual((try inlines.p9(Object.from(0x1000_0000), Object.from(-0x400_000))).toInt(), -0x4_0000_0000_0000);
-    try expectEqual(inlines.p9(Object.from(0x1000_0000), Object.from(0x400_000)), error.primitiveError);
-    try expectEqual((try inlines.p_negated(Object.from(42))).toInt(), -42);
-    //TODO    try expectEqual((try inlines.p_negated(Object.from(-0x3_ffff_ffff_ffff))).toInt(), 0x3_ffff_ffff_ffff);
-    //TODO    try expectEqual((try inlines.p_negated(Object.from(0x3_ffff_ffff_ffff))).toInt(), -0x3_ffff_ffff_ffff);
-    try expectEqual((try inlines.p_negated(Object.from(0))).toInt(), 0);
-    //TODO    try expectEqual(inlines.p_negated(Object.from(-0x4_0000_0000_0000)), error.primitiveError);
-    try expectEqual(try inlines.p5(Object.from(0), Object.from(0)), true);
-    try expectEqual(try inlines.p5(Object.from(0), Object.from(1)), true);
-    try expectEqual(try inlines.p5(Object.from(1), Object.from(0)), false);
-    try expectEqual(inlines.p5N(Object.from(0), Object.from(0)), true);
-    try expectEqual(inlines.p5N(Object.from(0), Object.from(1)), true);
-    try expectEqual(inlines.p5N(Object.from(1), Object.from(0)), false);
-    try expectEqual(try inlines.p6(Object.from(0), Object.from(0)), true);
-    try expectEqual(try inlines.p6(Object.from(0), Object.from(1)), false);
-    try expectEqual(try inlines.p6(Object.from(1), Object.from(0)), true);
+    try expectEqual(Object.from(12), inlines.p9(Object.from(3), Object.from(4)));
+    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000), Object.from(0x100_0000)));
+    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000), Object.from(0x80_0000)));
+    try expectEqual(Object.from(-0x80_0000_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(-0x80_0000)));
+    try expectEqual(Object.from(0x20_0000_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(0x20_0000)));
+    try expectEqual(Object.from(0x3f_ffff_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(0x3f_ffff)));
+    try expectEqual(Object.from(0), inlines.p_negated(Object.from(0)));
+    try expectEqual(Object.from(-42), inlines.p_negated(Object.from(42)));
+    try expectEqual(Object.from(0x7f_ffff_ffff_ffff), inlines.p_negated(Object.from(-0x7f_ffff_ffff_ffff)));
+    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff), inlines.p_negated(Object.from(0x7f_ffff_ffff_ffff)));
+    try expectEqual(error.primitiveError, inlines.p_negated(Object.from(-0x80_0000_0000_0000)));
+    try expectEqual(true, try inlines.p5(Object.from(0), Object.from(0)));
+    try expectEqual(true, try inlines.p5(Object.from(0), Object.from(1)));
+    try expectEqual(false, try inlines.p5(Object.from(1), Object.from(0)));
+    try expectEqual(true, inlines.p5N(Object.from(0), Object.from(0)));
+    try expectEqual(true, inlines.p5N(Object.from(0), Object.from(1)));
+    try expectEqual(false, inlines.p5N(Object.from(1), Object.from(0)));
+    try expectEqual(true, try inlines.p6(Object.from(0), Object.from(0)));
+    try expectEqual(false, try inlines.p6(Object.from(0), Object.from(1)));
+    try expectEqual(true, try inlines.p6(Object.from(1), Object.from(0)));
 }
 pub const embedded = struct {
     const fallback = execute.fallback;
