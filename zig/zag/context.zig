@@ -42,12 +42,14 @@ trapContextNumber: u64,
 temps: [nLocals]Object,
 const nLocals = 1;
 const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
-var yourself = execute.CompiledMethod.init(Sym.noFallback, Code.end);
 pub fn init() Self {
     var result: Self = undefined;
+    const end = &execute.endMethod;
+    const pc = PC.init(&end.code[0]);
     result.header = comptime HeapHeader.calc(.Context, baseSize + nLocals, 0, .static, null, Object, false) catch unreachable;
-    result.method = &yourself;
-    result.npc = .{ .f = Code.end };
+    result.method = @constCast(end);
+    result.npc = pc.asThreadedFn();
+    result.tpc = pc.next();
     result.prevCtxt = null;
     result.trapContextNumber = 0;
     return result;
@@ -61,13 +63,19 @@ pub fn format(
     _ = fmt;
     _ = options;
 
-    try writer.print("context: {}", .{self.header});
+    try writer.print("context: {{", .{});
+//    try writer.print(".header: {}", .{self.header});
+//    try writer.print(".method: {}", .{self.method});
+    try writer.print(".npc: {}", .{self.npc});
+    try writer.print(".tpc: {}", .{self.tpc});
+    try writer.print(".trapContextNumber: {}", .{self.trapContextNumber});
     if (self.prevCtxt) |ctxt|
         try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
     if (false) {
         @setRuntimeSafety(false);
         try writer.print(" temps: {any}", .{self.temps[0..self.size]});
     }
+    try writer.print("}}",.{});
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
@@ -232,6 +240,7 @@ test "init context" {
 }
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
+    const expect = std.testing.expect;
     pub const makeImmediateClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
             _ = .{ pc, sp, process, context, signature, unreachable };
@@ -257,8 +266,9 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 42,
             });
-            try exe.execute(&[_]Object{Object.from(17)})
-                .matchStack(&[_]Object{Object.from(42)});
+            try exe.execute(&[_]Object{Object.from(17)});
+            try exe.matchStack(&[_]Object{Object.from(42)});
+            try expect(exe.getContext() != &exe.ctxt);
         }
     };
     pub const pushLocal = struct {
@@ -299,3 +309,4 @@ pub const threadedFunctions = struct {
         }
     };
 };
+    

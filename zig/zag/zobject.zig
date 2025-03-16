@@ -557,8 +557,8 @@ const ObjectFunctions = struct {
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
             else => {
-                try writer.print("\nobject: 0x{x:0>16}", .{self.rawU()});
-                @panic("format for unknown class");
+                try writer.print("{{?0x{x:0>16}}}", .{self.rawU()});
+                //@panic("format for unknown class");
             },
         };
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{self.rawU()});

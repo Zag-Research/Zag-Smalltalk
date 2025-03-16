@@ -32,7 +32,6 @@ const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
         const target = pc.targetPC();
         return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
@@ -44,8 +43,9 @@ pub const branch = struct {
             17,
             ":label",
         });
-        try exe.execute(Object.empty)
-            .matchStack(Object.empty);
+        std.debug.print("Alignment of exe: {} {}\n",.{@alignOf(@TypeOf(exe)),@TypeOf(exe)});
+        try exe.execute(Object.empty);
+        try exe.matchStack(Object.empty);
     }
 };
 pub const classCase = struct {

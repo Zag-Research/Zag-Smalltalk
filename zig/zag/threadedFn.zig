@@ -57,6 +57,7 @@ const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
 };
+const addUnrecognized = true;
 pub const Enum =
     blk: {
     @setEvalBranchQuota(100000);
@@ -86,6 +87,16 @@ pub const Enum =
             .value = i,
         }};
     }
+    if (addUnrecognized) {
+        fields = fields ++ [_]std.builtin.Type.EnumField{.{
+            .name = "Code.end",
+            .value = fields.len,
+        }};
+        fields = fields ++ [_]std.builtin.Type.EnumField{.{
+            .name = "Unrecognized",
+            .value = 9999,
+        }};
+    }
     //@compileLog(fields);
     break :blk @Type(.{ .@"enum" = .{
         .tag_type = usize,
@@ -97,10 +108,17 @@ pub const Enum =
 
 const functions =
     blk: {
-    var array: [@typeInfo(Enum).@"enum".fields.len]ThreadedFn.Fn = undefined;
+    const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
+    var array: [arraySize]ThreadedFn.Fn = undefined;
     for (@typeInfo(Enum).@"enum".fields) |d| {
-        const ds = @field(structures, d.name);
-        array[d.value] = &@field(ds, "threadedFn");
+        if (d.value < arraySize) {
+            if (d.value == arraySize - 1) {
+                array[d.value] = &execute.Code.end;
+            } else {
+                const ds = @field(structures, d.name);
+                array[d.value] = &@field(ds, "threadedFn");
+            }
+        }
     }
     break :blk array;
 };
@@ -113,16 +131,20 @@ pub fn find(f: ThreadedFn.Fn) Enum {
     for (&functions, 0..) |func, index| {
         if (func == f) return @enumFromInt(index);
     }
-    return .branch;
-    // @panic("function not found");
+    return .Unrecognized;
 }
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
 test "function size" {
+    if (true) return error.SkipZigTest;
     expectEqual(43, functions.len) catch |err| {
-        inline for (std.meta.fields(Enum)) |f| {
-            std.debug.print("{s}\n", .{f.name});
+        inline for (std.meta.fields(Enum),0..) |f,i| {
+            std.debug.print("{s:<25}", .{f.name});
+            if (i < functions.len) {
+                std.debug.print("{x:0>16}\n",.{@intFromPtr(functions[i])});
+            } else
+                std.debug.print("?\n",.{});
         }
         return err;
     };

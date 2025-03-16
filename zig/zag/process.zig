@@ -40,17 +40,17 @@ const CodeContextPtr = execute.CodeContextPtr;
 const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
 m: [process_total_size]u8,
 const Process = extern struct {
-    stack: [stack_size]Object,
+    stack: [stack_size]Object align(alignment),
     h: Fields,
     nursery0: [nursery_size]HeapObject,
     nursery1: [nursery_size]HeapObject,
     const Fields = extern struct {
         next: ?*Self,
         id: u64,
+        context: *Context,
         trapContextNumber: u64,
         debugFn: ?execute.ThreadedFn.Fn,
         sp: SP,
-        context: *Context,
         process: Object,
         currHeap: HeapObjectArray,
         currHp: HeapObjectArray,
@@ -96,11 +96,11 @@ pub fn new() align(alignment) Self {
 }
 pub fn init(origin: *align(1) Self) void {
     const self = origin.ptr();
-    self.h.sp = self.stack.ptr + Process.stack_size;
-    self.h.currHeap = self.nursery0.ptr;
-    self.h.currEnd = self.nursery0.ptr + Process.nursery_size;
+    self.h.sp = origin.endOfStack();
+    self.h.currHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery0));
+    self.h.currEnd = self.h.currHeap + Process.nursery_size;
     self.h.currHp = self.h.currHeap;
-    self.h.otherHeap = self.nursery1.ptr;
+    self.h.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;

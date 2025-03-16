@@ -234,7 +234,7 @@ pub const @"+" = struct {
     test "simple add" {
         try Execution.runTest(
             "simple add",
-            .{ tf.primitive, 1 },
+            .{ tf.@"primitive:", 1 },
             &[_]Object{
                 Object.from(25),
                 Object.from(17),
@@ -246,8 +246,8 @@ pub const @"+" = struct {
     }
     test "simple add with overflow" {
         try Execution.runTest(
-            "simple add",
-            .{ tf.primitive, 1, tf.pushLiteral, 42 },
+            "simple add with overflow",
+            .{ tf.@"primitive:", 1, tf.pushLiteral, 42 },
             &[_]Object{
                 Object.from(4),
                 Object.from(0x7f_ffff_ffff_ffff),

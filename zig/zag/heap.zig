@@ -943,7 +943,7 @@ pub const HeapObject = packed struct {
         return @as([*]align(@alignOf(u64)) Object, @ptrFromInt(@intFromPtr(self))) + 1;
     }
     pub inline fn start(self: HeapObjectConstPtr) [*]Object {
-        return @as([*]Object, @constCast(@ptrCast(self)));
+        return @constCast(@ptrCast(self));
     }
 };
 pub fn growSize(obj: anytype, comptime Target: type) !usize {

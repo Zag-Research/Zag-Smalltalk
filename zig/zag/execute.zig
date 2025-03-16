@@ -31,6 +31,7 @@ const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 
 pub const SP = *Stack;
+pub const initStack = Stack.from;
 const Stack = struct {
     top: Object,
     next: Object,
@@ -42,6 +43,9 @@ const Stack = struct {
     }
     pub inline fn lessThan(self: SP, other: anytype) bool {
         return @intFromPtr(self) < @intFromPtr(other);
+    }
+    fn from(self: anytype) SP {
+        return @ptrCast(self);
     }
     pub inline fn push(self: SP, v: Object) SP {
         const newSp = self.reserve(1);
@@ -178,18 +182,18 @@ pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
-    const logging = false;
+    const logging = config.logThreadExecution;
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
     pub //inline
     fn method(self: PC) CompiledMethodPtr {
-        if (logging) std.debug.print("PC_method: {}\n", .{self.code.method});
+        if (logging) std.debug.print("PC_method:      {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.method});
         return self.code.method;
     }
     pub //inline
     fn codeAddress(self: PC) *const Code {
-        if (logging) std.debug.print("PC_codeAddress: {}\n", .{self.code.codePtr});
+        if (logging) std.debug.print("PC_codeAddress: {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.codePtr});
         return self.code.codePtr;
     }
     pub //inline
@@ -201,11 +205,12 @@ pub const PC = packed struct {
     }
     pub //inline
     fn prim(self: PC) ThreadedFn.Fn {
-        if (logging) std.debug.print("PC_prim: {}\n", .{@import("threadedFn.zig").find(self.code.threadedFn)});
+        if (logging) std.debug.print("PC_prim:        {x:0>16}: {}\n", .{@intFromPtr(self.code),@import("threadedFn.zig").find(self.code.threadedFn)});
         return self.code.threadedFn;
     }
     pub //inline
     fn object(self: PC) Object {
+        if (logging) std.debug.print("PC_object:      {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
         return self.code.object;
     }
     pub inline fn asCode(self: PC) Code {
@@ -216,10 +221,12 @@ pub const PC = packed struct {
     }
     pub //inline
     fn uint(self: PC) u64 {
+        if (logging) std.debug.print("PC_uint:        {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
         return self.code.object.to(u64);
     }
     pub //inline
     fn int(self: PC) i64 {
+        if (logging) std.debug.print("PC_int:         {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
         return self.code.object.to(i64);
     }
     pub inline fn next(self: PC) PC {
@@ -325,6 +332,7 @@ pub const Code = union {
         } else try writer.print("0x{x}", .{self.object.toNatNoCheck()});
     }
 };
+pub const endMethod = CompiledMethod.init(Nil,Code.end);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = struct {
@@ -528,12 +536,16 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
-        pub fn resolve(self: *Self, literals: []const Object) void {
+        pub fn resolve(self: *Self, literals: []const Object) !void {
             for (&self.code, &self.offsets) |*c, *isOffset| {
                 if (isOffset.*) {
                     if (c.object.isInt()) {
                         c.* = Code.codePtrOf(c, c.object.to(i64));
-                    } else c.object = literals[c.object.toUnchecked(u64)];
+                    } else {
+                        const index = c.object.toUnchecked(u64);
+                        if (index >= literals.len) return error.Unresolved;
+                        c.object = literals[index];
+                    }
                     isOffset.* = false;
                 }
             }
@@ -652,7 +664,7 @@ test "compiling method" {
         for (t, 0..) |tv, idx|
             trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.rawU() });
     }
-    m.resolve(Object.empty);
+    try m.resolve(Object.empty);
     if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
@@ -824,7 +836,7 @@ pub const Execution = struct {
                 self.process.init();
                 if (stackObjects) |source| {
                     self.initStack(source);
-                } else self.sp = self.process.endOfStack();
+                }
             }
             fn initStack(self: *Self, source: []const Object) void {
                 const sp = self.process.endOfStack().reserve(source.len);
@@ -832,27 +844,33 @@ pub const Execution = struct {
                 for (source, sp.slice(source.len)) |src, *stck|
                     stck.* = src;
             }
-            pub fn resolve(self: *Self, objects: []const Object) void {
-                self.method.resolve(objects);
+            pub fn resolve(self: *Self, objects: []const Object) !void {
+                try self.method.resolve(objects);
                 self.process.setContext(&self.ctxt);
             }
             pub fn stack(self: *const Self) []Object {
                 return self.process.getContext().stack(self.process.getSp(), &self.process);
             }
-            pub fn run(self: *Self, source: []const Object) void {
-                self.resolve(Object.empty);
+            pub fn getProcess(self: *const Self) *Process {
+                return &self.process;
+            }
+            pub fn getContext(self: *const Self) *Context {
+                return self.process.getContext();
+            }
+            pub fn execute(self: *Self, source: []const Object) !void {
                 const method: CompiledMethodPtr = self.method.asCompiledMethodPtr();
-                self.initStack(source);
+                self.init(source);
+                try self.resolve(Object.empty);
+                if (false) {
+                    const ptr: [*]u64 = @ptrFromInt(@intFromPtr(&self.method));
+                    for (ptr[0..@sizeOf(MethodType)/8],0..) |*v,idx|
+                        std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n",.{idx,@intFromPtr(v),v.*});
+                }
                 _ = method.execute(self.process.getSp(), &self.process, self.process.getContext());
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
                 try std.testing.expectEqualSlices(Object, expected, result);
-            }
-            pub fn execute(self: *Self, source: []const Object) *Self {
-                self.method.resolve(Object.empty);
-                self.run(source);
-                return self;
             }
         };
     }
@@ -869,48 +887,28 @@ pub const Execution = struct {
     }
     pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
-        var exe = init(tup);
+        var exe align(1024) = init(tup);
+        exe.process.init();
         const t = exe.method.code[0..];
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |tv, idx|
                 trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
         }
-        exe.resolve(objects);
+        try exe.resolve(objects);
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
                 trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
         }
-        exe.run(source);
+        try exe.execute(source);
         const result = exe.stack();
         trace("expected: {any}\n", .{expected});
         trace("result: {any}\n", .{result});
         try std.testing.expectEqualSlices(Object, expected, result);
+        try std.testing.expect(exe.getContext() == &exe.ctxt);
     }
 
-    // pub fn setupTestWithObjects3(title: []const u8, tup: anytype, objects: [] const Object, source: []const Object) Self {
-    //     std.debug.print("ExecutionTest: {s}\n", .{title});
-    //     var m = compileMethod(Sym.yourself, 0, 0, .none, tup);
-    //     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
-    //     const t = m.code[0..];
-    //     if (config.debugging) {
-    //         @setRuntimeSafety(false);
-    //         trace("m: 0x{x:0>16}\n", .{@intFromPtr(&m)});
-    //         for (t, 0..) |tv, idx|
-    //             trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
-    //     }
-    //     m.resolve(objects);
-    //     if (config.debugging) {
-    //         @setRuntimeSafety(false);
-    //         for (t, 0..) |*tv, idx|
-    //             trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
-    //     }
-    //     var self = new();
-    //     _ = self.run(source, &m);
-    //     std.debug.print("stack.len: {} {x}\n",.{self.stack().len,@intFromPtr(self.sp)});
-    //     return self;
-    // }
     // fn mainSendTo(selector: Object, target: Object) !void {
     //     std.debug.print("Sending: {} to {}\n", .{ selector, target });
     //     var exec = Self.new();
