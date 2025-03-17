@@ -658,7 +658,7 @@ pub const HeapHeader = packed struct(u64) {
         return @as(Self, @bitCast(contextHeader | @as(u64, selfOffset) << 16));
     }
     pub inline fn freeHeader(length: u12) Self {
-        return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
+        return .{ .classIndex = .testClass, .hash = 0, .format = .free, .age = .free, .length = length };
     }
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
         self.* = freeHeader(0);

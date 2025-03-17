@@ -31,12 +31,13 @@ We extend this slightly, by using all 8 possible tag values:
 | `aaaaaaaa`  | ...          | `aaaaaaaa` | `llllllll` | `01011001` | `BlockAssignInstance`     |
 | `xxxxxxxx`  | ...          | `xxxxxxxx` | `cccccttt` | `01100001` | `ThunkImmediate`          |
 | `eeeeeeee`  | `mmmmmmmm`   | `mmmmmmmm` | `mmmmseee` | `01101001` | `ThunkFloat`              |
-| `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `01110001` | `Symbol`                  |
-| `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `01111001` | `SmallInteger`            |
+| `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `01110001` | `BlockClosure`            |
+| `00000000`  | ...          | `hhhhhhhh` | `hhhhhhhh` | `01111001` | `Symbol`                  |
 | `00000000`  | ...          | `00000000` | `00000000` | `10000001` | `False`                   |
 | `00000000`  | ...          | `00000000` | `00000000` | `10001001` | `True`                    |
-| `00000000`  | ...          | `uuuuuuuu` | `uuuuuuuu` | `10010001` | `Character`               |
-| `xxxxxxxx`  | ...          | ...        | ...        | `10011001` | reserved                  |
+| `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `10010001` | `SmallInteger`            |
+| `00000000`  | ...          | `uuuuuuuu` | `uuuuuuuu` | `10011001` | `Character`               |
+| `xxxxxxxx`  | ...          | ...        | ...        | `10100001` | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | -          | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | `11111001` | reserved                  |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `Float`                   |
@@ -69,12 +70,14 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 11. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the high 48 bits. That value is also the result. The variable index is encoded in the extra field.
 12. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values, as well as `nil`.
 13. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include 45-bit integral values as well as values with common fractional parts such as 0.5, 0.25, 0.75). Values that can't be encoded that way would use `ThunkHeap` to return an object.
-14. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-15. `True`: This encodes the singleton value `true`.
-16. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
-17. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
-18. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
-19. to 31 unused
+14. `BlockClosure`: this is coded so that a memory object allocated on the stack is recognizable. The whole word is actually a `HeapHeader` and the start of a `HeapObject`.
+15. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
+16. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
+17. `True`: This encodes the singleton value `true`.
+18. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
+19. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
+20. to 31 unused
+The additional classes that are hard-coded (because they are referenced by Zig code) are:
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits.
 33. `Float`: the bit patterns that encode double-precision IEEE floating point.
 34. `ProtoObject`: the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.

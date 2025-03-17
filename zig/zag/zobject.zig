@@ -76,16 +76,16 @@ pub const ClassIndex = enum(u16) {
     BlockAssignInstance,
     ThunkImmediate,
     ThunkFloat,
+    BlockClosure,
     Symbol,
-    SmallInteger,
     False,
     True,
+    SmallInteger,
     Character,
     UndefinedObject = 32,
     Float,
     ProtoObject,
     Object,
-    BlockClosure,
     BlockClosureValue,
     Context,
     Array,
@@ -97,6 +97,7 @@ pub const ClassIndex = enum(u16) {
     CompiledMethod,
     Dispatch,
     Association,
+    testClass = config.max_classes - 1,
     max = 0xffff - 8,
     replace7,
     replace6,
@@ -130,10 +131,11 @@ pub const ClassIndex = enum(u16) {
         BlockAssignInstance,
         ThunkImmediate,
         ThunkFloat,
+        BlockClosure,
         Symbol,
-        SmallInteger,
         False,
         True,
+        SmallInteger,
         Character,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
@@ -146,9 +148,11 @@ pub const ClassIndex = enum(u16) {
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
     std.debug.assert(std.meta.hasUniqueRepresentation(Object));
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields,
+         @typeInfo(ClassIndex).@"enum".fields[0 .. @typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci,cci| {
+        std.testing.expectEqual(ci,cci) catch unreachable;
+    }
 }
 const MemoryFloat = union {
     m: [@sizeOf(Internal)]u8,
@@ -251,7 +255,7 @@ const TagObject = packed struct(u64) {
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
-    pub const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
+    const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
     pub const u64_MINVAL = g(.smallInt);
     const u64_ZERO = g(.smallInt0);
     pub const u64_ZERO2 = u64_ZERO *% 2;
@@ -608,7 +612,7 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(229391, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(245778, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
         try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
@@ -699,9 +703,9 @@ fn slice1() []const Buf {
 test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
-    try ee(sl1[1], 42);
-    try ee(sl1[0], 121);
-    try ee(sl1[2], 0);
+    try ee(42, sl1[1]);
+    try ee(145, sl1[0]);
+    try ee(0, sl1[2]);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
     }).buf;

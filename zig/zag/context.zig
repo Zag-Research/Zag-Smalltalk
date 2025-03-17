@@ -213,31 +213,6 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-const e = struct {
-    usingnamespace execute.controlPrimitives;
-};
-test "init context" {
-    if (true) return error.SkipZigTest;
-    //    const expectEqual = std.testing.expectEqual;
-    //    const objs = comptime [_]Object{True,Object.from(42)};
-    std.debug.print("init: 1\n", .{});
-    var result = execute.Execution.new();
-    std.debug.print("init: 2\n", .{});
-    var c = result.ctxt;
-    std.debug.print("init: 3\n", .{});
-    var process = &result.process;
-    std.debug.print("init: 4\n", .{});
-    //c.print(process);
-    std.debug.print("init: 5\n", .{});
-    //    try expectEqual(result.o()[3].u(),4);
-    //    try expectEqual(result.o()[6],True);
-    const sp = process.endOfStack();
-    std.debug.print("init: 6\n", .{});
-    const newC = c.moveToHeap(sp, process);
-    std.debug.print("init: 7\n", .{});
-    newC.print(process);
-    std.debug.print("init: 8\n", .{});
-}
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     const expect = std.testing.expect;
@@ -270,6 +245,27 @@ pub const threadedFunctions = struct {
             try exe.matchStack(&[_]Object{Object.from(42)});
             try expect(exe.getContext() != &exe.ctxt);
         }
+        // test "init context" {
+        //     //    const expectEqual = std.testing.expectEqual;
+        //     //    const objs = comptime [_]Object{True,Object.from(42)};
+        //     std.debug.print("init: 1\n", .{});
+        //     var result = execute.Execution.initTest("init context",.{});
+        //     std.debug.print("init: 2\n", .{});
+        //     var c = result.ctxt;
+        //     std.debug.print("init: 3\n", .{});
+        //     var process = &result.process;
+        //     std.debug.print("init: 4\n", .{});
+        //     //c.print(process);
+        //     std.debug.print("init: 5\n", .{});
+        //     //    try expectEqual(result.o()[3].u(),4);
+        //     //    try expectEqual(result.o()[6],True);
+        //     const sp = process.endOfStack();
+        //     std.debug.print("init: 6\n", .{});
+        //     const newC = c.moveToHeap(sp, process);
+        //     std.debug.print("init: 7\n", .{});
+        //     newC.print(process);
+        //     std.debug.print("init: 8\n", .{});
+        // }
     };
     pub const pushLocal = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {

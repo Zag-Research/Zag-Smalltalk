@@ -51,7 +51,7 @@ test "simple llvm" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl = if (true) &p.pushLiteral else llvmPLCM;
-    var method = compileMethod(Sym.yourself, 0, 0, .none, .{
+    var method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
         pl,                    0,
         &p.returnTopNoContext,
     });
@@ -69,7 +69,7 @@ test "llvm external" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const pl = if (true) &p.pushLiteral else llvmPLCM;
-    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
+    var method = compileMethod(Sym.yourself, 1, 0, .testClass, .{
         &p.pushContext,   "^",
         ":label1",        &p.pushLiteral,
         42,               &p.popLocal,

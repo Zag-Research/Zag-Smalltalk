@@ -18,4 +18,4 @@ pub const logThreadExecution = debugging;
 const show_error_stack = debugging;
 const show_trace = debugging;
 pub const picSize = 0;
-pub const max_classes = 100;
+pub const max_classes = 256;

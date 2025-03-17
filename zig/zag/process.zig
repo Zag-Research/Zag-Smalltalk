@@ -34,11 +34,10 @@ const Extra = execute.Extra;
 const Result = execute.Result;
 const CodeContextPtr = execute.CodeContextPtr;
 
-//test "force dispatch load" {
-//    dispatch.forTest();
-//}
-const process_total_size = 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
-m: [process_total_size]u8,
+/// this is really a Process object with the low bits encoding additional information
+m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
+const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
+pub const alignment = flagMask + 1;
 const Process = extern struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -85,22 +84,23 @@ comptime {
 }
 const Self = @This();
 var allProcesses: ?*Self = null;
-pub inline fn ptr(self: *align(1) const Self) *align(alignment) Process {
+pub inline fn ptr(self: *align(1) const Self) *Process {
     return @ptrFromInt(@intFromPtr(self) & nonFlags);
 }
 pub inline fn header(self: *align(1) const Self) *Process.Fields {
     return &self.ptr().h;
 }
-pub fn new() align(alignment) Self {
+pub fn new() Self {
     return undefined;
 }
-pub fn init(origin: *align(1) Self) void {
+pub fn init(origin: *align(alignment) Self, process: Object) void {
     const self = origin.ptr();
     self.h.sp = origin.endOfStack();
     self.h.currHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery0));
     self.h.currEnd = self.h.currHeap + Process.nursery_size;
     self.h.currHp = self.h.currHeap;
     self.h.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
+    self.h.process = process;
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
@@ -109,13 +109,16 @@ pub fn init(origin: *align(1) Self) void {
     }
     self.h.trapContextNumber = 0;
 }
+pub fn deinit(self: *align(1) Self) void {
+    self.ptr().* = undefined;
+}
 const countType = u5;
 const countMask: usize = math.maxInt(u5);
 const countOverflowFlag = countMask + 1;
+const nonCount = ~(countOverflowFlag + countMask);
 const othersFlag = countOverflowFlag << 1;
 const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
-const alignment = flagMask + 1;
 const nonFlags = ~flagMask;
 pub inline fn check(self: *align(1) const Self, next: execute.ThreadedFn.Fn) execute.ThreadedFn.Fn {
     return if (self.needsCheck()) &fullCheck else next;
@@ -126,17 +129,15 @@ inline fn needsCheck(self: *align(1) const Self) bool {
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) Result {
     return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
 }
-pub inline fn checkBump(self: *align(1) Self) *align(1) Self {
+pub inline fn checkBump(self: *Self) *Self {
     if (self.needsCheck()) return self;
-    @setRuntimeSafety(false);
-    return @as(*align(1) Self, @ptrFromInt(@intFromPtr(self) + 1));
+    return @ptrFromInt(@intFromPtr(self) + 1);
 }
-pub inline fn maxCheck(self: *align(1) const Self) *align(1) Self {
-    @setRuntimeSafety(false);
-    return @as(*Self, @ptrFromInt(@intFromPtr(self) | countMask));
+pub inline fn maxCount(self: *align(1) const Self) *align(1) Self {
+    return @ptrFromInt(@intFromPtr(self) | countMask);
 }
-pub fn deinit(self: *align(1) Self) void {
-    self.ptr().* = undefined;
+pub inline fn clearCount(self: *align(1) const Self) *align(1) Self {
+    return @ptrFromInt(@intFromPtr(self) & nonCount);
 }
 pub inline fn endOfStack(self: *align(1) const Self) SP {
     return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + Process.stack_size);
@@ -281,13 +282,13 @@ pub fn resetForTest() void {
     allProcesses = null;
 }
 test "nursery allocation" {
-    if (true) return error.SkipZigTest;
     const ee = std.testing.expectEqual;
     var process align(alignment) = new();
     var pr = &process;
-    pr.init();
+    pr.init(Nil);
     const emptySize = Process.nursery_size;
     trace("\nemptySize = {}\n", .{emptySize});
+    try ee(Process.stack_size, 27);
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
@@ -313,35 +314,32 @@ test "nursery allocation" {
     // sp.top should be updated
 }
 test "check flag" {
-    if (true) return error.SkipZigTest;
     const testing = std.testing;
-    var process align(1) = new();
-    var pr = &process;
-    pr.init();
+    var process: struct {f: [alignment]u8 align(alignment) = undefined,p: Self} = .{.p = new()};
+    @as(*align(alignment)Self,@alignCast(&process.p)).init(Nil);
+    var pr align(1) = &process.p;
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();
-    pr = pr.maxCheck();
     try testing.expect(!pr.needsCheck());
-    var count = countMask - 1;
-    while (count > 1) : (count -= 1) {
+    std.debug.print("before: {x}\n",.{@intFromPtr(pr)});
+    for (0 .. countMask) |_| {
         pr = pr.checkBump();
     }
+    std.debug.print("after:  {x}\n",.{@intFromPtr(pr)});
     try testing.expect(!pr.needsCheck());
     try testing.expectEqual(pr.endOfStack(), origEOS);
     pr = pr.checkBump();
     try testing.expect(pr.needsCheck());
-}
-test "allocStack" {
-    if (true) return error.SkipZigTest;
-    //    const testing = std.testing;
-    var process align(alignment) = new();
-    var pr = &process;
-    pr.init();
+    pr = pr.clearCount().maxCount();
+    try testing.expect(!pr.needsCheck());
+    pr = pr.checkBump();
+    try testing.expect(pr.needsCheck());
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
-            _ = .{ pc, sp, process, context, extra, unreachable };
+            const newSp = sp.push(process.ptr().h.process);
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         }
     };
 };

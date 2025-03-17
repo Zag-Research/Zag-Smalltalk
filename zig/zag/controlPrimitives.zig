@@ -144,12 +144,12 @@ test "send with dispatch direct" {
     std.debug.print("Test: send with dispatch direct\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    const method = compileMethod(Sym.yourself, 0, 0, .none, .{
+    const method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
         &pushContext,       "^",
         &send,              Sym.value,
         &returnWithContext,
     });
-    const methodV = compileMethod(Sym.value, 0, 0, .none, .{
+    const methodV = compileMethod(Sym.value, 0, 0, .testClass, .{
         &push42,
         &returnTopNoContext,
         1,
@@ -168,7 +168,7 @@ test "simple return via Execution" {
     std.debug.print("Test: simple return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 0, 0, .none, .{
+    var method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
         &pushLiteral,        42,
         &returnTopNoContext, 1,
     });
@@ -185,7 +185,7 @@ test "context return via Execution" {
     std.debug.print("Test: context return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.@"at:", 0, 0, .none, .{
+    var method = compileMethod(Sym.@"at:", 0, 0, .testClass, .{
         &pushContext,       "^",
         &pushLiteral,       42,
         &returnWithContext,
@@ -201,7 +201,7 @@ test "context returnTop via Execution" {
     std.debug.print("Test: context returnTop via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 3, 0, .none, .{
+    var method = compileMethod(Sym.yourself, 3, 0, .testClass, .{
         &pushContext, "^",
         &pushLiteral, 42,
         &returnTop,
@@ -241,7 +241,7 @@ test "simple executable" {
     std.debug.print("Test: simple executable\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
-    var method = compileMethod(Sym.yourself, 1, 0, .none, .{
+    var method = compileMethod(Sym.yourself, 1, 0, .testClass, .{
         &pushContext,             "^",
         ":label1",                &pushLiteral,
         comptime Object.from(42), &popLocal,

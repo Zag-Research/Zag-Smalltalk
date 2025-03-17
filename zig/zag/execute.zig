@@ -353,7 +353,7 @@ pub const CompiledMethod = struct {
         return Self{
             .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
             .stackStructure = object.PackedObject.from(Object.from(0)),
-            .signature = Signature.from(name, .none),
+            .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
             .code = .{Code.primOf(methodFn)},
@@ -584,7 +584,7 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, null, .none, .{});
+    var r1 = c1.init(Sym.value, 2, 3, null, .testClass, .{});
     //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
     try expectEqual(9, r1.getCodeSize());
 }
@@ -648,7 +648,7 @@ test "compiling method" {
     std.debug.print("Test: compiling method\n", .{});
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
-    var m = compileMethod(Sym.yourself, 0, 0, .none, .{
+    var m = compileMethod(Sym.yourself, 0, 0, .testClass, .{
         ":abc", p.branch,
         "def",  True,
         42,     ":def",
@@ -820,7 +820,7 @@ test "compileObject" {
 pub const Execution = struct {
     fn Executer(size: comptime_int) type {
         return struct {
-            process: Process align(1024),
+            process: Process align(Process.alignment),
             ctxt: Context,
             method: MethodType,
             const MethodType = CompileTimeMethod(size);
@@ -833,7 +833,7 @@ pub const Execution = struct {
                 };
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                self.process.init();
+                self.process.init(Nil);
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
@@ -878,17 +878,17 @@ pub const Execution = struct {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         return init(tup);
     }
-    pub fn init(tup: anytype) Executer(countNonLabels(tup)) {
+    fn init(tup: anytype) Executer(countNonLabels(tup)) {
         const ExeType = Executer(countNonLabels(tup));
-        return ExeType.new(compileMethod(Sym.yourself, 0, 0, .none, tup));
+        return ExeType.new(compileMethod(Sym.yourself, 0, 0, .testClass, tup));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
     }
     pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
-        var exe align(1024) = init(tup);
-        exe.process.init();
+        var exe align(Process.alignment) = init(tup);
+        exe.process.init(Nil);
         const t = exe.method.code[0..];
         if (config.debugging) {
             @setRuntimeSafety(false);
