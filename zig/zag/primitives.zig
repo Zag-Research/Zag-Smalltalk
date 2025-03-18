@@ -79,7 +79,7 @@ const modules = [_]Module{
     // @import("primitives/Behavior.zig").module,
     // @import("primitives/BlockClosure.zig").module,
     // @import("primitives/Boolean.zig").module,
-    // Module.init(@import("primitives/llvm.zig")),
+    Module.init(@import("primitives/llvm.zig")),
     // @import("dispatch.zig").module,
 };
 
@@ -340,12 +340,12 @@ pub const @"primitive:error:" = struct {
         );
     }
 };
-pub const primitiveModule = struct {
+pub const @"primitive:module:" = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };
-pub const primitiveModuleError = struct {
+pub const @"primitive:module:error:" = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra, unreachable };
     }

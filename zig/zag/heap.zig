@@ -972,11 +972,11 @@ pub fn CompileTimeString(comptime str: []const u8) type {
         header: HeapHeader align(8),
         chars: T align(8),
         const Self = @This();
-        fn hash() u64 {
+        fn hash() u24 {
             var hsh: u64 = 0;
             for (str[0..@min(str.len, 6)]) |p|
                 hsh = hsh *% 3 + p;
-            return hsh;
+            return @truncate(hsh);
         }
         pub fn init() *const Self {
             var result = Self{
@@ -992,7 +992,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
         fn h(self: *const Self) []const u8 {
             return @as([*]const u8, @ptrCast(self))[0 .. (size + 15) / 8 * 8];
         }
-        fn obj(self: *const Self) HeapObjectConstPtr {
+        pub fn obj(self: *const Self) HeapObjectConstPtr {
             return @alignCast(@ptrCast(self));
         }
         pub fn asObject(self: *const Self) Object {

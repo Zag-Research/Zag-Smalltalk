@@ -365,6 +365,20 @@ const TagObject = packed struct(u64) {
     pub inline fn isMemoryAllocated(self: Object) bool {
         return self.tag == .heap and self != Object.Nil;
     }
+    pub const Special = packed struct {
+        imm: TagAndClassType,
+        tag: u8,
+        rest: u48,
+        pub fn ptr(self: Special) *Object {
+            return @ptrFromInt(self.rest >> 16);
+        }
+        pub fn objectFrom(tact: TagAndClassType, tag: u8, p: *opaque {}) Object {
+            return @bitCast(Special{ .imm = tact, .tag = tag, .rest = @truncate(@intFromPtr(p)) });
+        }
+    };
+    pub inline fn rawSpecial(self: Object) Special {
+        return @bitCast(self);
+    }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
@@ -489,6 +503,9 @@ const ObjectFunctions = struct {
     pub fn instVars(self: Object) []Object {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars();
         return &[0]Object{};
+    }
+    pub fn asZeroTerminatedString(self: Object, target: []u8) ![*:0]u8 {
+        _ = .{ self, target, @panic("not implemented") };
     }
     pub fn arrayAsSlice(self: Object, comptime T: type) ![]T {
         if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T);
