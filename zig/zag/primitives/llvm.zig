@@ -94,6 +94,16 @@ pub const createBuilderObject = struct {
         try expectEqual(Object.from(42), result);
     }
 };
+
+inline fn singleIndexGEP(builder: LLVMtype.LLVMBuilderRef, elementType: LLVMtype.LLVMTypeRef, base: LLVMtype.LLVMValueRef, offset: i64, name: []const u8) LLVMtype.LLVMValueRef {
+    // singleIndex - for pointer and integer offsets
+    const offset_bits: u64 = @bitCast(offset);
+    const signExtend = offset < 0;
+    const idx = [_]LLVMtype.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
+    const idx_ptr: [*c]LLVMtype.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
+}
+
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         //get builder instance from module?
@@ -103,14 +113,11 @@ pub const @"register:plus:asName:" = struct {
         var buffer: [16]u8 = undefined;
         const name = sp.top.asZeroTerminatedString(&buffer) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const newSp = sp.unreserve(3);
-        const tagObjectTy = {};
+        const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
         sp.top = singleIndexGEP(builder, tagObjectTy, registerToModify, offset, name);
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
-fn singleIndexGEP(_: anytype, _: anytype, _: anytype, _: anytype, _: anytype) Object {
-    return Nil;
-}
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra };
