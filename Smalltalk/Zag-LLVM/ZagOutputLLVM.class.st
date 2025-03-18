@@ -11,9 +11,9 @@ Class {
 	#traits : 'ZagImageOutputAPI',
 	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
-		'gen',
 		'sp',
-		'pc'
+		'pc',
+		'builder'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
@@ -22,12 +22,13 @@ Class {
 { #category : 'private - processing' }
 ZagOutputLLVM >> generateLabel [
 
-	^ gen newLabel
+	^ builder newLabel
 ]
 
 { #category : 'accessing' }
 ZagOutputLLVM >> generator: aGenerator [
-	gen := aGenerator
+
+	builder := aGenerator builder
 ]
 
 { #category : 'testing' }
@@ -36,14 +37,14 @@ ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
 	| otherewise |
 	otherewise :=  self generateLabel.
 	self if: condition isFalseThen: falseLabel isTrueThen: otherewise.
-	gen defineLabel: otherewise
+	builder defineLabel: otherewise
 
 ]
 
 { #category : 'testing' }
 ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
-	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
+	builder if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
 ]
 
 { #category : 'testing' }
@@ -52,7 +53,7 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 	| otherewise |
 	otherewise :=  self generateLabel.
 	self if: condition isFalseThen: otherewise isTrueThen: trueLabel.
-	gen defineLabel: otherewise
+	builder defineLabel: otherewise
 
 ]
 
@@ -91,25 +92,25 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 	"add code to set up builder, main function, entry label"
 	primitiveFail := self generateLabel.
 
-	aNumber := gen valueAt: #sp.
+	aNumber := builder valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	self if: aNumberIsSmallInteger isFalseThen: primitiveFail.
 
-	addressOfSelf := gen register: #sp plus: 8.
-	selfValue := gen valueAt: addressOfSelf.
-	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
-	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
+	addressOfSelf := builder register: #sp plus: 8.
+	selfValue := builder valueAt: addressOfSelf.
+	nativeANumber := builder shiftRightArithmeticly: aNumber by: 8.
+	nativeSelf := builder shiftRightArithmeticly: selfValue by: 8.
 
 	nativeResult := aBlock value: nativeANumber value: nativeSelf.
 	overflow := self validSmallInteger: nativeResult.
 	self if: overflow isFalseThen: primitiveFail.
 
 	result := self tagSmallInteger: nativeResult.
-	gen store: result at: addressOfSelf.
-	gen returnWith: addressOfSelf.
+	builder store: result at: addressOfSelf.
+	builder returnWith: addressOfSelf.
 
 	" ----- primitiveFail ----- "
-	gen defineLabel: primitiveFail.
+	builder defineLabel: primitiveFail.
 	"self primitiveFail"
 ]
 
@@ -117,33 +118,33 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 ZagOutputLLVM >> primitiveSmallIntegerMinus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
-		  gen subtract: aNumber from: selfValue ]
+		  builder subtract: aNumber from: selfValue ]
 ]
 
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
-		  gen add: aNumber to: selfValue ]
+		  builder add: aNumber to: selfValue ]
 ]
 
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
-	aNumber := gen valueAt: #sp.
+	aNumber := builder valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	primitiveFail := self generateLabel.
 	self branchIf: aNumberIsSmallInteger isFalseTo: primitiveFail.
-	addressOfSelf := gen register: #sp plus: 8.
-	selfValue := gen valueAt: addressOfSelf.
-	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
-	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
-	nativeResult := gen add: nativeANumber to: nativeSelf.
+	addressOfSelf := builder register: #sp plus: 8.
+	selfValue := builder valueAt: addressOfSelf.
+	nativeANumber := builder shiftRightArithmeticly: aNumber by: 8.
+	nativeSelf := builder shiftRightArithmeticly: selfValue by: 8.
+	nativeResult := builder add: nativeANumber to: nativeSelf.
 	overflow := self validSmallInteger: nativeResult.
 	self branchIf: overflow isTrueTo: primitiveFail.
 	result := self tagSmallInteger: nativeResult.
-	gen store: result at: addressOfSelf.
+	builder store: result at: addressOfSelf.
 	self returnWithSP: addressOfSelf.
 	self defineLabel: primitiveFail.
 	self primitiveFail
@@ -169,8 +170,8 @@ ZagOutputLLVM >> pushLiteral [
 
 	| literal |
 	literal := pc nextObject.
-	sp := gen register: sp plus: -8.
-	gen store: literal at: sp
+	sp := builder register: sp plus: -8.
+	builder store: literal at: sp
 ]
 
 { #category : 'threaded words' }
@@ -201,7 +202,7 @@ ZagOutputLLVM >> send [
 { #category : 'converting' }
 ZagOutputLLVM >> tagSmallInteger: untaggedInt [
 
-	^ gen tagSmallInteger: untaggedInt.
+	^ builder tagSmallInteger: untaggedInt.
 	
 ]
 
@@ -210,9 +211,9 @@ ZagOutputLLVM >> validSmallInteger: nativeInt [
 	
 	| temp res1 res2 |
 	temp := nativeInt.
-	res1 := gen shiftRightArithmeticly: temp by: 56.
-	res2 := gen shiftLeftArithmeticly: temp by: 56.
-	^ gen compare: res2 is: #eq to: nativeInt.
+	res1 := builder shiftRightArithmeticly: temp by: 56.
+	res2 := builder shiftLeftArithmeticly: temp by: 56.
+	^ builder compare: res2 is: #eq to: nativeInt.
 ]
 
 { #category : 'private - processing' }
@@ -220,12 +221,12 @@ ZagOutputLLVM >> verifySmallInteger: valueRef [
 	
 	"valueRef is a Zag smallInteger"
 	| andResult |
-	andResult := gen and: 16rff with: valueRef.
-	^ gen compare: andResult is: #eq to: 16r61
+	andResult := builder and: 16rff with: valueRef.
+	^ builder compare: andResult is: #eq to: 16r61
 ]
 
 { #category : 'instance creation' }
 ZagOutputLLVM >> with: aZagOutputLLVMAPI [
 
-	gen := aZagOutputLLVMAPI
+	builder := aZagOutputLLVMAPI
 ]
