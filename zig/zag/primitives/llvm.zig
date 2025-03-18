@@ -56,14 +56,27 @@ pub fn asLLVMContextRef(tagObject: Object) !LLVMtype.LLVMContextRef {
 pub fn asLLVMBuilderRef(tagObject: Object) !LLVMtype.LLVMContextRef {
     return @ptrCast(try detag(tagObject, .builder));
 }
+
+inline fn singleIndexGEP(builder: LLVMtype.LLVMBuilderRef, elementType: LLVMtype.LLVMTypeRef, base: LLVMtype.LLVMValueRef, offset: i64, name: []const u8) LLVMtype.LLVMValueRef {
+    // singleIndex - for pointer and integer offsets
+    const offset_bits: u64 = @bitCast(offset);
+    const signExtend = offset < 0;
+    const idx = [_]LLVMtype.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
+    const idx_ptr: [*c]LLVMtype.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
+}
+
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        //get builder instance from module?
+
+        // Collecting items from the stack
         const builder = asLLVMBuilderRef(sp.at(4)) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
         const registerToModify = asLLVMValueRef(sp.third) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(u64);
         var name: [16]u8 = undefined;
         sp.top.asZeroTerminatedString(&name) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
+
+        const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
         const newSp = singleIndexGEP(builder, tagObjectTy, registerToModify, offset, name);
         return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), newSp, process, context, undefined });
     }
