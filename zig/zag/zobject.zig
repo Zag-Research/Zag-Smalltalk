@@ -82,6 +82,7 @@ pub const ClassIndex = enum(u16) {
     True,
     SmallInteger,
     Character,
+    LLVM,
     UndefinedObject = 32,
     Float,
     ProtoObject,
@@ -137,6 +138,7 @@ pub const ClassIndex = enum(u16) {
         True,
         SmallInteger,
         Character,
+        LLVM,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -149,9 +151,8 @@ comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     std.debug.assert(std.meta.hasUniqueRepresentation(Object));
-    for (@typeInfo(ClassIndex.Compact).@"enum".fields,
-         @typeInfo(ClassIndex).@"enum".fields[0 .. @typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci,cci| {
-        std.testing.expectEqual(ci,cci) catch unreachable;
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
+        std.testing.expectEqual(ci, cci) catch unreachable;
     }
 }
 const MemoryFloat = union {

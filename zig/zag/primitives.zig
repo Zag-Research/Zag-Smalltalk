@@ -72,6 +72,17 @@ const Result = execute.Result;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 
+const modules = [_]Module{
+    Module.init(testModule),
+    Module.init(@import("primitives/Object.zig")),
+    Module.init(@import("primitives/Smallinteger.zig")),
+    // @import("primitives/Behavior.zig").module,
+    // @import("primitives/BlockClosure.zig").module,
+    // @import("primitives/Boolean.zig").module,
+    // Module.init(@import("primitives/llvm.zig")),
+    // @import("dispatch.zig").module,
+};
+
 const Module = struct {
     name: []const u8,
     primitives: []const Primitive,
@@ -140,7 +151,7 @@ const testModule = if (config.is_test) struct {
         pub const number = 998;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.tagbits() != sp.top.tagbits()) {
-                return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top));
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
@@ -149,7 +160,7 @@ const testModule = if (config.is_test) struct {
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.tagbits() != sp.top.tagbits()) {
                 const newSp = sp.push(Sym.value);
-                return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top));
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
@@ -159,20 +170,12 @@ const testModule = if (config.is_test) struct {
 } else struct {
     const moduleName = "test module";
 };
-const modules = [_]Module{
-    Module.init(testModule),
-    Module.init(@import("primitives/Object.zig")),
-    Module.init(@import("primitives/Smallinteger.zig")),
-    // @import("primitives/Behavior.zig").module,
-    // @import("primitives/BlockClosure.zig").module,
-    // @import("primitives/Boolean.zig").module,
-    // @import("primitives/llvm.zig").module,
-    // @import("dispatch.zig").module,
-};
 
 pub const @"primitive:" = struct {
     fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+        // the following should be exactly the same, but causes an error instead
+        // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
@@ -180,20 +183,17 @@ pub const @"primitive:" = struct {
             return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
         }
         const primNumber = pc.uint();
+        const method = extra.method;
         if (Module.findNumberedPrimitive(primNumber)) |prim| {
             if (prim.primitive) |p| {
-                const method = extra.method;
                 method.executeFn = p;
                 method.jitted = p;
-                return @call(tailCall, p, .{ pc, sp, process, context, extra });
-            } else 
-                @panic("found error primitive");
+            } else @panic("found primitive:error: need primitive:");
         } else {
-            const method = extra.method;
             method.executeFn = noPrim;
             method.jitted = noPrim;
-            return @call(tailCall, noPrim, .{ pc, sp, process, context, extra });
         }
+        return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
     }
     test "primitive found" {
         try Execution.runTest(
@@ -257,7 +257,7 @@ pub const @"primitive:" = struct {
 pub const @"primitive:error:" = struct {
     fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(Nil);
-        return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
     }
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
@@ -271,8 +271,7 @@ pub const @"primitive:error:" = struct {
                 method.executeFn = p;
                 method.jitted = p;
                 return @call(tailCall, p, .{ pc, sp, process, context, extra });
-            } else 
-                @panic("found error-free primitive");
+            } else @panic("found primitive: need primitive:error:");
         } else {
             const method = extra.method;
             method.executeFn = noPrimWithError;

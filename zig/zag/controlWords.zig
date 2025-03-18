@@ -43,7 +43,7 @@ pub const branch = struct {
             17,
             ":label",
         });
-        std.debug.print("Alignment of exe: {} {}\n",.{@alignOf(@TypeOf(exe)),@TypeOf(exe)});
+        std.debug.print("Alignment of exe: {} {}\n", .{ @alignOf(@TypeOf(exe)), @TypeOf(exe) });
         try exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }

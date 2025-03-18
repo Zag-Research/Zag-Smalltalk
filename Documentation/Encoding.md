@@ -37,7 +37,8 @@ We extend this slightly, by using all 8 possible tag values:
 | `00000000`  | ...          | `00000000` | `00000000` | `10001001` | `True`                    |
 | `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `10010001` | `SmallInteger`            |
 | `00000000`  | ...          | `uuuuuuuu` | `uuuuuuuu` | `10011001` | `Character`               |
-| `xxxxxxxx`  | ...          | ...        | ...        | `10100001` | reserved                  |
+| `aaaaaaaa`  | ...          | `aaaaaaaa` | `tttttttt` | `10100001` | `LLVM`                    |
+| `xxxxxxxx`  | ...          | ...        | ...        | `10100010` | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | -          | reserved                  |
 | `xxxxxxxx`  | ...          | ...        | ...        | `11111001` | reserved                  |
 | `eeeeeeee`  | `mmmmmmmm`   | ...        | `mmmmmmmm` | `mmmms010` | `Float`                   |
@@ -76,7 +77,8 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 17. `True`: This encodes the singleton value `true`.
 18. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
 19. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
-20. to 31 unused
+20. `LLVM`: Interface object to LLVM library. The 8 bit tag differentiates different kinds of LLVM JIT pointers.
+21. to 31 unused
 The additional classes that are hard-coded (because they are referenced by Zig code) are:
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits.
 33. `Float`: the bit patterns that encode double-precision IEEE floating point.

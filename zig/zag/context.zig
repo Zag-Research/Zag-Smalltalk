@@ -64,8 +64,8 @@ pub fn format(
     _ = options;
 
     try writer.print("context: {{", .{});
-//    try writer.print(".header: {}", .{self.header});
-//    try writer.print(".method: {}", .{self.method});
+    //    try writer.print(".header: {}", .{self.header});
+    //    try writer.print(".method: {}", .{self.method});
     try writer.print(".npc: {}", .{self.npc});
     try writer.print(".tpc: {}", .{self.tpc});
     try writer.print(".trapContextNumber: {}", .{self.trapContextNumber});
@@ -75,7 +75,7 @@ pub fn format(
         @setRuntimeSafety(false);
         try writer.print(" temps: {any}", .{self.temps[0..self.size]});
     }
-    try writer.print("}}",.{});
+    try writer.print("}}", .{});
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
@@ -305,4 +305,3 @@ pub const threadedFunctions = struct {
         }
     };
 };
-    

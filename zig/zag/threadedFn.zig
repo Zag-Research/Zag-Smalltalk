@@ -139,12 +139,11 @@ comptime {
 test "function size" {
     if (true) return error.SkipZigTest;
     expectEqual(43, functions.len) catch |err| {
-        inline for (std.meta.fields(Enum),0..) |f,i| {
+        inline for (std.meta.fields(Enum), 0..) |f, i| {
             std.debug.print("{s:<25}", .{f.name});
             if (i < functions.len) {
-                std.debug.print("{x:0>16}\n",.{@intFromPtr(functions[i])});
-            } else
-                std.debug.print("?\n",.{});
+                std.debug.print("{x:0>16}\n", .{@intFromPtr(functions[i])});
+            } else std.debug.print("?\n", .{});
         }
         return err;
     };

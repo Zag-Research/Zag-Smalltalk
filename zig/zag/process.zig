@@ -315,17 +315,17 @@ test "nursery allocation" {
 }
 test "check flag" {
     const testing = std.testing;
-    var process: struct {f: [alignment]u8 align(alignment) = undefined,p: Self} = .{.p = new()};
-    @as(*align(alignment)Self,@alignCast(&process.p)).init(Nil);
+    var process: struct { f: [alignment]u8 align(alignment) = undefined, p: Self } = .{ .p = new() };
+    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil);
     var pr align(1) = &process.p;
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();
     try testing.expect(!pr.needsCheck());
-    std.debug.print("before: {x}\n",.{@intFromPtr(pr)});
-    for (0 .. countMask) |_| {
+    std.debug.print("before: {x}\n", .{@intFromPtr(pr)});
+    for (0..countMask) |_| {
         pr = pr.checkBump();
     }
-    std.debug.print("after:  {x}\n",.{@intFromPtr(pr)});
+    std.debug.print("after:  {x}\n", .{@intFromPtr(pr)});
     try testing.expect(!pr.needsCheck());
     try testing.expectEqual(pr.endOfStack(), origEOS);
     pr = pr.checkBump();

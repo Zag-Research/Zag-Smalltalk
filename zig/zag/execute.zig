@@ -106,7 +106,12 @@ pub const Extra = union {
     object: Object,
     signature: Signature,
     pub fn encoded(self: Extra) Extra {
-        return .{ .object = Object.from(self.method).thunkImmediate().? };
+        if (Object.from(self.method).thunkImmediate()) |obj| {
+            return .{ .object = obj };
+        } else {
+            std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
+            @panic("weird method");
+        }
     }
     pub fn decoded(self: Extra) Extra {
         return .{ .object = self.object.thunkImmediateValue() };
@@ -115,8 +120,23 @@ pub const Extra = union {
         @setRuntimeSafety(false);
         return self.object.isThunkImmediate();
     }
-    pub fn threadedFn(self: Extra) ThreadedFn.Fn {
-        return self.method.code[0].threadedFn;
+    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (config.logThreadExecution)
+            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    }
+    pub fn formatX(
+        self: Extra,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = .{ fmt, options };
+        switch (self) {
+            .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
+            .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
+            .signature => |s| try writer.print("Extra{{.method = {}}}", .{s}),
+        }
     }
 };
 pub const Result = SP;
@@ -188,12 +208,12 @@ pub const PC = packed struct {
     }
     pub //inline
     fn method(self: PC) CompiledMethodPtr {
-        if (logging) std.debug.print("PC_method:      {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.method});
+        if (logging) std.debug.print("PC_method:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.method });
         return self.code.method;
     }
     pub //inline
     fn codeAddress(self: PC) *const Code {
-        if (logging) std.debug.print("PC_codeAddress: {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.codePtr});
+        if (logging) std.debug.print("PC_codeAddress: {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.codePtr });
         return self.code.codePtr;
     }
     pub //inline
@@ -205,12 +225,12 @@ pub const PC = packed struct {
     }
     pub //inline
     fn prim(self: PC) ThreadedFn.Fn {
-        if (logging) std.debug.print("PC_prim:        {x:0>16}: {}\n", .{@intFromPtr(self.code),@import("threadedFn.zig").find(self.code.threadedFn)});
+        if (logging) std.debug.print("PC_prim:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.code.threadedFn) });
         return self.code.threadedFn;
     }
     pub //inline
     fn object(self: PC) Object {
-        if (logging) std.debug.print("PC_object:      {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
+        if (logging) std.debug.print("PC_object:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
         return self.code.object;
     }
     pub inline fn asCode(self: PC) Code {
@@ -221,12 +241,12 @@ pub const PC = packed struct {
     }
     pub //inline
     fn uint(self: PC) u64 {
-        if (logging) std.debug.print("PC_uint:        {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
+        if (logging) std.debug.print("PC_uint:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
         return self.code.object.to(u64);
     }
     pub //inline
     fn int(self: PC) i64 {
-        if (logging) std.debug.print("PC_int:         {x:0>16}: {}\n", .{@intFromPtr(self.code),self.code.object});
+        if (logging) std.debug.print("PC_int:         {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
         return self.code.object.to(i64);
     }
     pub inline fn next(self: PC) PC {
@@ -332,7 +352,7 @@ pub const Code = union {
         } else try writer.print("0x{x}", .{self.object.toNatNoCheck()});
     }
 };
-pub const endMethod = CompiledMethod.init(Nil,Code.end);
+pub const endMethod = CompiledMethod.init(Nil, Code.end);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = struct {
@@ -863,8 +883,8 @@ pub const Execution = struct {
                 try self.resolve(Object.empty);
                 if (false) {
                     const ptr: [*]u64 = @ptrFromInt(@intFromPtr(&self.method));
-                    for (ptr[0..@sizeOf(MethodType)/8],0..) |*v,idx|
-                        std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n",.{idx,@intFromPtr(v),v.*});
+                    for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
+                        std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
                 }
                 _ = method.execute(self.process.getSp(), &self.process, self.process.getContext());
             }

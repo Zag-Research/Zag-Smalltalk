@@ -65,7 +65,7 @@ pub const @"basicAt:" = struct {
             const newSp = sp.dropPut(result);
             return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
-        return @call(tailCall, process.check(extra.threadedFn()), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
 };
 pub const @"==" = struct {
@@ -92,7 +92,7 @@ pub const @"perform:" = struct { // perform: perform:with: perform:with:with: pe
             //     const newPc = lookupAddress(selector);//, sp.next.get_class());
             unreachable;
         }
-        return @call(tailCall, process.check(extra.threadedFn()), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
 };
 pub const @"perform:withArguments:" = struct {

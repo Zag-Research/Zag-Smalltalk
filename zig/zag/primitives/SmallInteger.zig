@@ -64,12 +64,12 @@ pub const inlines = struct {
                 if (result.isInt()) return result;
             },
             .tag => {
-                const result, const overflow = @addWithOverflow(@as(u64, 256), self.rawU() ^ 0xffff_ffff_ffff_ff00 );
+                const result, const overflow = @addWithOverflow(@as(u64, 256), self.rawU() ^ 0xffff_ffff_ffff_ff00);
                 if (overflow == 0) {
                     const obj: Object = @bitCast(result);
                     if (obj != self)
                         return obj;
-                } else if (self == Object.makeImmediate(.SmallInteger,0))
+                } else if (self == Object.makeImmediate(.SmallInteger, 0))
                     return self;
             },
         }
@@ -229,7 +229,7 @@ pub const @"+" = struct {
             const newSp = sp.dropPut(result);
             return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
-        return @call(tailCall, extra.threadedFn(), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
     test "simple add" {
         try Execution.runTest(

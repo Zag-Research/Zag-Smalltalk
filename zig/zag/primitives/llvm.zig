@@ -1,27 +1,73 @@
 const std = @import("std");
-const config = @import("config.zig");
+const zag = @import("../zag.zig");
+const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
-const checkEqual = @import("utilities.zig").checkEqual;
-const object = @import("zobject.zig");
+const checkEqual = zag.utilities.checkEqual;
+const object = zag.object;
 const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
 const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
-const indexSymbol0 = object.Object.indexSymbol0;
-const indexSymbol1 = object.Object.indexSymbol1;
-pub const Context = @import("context.zig").Context;
-
 //const class = @import("class.zig");
-const symbol = @import("symbol.zig");
+const symbol = zag.symbol;
 const Sym = symbol.symbols;
-const phi32 = @import("utilities.zig").inversePhi(u32);
+const phi32 = zag.utilities.inversePhi(u32);
+const execute = zag.execute;
+const llvm = zag.llvm;
+const core = llvm.core;
+const LLVMtype = llvm.types;
+const empty = &[0]Object{};
+const PC = execute.PC;
+const SP = execute.SP;
+const Execution = execute.Execution;
+const Process = zag.Process;
+const Context = zag.Context;
+const Extra = execute.Extra;
+const Result = execute.Result;
+const CompiledMethod = execute.CompiledMethod;
+const tf = zag.threadedFn.Enum;
 
-const execute = @import("execute.zig");
-
+pub const moduleName = "llvm";
+pub fn init() void {}
+const LLVMTypeEnum = enum(u8) {
+    value,
+    context,
+    builder,
+};
+const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
+fn detag(tagObject: Object, tag: LLVMTypeEnum) !*u64 {
+    const int = tagObject.rawU();
+    if (int & 0xffff == (@intFromEnum(tag) << 8) + llvmClass)
+        return @ptrFromInt(int >> 16);
+    return error.notValidTag;
+}
+fn llvmTag(llvmPtr: ?*opaque {}, tag: LLVMTypeEnum) Object {
+    return @bitCast((@intFromPtr(llvmPtr) << 16) + (tag << 8) + llvmClass);
+}
+pub fn asLLVMValueRef(tagObject: Object) !LLVMtype.LLVMValueRef {
+    return @ptrCast(try detag(tagObject, .value));
+}
+pub fn asLLVMContextRef(tagObject: Object) !LLVMtype.LLVMContextRef {
+    return @ptrCast(try detag(tagObject, .context));
+}
+pub fn asLLVMBuilderRef(tagObject: Object) !LLVMtype.LLVMContextRef {
+    return @ptrCast(try detag(tagObject, .builder));
+}
+pub const @"register:plus:asName:" = struct {
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        //get builder instance from module?
+        const builder = asLLVMBuilderRef(sp.at(4)) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
+        const registerToModify = asLLVMValueRef(sp.third) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
+        const offset = sp.next.to(u64);
+        var name: [16]u8 = undefined;
+        sp.top.asZeroTerminatedString(&name) catch return @call(tailCall, extra.fail, .{ pc, sp, process, context, extra });
+        const newSp = singleIndexGEP(builder, tagObjectTy, registerToModify, offset, name);
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), newSp, process, context, undefined });
+    }
+};
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra };
@@ -38,7 +84,7 @@ pub const @"literalToRegister:" = struct {
 pub const @"add:to:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ pc, sp, process, context, extra };
-        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
 };
 
