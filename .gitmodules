@@ -1,3 +1,3 @@
 [submodule "libs/zig-llvm"]
-	path = libs/zig-llvm
+	path = zig/zag/libs/zig-llvm
 	url = https://github.com/Zag-Research/llvm-zig.git

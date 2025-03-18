@@ -22,34 +22,34 @@ const ThreadedFn = execute.ThreadedFn;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
+const Result = execute.Result;
 const compileMethod = execute.compileMethod;
 const compileObject = execute.compileObject;
 const Execution = execute.Execution;
-const combine14asObject = execute.combiners.combine14asObject;
-const classes14  = execute.combiners.classes14;
+const combine14asObject = object.PackedObject.combine14asObject;
+const classes14 = object.PackedObject.classes14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 pub const branch = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        trace("pc: 0x{x:0>8}\n", .{@as(u64, @bitCast(pc))});
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();
         return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
-        try Execution.runTest(
-            "branch",
-            .{
-                tf.branch,
-                "label",
-                ":label",
-            },
-            &[_]Object{},
-            &[_]Object{},
-        );
+        var exe = Execution.initTest("branch", .{
+            tf.branch,
+            "label",
+            tf.pushLocal,
+            17,
+            ":label",
+        });
+        std.debug.print("Alignment of exe: {} {}\n", .{ @alignOf(@TypeOf(exe)), @TypeOf(exe) });
+        try exe.execute(Object.empty);
+        try exe.matchStack(Object.empty);
     }
 };
 pub const classCase = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         var newPc = pc;
         const top = sp.top;
         const match = @intFromEnum(top.get_class());
@@ -117,7 +117,7 @@ pub const classCase = struct {
             "classCase no match - leave",
             .{
                 tf.classCase,
-                comptime combine14asObject(.{class.True,0x3fff}),
+                comptime combine14asObject(.{ class.True, 0x3fff }),
                 "true",
                 tf.branch,
                 "end",
@@ -132,14 +132,14 @@ pub const classCase = struct {
     }
 };
 pub const drop = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.drop();
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "drop" {
         try Execution.runTest(
             "drop",
-            .{ tf.drop },
+            .{tf.drop},
             &[_]Object{
                 Object.from(17),
                 Object.from(42),
@@ -151,14 +151,14 @@ pub const drop = struct {
     }
 };
 pub const dropNext = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.dropPut(sp.top);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "dropNext" {
         try Execution.runTest(
             "dropNext",
-            .{ tf.dropNext },
+            .{tf.dropNext},
             &[_]Object{
                 Object.from(42),
                 Object.from(17),
@@ -170,14 +170,14 @@ pub const dropNext = struct {
     }
 };
 pub const dup = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(sp.top);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "dup" {
         try Execution.runTest(
             "dup",
-            .{ tf.dup },
+            .{tf.dup},
             &[_]Object{
                 Object.from(42),
                 Object.from(17),
@@ -191,14 +191,14 @@ pub const dup = struct {
     }
 };
 pub const over = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(sp.next);
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "over" {
         try Execution.runTest(
             "over",
-            .{ tf.over },
+            .{tf.over},
             &[_]Object{
                 Object.from(17),
                 Object.from(42),
@@ -212,8 +212,8 @@ pub const over = struct {
     }
 };
 pub const popAssociationValue = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-        pc.object().setField(2,sp.top);
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pc.object().setField(2, sp.top);
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
@@ -235,14 +235,13 @@ pub const popAssociationValue = struct {
             &[_]Object{
                 Object.from(42),
             },
-            &[_]Object{
-            },
+            &[_]Object{},
         );
         try expectEqual(Object.from(42), association.objects[2]);
     }
 };
 pub const pushAssociationValue = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = pc.object().getField(2);
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.push(value), process, context, extra });
     }
@@ -262,8 +261,7 @@ pub const pushAssociationValue = struct {
             &.{
                 association.asObject(),
             },
-            &[_]Object{
-            },
+            &[_]Object{},
             &[_]Object{
                 Object.from(42),
             },
@@ -271,25 +269,27 @@ pub const pushAssociationValue = struct {
     }
 };
 pub const pushLiteral = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(pc.object());
         trace("\npushLiteral: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
     test "pushLiteral" {
         try Execution.runTest(
             "pushLiteral",
             .{
                 tf.pushLiteral,
+                17,
+                tf.pushLiteral,
                 42,
             },
             &[_]Object{},
-            &[_]Object{Object.from(42)},
+            &[_]Object{ Object.from(42), Object.from(17) },
         );
     }
 };
 pub const pushStack = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const offset = pc.object().to(u64);
         const newSp = sp.push(sp.at(offset));
         trace("\npushStack: {any}", .{context.stack(newSp, process)});
@@ -312,6 +312,28 @@ pub const pushStack = struct {
                 Object.from(17),
                 Object.from(2),
                 Object.from(3),
+            },
+        );
+    }
+};
+pub const swap = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const saved = sp.top;
+        sp.top = sp.next;
+        sp.next = saved;
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+    }
+    test "swap" {
+        try Execution.runTest(
+            "swap",
+            .{tf.swap},
+            &[_]Object{
+                Object.from(17),
+                Object.from(42),
+            },
+            &[_]Object{
+                Object.from(42),
+                Object.from(17),
             },
         );
     }

@@ -24,8 +24,11 @@ const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
+const Result = execute.Result;
+const Execution = execute.Execution;
 const ThreadedFn = execute.ThreadedFn;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
+const Sym = zag.symbol.symbols;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 const Self = @This();
@@ -34,16 +37,21 @@ header: HeapHeader,
 method: CompiledMethodPtr,
 tpc: PC, // threaded PC
 npc: ThreadedFn, // native PC - in Continuation Passing Style
-prevCtxt: ?ContextPtr, // note this is not an Object, so access and GC need to handle specially
+prevCtxt: ?ContextPtr,
 trapContextNumber: u64,
 temps: [nLocals]Object,
 const nLocals = 1;
 const baseSize = @sizeOf(Self) / @sizeOf(Object) - nLocals;
 pub fn init() Self {
-    var result: Self align(@alignOf(Context)) = undefined;
-    const s: *Context = @ptrCast(&result);
-    s.header = comptime HeapHeader.calc(.Context, baseSize + nLocals, 0, .static, null, Object, false) catch unreachable;
-    s.npc = .{ .f = Code.end }; //@constCast(@ptrCast(&Code.end));
+    var result: Self = undefined;
+    const end = &execute.endMethod;
+    const pc = PC.init(&end.code[0]);
+    result.header = comptime HeapHeader.calc(.Context, baseSize + nLocals, 0, .static, null, Object, false) catch unreachable;
+    result.method = @constCast(end);
+    result.npc = pc.asThreadedFn();
+    result.tpc = pc.next();
+    result.prevCtxt = null;
+    result.trapContextNumber = 0;
     return result;
 }
 pub fn format(
@@ -55,13 +63,19 @@ pub fn format(
     _ = fmt;
     _ = options;
 
-    try writer.print("context: {}", .{self.header});
+    try writer.print("context: {{", .{});
+    //    try writer.print(".header: {}", .{self.header});
+    //    try writer.print(".method: {}", .{self.method});
+    try writer.print(".npc: {}", .{self.npc});
+    try writer.print(".tpc: {}", .{self.tpc});
+    try writer.print(".trapContextNumber: {}", .{self.trapContextNumber});
     if (self.prevCtxt) |ctxt|
         try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
     if (false) {
         @setRuntimeSafety(false);
         try writer.print(" temps: {any}", .{self.temps[0..self.size]});
     }
+    try writer.print("}}", .{});
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
@@ -81,14 +95,16 @@ pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: Cont
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodPtr, locals: u16, maxStackNeeded: u16, selfOffset: u16) ContextPtr {
-    const newSp = (process.allocStackSpace(sp, baseSize + 1 + locals + maxStackNeeded) catch {
+pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodPtr) ContextPtr {
+    const stackStructure = method.stackStructure;
+    const locals = stackStructure.f1;
+    const maxStackNeeded = stackStructure.f2;
+    const reserve = baseSize + 1 + locals + maxStackNeeded;
+    const newSp = (process.allocStackSpace(sp, reserve) catch {
         var contextMutable = self;
         const newerSp = process.spillStack(sp, &contextMutable);
-        return contextMutable.push(newerSp, process, method, locals, maxStackNeeded, selfOffset);
+        return contextMutable.push(newerSp, process, method);
     }).unreserve(maxStackNeeded);
-    trace("\npush: {} {} {} {}", .{ baseSize, locals, maxStackNeeded, selfOffset });
-    trace("\npush: {} sp={*} newSp={*}", .{ method.signature, sp, newSp });
     const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp.unreserve(1))));
     ctxt.prevCtxt = self;
     ctxt.trapContextNumber = process.header().trapContextNumber;
@@ -99,6 +115,7 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodP
             local.* = Nil;
         }
     }
+    const selfOffset = stackStructure.f3;
     ctxt.header = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
     return ctxt;
 }
@@ -119,13 +136,12 @@ pub inline fn isOnStack(self: *const Self) bool {
 }
 pub inline fn endOfStack(self: *const Context, process: *const Process) SP {
     if (!self.isOnStack()) return process.endOfStack();
-    // TODO: account for BlockClosures and ContextData objects on stack
     return @ptrCast(@constCast(self));
 }
 inline fn tempSize(self: *const Context, process: *const Process) usize {
     return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object) - 1;
 }
-pub fn stack(self: *const Self, sp: SP, process: *Process) []Object {
+pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
     if (self.isOnStack())
         return sp.slice((@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
     return process.getStack(sp);
@@ -197,76 +213,69 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn call(oldPc: [*]const Code, sp: SP, process: *Process, self: ContextPtr, selector: Object) SP {
-    self.tpc = oldPc + 1;
-    self.npc = oldPc[0].prim;
-    trace("\ncall: N={} T={} {any}", .{ self.getNPc(), self.getTPc(), self.stack(sp, process) });
-    const method = @as(CompiledMethodPtr, @ptrFromInt(@as(u64, @bitCast(selector))));
-    const pc = @as([*]const Code, @ptrCast(&method.code));
-    _ = .{ pc, oldPc, sp, process, selector, @panic("call unimplemented") };
-    //        return @call(tailCall,process.check(pc.prim()),.{pc+1,sp,process,self,method.selector});
-}
-const e = struct {
-    usingnamespace execute.controlPrimitives;
-};
-test "init context" {
-    if (true) return error.SkipZigTest;
-    //    const expectEqual = std.testing.expectEqual;
-    //    const objs = comptime [_]Object{True,Object.from(42)};
-    std.debug.print("init: 1\n", .{});
-    var result = execute.Execution.new();
-    std.debug.print("init: 2\n", .{});
-    var c = result.ctxt;
-    std.debug.print("init: 3\n", .{});
-    var process = &result.process;
-    std.debug.print("init: 4\n", .{});
-    //c.print(process);
-    std.debug.print("init: 5\n", .{});
-    //    try expectEqual(result.o()[3].u(),4);
-    //    try expectEqual(result.o()[6],True);
-    const sp = process.endOfStack();
-    std.debug.print("init: 6\n", .{});
-    const newC = c.moveToHeap(sp, process);
-    std.debug.print("init: 7\n", .{});
-    newC.print(process);
-    std.debug.print("init: 8\n", .{});
-}
 pub const threadedFunctions = struct {
+    const tf = zag.threadedFn.Enum;
+    const expect = std.testing.expect;
     pub const makeImmediateClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
             _ = .{ pc, sp, process, context, signature, unreachable };
         }
     };
     pub const popLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             context.setLocal(pc.uint(), sp.top);
             const newSp = sp.drop();
             return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
         }
     };
     pub const pushContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
-            const method = pc.method();
-            const stackStructure = method.stackStructure.hash56();
-            const locals: u8 = @truncate(stackStructure);
-            const maxStackNeeded: u16 = @truncate(stackStructure >> 16);
-            const selfOffset: u16 = @truncate(stackStructure >> 32);
-            trace("\npushContext: locals={} maxStack={} selfOffset={} signature={}", .{ locals, maxStackNeeded, selfOffset, method.signature });
-            const ctxt = context.push(sp, process, method, locals, maxStackNeeded, selfOffset);
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const method = extra.method;
+            const ctxt = context.push(sp, process, method);
             const newSp = ctxt.asNewSp();
-            trace("\npushContext: {any} {} {} {} 0x{x} 0x{x}", .{ process.getStack(sp), locals, method.signature, selfOffset, @intFromPtr(ctxt), @intFromPtr(sp) });
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, ctxt, extra });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, ctxt, extra });
         }
+        test "pushContext" {
+            var exe = Execution.initTest("pushContext", .{
+                tf.pushContext,
+                tf.pushLiteral,
+                42,
+            });
+            try exe.execute(&[_]Object{Object.from(17)});
+            try exe.matchStack(&[_]Object{Object.from(42)});
+            try expect(exe.getContext() != &exe.ctxt);
+        }
+        // test "init context" {
+        //     //    const expectEqual = std.testing.expectEqual;
+        //     //    const objs = comptime [_]Object{True,Object.from(42)};
+        //     std.debug.print("init: 1\n", .{});
+        //     var result = execute.Execution.initTest("init context",.{});
+        //     std.debug.print("init: 2\n", .{});
+        //     var c = result.ctxt;
+        //     std.debug.print("init: 3\n", .{});
+        //     var process = &result.process;
+        //     std.debug.print("init: 4\n", .{});
+        //     //c.print(process);
+        //     std.debug.print("init: 5\n", .{});
+        //     //    try expectEqual(result.o()[3].u(),4);
+        //     //    try expectEqual(result.o()[6],True);
+        //     const sp = process.endOfStack();
+        //     std.debug.print("init: 6\n", .{});
+        //     const newC = c.moveToHeap(sp, process);
+        //     std.debug.print("init: 7\n", .{});
+        //     newC.print(process);
+        //     std.debug.print("init: 8\n", .{});
+        // }
     };
     pub const pushLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const newSp = sp.push(context.getLocal(pc.uint()));
             trace("\npushLocal: {any} {any}", .{ context.stack(newSp, process), context.allLocals(process) });
             return @call(tailCall, process.check(pc.next().prim2()), .{ pc.next2(), newSp, process, context, extra });
         }
     };
     pub const pushLocalData = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const ref = pc.uint();
             const local = context.getLocal(ref & 0xfff);
             const newSp = sp.push(local.getField(ref >> 12));
@@ -275,7 +284,7 @@ pub const threadedFunctions = struct {
         }
     };
     pub const pushLocalField = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const ref = pc.uint();
             const local = context.getLocal(ref & 0xff);
             const newSp = sp.push(local.getField(ref >> 12));
@@ -284,13 +293,13 @@ pub const threadedFunctions = struct {
         }
     };
     pub const pushThisContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const newSp = sp.push(Object.from(context));
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         }
     };
     pub const storeLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) SP {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             context.setLocal(pc.uint(), sp.top);
             return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), sp, process, context, extra });
         }

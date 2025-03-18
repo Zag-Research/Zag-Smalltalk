@@ -76,16 +76,17 @@ pub const ClassIndex = enum(u16) {
     BlockAssignInstance,
     ThunkImmediate,
     ThunkFloat,
+    BlockClosure,
     Symbol,
-    SmallInteger,
     False,
     True,
+    SmallInteger,
     Character,
+    LLVM,
     UndefinedObject = 32,
     Float,
     ProtoObject,
     Object,
-    BlockClosure,
     BlockClosureValue,
     Context,
     Array,
@@ -97,6 +98,7 @@ pub const ClassIndex = enum(u16) {
     CompiledMethod,
     Dispatch,
     Association,
+    testClass = config.max_classes - 1,
     max = 0xffff - 8,
     replace7,
     replace6,
@@ -130,11 +132,13 @@ pub const ClassIndex = enum(u16) {
         BlockAssignInstance,
         ThunkImmediate,
         ThunkFloat,
+        BlockClosure,
         Symbol,
-        SmallInteger,
         False,
         True,
+        SmallInteger,
         Character,
+        LLVM,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -146,9 +150,10 @@ pub const ClassIndex = enum(u16) {
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.Character), 18) catch unreachable;
-    std.testing.expectEqual(@intFromEnum(ClassIndex.Compact.Character), 18) catch unreachable;
     std.debug.assert(std.meta.hasUniqueRepresentation(Object));
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
+        std.testing.expectEqual(ci, cci) catch unreachable;
+    }
 }
 const MemoryFloat = union {
     m: [@sizeOf(Internal)]u8,
@@ -191,8 +196,8 @@ const TagObject = packed struct(u64) {
         }
     };
     const Self = @This();
-    const tagAndClassType = u8;
-    pub inline fn tagbits(self: Self) tagAndClassType {
+    const TagAndClassType = u8;
+    pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(@as(u64, @bitCast(self)));
     }
     fn enumBits(T: type) usize {
@@ -200,7 +205,7 @@ const TagObject = packed struct(u64) {
     }
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
-        assert(tagAndClassBits == @bitSizeOf(tagAndClassType));
+        assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     pub inline fn untaggedI(self: Object) i64 {
@@ -251,7 +256,7 @@ const TagObject = packed struct(u64) {
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
-    pub const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
+    const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
     pub const u64_MINVAL = g(.smallInt);
     const u64_ZERO = g(.smallInt0);
     pub const u64_ZERO2 = u64_ZERO *% 2;
@@ -360,6 +365,20 @@ const TagObject = packed struct(u64) {
     pub inline fn isMemoryAllocated(self: Object) bool {
         return self.tag == .heap and self != Object.Nil;
     }
+    pub const Special = packed struct {
+        imm: TagAndClassType,
+        tag: u8,
+        rest: u48,
+        pub fn ptr(self: Special) *Object {
+            return @ptrFromInt(self.rest >> 16);
+        }
+        pub fn objectFrom(tact: TagAndClassType, tag: u8, p: *opaque {}) Object {
+            return @bitCast(Special{ .imm = tact, .tag = tag, .rest = @truncate(@intFromPtr(p)) });
+        }
+    };
+    pub inline fn rawSpecial(self: Object) Special {
+        return @bitCast(self);
+    }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
@@ -384,11 +403,8 @@ const ObjectFunctions = struct {
             return ptr[field];
         return Nil;
     }
-    pub inline fn indexEquals(self: Object, other: Object) bool {
-        return self.equals(other.makeImmediate(.Symbol, self.hash32())); // may be false positive
-    }
     pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime Object.indexSymbol0(0).tagbits();
+        return self.tagbits() == comptime Object.makeImmediate(.Symbol, 0).tagbits();
     }
     pub inline fn isBool(self: Object) bool {
         return self == Object.False or self == Object.True;
@@ -488,6 +504,9 @@ const ObjectFunctions = struct {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars();
         return &[0]Object{};
     }
+    pub fn asZeroTerminatedString(self: Object, target: []u8) ![*:0]u8 {
+        _ = .{ self, target, @panic("not implemented") };
+    }
     pub fn arrayAsSlice(self: Object, comptime T: type) ![]T {
         if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T);
         return error.ObjectNotIndexable;
@@ -560,15 +579,59 @@ const ObjectFunctions = struct {
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
             .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
             else => {
-                try writer.print("\nobject: 0x{x:0>16}", .{self.rawU()});
-                @panic("format for unknown class");
+                try writer.print("{{?0x{x:0>16}}}", .{self.rawU()});
+                //@panic("format for unknown class");
             },
         };
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{self.rawU()});
     }
     pub const alignment = @alignOf(u64);
-    pub fn packedInt(f0: u16, f1: u16, f2: u16) Object {
-        return Object.from(f0 + (@as(i56, f1) << 16) + (@as(i56, f2) << 32));
+    // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {
+    //     return @bitCast(PackedObject.from3(f1,f2,f3));
+    // }
+};
+pub const PackedObject = packed struct {
+    tag: Object.TagAndClassType,
+    f1: u14,
+    f2: u14,
+    f3: u14,
+    f4: u14,
+    pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
+        return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3, .f4 = 0 };
+    }
+    pub inline fn from(o: Object) PackedObject {
+        return @bitCast(o);
+    }
+    fn combine(size: type, tup: anytype) comptime_int {
+        comptime var n: u56 = 0;
+        comptime var shift = 0;
+        inline for (tup) |field| {
+            switch (@TypeOf(field)) {
+                comptime_int => n |= @as(u56, @as(size, field)) << shift,
+                else => n |= @as(u56, @as(size, @intFromEnum(field))) << shift,
+            }
+            shift += @typeInfo(size).int.bits;
+        }
+        return n;
+    }
+    pub fn combine14(tup: anytype) comptime_int {
+        return combine(u14, tup);
+    }
+    pub fn combine14asObject(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
+    pub fn classes14(tup: anytype) Object {
+        return Object.from(combine(u14, tup));
+    }
+    pub fn combine24(tup: anytype) comptime_int {
+        return combine(u24, tup);
+    }
+    test "combiners" {
+        std.debug.print("Test: combiners\n", .{});
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
+        try expectEqual(245778, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
 
@@ -658,9 +721,9 @@ fn slice1() []const Buf {
 test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
-    try ee(sl1[1], 42);
-    try ee(sl1[0], 121);
-    try ee(sl1[2], 0);
+    try ee(42, sl1[1]);
+    try ee(145, sl1[0]);
+    try ee(0, sl1[2]);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
     }).buf;
