@@ -28,7 +28,7 @@ ZagOutputLLVM >> generateLabel [
 { #category : 'accessing' }
 ZagOutputLLVM >> generator: aGenerator [
 
-	builder := aGenerator builder
+	builder := aGenerator new.
 ]
 
 { #category : 'testing' }
@@ -197,6 +197,12 @@ ZagOutputLLVM >> send [
 	"need code to extend selector with the class of the target of the send"
 	threadedReturnPoint := pc offset: 0
 	" we need to save this and the address of our return point in the context"
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> source: builderSource [ 
+	
+	builder := builderSource.
 ]
 
 { #category : 'converting' }

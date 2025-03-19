@@ -14,6 +14,7 @@ Class {
 ZagLLVMBuilder class >> new [
 
 	<primitive: 'createBuilderObject' module: 'llvm'>
+	Transcript show: 'BuilderInit'; cr.
 ]
 
 { #category : 'API' }
