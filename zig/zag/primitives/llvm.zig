@@ -17,9 +17,6 @@ const symbol = zag.symbol;
 const Sym = symbol.symbols;
 const phi32 = zag.utilities.inversePhi(u32);
 const execute = zag.execute;
-const llvm = zag.llvm;
-const core = llvm.core;
-const LLVMtype = llvm.types;
 const empty = &[0]Object{};
 const PC = execute.PC;
 const SP = execute.SP;
@@ -31,52 +28,54 @@ const Result = execute.Result;
 const CompiledMethod = execute.CompiledMethod;
 const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
+const llvm = zag.llvm;
+const core = llvm.core;
+const LLVMtype = llvm.types;
+
+const LLVMValueRef = LLVMtype.LLVMValueRef;
+const LLVMContextRef = LLVMtype.LLVMContextRef;
+const LLVMBuilderRef = LLVMtype.LLVMBuilderRef;
+const LLVMModuleRef = LLVMtype.LLVMModuleRef;
+const LLVMTypeRef = LLVMtype.LLVMTypeRef;
 
 pub const moduleName = "llvm";
 pub fn init() void {}
-const LLVMTypeEnum = enum(u8) {
-    invalid,
-    value,
-    context,
-    builder,
-};
-const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
-fn detag(obj: Object, tag: LLVMTypeEnum) !*Object {
-    if (from(obj)) |spec| {
-        if (spec.tag == @intFromEnum(tag))
-            return spec.ptr();
-    }
-    return error.InvalidTag;
+fn Converter(T: type) type {
+    const tag = switch (T) {
+        LLVMtype.LLVMValueRef => 1,
+        LLVMtype.LLVMContextRef => 2,
+        LLVMtype.LLVMBuilderRef => 3,
+        else => @compileError("Converter needs extansion for type: " ++ @typeName(T)),
+    };
+    const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
+    return struct {
+        fn asObject(llvmPtr: T) Object {
+            return Object.Special.objectFrom(llvmClass, tag, @ptrCast(llvmPtr));
+        }
+        fn asLLVM(tagObject: Object) !T {
+            const spec = tagObject.rawSpecial();
+            if (spec.imm == llvmClass) {
+                if (spec.tag == tag)
+                    return @ptrCast(spec.ptr());
+            }
+            return error.InvalidTag;
+        }
+    };
 }
-fn getTag(obj: Object) ?LLVMTypeEnum {
-    if (from(obj)) |spec|
-        return spec.tag;
-    return null;
-}
-fn from(obj: Object) ?Object.Special {
-    const spec = obj.rawSpecial();
-    if (spec.imm == llvmClass) return spec;
-    return null;
-}
-fn llvmTag(llvmPtr: ?*opaque {}, tag: LLVMTypeEnum) Object {
-    return Object.Special.objectFrom(llvmClass, @intFromEnum(tag), llvmPtr);
-}
-pub fn asLLVMValueRef(tagObject: Object) !LLVMtype.LLVMValueRef {
-    return @ptrCast(try detag(tagObject, .value));
-}
-pub fn asLLVMContextRef(tagObject: Object) !LLVMtype.LLVMContextRef {
-    return @ptrCast(try detag(tagObject, .context));
-}
-pub fn asLLVMBuilderRef(tagObject: Object) !LLVMtype.LLVMContextRef {
-    return @ptrCast(try detag(tagObject, .builder));
-}
+
+const ValueRef = Converter(LLVMValueRef);
+const ContextRef = Converter(LLVMContextRef);
+const BuilderRef = Converter(LLVMBuilderRef);
+const ModuleRef = Converter(LLVMModuleRef);
+const TypeRef = Converter(LLVMTypeRef);
+
 pub const llvmString = stringOf("llvm").init().obj();
 
 pub const createBuilderObject = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const builder: LLVMtype.LLVMBuilderRef = null; // should be calling the LLVM creator function
+        const builder: LLVMBuilderRef = null; // should be calling the LLVM creator function
         if (builder == null) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        sp.top = llvmTag(builder, .builder);
+        sp.top = BuilderRef.asObject(builder);
         return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
     test "createBuilderObject" {
@@ -95,26 +94,26 @@ pub const createBuilderObject = struct {
     }
 };
 
-inline fn singleIndexGEP(builder: LLVMtype.LLVMBuilderRef, elementType: LLVMtype.LLVMTypeRef, base: LLVMtype.LLVMValueRef, offset: i64, name: []const u8) LLVMtype.LLVMValueRef {
+inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base: LLVMValueRef, offset: i64, name: []const u8) LLVMValueRef {
     // singleIndex - for pointer and integer offsets
     const offset_bits: u64 = @bitCast(offset);
     const signExtend = offset < 0;
-    const idx = [_]LLVMtype.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
-    const idx_ptr: [*c]LLVMtype.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    const idx = [_]LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
+    const idx_ptr: [*c]LLVMValueRef = @constCast(@ptrCast(&idx[0]));
     return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }
 
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         //get builder instance from module?
-        const builder = asLLVMBuilderRef(sp.at(4)) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const registerToModify = asLLVMValueRef(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const offset = sp.next.to(u64);
-        var buffer: [16]u8 = undefined;
-        const name = sp.top.asZeroTerminatedString(&buffer) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const builder = BuilderRef.asLLVM(sp.at(4)) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const offset = sp.next.to(i64);
+        const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const newSp = sp.unreserve(3);
+        const module: LLVMModuleRef = undefined;
         const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
-        sp.top = singleIndexGEP(builder, tagObjectTy, registerToModify, offset, name);
+        sp.top = ValueRef.asObject(singleIndexGEP(@ptrCast(builder), tagObjectTy, registerToModify, offset, name));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };

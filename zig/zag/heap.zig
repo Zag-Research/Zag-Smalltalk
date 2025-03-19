@@ -1020,6 +1020,8 @@ test "compile time" {
 }
 test "compile time2" {
     try std.testing.expectEqual(try abcde.size(), 13);
+    var buffer: [20]u8 = undefined;
+    _ = try abcde.asObject().asZeroTerminatedString(&buffer);
 }
 test "compile time3" {
     if (!debugError)

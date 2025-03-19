@@ -79,7 +79,7 @@ const modules = [_]Module{
     // @import("primitives/Behavior.zig").module,
     // @import("primitives/BlockClosure.zig").module,
     // @import("primitives/Boolean.zig").module,
-    Module.init(@import("primitives/llvm.zig")),
+    // Module.init(@import("primitives/llvm.zig")),
     // @import("dispatch.zig").module,
 };
 

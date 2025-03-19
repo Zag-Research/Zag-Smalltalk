@@ -505,7 +505,11 @@ const ObjectFunctions = struct {
         return &[0]Object{};
     }
     pub fn asZeroTerminatedString(self: Object, target: []u8) ![*:0]u8 {
-        _ = .{ self, target, @panic("not implemented") };
+        const m = try self.arrayAsSlice(u8);
+        if (m.len >= target.len) return error.NotEnoughSpace;
+        @memcpy(target[0..m.len], m);
+        target[m.len] = 0;
+        return target[0..m.len :0];
     }
     pub fn arrayAsSlice(self: Object, comptime T: type) ![]T {
         if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T);
