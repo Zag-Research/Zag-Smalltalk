@@ -69,10 +69,13 @@ const BuilderRef = Converter(LLVMBuilderRef);
 const ModuleRef = Converter(LLVMModuleRef);
 const TypeRef = Converter(LLVMTypeRef);
 
+const noLLVM = true;
+
 pub const llvmString = stringOf("llvm").init().obj();
 
 pub const createBuilderObject = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const builder: LLVMBuilderRef = null; // should be calling the LLVM creator function
         if (builder == null) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         sp.top = BuilderRef.asObject(builder);
@@ -105,6 +108,7 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
 
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         //get builder instance from module?
         const builder = BuilderRef.asLLVM(sp.at(4)) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -119,20 +123,20 @@ pub const @"register:plus:asName:" = struct {
 };
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra };
+        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
 pub const @"literalToRegister:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const valueToPush = sp.top;
-        _ = .{ valueToPush, pc, sp, process, context, extra };
+        // const valueToPush = sp.top;
+        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
 pub const @"add:to:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra };
+        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
