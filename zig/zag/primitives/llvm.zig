@@ -32,19 +32,53 @@ const llvm = zag.llvm;
 const core = llvm.core;
 const LLVMtype = llvm.types;
 
-const LLVMValueRef = LLVMtype.LLVMValueRef;
-const LLVMContextRef = LLVMtype.LLVMContextRef;
+const LLVMAttributeRef = LLVMtype.LLVMAttributeRef;
+const LLVMBasicBlockRef = LLVMtype.LLVMBasicBlockRef;
+const LLVMBool = LLVMtype.LLVMBool;
 const LLVMBuilderRef = LLVMtype.LLVMBuilderRef;
+const LLVMComdatRef = LLVMtype.LLVMComdatRef;
+const LLVMContextRef = LLVMtype.LLVMContextRef;
+const LLVMDIBuilderRef = LLVMtype.LLVMDIBuilderRef;
+const LLVMDiagnosticInfoRef = LLVMtype.LLVMDiagnosticInfoRef;
+const LLVMJITEventListenerRef = LLVMtype.LLVMJITEventListenerRef;
+const LLVMMemoryBufferRef = LLVMtype.LLVMMemoryBufferRef;
+const LLVMMetadataRef = LLVMtype.LLVMMetadataRef;
+const LLVMModuleFlagEntry = LLVMtype.LLVMModuleFlagEntry;
+const LLVMModuleProviderRef = LLVMtype.LLVMModuleProviderRef;
 const LLVMModuleRef = LLVMtype.LLVMModuleRef;
+const LLVMNamedMDNodeRef = LLVMtype.LLVMNamedMDNodeRef;
+const LLVMPassManagerRef = LLVMtype.LLVMPassManagerRef;
+const LLVMPassRegistryRef = LLVMtype.LLVMPassRegistryRef;
 const LLVMTypeRef = LLVMtype.LLVMTypeRef;
+const LLVMUseRef = LLVMtype.LLVMUseRef;
+const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
+const LLVMValueRef = LLVMtype.LLVMValueRef;
 
 pub const moduleName = "llvm";
 pub fn init() void {}
 fn Converter(T: type) type {
     const tag = switch (T) {
-        LLVMtype.LLVMValueRef => 1,
-        LLVMtype.LLVMContextRef => 2,
-        LLVMtype.LLVMBuilderRef => 3,
+        LLVMAttributeRef => 1,
+        LLVMBasicBlockRef => 2,
+        LLVMBool => 3,
+        LLVMBuilderRef => 4,
+        LLVMComdatRef => 5,
+        LLVMContextRef => 6,
+        LLVMDIBuilderRef => 7,
+        LLVMDiagnosticInfoRef => 8,
+        LLVMJITEventListenerRef => 9,
+        LLVMMemoryBufferRef => 10,
+        LLVMMetadataRef => 11,
+        LLVMModuleFlagEntry => 12,
+        LLVMModuleProviderRef => 13,
+        LLVMModuleRef => 14,
+        LLVMNamedMDNodeRef => 15,
+        LLVMPassManagerRef => 16,
+        LLVMPassRegistryRef => 17,
+        LLVMTypeRef => 18,
+        LLVMUseRef => 19,
+        LLVMValueMetadataEntry => 20,
+        LLVMValueRef => 21,
         else => @compileError("Converter needs extansion for type: " ++ @typeName(T)),
     };
     const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
@@ -82,6 +116,7 @@ pub const createBuilderObject = struct {
         return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
     test "createBuilderObject" {
+        if (noLLVM) return error.SkipZigTest;
         const name = stringOf("createBuilderObject").init().asObject();
         var exe = Execution.initTest("llvm createBuilderObject", .{
             tf.@"primitive:module:",
