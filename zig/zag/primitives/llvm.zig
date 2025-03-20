@@ -45,6 +45,8 @@ fn Converter(T: type) type {
         LLVMtype.LLVMValueRef => 1,
         LLVMtype.LLVMContextRef => 2,
         LLVMtype.LLVMBuilderRef => 3,
+        LLVMtype.LLVMModuleRef => 4, 
+        LLVMtype.LLVMTypeRef => 5,
         else => @compileError("Converter needs extansion for type: " ++ @typeName(T)),
     };
     const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
