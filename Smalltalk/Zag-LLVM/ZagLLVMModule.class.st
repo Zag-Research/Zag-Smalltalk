@@ -9,4 +9,5 @@ Class {
 ZagLLVMModule class >> new [
 
 	<primitive: 'createModuleObject' module: 'llvm'>
+	Transcript show: 'createModuleObject'; cr.
 ]

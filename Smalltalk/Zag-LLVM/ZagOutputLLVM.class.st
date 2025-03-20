@@ -11,13 +11,21 @@ Class {
 	#traits : 'ZagImageOutputAPI',
 	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
+		'builder',
+		'module',
+		'lljit',
 		'sp',
-		'pc',
-		'builder'
+		'pc'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> builder: aBuilder [
+
+	builder := aBuilder new.
+]
 
 { #category : 'private - processing' }
 ZagOutputLLVM >> generateLabel [
@@ -71,6 +79,12 @@ ZagOutputLLVM >> makeImmediateClosure [
 	| value |
 	value := pc next
 
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> module: aModule [ 
+	
+	module := aModule new.
 ]
 
 { #category : 'accessing' }

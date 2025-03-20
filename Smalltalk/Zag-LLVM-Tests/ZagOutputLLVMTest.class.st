@@ -6,7 +6,8 @@ Class {
 	#superclass : 'TestCase',
 	#instVars : [
 		'output',
-		'textOut'
+		'builder',
+		'module'
 	],
 	#category : 'Zag-LLVM-Tests-Tests',
 	#package : 'Zag-LLVM-Tests',
@@ -55,10 +56,12 @@ ZagOutputLLVMTest class >> returnAdd42Tail [
 ZagOutputLLVMTest >> setUp [
 
 	super setUp.
-	textOut := ZagLLVMBuilder new.
+	builder := ZagLLVMBuilder new.
+	module := ZagLLVMModule new.
 	output := ZagOutputLLVMFromTestArray new
 		          methodAddress: 16r10000;
-		          codeGen: (ZagOutputLLVM new generator: textOut)
+		          codeGen: (ZagOutputLLVM new builder: builder;
+														 module: module)
 ]
 
 { #category : 'tests' }
@@ -78,5 +81,5 @@ ZagOutputLLVMTest >> testFibFromArray [
 ZagOutputLLVMTest >> testFromArray [
 
 	output halt; genFrom: self class return42.
-	textOut contents inspect
+	builder contents inspect
 ]

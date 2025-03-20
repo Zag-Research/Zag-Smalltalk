@@ -62,6 +62,7 @@ ZagOutputLLVMFromTestArray >> genFrom: collection [
 
 	index := 1.
 	array := collection.
+	codeGen pc: collection.
 	^ self iterate
 ]
 

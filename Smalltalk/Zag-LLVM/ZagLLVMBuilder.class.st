@@ -5,7 +5,7 @@ I am a connector to the Zag runtime code.
 "
 Class {
 	#name : 'ZagLLVMBuilder',
-	#superclass : 'ZagLLVMGeneratorAPI',
+	#superclass : 'ZagLLVMBuilderAPI',
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
@@ -14,7 +14,7 @@ Class {
 ZagLLVMBuilder class >> new [
 
 	<primitive: 'createBuilderObject' module: 'llvm'>
-	Transcript show: 'BuilderInit'; cr.
+	Transcript show: 'createBuilderObject'; cr.
 ]
 
 { #category : 'API' }
