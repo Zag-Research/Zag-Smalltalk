@@ -44,19 +44,6 @@ pub const inlines = struct {
         }
         return error.primitiveError;
     }
-    pub inline fn p1L(self: Object, other: i32) !Object { // Add a positive literal
-        switch (config.objectEncoding) {
-            .nan => {
-                const result = @as(Object, @bitCast(self.rawI() +% other));
-                if (result.atMostInt()) return result;
-            },
-            .tag => {
-                const result = @addWithOverflow(self.rawI(), Object.shiftI(other));
-                if (result[1] == 0) return result[0];
-            },
-        }
-        return error.primitiveError;
-    }
     pub inline fn p_negated(self: Object) !Object { // Negate
         switch (config.objectEncoding) {
             .nan => {
@@ -77,27 +64,22 @@ pub const inlines = struct {
     }
     pub inline fn p2(self: Object, other: Object) !Object { // Subtract
         if (other.isInt()) {
-            const result = @as(Object, @bitCast(self.rawI() -% other.untaggedI()));
-            if (result.isInt()) return result;
+            const result, const overflow = @subWithOverflow(self.rawI(), other.untaggedI());
+            if (overflow == 0) return @bitCast(result);
         }
-        return error.primitiveError;
-    }
-    pub fn p2L(self: Object, other: i32) !Object { // INLINED - Subtract a positive literal
-        const result = @as(Object, @bitCast(self.rawI() -% other));
-        if (result.atLeastInt()) return result;
         return error.primitiveError;
     }
     pub inline fn p3(self: Object, other: Object) !bool { // LessThan
         if (!other.isInt()) return error.primitiveError;
-        return self.u() < other.u();
+        return self.rawI() < other.rawI();
     }
     pub inline fn p4(self: Object, other: Object) !bool { // GreaterThan
         if (!other.isInt()) return error.primitiveError;
-        return self.u() > other.u();
+        return self.rawI() > other.rawI();
     }
     pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
         if (!other.isInt()) return error.primitiveError;
-        return self.rawU() <= other.rawU();
+        return self.rawI() <= other.rawI();
     }
     pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
         return switch (config.objectEncoding) {
@@ -107,15 +89,15 @@ pub const inlines = struct {
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
         if (!other.isInt()) return error.primitiveError;
-        return self.rawU() >= other.rawU();
+        return self.rawI() >= other.rawI();
     }
     pub inline fn p7(self: Object, other: Object) !bool { // Equal
         if (!other.isInt()) return error.primitiveError;
-        return self.u() == other.u();
+        return self.rawI() == other.rawI();
     }
     pub inline fn p8(self: Object, other: Object) !bool { // NotEqual
         if (!other.isInt()) return error.primitiveError;
-        return self.u() != other.u();
+        return self.rawI() != other.rawI();
     }
     inline fn unsafeAbs(x: i64) u64 {
         @setRuntimeSafety(false);
@@ -234,7 +216,7 @@ pub const @"+" = struct {
     test "simple add" {
         try Execution.runTest(
             "simple add",
-            .{ tf.@"primitive:", 1 },
+            .{ tf.primitive, 1 },
             &[_]Object{
                 Object.from(25),
                 Object.from(17),
@@ -247,7 +229,7 @@ pub const @"+" = struct {
     test "simple add with overflow" {
         try Execution.runTest(
             "simple add with overflow",
-            .{ tf.@"primitive:", 1, tf.pushLiteral, 42 },
+            .{ tf.primitive, 1, tf.pushLiteral, 42 },
             &[_]Object{
                 Object.from(4),
                 Object.from(0x7f_ffff_ffff_ffff),

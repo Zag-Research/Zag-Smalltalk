@@ -191,7 +191,7 @@ fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Re
     // the following should be exactly the same, but causes an error instead
     // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
-pub const @"primitive:" = struct {
+pub const primitive = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next();
@@ -203,7 +203,8 @@ pub const @"primitive:" = struct {
             if (prim.primitive) |p| {
                 method.executeFn = p;
                 method.jitted = p;
-            } else @panic("found primitive:error: need primitive:");
+            } else if (config.is_test)
+                @panic("found primitive:error: need primitive:");
         } else {
             method.executeFn = noPrim;
             method.jitted = noPrim;
@@ -214,7 +215,7 @@ pub const @"primitive:" = struct {
         try Execution.runTest(
             "primitive: found",
             .{
-                tf.@"primitive:",
+                tf.primitive,
                 998,
                 tf.pushLiteral,
                 99,
@@ -232,7 +233,7 @@ pub const @"primitive:" = struct {
         try Execution.runTest(
             "primitive: with error",
             .{
-                tf.@"primitive:",
+                tf.primitive,
                 998,
                 tf.pushLiteral,
                 99,
@@ -252,7 +253,7 @@ pub const @"primitive:" = struct {
         try Execution.runTest(
             "primitive: not found",
             .{
-                tf.@"primitive:",
+                tf.primitive,
                 999,
                 tf.pushLiteral,
                 99,
@@ -273,7 +274,7 @@ fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: 
     const newSp = sp.push(Nil);
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
-pub const @"primitive:error:" = struct {
+pub const primitiveError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next();
@@ -286,7 +287,8 @@ pub const @"primitive:error:" = struct {
                 method.executeFn = p;
                 method.jitted = p;
                 return @call(tailCall, p, .{ pc, sp, process, context, extra });
-            } else @panic("found primitive: need primitive:error:");
+            } else if (config.is_test)
+                @panic("found primitive: need primitive:error:");
         }
         const method = extra.method;
         method.executeFn = noPrimWithError;
@@ -297,7 +299,7 @@ pub const @"primitive:error:" = struct {
         try Execution.runTest(
             "primitive:error: found",
             .{
-                tf.@"primitive:error:",
+                tf.primitiveError,
                 998,
                 tf.pushLiteral,
                 99,
@@ -315,7 +317,7 @@ pub const @"primitive:error:" = struct {
         try Execution.runTest(
             "primitive:error: with error",
             .{
-                tf.@"primitive:error:",
+                tf.primitiveError,
                 998,
                 tf.pushLiteral,
                 99,
@@ -336,7 +338,7 @@ pub const @"primitive:error:" = struct {
         try Execution.runTest(
             "primitive:error: not found",
             .{
-                tf.@"primitive:error:",
+                tf.primitiveError,
                 999,
                 tf.pushLiteral,
                 99,
@@ -355,7 +357,7 @@ pub const @"primitive:error:" = struct {
     }
 };
 const moduleString = stringOf("test module").init().obj();
-pub const @"primitive:module:" = struct {
+pub const primitiveModule = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next().next();
@@ -369,7 +371,8 @@ pub const @"primitive:module:" = struct {
                         method.executeFn = p;
                         method.jitted = p;
                         return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                    } else @panic("found primitive: need primitive:error:");
+                    } else if (config.is_test)
+                        @panic("found primitive: need primitive:error:");
                 }
             }
         }
@@ -384,7 +387,7 @@ pub const @"primitive:module:" = struct {
         var exe = Execution.initTest(
             "primitive:module: found",
             .{
-                tf.@"primitive:module:",
+                tf.primitiveModule,
                 "0name",
                 "1module",
                 tf.pushLiteral,
@@ -403,7 +406,7 @@ pub const @"primitive:module:" = struct {
         var exe = Execution.initTest(
             "primitive:module: with error",
             .{
-                tf.@"primitive:module:",
+                tf.primitiveModule,
                 "0name",
                 "1module",
                 tf.pushLiteral,
@@ -424,7 +427,7 @@ pub const @"primitive:module:" = struct {
         var exe = Execution.initTest(
             "primitive:module: not found",
             .{
-                tf.@"primitive:module:",
+                tf.primitiveModule,
                 "0name",
                 "1module",
                 tf.pushLiteral,
@@ -442,7 +445,7 @@ pub const @"primitive:module:" = struct {
                 }, exe.stack());
     }
 };
-pub const @"primitive:module:error:" = struct {
+pub const primitiveModuleError = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.isEncoded()) {
             const newPc = pc.next().next();
@@ -456,7 +459,8 @@ pub const @"primitive:module:error:" = struct {
                         method.executeFn = p;
                         method.jitted = p;
                         return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                    } else @panic("found primitive: need primitive:error:");
+                    } else if (config.is_test)
+                        @panic("found primitive: need primitive:error:");
                 }
             }
         }
@@ -471,7 +475,7 @@ pub const @"primitive:module:error:" = struct {
         var exe = Execution.initTest(
             "primitive:module:error: found",
             .{
-                tf.@"primitive:module:error:",
+                tf.primitiveModuleError,
                 "0name",
                 "1module",
                 tf.pushLiteral,
@@ -490,7 +494,7 @@ pub const @"primitive:module:error:" = struct {
         var exe = Execution.initTest(
             "primitive:module:error: with error",
             .{
-                tf.@"primitive:module:error:",
+                tf.primitiveModuleError,
                 "0name",
                 "1module",
                 tf.pushLiteral,
@@ -512,7 +516,7 @@ pub const @"primitive:module:error:" = struct {
         var exe = Execution.initTest(
             "primitive:module:error: not found",
             .{
-                tf.@"primitive:module:error:",
+                tf.primitiveModuleError,
                 "0name",
                 "1module",
                 tf.pushLiteral,
