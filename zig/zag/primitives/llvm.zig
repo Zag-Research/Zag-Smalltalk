@@ -97,11 +97,27 @@ fn Converter(T: type) type {
     };
 }
 
-const ValueRef = Converter(LLVMValueRef);
-const ContextRef = Converter(LLVMContextRef);
+const AttributeRef = Converter(LLVMAttributeRef);
+const BasicBlockRef = Converter(LLVMBasicBlockRef);
+const Bool = Converter(LLVMBool);
 const BuilderRef = Converter(LLVMBuilderRef);
+const ComdatRef = Converter(LLVMComdatRef);
+const ContextRef = Converter(LLVMContextRef);
+const DIBuilderRef = Converter(LLVMDIBuilderRef);
+const DiagnosticInfoRef = Converter(LLVMDiagnosticInfoRef);
+const JITEventListenerRef = Converter(LLVMJITEventListenerRef);
+const MemoryBufferRef = Converter(LLVMMemoryBufferRef);
+const MetadataRef = Converter(LLVMMetadataRef);
+const ModuleFlagEntry = Converter(LLVMModuleFlagEntry);
+const ModuleProviderRef = Converter(LLVMModuleProviderRef);
 const ModuleRef = Converter(LLVMModuleRef);
+const NamedMDNodeRef = Converter(LLVMNamedMDNodeRef);
+const PassManagerRef = Converter(LLVMPassManagerRef);
+const PassRegistryRef = Converter(LLVMPassRegistryRef);
 const TypeRef = Converter(LLVMTypeRef);
+const UseRef = Converter(LLVMUseRef);
+const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
+const ValueRef = Converter(LLVMValueRef);
 
 const noLLVM = true;
 
