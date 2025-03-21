@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
 
     // LLVM MODULE
     const llvm_module = b.addModule("llvm", .{
-        .root_source_file = b.path("../libs/zig-llvm/src/llvm.zig"),
+        .root_source_file = b.path("./zag/libs/zig-llvm/src/llvm.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -39,7 +39,7 @@ pub fn build(b: *std.Build) !void {
 
     // CLANG MODULE
     const clang_module = b.addModule("clang", .{
-        .root_source_file = b.path("./libs/zig-llvm/src/clang.zig"),
+        .root_source_file = b.path("./zag/libs/zig-llvm/src/clang.zig"),
         .target = target,
         .optimize = optimize,
     });

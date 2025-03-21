@@ -28,7 +28,7 @@ const Result = execute.Result;
 const CompiledMethod = execute.CompiledMethod;
 const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
-const llvm = zag.llvm;
+const llvm = @import("llvm");
 const core = llvm.core;
 const LLVMtype = llvm.types;
 
@@ -55,7 +55,7 @@ const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
 const LLVMValueRef = LLVMtype.LLVMValueRef;
 
 pub const moduleName = "llvm";
-pub fn init() void {}
+pub fn main() void {}
 fn Converter(T: type) type {
     const tag = switch (T) {
         LLVMAttributeRef => 1,
@@ -180,6 +180,7 @@ test "primitives" {}
 
 extern fn llvmPL(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
 const llvmPLCM = CompiledMethod.init(Sym.yourself, @ptrCast(&llvmPL));
+
 // old tests
 // test "simple llvm" {
 //     std.debug.print("Test: simple llvm\n", .{});
