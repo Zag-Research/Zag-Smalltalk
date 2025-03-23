@@ -15,7 +15,8 @@ Class {
 		'basicBlocks',
 		'stackArray',
 		'stackPointer',
-		'primitiveSuccessStackPointer'
+		'primitiveSuccessStackPointer',
+		'blockValueSymbols'
 	],
 	#pools : [
 		'ZagConstants'
@@ -155,6 +156,7 @@ ASemanticInterpreter >> getClass: aClass [
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
 	| classIndex |
+	(blockValueSymbols includes: aSymbol) ifTrue: [ ^anObject ].
 	classIndex := self getClass: anObject class.
 	^ ((dispatch at: classIndex) ifNil: [
 		   dispatch at: classIndex put: IdentityDictionary new ])
@@ -214,6 +216,13 @@ ASemanticInterpreter >> reset [
 	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
 	lastClass := 0.
+	blockValueSymbols := { 
+		#value.
+		#value:.
+		#value:value:.
+		#value:value:value:.
+		#value:value:value:value:
+	 }.
 	self addClasses: {
 			#ThunkHeap.
 			#ThunkReturnLocal.
