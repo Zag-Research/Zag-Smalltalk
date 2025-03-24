@@ -78,11 +78,11 @@ const modules = [_]Module{
     Module.init(testModule),
     Module.init(@import("primitives/Object.zig")),
     Module.init(@import("primitives/Smallinteger.zig")),
-    // @import("primitives/Behavior.zig").module,
-    // @import("primitives/BlockClosure.zig").module,
-    // @import("primitives/Boolean.zig").module,
+    // Module.init(@import("primitives/Behavior.zig").module),
+    Module.init(@import("primitives/BlockClosure.zig")),
+    // Module.init(@import("primitives/Boolean.zig").module,
     Module.init(@import("primitives/llvm.zig")),
-    // @import("dispatch.zig").module,
+    // Module.init(@import("dispatch.zig"),
 };
 
 const Module = struct {
@@ -146,7 +146,7 @@ const Module = struct {
         }
         return null;
     }
-    fn findNamedPrimitive(moduleName: [] const u8, primName: [] const u8) ?Primitive {
+    fn findNamedPrimitive(moduleName: []const u8, primName: []const u8) ?Primitive {
         for (&modules) |m| {
             if (std.mem.eql(u8, m.name, moduleName)) {
                 for (m.primitives) |p| {
@@ -365,7 +365,7 @@ pub const primitiveModule = struct {
         }
         if (pc.object().arrayAsSlice(u8) catch null) |primName| {
             if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
-                if (Module.findNamedPrimitive(modName,primName)) |prim| {
+                if (Module.findNamedPrimitive(modName, primName)) |prim| {
                     if (prim.primitive) |p| {
                         const method = extra.method;
                         method.executeFn = p;
@@ -384,65 +384,59 @@ pub const primitiveModule = struct {
     const primitive998 = testModule.zName;
     const primitiveNotDefined = testModule.primitiveNotDefined;
     test "primitive:module: found" {
-        var exe = Execution.initTest(
-            "primitive:module: found",
-            .{
-                tf.primitiveModule,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module: found", .{
+            tf.primitiveModule,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
             Object.from(42),
             Object.from(17),
         });
-        try expectEqualSlices(Object,&[_]Object{
+        try expectEqualSlices(Object, &[_]Object{
             False,
-            }, exe.stack());
+        }, exe.stack());
     }
     test "primitive:module: with error" {
-        var exe = Execution.initTest(
-            "primitive:module: with error",
-            .{
-                tf.primitiveModule,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module: with error", .{
+            tf.primitiveModule,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
-                True,
-                Object.from(17),
+            True,
+            Object.from(17),
         });
         try expectEqualSlices(Object, &[_]Object{
-                Object.from(99),
-                True,
-                Object.from(17),
-                }, exe.stack());
+            Object.from(99),
+            True,
+            Object.from(17),
+        }, exe.stack());
     }
     test "primitive:module: not found" {
-        var exe = Execution.initTest(
-            "primitive:module: not found",
-            .{
-                tf.primitiveModule,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module: not found", .{
+            tf.primitiveModule,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
-                Object.from(42),
-                Object.from(17),
+            Object.from(42),
+            Object.from(17),
         });
         try expectEqualSlices(Object, &[_]Object{
-                Object.from(99),
-                Object.from(42),
-                Object.from(17),
-                }, exe.stack());
+            Object.from(99),
+            Object.from(42),
+            Object.from(17),
+        }, exe.stack());
     }
 };
 pub const primitiveModuleError = struct {
@@ -453,7 +447,7 @@ pub const primitiveModuleError = struct {
         }
         if (pc.object().arrayAsSlice(u8) catch null) |primName| {
             if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
-                if (Module.findNamedPrimitive(modName,primName)) |prim| {
+                if (Module.findNamedPrimitive(modName, primName)) |prim| {
                     if (prim.primitiveError) |p| {
                         const method = extra.method;
                         method.executeFn = p;
@@ -472,67 +466,61 @@ pub const primitiveModuleError = struct {
     const primitive998 = testModule.zName;
     const primitiveNotDefined = testModule.primitiveNotDefined;
     test "primitive:module:error: found" {
-        var exe = Execution.initTest(
-            "primitive:module:error: found",
-            .{
-                tf.primitiveModuleError,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module:error: found", .{
+            tf.primitiveModuleError,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
-                Object.from(42),
-                Object.from(17),
+            Object.from(42),
+            Object.from(17),
         });
         try expectEqualSlices(Object, &[_]Object{
-                False,
-                }, exe.stack());
+            False,
+        }, exe.stack());
     }
     test "primitive:module:error: with error" {
-        var exe = Execution.initTest(
-            "primitive:module:error: with error",
-            .{
-                tf.primitiveModuleError,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module:error: with error", .{
+            tf.primitiveModuleError,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
-                True,
-                Object.from(17),
+            True,
+            Object.from(17),
         });
         try expectEqualSlices(Object, &[_]Object{
-                Object.from(99),
-                Sym.value,
-                True,
-                Object.from(17),
-                }, exe.stack());
+            Object.from(99),
+            Sym.value,
+            True,
+            Object.from(17),
+        }, exe.stack());
     }
     test "primitive:module:error: not found" {
-        var exe = Execution.initTest(
-            "primitive:module:error: not found",
-            .{
-                tf.primitiveModuleError,
-                "0name",
-                "1module",
-                tf.pushLiteral,
-                99,
+        var exe = Execution.initTest("primitive:module:error: not found", .{
+            tf.primitiveModuleError,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
         });
         try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), moduleString.asObject() });
         try exe.execute(&[_]Object{
-                Object.from(42),
-                Object.from(17),
+            Object.from(42),
+            Object.from(17),
         });
         try expectEqualSlices(Object, &[_]Object{
-                Object.from(99),
-                Nil,
-                Object.from(42),
-                Object.from(17),
-                }, exe.stack());
+            Object.from(99),
+            Nil,
+            Object.from(42),
+            Object.from(17),
+        }, exe.stack());
     }
 };
 

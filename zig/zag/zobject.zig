@@ -83,7 +83,8 @@ pub const ClassIndex = enum(u16) {
     SmallInteger,
     Character,
     LLVM,
-    UndefinedObject = 32,
+    reserved = 31,
+    UndefinedObject,
     Float,
     ProtoObject,
     Object,
@@ -139,6 +140,7 @@ pub const ClassIndex = enum(u16) {
         SmallInteger,
         Character,
         LLVM,
+        reserved = 31,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -188,9 +190,6 @@ const TagObject = packed struct(u64) {
         float5,
         float6,
         float7,
-        inline fn base(cg: Group) u64 {
-            return @intFromEnum(cg);
-        }
         inline fn u(cg: Group) u3 {
             return @intFromEnum(cg);
         }
@@ -243,6 +242,15 @@ const TagObject = packed struct(u64) {
     pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
+    pub inline fn isHeap(self: Object) bool {
+        return (self.rawU() & 7) == 0;
+    }
+    pub inline fn isImmediate(self: Object) bool {
+        return (self.rawU() & 7) == 1;
+    }
+    pub inline fn isDouble(self: Object) bool {
+        return (self.rawU() & 6) != 0;
+    }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
@@ -271,13 +279,6 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn isDouble(self: Object) bool {
-        return switch (self.tag) {
-            .float2, .float3, .float4, .float5, .float6, .float7 => true,
-            .immediates => false,
-            .heap => false, // ToDo handle in-memory floats
-        };
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.rawU() == Object.True.rawU();
@@ -363,7 +364,7 @@ const TagObject = packed struct(u64) {
         return self.which_class(true) == .String;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return self.tag == .heap and self != Object.Nil;
+        return self.isHeap() and self != Object.Nil;
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
