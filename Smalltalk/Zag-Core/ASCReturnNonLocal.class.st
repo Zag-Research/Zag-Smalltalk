@@ -10,6 +10,21 @@ Class {
 }
 
 { #category : 'as yet unclassified' }
+ASCReturnNonLocal >> interpretFor: anInterpreter [ 
+
+"need to adjust stack by some offset"
+"need to return to defining blocks method, or terminate"
+
+"(inContext and: [ stackElement isInContext ]) ifTrue: [
+		^ anInterpreter
+			  return: anInterpreter top
+			  selfContext: stackElement offset ]."
+	^ anInterpreter
+		  returnNonLocal: anInterpreter top
+		  selfOffset: stack offset
+]
+
+{ #category : 'as yet unclassified' }
 ASCReturnNonLocal >> outputTo: output [
 
 	^ output visitReturnNonLocalTop
