@@ -153,6 +153,16 @@ ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection
 ]
 
 { #category : 'asserting' }
+ASCompilerInlineTest >> assertEquivalentSending: selecter arguments: aCollection to: anObject inlineDepth: inlineDepth [
+	interpreter inlineDepth: inlineDepth.
+ 	self
+		assert: (interpreter send: selecter with: aCollection to: anObject)
+		equals: (anObject perform: selecter withArguments: aCollection).
+		interpreter inspect.
+	self assert: interpreter stackDepth equals: 1
+]
+
+{ #category : 'asserting' }
 ASCompilerInlineTest >> assertEquivalentSending: selecter to: anObject [
 
 	self assertEquivalentSending: selecter arguments: #() to: anObject 
@@ -220,8 +230,10 @@ blockReturn: p1
 	true ifTrue: [ ^ 42 ]
 "
 
-	(ASNoOutput withInlining compileMethod:
-		 ASCompileTestClass1 >> #blockReturnEasy) inspect
+"	(ASNoOutput withInlining compileMethod:
+		 ASCompileTestClass1 >> #blockReturnEasy) inspect"
+		
+	self assertEquivalentSending: #blockReturnEasy to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -378,8 +390,9 @@ ASCompilerInlineTest >> testFoo1Inlined [
 	"bar
 	^ 42"
 
-	interpreter inlineDepth: 1.
-	self testFoo1
+"	interpreter inlineDepth: 1.
+	self testFoo1"
+	self assertEquivalentSending: #foo arguments: { } to: ASCompileTestClass1 new inlineDepth: 1000.
 ]
 
 { #category : 'tests' }

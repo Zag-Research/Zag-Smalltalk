@@ -29,8 +29,8 @@ ASCCompilableUnitBlock >> newInlinedBlock: aBlockAST [
 		- send that assigns to a variable?
 		- send that returns value?
 	"
-
-	^ aBlockAST newInlineMethodBlock: self
+	^ operations last newInlineBlock: aBlockAST
+	"^ code newInlineMethodBlock: aBlockAST "
 ]
 
 { #category : 'API' }

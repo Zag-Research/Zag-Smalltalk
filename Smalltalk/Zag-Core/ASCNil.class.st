@@ -14,3 +14,8 @@ ASCNil >> fromOperation: anASCBlock [
 
 	stack := anASCBlock stack
 ]
+
+{ #category : 'as yet unclassified' }
+ASCNil >> interpretFor: anASemanticInterpreter [ 
+	^ true
+]
