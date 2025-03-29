@@ -76,11 +76,10 @@ pub const ClassIndex = enum(u16) {
     BlockAssignInstance,
     ThunkImmediate,
     ThunkFloat,
-    BlockClosure,
+    SmallInteger,
     Symbol,
     False,
     True,
-    SmallInteger,
     Character,
     LLVM,
     reserved = 31,
@@ -88,7 +87,7 @@ pub const ClassIndex = enum(u16) {
     Float,
     ProtoObject,
     Object,
-    BlockClosureValue,
+    BlockClosure,
     Context,
     Array,
     String,
@@ -99,6 +98,10 @@ pub const ClassIndex = enum(u16) {
     CompiledMethod,
     Dispatch,
     Association,
+    Exception,
+    Error,
+    SelectorException,
+    PrimitiveFailed,
     testClass = config.max_classes - 1,
     max = 0xffff - 8,
     replace7,
@@ -133,11 +136,10 @@ pub const ClassIndex = enum(u16) {
         BlockAssignInstance,
         ThunkImmediate,
         ThunkFloat,
-        BlockClosure,
+        SmallInteger,
         Symbol,
         False,
         True,
-        SmallInteger,
         Character,
         LLVM,
         reserved = 31,
@@ -195,7 +197,7 @@ const TagObject = packed struct(u64) {
         }
     };
     const Self = @This();
-    const TagAndClassType = u8;
+    pub const TagAndClassType = u8;
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(@as(u64, @bitCast(self)));
     }
@@ -280,6 +282,21 @@ const TagObject = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
+    pub inline fn hasPointer(self: Object) bool {
+        const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
+        return bits <= math.rotr(TagAndClassType, oImm(.BlockAssignInstance, 0).tagbits(), 3) and bits != 0;
+    }
+    pub inline fn pointer(self: Object, T: type) ?T {
+        switch (self.tag) {
+            .heap => return @ptrFromInt(self.rawU()),
+            .immediates => switch (self.class) {
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return @ptrFromInt(self.rawU() >> 16),
+                else => {},
+            },
+            else => {},
+        }
+        return null;
+    }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.rawU() == Object.True.rawU();
     }
@@ -305,6 +322,9 @@ const TagObject = packed struct(u64) {
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
+    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
+        return oImm(cls, (@intFromPtr(ptr) << 8) + extra);
+    }
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.hash);
     }
@@ -313,6 +333,9 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn hash56(self: Object) u56 {
         return self.hash;
+    }
+    pub inline fn highAddress(self: Object) *u64 {
+        return @ptrFromInt(self.rawU() >> 16);
     }
     pub inline fn numArgs(self: Object) u8 {
         return @truncate(self.hash);
@@ -635,39 +658,39 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(245778, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(245774, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
         try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
 
 test "testing doubles including NaN" {
     switch (config.objectEncoding) {
-        .tag => return error.SkipZigTest,
-        .nan => {},
+        .tag => {},
+        .nan => {
+            // test that all things that generate NaN generate positive ones
+            // otherwise we'd need to check in any primitive that could create a NaN
+            // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
+            const e = std.testing.expect;
+            const inf = @as(f64, 1.0) / 0.0;
+            const zero = @as(f64, 0);
+            const one = @as(f64, 1);
+            const fns = struct {
+                fn cast(x: anytype) Object {
+                    return Object.from(x);
+                }
+            };
+            const cast = fns.cast;
+            try e(cast(@sqrt(-one)).isDouble());
+            try e(cast(@log(-one)).isDouble());
+            try e(cast(zero / zero).isDouble());
+            try e(cast((-inf) * 0.0).isDouble());
+            try e(cast((-inf) * inf).isDouble());
+            try e(cast((-inf) + inf).isDouble());
+            try e(cast(inf - inf).isDouble());
+            try e(cast(inf * 0.0).isDouble());
+            try e(cast(std.math.nan(f64)).isDouble());
+        },
     }
-    // only applicable to NaN encoding which is not currently well supported
-    // test that all things that generate NaN generate positive ones
-    // otherwise we'd need to check in any primitive that could create a NaN
-    // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
-    const e = std.testing.expect;
-    const inf = @as(f64, 1.0) / 0.0;
-    const zero = @as(f64, 0);
-    const one = @as(f64, 1);
-    const fns = struct {
-        fn cast(x: anytype) Object {
-            return Object.from(x);
-        }
-    };
-    const cast = fns.cast;
-    try e(cast(@sqrt(-one)).isDouble());
-    try e(cast(@log(-one)).isDouble());
-    try e(cast(zero / zero).isDouble());
-    try e(cast((-inf) * 0.0).isDouble());
-    try e(cast((-inf) * inf).isDouble());
-    try e(cast((-inf) + inf).isDouble());
-    try e(cast(inf - inf).isDouble());
-    try e(cast(inf * 0.0).isDouble());
-    try e(cast(std.math.nan(f64)).isDouble());
 }
 test "from conversion" {
     const ee = std.testing.expectEqual;
@@ -727,7 +750,7 @@ test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
     try ee(42, sl1[1]);
-    try ee(145, sl1[0]);
+    try ee(113, sl1[0]);
     try ee(0, sl1[2]);
     const buf2 = (Buf{
         .obj = Object.from(42.0),

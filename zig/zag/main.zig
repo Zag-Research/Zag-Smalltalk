@@ -113,16 +113,16 @@ fn loadDispatchTable(file: std.fs.File) !void {
     //    _ = references;
 }
 fn loadCodeAddresses() !void {
-    const controlPrimitives = @import("controlPrimitives.zig");
+    const threadedFunctions = zag.threadedFn.functions;
     const Element = struct {
         files: u64,
         ours: u64,
     };
-    var map: [controlPrimitives.references.len]Element = undefined;
+    var map: [threadedFunctions.len]Element = undefined;
     const codeAddresses = try zagImageHeader.codeAddresses.arrayAsSlice(u64);
-    if (controlPrimitives.references.len != codeAddresses.len)
-        std.debug.print("my primitives length: {} file:{}\n", .{ controlPrimitives.references.len, codeAddresses.len });
-    for (&map, &controlPrimitives.references, codeAddresses) |*element, o, f| {
+    if (threadedFunctions.len != codeAddresses.len)
+        std.debug.print("my primitives length: {} file:{}\n", .{ threadedFunctions.len, codeAddresses.len });
+    for (&map, &threadedFunctions, codeAddresses) |*element, o, f| {
         element.files = f;
         element.ours = @intFromPtr(o.f);
     }

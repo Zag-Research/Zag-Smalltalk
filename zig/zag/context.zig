@@ -80,7 +80,13 @@ pub fn format(
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
-pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: ContextPtr } {
+pub inline fn popTargetContext(self: *Context, sp: SP, target: *Context, process: *Process, result: Object) struct { sp: SP, ctxt: *Context } {
+    _ = .{ self, target, process };
+    const newSp = sp;
+    newSp.top = result;
+    return .{ .sp = newSp, .ctxt = unreachable };
+}
+pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: *Context } {
     _ = process;
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
@@ -97,8 +103,8 @@ pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: Cont
 }
 pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodPtr) ContextPtr {
     const stackStructure = method.stackStructure;
-    const locals = stackStructure.f1;
-    const maxStackNeeded = stackStructure.f2;
+    const locals = stackStructure.locals;
+    const maxStackNeeded = stackStructure.maxStackNeeded;
     const reserve = baseSize + 1 + locals + maxStackNeeded;
     const newSp = (process.allocStackSpace(sp, reserve) catch {
         var contextMutable = self;
@@ -115,7 +121,7 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodP
             local.* = Nil;
         }
     }
-    const selfOffset = stackStructure.f3;
+    const selfOffset = stackStructure.selfOffset;
     ctxt.header = HeapHeader.contextHeaderOnStack(baseSize + selfOffset);
     return ctxt;
 }

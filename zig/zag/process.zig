@@ -262,7 +262,7 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
                 if (objPtr.asMemoryObject()) |pointer| {
                     if (pointer.isForwarded()) {
                         unreachable;
-                    } else if (pointer.header.age.isNursery())
+                    } else if (pointer.isNursery())
                         hp = pointer.copyTo(hp, objPtr);
                 }
             }
@@ -321,11 +321,9 @@ test "check flag" {
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();
     try testing.expect(!pr.needsCheck());
-    std.debug.print("before: {x}\n", .{@intFromPtr(pr)});
     for (0..countMask) |_| {
         pr = pr.checkBump();
     }
-    std.debug.print("after:  {x}\n", .{@intFromPtr(pr)});
     try testing.expect(!pr.needsCheck());
     try testing.expectEqual(pr.endOfStack(), origEOS);
     pr = pr.checkBump();

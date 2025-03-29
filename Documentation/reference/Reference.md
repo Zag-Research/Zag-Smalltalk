@@ -49,6 +49,73 @@ $ make install
 - [zig-webui](https://github.com/webui-dev/zig-webui)
 - 
 ## Architectures
+
+#### Smalltalk machines
+- [A discussion where most of these links came from](https://narkive.com/NFS7uGan.4)
+- [[The-Design-and-Evaluation-of-a-High-Performance-Smalltalk-System.pdf]]
+SOAR (mentioned by Davide Grandi - thanks for the link!) was one of the  
+great student project Smalltalk machines. The others were Mushroom and  
+J-Machine: 
+- [Mushroom](http://www.wolczko.com/mushroom/index.html)
+- [J-Machine](http://cva.stanford.edu/j-machine/cva_j_machine.html)
+  
+Though the Xerox PARC computers such as the Alto and Dorado were never  
+released commercially and not all were used as Smalltalk machines I  
+think it is fair to compare them to the Symbolics and LMI efforts. The  
+Rekursive was an important Smalltalk machine that never reached the  
+market: 
+http://www.brouhaha.com/~eric/retrocomputing/rekursiv/  
+Rekursiv used a Smalltalk 'like' language - not Smalltalk  
+See http://www.erg.abdn.ac.uk/research/projects/lingo.html  
+Here's some more about Rekursiv  
+http://www.brouhaha.com/~eric/retrocomputing/rekursiv/rekursiv.txt  
+While in practice the focus was on Lingo, the November 1988 Byte  
+magazine article did present the Rekursive as a Smalltalk machine.  
+Mario Wolczko's comment (in 1992) about how much (actually how little)  
+was developed in this direction is interesting:  
+http://www.merlintec.com/old-self-interest/msg00248.html  
+ 
+If we expand our definition to include computers using conventional  
+microprocessors but built specifically to run Smalltalk then we have  
+some that were actually sold: the Tektronix 4404 (68010) and 4406  
+(68020) workstations and the Momenta (386SX) pen based computer (what  
+Microsoft has been calling tabletPCs).
+http://www.byte.com/art/9611/sec4/art1.htm  
+  
+Some products of this kind that failed to reach the market were the  
+Exobox (ARM?), Interval Research (ARM) and my own Merlin efforts (68000  
+and ARM).  
+http://www.merlintec.com/lsi/history.html  
+The exobox stuff was platform agnostic though mainly expected to run on a linux-  
+ish OS.  
+And not sold but almost completed before being killed by ATT, the Active Book  
+(2Mb rom, 1Mb ram, full Smalltalk-80 system, ARM 8MHz).  
+  
+I (Jecel) still haven't given up and fortunately FPGAs now allow me to build  
+the first class of machines (custom Smalltalk processors) instead of  
+the second.  
+  
+There were other student project and commercial efforts beyond those I  
+listed above, but it would take a short book to do them all justice.  
+
+Well, I think the Dorado workstation at Xerox was built just for  
+running Smalltalk. Don't really know why it was built. Maybe they  
+needed a machine that was fast enough for Smalltalk's bit block  
+operations on screen or they needed a machine they could attach a mouse  
+to. If Xerox has a museum the Dorado might be displayed there ;-). Then  
+there was the Dynabook for which Smalltalk was intended to be operating  
+system and development environment. It envisioned what nowadays  
+notebooks are (nowadays notebooks even do a little more).  
+
+In '87 some company we can't quite track down demoed at OOPSLA a board  
+that ran V286 on a microcoded machine (i.e. Smalltalk/V). From George  
+Bosworth:  
+The guys that ran it were spin out of aerospace corp in la  
+where they had been doing custom stuff for the airforce and  
+other DOD type people. The chip was also being positioned  
+as a potential Ada chip since all of its microcode was in  
+writeable control store.  
+The name is escaping me....something like Micro Systems....  
 #### HPC and architectures (cache et al)
 - [Algorithmica](https://en.algorithmica.org/hpc/)
 - [What Every Programmer Should Know About Memory](http://people.freebsd.org/~lstewart/articles/cpumemory.pdf)

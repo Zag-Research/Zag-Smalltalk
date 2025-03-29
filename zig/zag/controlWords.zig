@@ -43,7 +43,7 @@ pub const branch = struct {
             17,
             ":label",
         });
-        std.debug.print("Alignment of exe: {} {}\n", .{ @alignOf(@TypeOf(exe)), @TypeOf(exe) });
+        assert(@alignOf(@TypeOf(exe)) > 50);
         try exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }
@@ -338,3 +338,13 @@ pub const swap = struct {
         );
     }
 };
+pub const testFunctions = if (zag.config.is_test) struct {
+    pub const callLabel = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+            const target = pc.targetPC();
+            // skip the structure word
+            context.setReturn(pc.next().next());
+            return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, Extra{ .method = @constCast(@ptrCast(pc.asCodePtr())) } });
+        }
+    };
+} else struct {};

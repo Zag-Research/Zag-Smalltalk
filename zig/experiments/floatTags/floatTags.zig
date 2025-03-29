@@ -185,14 +185,21 @@ pub fn main() !void {
             std.debug.print("{x:0>16} {x:0>16} {} {}\n", .{ cvtU64(x), u.u(), u, u.immediate_class() });
         }
     }
-    for (0..255) |bits| {
-        const sign_exponent = @as(u64, bits & 0xc0) << 56;
-        const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast(@as(u64, bits) << 58)) >> 6)) >> 2;
-        const u = sign_exponent | exponent_mantissa;
-        const x: f64 = @bitCast(u);
-        std.debug.print("{:>3} {x:0>16} {x:0>16} {x:0>16} ", .{ bits, sign_exponent, exponent_mantissa, cvtU64(x) });
+    for (0..128) |bits| {
+        const x = blk1: {
+            const sign_exponent = @as(u64, bits & 0xc0) << 56;
+            const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast(@as(u64, bits) << 58)) >> 6)) >> 2;
+            break :blk1 @as(f64, @bitCast( sign_exponent | exponent_mantissa ));
+        };
+        const f = blk2: {
+            const val = @as(u64, bits) << 8;
+            const sign_exponent = (val & 0xc000) << 48;
+            const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val & 0x3f00) << 50)) >> 6)) >> 2;
+            break :blk2 @as(f64,@bitCast( sign_exponent | exponent_mantissa ));
+        };
+        std.debug.print("{:>3}: {x:0>16} ", .{ bits, cvtU64(x) });
         if (@abs(x) < 0.0001 or @abs(x) > 1000.0) {
-            std.debug.print("{e:10.5}\n", .{x});
-        } else std.debug.print("{d:11.7}\n", .{x});
+            std.debug.print("{e:10.5} {e:10.5}\n", .{x,f});
+        } else std.debug.print("{d:11.7} {d:11.7}\n", .{x,f});
     }
 }

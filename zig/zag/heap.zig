@@ -1,7 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
-const config = @import("config.zig");
+const zag = @import("zag.zig");
+const config = zag.config;
 const debugError = false;
 const object = if (debugError) struct {
     const ClassIndex = enum(u16) { String };
@@ -12,17 +13,17 @@ const object = if (debugError) struct {
             return .{ .field = @intFromPtr(self) };
         }
     };
-} else @import("zobject.zig");
+} else zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const ClassIndex = object.ClassIndex;
-const utilities = @import("utilities.zig");
+const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
 const inversePhi24 = utilities.inversePhi24;
 const assert = std.debug.assert;
-//const compileObject = @import("execute.zig").compileObject;
-//const Sym = @import("symbol.zig").symbols;
+//const compileObject = zag.execute.compileObject;
+//const Sym = zag.symbol.symbols;
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
@@ -636,13 +637,15 @@ pub const HeapHeader = packed struct(u64) {
     age: Age,
     length: u12,
     const Self = @This();
-    //const immediateLength: u12 = 4095; // all immediate objects (except doubles) have this as top 12 bits in NaN encoding
     const forwardLength: u12 = 2048; // makes whole word negative
     pub const maxLength: u12 = 2047;
     pub const includesHeader = true;
     comptime {
         assert(@sizeOf(Self) == 8);
         std.debug.assert(std.meta.hasUniqueRepresentation(Self));
+    }
+    pub inline fn isForwarded(self: HeapHeader) bool {
+        return @as(i64, @bitCast(self)) < 0;
     }
     pub inline fn array(self: HeapHeader, obj: HeapObjectConstPtr, elementSize: usize) ![]Object {
         return self.format.array(self, obj, elementSize);
@@ -720,8 +723,9 @@ pub const HeapHeader = packed struct(u64) {
         return self.age.isUnmoving();
     }
     pub inline fn forwardedTo(self: Self) ?HeapObjectConstPtr {
-        if (self.length == forwardLength)
-            return @ptrFromInt(@as(u64, @intCast(@as(i64, @intCast(@as(u64, @bitCast(self)) << 16)) >> 16)));
+        if (self.isForwarded())
+            return @ptrFromInt(@as(u64, @bitCast(self)) & 0xffff_ffff_ffff);
+        // return @ptrFromInt(@as(u64, @intCast(@as(i64, @intCast(@as(u64, @bitCast(self)) << 16)) >> 16)));
         return null;
     }
     pub inline fn setHash(self: *Self, hash: u24) void {
@@ -734,7 +738,7 @@ pub const HeapHeader = packed struct(u64) {
         return self.classIndex;
     }
     pub inline fn hash16(self: Self) u16 {
-        return @as(u16, @truncate(@as(u64, @bitCast(self)) >> 16));
+        return @truncate(@as(u64, @bitCast(self)) >> 16);
     }
     pub inline fn hasInstVars(self: Self) bool {
         return self.format.hasInstVars();
@@ -787,17 +791,16 @@ pub const HeapObject = packed struct {
         return self.header.isUnmoving();
     }
     pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
-        if (self.header.forwardedTo()) |_| return true;
-        return false;
+        return self.header.isForwarded();
+    }
+    pub inline fn isNursery(self: HeapObjectConstPtr) bool {
+        return self.header.age.isNursery();
     }
     pub inline fn getClass(self: HeapObjectConstPtr) ClassIndex {
         return self.header.classIndex;
     }
-    pub inline fn forwarded(self: HeapObjectConstPtr) HeapObjectConstPtr {
-        if (self.header().forwardedTo()) |target| {
-            return target;
-        }
-        return self;
+    pub inline fn forwardedX(self: HeapObjectConstPtr) HeapObjectConstPtr {
+        return self.header().forwardedTo() orelse self;
     }
     pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;

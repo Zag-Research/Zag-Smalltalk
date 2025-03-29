@@ -26,10 +26,42 @@ const heap = zag.heap;
 const tf = zag.threadedFn.Enum;
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
+const stringOf = zag.heap.CompileTimeString;
 
 pub fn init() void {}
 pub const moduleName = "BlockClosure";
-
+const zModuleName = stringOf(moduleName).init().obj();
+pub const ThunkReturnSmallInteger = struct {
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const val = sp.top;
+        trace("\nvalue: {x}", .{val});
+        const result = Object.from(@as(i56, @truncate(@as(i64, @bitCast(val.rawU() << 48)) >> 56)));
+        const targetContext: *Context = @ptrCast(val.highAddress());
+        const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
+        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
+    }
+    const name = stringOf("ThunkReturnSmallInteger").init().obj();
+    test "ThunkReturnSmallInteger" {
+        var exe = zag.execute.Execution.initTest("primitive:module: found", .{
+            tf.primitiveModule,
+            "0name",
+            "1module",
+            tf.pushLiteral,
+            99,
+        });
+        try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject() });
+    }
+    var method = zag.execute.CompiledMethod(4).init(.{
+        tf.primitiveModule,
+        "0name",
+        "1module",
+        tf.pushLiteral,
+        99,
+    });
+    pub fn init() void {
+        try method.resolve(&[_]Object{ name.asObject(), zModuleName.asObject() });
+    }
+};
 pub const inlines = struct {
     pub inline fn p201(self: Object, other: Object) !Object { // value
         _ = self;
@@ -80,7 +112,7 @@ pub const inlines = struct {
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
     pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, _: ContextPtr, _: Extra) SP {
-        const flags = block.stackStructure.f1 >> 8;
+        const flags = block.stackStructure.locals; // TODO: wrong
         const fields = flags & 63;
         const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
         sp.top = sp.at(fields + 1);
@@ -121,72 +153,82 @@ const fallback = execute.fallback;
 pub const value = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const val = sp.top;
-        trace("\nvalue: {}", .{val});
+        trace("\nvalue: {x}", .{val});
         var result: Object = undefined;
-
         if (val.isImmediate()) {
             sw: switch (val.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .reserved => { // this is the common part for ThunkReturns
-                    const targetContext: Context = @ptrFromInt(val.rawU() >> 16);
-                    const newSp, const callerContext = context.popTargetContext(targetContext, process);
-                    newSp.top = result;
-                    return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
+                .ThunkReturnSmallInteger => {
+                    result = Object.from(@as(i64, @bitCast(val.rawU() << 48)) >> 56);
+                    continue :sw .reserved;
+                },
+                .ThunkReturnImmediate => {
+                    result = @bitCast(val.rawU() << 48 >> 56);
+                    continue :sw .reserved;
+                },
+                .ThunkReturnCharacter => {
+                    result = Object.makeImmediate(.Character, val.rawU() << 48 >> 56);
+                    continue :sw .reserved;
+                },
+                .ThunkReturnFloat => {
+                    const sign_exponent = (val.rawU() & 0xc000) << 48;
+                    const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val.rawU() & 0x3f00) << 50)) >> 6)) >> 2;
+                    result = Object.from(@as(f64, @bitCast(sign_exponent | exponent_mantissa)));
+                    continue :sw .reserved;
+                },
+                .ThunkReturnLocal, .ThunkReturnInstance, .reserved => { // this is the common part for ThunkReturns
+                    const targetContext: Context = @ptrFromInt(val >> 16);
+                    switch (val.class) {
+                        .ThunkReturnLocal => {
+                            result = targetContext.getLocal((val.rawU() >> 8) and 0xFF);
+                        },
+                        .ThunkReturnInstance => {
+                            result = targetContext.getSelfInstVar((val.rawU() >> 8) and 0xFF);
+                        },
+                        else => {},
+                    }
+                    const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
+                    return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
                 },
                 .ThunkImmediate => {
                     result = @bitCast(val.rawI() >> 8);
                     continue :sw .none;
                 },
-                .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance, .ThunkFloat, .none => { // this is the common part for other immediate BlockClosures
+                .ThunkHeap => {
+                    result = @bitCast(val.rawI() >> 16);
+                    continue :sw .none;
+                },
+                .ThunkLocal, .ThunkInstance, .ThunkFloat, .none => { // this is the common part for other immediate BlockClosures
                     sp.top = result;
                     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
                 },
-                else => {},
+                .BlockAssignLocal, .BlockAssignInstance => {
+                    unreachable;
+                },
+                else => {
+                    unreachable;
+                },
             }
         }
-        // .heapThunk => sp.top.tag = .heap,
-        // .nonLocalThunk => {
-        //     const targetContext = @as(ContextPtr, @ptrFromInt(val.rawWordAddress()));
-        //     const index = val.u() & 7;
-        //     sp.top = nonLocalValues[index];
-        //     trace(" {*} {}", .{ targetContext, index });
-        //     return @call(tailCall, process.check(inlines.nonLocalReturn), .{ pc, sp, process, targetContext, undefined, undefined });
-        // },
-        // .numericThunk => {
-        //     if (((val.u() >> 47) & 1) == 0) {
-        //         sp.top = Object.from(@as(i64, @bitCast(val.u() << 17)) >> 17);
-        //     } else {
-        //         sp.top = @as(Object, @bitCast(val.u() << 17));
-        //     }
-        // },
-        // .immediateThunk => sp.top.tag = .immediates,
-        // .heapClosure, .nonLocalClosure => {
-        //     const closure = val.to(heap.HeapObjectPtr);
-        //     const method = closure.prev().to(CompiledMethodPtr);
-        //     if (method != &inlines.valueClosureMethod) {
-        //         const newPc = PC.init(method.codePtr());
-        //         context.setReturn(pc);
-        //         return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, Sym.value});
-        //     }
-        //     if (!Sym.value.selectorEquals(method.selector)) @panic("wrong selector");
-        //     sp.top = closure.prevPrev();
-        // },
         @panic("fallback");
     }
 };
-pub const @"value:" = struct {
+pub const valueColon = struct {
     fn threadedFn(pc: PC, sp: SP, process: *Process, context: Context, _: Extra) Result {
         const val = sp.next;
-        switch (val.tag) {
-            .heap => {
-                const closure = val.to(heap.HeapObjectPtr);
-                const method = closure.prev().to(CompiledMethodPtr);
-                //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
-                const newPc = method.codePtr();
-                context.setReturn(pc);
-                if (true) @panic("unfinished");
-                return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
-            },
-            else => @panic("not closure"),
+        if (val.isImmediate()) {
+            switch (val.class) {
+                .BlockAssignLocal, .BlockAssignInstance => {
+                    const closure = val.to(heap.HeapObjectPtr);
+                    const method = closure.prev().to(CompiledMethodPtr);
+                    //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
+                    const newPc = method.codePtr();
+                    context.setReturn(pc);
+                    if (true) @panic("unfinished");
+                    return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
+                },
+                .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
+                else => @panic("not closure"),
+            }
         }
         return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined, undefined });
     }

@@ -33,6 +33,7 @@ const symbol = zag.symbol;
 
 const structures = struct {
     pub usingnamespace @import("controlWords.zig");
+    pub usingnamespace @import("controlWords.zig").testFunctions;
     pub usingnamespace @import("dispatch.zig").threadedFunctions;
     pub usingnamespace @import("primitives.zig");
     pub usingnamespace @import("context.zig").threadedFunctions;
@@ -106,7 +107,7 @@ pub const Enum =
     } });
 };
 
-const functions =
+pub const functions =
     blk: {
     const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
     var array: [arraySize]ThreadedFn.Fn = undefined;
@@ -136,7 +137,7 @@ pub fn find(f: ThreadedFn.Fn) Enum {
 comptime {
     assert(structures.branch.threadedFn == threadedFn(.branch));
 }
-test "function size" {
+test "number of threaded functions" {
     if (true) return error.SkipZigTest;
     expectEqual(43, functions.len) catch |err| {
         inline for (std.meta.fields(Enum), 0..) |f, i| {

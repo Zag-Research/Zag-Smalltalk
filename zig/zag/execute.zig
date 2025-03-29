@@ -239,6 +239,9 @@ pub const PC = packed struct {
     pub inline fn asCodePtr(self: PC) *const Code {
         return self.code;
     }
+    pub inline fn structure(self: PC) StackStructure {
+        return self.code.structure;
+    }
     pub //inline
     fn uint(self: PC) u64 {
         if (logging) std.debug.print("PC_uint:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
@@ -297,7 +300,8 @@ pub const Code = union {
     threadedFn: ThreadedFn.Fn,
     method: *CompiledMethod,
     codePtr: *Code,
-    int: u64,
+    //    int: u64,
+    structure: StackStructure,
     pub inline fn primOf(pp: ThreadedFn.Fn) Code {
         //@compileLog(pp);
         const result = Code{ .threadedFn = pp };
@@ -313,6 +317,9 @@ pub const Code = union {
     }
     pub inline fn methodOf(method: *CompiledMethod) Code {
         return Code{ .method = method };
+    }
+    pub inline fn structureOf(structure: StackStructure) Code {
+        return Code{ .structure = structure };
     }
     pub inline fn codePtrOf(code: *Code, offs: i64) Code {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
@@ -352,18 +359,25 @@ pub const Code = union {
         } else try writer.print("0x{x}", .{self.object.toNatNoCheck()});
     }
 };
+pub const StackStructure = packed struct {
+    tag: Object.TagAndClassType = Object.makeImmediate(.SmallInteger, 0).tagbits(),
+    locals: u8 = 0,
+    maxStackNeeded: u16 = 0,
+    selfOffset: u8 = 0,
+    _filler: u24 = 0,
+};
 pub const endMethod = CompiledMethod.init(Nil, Code.end);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = struct {
     header: HeapHeader,
-    stackStructure: object.PackedObject, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
+    stackStructure: StackStructure,
     signature: Signature,
     executeFn: ThreadedFn.Fn,
     jitted: ?ThreadedFn.Fn,
-    code: [codeSize]Code, // will typically be a lot more then 1, as it will be the threaded version of the method
+    code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
-    const codeSize = 1;
+    const codeSize = 4;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
     comptime {
         std.debug.assert(@offsetOf(Self, "header") == 0);
@@ -372,11 +386,11 @@ pub const CompiledMethod = struct {
     pub fn init(name: Object, methodFn: ThreadedFn.Fn) Self {
         return Self{
             .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
-            .stackStructure = object.PackedObject.from(Object.from(0)),
+            .stackStructure = StackStructure{},
             .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn)},
+            .code = .{Code.primOf(methodFn)} ++ .{undefined} ** 3,
         };
     }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
@@ -533,6 +547,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     ClassIndex => {
                         code[n] = Code.objectOf(@intFromEnum(field));
+                        n = n + 1;
+                    },
+                    StackStructure => {
+                        code[n] = Code.structureOf(field);
                         n = n + 1;
                     },
                     else => {
