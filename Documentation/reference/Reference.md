@@ -133,18 +133,20 @@ The name is escaping me....something like Micro Systems....
 - [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))
 #### RISC-V
 - [Computer Organization and Design](https://www.academia.edu/38301807/Computer_organization_and_design_RISC_V?auto=download&email_work_card=download-paper)
-#### LLVM
+## LLVM
 - [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
 
-#### Atomics and Locks
+## Atomics and Locks
 - [Rust Atomics and Locks](https://marabos.nl/atomics/) most of which applies to Zig
 - [Understanding Memory Ordering in Rust](https://emschwartz.me/understanding-memory-ordering-in-rust/) ditto (refers to Chapter 3 of the above)
 
-#### IEEE Floating point
+## SIMD
+- [discussion of SSE and Neon](https://blog.yiningkarlli.com/2021/09/neon-vs-sse.html)
+## IEEE Floating point
 - 64 bit floating point ![IEEE 754 Binary-64](Pasted%20image%2020210311212924.png)
 - [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754)
 
-### Zig
+## Zig
 - [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
 - [Zig 0.10.0 release notes](https://ziglang.org/download/0.10.0/release-notes.html#Function-Pointers)
 
