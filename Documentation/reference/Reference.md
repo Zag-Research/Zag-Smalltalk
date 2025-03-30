@@ -49,6 +49,7 @@ $ make install
 - [zig-webui](https://github.com/webui-dev/zig-webui)
 - 
 ## Architectures
+- [C Is Not a Low-level Language - Your computer is not a fast PDP-11](https://queue.acm.org/detail.cfm?id=3212479)
 
 #### Smalltalk machines
 - [A discussion where most of these links came from](https://narkive.com/NFS7uGan.4)
