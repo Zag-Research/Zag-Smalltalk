@@ -1,24 +1,29 @@
 "
 I am a connector to the Zag runtime code.
 
-`new` is a primitive that returns an object that connects to a dispatch table that calls the LLVM-Zig interface to LLVM.
+The instance variables are referenced by Zig code in the LLVM module, so must not be re-ordered
 "
 Class {
-	#name : 'ZagLLVMBuilder',
+	#name : 'ZagLLVMGenerator',
 	#superclass : 'ZagLLVMGeneratorAPI',
+	#instVars : [
+		'builder',
+		'module',
+		'context'
+	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'instance creation' }
-ZagLLVMBuilder class >> new [
+ZagLLVMGenerator class >> new [
 
 	<primitive: 'createBuilderObject' module: 'llvm'>
 	Transcript show: 'BuilderInit'; cr.
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> add: aNumber to: selfValue [
+ZagLLVMGenerator >> add: aNumber to: selfValue [
 
 	<primitive: 'add:to:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAdd, ('
@@ -27,7 +32,7 @@ ZagLLVMBuilder >> add: aNumber to: selfValue [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> and: valueRef1 with: valueRef2 [
+ZagLLVMGenerator >> and: valueRef1 with: valueRef2 [
 	
 	<primitive: 'and:with:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAnd, ('
@@ -38,7 +43,7 @@ ZagLLVMBuilder >> and: valueRef1 with: valueRef2 [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> compare: valueRef1 is: comparison to: valueRef2 [
+ZagLLVMGenerator >> compare: valueRef1 is: comparison to: valueRef2 [
 
 	<primitive: 'compare:is:to:' module: 'llvm'>
 	Transcript show: 'LLVMBuildICmp, ('
@@ -47,8 +52,35 @@ ZagLLVMBuilder >> compare: valueRef1 is: comparison to: valueRef2 [
 	<< 'valueRef2: ' << valueRef2 << ')'; cr.
 ]
 
+{ #category : 'initialization' }
+ZagLLVMGenerator >> initialize [
+
+	super initialize.
+	builder := self makeBuilder.
+	module := self makeModule.
+	context := self makeContext
+]
+
+{ #category : 'initialization' }
+ZagLLVMGenerator >> makeBuilder [
+
+		<primitive: 'makeBuilder' module: 'llvm'> 
+]
+
+{ #category : 'initialization' }
+ZagLLVMGenerator >> makeContext [
+
+		<primitive: 'makeContext' module: 'llvm'> 
+]
+
+{ #category : 'initialization' }
+ZagLLVMGenerator >> makeModule [
+
+		<primitive: 'makeModule' module: 'llvm'> 
+]
+
 { #category : 'API' }
-ZagLLVMBuilder >> newLabel [
+ZagLLVMGenerator >> newLabel [
 
 	<primitive: 'newLabel' module: 'llvm'>
 	"Creating a new label is like creating a new basic block (BB)"
@@ -57,7 +89,7 @@ ZagLLVMBuilder >> newLabel [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> or: int1 with: int2 [
+ZagLLVMGenerator >> or: int1 with: int2 [
 	
 	<primitive: 'or:with:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildOr, ('
@@ -66,7 +98,7 @@ ZagLLVMBuilder >> or: int1 with: int2 [
 ]
 
 { #category : 'as yet unclassified' }
-ZagLLVMBuilder >> register: oldReg plus: offset asName: newName [
+ZagLLVMGenerator >> register: oldReg plus: offset asName: newName [
 
 	<primitive: 'register:plus:asName:' module: 'llvm'>
 	"Different than add:to: because we want to move the register by 
@@ -78,7 +110,7 @@ ZagLLVMBuilder >> register: oldReg plus: offset asName: newName [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> returnWith: addressOfValue [
+ZagLLVMGenerator >> returnWith: addressOfValue [
 	
 	<primitive: 'returnWith:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildRet, ('
@@ -87,7 +119,7 @@ ZagLLVMBuilder >> returnWith: addressOfValue [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> shiftLeftArithmeticly: num1 by: num2 [
+ZagLLVMGenerator >> shiftLeftArithmeticly: num1 by: num2 [
 	
 	<primitive: 'shiftLeftArithmeticly:by:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildShl, ('
@@ -97,7 +129,7 @@ ZagLLVMBuilder >> shiftLeftArithmeticly: num1 by: num2 [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> shiftRightArithmeticly: num1 by: num2 [
+ZagLLVMGenerator >> shiftRightArithmeticly: num1 by: num2 [
 	
 	<primitive: 'shiftLeftArithmeticly:by:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAShr, ('
@@ -107,7 +139,7 @@ ZagLLVMBuilder >> shiftRightArithmeticly: num1 by: num2 [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> store: result at: addressOfSelf [ 
+ZagLLVMGenerator >> store: result at: addressOfSelf [ 
 
 	<primitive: 'store:at:' module: 'llvm'>
 	Transcript show: 'LLVMBuildStore, ('
@@ -116,7 +148,7 @@ ZagLLVMBuilder >> store: result at: addressOfSelf [
 ]
 
 { #category : 'API' }
-ZagLLVMBuilder >> valueAt: aString [ 
+ZagLLVMGenerator >> valueAt: aString [ 
 
 	<primitive: 'valueAt:' module: 'llvm'>
 	Transcript show: 'LLVMBuildLoad2, ('

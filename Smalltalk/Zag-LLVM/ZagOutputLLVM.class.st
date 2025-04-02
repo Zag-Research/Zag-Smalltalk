@@ -12,23 +12,35 @@ Class {
 	#classTraits : 'ZagImageOutputAPI classTrait',
 	#instVars : [
 		'sp',
-		'pc',
-		'builder'
+		'gen',
+		'driver'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
+{ #category : 'accessing' }
+ZagOutputLLVM >> driver [
+
+	^ driver
+]
+
+{ #category : 'accessing' }
+ZagOutputLLVM >> driver: anObject [
+
+	driver := anObject
+]
+
 { #category : 'private - processing' }
 ZagOutputLLVM >> generateLabel [
 
-	^ builder newLabel
+	^ gen newLabel
 ]
 
 { #category : 'accessing' }
 ZagOutputLLVM >> generator: aGenerator [
 
-	builder := aGenerator new.
+	gen := aGenerator new.
 ]
 
 { #category : 'testing' }
@@ -37,14 +49,14 @@ ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
 	| otherewise |
 	otherewise :=  self generateLabel.
 	self if: condition isFalseThen: falseLabel isTrueThen: otherewise.
-	builder defineLabel: otherewise
+	gen defineLabel: otherewise
 
 ]
 
 { #category : 'testing' }
 ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
-	builder if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
+	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
 ]
 
 { #category : 'testing' }
@@ -53,7 +65,7 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 	| otherewise |
 	otherewise :=  self generateLabel.
 	self if: condition isFalseThen: otherewise isTrueThen: trueLabel.
-	builder defineLabel: otherewise
+	gen defineLabel: otherewise
 
 ]
 
@@ -61,7 +73,7 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 ZagOutputLLVM >> label [
 
 	| address |
-	address := pc thatAddress.
+	address := driver thatAddress.
 	" generate a label and keep track of the address of this  and the label so when we have a branch or other reference to this address we acan use the label that corresponds to it"
 ]
 
@@ -69,20 +81,8 @@ ZagOutputLLVM >> label [
 ZagOutputLLVM >> makeImmediateClosure [
 
 	| value |
-	value := pc next
+	value := driver nextObject
 
-]
-
-{ #category : 'accessing' }
-ZagOutputLLVM >> pc [
-
-	^ pc
-]
-
-{ #category : 'accessing' }
-ZagOutputLLVM >> pc: anObject [
-
-	pc := anObject
 ]
 
 { #category : 'primitives' }
@@ -92,25 +92,25 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 	"add code to set up builder, main function, entry label"
 	primitiveFail := self generateLabel.
 
-	aNumber := builder valueAt: #sp.
+	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	self if: aNumberIsSmallInteger isFalseThen: primitiveFail.
 
-	addressOfSelf := builder register: #sp plus: 8.
-	selfValue := builder valueAt: addressOfSelf.
-	nativeANumber := builder shiftRightArithmeticly: aNumber by: 8.
-	nativeSelf := builder shiftRightArithmeticly: selfValue by: 8.
+	addressOfSelf := gen register: #sp plus: 8.
+	selfValue := gen valueAt: addressOfSelf.
+	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
+	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
 
 	nativeResult := aBlock value: nativeANumber value: nativeSelf.
 	overflow := self validSmallInteger: nativeResult.
 	self if: overflow isFalseThen: primitiveFail.
 
 	result := self tagSmallInteger: nativeResult.
-	builder store: result at: addressOfSelf.
-	builder returnWith: addressOfSelf.
+	gen store: result at: addressOfSelf.
+	gen returnWith: addressOfSelf.
 
 	" ----- primitiveFail ----- "
-	builder defineLabel: primitiveFail.
+	gen defineLabel: primitiveFail.
 	"self primitiveFail"
 ]
 
@@ -118,33 +118,33 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 ZagOutputLLVM >> primitiveSmallIntegerMinus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
-		  builder subtract: aNumber from: selfValue ]
+		  gen subtract: aNumber from: selfValue ]
 ]
 
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
-		  builder add: aNumber to: selfValue ]
+		  gen add: aNumber to: selfValue ]
 ]
 
 { #category : 'primitives' }
 ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
-	aNumber := builder valueAt: #sp.
+	aNumber := gen valueAt: #sp.
 	aNumberIsSmallInteger := self verifySmallInteger: aNumber.
 	primitiveFail := self generateLabel.
 	self branchIf: aNumberIsSmallInteger isFalseTo: primitiveFail.
-	addressOfSelf := builder register: #sp plus: 8.
-	selfValue := builder valueAt: addressOfSelf.
-	nativeANumber := builder shiftRightArithmeticly: aNumber by: 8.
-	nativeSelf := builder shiftRightArithmeticly: selfValue by: 8.
-	nativeResult := builder add: nativeANumber to: nativeSelf.
+	addressOfSelf := gen register: #sp plus: 8.
+	selfValue := gen valueAt: addressOfSelf.
+	nativeANumber := gen shiftRightArithmeticly: aNumber by: 8.
+	nativeSelf := gen shiftRightArithmeticly: selfValue by: 8.
+	nativeResult := gen add: nativeANumber to: nativeSelf.
 	overflow := self validSmallInteger: nativeResult.
 	self branchIf: overflow isTrueTo: primitiveFail.
 	result := self tagSmallInteger: nativeResult.
-	builder store: result at: addressOfSelf.
+	gen store: result at: addressOfSelf.
 	self returnWithSP: addressOfSelf.
 	self defineLabel: primitiveFail.
 	self primitiveFail
@@ -154,14 +154,14 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 ZagOutputLLVM >> pushBlockNonlocalReturning [
 
 	| value |
-	value := pc next.
+	value := driver nextObject.
 	" push an immediate block returning the next value. Determined at threaded-code-generation time to be one of the immediate-codable values "
 ]
 
 { #category : 'threaded words' }
 ZagOutputLLVM >> pushContext [
 
-	pc next. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
+	driver nextObject. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
 
 ]
 
@@ -169,16 +169,16 @@ ZagOutputLLVM >> pushContext [
 ZagOutputLLVM >> pushLiteral [
 
 	| literal |
-	literal := pc nextObject.
-	sp := builder register: sp plus: -8.
-	builder store: literal at: sp
+	literal := driver nextObject.
+	sp := gen register: sp plus: -8.
+	gen store: literal at: sp
 ]
 
 { #category : 'threaded words' }
 ZagOutputLLVM >> pushLocal [
 
 	| localNumber |
-	localNumber := pc next.
+	localNumber := driver nextObject.
 	" push the value of this local in the context "
 ]
 
@@ -193,22 +193,22 @@ ZagOutputLLVM >> send [
 	" the same as send0 and send1 except it uses the arity of the selector to find the target"
 
 	| selector threadedReturnPoint |
-	selector := pc next.
+	selector := driver nextObject.
 	"need code to extend selector with the class of the target of the send"
-	threadedReturnPoint := pc offset: 0
+	threadedReturnPoint := driver offset: 0
 	" we need to save this and the address of our return point in the context"
 ]
 
 { #category : 'accessing' }
 ZagOutputLLVM >> source: builderSource [ 
 	
-	builder := builderSource.
+	gen := builderSource.
 ]
 
 { #category : 'converting' }
 ZagOutputLLVM >> tagSmallInteger: untaggedInt [
 
-	^ builder tagSmallInteger: untaggedInt.
+	^ gen tagSmallInteger: untaggedInt.
 	
 ]
 
@@ -217,9 +217,9 @@ ZagOutputLLVM >> validSmallInteger: nativeInt [
 	
 	| temp res1 res2 |
 	temp := nativeInt.
-	res1 := builder shiftRightArithmeticly: temp by: 56.
-	res2 := builder shiftLeftArithmeticly: temp by: 56.
-	^ builder compare: res2 is: #eq to: nativeInt.
+	res1 := gen shiftRightArithmeticly: temp by: 56.
+	res2 := gen shiftLeftArithmeticly: temp by: 56.
+	^ gen compare: res2 is: #eq to: nativeInt.
 ]
 
 { #category : 'private - processing' }
@@ -227,12 +227,12 @@ ZagOutputLLVM >> verifySmallInteger: valueRef [
 	
 	"valueRef is a Zag smallInteger"
 	| andResult |
-	andResult := builder and: 16rff with: valueRef.
-	^ builder compare: andResult is: #eq to: 16r61
+	andResult := gen and: 16rff with: valueRef.
+	^ gen compare: andResult is: #eq to: 16r61
 ]
 
 { #category : 'instance creation' }
 ZagOutputLLVM >> with: aZagOutputLLVMAPI [
 
-	builder := aZagOutputLLVMAPI
+	gen := aZagOutputLLVMAPI
 ]
