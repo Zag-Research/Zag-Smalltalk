@@ -79,7 +79,7 @@ ASCCompiledMethodBlock >> propagateContextFreeFor [
 { #category : 'as yet unclassified' }
 ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [ 
 
-	^ aBasicBlock returnTop
+	^ self returnTop
 ]
 
 { #category : 'accessing' }
