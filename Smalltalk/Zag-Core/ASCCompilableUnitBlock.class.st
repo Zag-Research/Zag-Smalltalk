@@ -29,7 +29,7 @@ ASCCompilableUnitBlock >> newInlinedBlock: aBlockAST [
 		- send that assigns to a variable?
 		- send that returns value?
 	"
-	^ operations last newInlineBlock: aBlockAST
+	^ ASCInlineMethodBlock new
 	"^ code newInlineMethodBlock: aBlockAST "
 ]
 

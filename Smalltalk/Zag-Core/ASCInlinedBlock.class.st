@@ -26,6 +26,12 @@ ASCInlinedBlock >> branch: aBasicBlock [
 	^ aBasicBlock
 ]
 
+{ #category : 'API' }
+ASCInlinedBlock >> branchReturnTop: aBasicBlock [ 
+
+	self addOperation: (ASCBranchReturnTop with: aBasicBlock )
+]
+
 { #category : 'initialization' }
 ASCInlinedBlock >> initNamedIndirect: aBasicBlock [
 
@@ -42,7 +48,7 @@ ASCInlinedBlock >> initParameterNamed: aSymbol [
 { #category : 'API' }
 ASCInlinedBlock >> returnTopFor: aBasicBlock [ 
 
-	^ aBasicBlock branchReturnTop: branchBlock 
+	^ self branchReturnTop: aBasicBlock 
 ]
 
 { #category : 'initialization' }

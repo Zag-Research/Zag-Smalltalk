@@ -21,7 +21,6 @@ ASCReturnNonLocal >> interpretFor: anInterpreter [
 			  selfContext: stackElement offset ]."
 	^ anInterpreter
 		  returnNonLocal: anInterpreter top
-		  selfOffset: stack offset
 ]
 
 { #category : 'as yet unclassified' }

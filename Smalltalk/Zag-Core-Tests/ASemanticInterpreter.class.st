@@ -16,7 +16,8 @@ Class {
 		'stackArray',
 		'stackPointer',
 		'primitiveSuccessStackPointer',
-		'blockValueSymbols'
+		'blockValueSymbols',
+		'nonLocalReturns'
 	],
 	#pools : [
 		'ZagConstants'
@@ -208,6 +209,12 @@ ASemanticInterpreter >> push: anObject [
 	^ stackArray at: stackPointer put: anObject
 ]
 
+{ #category : 'API' }
+ASemanticInterpreter >> pushBlock: aBasicBlock [ 
+	nonLocalReturns at: aBasicBlock put: context sendingContext. 
+	self push: aBasicBlock
+]
+
 { #category : 'initialization' }
 ASemanticInterpreter >> reset [
 
@@ -215,6 +222,7 @@ ASemanticInterpreter >> reset [
 	context := nil.
 	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
+	nonLocalReturns := IdentityDictionary new.
 	lastClass := 0.
 	blockValueSymbols := { 
 		#value.
@@ -310,6 +318,15 @@ ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 	stackPointer := stackPointer + selfOffset.
 	stackArray at: stackPointer put: anObject.
 	pc := context returnPC
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> returnNonLocal: anObject [ 
+	| blockDefiningContext |
+	blockDefiningContext := nonLocalReturns at: pc basicBlock.
+	stackPointer := stackArray size - (stackArray indexOf: blockDefiningContext).
+	stackArray at: stackPointer put: anObject.
+	pc := blockDefiningContext returnPC
 ]
 
 { #category : 'accessing' }

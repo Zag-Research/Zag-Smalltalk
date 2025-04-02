@@ -12,11 +12,6 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
-{ #category : 'API' }
-ASCInlineClosureBlock >> branchReturnTop: aBasicBlock [ 
-	self addOperation: (ASCBranchReturnTop with: branchBlock)
-]
-
 { #category : 'accessing' }
 ASCInlineClosureBlock >> locals: locals parameters: arguments [
 	arguments do: [ :each | self initParameterNamed: each ].

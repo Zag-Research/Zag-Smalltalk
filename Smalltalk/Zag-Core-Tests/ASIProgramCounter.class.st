@@ -13,6 +13,11 @@ Class {
 	#tag : 'SemanticInterpreter'
 }
 
+{ #category : 'printing' }
+ASIProgramCounter >> basicBlock [
+ ^ basicBlock 
+]
+
 { #category : 'interpreting' }
 ASIProgramCounter >> doForInterpreter: anInterpreter [
 

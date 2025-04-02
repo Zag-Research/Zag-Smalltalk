@@ -226,8 +226,9 @@ ASCompilerInlineTest >> testBarInlined [
 { #category : 'tests' }
 ASCompilerInlineTest >> testBlockReturnEasyInline [
 	"
-blockReturn: p1
-	true ifTrue: [ ^ 42 ]
+blockReturnEasy
+
+	true ifTrue: [ ^ 42 ] ifFalse: [ ^ self ]
 "
 
 "	(ASNoOutput withInlining compileMethod:
