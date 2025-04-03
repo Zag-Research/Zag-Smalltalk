@@ -55,6 +55,9 @@ const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
 const LLVMValueRef = LLVMtype.LLVMValueRef;
 
 pub const moduleName = "llvm";
+
+// Compiling: zig build -Dllvm-path='./zag/primitives/llvm.zig'
+
 pub fn main() void {}
 fn Converter(T: type) type {
     const tag = switch (T) {
