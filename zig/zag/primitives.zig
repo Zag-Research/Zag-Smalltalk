@@ -93,6 +93,8 @@ const Module = struct {
         number: u32,
         primitive: ?ThreadedFn.Fn,
         primitiveError: ?ThreadedFn.Fn,
+        moduleInit: ?*const fn () void,
+        method: ?*const execute.CompiledMethod,
     };
     fn init(M: anytype) Module {
         return Module{ .name = M.moduleName, .primitives = &findPrimitives(M) };
@@ -128,6 +130,8 @@ const Module = struct {
                                 .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0,
                                 .primitive = if (@hasDecl(ds, "primitive")) &@field(ds, "primitive") else null,
                                 .primitiveError = if (@hasDecl(ds, "primitiveError")) &@field(ds, "primitiveError") else null,
+                                .moduleInit = if (@hasDecl(ds, "moduleInit")) &@field(ds, "moduleInit") else null,
+                                .method = if (@hasDecl(ds, "method")) &@field(ds, "method") else null,
                             };
                             n += 1;
                         }
@@ -160,6 +164,7 @@ const Module = struct {
 };
 const testModule = if (config.is_test) struct {
     const moduleName = "test module";
+    const moduleString = stringOf(moduleName).init().obj();
     const zName = stringOf("primitive998").init().obj();
     const primitiveNotDefined = stringOf("primitiveNotDefined").init().obj();
     pub const primitive998 = struct {
@@ -191,344 +196,345 @@ fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Re
     // the following should be exactly the same, but causes an error instead
     // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
-pub const primitive = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (extra.isEncoded()) {
-            const newPc = pc.next();
-            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
-        }
-        const primNumber = pc.uint();
-        const method = extra.method;
-        if (Module.findNumberedPrimitive(primNumber)) |prim| {
-            if (prim.primitive) |p| {
-                method.executeFn = p;
-                method.jitted = p;
-            } else if (config.is_test)
-                @panic("found primitive:error: need primitive:");
-        } else {
-            method.executeFn = noPrim;
-            method.jitted = noPrim;
-        }
-        return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
-    }
-    test "primitive found" {
-        try Execution.runTest(
-            "primitive: found",
-            .{
-                tf.primitive,
-                998,
-                tf.pushLiteral,
-                99,
-            },
-            &[_]Object{
-                Object.from(42),
-                Object.from(17),
-            },
-            &[_]Object{
-                False,
-            },
-        );
-    }
-    test "primitive with error" {
-        try Execution.runTest(
-            "primitive: with error",
-            .{
-                tf.primitive,
-                998,
-                tf.pushLiteral,
-                99,
-            },
-            &[_]Object{
-                True,
-                Object.from(17),
-            },
-            &[_]Object{
-                Object.from(99),
-                True,
-                Object.from(17),
-            },
-        );
-    }
-    test "primitive not found" {
-        try Execution.runTest(
-            "primitive: not found",
-            .{
-                tf.primitive,
-                999,
-                tf.pushLiteral,
-                99,
-            },
-            &[_]Object{
-                Object.from(42),
-                Object.from(17),
-            },
-            &[_]Object{
-                Object.from(99),
-                Object.from(42),
-                Object.from(17),
-            },
-        );
-    }
-};
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = sp.push(Nil);
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
-pub const primitiveError = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (extra.isEncoded()) {
-            const newPc = pc.next();
-            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+
+pub const threadedFunctions = struct {
+    pub const primitive = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.isEncoded()) {
+                const newPc = pc.next();
+                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+            }
+            const primNumber = pc.uint();
+            const method = extra.method;
+            if (Module.findNumberedPrimitive(primNumber)) |prim| {
+                if (prim.primitive) |p| {
+                    method.executeFn = p;
+                    method.jitted = p;
+                } else if (config.is_test)
+                    @panic("found primitive:error: need primitive:");
+            } else {
+                method.executeFn = noPrim;
+                method.jitted = noPrim;
+            }
+            return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
         }
-        const primNumber = pc.uint();
-        if (Module.findNumberedPrimitive(primNumber)) |prim| {
-            if (prim.primitiveError) |p| {
-                const method = extra.method;
-                method.executeFn = p;
-                method.jitted = p;
-                return @call(tailCall, p, .{ pc, sp, process, context, extra });
-            } else if (config.is_test)
-                @panic("found primitive: need primitive:error:");
+        test "primitive found" {
+            try Execution.runTest(
+                "primitive: found",
+                .{
+                    tf.primitive,
+                    998,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    Object.from(42),
+                    Object.from(17),
+                },
+                &[_]Object{
+                    False,
+                },
+            );
         }
-        const method = extra.method;
-        method.executeFn = noPrimWithError;
-        method.jitted = noPrimWithError;
-        return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
-    }
-    test "primitive:error: found" {
-        try Execution.runTest(
-            "primitive:error: found",
-            .{
-                tf.primitiveError,
-                998,
+        test "primitive with error" {
+            try Execution.runTest(
+                "primitive: with error",
+                .{
+                    tf.primitive,
+                    998,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    True,
+                    Object.from(17),
+                },
+                &[_]Object{
+                    Object.from(99),
+                    True,
+                    Object.from(17),
+                },
+            );
+        }
+        test "primitive not found" {
+            try Execution.runTest(
+                "primitive: not found",
+                .{
+                    tf.primitive,
+                    999,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    Object.from(42),
+                    Object.from(17),
+                },
+                &[_]Object{
+                    Object.from(99),
+                    Object.from(42),
+                    Object.from(17),
+                },
+            );
+        }
+    };
+    pub const primitiveError = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.isEncoded()) {
+                const newPc = pc.next();
+                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+            }
+            const primNumber = pc.uint();
+            if (Module.findNumberedPrimitive(primNumber)) |prim| {
+                if (prim.primitiveError) |p| {
+                    const method = extra.method;
+                    method.executeFn = p;
+                    method.jitted = p;
+                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
+                } else if (config.is_test)
+                    @panic("found primitive: need primitive:error:");
+            }
+            const method = extra.method;
+            method.executeFn = noPrimWithError;
+            method.jitted = noPrimWithError;
+            return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
+        }
+        test "primitive:error: found" {
+            try Execution.runTest(
+                "primitive:error: found",
+                .{
+                    tf.primitiveError,
+                    998,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    Object.from(42),
+                    Object.from(17),
+                },
+                &[_]Object{
+                    False,
+                },
+            );
+        }
+        test "primitive:error: with error" {
+            try Execution.runTest(
+                "primitive:error: with error",
+                .{
+                    tf.primitiveError,
+                    998,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    True,
+                    Object.from(17),
+                },
+                &[_]Object{
+                    Object.from(99),
+                    Sym.value,
+                    True,
+                    Object.from(17),
+                },
+            );
+        }
+        test "primitive:error: not found" {
+            try Execution.runTest(
+                "primitive:error: not found",
+                .{
+                    tf.primitiveError,
+                    999,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    Object.from(42),
+                    Object.from(17),
+                },
+                &[_]Object{
+                    Object.from(99),
+                    Nil,
+                    Object.from(42),
+                    Object.from(17),
+                },
+            );
+        }
+    };
+    pub const primitiveModule = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.isEncoded()) {
+                const newPc = pc.next().next();
+                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+            }
+            if (pc.object().arrayAsSlice(u8) catch null) |primName| {
+                if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
+                    if (Module.findNamedPrimitive(modName, primName)) |prim| {
+                        if (prim.primitive) |p| {
+                            const method = extra.method;
+                            method.executeFn = p;
+                            method.jitted = p;
+                            return @call(tailCall, p, .{ pc, sp, process, context, extra });
+                        } else if (config.is_test)
+                            @panic("found primitive: need primitive:error:");
+                    }
+                }
+            }
+            const method = extra.method;
+            method.executeFn = noPrim;
+            method.jitted = noPrim;
+            return @call(tailCall, noPrim, .{ pc, sp, process, context, extra });
+        }
+        const primitive998 = testModule.zName;
+        const primitiveNotDefined = testModule.primitiveNotDefined;
+        test "primitive:module: found" {
+            var exe = Execution.initTest("primitive:module: found", .{
+                tf.primitiveModule,
+                "0name",
+                "1module",
                 tf.pushLiteral,
                 99,
-            },
-            &[_]Object{
+            });
+            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
                 Object.from(42),
                 Object.from(17),
-            },
-            &[_]Object{
+            });
+            try expectEqualSlices(Object, &[_]Object{
                 False,
-            },
-        );
-    }
-    test "primitive:error: with error" {
-        try Execution.runTest(
-            "primitive:error: with error",
-            .{
-                tf.primitiveError,
-                998,
+                }, exe.stack());
+        }
+        test "primitive:module: with error" {
+            var exe = Execution.initTest("primitive:module: with error", .{
+                tf.primitiveModule,
+                "0name",
+                "1module",
                 tf.pushLiteral,
                 99,
-            },
-            &[_]Object{
+            });
+            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
                 True,
                 Object.from(17),
-            },
-            &[_]Object{
+            });
+            try expectEqualSlices(Object, &[_]Object{
+                Object.from(99),
+                True,
+                Object.from(17),
+                }, exe.stack());
+        }
+        test "primitive:module: not found" {
+            var exe = Execution.initTest("primitive:module: not found", .{
+                tf.primitiveModule,
+                "0name",
+                "1module",
+                tf.pushLiteral,
+                99,
+            });
+            try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
+                Object.from(42),
+                Object.from(17),
+            });
+            try expectEqualSlices(Object, &[_]Object{
+                Object.from(99),
+                Object.from(42),
+                Object.from(17),
+                }, exe.stack());
+        }
+    };
+    pub const primitiveModuleError = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.isEncoded()) {
+                const newPc = pc.next().next();
+                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+            }
+            if (pc.object().arrayAsSlice(u8) catch null) |primName| {
+                if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
+                    if (Module.findNamedPrimitive(modName, primName)) |prim| {
+                        if (prim.primitiveError) |p| {
+                            const method = extra.method;
+                            method.executeFn = p;
+                            method.jitted = p;
+                            return @call(tailCall, p, .{ pc, sp, process, context, extra });
+                        } else if (config.is_test)
+                            @panic("found primitive: need primitive:error:");
+                    }
+                }
+            }
+            const method = extra.method;
+            method.executeFn = noPrimWithError;
+            method.jitted = noPrimWithError;
+            return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
+        }
+        const primitive998 = testModule.zName;
+        const primitiveNotDefined = testModule.primitiveNotDefined;
+        test "primitive:module:error: found" {
+            var exe = Execution.initTest("primitive:module:error: found", .{
+                tf.primitiveModuleError,
+                "0name",
+                "1module",
+                tf.pushLiteral,
+                99,
+            });
+            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
+                Object.from(42),
+                Object.from(17),
+            });
+            try expectEqualSlices(Object, &[_]Object{
+                False,
+                }, exe.stack());
+        }
+        test "primitive:module:error: with error" {
+            var exe = Execution.initTest("primitive:module:error: with error", .{
+                tf.primitiveModuleError,
+                "0name",
+                "1module",
+                tf.pushLiteral,
+                99,
+            });
+            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
+                True,
+                Object.from(17),
+            });
+            try expectEqualSlices(Object, &[_]Object{
                 Object.from(99),
                 Sym.value,
                 True,
                 Object.from(17),
-            },
-        );
-    }
-    test "primitive:error: not found" {
-        try Execution.runTest(
-            "primitive:error: not found",
-            .{
-                tf.primitiveError,
-                999,
+                }, exe.stack());
+        }
+        test "primitive:module:error: not found" {
+            var exe = Execution.initTest("primitive:module:error: not found", .{
+                tf.primitiveModuleError,
+                "0name",
+                "1module",
                 tf.pushLiteral,
                 99,
-            },
-            &[_]Object{
+            });
+            try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
+            try exe.execute(&[_]Object{
                 Object.from(42),
                 Object.from(17),
-            },
-            &[_]Object{
+            });
+            try expectEqualSlices(Object, &[_]Object{
                 Object.from(99),
                 Nil,
                 Object.from(42),
                 Object.from(17),
-            },
-        );
-    }
-};
-const moduleString = stringOf("test module").init().obj();
-pub const primitiveModule = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (extra.isEncoded()) {
-            const newPc = pc.next().next();
-            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+                }, exe.stack());
         }
-        if (pc.object().arrayAsSlice(u8) catch null) |primName| {
-            if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
-                if (Module.findNamedPrimitive(modName, primName)) |prim| {
-                    if (prim.primitive) |p| {
-                        const method = extra.method;
-                        method.executeFn = p;
-                        method.jitted = p;
-                        return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                    } else if (config.is_test)
-                        @panic("found primitive: need primitive:error:");
-                }
-            }
-        }
-        const method = extra.method;
-        method.executeFn = noPrim;
-        method.jitted = noPrim;
-        return @call(tailCall, noPrim, .{ pc, sp, process, context, extra });
-    }
-    const primitive998 = testModule.zName;
-    const primitiveNotDefined = testModule.primitiveNotDefined;
-    test "primitive:module: found" {
-        var exe = Execution.initTest("primitive:module: found", .{
-            tf.primitiveModule,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            Object.from(42),
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            False,
-        }, exe.stack());
-    }
-    test "primitive:module: with error" {
-        var exe = Execution.initTest("primitive:module: with error", .{
-            tf.primitiveModule,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            True,
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            Object.from(99),
-            True,
-            Object.from(17),
-        }, exe.stack());
-    }
-    test "primitive:module: not found" {
-        var exe = Execution.initTest("primitive:module: not found", .{
-            tf.primitiveModule,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            Object.from(42),
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            Object.from(99),
-            Object.from(42),
-            Object.from(17),
-        }, exe.stack());
-    }
-};
-pub const primitiveModuleError = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (extra.isEncoded()) {
-            const newPc = pc.next().next();
-            return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
-        }
-        if (pc.object().arrayAsSlice(u8) catch null) |primName| {
-            if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
-                if (Module.findNamedPrimitive(modName, primName)) |prim| {
-                    if (prim.primitiveError) |p| {
-                        const method = extra.method;
-                        method.executeFn = p;
-                        method.jitted = p;
-                        return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                    } else if (config.is_test)
-                        @panic("found primitive: need primitive:error:");
-                }
-            }
-        }
-        const method = extra.method;
-        method.executeFn = noPrimWithError;
-        method.jitted = noPrimWithError;
-        return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
-    }
-    const primitive998 = testModule.zName;
-    const primitiveNotDefined = testModule.primitiveNotDefined;
-    test "primitive:module:error: found" {
-        var exe = Execution.initTest("primitive:module:error: found", .{
-            tf.primitiveModuleError,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            Object.from(42),
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            False,
-        }, exe.stack());
-    }
-    test "primitive:module:error: with error" {
-        var exe = Execution.initTest("primitive:module:error: with error", .{
-            tf.primitiveModuleError,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitive998.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            True,
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            Object.from(99),
-            Sym.value,
-            True,
-            Object.from(17),
-        }, exe.stack());
-    }
-    test "primitive:module:error: not found" {
-        var exe = Execution.initTest("primitive:module:error: not found", .{
-            tf.primitiveModuleError,
-            "0name",
-            "1module",
-            tf.pushLiteral,
-            99,
-        });
-        try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), moduleString.asObject() });
-        try exe.execute(&[_]Object{
-            Object.from(42),
-            Object.from(17),
-        });
-        try expectEqualSlices(Object, &[_]Object{
-            Object.from(99),
-            Nil,
-            Object.from(42),
-            Object.from(17),
-        }, exe.stack());
-    }
-};
+    };
 
-pub const threadedFns = struct {
-    pub usingnamespace @import("primitives/Object.zig");
+
+    // pub usingnamespace @import("primitives/Object.zig").threadedFns;
     // pub usingnamespace @import("primitives/Smallinteger.zig").threadedFns;
     // pub usingnamespace @import("primitives/Behavior.zig").threadedFns;
-    // pub usingnamespace @import("primitives/BlockClosure.zig").threadedFns;
+    pub usingnamespace @import("primitives/BlockClosure.zig").threadedFns;
     // pub usingnamespace @import("primitives/Boolean.zig").threadedFns;
 };
 pub fn init() void {
@@ -537,4 +543,7 @@ pub fn init() void {
     // @import("primitives/Behavior.zig").init();
     // @import("primitives/BlockClosure.zig").init();
     // @import("primitives/Boolean.zig").init();
+}
+test "Verify primitives loaded" {
+
 }

@@ -126,7 +126,7 @@ const noLLVM = true;
 
 pub const llvmString = stringOf("llvm").init().obj();
 
-pub const createBuilderObject = struct {
+pub const makeBuilder = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const builder: LLVMBuilderRef = null; // should be calling the LLVM creator function
@@ -134,10 +134,10 @@ pub const createBuilderObject = struct {
         sp.top = BuilderRef.asObject(builder);
         return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
-    test "createBuilderObject" {
+    test "makeBuilder" {
         if (noLLVM) return error.SkipZigTest;
-        const name = stringOf("createBuilderObject").init().asObject();
-        var exe = Execution.initTest("llvm createBuilderObject", .{
+        const name = stringOf("makeBuilder").init().asObject();
+        var exe = Execution.initTest("llvm makeBuilder", .{
             tf.@"primitive:module:",
             "0name",
             "1llvm",
@@ -163,13 +163,15 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const self = sp.at(4);
+        const instVars = self.instVars();
         //get builder instance from module?
-        const builder = BuilderRef.asLLVM(sp.at(4)) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const builder = BuilderRef.asLLVM(instVars[0])  catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(i64);
         const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const newSp = sp.unreserve(3);
-        const module: LLVMModuleRef = undefined;
+        const module = ModuleRef.asLLVM(instVars[1])  catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
         sp.top = ValueRef.asObject(singleIndexGEP(@ptrCast(builder), tagObjectTy, registerToModify, offset, name));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });

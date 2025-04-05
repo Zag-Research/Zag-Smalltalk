@@ -377,7 +377,7 @@ pub const CompiledMethod = struct {
     jitted: ?ThreadedFn.Fn,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
-    const codeSize = 4;
+    const codeSize = 1;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
     comptime {
         std.debug.assert(@offsetOf(Self, "header") == 0);
@@ -390,7 +390,17 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn)} ++ .{undefined} ** 3,
+            .code = .{Code.primOf(methodFn)},
+        };
+    }
+    pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: ThreadedFn.Fn) Self {
+        return Self{
+            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
+            .stackStructure = StackStructure{},
+            .signature = Signature.from(name, class),
+            .executeFn = methodFn,
+            .jitted = methodFn,
+            .code = .{Code.primOf(methodFn)}, //TODO: should be something like primitiveFailed
         };
     }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
@@ -501,7 +511,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
     const codes = counts + (if (config.is_test) 1 else 0);
     return struct { // structure must exactly match CompiledMethod
         header: HeapHeader,
-        stackStructure: object.PackedObject, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
+        stackStructure: StackStructure, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
         signature: Signature,
         executeFn: ThreadedFn.Fn,
         jitted: ThreadedFn.Fn,
@@ -521,7 +531,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             var method = Self{
                 .header = header,
                 .signature = Signature.from(name, class),
-                .stackStructure = object.PackedObject.from3(locals, maxStack, locals + name.numArgs()),
+                .stackStructure = StackStructure{.locals = locals, .maxStackNeeded = maxStack, .selfOffset = locals + name.numArgs()},
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,
@@ -888,6 +898,9 @@ pub const Execution = struct {
             }
             pub fn stack(self: *const Self) []Object {
                 return self.process.getContext().stack(self.process.getSp(), &self.process);
+            }
+            pub fn getHeap(self: *const Self) []HeapObject {
+                return self.process.getHeap();
             }
             pub fn getProcess(self: *const Self) *Process {
                 return &self.process;

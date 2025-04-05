@@ -140,16 +140,19 @@ pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) ContextPtr {
 pub inline fn isOnStack(self: *const Self) bool {
     return self.header.isOnStack();
 }
-pub inline fn endOfStack(self: *const Context, process: *const Process) SP {
-    if (!self.isOnStack()) return process.endOfStack();
+pub inline fn endOfStack(self: *const Context) ?SP {
+    if (!self.isOnStack()) return null;
     return @ptrCast(@constCast(self));
 }
+pub inline fn callerStack(self: *const Context) SP {
+    return @constCast(@ptrCast(&self.temps));
+}
 inline fn tempSize(self: *const Context, process: *const Process) usize {
-    return (@intFromPtr(self.previous().endOfStack(process)) - @intFromPtr(&self.temps)) / @sizeOf(Object) - 1;
+    return (@intFromPtr(self.previous().endOfStack() orelse process.endOfStack()) - @intFromPtr(&self.temps)) / @sizeOf(Object) - 1;
 }
 pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
     if (self.isOnStack())
-        return sp.slice((@intFromPtr(self.endOfStack(process)) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
+        return sp.slice((@intFromPtr(self.endOfStack() orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
     return process.getStack(sp);
 }
 pub inline fn allLocals(self: *const Context, process: *const Process) []Object {

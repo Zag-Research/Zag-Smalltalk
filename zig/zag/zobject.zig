@@ -69,11 +69,11 @@ pub const ClassIndex = enum(u16) {
     ThunkReturnImmediate,
     ThunkReturnCharacter,
     ThunkReturnFloat,
-    ThunkHeap,
     ThunkLocal,
-    ThunkInstance,
     BlockAssignLocal,
+    ThunkInstance,
     BlockAssignInstance,
+    ThunkHeap,
     ThunkImmediate,
     ThunkFloat,
     SmallInteger,
@@ -129,11 +129,11 @@ pub const ClassIndex = enum(u16) {
         ThunkReturnImmediate,
         ThunkReturnCharacter,
         ThunkReturnFloat,
-        ThunkHeap,
         ThunkLocal,
-        ThunkInstance,
         BlockAssignLocal,
+        ThunkInstance,
         BlockAssignInstance,
+        ThunkHeap,
         ThunkImmediate,
         ThunkFloat,
         SmallInteger,
@@ -142,9 +142,14 @@ pub const ClassIndex = enum(u16) {
         True,
         Character,
         LLVM,
-        reserved = 31,
         inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
+        }
+        pub fn thunk16(self: Compact, addr: u64, tag: u8) Object {
+            return Object.oImm(self, @truncate((addr << 8) | tag));
+        }
+        pub fn thunk8(self: Compact, value: u64) Object {
+            return Object.oImm(self, @truncate(value));
         }
     };
     pub inline fn compact(ci: ClassIndex) Compact {
@@ -245,10 +250,10 @@ const TagObject = packed struct(u64) {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
     pub inline fn isHeap(self: Object) bool {
-        return (self.rawU() & 7) == 0;
+        return self.tag == .heap;
     }
     pub inline fn isImmediate(self: Object) bool {
-        return (self.rawU() & 7) == 1;
+        return self.tag == .immediates;
     }
     pub inline fn isDouble(self: Object) bool {
         return (self.rawU() & 6) != 0;
@@ -284,7 +289,7 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn hasPointer(self: Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
-        return bits <= math.rotr(TagAndClassType, oImm(.BlockAssignInstance, 0).tagbits(), 3) and bits != 0;
+        return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
     }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
@@ -387,7 +392,7 @@ const TagObject = packed struct(u64) {
         return self.which_class(true) == .String;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return self.isHeap() and self != Object.Nil;
+        return if (self.isHeap()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
@@ -525,7 +530,8 @@ const ObjectFunctions = struct {
         return @as(HeapObject, @bitCast(@as(u64, 0)));
     }
     pub fn instVars(self: Object) []Object {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars();
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars() catch
+            return &[0]Object{};
         return &[0]Object{};
     }
     pub fn asZeroTerminatedString(self: Object, target: []u8) ![*:0]u8 {
@@ -605,7 +611,7 @@ const ObjectFunctions = struct {
             },
             .Character => writer.print("${c}", .{self.to(u8)}),
             .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
-            .Float => writer.print("{}(0x{x:0>16})", .{ self.to(f64), self.rawU() }),
+            .Float => writer.print("{}", .{ self.to(f64) }),
             else => {
                 try writer.print("{{?0x{x:0>16}}}", .{self.rawU()});
                 //@panic("format for unknown class");

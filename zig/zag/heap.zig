@@ -2,7 +2,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
 const zag = @import("zag.zig");
-const config = zag.config;
+const config = zag.config;  
+const trace = config.trace;  
 const debugError = false;
 const object = if (debugError) struct {
     const ClassIndex = enum(u16) { String };
@@ -20,7 +21,7 @@ const True = object.True;
 const ClassIndex = object.ClassIndex;
 const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
-const inversePhi24 = utilities.inversePhi24;
+const inversePhi24 = utilities.inversePhi(u24);
 const assert = std.debug.assert;
 //const compileObject = zag.execute.compileObject;
 //const Sym = zag.symbol.symbols;
@@ -43,10 +44,11 @@ pub const Format = enum(u7) {
     indexedWithPointers,
     externalWithPointers,
     externalWeakWithPointers, // only this and following have weak queue link
-    indexedWeakWithPointers,
+    indexedWeakWithPointers, 
     _,
     comptime {
-        assert(@intFromEnum(Format.notIndexable) == 128 - 16);
+        assert(@intFromEnum(Format.notIndexable) == 128 - 16); 
+        assert(@intFromEnum(Format.indexedWeakWithPointers) == 127); 
     }
     const Self = @This();
     const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
@@ -90,6 +92,7 @@ pub const Format = enum(u7) {
         return self.operations().size(self, header, obj);
     }
     pub inline fn pointerIterator(self: Self, header: HeapHeader, obj: *HeapObject) ?HeapObjectPtrIterator {
+        trace("pointerIterator: {} {}\n",.{ self, self.operations()});
         if (self.operations().iterator) |iteratorFn|
             return iteratorFn(header, obj);
         return null;
@@ -187,7 +190,7 @@ const HeapOperations = struct {
     array: *const fn (Format, HeapHeader, *const HeapObject, usize) HeapOperationError![]Object = notArray,
     instVars: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError![]Object = noInstVars,
     size: *const fn (Format, HeapHeader, *const HeapObject) HeapOperationError!usize = noSize,
-    iterator: ?*const fn (HeapHeader, *const HeapObject) HeapObjectPtrIterator = null,
+    iterator: ?*const fn (HeapHeader, *const HeapObject) ?HeapObjectPtrIterator = null,
     instVarWithPtr: Format = .free,
     inline fn set(ops: *[128]HeapOperations, format: Format, tuple: HeapOperations) void {
         const idx = @intFromEnum(format);
@@ -214,13 +217,15 @@ const HeapOperations = struct {
             };
         }
         set(&ops, .notIndexable, .{
-            .instVars = justInstVars,
-        });
+            .instVars = justInstVars, 
+            .iterator = HeapObjectPtrIterator.iteratorAll, 
+        }); 
         //indexedNonObject,
         //externalNonObject,
         set(&ops, .directIndexed, .{
             .array = directArray,
             .size = directSize,
+            .iterator = HeapObjectPtrIterator.iteratorAll, 
         });
         //indexed,
         //external,
@@ -233,14 +238,14 @@ const HeapOperations = struct {
         return false; // ToDo
     }
     fn directArray(_: Format, header: HeapHeader, obj: *const HeapObject, _: usize) HeapOperationError![]Object {
-        return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. header.length + 1];
+        return obj.asObjectArray()[0 .. header.length]; 
     }
     fn directSize(_: Format, header: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return header.length;
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         if (format.asU7() > 0 and elementSize != 1) return error.wrongElementSize;
-        return @as([*]Object, @constCast(@ptrCast(obj)))[1 .. format.asU7() + 1];
+        return obj.asObjectArray()[0 .. format.asU7()];
     }
     fn byteSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return format.asU7();
@@ -251,8 +256,8 @@ const HeapOperations = struct {
     fn noInstVars(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
         return &[0]Object{};
     }
-    fn justInstVars(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        return &[0]Object{};
+    fn justInstVars(_: Format, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
+        return obj.asObjectArray()[0 .. header.length]; 
     }
     fn noSize(_: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
         return error.notIndexable;
@@ -283,38 +288,23 @@ pub const HeapObjectPtrIterator = struct {
     fn notSpecial(_: *Self) ?*Object {
         @panic("special with no special function");
     }
-    pub fn iterator(self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
-        const head = self.header;
-        if (head.forwardedTo()) |realSelf| {
-            return realSelf.iterator_(realSelf.header());
-        } else return self.iterator_(head);
+    pub fn iteratorAll(head: HeapHeader, self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
+        const oa = self.start() + 1;
+        return .{
+            .nextPointer = remainingPointers,
+            .scanObject = self,
+            .current = oa,
+            .beyond = oa + head.length,
+        };
     }
-    inline fn iterator_(self: HeapObjectConstPtr, head: HeapHeader) ?HeapObjectPtrIterator {
-        const format = head.format;
-        if (!format.hasPointers()) return null;
-        switch (format.base(0)) {
-            .notObject => return null,
-            .notIndexable, .directIndexed => {
-                const oa = self.start();
-                return .{
-                    .nextPointer = remainingPointers,
-                    .scanObject = self,
-                    .current = oa,
-                    .beyond = oa + head.length,
-                };
-            },
-            .special => {
-                const oa = self.start();
-                return .{
-                    .nextPointer = specials[@intFromEnum(head.classIndex)],
-                    .scanObject = self,
-                    .current = oa,
-                    .beyond = oa + 1,
-                };
-            },
-            .externalWeakWithPointers, .weakWithPointers => unreachable,
-            else => unreachable,
-        }
+    pub fn iteratorSpecial(head: HeapHeader, self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
+        const oa = self.start() + 1;
+        return .{
+            .nextPointer = specials[@intFromEnum(head.classIndex)], 
+            .scanObject = self, 
+            .current = oa, 
+            .beyond = oa + 1, 
+        };
     }
     fn remainingPointers(self: *Self) ?*Object {
         while (@intFromPtr(self.current) < @intFromPtr(self.beyond)) {
@@ -367,7 +357,10 @@ pub const HeapObjectPtrIterator = struct {
 //     // var o3 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
 //     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
 // }
-pub const AllocationInfo = struct {
+inline fn hashFromPtr(ptr: anytype) u24 {
+    return @truncate((@intFromPtr(ptr) >> 3) *% inversePhi24);  
+}
+ pub const AllocationInfo = struct {
     format: Format,
     nInstVars: u12 = 0,
     footerLength: u12 = 0,
@@ -453,7 +446,7 @@ pub const AllocationInfo = struct {
         };
     }
     pub inline fn initObjectStructure(self: Self, theHeapObject: HeapObjectPtr, classIndex: ClassIndex, age: Age) void {
-        const hash = if (builtin.is_test) 0 else @as(u24, @truncate(@as(u32, @truncate(@intFromPtr(theHeapObject) >> 3)) *% inversePhi24 >> 8));
+        const hash = if (builtin.is_test) 0 else hashFromPtr(theHeapObject);
         theHeapObject.setHeader(self.heapHeader(classIndex, age, hash));
         if (self.footerSetup) |setup|
             setup(self, theHeapObject);
@@ -656,7 +649,15 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn size(self: HeapHeader, obj: HeapObjectConstPtr) !usize {
         return self.format.size(self, obj);
     }
-    const contextHeader: u64 = @bitCast(Self{ .classIndex = .Context, .hash = 0, .format = .special, .age = .onStack, .length = 0 });
+    pub inline fn objectInNursery(self: *HeapHeader, class: ClassIndex, objectSize: u11) void {
+        self.* = .{
+            .classIndex = class,
+            .hash = hashFromPtr(self),
+            .format = .directIndexed,
+            .age = .nursery,
+            .length = objectSize };
+    }
+    const contextHeader: u64 = @bitCast(Self{ .classIndex = .Context, .hash = 0, .format = .special, .age = .onStack, .length = 0 }); 
     pub inline fn contextHeaderOnStack(selfOffset: u16) Self {
         return @as(Self, @bitCast(contextHeader | @as(u64, selfOffset) << 16));
     }
@@ -822,9 +823,6 @@ pub const HeapObject = packed struct {
         };
         return newHp;
     }
-    pub inline fn makeIterator(self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
-        return HeapObjectPtrIterator.iterator(self);
-    }
     pub inline fn prev(self: HeapObjectPtr) Object {
         const ptr = @as([*]Object, @ptrCast(self)) - 1;
         return ptr[0];
@@ -845,8 +843,7 @@ pub const HeapObject = packed struct {
     }
     pub inline fn skipForward(self: HeapObjectConstPtr) [*]HeapObject {
         const head = self.header;
-        const len = head.length;
-        return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * len);
+        return @as([*]HeapObject,@constCast(@ptrCast(self))) + head.length + 1;
     }
     pub inline fn asSlice(maybeForwarded: HeapObjectConstPtr) ![]Object {
         const self = maybeForwarded.forwarded();
@@ -932,6 +929,9 @@ pub const HeapObject = packed struct {
     }
     pub inline fn asObject(self: HeapObjectConstPtr) Object {
         return Object.from(self);
+    }
+    pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {
+        return @bitCast(self.*);
     }
     pub inline fn asObjectConstPtr(self: HeapObjectConstPtr) [*]const Object {
         return @as([*]const Object, @ptrCast(self));

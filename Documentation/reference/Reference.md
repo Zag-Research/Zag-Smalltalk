@@ -2,6 +2,7 @@
 
 ### Smalltalk
 
+- [Rewilding Software Engineering  - currently to Chapter 4](https://medium.com/feenk/rewilding-software-engineering-900ca95ebc8c)
 - [Blue Book](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
 - [Jecel's list of Smalltalks](https://github.com/jeceljr/SmalltalkSurvey)
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)

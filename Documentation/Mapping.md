@@ -105,14 +105,14 @@ An array-like object of 5 elements with 2 instance variables and no pointers wou
 
 And an Array of 768 elements (direct index) would look like:
 
-| Value               | Description                      |
-| ------------------- | -------------------------------- |
-| 300a 71hh hhhh 000A | length=768, format=directIndexed, class=10 (Array) |
-| xxxx xxxx xxxx xxxx | index 1                          |
-| xxxx xxxx xxxx xxxx | index 2                          |
-| xxxx xxxx xxxx xxxx | index 3                          |
-| ...                 | intermediate values              |
-| xxxx xxxx xxxx xxxx | index 768                       | 
+| Value               | Description                                        |     |
+| ------------------- | -------------------------------------------------- | --- |
+| 300a 71hh hhhh 000A | length=768, format=directIndexed, class=10 (Array) |     |
+| xxxx xxxx xxxx xxxx | index 1                                            |     |
+| xxxx xxxx xxxx xxxx | index 2                                            |     |
+| xxxx xxxx xxxx xxxx | index 3                                            |     |
+| ...                 | intermediate values                                |     |
+| xxxx xxxx xxxx xxxx | index 768                                          |     |
 
 And an Array of 2^20 elements would look like:
 

@@ -12,7 +12,7 @@ This provides 61-bit SmallInteger and immediate floats that have an exponent ran
 We extend this slightly, by using all 8 possible tag values:
 - 0: Pointer or `nil`. This is compatible with native 8-byte-aligned pointers, so no conversion is required. This compatibility extends to `nil` being equivalent to `null` in C, C++, Rust, or Zig.
 - 1: immediate values for the classes `SmallInteger`, `Character`, `Symbol`, `True`, `False` as well as several forms of immediate `BlockClosure`s that take 0 or 1 parameters. The next 5 bits are the class number, and the top 56 bits are the information (the integer value or the character Unicode value or the symbol hash code). In some cases, the top 48 bits provide a 48-bit address allowing capture of heap objects, including contexts.
-- 2-7: `Float`. By using 6 tags we can encode all 64-bit floats less than 2.68e154. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 2, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits and add 2; if the result anded with 6 is zero, immediate encoding is not possible, so a reference to a static (`+inf`, `-inf`, or `nan`) or heap-allocated memory object is used. These are both several instructions shorter than Spur and involves no conditional code on decode.
+- 2-7: `Float`. By using 6 tags we can encode all 64-bit floats less than 2.68e154. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 2, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits and add 2; if the result anded with 6 is zero, immediate encoding is not possible, so a reference to a static (`+inf`, `-inf`, or `nan`) or heap-allocated memory object is used. These are both several instructions shorter than Spur and involve no conditional code on decode.
 
 | High 8 bits | Next 24 bits |            |            | Tag        | Type                      |
 | ----------- | ------------ | ---------- | ---------- | ---------- | ------------------------- |
@@ -24,11 +24,11 @@ We extend this slightly, by using all 8 possible tag values:
 | `aaaaaaaa`  | ...          | `aaaaaaaa` | `iiiiiiii` | `00100001` | `ThunkReturnImmediate`    |
 | `aaaaaaaa`  | ...          | `aaaaaaaa` | `cccccccc` | `00101001` | `ThunkReturnCharacter`    |
 | `aaaaaaaa`  | ...          | `aaaaaaaa` | `seeemmmm` | `00110001` | `ThunkReturnFloat`        |
-| `aaaaaaaa`  | ...          | `aaaaaaaa` | `00000000` | `00111001` | `ThunkHeap`               |
-| `aaaaaaaa`  | ...          | `aaaaaaaa` | `llllllll` | `01000001` | `ThunkLocal`              |
+| `aaaaaaaa`  | ...          | `aaaaaaaa` | `llllllll` | `00111001` | `ThunkLocal`              |
+| `aaaaaaaa`  | ...          | `aaaaaaaa` | `iiiiiiii` | `01000001` | `BlockAssignLocal`        |
 | `aaaaaaaa`  | ...          | `aaaaaaaa` | `iiiiiiii` | `01001001` | `ThunkInstance`           |
-| `aaaaaaaa`  | ...          | `aaaaaaaa` | `iiiiiiii` | `01010001` | `BlockAssignLocal`        |
-| `aaaaaaaa`  | ...          | `aaaaaaaa` | `llllllll` | `01011001` | `BlockAssignInstance`     |
+| `aaaaaaaa`  | ...          | `aaaaaaaa` | `llllllll` | `01010001` | `BlockAssignInstance`     |
+| `aaaaaaaa`  | ...          | `aaaaaaaa` | `00000000` | `01011001` | `ThunkHeap`               |
 | `xxxxxxxx`  | ...          | `xxxxxxxx` | `cccccttt` | `01100001` | `ThunkImmediate`          |
 | `eeeeeeee`  | `mmmmmmmm`   | `mmmmmmmm` | `mmmmseee` | `01101001` | `ThunkFloat`              |
 | `xxxxxxxx`  | ...          | `xxxxxxxx` | `xxxxxxxx` | `01110001` | `SmallInteger`            |
