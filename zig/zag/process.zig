@@ -183,7 +183,7 @@ pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: 
     const hop = self.allocSpace(len, sp, context);
     hop.header.objectInNursery(.Array, len);
     const target: HeapObjectArray = @ptrCast(hop);
-    @memcpy(target + 1, @as([]const HeapObject,@ptrCast(slice)));
+    @memcpy(target + 1, @as([]const HeapObject, @ptrCast(slice)));
     return target;
 }
 fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapObjectPtr {
@@ -194,7 +194,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
         head.currHp = newHp;
         return @ptrCast(result);
     }
-    _ = .{sp, context, unreachable};
+    _ = .{ sp, context, unreachable };
 }
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
@@ -234,7 +234,7 @@ pub fn collectNursery(self: *align(1) Self, sp: SP, context: *Context, need: usi
     if (self.freeNursery() >= need) return;
     var total: usize = 0;
     var age = Process.lastNurseryAge;
-    while (age>=0) : ( age -= 1) {
+    while (age >= 0) : (age -= 1) {
         total += ageSizes[age];
         if (total >= need) {
             self.collectNurseryPass(sp, context, ageSizes, age);
@@ -245,9 +245,9 @@ pub fn collectNursery(self: *align(1) Self, sp: SP, context: *Context, need: usi
 }
 fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
     _ = .{ sizes, promoteAge };
-    trace("collectNurseryPass: before\n",.{}); 
+    trace("collectNurseryPass: before\n", .{});
     var scan = self.header().otherHeap;
-    var hp = scan; 
+    var hp = scan;
     var context = contextMutable;
     const endStack = self.endOfStack();
     var sp = originalSp;
@@ -255,26 +255,26 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
     while (context.endOfStack()) |endSP| {
         while (sp.lessThan(endSP)) {
             if (sp.top.asMemoryObject()) |pointer|
-                hp = pointer.copyTo(hp, &sp.top); 
-            sp = sp.drop(); 
+                hp = pointer.copyTo(hp, &sp.top);
+            sp = sp.drop();
         }
         sp = context.callerStack();
         context = context.previous();
     }
-    trace("collectNurseryPass: after contexts\n",.{}); 
+    trace("collectNurseryPass: after contexts\n", .{});
     // find references from the residual stack
     while (sp.lessThan(endStack)) {
         if (sp.top.asMemoryObject()) |pointer|
-            hp = pointer.copyTo(hp, &sp.top); 
-        sp = sp.drop(); 
+            hp = pointer.copyTo(hp, &sp.top);
+        sp = sp.drop();
     }
-    trace("collectNurseryPass: after residual\n",.{}); 
+    trace("collectNurseryPass: after residual\n", .{});
     // find self referencesy
     var count: usize = 10;
     while (@intFromPtr(hp) > @intFromPtr(scan)) {
-        trace("collectNurseryPass: hp={*} scan={*}:{}\n",.{ hp, scan, scan[0] }); 
+        trace("collectNurseryPass: hp={*} scan={*}:{}\n", .{ hp, scan, scan[0] });
         if (scan[0].iterator()) |iter| {
-            trace("collectNurseryPass: iter={}\n",.{ iter }); 
+            trace("collectNurseryPass: iter={}\n", .{iter});
             var it = iter;
             while (it.next()) |objPtr| {
                 if (objPtr.asMemoryObject()) |pointer| {
@@ -288,7 +288,7 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
         scan = scan[0].skipForward();
         count = count - 1;
     }
-    trace("collectNurseryPass: after self references\n",.{}); 
+    trace("collectNurseryPass: after self references\n", .{});
     // swap heaps
     const head = self.header();
     const tempHeap = head.otherHeap;

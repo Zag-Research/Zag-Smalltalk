@@ -133,7 +133,7 @@ const Dispatch = struct {
     //inline
     fn lookupAddress(self: *const Self, signature: Signature) ?*DispatchElement {
         const index = getIndex(signature, self.nMethods);
-        const des: [*]DispatchElement = self.methods() + index; 
+        const des: [*]DispatchElement = self.methods() + index;
         if (DispatchElement.matchOrNil(des, matchSize, signature)) |de|
             return de;
         return null;
@@ -141,7 +141,7 @@ const Dispatch = struct {
     //inline
     fn lookupMethod(self: *Self, signature: Signature) *const CompiledMethod {
         const index = getIndex(signature, self.nMethods);
-        const des: [*]DispatchElement = self.methods() + index; 
+        const des: [*]DispatchElement = self.methods() + index;
         if (DispatchElement.match(des, matchSize, signature)) |method|
             return method;
         unreachable;
@@ -330,9 +330,9 @@ pub const threadedFunctions = struct {
     };
     pub const returnSelf = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            _ = .{ pc, sp, process, context, extra, unreachable }; 
+            _ = .{ pc, sp, process, context, extra, unreachable };
         }
-    }; 
+    };
     pub const returnSelfNoContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const selfOffset = pc.uint();
@@ -489,7 +489,7 @@ const DispatchMethod = struct {
     method: ?*const CompiledMethod,
     pub const empty: DispatchElement = .{ .method = null };
     inline fn match(dea: [*]DispatchElement, comptime matchSize: usize, signature: Signature) ?*const CompiledMethod {
-        inline for (dea[0 .. matchSize]) |de| {
+        inline for (dea[0..matchSize]) |de| {
             if (de.method) |method| {
                 if (method.signature == signature)
                     return method;
@@ -498,7 +498,7 @@ const DispatchMethod = struct {
         return null;
     }
     inline fn matchOrNil(dea: [*]DispatchElement, comptime matchSize: usize, signature: Signature) ?*DispatchElement {
-        inline for (dea[0 .. matchSize]) |de| {
+        inline for (dea[0..matchSize]) |de| {
             if (de.method) |method| {
                 if (method.signature == signature)
                     return de;

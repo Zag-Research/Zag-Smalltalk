@@ -531,7 +531,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             var method = Self{
                 .header = header,
                 .signature = Signature.from(name, class),
-                .stackStructure = StackStructure{.locals = locals, .maxStackNeeded = maxStack, .selfOffset = locals + name.numArgs()},
+                .stackStructure = StackStructure{ .locals = locals, .maxStackNeeded = maxStack, .selfOffset = locals + name.numArgs() },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,

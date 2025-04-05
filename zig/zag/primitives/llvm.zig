@@ -166,12 +166,12 @@ pub const @"register:plus:asName:" = struct {
         const self = sp.at(4);
         const instVars = self.instVars();
         //get builder instance from module?
-        const builder = BuilderRef.asLLVM(instVars[0])  catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const builder = BuilderRef.asLLVM(instVars[0]) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(i64);
         const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const newSp = sp.unreserve(3);
-        const module = ModuleRef.asLLVM(instVars[1])  catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const module = ModuleRef.asLLVM(instVars[1]) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
         sp.top = ValueRef.asObject(singleIndexGEP(@ptrCast(builder), tagObjectTy, registerToModify, offset, name));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });

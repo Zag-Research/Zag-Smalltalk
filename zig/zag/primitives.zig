@@ -404,7 +404,7 @@ pub const threadedFunctions = struct {
             });
             try expectEqualSlices(Object, &[_]Object{
                 False,
-                }, exe.stack());
+            }, exe.stack());
         }
         test "primitive:module: with error" {
             var exe = Execution.initTest("primitive:module: with error", .{
@@ -423,7 +423,7 @@ pub const threadedFunctions = struct {
                 Object.from(99),
                 True,
                 Object.from(17),
-                }, exe.stack());
+            }, exe.stack());
         }
         test "primitive:module: not found" {
             var exe = Execution.initTest("primitive:module: not found", .{
@@ -442,7 +442,7 @@ pub const threadedFunctions = struct {
                 Object.from(99),
                 Object.from(42),
                 Object.from(17),
-                }, exe.stack());
+            }, exe.stack());
         }
     };
     pub const primitiveModuleError = struct {
@@ -486,7 +486,7 @@ pub const threadedFunctions = struct {
             });
             try expectEqualSlices(Object, &[_]Object{
                 False,
-                }, exe.stack());
+            }, exe.stack());
         }
         test "primitive:module:error: with error" {
             var exe = Execution.initTest("primitive:module:error: with error", .{
@@ -506,7 +506,7 @@ pub const threadedFunctions = struct {
                 Sym.value,
                 True,
                 Object.from(17),
-                }, exe.stack());
+            }, exe.stack());
         }
         test "primitive:module:error: not found" {
             var exe = Execution.initTest("primitive:module:error: not found", .{
@@ -526,10 +526,9 @@ pub const threadedFunctions = struct {
                 Nil,
                 Object.from(42),
                 Object.from(17),
-                }, exe.stack());
+            }, exe.stack());
         }
     };
-
 
     // pub usingnamespace @import("primitives/Object.zig").threadedFns;
     // pub usingnamespace @import("primitives/Smallinteger.zig").threadedFns;
@@ -544,6 +543,4 @@ pub fn init() void {
     // @import("primitives/BlockClosure.zig").init();
     // @import("primitives/Boolean.zig").init();
 }
-test "Verify primitives loaded" {
-
-}
+test "Verify primitives loaded" {}

@@ -29,7 +29,7 @@ const tf = zag.threadedFn.Enum;
 const MinSmallInteger: i64 = object.MinSmallInteger;
 const MaxSmallInteger: i64 = object.MaxSmallInteger;
 const stringOf = zag.heap.CompileTimeString;
-const expectEqual = std.testing.expectEqual; 
+const expectEqual = std.testing.expectEqual;
 
 pub fn moduleInit() void {}
 pub const moduleName = "BlockClosure";
@@ -45,8 +45,7 @@ pub const ThunkReturnSmallInteger = struct {
     }
     const name = stringOf("ThunkReturnSmallInteger").init().obj();
     test "ThunkReturnSmallInteger" {
-        var exe = zag.execute.Execution.initTest("ThunkReturnSmallInteger", .{
-        });
+        var exe = zag.execute.Execution.initTest("ThunkReturnSmallInteger", .{});
         try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject() });
     }
     pub var method = zag.execute.CompiledMethod.initInfalliblePrimitive(Sym.value, .ThunkReturnSmallInteger, primitive);
@@ -64,7 +63,7 @@ pub const threadedFns = struct {
         }
         fn encode(obj: Object, sp: SP, process: *Process, context: *Context) Object {
             switch (obj.tag) {
-                .heap => return Compact.ThunkHeap.thunk16(obj.rawU(),0),
+                .heap => return Compact.ThunkHeap.thunk16(obj.rawU(), 0),
                 .immediates => {
                     const original = obj.rawI();
                     const signExtended = original << 8 >> 8;
@@ -78,7 +77,7 @@ pub const threadedFns = struct {
                 },
             }
             const ar = process.allocArray(&[_]Object{obj}, sp, context);
-            return Compact.ThunkInstance.thunk16(@intFromPtr(ar),1);
+            return Compact.ThunkInstance.thunk16(@intFromPtr(ar), 1);
         }
         test "asThunk int" {
             try Execution.runTest(
@@ -98,7 +97,7 @@ pub const threadedFns = struct {
                 "asThunk ptr",
                 .{tf.asThunk},
                 &[_]Object{
-                   obj,
+                    obj,
                 },
                 &[_]Object{
                     Object.makeImmediate(.ThunkHeap, @truncate(obj.rawU() << 8)),
@@ -125,20 +124,20 @@ pub const threadedFns = struct {
                     Object.from(-32767.75),
                 },
                 &[_]Object{
-                    @bitCast(@as(u64,0x0dffff0000000e69)),
+                    @bitCast(@as(u64, 0x0dffff0000000e69)),
                 },
             );
         }
         test "asThunk doesn't fit" {
             var exe = zag.execute.Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
-            const num: f64 = 1.0/5.0;
+            const num: f64 = 1.0 / 5.0;
             const obj = Object.from(num);
             try exe.execute(&[_]Object{obj});
             const result = exe.stack()[0];
             try expectEqual(.ThunkInstance, result.class);
             const exeheap = exe.getHeap();
-            try expectEqual(2,exeheap.len);
-            try expectEqual(obj,exeheap[1].asObjectValue());
+            try expectEqual(2, exeheap.len);
+            try expectEqual(obj, exeheap[1].asObjectValue());
         }
     };
 };
@@ -150,8 +149,7 @@ pub const ThunkImmediate = struct {
     }
     const name = stringOf("ThunkImmediate").init().obj();
     test "ThunkImmediate" {
-        var exe = zag.execute.Execution.initTest("ThunkImmediate", .{
-        });
+        var exe = zag.execute.Execution.initTest("ThunkImmediate", .{});
         try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject() });
     }
     pub var method = zag.execute.CompiledMethod.initInfalliblePrimitive(Sym.value, .ThunkImmediate, primitive);
