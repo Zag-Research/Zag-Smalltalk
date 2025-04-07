@@ -442,13 +442,13 @@ const oldFns = struct {
         const ms = getSignature(pc, sp, null);
         const returnPc = pc.next().returnOffset();
         context.setReturn(returnPc);
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, Extra{ .signature = ms } });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, .{ .signature = ms } });
     }
     fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, Extra{ .signature = getSignature(pc, sp, null) } });
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, .{ .signature = getSignature(pc, sp, null) } });
     }
     pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, Extra{ .signature = getSignature(pc, sp, 0) } });
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, .{ .signature = getSignature(pc, sp, 0) } });
     }
     pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const cM = Dispatch.lookupMethodForClass(extra.signature);

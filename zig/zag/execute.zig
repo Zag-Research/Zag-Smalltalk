@@ -70,6 +70,9 @@ const Stack = struct {
     pub inline fn unreserve(self: SP, n: usize) SP {
         return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * n);
     }
+    pub inline fn delta(self: SP, other: SP) usize {
+        return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
+    }
     pub inline fn array(self: SP) [*]Object {
         return @ptrCast(self);
     }
@@ -105,6 +108,7 @@ pub const Extra = union {
     method: *CompiledMethod,
     object: Object,
     signature: Signature,
+    localsAndStack: *Context.LocalsAndStack,
     pub fn encoded(self: Extra) Extra {
         if (Object.from(self.method).thunkImmediate()) |obj| {
             return .{ .object = obj };
@@ -136,6 +140,7 @@ pub const Extra = union {
             .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
             .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
             .signature => |s| try writer.print("Extra{{.method = {}}}", .{s}),
+            .localsAndStack => |l| try writer.print("Extra{{.localsAndStack = {}}}", .{l}),
         }
     }
 };
@@ -362,10 +367,11 @@ pub const Code = union {
 pub const StackStructure = packed struct {
     tag: Object.TagAndClassType = Object.makeImmediate(.SmallInteger, 0).tagbits(),
     locals: u8 = 0,
-    maxStackNeeded: u16 = 0,
     selfOffset: u8 = 0,
+    reserve: u11 = 0,
     _filler: u24 = 0,
 };
+pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil, Code.end);
 pub const CodeContextPtr = *Context;
 pub const CompiledMethodPtr = *CompiledMethod;
@@ -403,10 +409,16 @@ pub const CompiledMethod = struct {
             .code = .{Code.primOf(methodFn)}, //TODO: should be something like primitiveFailed
         };
     }
+    pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context) StackAndContext {
+        if (!process.canAllocStackSpace(sp, spaceToReserve))
+            return process.spillStack(sp, context);
+        return .{ .sp = sp, .context = context };
+    }
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
+        const new = reserve(self.stackStructure.reserve, sp, process, context);
         const pc = PC.init(&self.code[0]);
-        trace("\nexecute: {} {} {}\n", .{ pc, sp, self.signature });
-        return pc.prim()(pc.next(), sp, process, context, .{ .method = self });
+        trace("\nexecute: {} {} {}\n", .{ pc, new.sp, self.signature });
+        return pc.prim()(pc.next(), new.sp, process, new.context, .{ .method = self });
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
     //     self.signature.setClass(class);
@@ -531,7 +543,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             var method = Self{
                 .header = header,
                 .signature = Signature.from(name, class),
-                .stackStructure = StackStructure{ .locals = locals, .maxStackNeeded = maxStack, .selfOffset = locals + name.numArgs() },
+                .stackStructure = .{ .locals = locals, .reserve = maxStack, .selfOffset = locals + name.numArgs() },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,

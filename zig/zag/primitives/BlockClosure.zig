@@ -198,16 +198,17 @@ pub const inlines = struct {
         return newSp;
     }
     pub inline fn generalClosure(oldSp: SP, process: *Process, val: Object) SP {
-        const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch unreachable; // can't fail because preallocated
-        sp.third = val;
-        return sp;
+        // const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch unreachable; // can't fail because preallocated
+        // sp.third = val;
+        // return sp;
+        _ = .{ oldSp, process, val, unreachable };
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, _: ContextPtr, _: Extra) SP {
-        const flags = block.stackStructure.locals; // TODO: wrong
-        const fields = flags & 63;
-        const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
-        sp.top = sp.at(fields + 1);
+    pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, context: ContextPtr, _: Extra) SP {
+        // const flags = block.stackStructure.locals; // TODO: wrong
+        // const fields = flags & 63;
+        // const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
+        // sp.top = sp.at(fields + 1);
         // sp.top.tag = .nonLocalThunk;
         // sp.atPut(fields, Object.from(block));
         // var f = fields;
@@ -223,7 +224,7 @@ pub const inlines = struct {
         //     op.* = Nil;
         // sp[fields + 1] = heap.HeapObject.simpleStackObject(object.BlockClosure_C, fields, block.selector.hash24()).o();
         // return sp;
-        @panic("fullClosure");
+        _ = .{ oldSp, process, block, context, @panic("fullClosure") };
     }
     fn pushValue(_: PC, sp: SP, _: *Process, _: *Context, _: Object) SP {
         const closure = sp.top.to(heap.HeapObjectPtr);
@@ -334,10 +335,10 @@ pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: 
     const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.rawU()), context, extra);
     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
 }
-pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-    const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
-}
+// pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+//     const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
+//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+// }
 
 // fn testImmutableClosure(process: *Process, value: Extra) !object.Group {
 //     const ee = std.testing.expectEqual;

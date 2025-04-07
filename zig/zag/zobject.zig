@@ -102,6 +102,7 @@ pub const ClassIndex = enum(u16) {
     Error,
     SelectorException,
     PrimitiveFailed,
+    LocalsAndStack,
     testClass = config.max_classes - 1,
     max = 0xffff - 8,
     replace7,

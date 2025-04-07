@@ -162,10 +162,9 @@ fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
 }
-pub inline fn allocStackSpace(self: *align(1) Self, sp: SP, words: usize) !SP {
+pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);
-    if (@intFromPtr(newSp) > @intFromPtr(self)) return newSp;
-    return error.NoSpace;
+    return @intFromPtr(newSp) > @intFromPtr(self);
 }
 pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
     return self.header().currHeap[0..((@intFromPtr(self.header().currHp) - @intFromPtr(self.header().currHeap)) / @sizeOf(Object))];
@@ -173,8 +172,8 @@ pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
 pub inline fn freeNursery(self: *align(1) const Self) usize {
     return (@intFromPtr(self.header().currEnd) - @intFromPtr(self.header().currHp)) / 8;
 }
-pub fn spillStack(self: *align(1) Self, sp: SP, contextMutable: *ContextPtr) SP {
-    if (!contextMutable.*.isOnStack()) return sp;
+pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context) execute.StackAndContext {
+    if (!context.isOnStack()) return .{ .sp = sp, .context = context };
     // if the Context is on the stack, both the Context and the SP will move
     _ = .{ self, @panic("unimplemented") };
 }
@@ -196,7 +195,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
     }
     _ = .{ sp, context, unreachable };
 }
-pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
+pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
         const result = self.header().currHp;
@@ -214,15 +213,17 @@ pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u12, indexed: 
     }
     return error.NeedNurseryCollection;
 }
-pub fn allocStack(self: *align(1) Self, oldSp: SP, classIndex: ClassIndex, iVars: u12, indexed: ?usize, comptime element: type) !SP {
+pub fn allocStackX(self: *align(1) Self, oldSp: SP, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type) !SP {
     const aI = allocationInfo(iVars, indexed, element, false);
     if (aI.objectSize(Process.maxStackObjectSize)) |size| {
-        const sp = try self.allocStackSpace(oldSp, size + 2);
-        const obj: heap.HeapObjectPtr = @ptrCast(sp.array() + 1);
-        sp.top = Object.from(obj);
-        aI.initObjectStructure(obj, classIndex, .onStack);
-        aI.initContents(obj);
-        return sp;
+        if (self.canAllocStackSpace(oldSp, size + 2)) {
+            const sp = oldSp.reserve(size + 2);
+            const obj: heap.HeapObjectPtr = @ptrCast(sp.array() + 1);
+            sp.top = Object.from(obj);
+            aI.initObjectStructure(obj, classIndex, .onStack);
+            aI.initContents(obj);
+            return sp;
+        }
     }
     return error.NoSpace;
 }
@@ -311,7 +312,6 @@ test "nursery allocation" {
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
-    var mutableContext = &initialContext;
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
@@ -323,9 +323,10 @@ test "nursery allocation" {
     try ee(pr.freeNursery(), emptySize - 18);
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject());
-    try ee(@intFromPtr(pr.spillStack(sp, &mutableContext)), @intFromPtr(sp));
-    try ee(@intFromPtr(&initialContext), @intFromPtr(mutableContext));
-    pr.collectNursery(sp, mutableContext, 0);
+    const news = pr.spillStack(sp, &initialContext);
+    try ee(sp, news.sp);
+    try ee(&initialContext, news.context);
+    pr.collectNursery(sp, &initialContext, 0);
     try ee(pr.freeNursery(), emptySize - 12);
     // age test
     // o1 still contains corrected address of o2
