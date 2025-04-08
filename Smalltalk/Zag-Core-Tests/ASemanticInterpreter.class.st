@@ -17,7 +17,7 @@ Class {
 		'stackPointer',
 		'primitiveSuccessStackPointer',
 		'blockValueSymbols',
-		'nonLocalReturns'
+		'blockClosuresToParentContext'
 	],
 	#pools : [
 		'ZagConstants'
@@ -156,13 +156,16 @@ ASemanticInterpreter >> getClass: aClass [
 { #category : 'adding' }
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
-	| classIndex |
+	| classIndex aClass |
 	(blockValueSymbols includes: aSymbol) ifTrue: [ ^anObject ].
-	classIndex := self getClass: anObject class.
+	aClass := blockClosuresToParentContext at: anObject 
+		ifPresent: [ :blockDefiningContext |  blockDefiningContext selfObject class]
+		ifAbsent: [ anObject class ].
+	classIndex := self getClass: aClass.
 	^ ((dispatch at: classIndex) ifNil: [
 		   dispatch at: classIndex put: IdentityDictionary new ])
 		  at: aSymbol
-		  ifAbsentPut: [ self compile: aSymbol for: anObject class ]
+		  ifAbsentPut: [ self compile: aSymbol for: aClass ]
 ]
 
 { #category : 'initialization' }
@@ -211,7 +214,7 @@ ASemanticInterpreter >> push: anObject [
 
 { #category : 'API' }
 ASemanticInterpreter >> pushBlock: aBasicBlock [ 
-	nonLocalReturns at: aBasicBlock put: context sendingContext. 
+	blockClosuresToParentContext at: aBasicBlock put: context sendingContext. 
 	self push: aBasicBlock
 ]
 
@@ -222,7 +225,7 @@ ASemanticInterpreter >> reset [
 	context := nil.
 	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
-	nonLocalReturns := IdentityDictionary new.
+	blockClosuresToParentContext := IdentityDictionary new.
 	lastClass := 0.
 	blockValueSymbols := { 
 		#value.
@@ -323,7 +326,7 @@ ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> returnNonLocal: anObject [ 
 	| blockDefiningContext |
-	blockDefiningContext := nonLocalReturns at: pc basicBlock.
+	blockDefiningContext := blockClosuresToParentContext at: pc basicBlock.
 	stackPointer := stackArray size - (stackArray indexOf: blockDefiningContext).
 	stackArray at: stackPointer put: anObject.
 	pc := blockDefiningContext returnPC
@@ -357,7 +360,7 @@ ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 	self push: anObject.
 	arguments do: [ :arg | self push: arg ].
 	self send: aSymbol.
-	context := ASIContext new returnPC: ASINullProgramCounter new.
+	context := ASIContext new returnPC: ASINullProgramCounter new; selfObject: anObject.
 	self interpret.
 	^ self top
 ]

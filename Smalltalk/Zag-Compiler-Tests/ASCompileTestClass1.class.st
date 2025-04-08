@@ -69,6 +69,12 @@ ASCompileTestClass1 >> block [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCall [
+"bar ^42"
+	^ [ self bar + 5 ] value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockReturn: p1 [
 	true ifTrue: [ ^p1 ]
 ]

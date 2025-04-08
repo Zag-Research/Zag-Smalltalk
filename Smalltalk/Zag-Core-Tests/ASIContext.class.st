@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'returnPC',
 		'sendingContext',
-		'extra'
+		'extra',
+		'selfObject'
 	],
 	#category : 'Zag-Core-Tests-SemanticInterpreter',
 	#package : 'Zag-Core-Tests',
@@ -44,6 +45,18 @@ ASIContext >> returnPC [
 ASIContext >> returnPC: aProgramCounter [
 
 	returnPC := aProgramCounter
+]
+
+{ #category : 'accessing' }
+ASIContext >> selfObject [
+
+	^ selfObject
+]
+
+{ #category : 'accessing' }
+ASIContext >> selfObject: anObject [
+
+	selfObject := anObject
 ]
 
 { #category : 'accessing' }
