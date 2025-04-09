@@ -27,9 +27,7 @@ ASCPushVariable >> dotStringOn: aStream [
 ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	aStream << $(;
-		<< variableLocation name;
-		<< $)
+	variableLocation inspectZagASTOn: aStream 
 ]
 
 { #category : 'testing' }
@@ -53,8 +51,8 @@ ASCPushVariable >> outputTo: anOutput [
 
 { #category : 'printing' }
 ASCPushVariable >> printOn: aStream [
-
-	aStream nextPutAll: variableLocation name.
+	variableLocation printOn: aStream
+	"aStream nextPutAll: variableLocation name."
 ]
 
 { #category : 'stack' }

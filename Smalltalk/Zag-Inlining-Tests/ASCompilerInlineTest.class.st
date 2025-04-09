@@ -224,6 +224,17 @@ ASCompilerInlineTest >> testBarInlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCall [
+	"blockEvaluationWithCall
+		""bar ^42""
+		^ [ bar + 5 ] value"
+	
+	self assertEquivalentSending: #blockEvaluationWithCall to: ASCompileTestClass1 new.
+	
+	
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockReturnEasyInline [
 	"
 blockReturnEasy
