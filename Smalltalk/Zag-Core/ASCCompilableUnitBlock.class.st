@@ -46,7 +46,7 @@ ASCCompilableUnitBlock >> returnSelfFor: aBasicBlock [
 ]
 
 { #category : 'API' }
-ASCCompilableUnitBlock >> returnTopFor: aBasicBlock [
+ASCCompilableUnitBlock >> returnTopFor: aBasicBlock current: current [
 
 	^ self subclassResponsibility
 ]

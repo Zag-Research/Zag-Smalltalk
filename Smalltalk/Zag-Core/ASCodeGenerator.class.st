@@ -511,7 +511,7 @@ ASCodeGenerator >> returnSelf [
 { #category : 'API' }
 ASCodeGenerator >> returnTop [
 
-	^ currentCodeUnit returnTopFor: returnBlock 
+	^ currentCodeUnit returnTopFor: returnBlock current: code
 ]
 
 { #category : 'threaded words' }

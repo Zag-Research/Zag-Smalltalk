@@ -76,8 +76,8 @@ ASCCompiledMethodBlock >> propagateContextFreeFor [
 	^ self propagateContextFreeFor: sourceElements " context is the first thing on the stack"
 ]
 
-{ #category : 'as yet unclassified' }
-ASCCompiledMethodBlock >> returnTopFor: aBasicBlock [ 
+{ #category : 'API' }
+ASCCompiledMethodBlock >> returnTopFor: aBasicBlock current: current [ 
 
 	^ self returnTop
 ]

@@ -157,7 +157,7 @@ ASemanticInterpreter >> getClass: aClass [
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
 	| classIndex aClass |
-	(blockValueSymbols includes: aSymbol) ifTrue: [ ^anObject ].
+	^anObject dispatchGetMethodFor: [
 	aClass := blockClosuresToParentContext at: anObject 
 		ifPresent: [ :blockDefiningContext |  blockDefiningContext selfObject class]
 		ifAbsent: [ anObject class ].
@@ -165,7 +165,7 @@ ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 	^ ((dispatch at: classIndex) ifNil: [
 		   dispatch at: classIndex put: IdentityDictionary new ])
 		  at: aSymbol
-		  ifAbsentPut: [ self compile: aSymbol for: aClass ]
+		  ifAbsentPut: [ self compile: aSymbol for: aClass ]]
 ]
 
 { #category : 'initialization' }

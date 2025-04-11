@@ -46,7 +46,7 @@ ASCInlinedBlock >> initParameterNamed: aSymbol [
 ]
 
 { #category : 'API' }
-ASCInlinedBlock >> returnTopFor: aBasicBlock [ 
+ASCInlinedBlock >> returnTopFor: aBasicBlock current: current [ 
 
 	^ self branchReturnTop: aBasicBlock 
 ]

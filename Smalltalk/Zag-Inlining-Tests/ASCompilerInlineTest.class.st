@@ -227,7 +227,7 @@ ASCompilerInlineTest >> testBarInlined [
 ASCompilerInlineTest >> testBlockEvaluationWithCall [
 	"blockEvaluationWithCall
 		""bar ^42""
-		^ [ bar + 5 ] value"
+		^ [ self bar + 5 ] value"
 	
 	self assertEquivalentSending: #blockEvaluationWithCall to: ASCompileTestClass1 new.
 	

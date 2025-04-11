@@ -71,9 +71,9 @@ ASCCompiledClosureBlock >> printOn: aStream [
 ]
 
 { #category : 'API' }
-ASCCompiledClosureBlock >> returnTopFor: aBasicBlock [
+ASCCompiledClosureBlock >> returnTopFor: aBasicBlock current: current [
 
-	^ self returnTop
+	^ current returnTop
 ]
 
 { #category : 'API' }
