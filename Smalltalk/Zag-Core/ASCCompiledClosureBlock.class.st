@@ -30,6 +30,12 @@ ASCCompiledClosureBlock >> blockClosureClass [
 	^ ASCTopClosureBlock
 ]
 
+{ #category : 'compiling' }
+ASCCompiledClosureBlock >> dispatchGetMethodFor: aBlock [
+
+	^ self
+]
+
 { #category : 'data flow instructions' }
 ASCCompiledClosureBlock >> flowForLocals [
 

@@ -30,6 +30,13 @@ Object >> contents [
 ]
 
 { #category : '*Zag-Core' }
+Object >> dispatchGetMethodFor: aBlock [ 
+
+	
+	^ aBlock value
+]
+
+{ #category : '*Zag-Core' }
 Object >> inspectZagASTOn: aStream [
 	aStream
 		nextPutAll: self class name.
