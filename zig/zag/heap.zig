@@ -684,8 +684,8 @@ pub const HeapHeader = packed struct(u64) {
     // pub inline fn headerPtr(self: anytype) *HeapHeader {
     //     return @as(*HeapHeader,@ptrCast(@as([*]HeapHeader,@ptrFromInt(@intFromPtr(self)))-1));
     // }
-    pub inline fn calc(classIndex: ClassIndex, comptime iVars: u12, hash: u24, age: Age, indexed: ?usize, comptime element: type, makeWeak: bool) !HeapHeader {
-        const aI = comptime AllocationInfo.calc(iVars, indexed, element, makeWeak);
+    pub inline fn calc(classIndex: ClassIndex, iVars: u11, hash: u24, age: Age, indexed: ?usize, comptime element: type, makeWeak: bool) !HeapHeader {
+        const aI = AllocationInfo.calc(iVars, indexed, element, makeWeak);
         if (aI.requiresIndex()) return error.DoesntFit;
         return .{
             .classIndex = classIndex,

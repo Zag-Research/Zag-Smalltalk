@@ -1,6 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
+const expectEqualSlices = std.testing.expectEqualSlices;
 const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
@@ -11,6 +12,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const class = object.ClassIndex;
+const PackedObject = object.PackedObject;
 //const primitives = zag.primitives;
 //const globalArena = zag.globalArena;
 const symbol = zag.symbol;
@@ -26,8 +28,9 @@ const Result = execute.Result;
 const compileMethod = execute.compileMethod;
 const compileObject = execute.compileObject;
 const Execution = execute.Execution;
-const combine14asObject = object.PackedObject.combine14asObject;
-const classes14 = object.PackedObject.classes14;
+const heap = zag.heap;
+const HeapHeader = heap.HeapHeader;
+const object14 = object.PackedObject.object14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 pub const branch = struct {
@@ -77,7 +80,7 @@ pub const classCase = struct {
             "classCase match",
             .{
                 tf.classCase,
-                comptime combine14asObject(.{class.True}),
+                comptime object14(.{class.True}),
                 "true",
                 tf.pushLiteral,
                 17,
@@ -97,7 +100,7 @@ pub const classCase = struct {
             "classCase no match",
             .{
                 tf.classCase,
-                comptime classes14(.{class.True}),
+                comptime object14(.{class.True}),
                 "true",
                 tf.pushLiteral,
                 42,
@@ -117,7 +120,7 @@ pub const classCase = struct {
             "classCase no match - leave",
             .{
                 tf.classCase,
-                comptime combine14asObject(.{ class.True, 0x3fff }),
+                comptime object14(.{ class.True, 0x3fff }),
                 "true",
                 tf.branch,
                 "end",
@@ -288,12 +291,73 @@ pub const pushLiteral = struct {
         );
     }
 };
+pub const pushClosure = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const structure = pc.object().to(PackedObject);
+        const stackedFields = structure.f1;
+        const stackOffset = structure.f2;
+        const stackReserve = structure.f3;
+        _ = stackReserve;
+        const includeContext = structure.f4;
+        const size = stackedFields + 1 + includeContext;
+        var tempBuffer: [10]Object = undefined;
+        const temp = tempBuffer[0..stackedFields]; // ToDo: verify that fits
+        for (temp,sp.slice(stackedFields)) |*t,s|
+            t.* = s;
+        const newSp = sp.reserve(3 + includeContext);
+        const copySize = stackOffset - stackedFields;
+        for (newSp.unreserve(1).slice(copySize),
+             sp.unreserve(stackedFields).slice(copySize)) |*d,s|
+            d.* = s;
+        const closure = newSp.unreserve(copySize + 1).slice(size + 1);
+        for(closure[2 + includeContext ..], temp) |*d,s|
+            d.* = s;
+        closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
+        closure[1] = pc.next().object();
+        if (includeContext != 0) closure[2] = Object.from(context);
+        newSp.top = Object.from(closure.ptr);
+        return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, context, extra });
+    }
+    const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{
+    });
+    test "pushClosure" {
+        var exe = Execution.initTest("pushClosure", .{
+            tf.pushLiteral,
+            42,
+            tf.pushLiteral,
+            True,
+            tf.pushLiteral,
+            Nil,
+            tf.pushLiteral,
+            1,
+            tf.pushClosure,
+            comptime object14(.{3,4,0}),
+            "0block",
+        });
+        try exe.resolve(&[_]Object{ Object.from(& testMethod) });
+        try exe.execute(&[_]Object{
+            Object.from(17),
+        });
+        const stack = exe.stack();
+        try expectEqual(Object.from(&stack[2]),stack[0]);
+        try expectEqual(Object.from(42),stack[1]);
+        const header: HeapHeader = @bitCast(stack[2]);
+        try expectEqual(.onStack,header.age);
+        try expectEqual(4,header.length);
+        try expectEqual(.BlockClosure,header.classIndex);
+        try expectEqual(Object.from(&testMethod),stack[3]);
+        try expectEqual(Object.from(1),stack[4]);
+        try expectEqual(Nil,stack[5]);
+        try expectEqual(True,stack[6]);
+        try expectEqual(Object.from(17),stack[7]);
+    }
+};
 pub const pushStack = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const offset = pc.object().to(u64);
         const newSp = sp.push(sp.at(offset));
         trace("\npushStack: {any}", .{context.stack(newSp, process)});
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
     test "pushStack" {
         try Execution.runTest(
