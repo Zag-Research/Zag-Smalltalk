@@ -75,6 +75,18 @@ ASCompileTestClass1 >> blockEvaluationWithCall [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithSend2 [
+	^ [ 10 + 5 ] value
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithSendWithoutTailCall [
+	| x |
+	x := [ 10 + 5 ] value.
+	^ x
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockReturn: p1 [
 	true ifTrue: [ ^p1 ]
 ]
