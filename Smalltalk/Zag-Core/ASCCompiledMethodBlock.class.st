@@ -70,12 +70,6 @@ ASCCompiledMethodBlock >> newInlineMethodBlockReturnSelf [
 	^ ASCInlineClosureBlock new
 ]
 
-{ #category : 'as yet unclassified' }
-ASCCompiledMethodBlock >> propagateContextFreeFor [
-
-	^ self propagateContextFreeFor: sourceElements " context is the first thing on the stack"
-]
-
 { #category : 'API' }
 ASCCompiledMethodBlock >> returnTopFor: aBasicBlock current: current [ 
 

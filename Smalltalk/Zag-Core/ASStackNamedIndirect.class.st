@@ -23,6 +23,12 @@ ASStackNamedIndirect >> class: aClass [
 	self myScope: (ZagScope new class: aClass)
 ]
 
+{ #category : 'accessing' }
+ASStackNamedIndirect >> countParameters [
+
+	^ myScope next countParameters 
+]
+
 { #category : 'displaying' }
 ASStackNamedIndirect >> displayStringOn: stream [
 	stream << #ASStackNamedIndirect 

@@ -121,6 +121,7 @@ ASCodeGenerator >> compileBlock: anAStBlock [
 
 	code := ASCCompiledClosureBlock new.
 	compiledUnits add: code.
+	basicBlocks add: code.
 	anAStBlock compiledUnit: code.
 	code initNamedIndirect: basicBlocks first.
 	anAStBlock ast zigWalkMethod: self
@@ -135,11 +136,11 @@ ASCodeGenerator >> compileRemainingBlockClosures [
 { #category : 'finalAnalysis' }
 ASCodeGenerator >> createContextWhereRequired [
 
-	basicBlocks first
-		propagateContextFreeFor.
-	^ basicBlocks	do: #defaultAsReturn;
-		do: #requireSourceContext;
-		do: #setInContextForOperations
+	compiledUnits do: #propagateContextFreeFor.
+	^ basicBlocks
+		  do: #defaultAsReturn;
+		  do: #requireSourceContext;
+		  do: #setInContextForOperations
 ]
 
 { #category : 'API' }

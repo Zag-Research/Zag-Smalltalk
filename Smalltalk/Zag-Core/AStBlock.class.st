@@ -36,7 +36,6 @@ AStBlock >> block: anASBlock [
 { #category : 'compiling' }
 AStBlock >> compileIn: aCodeGenerator [
 
-	self halt.
 	^ aCodeGenerator compileBlock: self
 ]
 

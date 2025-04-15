@@ -235,6 +235,28 @@ ASCompilerInlineTest >> testBlockEvaluationWithCall [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithSend2 [
+	"blockEvaluationWithSend2
+	^ [ 10 + 5 ] value"
+	
+	self assertEquivalentSending: #blockEvaluationWithSend2 to: ASCompileTestClass1 new.
+	
+	
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithSendWithoutTailCall [
+	"blockEvaluationWithSendWithoutTailCall
+	| x |
+	x := [ 10 + 5 ] value.
+	^ x"
+	
+	self assertEquivalentSending: #blockEvaluationWithSendWithoutTailCall to: ASCompileTestClass1 new.
+	
+	
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockReturnEasyInline [
 	"
 blockReturnEasy

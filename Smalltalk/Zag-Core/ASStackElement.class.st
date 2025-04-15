@@ -6,7 +6,6 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'offset',
-		'next',
 		'location'
 	],
 	#category : 'Zag-Core-Stack',
@@ -174,11 +173,6 @@ ASStackElement >> mergeWith: aStackElement [
 ASStackElement >> newElementFor: aBasicBlock [
 
 	^ self replicate: (next newElementFor: aBasicBlock)
-]
-
-{ #category : 'accessing' }
-ASStackElement >> next [
-	^ next
 ]
 
 { #category : 'accessing' }

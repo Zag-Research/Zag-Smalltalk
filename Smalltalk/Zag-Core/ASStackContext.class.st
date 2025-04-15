@@ -8,7 +8,6 @@ Class {
 	#superclass : 'ASStack',
 	#instVars : [
 		'size',
-		'next',
 		'extra',
 		'parameters'
 	],

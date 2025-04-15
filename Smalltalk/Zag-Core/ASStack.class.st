@@ -4,6 +4,9 @@ I reperesent an empty stack of values within a method.
 Class {
 	#name : 'ASStack',
 	#superclass : 'ASVariable',
+	#instVars : [
+		'next'
+	],
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'
@@ -170,6 +173,11 @@ ASStack >> makeStackTheSource [
 { #category : 'instance creation' }
 ASStack >> newElementFor: anASCInlineBlock [ 
 	
+]
+
+{ #category : 'accessing' }
+ASStack >> next [
+	^ next
 ]
 
 { #category : 'accessing' }

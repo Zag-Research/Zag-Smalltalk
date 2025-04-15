@@ -80,3 +80,9 @@ ASCDispatchableBlock >> owns: anObject [
 
 	owns := anObject
 ]
+
+{ #category : 'API' }
+ASCDispatchableBlock >> propagateContextFreeFor [
+
+	^ self propagateContextFreeFor: sourceElements " context is the first thing on the stack"
+]
