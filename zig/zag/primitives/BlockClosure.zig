@@ -124,7 +124,7 @@ pub const threadedFns = struct {
                     Object.from(-32767.75),
                 },
                 &[_]Object{
-                    @bitCast(@as(u64, 0x0dffff0000000e69)),
+                    @bitCast(@as(u64, 0x0dffff0000000e81)),
                 },
             );
         }

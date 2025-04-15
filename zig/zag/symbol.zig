@@ -231,8 +231,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.value), 0);
     try expectEqual(symbolIndex(symbols.Object), 53);
     try expectEqual(symbolArity(symbols.Object), 0);
-    try expectEqual(3246132601, symbols.Object.rawU());
-    try expectEqual(12406198393, symbols.@"value:value:".rawU());
+    try expectEqual(3246132625, symbols.Object.rawU());
+    try expectEqual(12406198417, symbols.@"value:value:".rawU());
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");

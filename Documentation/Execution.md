@@ -3,55 +3,59 @@
 This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
 
 ### Semantic Interpreter
-There is an interpreter that is part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
+There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
 ##### Execution details currently having their semantics clarified
 - return with/no context - with/no tos - offset to self
 - restructure operation for branch-returns and inlined methods
 - tailSend with/no context with restructure parameter
 - can optimize away pushes into restructure instruction/tailSend
+
 ### Threaded Method Implementation
 The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every `CompiledMethod` has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every threaded operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
 
 ### Native Method Implementation
 The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
 
-When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
+### Common features
+All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `pushLiteral` which pushes a literal object (at the next position in the threaded code) onto the stack:
+```zig
+pub const pushLiteral = struct {
+    pub fn threadedFn(
+		    pc: PC,
+		    sp: SP,
+		    process: *Process,
+		    context: *Context,
+		    extra: Extra)
+		      Result {
+        const newSp = sp.push(pc.object());
+        return @call(tailCall, process.check(pc.prim2()),
+	         .{ pc.next2(), newSp, process, context, extra });
+    }
+};
+```
 
-When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
-1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
-2. If there is no native version and the method doesn't start with a primitive, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. The rest of the thread is from the Smalltalk in the method.
-3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native (CPS) function implementing the method. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context. The remaining functions all will know which threaded-pc corresponds to each function.
-4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions used to implement the method. The functions all will know which threaded-pc corresponds to each function.
+The parameters (presumably all in registers on modern architectures) are:
 
+| Parameter | Description                               |
+| --------- | ----------------------------------------- |
+| pc        | pointer to the next threaded word         |
+| sp        | pointer to the top of the Smalltalk stack |
+| process   | pointer to the current process            |
+| context   | pointer to the current context            |
+| extra     | multi-purpose value                       |
+The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word (in this case, skipping the literal object to push) unless this threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address (in this case, also skipping the object). Note that the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
 ## The stack and Contexts
 
-The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process (and are actually not completely filled in as long as they reside in the stack). If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). Similarly, if `thisContext` is returned from a method, the Context (and ones it links to) will be spilled to the heap.
+The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process. If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). There are a few other conditions (such as returning `thisContext` from a method) that similarly cause the `Context` (and ones it links to) to be spilled to the heap.
 
 There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
-## Sends and Polymorphic Inline Caches
-When a message send is encountered a sequence of threaded words are output:
-1. Either a `SetupReturn` for a normal send, or a `SetupNoReturn` for a tail send. These both get the class from the receiver and the selector from the following word. `SetupReturn` also saves the return address (the address after the `DispatchDynamic` - the offset of which is also in that argument word) in the `Context`. `SetupNoReturn` doesn't save the return, but does restructure the stack (the parameters of which are also in that argument word). There are versions of both of these for unary and binary selectors as well as the general case, and there are versions of `SetupNoReturn` for with/without `Context` for the current method.
-2. A sequence of `DispatchDirect` words, each followed by a `nil`.
-	1. `DispatchDirect` gets the class of the receiver from the signature, hashes into the appropriate dispatch table, finds the appropriate method (which may require probing through the table).
-	2. It then replaces the `DispatchDirect` and the `nil` with disambiguator for the method and the address of the `CompiledMethod`.
-	3. Therefore, the next time we send here, the word will point directly into the code. So, these become a PIC, and bypass the hashing.
-3. Finally a `DispatchDynamic`. This is the fallback and is never replaced. It does the same lookup of the class and hashing, but rather than probing for a match, it jumps indirectly through the dispatch table which is laid out the same way: a code address to execute followed by the `CompiledMethod` address.
-4. This sequence will also be directly used for dispatch by any JIT code (although step 1 will be done in the JIT code with the native PC pointing to the return point in the JIT code, and the threaded PC pointing to the word after the `DynamicDispatch`). This means that: a) the JIT code benefits from the same PIC as the threaded code; b) no code addresses (other than the current method) are embedded in native code and would have to be invalidated; c) JIT dispatch is a little more expensive than it would otherwise be.
-If a send is to a known method of a known class, then only one `DirectDispatch` need be generated and no `DynamicDIspatch`. If the send is to this method (after inlining) steps 2-3 will be replaced by a `Branch`.
-## Dispatch
-To find a compiled method from a signature, we need to get the dispatch table for the class, and then hash into that to find the actual method.
 
-The signature is an augmented [[Symbol]] that has the class number in the top 24 bits of the word (which are zero in the `Symbol` encoding). So the first step is to extract the class number and index through a static table to the `Dispatch` table for the class. The number of classes is a compile-time configuration parameter to the Zag runtime, but the individual `Dispatch` tables are dynamically allocated.
+`self`, parameters, and locals are initially on the stack, and are accessed via offsets from `sp`. This means in a method that doesn't create a `Context` all references to these values will use stack offsets. Even in a method that does push a `Context`, there may be access to these values before the `Context` is created that will use stack offsets.
 
-Each `Dispatch` object has an array of `DispatchElement` structs. Each has a signature and a pointer to a `CompiledMethod`.
+A `Context` must be created if a method sends any messages or calls any methods or if a block closure is created that either does a non-local return or references a shared local.
 
-We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, we end up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
+Once a `Context` has been created, `self`, parameters, and locals (and the caller's stack) are encapsulated in the `Context` and must be accessed via the `Context`.
 
-Starting from that position we check each `DispatchElement` for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, if the `DispatchElement` has a non-`nil` signature, we look at the next one, etc. This loop is guaranteed to finish because we will either find a match, a gap (because the hash table is generated with a loading factor of about 70%), or we will get to the end and there is an extra `nil` value at the end of the array.
-
-If the `DispatchElement` has a `nil` signature, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if this `nil` is a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
-
-The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMeethod`.
 #### Stack example
 
 When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
@@ -105,6 +109,40 @@ A method will only create a Context if `thisContext` is referenced, or if a non-
 Non-local return does a return from the target Context, making all the intervening Contexts inaccessible (and hence garbage). In most cases this is within a couple of instructions of as efficient as a normal return.
 The complication is if there is an `on:do:` or an `ensure:` between the target Context and the current Context. If all the Contexts were on a stack, this could be checked with a simple range check. However Contexts can migrate to the heap, at which point there is no longer any guaranteed ordering of addresses. The solution is that every time a trapping context is created, a thread-local counter is incremented. The good news is that if the target and current trap-context number is equal, all further checking is avoided. If the trap-context number is different for the target and current Contexts then a trapping context has been created between them. That context may no longer be active, but a more expensive check will have to be performed. The first check is if the top trapping context on the queue has a trap-context smaller than the target, in which case it is not a problem for this non-local return. in this case, any intervening `on:do:` contexts need to be removed from the queue, and the first intervening `ensure:` context needs to be returned to.
 
+### ???
+When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
+
+When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
+1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
+2. If there is no native version and the method doesn't start with a primitive, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. The rest of the thread is from the Smalltalk in the method.
+3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native (CPS) function implementing the method. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context. The remaining functions all will know which threaded-pc corresponds to each function.
+4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions used to implement the method. The functions all will know which threaded-pc corresponds to each function.
+
+## Sends and Polymorphic Inline Caches
+When a message send is encountered a sequence of threaded words are output:
+1. Either a `SetupReturn` for a normal send, or a `SetupNoReturn` for a tail send. These both get the class from the receiver and the selector from the following word. `SetupReturn` also saves the return address (the address after the `DispatchDynamic` - the offset of which is also in that argument word) in the `Context`. `SetupNoReturn` doesn't save the return, but does restructure the stack (the parameters of which are also in that argument word). There are versions of both of these for unary and binary selectors as well as the general case, and there are versions of `SetupNoReturn` for with/without `Context` for the current method.
+2. A sequence of `DispatchDirect` words, each followed by a `nil`.
+	1. `DispatchDirect` gets the class of the receiver from the signature, hashes into the appropriate dispatch table, finds the appropriate method (which may require probing through the table).
+	2. It then replaces the `DispatchDirect` and the `nil` with disambiguator for the method and the address of the `CompiledMethod`.
+	3. Therefore, the next time we send here, the word will point directly into the code. So, these become a PIC, and bypass the hashing.
+3. Finally a `DispatchDynamic`. This is the fallback and is never replaced. It does the same lookup of the class and hashing, but rather than probing for a match, it jumps indirectly through the dispatch table which is laid out the same way: a code address to execute followed by the `CompiledMethod` address.
+4. This sequence will also be directly used for dispatch by any JIT code (although step 1 will be done in the JIT code with the native PC pointing to the return point in the JIT code, and the threaded PC pointing to the word after the `DynamicDispatch`). This means that: a) the JIT code benefits from the same PIC as the threaded code; b) no code addresses (other than the current method) are embedded in native code and would have to be invalidated; c) JIT dispatch is a little more expensive than it would otherwise be.
+If a send is to a known method of a known class, then only one `DirectDispatch` need be generated and no `DynamicDIspatch`. If the send is to this method (after inlining) steps 2-3 will be replaced by a `Branch`.
+## Dispatch
+To find a compiled method from a signature, we need to get the dispatch table for the class, and then hash into that to find the actual method.
+
+The signature is an augmented [[Symbol]] that has the class number in the top 24 bits of the word (which are zero in the `Symbol` encoding). So the first step is to extract the class number and index through a static table to the `Dispatch` table for the class. The number of classes is a compile-time configuration parameter to the Zag runtime, but the individual `Dispatch` tables are dynamically allocated.
+
+Each `Dispatch` object has an array of `DispatchElement` structs. Each has a signature and a pointer to a `CompiledMethod`.
+
+We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, we end up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
+
+Starting from that position we check each `DispatchElement` for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, if the `DispatchElement` has a non-`nil` signature, we look at the next one, etc. This loop is guaranteed to finish because we will either find a match, a gap (because the hash table is generated with a loading factor of about 70%), or we will get to the end and there is an extra `nil` value at the end of the array.
+
+If the `DispatchElement` has a `nil` signature, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if this `nil` is a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
+
+The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMethod`.
+
 ## Method dispatch
 One of the defining aspects of object-oriented programming is that methods are customized to the object (or class). This requires dispatching to various code, dependent on the class of the object^[This is for class-based OOP like Smalltalk, Java, C++, Python, Ruby, etc.; for the much less common prototype-based OOP like Javascript or Self, there is still dispatch, but based on the object, not its class.]. Since this happens so frequently, optimizing the message dispatch is critical to performance.
 
@@ -146,20 +184,17 @@ We lazily build a single dispatch table for each class, which includes not just 
 | method pointers                  | an array of pointers to threads |
 
 The sequence to look up a method is:
-1. use the selector hash (symbol id and arity - 32 bits)
-2. 32-bit multiply with wrap by a constant hash (to spread the value over the 32 bits)
-3. convert to a u64 and then multiply by the hash multiplier
-4. shift right 32 bits(the 2nd multiply and shift replace a modulo)
-5. use that as the index into the array
-6. jump to the threaded code
+1. use the selector hash (symbol id (prehashed by multiplying by 24 bit inverse Phi) and arity - 32 bits)
+2. convert to a u64 and then multiply by the hash multiplier
+3. shift right 32 bits(the multiply and shift replace a modulo)
+4. use that as the index into the array
+5. jump to the threaded code
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
 The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup, so there is no check - just the jump.
 
-The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined - unless they are recursive.
-
-Note that because the hierarchy is flattened, and not all super sends can be inlined, there may be multiple methods with the same selector. These are disambiguated with tags in the arity field.
+The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined or called directly (without dispatch).
 
 ## Does Not Understand
 
