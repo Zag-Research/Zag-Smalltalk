@@ -101,7 +101,7 @@ ASBlockNode >> zigWalkMethod: aGenerator [
 
 	aGenerator
 		setCodeUnit;
-		setBlockName: self selector;
+		setBlock: self;
 		locals: locals parameters: arguments.
 	^ body
 		  zigWalkEmpty: [ aGenerator returnEmpty ]

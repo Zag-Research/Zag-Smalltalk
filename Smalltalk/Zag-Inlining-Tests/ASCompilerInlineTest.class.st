@@ -235,6 +235,30 @@ ASCompilerInlineTest >> testBlockEvaluationWithCall [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
+	"blockEvaluationWithCallAndLocalWithoutTailCall
+		""bar ^42""
+		| x |
+		x := [ self bar + 5 ] value.
+		^ x "
+
+	self
+		assertEquivalentSending: #blockEvaluationWithCallAndLocalWithoutTailCall
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallWithoutTailCall [
+	"blockEvaluationWithCallWithoutTailCall
+		""bar ^42""
+		[ self bar + 5 ] value"
+
+	self
+		assertEquivalentSending: #blockEvaluationWithCallWithoutTailCall
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithSend2 [
 	"blockEvaluationWithSend2
 	^ [ 10 + 5 ] value"

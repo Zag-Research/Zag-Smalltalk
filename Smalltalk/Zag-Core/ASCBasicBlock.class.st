@@ -311,6 +311,7 @@ ASCBasicBlock >> insertContext [
 		operation shrinksStack ifFalse: [
 			operations
 				add: (ASCCreateContext new
+						 method: self methodBlock;
 						 resultStack: operation stack;
 						 yourself)
 				beforeIndex: index.

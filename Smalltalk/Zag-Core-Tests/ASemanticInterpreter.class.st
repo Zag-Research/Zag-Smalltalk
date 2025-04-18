@@ -5,19 +5,18 @@ Class {
 	#name : 'ASemanticInterpreter',
 	#superclass : 'Object',
 	#instVars : [
+		'stackArray',
+		'stackPointer',
 		'context',
+		'pc',
+		'primitiveSuccessStackPointer',
 		'classes',
 		'dispatch',
 		'lastClass',
 		'inlineDepth',
-		'pc',
 		'executing',
 		'basicBlocks',
-		'stackArray',
-		'stackPointer',
-		'primitiveSuccessStackPointer',
-		'blockValueSymbols',
-		'blockClosuresToParentContext'
+		'blockValueSymbols'
 	],
 	#pools : [
 		'ZagConstants'
@@ -94,21 +93,18 @@ ASemanticInterpreter >> copiledUnitAt: anInteger [
 ]
 
 { #category : 'interpreting' }
-ASemanticInterpreter >> createContext: aStackContext [
+ASemanticInterpreter >> createContext: aCompiledMethodOrBlock [
 
-	| contextPtr size locals extra |
-	locals := aStackContext locals.
-	extra := aStackContext extra.
+	| contextPtr size locals |
+	locals := aCompiledMethodOrBlock locals.
 	contextPtr := stackPointer - locals - 1.
-	size := BaseAddress - (contextPtr + 1).
+	size := aCompiledMethodOrBlock arguments + locals + 1.
+	self halt.
 	context := ASIContext new
 		           array: stackArray offset: contextPtr size: size;
-		           sendingContext: context;
-		           extra: extra.
-	stackPointer := contextPtr - extra.
+		           sendingContext: context.
+	stackPointer := contextPtr.
 	stackArray at: contextPtr put: context.
-	stackPointer to: contextPtr - 1 do: [ :idx |
-	stackArray at: idx put: nil ].
 	contextPtr + 1 to: contextPtr + locals do: [ :idx |
 	stackArray at: idx put: nil ]
 ]
@@ -156,16 +152,14 @@ ASemanticInterpreter >> getClass: aClass [
 { #category : 'adding' }
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
-	| classIndex aClass |
-	^anObject dispatchGetMethodFor: [
-	aClass := blockClosuresToParentContext at: anObject 
-		ifPresent: [ :blockDefiningContext |  blockDefiningContext selfObject class]
-		ifAbsent: [ anObject class ].
-	classIndex := self getClass: aClass.
-	^ ((dispatch at: classIndex) ifNil: [
-		   dispatch at: classIndex put: IdentityDictionary new ])
-		  at: aSymbol
-		  ifAbsentPut: [ self compile: aSymbol for: aClass ]]
+	self halt.
+	^ anObject getMethodFor: aSymbol else: [ :aClass |
+		  | classIndex |
+		  classIndex := self getClass: aClass.
+		  ((dispatch at: classIndex) ifNil: [
+			   dispatch at: classIndex put: IdentityDictionary new ])
+			  at: aSymbol
+			  ifAbsentPut: [ self compile: aSymbol for: aClass ]]
 ]
 
 { #category : 'initialization' }
@@ -214,7 +208,7 @@ ASemanticInterpreter >> push: anObject [
 
 { #category : 'API' }
 ASemanticInterpreter >> pushBlock: aBasicBlock [ 
-	blockClosuresToParentContext at: aBasicBlock put: context sendingContext. 
+
 	self push: aBasicBlock
 ]
 
@@ -225,7 +219,6 @@ ASemanticInterpreter >> reset [
 	context := nil.
 	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
-	blockClosuresToParentContext := IdentityDictionary new.
 	lastClass := 0.
 	blockValueSymbols := { 
 		#value.
@@ -325,8 +318,8 @@ ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> returnNonLocal: anObject [ 
+
 	| blockDefiningContext |
-	blockDefiningContext := blockClosuresToParentContext at: pc basicBlock.
 	stackPointer := stackArray size - (stackArray indexOf: blockDefiningContext).
 	stackArray at: stackPointer put: anObject.
 	pc := blockDefiningContext returnPC
@@ -356,6 +349,7 @@ ASemanticInterpreter >> send: aSymbol to: anObject [
 { #category : 'private - testing' }
 ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 
+	self halt.
 	self reset.
 	self push: anObject.
 	arguments do: [ :arg | self push: arg ].

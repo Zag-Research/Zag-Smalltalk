@@ -6,7 +6,7 @@ My final expression will be a real return
 "
 Class {
 	#name : 'ASCCompiledClosureBlock',
-	#superclass : 'ASCDispatchableBlock',
+	#superclass : 'ASCCompiledBlock',
 	#instVars : [
 		'hasNonLocalReturn'
 	],
@@ -30,6 +30,12 @@ ASCCompiledClosureBlock >> blockClosureClass [
 	^ ASCTopClosureBlock
 ]
 
+{ #category : 'class membership' }
+ASCCompiledClosureBlock >> class [
+
+	^ BlockClosure
+]
+
 { #category : 'compiling' }
 ASCCompiledClosureBlock >> dispatchGetMethodFor: aBlock [
 
@@ -48,6 +54,13 @@ ASCCompiledClosureBlock >> flowForTemporaries [
 	^ self shouldNotImplement
 ]
 
+{ #category : 'as yet unclassified' }
+ASCCompiledClosureBlock >> getMethodFor: aSymbol else: aBlockClosure [
+
+	astBlock selector = aSymbol ifTrue: [ ^ self ].
+	^ aBlockClosure value: BlockClosure
+]
+
 { #category : 'data flow instructions' }
 ASCCompiledClosureBlock >> hasNonLocalReturn [
 	^ hasNonLocalReturn
@@ -60,7 +73,8 @@ ASCCompiledClosureBlock >> initNamedIndirect: aBasicBlock [
 ]
 
 { #category : 'initialization' }
-ASCCompiledClosureBlock >> initialize [ 
+ASCCompiledClosureBlock >> initialize [
+self halt.
 	super initialize.
 	hasNonLocalReturn := false
 ]

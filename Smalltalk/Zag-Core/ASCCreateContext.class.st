@@ -7,7 +7,8 @@ Class {
 	#name : 'ASCCreateContext',
 	#superclass : 'ASCNonStackReferencingOperations',
 	#instVars : [
-		'context'
+		'context',
+		'method'
 	],
 	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
@@ -18,6 +19,12 @@ Class {
 ASCCreateContext >> dotStringOn: aStream [
 
 	aStream << 'createContext'
+]
+
+{ #category : 'accessing' }
+ASCCreateContext >> method: aCompiledBlock [ 
+
+		method := aCompiledBlock
 ]
 
 { #category : 'stack' }

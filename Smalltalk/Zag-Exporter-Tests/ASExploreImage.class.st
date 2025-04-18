@@ -4,6 +4,10 @@ This class is just to extract some statistics from the running Pharo image.
 Class {
 	#name : 'ASExploreImage',
 	#superclass : 'Object',
+	#instVars : [
+		'potentialImmediate',
+		'nonLocalReturn'
+	],
 	#classVars : [
 		'Info',
 		'Something'
@@ -33,6 +37,60 @@ ASExploreImage class >> argumentsPerMethod [
 						 ifNil: [ 1 ]
 						 ifNotNil: [ :value | value + 1 ]) ] ].
 	^ argumentsPerMethod
+]
+
+{ #category : 'as yet unclassified' }
+ASExploreImage class >> blockClosureTypes [
+" self blockClosureTypes "
+	| closures |
+	closures := Bag new.
+	CompiledBlock allInstancesDo: [ :cb| closures add: cb ast zagClosureClass ].
+	self halt
+	"	(value isVariable and: [ argument = value variable]) ifTrue: [
+		variable variable zagIsLocal ifTrue: [ ^ #BlockAssignLocal ].
+		variable variable zagIsInstance ifTrue: [ ^ #BlockClosure ].
+		self halt.
+		^ #BlockClosure ].
+	(value isLiteralNode and: [ true == value value]) ifTrue: [ ^ #BlockAssignLocal:true ].
+	(value isLiteralNode and: [ false == value value]) ifTrue: [ ^ #BlockAssignLocal:false ].
+	self halt. 
+	^ #BlockClosure
+		value isMessage ifTrue: [ ^ #BlockClosure ].
+"
+"	statement := self statements first.
+	statement isMessage ifTrue: [ ^ #BlockClosure ].
+	statement isCascade ifTrue: [ ^ #BlockClosure ].
+	(statement isLiteralArray and: [ statement contents size = 0 ] ) ifTrue: [ ^ statement isForByteArray ifTrue: [ #ByteArray ] ifFalse: [ #Array ] ].
+	statement isReturn ifTrue: [ |value|
+		value := statement value.
+		value isMessage ifTrue: [ ^ #BlockClosure ].
+		value isLiteralNode ifTrue: [
+			value := value value.
+			(value isNil or: [ value == true or: [ value == false]]) ifTrue: [ ^ #ThunkReturnImmediate ].
+			self halt ].
+		value isVariable ifTrue: [ |variable|
+			variable := value variable.
+			variable isSelfVariable ifTrue: [ ^ #ThunkReturnLocal ].
+			variable isArgumentVariable ifTrue: [ ^ #ThunkReturnLocal ].
+			self halt ].
+		self halt ].
+	statement isLiteralNode ifTrue: [ |value|
+		value := statement value.
+		(value isNil or: [ value == true or: [ value == false]]) ifTrue: [ ^ #ThunkImmediate ].
+		self halt ].
+	statement isVariable ifTrue: [ |variable|
+		variable := statement variable.
+		variable isCopying ifTrue: [ variable := variable originalVar ].
+		variable isSelfVariable ifTrue: [ ^ #ThunkLocal ].
+		variable isArgumentVariable ifTrue: [ ^ #ThunkLocal ].
+		variable isTempVariable ifTrue: [ ^ #ThunkLocal ].
+		variable isGlobalVariable ifTrue: [ ^ #ThunkAssociation ].
+		self halt ].
+	statement isAssignment ifTrue: [ |variable value|
+		value := statement value.
+		self halt
+		].
+	self halt"
 ]
 
 { #category : 'class initialization' }
@@ -260,4 +318,33 @@ ASExploreImage class >> sendsInMethodFrequence [
 { #category : 'accessing' }
 ASExploreImage >> foo [
 	^ self bar: 2 + 3
+]
+
+{ #category : 'visiting' }
+ASExploreImage >> visit: anOCMethodNode [
+	^ anOCMethodNode acceptVisitor: self	
+]
+
+{ #category : 'visiting' }
+ASExploreImage >> visitBlockNode: anOCBlockNode [
+
+	potentialImmediate := anOCBlockNode statements size = 1.
+	nonLocalReturn := false.
+	[ anOCBlockNode statements do: [ :node| self visit: node ] ] ensure: [ potentialImmediate := false ]
+]
+
+{ #category : 'visiting' }
+ASExploreImage >> visitLiteralValueNode: anOCLiteralValueNode [
+]
+
+{ #category : 'visiting' }
+ASExploreImage >> visitMessageNode: anOCMessageNode [
+
+	anOCMessageNode arguments do: [ :node| self visit: node ]
+]
+
+{ #category : 'visiting' }
+ASExploreImage >> visitMethodNode: anOCMethodNode [
+
+	anOCMethodNode statements do: [ :node| self visit: node ]
 ]

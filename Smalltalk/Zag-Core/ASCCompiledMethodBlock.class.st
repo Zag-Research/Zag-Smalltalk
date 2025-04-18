@@ -4,7 +4,7 @@ Returns from me are real returns
 "
 Class {
 	#name : 'ASCCompiledMethodBlock',
-	#superclass : 'ASCDispatchableBlock',
+	#superclass : 'ASCCompiledBlock',
 	#instVars : [
 		'primitive'
 	],
@@ -79,12 +79,6 @@ ASCCompiledMethodBlock >> returnTopFor: aBasicBlock current: current [
 { #category : 'accessing' }
 ASCCompiledMethodBlock >> selector: aString [ 
 	self shouldBeImplemented.
-]
-
-{ #category : 'as yet unclassified' }
-ASCCompiledMethodBlock >> selector: aSymbol class: aClass codeUnit: aBasicBlock [
-
-	label := aClass name , '.' , aSymbol
 ]
 
 { #category : 'as yet unclassified' }

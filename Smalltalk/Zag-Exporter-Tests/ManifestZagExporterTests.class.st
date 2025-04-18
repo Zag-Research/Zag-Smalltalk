@@ -10,6 +10,13 @@ Class {
 }
 
 { #category : 'code-critics' }
+ManifestZagExporterTests class >> ruleConsistencyCheckRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#OCBlockNode #zagClosureClass #false)) #'2025-04-09T10:29:45.840989-04:00') #(#(#RGMethodDefinition #(#OCLiteralArrayNode #zagClosureClass #false)) #'2025-04-10T07:05:56.890359-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestZagExporterTests class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>

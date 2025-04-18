@@ -2,11 +2,12 @@
 I am an abstract class for all the compilable unitss that are dispatchable as opposed to inlined.
 "
 Class {
-	#name : 'ASCDispatchableBlock',
+	#name : 'ASCCompiledBlock',
 	#superclass : 'ASCCompilableUnitBlock',
 	#instVars : [
 		'owns',
-		'returnBlocks'
+		'returnBlocks',
+		'astBlock'
 	],
 	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
@@ -14,23 +15,29 @@ Class {
 }
 
 { #category : 'categories' }
-ASCDispatchableBlock class >> recategorizeSelector: selector from: oldProtocol to: newProtocol [ 
+ASCCompiledBlock class >> recategorizeSelector: selector from: oldProtocol to: newProtocol [ 
 	^ self subclassResponsibility
 ]
 
+{ #category : 'accessing' }
+ASCCompiledBlock >> arguments [
+
+	^ astBlock arguments size
+]
+
 { #category : 'as yet unclassified' }
-ASCDispatchableBlock >> deriveVariableReferences: referenced modifies: modified [
+ASCCompiledBlock >> deriveVariableReferences: referenced modifies: modified [
 
 	operations do: [ :op | op variableReferences: referenced modifies: modified block: self ]
 ]
 
 { #category : 'as yet unclassified' }
-ASCDispatchableBlock >> hasNonLocalReturn [
+ASCCompiledBlock >> hasNonLocalReturn [
 	^ false
 ]
 
 { #category : 'initialization' }
-ASCDispatchableBlock >> initialize [
+ASCCompiledBlock >> initialize [
 
 	super initialize.
 	owns := IdentitySet new.
@@ -38,7 +45,13 @@ ASCDispatchableBlock >> initialize [
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> locals: locals parameters: arguments [
+ASCCompiledBlock >> locals [
+
+	^ astBlock locals size
+]
+
+{ #category : 'accessing' }
+ASCCompiledBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
 	locals do: [ :each | self initLocalNamed: each ].
@@ -46,21 +59,21 @@ ASCDispatchableBlock >> locals: locals parameters: arguments [
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> methodBlock [
+ASCCompiledBlock >> methodBlock [
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> newInlineBlockNonLocalReturn [
+ASCCompiledBlock >> newInlineBlockNonLocalReturn [
 	^ ASCTopClosureBlock new
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> newInlineBlockReturnSelf [
+ASCCompiledBlock >> newInlineBlockReturnSelf [
 	^ ASCInlineClosureBlock new
 ]
 
 { #category : 'writing' }
-ASCDispatchableBlock >> outputTo: output [
+ASCCompiledBlock >> outputTo: output [
 
 	output
 		outputMethodDefinition: self label
@@ -70,19 +83,25 @@ ASCDispatchableBlock >> outputTo: output [
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> owns [
+ASCCompiledBlock >> owns [
 
 	^ owns
 ]
 
 { #category : 'accessing' }
-ASCDispatchableBlock >> owns: anObject [
+ASCCompiledBlock >> owns: anObject [
 
 	owns := anObject
 ]
 
 { #category : 'API' }
-ASCDispatchableBlock >> propagateContextFreeFor [
+ASCCompiledBlock >> propagateContextFreeFor [
 
 	^ self propagateContextFreeFor: sourceElements " context is the first thing on the stack"
+]
+
+{ #category : 'initialization' }
+ASCCompiledBlock >> setBlock: anASMethodNode [ 
+
+	astBlock := anASMethodNode
 ]

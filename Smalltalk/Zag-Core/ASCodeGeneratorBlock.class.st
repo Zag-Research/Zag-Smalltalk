@@ -41,10 +41,10 @@ ASCodeGeneratorBlock >> methodBlock [
 	^ parent methodBlock
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'code generation' }
 ASCodeGeneratorBlock >> parent: anASCodeGenerator source: aBlockClosureValue ast: anASBlock [
 
-	self flag: 'todo'.
+	self flag: 'todo';halt.
 	parent := anASCodeGenerator.
 	source := aBlockClosureValue.
 	self generateFrom: anASBlock

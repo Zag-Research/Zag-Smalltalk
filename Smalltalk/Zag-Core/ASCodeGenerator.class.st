@@ -577,6 +577,13 @@ ASCodeGenerator >> setBasicBlock: anASCBlock [
 ]
 
 { #category : 'initialization' }
+ASCodeGenerator >> setBlock: anASMethodNode [ 
+
+	self setBlockName: anASMethodNode selector.
+	code setBlock: anASMethodNode
+]
+
+{ #category : 'initialization' }
 ASCodeGenerator >> setBlockName: aSymbol [ 
 
 	^ code selector: aSymbol class: targetClass generator: self

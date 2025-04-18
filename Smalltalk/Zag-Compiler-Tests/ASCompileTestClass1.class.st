@@ -75,6 +75,22 @@ ASCompileTestClass1 >> blockEvaluationWithCall [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallAndLocalWithoutTailCall [
+	"bar ^42"
+
+	| x |
+	x := [ self bar + 5 ] value.
+	^ x
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallWithoutTailCall [
+	"bar ^42"
+
+	[ self bar + 5 ] value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockEvaluationWithSend2 [
 	^ [ 10 + 5 ] value
 ]
