@@ -1,6 +1,12 @@
 Extension { #name : 'Object' }
 
 { #category : '*Zag-Core-Tests' }
+Object >> getMethodFor: aString else: aBlockClosure [
+
+	^ aBlockClosure value: self class
+]
+
+{ #category : '*Zag-Core-Tests' }
 Object >> processPrimitiveResult: aSemanticInterpreter [
 
 	^ aSemanticInterpreter primitiveSuccess: self
