@@ -46,7 +46,7 @@ AStBlock >> compiledUnit [
 
 { #category : 'accessing' }
 AStBlock >> compiledUnit: aCompiledUnit [
-self halt.
+
 	compiledUnit := aCompiledUnit
 ]
 

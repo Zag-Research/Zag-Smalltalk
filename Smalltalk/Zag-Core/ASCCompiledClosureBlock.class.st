@@ -30,12 +30,6 @@ ASCCompiledClosureBlock >> blockClosureClass [
 	^ ASCTopClosureBlock
 ]
 
-{ #category : 'class membership' }
-ASCCompiledClosureBlock >> class [
-
-	^ BlockClosure
-]
-
 { #category : 'compiling' }
 ASCCompiledClosureBlock >> dispatchGetMethodFor: aBlock [
 
