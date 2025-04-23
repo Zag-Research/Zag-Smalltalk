@@ -108,7 +108,7 @@ pub const Extra = union {
     method: *CompiledMethod,
     object: Object,
     signature: Signature,
-    localsAndStack: *Context.LocalsAndStack,
+    contextData: *Context.ContextData,
     pub fn encoded(self: Extra) Extra {
         if (Object.from(self.method).thunkImmediate()) |obj| {
             return .{ .object = obj };
@@ -140,7 +140,7 @@ pub const Extra = union {
             .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
             .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
             .signature => |s| try writer.print("Extra{{.method = {}}}", .{s}),
-            .localsAndStack => |l| try writer.print("Extra{{.localsAndStack = {}}}", .{l}),
+            .contextData => |l| try writer.print("Extra{{.contextData = {}}}", .{l}),
         }
     }
 };

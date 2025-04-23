@@ -157,4 +157,4 @@ Since the hash value is changed for an object stored into an AoO, anything that 
 - [uta copying](https://lambda.uta.edu/cse5317/notes/node48.html)
 - [GNU Smalltalk partially-copying collector](https://www.gnu.org/software/smalltalk/manual/html_node/GC.html)
 - [OpenSmalltalk VM collector (including benchmarks)](https://dl.acm.org/doi/10.1145/3359619.3359741)
-- 
+- [Comparison of jemalloc, mimalloc, tcmalloc](https://lf-hyperledger.atlassian.net/wiki/spaces/BESU/pages/22156632/Reduce+Memory+usage+by+choosing+a+different+low+level+allocator)
