@@ -17,3 +17,9 @@ It's pretty difficult to wrap one's head around just how different latencies are
 | **7.2K RPM HDD**                            | 315 to 525 days       | 10 to 15 mSec       |
 | 5.4K RPM HDD                                | 525 to 700 days       | 15 to 20 mSec       |
 | 3.5" Floppy Disk                            | 23.75 years!!         | 250 mSec            |
+### What matters with modern architectures
+While the above table makes clear that main memory causes a significant slowdown, modern architectures are adept at ameliorating this effect:
+- branch prediction
+- large, multi-level, caches
+- hidden registers
+[[AnAttemptToCatchUpWithJITCompilers.pdf]] documents an experiment that shows that, at least in certain contexts, reducing memory loads and instruction counts can have minimal effect on execution time. Essentially they were inlining a monomorphic PIC.

@@ -33,6 +33,21 @@ const HeapHeader = heap.HeapHeader;
 const object14 = object.PackedObject.object14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
+pub fn init() void {}
+pub const module = struct {
+    pub const moduleName = "zag";
+    pub const unknown = struct {
+        //pub const number = 60;
+        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            // if (inlines.@"basicAt:"(sp.next, sp.top)) |result| {
+            //     const newSp = sp.dropPut(result);
+            //     return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            // } else |_| {}
+            // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+            _ = .{pc,sp,process,context,extra,unreachable};
+        }
+    };
+};
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();

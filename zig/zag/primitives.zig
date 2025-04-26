@@ -1,6 +1,6 @@
 // all primitives defined in Pharo image
 // SmallInteger - 1 2 3 4 5 6 7 8 9 10 11 12 13
-// SmallInteger and LargePositiveInteger - 14 15 16 17
+// SmallInteger and LargePositiveInteger - 14 15 16 17 (bit operations)
 // Integer @ - 18
 // BlockClosure - 19
 // LargeInteger - 20 21 22 23 24 25 26 29 30 31 32 33
@@ -80,9 +80,10 @@ const modules = [_]Module{
     Module.init(@import("primitives/Smallinteger.zig")),
     // Module.init(@import("primitives/Behavior.zig").module),
     Module.init(@import("primitives/BlockClosure.zig")),
-    // Module.init(@import("primitives/Boolean.zig").module,
+    // Module.init(@import("primitives/Boolean.zig").module),
     Module.init(@import("primitives/llvm.zig")),
-    // Module.init(@import("dispatch.zig"),
+    // Module.init(@import("dispatch.zig")),
+    Module.init(@import("controlWords.zig").module),
 };
 
 const Module = struct {

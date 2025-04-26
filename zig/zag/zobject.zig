@@ -68,7 +68,6 @@ pub const ClassIndex = enum(u16) {
     ThunkReturnSmallInteger,
     reservedForContext,
     reservedForBlockClosure,
-    reservedForContextData,
     ThunkReturnImmediate,
     ThunkReturnCharacter,
     ThunkReturnFloat,
@@ -133,7 +132,6 @@ pub const ClassIndex = enum(u16) {
         ThunkReturnSmallInteger,
         reservedForContext,
         reservedForBlockClosure,
-        reservedForContextData,
         ThunkReturnImmediate,
         ThunkReturnCharacter,
         ThunkReturnFloat,
@@ -687,7 +685,7 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(294929, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(278544, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
         try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
@@ -779,7 +777,7 @@ test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
     try ee(42, sl1[1]);
-    try ee(137, sl1[0]);
+    try ee(129, sl1[0]);
     try ee(0, sl1[2]);
     const buf2 = (Buf{
         .obj = Object.from(42.0),

@@ -17,9 +17,9 @@ The threaded implementation is a sequence of addresses of functions implementing
 The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
 
 ### Common features
-All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `pushLiteral` which pushes a literal object (at the next position in the threaded code) onto the stack:
+All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `dup` which pushes a copy of the object on top of the stack onto the stack:
 ```zig
-pub const pushLiteral = struct {
+pub const dup = struct {
     pub fn threadedFn(
 		    pc: PC,
 		    sp: SP,
@@ -27,9 +27,9 @@ pub const pushLiteral = struct {
 		    context: *Context,
 		    extra: Extra)
 		      Result {
-        const newSp = sp.push(pc.object());
-        return @call(tailCall, process.check(pc.prim2()),
-	         .{ pc.next2(), newSp, process, context, extra });
+        const newSp = sp.push(sp.top);
+        return @call(tailCall, process.check(pc.prim()),
+	         .{ pc.next(), newSp, process, context, extra });
     }
 };
 ```
@@ -43,7 +43,7 @@ The parameters (presumably all in registers on modern architectures) are:
 | process   | pointer to the current process            |
 | context   | pointer to the current context            |
 | extra     | multi-purpose value                       |
-The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word (in this case, skipping the literal object to push) unless this threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address (in this case, also skipping the object). Note that the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
+The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless this threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
 ## The stack and Contexts
 
 The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process. If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). There are a few other conditions (such as returning `thisContext` from a method) that similarly cause the `Context` (and ones it links to) to be spilled to the heap.
@@ -54,10 +54,131 @@ There are several reasons for this, but the primary reasons are that: a) all the
 
 A `Context` must be created if a method sends any messages or calls any methods or if a block closure is created that either does a non-local return or references a shared local.
 
-Once a `Context` has been created, `self`, parameters, and locals (and the caller's stack) are encapsulated in the `Context` and must be accessed via the `Context`.
+Once a `Context` has been created, `self`, parameters, and locals (and the caller's stack) are encapsulated in the `Context` (or, more accurately, `ContextData`) and must be accessed via the `Context`.
 
-#### Stack example
+Primitives are handled a little bit differently, but on entry to the Smalltalk code of a method, the receiver and any arguments will be on the stack, the `Extra` parameter in the threaded call will point to the current method, the stack will have enough space required for the method, and `Context` will point to the calling context.
+### Stack examples
+To demonstrate the execution model, and particularly the stack structure the following examples show a method, what the stack looks like on entry, and a plausible translation to threaded execution (actual generated code may be optimized). Note that the stack diagrams have low addresses at the top and that the stack grows down (so the stack pointer is at the top).
 
+For the method:
+```smalltalk
+foo: foo bar: bar
+    ^ foo
+```
+on entry the stack would look like:
+
+| Stack  | Comment  |
+| ------ | -------- |
+| `bar`  | <-- `sp` |
+| `foo`  |          |
+| `self` |          |
+and would naively translate to the threaded code:
+```threadedFn
+ tf.pushStack
+ 1
+ tf.dropNextN
+ 3
+ tf.return
+```
+which pushes the `foo` value onto the stack and then discards the 3 things below it, leaving just the `foo` value on the stack, which is the result value when we return to the caller.
+
+a somewhat more optimized version would be:
+```threadedFn
+ tf.drop
+ tf.dropNext
+ tf.return
+```
+which discards the `bar` and `self` values leaving just the `foo` value on the stack, which is the result value when we return to the caller.
+
+
+For the method:
+```smalltalk
+foo: foo bar: bar
+    ^ bar
+```
+on entry the stack would look like:
+
+| Stack  | Comment  |
+| ------ | -------- |
+| `bar`  | <-- `sp` |
+| `foo`  |          |
+| `self` |          |
+and would translate to the threaded code:
+```threadedFn
+ tf.dropNext
+ tf.dropNext
+ tf.return
+```
+which discards the `foo` and `self` values leaving just the `bar` value on the stack, which is the result value when we return to the caller.
+
+
+For the method:
+```smalltalk
+foo: foo
+    ^ foo blat: self
+```
+on entry the stack would look like:
+
+| Stack  | Comment  |
+| ------ | -------- |
+| `foo`  | <-- `sp` |
+| `self` |          |
+and would translate to the threaded code:
+```threadedFn
+ tf.swap
+ tf.tailSend
+ #blat:
+```
+which interchanges the `foo` and `self` values, and then sends the `#blat:` message.
+
+For the method:
+```smalltalk
+foo: foo bar: bar
+	bar blat: foo.
+    ^ self
+```
+on entry the stack would look like:
+
+| Stack  | Comment        |
+| ------ | -------------- |
+| `bar`  | <-- `sp`       |
+| `foo`  |                |
+| `self` |                |
+|        | caller's stack |
+and would translate to the threaded code:
+```threadedFn
+ tf.pushContext
+ tf.pushLocal
+ 1
+ tf.pushLocal
+ 2
+ tf.send
+ #blat:
+ 
+```
+Just before the `send`, the stack would look like:
+
+| Stack               | Comment                         |
+| ------------------- | ------------------------------- |
+| `foo`               | <-- `sp`                        |
+| `bar`               |                                 |
+| header              | <-- `context`                   |
+| `method`            | --> current method              |
+| `tpc`               | threaded `pc`                   |
+| `npc`               | @native next code to execute    |
+| `prevCtxt`          | --> caller context              |
+| `trapContextNumber` |                                 |
+| `contextData`       | --> next word                   |
+| header              | <-- `contextData`               |
+| `bar`               |                                 |
+| `foo`               |                                 |
+| `self`              |                                 |
+|                     | caller's stack                  |
+| header              | <-- caller context or a closure |
+
+which interchanges the `foo` and `self` values, and then sends the `#blat:` message.
+
+#### Old (incorrect) example
 When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
 
 | Stack  | Description                 | Pointers                                               |
