@@ -128,8 +128,9 @@ and would translate to the threaded code:
  tf.swap
  tf.tailSend
  #blat:
+ PIC
 ```
-which interchanges the `foo` and `self` values, and then sends the `#blat:` message.
+which interchanges the `foo` and `self` values, and then sends the `#blat:` message. Note that every send (tail or otherwise) is followed by the symbol for the message and a PIC, described below ([[#Sends and Polymorphic Inline Caches]]). This send is a `tailSend` because it is in tail position - that is, the result of the send is simply going to be returned to our caller. Since the current context is that of our caller, there is nothing to be done except the dispatch.
 
 For the method:
 ```smalltalk
@@ -154,8 +155,26 @@ and would translate to the threaded code:
  2
  tf.send
  #blat:
- 
+ PIC
+ tf.returnSelf
 ```
+Just after the `createContext`, the stack would look like:
+
+| Stack               | Comment                         |
+| ------------------- | ------------------------------- |
+| header              | <-- `context` <-- `sp`          |
+| `method`            | --> current method              |
+| `tpc`               | undefined                       |
+| `npc`               | undefined                       |
+| `prevCtxt`          | --> caller context              |
+| `trapContextNumber` | from `process`                  |
+| `contextData`       | --> next word                   |
+| header              | <-- `contextData`               |
+| `bar`               |                                 |
+| `foo`               |                                 |
+| `self`              |                                 |
+| ...                 | caller's stack                  |
+| header              | <-- caller context or a closure |
 Just before the `send`, the stack would look like:
 
 | Stack               | Comment                         |
@@ -173,94 +192,46 @@ Just before the `send`, the stack would look like:
 | `bar`               |                                 |
 | `foo`               |                                 |
 | `self`              |                                 |
-|                     | caller's stack                  |
+| ...                 | caller's stack                  |
 | header              | <-- caller context or a closure |
+The send will set the `tpc` of our context to the address after the `returnSelf`, set the `npc` field to the address of the native-code, threaded function for `returnSelf`, and then dispatch the #blat: message.
 
-which interchanges the `foo` and `self` values, and then sends the `#blat:` message.
-
-#### Old (incorrect) example
-When m4 has called m3 has called m2 has called m1 has called m0, but we haven't created a Context for m0 yet, the stack looks like (lower addresses at the top of the  diagrams):
-
-| Stack  | Description                 | Pointers                                               |
-| ------ | --------------------------- | ------------------------------------------------------ |
-| ...    |                             | space for stack growth                                 |
-| object | m0 parameters               | <--- sp                                                |
-| object | m0 self                     |                                                        |
-| ...    | m1 stack                    |                                                        |
-| header | m1 header                   | <--- aContext                                          |
-| tpc    | m1 threaded pc to return to |                                                        |
-| npc    | m1 native pc to return to   |                                                        |
-| ctxt   | m1 ContextPtr               | ---> m2 header                                         |
-| method | m1 method                   |                                                        |
-| object | m1 locals                   | allocated by pushContext                               |
-| object | m1 parameters               | pushed by m2                                           |
-| object | m1 self                     | pushed by m2                                           |
-| ...    | m2 stack                    |                                                        |
-| header | m2 header                   | <--- m1 ctxt                                           |
-| tpc    | m2 threaded pc to return to |                                                        |
-| npc    | m2 native pc to return to   |                                                        |
-| ctxt   | m2 ContextPtr               | ---> m3 Context header (see example below on the heap) |
-| method | m2 method                   |                                                        |
-| object | m2 locals                   |                                                        |
-| object | m2 parameters               |                                                        |
-| object | m2 self                     |                                                        |
-| ...    | m3 stack                    |                                                        |
-
-
-| m3 Context | Description | Pointers |
-| ----  | ------------------------ | --------------------------------------------------------- |
-| header | m3 header |
-| tpc    | m3 threaded pc to return to       |                                                           |
-| npc    | m3 native pc to return to       |                                                           |
-| ctxt   | m3 ContextPtr            | ---> m4 header                                            |
-| method | m3 method                |                                                           |
-| object | m3  locals |                                                           |
-| object | m3 parameters |                                                           |
-| ...    | ...                         |                                                           |
-| object | m3 self                  |                                                           |
-| ...    | m4 stack                 |                                                           |
-| footer  | m3 footer | needed for all heap objects |
-
-
-Note that the Context headers/size are set lazily because while they are on the stack, they are chained and physically contiguous. The partial header is also at the front of the object, rather than the end. The context is only turned into a proper object if it is promoted to the heap (via a spill or explicit reference).
-
-A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. If the primitive succeeds, it adjusts the stack and returns to the current context. Primitives that fail proceed to the next threaded function, which will typically create a Context.
+A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. If the primitive succeeds, it adjusts the stack and returns to the current (calling) context. Primitives that fail proceed to the next threaded function, which will typically create a Context.
 
 #### Non-local Return and Exceptions
 Non-local return does a return from the target Context, making all the intervening Contexts inaccessible (and hence garbage). In most cases this is within a couple of instructions of as efficient as a normal return.
 The complication is if there is an `on:do:` or an `ensure:` between the target Context and the current Context. If all the Contexts were on a stack, this could be checked with a simple range check. However Contexts can migrate to the heap, at which point there is no longer any guaranteed ordering of addresses. The solution is that every time a trapping context is created, a thread-local counter is incremented. The good news is that if the target and current trap-context number is equal, all further checking is avoided. If the trap-context number is different for the target and current Contexts then a trapping context has been created between them. That context may no longer be active, but a more expensive check will have to be performed. The first check is if the top trapping context on the queue has a trap-context smaller than the target, in which case it is not a problem for this non-local return. in this case, any intervening `on:do:` contexts need to be removed from the queue, and the first intervening `ensure:` context needs to be returned to.
 
 ### ???
-When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. If there *is* no native code, it will point to the next threaded primitive. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
+When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. In threaded mode, it will point to the next threaded function. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
-When we dispatch to a method, we always treat it as threaded code. This may seem expensive, but it is only 1 extra indirect jump. There are four kinds of method:
-1. If there is no native version but the method starts with a primitive, the first address will point to the primitive. The rest of the thread is from the Smalltalk in the rest of the method (which could be preceded by a word to schedule optimization). The primitive will verify the selector and perform the operation. If successful, it will return to the caller. On failure, it simply proceeds with the following word of the threaded code.
-2. If there is no native version and the method doesn't start with a primitive, the first address will point to a primitive to verify the selector and possibly schedule JIT compilation of this method. The rest of the thread is from the Smalltalk in the method.
-3. If it is a native method generated from the threaded version, the first threaded address will simply be the address of the first native (CPS) function implementing the method. This function will verify the selector and implement 1 or more of the threaded words. It knows how many of these it implements, so knows what threaded-pc that it should save as the continuation in the Context. The remaining functions all will know which threaded-pc corresponds to each function.
-4. If it is a hand-written native method, the first threaded address will simply be the address of the first native function. The remaining words will just be pointers to the other CPS functions used to implement the method. The functions all will know which threaded-pc corresponds to each function.
+When we dispatch to a method, we execute the `executeFn` function, with the `pc` parameter set to the address of the second word of the threaded implementation and the `extra` parameter set to the address of the method. There are several cases of what `executeFn` could point to:
+1. If the method has been jitted, `executeFn` is the address of the jitted code.
+2. If it has not been jitted, this is the address of a function that checks that there is enough stack space for the stack and then jumps to the first threaded word.
+3. If the method starts with a primitive and this is not the first execution, then `executeFn` will point to the native code for the primitive.
 
 ## Sends and Polymorphic Inline Caches
-When a message send is encountered a sequence of threaded words are output:
-1. Either a `SetupReturn` for a normal send, or a `SetupNoReturn` for a tail send. These both get the class from the receiver and the selector from the following word. `SetupReturn` also saves the return address (the address after the `DispatchDynamic` - the offset of which is also in that argument word) in the `Context`. `SetupNoReturn` doesn't save the return, but does restructure the stack (the parameters of which are also in that argument word). There are versions of both of these for unary and binary selectors as well as the general case, and there are versions of `SetupNoReturn` for with/without `Context` for the current method.
-2. A sequence of `DispatchDirect` words, each followed by a `nil`.
-	1. `DispatchDirect` gets the class of the receiver from the signature, hashes into the appropriate dispatch table, finds the appropriate method (which may require probing through the table).
-	2. It then replaces the `DispatchDirect` and the `nil` with disambiguator for the method and the address of the `CompiledMethod`.
-	3. Therefore, the next time we send here, the word will point directly into the code. So, these become a PIC, and bypass the hashing.
-3. Finally a `DispatchDynamic`. This is the fallback and is never replaced. It does the same lookup of the class and hashing, but rather than probing for a match, it jumps indirectly through the dispatch table which is laid out the same way: a code address to execute followed by the `CompiledMethod` address.
-4. This sequence will also be directly used for dispatch by any JIT code (although step 1 will be done in the JIT code with the native PC pointing to the return point in the JIT code, and the threaded PC pointing to the word after the `DynamicDispatch`). This means that: a) the JIT code benefits from the same PIC as the threaded code; b) no code addresses (other than the current method) are embedded in native code and would have to be invalidated; c) JIT dispatch is a little more expensive than it would otherwise be.
-If a send is to a known method of a known class, then only one `DirectDispatch` need be generated and no `DynamicDIspatch`. If the send is to this method (after inlining) steps 2-3 will be replaced by a `Branch`.
+Experience has shown that 90% of message sending locations dispatch to a single class and 9% to a small set of classes. Thus a significant speedup is achieved by trying previously found methods before going to a generalized dispatch. While Zag dispatch is much more efficient than most, it is certainly slower than a comparison.
+A message send is followed by a selector and a PIC. The selector (which is a  [[Symbol]]) is augmented with the class of the receiver to create a signature.
+
+The Polymorphic Inline Cache is a single object with 4 possible values:
+1. It is initially `nil` which means this is the first time this send is being executed. The correct method will be looked up and the `nil` replaced with a reference to that `CompiledMethod` and then it will be executed.
+2. It may be a regular heap pointer which is a reference to a `CompiledMethod`. If the method signature matches the signature for the send, then we have found the correct method and we start executing it. This covers 90% of message sends. If it doesn't match, a PIC object is created and the method pointer is replaced by a `PICPointer` that references the PIC object.
+3. It may be a `PICPointer`, in which case we extract the pointer. If it is not null then it points to a PIC object (an array of 7 objects (either `nil` or references to `CompiledMethod` objects)). Searching through these we either match or find a `nil`. If we match, we execute the method. If we find `nil` we look up the method and replace the `nil` with the reference and execute it. This handles the 9% of message sends. If we look at all 7 and don't find a matching signature, then we replace the `PICPointer` in the PIC with a null `PICPointer`.
+4. If the pointer of the `PICPointer` is null, then the lookup and execute the method through the dispatch table. This handle the remaining 1% of message sends. The null `PICPointer` bypasses the searching through the 7 potential references, because our dispatch mechanism is only a bit slower than that scan.
+Note that all of these updates are done in a multi-process-safe way (i.e. Compare-and-Swap with failure looping back to the start of the PIC processing). The choice of 7 for the size of a PIC object is because it doesn't have any internal fragmentation in the heap object, and is close to the size recommended by the literature.
 ## Dispatch
 To find a compiled method from a signature, we need to get the dispatch table for the class, and then hash into that to find the actual method.
 
 The signature is an augmented [[Symbol]] that has the class number in the top 24 bits of the word (which are zero in the `Symbol` encoding). So the first step is to extract the class number and index through a static table to the `Dispatch` table for the class. The number of classes is a compile-time configuration parameter to the Zag runtime, but the individual `Dispatch` tables are dynamically allocated.
 
-Each `Dispatch` object has an array of `DispatchElement` structs. Each has a signature and a pointer to a `CompiledMethod`.
+Each `Dispatch` object has an array of pointers to `CompiledMethod`s.
 
-We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, we end up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
+We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, ending up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
 
-Starting from that position we check each `DispatchElement` for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, if the `DispatchElement` has a non-`nil` signature, we look at the next one, etc. This loop is guaranteed to finish because we will either find a match, a gap (because the hash table is generated with a loading factor of about 70%), or we will get to the end and there is an extra `nil` value at the end of the array.
+Starting from that position we check each object as either a `nil` or a `CompiledMethod`. If it is a `CompiledMethod` we compare its signature for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, we look at the next one, etc. If the object is `nil`, the method isn't in the table. We look at up to 7 objects. If we don't find either a `nil` or a matching method, we will create a larger table where all objects are matched within 7 objects of the starting position. This number 7 is somewhat arbitrarily chosen to be the same as the PIC object size.
 
-If the `DispatchElement` has a `nil` signature, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if this `nil` is a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
+If there is no match, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if we found a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
 
 The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMethod`.
 

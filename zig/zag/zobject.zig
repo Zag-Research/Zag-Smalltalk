@@ -75,13 +75,14 @@ pub const ClassIndex = enum(u16) {
     BlockAssignLocal,
     ThunkInstance,
     BlockAssignInstance,
+    PICPointer,
     ThunkHeap,
     ThunkImmediate,
     ThunkFloat,
     SmallInteger,
-    Symbol,
     False,
     True,
+    Symbol,
     Character,
     LLVM,
     reserved = 31,
@@ -139,13 +140,14 @@ pub const ClassIndex = enum(u16) {
         BlockAssignLocal,
         ThunkInstance,
         BlockAssignInstance,
+        PICPointer,
         ThunkHeap,
         ThunkImmediate,
         ThunkFloat,
         SmallInteger,
-        Symbol,
         False,
         True,
+        Symbol,
         Character,
         LLVM,
         inline fn classIndex(cp: Compact) ClassIndex {
@@ -299,11 +301,14 @@ const TagObject = packed struct(u64) {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
     }
+    pub inline fn highPointer(self: Object, T: type) ?T {
+        return @ptrFromInt(self.rawU() >> 16);
+    }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
             .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return @ptrFromInt(self.rawU() >> 16),
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance, .PICPointer => return self.highPointer(T),
                 else => {},
             },
             else => {},
@@ -685,7 +690,7 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(278544, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(327697, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
         try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
@@ -777,7 +782,7 @@ test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
     try ee(42, sl1[1]);
-    try ee(129, sl1[0]);
+    try ee(137, sl1[0]);
     try ee(0, sl1[2]);
     const buf2 = (Buf{
         .obj = Object.from(42.0),
