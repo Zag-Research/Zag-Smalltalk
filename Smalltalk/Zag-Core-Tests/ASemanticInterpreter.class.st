@@ -309,6 +309,13 @@ ASemanticInterpreter >> restructureStack: anInteger [
 ]
 
 { #category : 'handling' }
+ASemanticInterpreter >> return: anObject selfContext: selfOffset [ 
+	stackPointer := stackPointer + selfOffset + 1.
+	stackArray at: stackPointer put: anObject.
+	pc := context sendingContext returnPC 
+]
+
+{ #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 
 	stackPointer := stackPointer + selfOffset.
