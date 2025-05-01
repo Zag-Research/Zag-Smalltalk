@@ -69,6 +69,11 @@ ASCompileTestClass1 >> block [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationNestedWithSend [
+	^ [ | x | x := [ 10 + 5 ] value. x ] value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockEvaluationWithCall [
 "bar ^42"
 	^ [ self bar + 5 ] value
