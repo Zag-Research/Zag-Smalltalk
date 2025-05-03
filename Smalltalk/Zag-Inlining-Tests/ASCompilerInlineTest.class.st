@@ -224,6 +224,16 @@ ASCompilerInlineTest >> testBarInlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationNestedWithSend [
+	"blockEvaluationNestedWithSend
+	^ [ | x | x := [ 10 + 5 ] value. x ] value"
+	
+	self assertEquivalentSending: #blockEvaluationNestedWithSend to: ASCompileTestClass1 new.
+	
+	
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithCall [
 	"blockEvaluationWithCall
 		""bar ^42""
