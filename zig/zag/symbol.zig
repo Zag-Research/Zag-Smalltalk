@@ -3,6 +3,7 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 const builtin = @import("builtin");
 const object = @import("zobject.zig");
+const Object = object.Object;
 const Nil = object.Nil;
 const heap = @import("heap.zig");
 const Treap = @import("utilities.zig").Treap;
@@ -13,7 +14,7 @@ pub inline fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
-    return fromHash32(@as(u32, index *% inversePhi24) | (@as(u32, arity) << 24));
+    return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return @as(u24, @truncate(obj.hash56())) *% undoPhi24;

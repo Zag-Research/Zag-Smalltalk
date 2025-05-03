@@ -149,7 +149,7 @@ pub const ThreadedFn = struct {
     f: Fn,
     pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result;
 };
-pub const Signature = struct {
+pub const Signature = packed struct {
     int: u64,
     const Internal = packed struct {
         selector: u40,
@@ -212,7 +212,7 @@ pub const PC = packed struct {
         return .{ .code = code };
     }
     pub //inline
-    fn method(self: PC) CompiledMethodPtr {
+    fn method(self: PC) *CompiledMethod {
         if (logging) std.debug.print("PC_method:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.method });
         return self.code.method;
     }
@@ -373,8 +373,6 @@ pub const StackStructure = packed struct {
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil, Code.end);
-pub const CodeContextPtr = *Context;
-pub const CompiledMethodPtr = *CompiledMethod;
 pub const CompiledMethod = struct {
     header: HeapHeader,
     stackStructure: StackStructure,
@@ -383,7 +381,7 @@ pub const CompiledMethod = struct {
     jitted: ?ThreadedFn.Fn,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
-    const codeSize = 1;
+    const codeSize = 2;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
     comptime {
         std.debug.assert(@offsetOf(Self, "header") == 0);
@@ -396,7 +394,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn)},
+            .code = .{Code.primOf(methodFn),undefined},
         };
     }
     pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: ThreadedFn.Fn) Self {
@@ -406,7 +404,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, class),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn)}, //TODO: should be something like primitiveFailed
+            .code = .{Code.primOf(methodFn),undefined}, //TODO: should be something like primitiveFailed
         };
     }
     pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context) StackAndContext {
@@ -432,6 +430,9 @@ pub const CompiledMethod = struct {
     }
     pub inline fn codePc(self: *const Self) PC {
         return PC.init(@ptrCast(&self.code[0]));
+    }
+    pub inline fn startPc(self: *const Self) PC {
+        return PC.init(@ptrCast(&self.code[1]));
     }
     pub inline fn selectorHash32X(self: *const Self) u32 {
         return @truncate(self.signature.rawU());
@@ -921,7 +922,7 @@ pub const Execution = struct {
                 return self.process.getContext();
             }
             pub fn execute(self: *Self, source: []const Object) !void {
-                const method: CompiledMethodPtr = self.method.asCompiledMethodPtr();
+                const method: *CompiledMethod = self.method.asCompiledMethodPtr();
                 self.init(source);
                 try self.resolve(Object.empty);
                 if (false) {

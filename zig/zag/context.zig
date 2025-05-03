@@ -27,14 +27,14 @@ const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const ThreadedFn = execute.ThreadedFn;
-const CompiledMethodPtr = execute.CompiledMethodPtr;
+const CompiledMethod = execute.CompiledMethod;
 const Sym = zag.symbol.symbols;
 pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 const Self = @This();
 const Context = Self;
 header: HeapHeader,
-method: CompiledMethodPtr,
+method: *const CompiledMethod,
 tpc: PC, // threaded PC
 npc: ThreadedFn, // native PC - in Continuation Passing Style
 prevCtxt: ?ContextPtr,
@@ -130,7 +130,7 @@ pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: *Con
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: ContextPtr, sp: SP, process: *Process, method: CompiledMethodPtr) ContextPtr {
+pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const CompiledMethod) ContextPtr {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
     const spForLocals = sp.reserve(locals + 1);

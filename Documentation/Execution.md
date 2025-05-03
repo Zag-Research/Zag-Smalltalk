@@ -44,11 +44,12 @@ The parameters (presumably all in registers on modern architectures) are:
 | context   | pointer to the current context            |
 | extra     | multi-purpose value                       |
 The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless this threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
+## Heap and Arenas
 ## The stack and Contexts
 
 The native stack is only used when calling non-Smalltalk functions. All Smalltalk stack frames (Contexts) are implemented in a Smalltalk linked list of `Context` objects. They are initially allocated on the Smalltalk stack which resides at the beginning of a Process. If the stack becomes too deep, the Contexts will be spilled to the Process' Nursery arena (and potentially to the Global arena). There are a few other conditions (such as returning `thisContext` from a method) that similarly cause the `Context` (and ones it links to) to be spilled to the heap.
 
-There are several reasons for this, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
+There are several reasons for this decision, but the primary reasons are that: a) all the GC roots are on the stack or in the current Context which means that it is easy to do precise GC; and b) switching between interpreter and native implementation is seamless.
 
 `self`, parameters, and locals are initially on the stack, and are accessed via offsets from `sp`. This means in a method that doesn't create a `Context` all references to these values will use stack offsets. Even in a method that does push a `Context`, there may be access to these values before the `Context` is created that will use stack offsets.
 

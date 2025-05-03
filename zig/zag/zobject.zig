@@ -6,12 +6,19 @@ const config = @import("config.zig");
 const assert = std.debug.assert;
 const debugError = false;
 const symbol = if (debugError) struct {
-    const inversePhi32 = @import("utilities.zig").inversePhi(u32);
+    const inversePhi24 = @import("utilities.zig").inversePhi(u24);
+    const undoPhi24 = @import("utilities.zig").undoPhi(u24);
     pub inline fn fromHash32(hash: u32) Object {
         return Object.makeImmediate(.Symbol, hash);
     }
-    inline fn symbol_of(index: u24, arity: u8) Object {
-        return fromHash32((index << 5 | @as(u32, arity) << 1 | 1) *% inversePhi32);
+    inline fn symbol_of(index: u24, arity: u4) Object {
+        return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
+    }
+    pub inline fn symbolIndex(obj: Object) u24 {
+        return @as(u24, @truncate(obj.hash56())) *% undoPhi24;
+    }
+    pub inline fn symbolArity(obj: Object) u4 {
+        return @truncate(obj.hash56() >> 24);
     }
     pub inline fn symbol0(index: u24) Object {
         return symbol_of(index, 0);
@@ -262,9 +269,6 @@ const TagObject = packed struct(u64) {
     pub inline fn isHeap(self: Object) bool {
         return self.tag == .heap;
     }
-    pub inline fn isImmediate(self: Object) bool {
-        return self.tag == .immediates;
-    }
     pub inline fn isDouble(self: Object) bool {
         return (self.rawU() & 6) != 0;
     }
@@ -355,8 +359,8 @@ const TagObject = packed struct(u64) {
     pub inline fn highAddress(self: Object) *u64 {
         return @ptrFromInt(self.rawU() >> 16);
     }
-    pub inline fn numArgs(self: Object) u8 {
-        return @truncate(self.hash);
+    pub inline fn numArgs(self: Object) u4 {
+        return symbol.symbolArity(self);
     }
     const nanMemObject = simpleFloat(math.nan(f64), .static);
     const pInfMemObject = simpleFloat(math.inf(f64), .static);
@@ -396,7 +400,7 @@ const TagObject = packed struct(u64) {
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
-            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else if (self.rawU() == 0) .UndefinedObject else .Object,
+            .heap => if (self.rawU() == 0) .UndefinedObject else if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
             .immediates => self.class.classIndex(),
             else => .Float,
         };
@@ -526,9 +530,9 @@ const ObjectFunctions = struct {
                             .@"struct" => {
                                 if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16))));
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(@as(i64, @bitCast(self)) << 16 >> 16)) + @sizeOf(HeapHeader)));
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
                                     }
                                 }
                             },
@@ -635,6 +639,7 @@ const ObjectFunctions = struct {
             .True => writer.print("true", .{}),
             .UndefinedObject => writer.print("nil", .{}),
             .Symbol => {
+//                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
                 try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
                 if ((self.hash56() >> 32) > 0)
                     try writer.print("=>{}", .{self.classFromSymbolPlus()});

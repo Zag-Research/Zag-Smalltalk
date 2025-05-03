@@ -28,3 +28,30 @@ Primitive methods in Zag are also treated somewhat specially. The first code wor
 3. if it is encoded, then we have just been called from the primitive code because there was a primitive failure, so skip the following parameter words and execute the next code word naturally, but with a decoded `extra` parameter.
 
 After the first call to the method, the `executeFn` will point directly to the primitive implementation. If the parameters are valid and the operation can succeed, the primitive will remove self and the parameters, push the result, and return to the caller. If there is a failure, it will pass control to the threaded code, passing an encoded version of the `extra` parameter. The threaded code will never be jitted, which is a small slowdown, but the fallback code is intended to be a relatively rare case.
+
+The `primitives.zig` module has the threaded words for the above, and the linkages to primitives that are described in several modules. To add primitives for a new module, simply add a new module reference to the `modules` array at the beginning of `primitives.zig`:
+```zig
+const modules = [_]Module{
+    Module.init(testModule),
+    Module.init(@import("primitives/Object.zig")),
+    ...
+    Module.init(@import("controlWords.zig").module),
+};
+
+```
+The `@import`ed module looks like:
+```zig
+pub const moduleName = "someModuleName";
+pub const "somePrimitiveName" = struct {
+    pub const number = 60;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (produceValidResultForThisPrimitive(sp)) |result| {
+            const newSp = sp.dropPut(result);
+            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        } else |_| {}
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+    }
+};
+
+```
+The `moduleName` and struct name are entered in the module table by name. The `number` const is optional. If it is included, the primitive will also be entered in the table for the numeric version of the primitives lookup, but it must be unique across the whole system. The function must be called `primitive` or `primitiveError` and have this type. The example uses a mythical function to calculate the result of the primitive and if it is successful, returns to the sender with the stack adjusted. If it fails, it passes control to `Extra.primitiveFailed` to continue with the Smalltalk code. The function called `primitive` must not push an error code on the stack. The function called `primitiveError` must push an error code (normally a symbol) on the stack if the primitive fails. Each primitive can have either or both of these functions.

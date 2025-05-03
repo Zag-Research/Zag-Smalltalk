@@ -4,13 +4,11 @@ const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
 const execute = zag.execute;
-const ContextPtr = execute.CodeContextPtr;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
-const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
@@ -204,7 +202,7 @@ pub const inlines = struct {
         _ = .{ oldSp, process, val, unreachable };
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: CompiledMethodPtr, context: ContextPtr, _: Extra) SP {
+    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, _: Extra) SP {
         // const flags = block.stackStructure.locals; // TODO: wrong
         // const fields = flags & 63;
         // const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
@@ -308,7 +306,7 @@ pub const valueColon = struct {
             switch (val.class) {
                 .BlockAssignLocal, .BlockAssignInstance => {
                     const closure = val.to(heap.HeapObjectPtr);
-                    const method = closure.prev().to(CompiledMethodPtr);
+                    const method = closure.prev().to(*CompiledMethod);
                     //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
                     const newPc = method.codePtr();
                     context.setReturn(pc);
