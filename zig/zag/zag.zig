@@ -1,4 +1,4 @@
-pub const object = @import("zobject.zig");
+pub const object = @import("object.zig");
 pub const config = @import("config.zig");
 pub const execute = @import("execute.zig");
 pub const Context = @import("context.zig");

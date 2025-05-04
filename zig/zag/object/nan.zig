@@ -1,4 +1,17 @@
-const NanObject = packed struct(u64) {
+const std = @import("std");
+const builtin = @import("builtin");
+const mem = std.mem;
+const math = std.math;
+const zag = @import("../zag.zig");
+const config = zag.config;
+const assert = std.debug.assert;
+const debugError = false;
+const object = zag.object;
+const Object = object.Object;
+const ClassIndex = object.ClassIndex;
+const heap = zag.heap;
+const HeapObjectPtr = heap.HeapObjectPtr;
+pub const NanObject = packed struct(u64) {
     h0: u16, // align(8),
     h1: u16,
     classIndex: ClassIndex,
@@ -204,5 +217,5 @@ const NanObject = packed struct(u64) {
             else => .Float,
         };
     }
-    pub usingnamespace ObjectFunctions;
+    pub usingnamespace object.ObjectFunctions;
 };
