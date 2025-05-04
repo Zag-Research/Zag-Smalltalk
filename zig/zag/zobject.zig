@@ -292,9 +292,6 @@ const TagObject = packed struct(u64) {
     const u64_MAXVAL = g(.numericThunk) - 1;
     pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
     pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
-    pub inline fn shiftI(n: i56) i64 {
-        return @as(i64, n) << 8;
-    }
     pub inline fn isInt(self: Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
@@ -397,6 +394,48 @@ const TagObject = packed struct(u64) {
             else => {},
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
+    }
+    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
+        switch (T) {
+            f64 => {
+                if (!check or self.isDouble()) return self.toDoubleNoCheck();
+            },
+            i64 => {
+                if (!check or self.isInt()) return self.toIntNoCheck();
+            },
+            u64 => {
+                if (!check or self.isNat()) return self.toNatNoCheck();
+            },
+            bool => {
+                if (!check or self.isBool()) return self.toBoolNoCheck();
+            },
+            PackedObject => {
+                if (!check or self.isInt()) return @as(PackedObject, @bitCast(self));
+            },
+
+            //u8  => {return @intCast(u8, self.hash & 0xff);},
+            else => {
+                switch (@typeInfo(T)) {
+                    .pointer => |ptrInfo| {
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                    }
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+            },
+        }
+        @panic("Trying to convert Object to " ++ @typeName(T));
     }
     inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {
@@ -503,48 +542,6 @@ const ObjectFunctions = struct {
         return error.wrongType;
     }
 
-    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
-        switch (T) {
-            f64 => {
-                if (!check or self.isDouble()) return self.toDoubleNoCheck();
-            },
-            i64 => {
-                if (!check or self.isInt()) return self.toIntNoCheck();
-            },
-            u64 => {
-                if (!check or self.isNat()) return self.toNatNoCheck();
-            },
-            bool => {
-                if (!check or self.isBool()) return self.toBoolNoCheck();
-            },
-            PackedObject => {
-                if (!check or self.isInt()) return @as(PackedObject, @bitCast(self));
-            },
-
-            //u8  => {return @intCast(u8, self.hash & 0xff);},
-            else => {
-                switch (@typeInfo(T)) {
-                    .pointer => |ptrInfo| {
-                        switch (@typeInfo(ptrInfo.child)) {
-                            .@"fn" => {},
-                            .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
-                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
-                                    } else {
-                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
-                                    }
-                                }
-                            },
-                            else => {},
-                        }
-                    },
-                    else => {},
-                }
-            },
-        }
-        @panic("Trying to convert Object to " ++ @typeName(T));
-    }
     pub fn to(self: Object, comptime T: type) T {
         return self.toWithCheck(T, true);
     }
