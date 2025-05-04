@@ -800,7 +800,7 @@ pub const HeapObject = packed struct {
         if (head.forwardedTo()) |target| { // already forwarded
             reference.* = switch (config.objectEncoding) {
                 .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .tag => object.NotAnObject,
+                .tag => Nil,
             };
             return hp;
         }
@@ -811,7 +811,7 @@ pub const HeapObject = packed struct {
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
             .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .tag => object.NotAnObject,
+            .tag => Nil,
         };
         return newHp;
     }

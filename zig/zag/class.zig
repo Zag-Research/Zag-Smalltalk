@@ -4,7 +4,6 @@ const process = @import("process.zig");
 const object = @import("zobject.zig");
 const Object = object.Object;
 const Nil = object.Nil;
-const u64_MINVAL = object.u64_MINVAL;
 const symbol = @import("symbol.zig");
 const symbols = symbol.symbols;
 const globalAllocator = symbol.globalAllocator;

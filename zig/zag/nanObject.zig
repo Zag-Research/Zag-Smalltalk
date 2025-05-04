@@ -60,13 +60,7 @@ const NanObject = packed struct(u64) {
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = oImm(.UndefinedObject, 0);
-    pub const NotAnObject = oImm(.UndefinedObject, 0x3); // never a valid object... should never be visible to managed language
-    pub const u64_MINVAL = g(.smallInt);
     const u64_ZERO = g(.smallInt0);
-    pub const u64_ZERO2 = u64_ZERO *% 2;
-    const u64_MAXVAL = g(.numericThunk) - 1;
-    pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
-    pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
     pub inline fn makeGroup(grp: Group, low48: u48) Object {
         return cast(grp.base() | low48);
     }

@@ -18,11 +18,8 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
 const Sym = zag.symbol.symbols;
 const heap = zag.heap;
-const MinSmallInteger: i64 = object.MinSmallInteger;
-const MaxSmallInteger: i64 = object.MaxSmallInteger;
 const empty = &[0]Object{};
 const tf = zag.threadedFn.Enum;
 

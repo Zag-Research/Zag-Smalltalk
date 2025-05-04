@@ -10,7 +10,6 @@ const object = zag.object;
 const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
-const NotAnObject = object.NotAnObject;
 const True = object.True;
 const False = object.False;
 const Context = zag.Context;

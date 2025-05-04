@@ -10,7 +10,6 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
 const heap = zag.heap;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObject = heap.HeapObject;

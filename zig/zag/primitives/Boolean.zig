@@ -17,7 +17,6 @@ const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
 const Sym = @import("../symbol.zig").symbols;
 const heap = @import("../heap.zig");
 const blockClosure = @import("BlockClosure.zig");

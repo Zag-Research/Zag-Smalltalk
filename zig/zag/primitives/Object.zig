@@ -17,11 +17,8 @@ const empty = Object.empty;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
 const Sym = zag.symbol.zig.symbols;
 const heap = zag.heap.zig;
-const MinSmallInteger: i64 = object.MinSmallInteger;
-const MaxSmallInteger: i64 = object.MaxSmallInteger;
 
 pub fn init() void {}
 pub const moduleName = "object";

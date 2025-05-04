@@ -20,12 +20,9 @@ const Compact = object.ClassIndex.Compact;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const u64_MINVAL = object.u64_MINVAL;
 const Sym = zag.symbol.symbols;
 const heap = zag.heap;
 const tf = zag.threadedFn.Enum;
-const MinSmallInteger: i64 = object.MinSmallInteger;
-const MaxSmallInteger: i64 = object.MaxSmallInteger;
 const stringOf = zag.heap.CompileTimeString;
 const expectEqual = std.testing.expectEqual;
 
@@ -37,7 +34,7 @@ pub const ThunkReturnSmallInteger = struct {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
         const result = Object.from(@as(i56, @truncate(@as(i64, @bitCast(val.rawU() << 48)) >> 56)));
-        const targetContext: *Context = @ptrCast(val.highAddress());
+        const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }
@@ -233,7 +230,7 @@ pub const inlines = struct {
         const val = sp.top;
         const result = targetContext.pop(process);
         const newSp = result.sp;
-        if (!val.equals(object.NotAnObject))
+        if (!val.equals(unreachable))
             newSp.top = val;
         const callerContext = result.ctxt;
         trace("-> {any}", .{callerContext.stack(newSp, process)});

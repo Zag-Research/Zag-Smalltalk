@@ -56,13 +56,9 @@ pub usingnamespace if (!builtin.is_test) struct {} else struct {
 //     try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
 //     try ee(Object.indexSymbol1(42).indexNumber(), 42);
 // }
-pub const ZERO = Object.ZERO;
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
-pub const NotAnObject = Object.NotAnObject;
-pub const MinSmallInteger = Object.MinSmallInteger;
-pub const MaxSmallInteger = Object.MaxSmallInteger;
 pub fn fromLE(comptime T: type, v: T) Object {
     const val = @as(*const [@sizeOf(T)]u8, @ptrCast(&v));
     return Object.of(mem.readIntLittle(T, val));
@@ -275,7 +271,7 @@ const TagObject = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    inline fn imm(c: ClassIndex.Compact, h: u56) u64 {
+    inline fn immX(c: ClassIndex.Compact, h: u56) u64 {
         return @bitCast(oImm(c, h));
     }
     inline fn g(grp: Group) u64 {
@@ -285,16 +281,6 @@ const TagObject = packed struct(u64) {
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
-    const NotAnObject = Self{ .tag = .heap, .class = .none, .hash = 0xf0000000000000 }; // never a valid object... should never be visible to managed language
-    pub const u64_MINVAL = g(.smallInt);
-    const u64_ZERO = g(.smallInt0);
-    pub const u64_ZERO2 = u64_ZERO *% 2;
-    const u64_MAXVAL = g(.numericThunk) - 1;
-    pub const MinSmallInteger = of(u64_MINVAL).to(i64); // anything smaller than this will underflow
-    pub const MaxSmallInteger = of(u64_MAXVAL).to(i64); // anything larger than this will overflow
-    pub inline fn isInt(self: Object) bool {
-        return self.isImmediateClass(.SmallInteger);
-    }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
@@ -329,9 +315,6 @@ const TagObject = packed struct(u64) {
         if (!self.isSymbol()) @panic("not a Symbol");
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
-    pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
-        return @enumFromInt(self.rawU() >> 40);
-    }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & 0xffff_ffff_fff8;
     }
@@ -352,12 +335,6 @@ const TagObject = packed struct(u64) {
     }
     pub inline fn hash56(self: Object) u56 {
         return self.hash;
-    }
-    pub inline fn highAddress(self: Object) *u64 {
-        return @ptrFromInt(self.rawU() >> 16);
-    }
-    pub inline fn numArgs(self: Object) u4 {
-        return symbol.symbolArity(self);
     }
     const nanMemObject = simpleFloat(math.nan(f64), .static);
     const pInfMemObject = simpleFloat(math.inf(f64), .static);
@@ -444,9 +421,6 @@ const TagObject = packed struct(u64) {
             else => .Float,
         };
     }
-    pub inline fn isString(self: Object) bool {
-        return self.which_class(true) == .String;
-    }
     pub inline fn isMemoryAllocated(self: Object) bool {
         return if (self.isHeap()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
@@ -477,6 +451,15 @@ const TagObject = packed struct(u64) {
             _ = .{ctx, obj};
         }
     };
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbits() == comptime Object.makeImmediate(.Symbol, 0).tagbits();
+    }
+    pub inline fn isImmediate(self: Object) bool {
+        return self.tag == .immediates;
+    }
+    pub inline fn isHeapObject(self: Object) bool {
+        return self.tag == .heap;
+    }
     pub usingnamespace ObjectFunctions;
 };
 const ObjectFunctions = struct {
@@ -493,6 +476,15 @@ const ObjectFunctions = struct {
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
     }
+    pub inline fn numArgs(self: Object) u4 {
+        return symbol.symbolArity(self);
+    }
+    pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
+        return @enumFromInt(self.hash56() >> 32);
+    }
+    pub inline fn isInt(self: Object) bool {
+        return self.isImmediateClass(.SmallInteger);
+    }
     pub inline fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -501,8 +493,8 @@ const ObjectFunctions = struct {
             return ptr[field];
         return Nil;
     }
-    pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime Object.makeImmediate(.Symbol, 0).tagbits();
+    pub inline fn isString(self: Object) bool {
+        return self.which_class(true) == .String;
     }
     pub inline fn isBool(self: Object) bool {
         return self == Object.False or self == Object.True;
@@ -510,17 +502,8 @@ const ObjectFunctions = struct {
     pub inline fn isNil(self: Object) bool {
         return self == Object.Nil;
     }
-    pub inline fn isImmediate(self: Object) bool {
-        return self.tag == .immediates;
-    }
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.tag == .heap;
-    }
     pub inline fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
-    }
-    pub inline fn isLiteral(self: Object) bool {
-        return !self.isMemoryAllocated();
     }
     pub inline fn hash(self: Object) Object {
         return self.from(self.hash32()) catch unreachable;
@@ -728,9 +711,7 @@ test "testing doubles including NaN" {
 }
 test "from conversion" {
     const ee = std.testing.expectEqual;
-    //    try ee(@as(u64, @bitCast(Object.packedInt(1, 2, 3))), u64_ZERO + 0x000300020001);
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
-    //    try ee((Object.from(42)).u(), u64_ZERO +% 42);
     try ee((Object.from(3.14)).immediate_class(), .Float);
     try std.testing.expect((Object.from(3.14)).isDouble());
     try ee((Object.from(3)).immediate_class(), .SmallInteger);

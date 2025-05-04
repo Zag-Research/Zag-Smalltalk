@@ -194,11 +194,9 @@ const Dispatch = struct {
     }
     fn testDnu(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ programCounter, sp, process, context, extra, @panic("testDnu") };
-        //        return sp.push(object.NotAnObject);
     }
     fn testGrow(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ programCounter, sp, process, context, extra, @panic("testGrow") };
-        //        return sp.push(object.NotAnObject);
     }
     fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ process, context, extra };
@@ -306,7 +304,6 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 //     try dispatch.add(@ptrCast(&code0));
 //     try dispatch.add(@ptrCast(&code1));
 //     try ee(doDispatch(&tE, &dispatch, symbols.yourself)[0], Object.from(2));
-//     try ee(doDispatch(&tE, &dispatch, symbols.self)[0], object.NotAnObject);
 //     try dispatch.add(@ptrCast(&code2));
 //     try ee(doDispatch(&tE, &dispatch, symbols.yourself)[0], Object.from(2));
 //     try ee(doDispatch(&tE, &dispatch, symbols.@"at:")[0], Object.from(4));
