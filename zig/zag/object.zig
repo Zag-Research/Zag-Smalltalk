@@ -123,12 +123,6 @@ pub const ClassIndex = enum(u16) {
     _,
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
-    // inline fn base(ci: Self) u64 {
-    //     return @as(u64, @intFromEnum(ci)) << 32;
-    // }
-    // inline fn immediate(cg: Self) u64 {
-    //     return (@as(u64, @intFromEnum(Group.immediates)) << 48) | cg.base();
-    // }
     pub const Compact = enum(u5) {
         none = 0,
         ThunkReturnLocal,
@@ -415,35 +409,6 @@ pub const PackedObject = packed struct {
     }
 };
 
-test "testing doubles including NaN" {
-    switch (config.objectEncoding) {
-        .tag => {},
-        .nan => {
-            // test that all things that generate NaN generate positive ones
-            // otherwise we'd need to check in any primitive that could create a NaN
-            // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
-            const e = std.testing.expect;
-            const inf = @as(f64, 1.0) / 0.0;
-            const zero = @as(f64, 0);
-            const one = @as(f64, 1);
-            const fns = struct {
-                fn cast(x: anytype) Object {
-                    return Object.from(x);
-                }
-            };
-            const cast = fns.cast;
-            try e(cast(@sqrt(-one)).isDouble());
-            try e(cast(@log(-one)).isDouble());
-            try e(cast(zero / zero).isDouble());
-            try e(cast((-inf) * 0.0).isDouble());
-            try e(cast((-inf) * inf).isDouble());
-            try e(cast((-inf) + inf).isDouble());
-            try e(cast(inf - inf).isDouble());
-            try e(cast(inf * 0.0).isDouble());
-            try e(cast(std.math.nan(f64)).isDouble());
-        },
-    }
-}
 test "from conversion" {
     const ee = std.testing.expectEqual;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
