@@ -801,6 +801,7 @@ pub const HeapObject = packed struct {
             reference.* = switch (config.objectEncoding) {
                 .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
                 .tag => Nil,
+                else => unreachable,
             };
             return hp;
         }
@@ -812,6 +813,7 @@ pub const HeapObject = packed struct {
         reference.* = switch (config.objectEncoding) {
             .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
             .tag => Nil,
+            else => unreachable,
         };
         return newHp;
     }

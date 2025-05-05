@@ -13,88 +13,32 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
-pub const TagObject = packed struct(u64) {
-    tag: Group,
-    class: ClassIndex.Compact,
-    hash: u56,
-    pub const Group = enum(u3) {
-        heap = 0,
-        immediates,
-        float2,
-        float3,
-        float4,
-        float5,
-        float6,
-        float7,
-        inline fn u(cg: Group) u3 {
-            return @intFromEnum(cg);
-        }
-    };
+pub const PtrObject = packed struct(u64) {
+    ref: HeapObjectPtr,
     const Self = @This();
-    pub const TagAndClassType = u8;
-    pub inline fn tagbits(self: Self) TagAndClassType {
-        return @truncate(@as(u64, @bitCast(self)));
-    }
-    fn enumBits(T: type) usize {
-        return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
-    }
-    const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
-    comptime {
-        assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
-    }
-    const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     pub inline fn untaggedI(self: Object) i64 {
-        return @bitCast(self.rawU() & ~tagAndClass);
-    }
-    // pub inline fn cast(v: anytype) Object {
-    //     // stored using little-endian order
-    //     return @bitCast(v);
-    // }
-    pub inline fn rawU(self: Object) u64 {
-        return @bitCast(self);
-    }
-    pub inline fn rawI(self: Object) i64 {
-        return @bitCast(self);
+        _ = .{ self, unreachable };
     }
     inline fn of(comptime v: u64) Object {
         return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
-        const value: i64 = @bitCast(o);
-        const shifted = value >> 55;
-        if (shifted == 0 or shifted == -1)
-            return oImm(.ThunkImmediate, @bitCast(@as(i56, @truncate(value))));
-        return null;
+        _ = .{ o, unreachable};
     }
     pub inline fn thunkImmediateValue(self: Self) Object {
-        return @bitCast(@as(i64, @bitCast(self)) >> 8);
+        _ = .{ self, unreachable};
     }
-    test "ThunkImmediate" {
-        std.debug.print("Test: ThunkImmediate\n", .{});
-        const ee = std.testing.expectEqual;
-        if (thunkImmediate(Object.from(42))) |value|
-            try ee(Object.from(42), value.thunkImmediateValue());
-        if (thunkImmediate(Object.from(-42))) |value|
-            try ee(Object.from(-42), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(Object.from(@as(u64, 1) << 47)));
+    pub inline fn isImmediateClass(_: Object, _: ClassIndex.Compact) bool {
+        return false;
     }
-    pub inline fn isImmediateClass(self: Object, class: ClassIndex.Compact) bool {
-        return self.tagbits() == oImm(class, 0).tagbits();
-    }
-    pub inline fn isHeap(self: Object) bool {
-        return self.tag == .heap;
+    pub inline fn isHeap(_: Object) bool {
+        return true;
     }
     pub inline fn isDouble(self: Object) bool {
         return (self.rawU() & 6) != 0;
     }
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
-    }
-    inline fn immX(c: ClassIndex.Compact, h: u56) u64 {
-        return @bitCast(oImm(c, h));
-    }
-    inline fn g(grp: Group) u64 {
-        return grp.base();
     }
     pub const ZERO = of(0);
     pub const False = oImm(.False, 0);
@@ -103,12 +47,11 @@ pub const TagObject = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn hasPointer(self: Object) bool {
-        const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
-        return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
+    pub inline fn hasPointer(_: Object) bool {
+        return true;
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
+        return @bitCast(self);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
@@ -242,20 +185,6 @@ pub const TagObject = packed struct(u64) {
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
         return if (self.isHeap()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
-    }
-    pub const Special = packed struct {
-        imm: TagAndClassType,
-        tag: u8,
-        rest: u48,
-        pub fn ptr(self: Special) *Object {
-            return @ptrFromInt(self.rest);
-        }
-        pub fn objectFrom(tact: TagAndClassType, tag: u8, p: *opaque {}) Object {
-            return @bitCast(Special{ .imm = tact, .tag = tag, .rest = @truncate(@intFromPtr(p)) });
-        }
-    };
-    pub inline fn rawSpecial(self: Object) Special {
-        return @bitCast(self);
     }
     pub const Scanner = struct {
         ptr: *anyopaque,

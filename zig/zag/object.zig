@@ -43,19 +43,6 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 pub usingnamespace if (!builtin.is_test) struct {} else struct {
     pub const SelfObject: Object = Object.oImm(.Symbol, 0xf0000ff);
 };
-// test "indexSymbol" {
-//     const e = std.testing.expect;
-//     const ee = std.testing.expectEqual;
-//     try e(Object.indexSymbol0(42).isSymbol());
-//     try e(Object.indexSymbol0(42).isIndexSymbol0());
-//     try ee(Object.imm(.Symbol, 0x0002a0ff), 0x2a0ff71);
-//     try ee(Object.indexSymbol0(42).rawU(), 0xf00002a71);
-//     try ee(Object.indexSymbol0(42).indexNumber(), 42);
-//     try e(Object.indexSymbol1(42).isSymbol());
-//     try e(Object.indexSymbol1(42).isIndexSymbol1());
-//     try ee(Object.indexSymbol1(42).rawU(), 0xf80002a71);
-//     try ee(Object.indexSymbol1(42).indexNumber(), 42);
-// }
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
@@ -188,19 +175,15 @@ pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
     } };
 }
 pub const Object = switch (config.objectEncoding) {
-    .nan => @import("object/nan.zig").NanObject,
     .tag => @import("object/tag.zig").TagObject,
+    .nan => @import("object/nan.zig").NanObject,
+    .ptr => @import("object/ptr.zig").PtrObject,
+    .taggedPtr => @import("object/taggedPtr.zig").TaggedPtrObject,
 };
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
-    pub inline fn rawU(self: Object) u64 {
-        return @bitCast(self);
-    }
-    pub inline fn rawI(self: Object) i64 {
-        return @bitCast(self);
-    }
     pub inline fn equals(self: Object, other: Object) bool {
-        return self.rawU() == other.rawU();
+        return self == other;
     }
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
@@ -210,6 +193,9 @@ pub const ObjectFunctions = struct {
     }
     pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
         return @enumFromInt(self.hash56() >> 32);
+    }
+    pub inline fn isThunkImmediate(self: Object) bool {
+        return self.isImmediateClass(.ThunkImmediate);
     }
     pub inline fn isInt(self: Object) bool {
         return self.isImmediateClass(.SmallInteger);

@@ -9,8 +9,10 @@ pub fn trace(comptime format: anytype, values: anytype) void {
 pub const objectEncoding = Encoding.tag;
 
 const Encoding = enum {
-    nan,
     tag,
+    nan,
+    ptr,
+    taggedPtr,
 };
 
 pub const debugging = false;

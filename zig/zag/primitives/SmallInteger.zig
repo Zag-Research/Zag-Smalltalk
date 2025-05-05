@@ -37,6 +37,7 @@ pub const inlines = struct {
                     const result, const overflow = @addWithOverflow(self.rawI(), other.untaggedI());
                     if (overflow == 0) return @bitCast(result);
                 },
+                else => unreachable,
             }
         }
         return error.primitiveError;
@@ -56,6 +57,7 @@ pub const inlines = struct {
                 } else if (self == Object.makeImmediate(.SmallInteger, 0))
                     return self;
             },
+            else => unreachable,
         }
         return error.primitiveError;
     }
@@ -82,6 +84,7 @@ pub const inlines = struct {
         return switch (config.objectEncoding) {
             .nan => self.rawU() <= other.rawU(),
             .tag => self.rawI() <= other.rawI(),
+            else => unreachable,
         };
     }
     pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
