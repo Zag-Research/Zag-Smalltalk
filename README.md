@@ -1,4 +1,4 @@
-# Zag-Smalltalk
+#  ![[zag-icon.png|50]] Zag-Smalltalk
 
 Smalltalk VM Written in Zig with methods stored as type-annotated ASTs
 

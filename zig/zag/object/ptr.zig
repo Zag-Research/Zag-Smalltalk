@@ -13,14 +13,22 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+pub const PointedObject = struct {
+    header: HeapHeader,
+    data: union {
+        int: i64,
+        float: f64,
+        symbol: [8]u8,
+        boolean: void,
+        nil: void,
+        character: void,
+    },
+};
 pub const PtrObject = packed struct(u64) {
-    ref: HeapObjectPtr,
+    ref: *PointedObject,
     const Self = @This();
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
-    }
-    inline fn of(comptime v: u64) Object {
-        return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable};
@@ -35,12 +43,13 @@ pub const PtrObject = packed struct(u64) {
         return true;
     }
     pub inline fn isDouble(self: Object) bool {
-        return (self.rawU() & 6) != 0;
+        return self.ref.header.classIndex == .Float;
     }
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    pub const ZERO = of(0);
+    const c = ClassIndex;
+    pub const ZERO = ptrObject(.{c.SmallInteger,0} PtrObject = @bitCast
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
