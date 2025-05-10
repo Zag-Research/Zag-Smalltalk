@@ -226,25 +226,30 @@ test "all generated NaNs are positive" {
             // test that all things that generate NaN generate positive ones
             // otherwise we'd need to check in any primitive that could create a NaN
             // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
-            const e = std.testing.expect;
             const inf = @as(f64, 1.0) / 0.0;
             const zero = @as(f64, 0);
             const one = @as(f64, 1);
             const fns = struct {
-                fn cast(x: anytype) Object {
-                    return Object.from(x);
+                const nanU: u64 = @bitCast(math.nan(f64));
+                fn d(x: anytype) !void {
+                    try std.testing.expect(Object.from(x).isDouble());
+                }
+                fn v(x: anytype) !void {
+                    try d(x);
+                    try std.testing.expectEqual(nanU,@as(u64,@bitCast(x)));
                 }
             };
-            const cast = fns.cast;
-            try e(cast(@sqrt(-one)).isDouble());
-            try e(cast(@log(-one)).isDouble());
-            try e(cast(zero / zero).isDouble());
-            try e(cast((-inf) * 0.0).isDouble());
-            try e(cast((-inf) * inf).isDouble());
-            try e(cast((-inf) + inf).isDouble());
-            try e(cast(inf - inf).isDouble());
-            try e(cast(inf * 0.0).isDouble());
-            try e(cast(std.math.nan(f64)).isDouble());
+            const d = fns.d;
+            const v = fns.v;
+            try v(@sqrt(-one));
+            try v(@log(-one));
+            try v(zero / zero);
+            try v((-inf) * 0.0);
+            try d((-inf) * inf);
+            try v((-inf) + inf);
+            try v(inf - inf);
+            try v(inf * 0.0);
+            try v(std.math.nan(f64));
         },
     }
 }

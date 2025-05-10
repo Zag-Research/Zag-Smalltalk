@@ -15,7 +15,7 @@ There are a few significant changes:
 2. We are using a pure generational copying collector for the nursery arenas. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
 3. `become:` will be implemented with similar forwarding.... When the objects are collected, the references will be updated.
 #### Object addresses
-All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move.
+All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move, whereas the global allocator never moves an object.
 
 ##### HeapObject word format:
 | Bits | What         | Characteristics                         |
@@ -30,9 +30,9 @@ All object addresses point to a HeapObject word.  Every object has a HeapHeader 
 The length field encodes the total size of the heap allocation except for the HeapObject word itself.
 
 There are a number of special length values:
-- 4094 - this is a forwarding pointer, the low 48 bits are the forwarding address. The rest of the original object will be described by a dummy object defined by the next word (a HeapHeader).
-- 0-4093 - normal object 
-Note that the total heap space for an object (including any footer fields) can't exceed 4094 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as an external object.
+- 2048 - this is a forwarding pointer, the low 48 bits are the forwarding address. The rest of the original object will be described by a dummy object defined by the next word (a HeapHeader). In fact any larger value will be treated the same as it is only the top bit that is relevant.
+- 0-2047 - normal object 
+Note that the total heap space for an object (including any footer fields) can't exceed 2047 words (and maybe smaller, depending on the HeapAllocation size). Anything larger will be allocated as an external object.
 #### Age
 The age field encodes where the object is, and the number of times the object has been copied. Every time it is copied to a nursery arena, the count is incremented. When it gets to 6 if it is above a certain size, it will be promoted to the global heap.
 
@@ -49,7 +49,7 @@ The format field encodes whether there are instance variables, indexable portion
 
 | Value | Name                          | Meaning                                      |
 | ----- | ----------------------------- | -------------------------------------------- |
-| 0     | immutableSizeZero             | any empty indexable area                     |
+| 0     | immutableSizeZero             | any empty indexable object                   |
 | 1-109 |                               | size 1-109 byte arrays                       |
 | x6e   | indexedStruct                 | allocated Zig struct, not an Object          |
 | x6f   | externalStruct                | allocated Zig struct, not an Object          |
@@ -70,7 +70,7 @@ The format field encodes whether there are instance variables, indexable portion
 | x7e   | externalWeakWithPointers      | only this and following have weak queue link |
 | x7f   | weakWithPointers              |                                              |
 
-The choice of values means that if the value is greater than x76, there are pointers, otherwise not. All the "WithPointers" versions are a fixed offset from their regular versions, so can be converted easily.
+The choice of values means that if the value is greater than x76, there are pointers, otherwise not. All the "WithPointers" versions are a fixed offset from their regular versions, so can be converted easily if/when an object reference is stored in them.
 
 The remaining format bit 7 encodes whether  the object is mutable, so 0 means that any assignments will signal an exception.
 

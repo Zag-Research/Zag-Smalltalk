@@ -14,38 +14,37 @@ We extend this slightly, by using all 8 possible tag values:
 - 1: immediate values for the classes `SmallInteger`, `Character`, `Symbol`, `True`, `False` as well as several forms of immediate `BlockClosure`s that take 0 or 1 parameters. The next 5 bits are the class number, and the top 56 bits are the information (the integer value or the character Unicode value or the symbol hash code). In some cases, the top 48 bits provide a 48-bit address allowing capture of heap objects, including contexts.
 - 2-7: `Float`. By using 6 tags we can encode all 64-bit floats less than 2.68e154. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 2, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits and add 2; if the result anded with 6 is zero, immediate encoding is not possible, so a reference to a static (`+inf`, `-inf`, or `nan`) or heap-allocated memory object is used. These are both several instructions shorter than Spur and involve no conditional code on decode.
 
-| High 16 bits       |            |            | Tag        | Type                        |
-| ------------------ | ---------- | ---------- | ---------- | --------------------------- |
-| `0000000000000000` | `00000000` | `00000000` | `00000000` | `nil`                       |
-| `0000000000000000` | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | (heap) pointer              |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `llllllll` | `00001001` | `ThunkReturnLocal`          |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00010001` | `ThunkReturnInstance`       |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `nnnnnnnn` | `00011001` | `ThunkReturnSmallInteger`   |
-| ...                | ...        | `00000000` | `00100001` | reserved for `Context`      |
-| ...                | ...        | `00000000` | `00101001` | reserved for `BlockClosure` |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00110001` | `ThunkReturnImmediate`      |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `cccccccc` | `00111001` | `ThunkReturnCharacter`      |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `seeemmmm` | `01000001` | `ThunkReturnFloat`          |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `llllllll` | `01001001` | `ThunkLocal`                |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01010001` | `BlockAssignLocal`          |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01011001` | `ThunkInstance`             |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01100001` | `BlockAssignInstance`       |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `00000000` | `01101001` | `PICPointer`                |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `00000000` | `01110001` | `ThunkHeap`                 |
-| `xxxxxxxxxxxxxxxx` | `xxxxxxxx` | `cccccttt` | `01111001` | `ThunkImmediate`            |
-| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmseee` | `10000001` | `ThunkFloat`                |
-| `xxxxxxxxxxxxxxxx` | `xxxxxxxx` | `xxxxxxxx` | `10001001` | `SmallInteger`              |
-| `0000000000000000` | `00000000` | `00000000` | `10010001` | `False`                     |
-| `0000000000000000` | `00000000` | `00000000` | `10011001` | `True`                      |
-| `0000000000000000` | `hhhhhhhh` | `hhhhhhhh` | `10100001` | `Symbol`                    |
-| `0000000000000000` | `uuuuuuuu` | `uuuuuuuu` | `10101001` | `Character`                 |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `tttttttt` | `10110001` | `LLVM`                      |
-| ...                | ...        | ...        | `10111001` | reserved                    |
-| ...                | ...        | ...        | -          | reserved                    |
-| ...                | ...        | ...        | `11111001` | reserved                    |
-| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | `mmmms010` | `Float`                     |
-| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | -          | `Float`                     |
-| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | `mmmms111` | `Float`                     |
+| High 16 bits       |            |            | Tag        | Type                            |
+| ------------------ | ---------- | ---------- | ---------- | ------------------------------- |
+| `0000000000000000` | `00000000` | `00000000` | `00000000` | `nil`                           |
+| `0000000000000000` | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | (heap) pointer                  |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `llllllll` | `00001001` | `ThunkReturnLocal`              |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00010001` | `ThunkReturnInstance`           |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `nnnnnnnn` | `00011001` | `ThunkReturnSmallInteger`       |
+| ...                | ...        | `00000000` | `00100001` | reserved for on-stack `Context` |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00101001` | `ThunkReturnImmediate`          |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `cccccccc` | `00110001` | `ThunkReturnCharacter`          |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `seeemmmm` | `00111001` | `ThunkReturnFloat`              |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `llllllll` | `01000001` | `ThunkLocal`                    |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01001001` | `BlockAssignLocal`              |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01010001` | `ThunkInstance`                 |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `01011001` | `BlockAssignInstance`           |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `00000000` | `01100001` | `PICPointer`                    |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `00000000` | `01101001` | `ThunkHeap`                     |
+| `xxxxxxxxxxxxxxxx` | `xxxxxxxx` | `cccccttt` | `01110001` | `ThunkImmediate`                |
+| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmseee` | `01111001` | `ThunkFloat`                    |
+| `xxxxxxxxxxxxxxxx` | `xxxxxxxx` | `xxxxxxxx` | `10000001` | `SmallInteger`                  |
+| `0000000000000000` | `hhhhhhhh` | `hhhhhhhh` | `10001001` | `Symbol`                        |
+| `0000000000000000` | `00000000` | `00000000` | `10010001` | `False`                         |
+| `0000000000000000` | `00000000` | `00000000` | `10011001` | `True`                          |
+| `0000000000000000` | `uuuuuuuu` | `uuuuuuuu` | `10101001` | `Character`                     |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `tttttttt` | `10110001` | `LLVM`                          |
+| ...                | ...        | ...        | `10111001` | reserved                        |
+| ...                | ...        | ...        | -          | reserved                        |
+| ...                | ...        | ...        | `11111001` | reserved                        |
+| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | `mmmms010` | `Float`                         |
+| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | -          | `Float`                         |
+| `eeeeeeeemmmmmmmm` | `mmmmmmmm` | `mmmmmmmm` | `mmmms111` | `Float`                         |
 
 Because we are using all 8 possible values of the tag field, where the test in Spur for "is a `SmallInteger`" was simply **`and 1`** not being 0, using our encoding it requires comparing the low byte with a constant. However testing for a `Float` is simply **`and 6`** not being 0, and a test for a heap object is **`and 7`** being 0.
 

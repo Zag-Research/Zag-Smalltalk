@@ -8,10 +8,10 @@ Zag Smalltalk has several features that minimize garbage creation:
 - `nil`, `true`, `false`, Symbols, Characters, SmallIntegers and most Floats are encoded as immediate values
 - SmallIntegers have a wide range (2^55) so extension to BigIntegers (which would be heap-allocated) is rare
 - BlockClosures are stack allocated
-- code blocks are generated outside the heap
+- JITed code blocks are generated outside the heap
 - several kinds of common BlockClosures are encoded as immediate values
 
-Zag Smalltalk has several features that minimize the amount of work required by garbage collection:
+Zag Smalltalk also has several features that minimize the amount of work required by garbage collection:
 - all execution stacks and code addresses are outside the range of valid heap pointers, so by being careful to never save anything in a stack frame that looks like a heap reference, no scanning is required for the stacks;
 - scanning for roots can proceed very quickly (a single comparison filters all non-heap values);
 - the format of indexable objects encodes if they are pointer-free, so don't need to be scanned;
@@ -23,7 +23,7 @@ Zag Smalltalk has several features that minimize the amount of work required by 
 The heap is structured as per-process arenas (accessible only by the execution process itself) and a global arena accessible by all processes.
 
 ## Per-Process Arenas
-Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are process-private, there is no locking required for allocation in the nursery arena, nor for collection.
+Each thread/process has its own nursery heap pair, typically about 30kib each. All allocations are done in the nursery except for large objects that would not fit and `CompiledMethod` objects. The heap grows up. When there is no room for the current allocation, the heap will be collected to the other arena. Because these are process-private, there is no locking required for allocation in the nursery arena, nor for collection.
 
 The nursery is collected using a copying collector. Copying collectors are very fast when a significant portion of the content is garbage, because they only examine the live content of the heap. The roots for collection are the stack and current context.
 
@@ -32,23 +32,22 @@ If, for an allocation in the nursery, there is not enough free space in the curr
 ### Stack of Contexts
 The execution stack is allocated in the stack area of each Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
 
-The stack pointer points to the top of the working stack. If the current context (which could be ours or a sender's) is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context (technically there may be some closures in front of the context - these aren't technically part of the working stack and will be spilled to the heap if the context is spilled (even more technically, there may simply be space reserved (`nil`ed) for such closures and these `nil`s may not be spilled)). If the current context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
+The stack pointer points to the top of the working stack. If the current context (which could be ours or a sender's) is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context (technically there may be some closures in front of the context - these aren't technically part of the working stack and will be spilled to the heap if the context is spilled). If the current context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
 
-On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details. This `Context` will be created as late as possible, because after inlining, there may be paths through the method that don't require the `Context`. The partial creation is because a) we create a lot of them, so we want it to be as cheap as possible; b)it is likely to go away, rather than be spilled; c) it's on the stack so we can calculate its structure if we have to reify it. It is partial in the sense that the size is not calculated, and any block closure references are `nil`.
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details. This `Context` will be created as late as possible, because after inlining, there may be paths through the method that don't require the `Context`. The partial creation is because a) we create a lot of them, so we want it to be as cheap as possible; b) it is likely to go away, rather than be spilled; c) it's on the stack so we can calculate its structure if we have to reify it. It is partial in the sense that the size is not calculated.
 
 ### Block Closures
-Block closures are allocated "on top" of the `Context`, with a field in the `Context` referencing them. Each closure that does a non-local return, or references local variables stored in the `Context`, will have a reference to the `Context`. When the `Context` is created, the field in the `Context` that references the closure is initialized to `nil`, and the reserved memory for the closures will simply be filled with `nil` values. This is because nothing can reference the closure until it is actually created, and we may not need to create them all before the method returns. One tricky detail is that the `Context` may have to be spilled to the heap before some of these closures are filled in. So when a closure is create and the `Context` is on the stack, the resulting object will be created in the reserved space on the stack. But if the `Context` is on the heap, the closure will be allocated on the heap. Another tricky detail is that a reference to a local that resides in a closure may occur before the closure is otherwise needed, so it will need to be created before that reference.
-
+Block closures are allocated "on top" of the `Context`. Each closure that does a non-local return, or references local variables stored in the `Context`, will have a reference to the `Context`. When a closure is created and the `Context` is on the stack, the resulting object will be created on the stack. But if the `Context` is on the heap, the closure will be allocated on the heap.
 ### Copying Collector
 Copying collectors are much faster than mark-and-sweep collectors if you mostly have garbage. Every BlockClosure or temporary array you create almost instantly becomes garbage, so a typical minor collect might be only 10-20% live data^[experimental data to follow]. Even more importantly, allocations are practically free, just bump a pointer. They are also very cache friendly. This means they are ideal for a per-process arena, where no locks are required. This is why Zag uses this for [[Garbage Collection#Per-process arenas|per-process arena collection]].
 
 ## Global Arena
-The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a nursery arena, so such objects must be promoted to the GlobalArena. There are several sources of this data:
+The GlobalArena is the eventual repository for all live data. One invariant is that objects in the GlobalArena cannot reference objects in a process-private area which means a stack or nursery arena, so such referenced objects must be promoted to the GlobalArena. There are several sources of objects in the global arena:
 1. promotions from process arenas
 2. the symbol table
 3. the strings that have the representation of symbols
 4. dispatch tables & generated code (threaded and native execution)
-5. class objects
+5. class objects and method ASTs
 6. large allocations
 7. setting a field in an existing global object to a reference to a local object requires that the local object be promoted (leaving behind forwarding pointers)
 8. Contexts spilled from the stack (e.g., from deep recursion)
@@ -57,7 +56,8 @@ Roots for the GlobalArena include:
 1. the symbol table reference
 2. the class table reference
 3. roots from all processes
-4. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
+4. the dispatch tables
+5. the old-dispatch reference (if there is a parallel global collector running) **ToDo: I don't know what this referenced**
 
 If you have an arena that is accessible to multiple processes, then moving becomes a big deal - you'd have to stop all processes to move anything, and you can't collect in parallel. The production Java systems do this by partitioning the heap and only locking one section at a time, copying that into a new area and then letting things proceed; this works, but we think we can do better. So here, Zag uses a mark and sweep collector that doesn't move anything once allocated. Any allocation here requires a lock, but is otherwise very fast. Zag uses a similar allocation scheme to [Mist](https://github.com/martinmcclure/mist). Free space is easily coalesced in the sweep phase.
 
@@ -81,7 +81,7 @@ The age field for global objects is as follows:
 | 14    | free                        | part of a free list           |
 | 15    | AoO, already scanned        |                               |
 The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots, whereas struct is just an arbitration Zig allocation. The global arena maintains a Zig Allocator structure so that any Zig allocations are handled within our space.
-
+pp
 AoO objects are objects within [[Memory Management#Array of Objects]].
 Static objects are only scanned once per garbage collection.
 
@@ -136,7 +136,7 @@ The allocation of an array of objects creates an object that encompasses a seque
 The low 6 bits of the hash field for an element are the log2 of the size of the total array and allow accessing its header.
 
 The two advantages of arrays of objects are:
-1. (small) space saving, since we save an indirect pointer, but this can be a 25% saving for, e.g., `Point` or `Association`
+1. (small) space saving, since we save an indirect pointer, but this can be a 25% saving for, e.g., `Point`
 2. significantly better cache locality for `do:` or `collect:`
 
 The disadvantages relate to garbage collection:
@@ -147,7 +147,7 @@ The disadvantages relate to garbage collection:
 `at:put:` verifies that either:
 -  the value is a non-double immediate, or 
 - a heap-allocated object with a length <= the specified limit, and that value is currently on a per-process heap (or immutable) - because we must move the object into the AoO and we don't move mutable global objects (this should not be an onerous limitation) - in this case we leave a forwarding pointer behind.
-Since the hash value is changed for an object stored into an AoO, anything that assumes the previous hash is correct will fail. That would make a Dictionary have bad performance before a rehash.
+Since the hash value is changed for an object stored into an AoO, anything that assumes the previous hash is correct will fail. That would make a Dictionary have bad performance before a rehash. One other limitation of AoO values is that they will be moved if they are copied to another AoO (like growing a `Dictionary`) so the address of the object would change. This makes them a bad choice for Associations where the address might be coded in something like a `CompiledMethod`. It might be good to limit them to only contain references to immutable objects.
 
 ## Notes
 - when the stack is being spilled, 

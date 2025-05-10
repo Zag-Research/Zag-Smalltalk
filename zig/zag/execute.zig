@@ -745,7 +745,7 @@ fn CompileTimeObject(comptime counts: usize) type {
     return struct {
         objects: [codes]Object align(8),
         const Self = @This();
-        pub fn init(comptime tup: anytype) Self {
+        pub fn init(comptime tup: anytype, raw: bool) Self {
             var obj = Self{
                 .objects = undefined,
             };
@@ -754,8 +754,18 @@ fn CompileTimeObject(comptime counts: usize) type {
             comptime var n = 0;
             inline for (tup) |field| {
                 switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null), comptime_int => {
+                    Object, bool, @TypeOf(null) => {
                         objects[n] = Object.from(field);
+                        n += 1;
+                    },
+                    comptime_int => {
+                        objects[n] = if (raw) @bitCast(@as(i64,field))
+                            else Object.from(field);
+                        n += 1;
+                    },
+                    comptime_float => {
+                        objects[n] = if (raw) @bitCast(@as(f64,field))
+                            else Object.from(field);
                         n += 1;
                     },
                     ClassIndex => {
@@ -826,7 +836,7 @@ fn CompileTimeObject(comptime counts: usize) type {
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const objType = CompileTimeObject(countNonLabels(tup));
-    return objType.init(tup);
+    return objType.init(tup,false);
 }
 test "compileObject" {
     std.debug.print("Test: compileObject\n", .{});
@@ -846,22 +856,24 @@ test "compileObject" {
         c.Dispatch, // third HeapObject
         True,
         "def",
+        42.0,
     });
     const debugging = false;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            trace("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
     }
     o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.rawU() });
+            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.rawU() });
     }
 
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[8].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(Object.from(42)));
+    try expect(o.objects[9].equals(Object.from(42.0)));
     try expect(o.objects[3].equals(True));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
     try expectEqual(h1.header.length, 4);
@@ -873,10 +885,39 @@ test "compileObject" {
     try expectEqual(h2.header.length, 0);
     const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
     try expectEqual(h3.header.classIndex, c.Dispatch);
-    try expectEqual(h3.header.length, 2);
+    try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
     try expectEqual(h3.header.format, .notIndexable);
 }
+pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
+    @setEvalBranchQuota(100000);
+    const objType = CompileTimeObject(countNonLabels(tup));
+    return objType.init(tup,true);
+}
+test "compileRaw" {
+    std.debug.print("Test: compileRaw\n", .{});
+    const expectEqual = std.testing.expectEqual;
+    const expect = std.testing.expect;
+    const c = ClassIndex;
+    var o = compileRaw(.{
+        c.SmallInteger,
+        42,
+        42.0,
+    });
+    const debugging = false;
+    if (debugging) {
+        for (&o.objects, 0..) |*ob, idx|
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
+    }
+    try expectEqual(@as(i64,@bitCast(o.objects[1])),42);
+    try expectEqual(@as(f64,@bitCast(o.objects[2])),42.0);
+    const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
+    try expectEqual(h1.header.length, 2);
+    try expect(!h1.header.isIndexable());
+    try expect(h1.header.isStatic());
+    try expect(h1.header.isUnmoving());
+}
+
 pub const Execution = struct {
     fn Executer(size: comptime_int) type {
         return struct {

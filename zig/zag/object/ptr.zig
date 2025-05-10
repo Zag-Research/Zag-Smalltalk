@@ -48,11 +48,7 @@ pub const PtrObject = packed struct(u64) {
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    const c = ClassIndex;
-    pub const ZERO = ptrObject(.{c.SmallInteger,0} PtrObject = @bitCast
-    pub const False = oImm(.False, 0);
-    pub const True = oImm(.True, 0);
-    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
+    const inMemory = @import("inMemory.zig");
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }

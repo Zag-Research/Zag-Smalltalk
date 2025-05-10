@@ -31,18 +31,15 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | FFF1-FFF4 | xxxx | xxxx | xxxx | unused                                     |
 | FFF5      | xxxx | xxxx | xxxx | heap thunk                                 |
 | FFF6      | xxxx | xxxx | xxxx | non-local thunk                            |
-| FFF7      | xxxx | xxxx | xxxx | heap object                                |
-| FFF8-F    | xxxx | xxxx | xxxx | SmallInteger                               |
-| FFF8      | 0000 | 0000 | 0000 | SmallInteger minVal                        |
-| FFFC      | 0000 | 0000 | 0000 | SmallInteger 0                             |
-| FFFF      | FFFF | FFFF | FFFF | SmallInteger maxVal                        |
+| FFFA      | xxxx | xxxx | xxxx | heap object                                |
+| FFFC-F    | xxxx | xxxx | xxxx | SmallInteger                               |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 5 through 7 have the low 48 bits being the address of an object.
 
 #### Class numbers
-1. `ThunkHeap`: This encodes a thunk that evaluates to a heap object. The address of the heap object is in the high 48 bits. (A non-zero extra field could be encoded to access an instance variable, if that is deemed to be a useful optimization.)
-2. `ThunkReturnLocal`: There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnUmmediate`.
+1. `ThunkHeap`: This encodes a thunk that evaluates to a heap object.
+2. `ThunkReturnLocal`: There is no encoding for this class in NaN encoding.
 3. `ThunkReturnInstance`: There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnUmmediate`.
 4.  `ThunkReturnSmallInteger`: There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnUmmediate`.
 5. `ThunkReturnImmediate`: non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^ firstInstanceVariable]`.
@@ -53,7 +50,7 @@ Groups 5 through 7 have the low 48 bits being the address of an object.
 10. `UndefinedObject`: This encodes the singleton value `nil`.
 11. `True`: This encodes the singleton value `true`.
 12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-13. `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 51 bits of the"hash code" make up the value, so this provides 51-bit integers (-2,251,799,813,685,248 to 2,251,799,813,685,247). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+13. `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 51 bits of the "hash code" make up the value, so this provides 51-bit integers (-2,251,799,813,685,248 to 2,251,799,813,685,247). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
 14. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
 15. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 16. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is the result. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.

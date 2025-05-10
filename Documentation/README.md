@@ -8,7 +8,7 @@ The basic idea is that methods are maintained in their AST form. An editor might
 
 Another goal is be be as compatible as possible with [Pharo](https://pharo.org) so that we can leverage most of the rich ecosystem!
 
-The system is being developed on https://github.com/dvmason/Zag-Smalltalk
+The system is being developed on https://github.com/Zag-Research/Zag-Smalltalk
 
 ## More
 - [Execution](Execution.md) is described here, including message dispatch.

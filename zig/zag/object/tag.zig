@@ -84,8 +84,14 @@ pub const TagObject = packed struct(u64) {
     pub inline fn isHeap(self: Object) bool {
         return self.tag == .heap;
     }
-    pub inline fn isDouble(self: Object) bool {
+    pub inline fn isImmediateDouble(self: Object) bool {
         return (self.rawU() & 6) != 0;
+    }
+    pub inline fn isDouble(self: Object) bool {
+        return self.isImmediateDouble() or self.isMemoryDouble();
+    }
+    pub inline fn isMemoryDouble(self: Object) bool {
+        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -140,6 +146,9 @@ pub const TagObject = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return decode(self);
     }
+    pub inline fn toDoubleFromMemory(self: Object) f64 {
+        return self.to(*object.MemoryFloat).*.value;
+    }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
@@ -181,7 +190,7 @@ pub const TagObject = packed struct(u64) {
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .One, .Many => {
+                    .one, .many => {
                         return @bitCast(@intFromPtr(value));
                     },
                     else => {},
@@ -194,7 +203,8 @@ pub const TagObject = packed struct(u64) {
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isDouble()) return self.toDoubleNoCheck();
+                if (!check or self.isImmediateDouble()) return self.toDoubleNoCheck();
+                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
             },
             i64 => {
                 if (!check or self.isInt()) return self.toIntNoCheck();
