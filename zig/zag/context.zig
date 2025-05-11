@@ -57,14 +57,16 @@ pub const ContextData = struct {
         return self.objects()[1 .. self.header.length + 1];
     }
     fn localAddress(self: *ContextData, indices: Object) *Object {
-        var ref: u64 = indices.toNatNoCheck();
-        var objs = self.objects();
-        for (0..4) |i| {
-            const result = &objs[ref & 0x7ff];
-            if (ref <= 0x7ff) return result;
-            if (i < 3) {
-                ref = ref >> 11;
-                objs = result.*.to([*]Object);
+        if (indices.nativeU()) |r| {
+            var ref = r;
+            var objs = self.objects();
+            for (0..4) |i| {
+                const result = &objs[ref & 0x7ff];
+                if (ref <= 0x7ff) return result;
+                if (i < 3) {
+                    ref = ref >> 11;
+                    objs = result.*.to([*]Object);
+                }
             }
         }
         unreachable;

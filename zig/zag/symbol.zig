@@ -235,8 +235,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.value), 0);
     try expectEqual(symbolIndex(symbols.Object), 53);
     try expectEqual(symbolArity(symbols.Object), 0);
-    try expectEqual(3246132641, symbols.Object.rawU());
-    try expectEqual(12406198433, symbols.@"value:value:".rawU());
+    try expectEqual(3246132641, symbols.Object.nativeU_noCheck());
+    try expectEqual(12406198433, symbols.@"value:value:".nativeI_noCheck());
     // test a few at random to verify arity
     try symbol.verify(symbols.@"cull:");
     try symbol.verify(symbols.@"cull:cull:");
@@ -262,9 +262,9 @@ test "find key value for quick selectors" {
     var match: u64 = 0;
     outer: for (8..32) |bit| {
         const bitmask = @as(u64, 1) << @truncate(bit);
-        const bitmatch = QuickSelectors[0].rawU() & bitmask;
+        const bitmatch = QuickSelectors[0].nativeU_noCheck() & bitmask;
         for (QuickSelectors) |obj| {
-            if ((obj.rawU() & bitmask) != bitmatch) continue :outer;
+            if ((obj.nativeU_noCheck() & bitmask) != bitmatch) continue :outer;
         }
         mask = mask | bitmask;
         match = match | bitmatch;

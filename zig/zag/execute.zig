@@ -163,7 +163,7 @@ pub const Signature = packed struct {
         return @truncate(self.int);
     }
     pub fn from(selector: Object, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{ .selector = @truncate(selector.rawU()), .class = class }) };
+        return .{ .int = @bitCast(Internal{ .selector = selector.symbol40(), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -599,10 +599,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn resolve(self: *Self, literals: []const Object) !void {
             for (&self.code, &self.offsets) |*c, *isOffset| {
                 if (isOffset.*) {
-                    if (c.object.isInt()) {
-                        c.* = Code.codePtrOf(c, c.object.to(i64));
+                    if (c.object.nativeI()) |i| {
+                        c.* = Code.codePtrOf(c, i);
                     } else {
-                        const index = c.object.toUnchecked(u64);
+                        const index = c.object.hash32();
                         if (index >= literals.len) return error.Unresolved;
                         c.object = literals[index];
                     }
@@ -796,11 +796,11 @@ fn CompileTimeObject(comptime counts: usize) type {
             for (&self.objects) |*o| {
                 if (o.isThunkImmediate()) {
                     const ob = o.thunkImmediateValue();
-                    if (ob.isInt()) {
-                        o.* = Object.from(&self.objects[ob.hash]);
+                    if (ob.nativeU()) |u| {
+                        o.* = Object.from(&self.objects[u]);
                         includesPointer = true;
                     } else {
-                        const obj = replacements[ob.toNatNoCheck()];
+                        const obj = replacements[ob.nativeU_noCheck()];
                         if (obj.isMemoryAllocated()) includesPointer = true;
                         o.* = obj;
                     }

@@ -33,7 +33,7 @@ pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
-        const result = Object.from(@as(i56, @truncate(@as(i64, @bitCast(val.rawU() << 48)) >> 56)));
+        const result = Object.from(val.extraI());
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
@@ -58,15 +58,15 @@ pub const threadedFns = struct {
         }
         fn encode(obj: Object, sp: SP, process: *Process, context: *Context) Object {
             switch (obj.tag) {
-                .heap => return Compact.ThunkHeap.thunk16(obj.rawU(), 0),
+                .heap => return Compact.ThunkHeap.thunk16(obj.nativeU_noCheck(), 0),
                 .immediates => {
-                    const original = obj.rawI();
+                    const original = obj.nativeI_noCheck();
                     const signExtended = original << 8 >> 8;
                     if (signExtended == original)
                         return Compact.ThunkImmediate.thunk8(@bitCast(signExtended));
                 },
                 else => { // float
-                    const raw = obj.rawU();
+                    const raw = obj.nativeU_noCheck();
                     if (raw & 0xff0 == 0)
                         return Compact.ThunkFloat.thunk8(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf));
                 },
@@ -82,7 +82,7 @@ pub const threadedFns = struct {
                     Object.from(42),
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, Object.from(42).rawU()),
+                    Object.makeImmediate(.ThunkImmediate, Object.from(42).hash),
                 },
             );
         }
@@ -95,7 +95,7 @@ pub const threadedFns = struct {
                     obj,
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkHeap, @truncate(obj.rawU() << 8)),
+                    //Object.makeImmediate(.ThunkHeap, @truncate(obj.rawU() << 8)),
                 },
             );
         }
@@ -107,7 +107,7 @@ pub const threadedFns = struct {
                     True,
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, True.rawU()),
+//                    Object.makeImmediate(.ThunkImmediate, @bitCast(True)),
                 },
             );
         }
@@ -138,7 +138,7 @@ pub const threadedFns = struct {
 };
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const result: Object = @bitCast(sp.top.rawI() >> 8);
+        const result: Object = @bitCast(sp.top.nativeI_noCheck() >> 8);
         const newSp, const callerContext = context.popTargetContext(sp, context, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }
@@ -327,7 +327,7 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, _: 
 }
 pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const block = pc.object();
-    const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.rawU()), context, extra);
+    const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.nativeU_noCheck()), context, extra);
     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
 }
 // pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {

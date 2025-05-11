@@ -186,14 +186,15 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline fn classFromSymbolPlus(self: Object) ClassIndex {
-        return @enumFromInt(self.hash56() >> 32);
+    pub inline fn classFromSymbolPlus(self: Object) ?ClassIndex {
+        if (self.symbolHash()) |h| {
+            const c = h >> 32;
+            if (c > 0) return @enumFromInt(c);
+        }
+        return null;
     }
     pub inline fn isThunkImmediate(self: Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
-    }
-    pub inline fn isInt(self: Object) bool {
-        return self.isImmediateClass(.SmallInteger);
     }
     pub inline fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
@@ -222,10 +223,6 @@ pub const ObjectFunctions = struct {
         if (self.isBool()) return self.toBoolNoCheck();
         return error.wrongType;
     }
-    pub inline fn toInt(self: Object) !i64 {
-        if (self.isInt()) return self.toIntNoCheck();
-        return error.wrongType;
-    }
     pub inline fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
         return error.wrongType;
@@ -242,11 +239,11 @@ pub const ObjectFunctions = struct {
         return self.toWithCheck(T, false);
     }
     pub inline fn asMemoryObject(self: Object) ?HeapObjectPtr {
-        if (self.isMemoryAllocated()) return @ptrFromInt(@as(u48, @truncate(self.rawU())));
+        if (self.isMemoryAllocated()) return self.pointer(HeapObjectPtr);
         return null;
     }
     pub inline fn asObjectArray(self: Object) ?[*]Object {
-        if (self.isHeapObject()) return @ptrCast(self.to(HeapObjectPtr));
+        if (self.isHeapObject()) return self.pointer([*]Object);
         return null;
     }
     pub fn header(self: Object) HeapObject {
@@ -289,9 +286,10 @@ pub const ObjectFunctions = struct {
         const ord = std.math.Order;
         if (self.equals(other)) return ord.eq;
         if (!self.isHeapObject() or !other.isHeapObject()) {
-            const u64s = self.rawU();
-            const u64o = other.rawU();
-            return std.math.order(u64s, u64o);
+            unreachable;
+            // const u64s = self.rawU();
+            // const u64o = other.rawU();
+            // return std.math.order(u64s, u64o);
         }
         const sla = self.arrayAsSlice(u8) catch &[0]u8{};
         const slb = other.arrayAsSlice(u8) catch &[0]u8{};
@@ -322,29 +320,31 @@ pub const ObjectFunctions = struct {
         writer: anytype,
     ) !void {
         _ = options;
-        try switch (self.immediate_class()) {
-            .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
-            .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
-            .False => writer.print("false", .{}),
-            .True => writer.print("true", .{}),
-            .UndefinedObject => writer.print("nil", .{}),
-            .Symbol => {
-//                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
-                try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-                if ((self.hash56() >> 32) > 0)
-                    try writer.print("=>{}", .{self.classFromSymbolPlus()});
-            },
-            .Character => writer.print("${c}", .{self.to(u8)}),
-            .SmallInteger => writer.print("{d}", .{self.toIntNoCheck()}),
-            .Float => writer.print("{}", .{self.to(f64)}),
-            .reservedForContext,
-            .reservedForBlockClosure => writer.print("{}", .{ @as(heap.HeapHeader, @bitCast(self.rawU()))}),
-            else => {
-                try writer.print("{{?0x{x:0>16}}}", .{self.rawU()});
-                //@panic("format for unknown class");
-            },
-        };
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{self.rawU()});
+        if (self.nativeI()) |i| {
+            try writer.print("{d}", .{i});
+        } else if (self.isImmediateClass(.False)) {
+            try writer.print("false", .{});
+        } else if (self.isImmediateClass(.True)) {
+            try writer.print("true", .{});
+        } else if (self.symbolHash()) |_| {
+            try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
+            if (self.classFromSymbolPlus()) |c|
+                try writer.print("=>{}", .{c});
+        } else if (self == Nil) {
+            try writer.print("nil", .{});
+        } else {
+            try writer.print("{{?0x{x:0>16}}}", .{@as(u64,@bitCast(self))});
+        }
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64,@bitCast(self))});
+//         try switch (self.immediate_class()) {
+//             .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
+//             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
+//             .Symbol => {
+// //                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
+//             },
+//             .Character => writer.print("${c}", .{self.to(u8)}),
+//             .Float => writer.print("{}", .{self.to(f64)}),
+//             .reservedForContext => writer.print("{}", .{ @as(heap.HeapHeader, @bitCast(self.rawU()))}),
     }
     pub const alignment = @alignOf(u64);
     // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {
@@ -407,7 +407,7 @@ test "from conversion" {
 test "to conversion" {
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14)).to(f64), 3.14);
-    try ee((Object.from(42)).toInt(), 42);
+    try ee((Object.from(42)).to(u64), 42);
     try std.testing.expect((Object.from(42)).isInt());
     try ee((Object.from(true)).to(bool), true);
     try ee((Object.from(-0x400000)).toUnchecked(i64), -0x400000);

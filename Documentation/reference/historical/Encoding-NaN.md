@@ -9,33 +9,37 @@ There are several ways to do NaN tagging/encoding. You can choose integers, poin
 
 So this leaves us with the following encoding based on the **S**ign+**E**xponent and **F**raction bits:
 
-| S+E       | F    | F    | F    | Type                                       |
-| --------- | ---- | ---- | ---- | ------------------------------------------ |
-| 0000      | 0000 | 0000 | 0000 | double  +0                                 |
-| 0000-7FEF | xxxx | xxxx | xxxx | double (positive)                          |
-| 7FF0      | 0000 | 0000 | 0000 | +inf                                       |
-| 7FF0-F    | xxxx | xxxx | xxxx | NaN (unused)                               |
-| 8000      | 0000 | 0000 | 0000 | double     -0                              |
-| 8000-FFEF | xxxx | xxxx | xxxx | double (negative)                          |
-| FFF0      | 0000 | 0000 | 0000 | -inf                                       |
-| FFF0      | 0000 | xxxx | xxxx | NaN (unused)                               |
-| FFF0      | 0001 | xxxx | xxxx | reserved (tag = Object)                    |
-| FFF0      | 0002 | xxxx | xxxx | reserved (tag = SmallInteger)              |
-| FFF0      | 0003 | FFFF | FFFF | UndefinedObject                            |
-| FFF0      | 0004 | 0000 | 0000 | False                                      |
-| FFF0      | 0005 | 0000 | 0001 | True                                       |
-| FFF0      | 0006 | xxxx | xxxx | reserved (tag = Float (double))            |
-| FFF0      | 0007 | xxxx | xxaa | Symbol                                     |
-| FFF0      | 0008 | 00xx | xxxx | Character                                  |
-| FFF0      | yyyy | xxxx | xxxx | (compressed representation for class yyyy) |
-| FFF1-FFF4 | xxxx | xxxx | xxxx | unused                                     |
-| FFF5      | xxxx | xxxx | xxxx | heap thunk                                 |
-| FFF6      | xxxx | xxxx | xxxx | non-local thunk                            |
-| FFFA      | xxxx | xxxx | xxxx | heap object                                |
-| FFFC-F    | xxxx | xxxx | xxxx | SmallInteger                               |
+| S+E           | F      | F      | F      | Type                            |
+| ------------- | ------ | ------ | ------ | ------------------------------- |
+| `0000`        | 0000   | 0000   | 0000   | double  +0                      |
+| `0000`-`7FEF` | xxxx   | xxxx   | xxxx   | double (positive)               |
+| `7FF0`        | 0000   | 0000   | 0000   | +inf                            |
+| `7FF0`-`7FFF` | xxxx   | xxxx   | xxxx   | NaN (unused)                    |
+| `8000`        | 0000   | 0000   | 0000   | double     -0                   |
+| `8000`-`FFEF` | xxxx   | xxxx   | xxxx   | double (negative)               |
+| `FFF0`        | 0000   | 0000   | 0000   | -inf                            |
+| `FFF0`        | 0000   | xxxx   | xxxx   | NaN (unused)                    |
+| `FFF0`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF1`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF2`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF3`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF4`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF5`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF6`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF7`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF8`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF9`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFFA`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFFB`        | `0010` | xxxx   | xxxx   | reserved (tag = `SmallInteger`) |
+| `FFFB`        | `0011` | xxxx   | xxaa   | `Symbol`                        |
+| `FFFB`        | `0012` | 0000   | 0000   | `False`                         |
+| `FFFB`        | `0013` | 0000   | 0001   | `True`                          |
+| `FFFB`        | `0014` | 00xx   | xxxx   | `Character`                     |
+| `FFFB`        | `0020` | `0000` | `0000` | `UndefinedObject` (`nil`)       |
+| `FFFC`-`FFFF` | xxxx   | xxxx   | xxxx   | `SmallInteger` values           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group 0, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
-Groups 5 through 7 have the low 48 bits being the address of an object.
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
+Groups 0 through A have the low 48 bits being the address of an object.
 
 #### Class numbers
 1. `ThunkHeap`: This encodes a thunk that evaluates to a heap object.
@@ -50,7 +54,7 @@ Groups 5 through 7 have the low 48 bits being the address of an object.
 10. `UndefinedObject`: This encodes the singleton value `nil`.
 11. `True`: This encodes the singleton value `true`.
 12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-13. `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 51 bits of the "hash code" make up the value, so this provides 51-bit integers (-2,251,799,813,685,248 to 2,251,799,813,685,247). The negative integers are first, followed by the positive integers. This allows numerous optimizations of SmallInteger operations (see [[Optimizations]]).
+13. `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 50 bits of the "hash code" make up the value, so this provides 50-bit integers (-562,949,953,421,312 to 562,949,953,421,311).
 14. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
 15. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
 16. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is the result. This encodes 48-bit `SmallInteger`s, and all of the other immediate values.
