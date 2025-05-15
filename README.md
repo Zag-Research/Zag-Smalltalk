@@ -1,4 +1,4 @@
-#  ![[Documentation/images/zag-icon.png|50]] Zag-Smalltalk
+#  <img src="Documentation/images/zag-icon.png" alt="Zag Icon" width="50"/>  Zag-Smalltalk
 
 Smalltalk VM Written in Zig with methods stored as type-annotated ASTs
 
