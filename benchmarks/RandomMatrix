@@ -1,0 +1,25 @@
+LcgFloat
+	"|lcg |
+	lcg := BenchRandom new.
+	^ Array rows: 10 columns: 6 tabulate: [ :i :j | random next ]"
+
+	| randomArray size seed a c m currentValue rand lcg |
+	BenchRandom class >> lcg.
+	^ self new initialize.
+
+	size := 10. "Define the size of the array"
+	seed := 12345. "Choose an initial seed value"
+	a := 1103515245. "Multiplier constant"
+	c := 12345. "Increment constant"
+	m := 2 raisedTo: 31. "Modulus "
+	randomArray := OrderedCollection new. "Create an empty collection to store random numbers"
+	rand := seed. "Set the initial value to the seed"
+
+
+	rand := BenchRandom between: 0 and: 100.
+	"(1 to: 10) collect: [ :ignore | rand nextFloat ]."
+	1 to: size do: [ :i |
+		rand := a * rand + c \\ m. "Linear congruential generator formula"
+		randomArray add: rand / m * 100 "Scale the result to a range between 0 and 100" ].
+
+	^ randomArray asArray "Return the array"
