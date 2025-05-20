@@ -18,24 +18,24 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `8000`        | 0000   | 0000   | 0000   | double     -0                   |
 | `8000`-`FFEF` | xxxx   | xxxx   | xxxx   | double (negative)               |
 | `FFF0`        | 0000   | 0000   | 0000   | -inf                            |
-| `FFF0`        | 0000   | xxxx   | xxxx   | NaN (unused)                    |
 | `FFF0`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF1`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF2`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF3`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF4`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF5`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF6`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF7`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF8`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFF9`        | xxxx   | xxxx   | xxxx   | heap object                     |
-| `FFFA`        | xxxx   | xxxx   | xxxx   | heap object                     |
+| `FFF1`        | xxxx   | xxxx   | xxxx   | `ThunkReturnLocal`              |
+| `FFF2`        | xxxx   | xxxx   | xxxx   | `ThunkReturnInstance`           |
+| `FFF3`        | xxxx   | xxxx   | xxxx   | `ThunkReturnSmallInteger`       |
+| `FFF4`        | xxxx   | xxxx   | xxxx   | `ThunkReturnImmediate`          |
+| `FFF5`        | xxxx   | xxxx   | xxxx   | `ThunkLocal`                    |
+| `FFF6`        | xxxx   | xxxx   | xxxx   | `ThunkInstance`                 |
+| `FFF7`        | xxxx   | xxxx   | xxxx   | `PICPointer`                    |
+| `FFF8`        | xxxx   | xxxx   | xxxx   | `ThunkHeap`                     |
+| `FFF9`        | xxxx   | xxxx   | xxxx   | `ThunkImmediate`                |
+| `FFFA`        | xxxx   | xxxx   | xxxx   | reserved                        |
 | `FFFB`        | `0010` | xxxx   | xxxx   | reserved (tag = `SmallInteger`) |
 | `FFFB`        | `0011` | xxxx   | xxaa   | `Symbol`                        |
 | `FFFB`        | `0012` | 0000   | 0000   | `False`                         |
 | `FFFB`        | `0013` | 0000   | 0001   | `True`                          |
 | `FFFB`        | `0014` | 00xx   | xxxx   | `Character`                     |
 | `FFFB`        | `0020` | `0000` | `0000` | `UndefinedObject` (`nil`)       |
+| `FFFB`        | `0022` | `0000` | `0000` | reserved (tag = `Float`)        |
 | `FFFC`-`FFFF` | xxxx   | xxxx   | xxxx   | `SmallInteger` values           |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
