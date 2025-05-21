@@ -61,68 +61,68 @@ const EnumSort = struct {
 const addUnrecognized = true;
 pub const Enum =
     blk: {
-    @setEvalBranchQuota(100000);
-    const decls = @typeInfo(structures).@"struct".decls;
-    var array: [decls.len]EnumSort = undefined;
-    var n = 0;
-    for (decls) |decl| {
-        const ds = @field(structures, decl.name);
-        switch (@typeInfo(@TypeOf(ds))) {
-            .comptime_int, .int, .@"fn", .array => {},
-            else => {
-                if (@hasDecl(ds, "threadedFn")) {
-                    if (@hasDecl(ds, "order")) {
-                        array[n] = .{ .field = &decl, .order = @field(ds, "order") };
-                    } else array[n] = .{ .field = &decl, .order = 0 };
-                    n += 1;
-                }
-            },
+        @setEvalBranchQuota(100000);
+        const decls = @typeInfo(structures).@"struct".decls;
+        var array: [decls.len]EnumSort = undefined;
+        var n = 0;
+        for (decls) |decl| {
+            const ds = @field(structures, decl.name);
+            switch (@typeInfo(@TypeOf(ds))) {
+                .comptime_int, .int, .@"fn", .array => {},
+                else => {
+                    if (@hasDecl(ds, "threadedFn")) {
+                        if (@hasDecl(ds, "order")) {
+                            array[n] = .{ .field = &decl, .order = @field(ds, "order") };
+                        } else array[n] = .{ .field = &decl, .order = 0 };
+                        n += 1;
+                    }
+                },
+            }
         }
-    }
-    const enums = array[0..n];
-    std.mem.sort(EnumSort, enums, {}, enumLessThan);
-    var fields = @typeInfo(enum {}).@"enum".fields;
-    for (enums, 0..) |d, i| {
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = d.field.name,
-            .value = i,
-        }};
-    }
-    if (addUnrecognized) {
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = "Code.end",
-            .value = fields.len,
-        }};
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = "Unrecognized",
-            .value = 9999,
-        }};
-    }
-    //@compileLog(fields);
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = usize,
-        .is_exhaustive = false,
-        .fields = fields,
-        .decls = &.{},
-    } });
-};
+        const enums = array[0..n];
+        std.mem.sort(EnumSort, enums, {}, enumLessThan);
+        var fields = @typeInfo(enum {}).@"enum".fields;
+        for (enums, 0..) |d, i| {
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = d.field.name,
+                .value = i,
+            }};
+        }
+        if (addUnrecognized) {
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = "Code.end",
+                .value = fields.len,
+            }};
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = "Unrecognized",
+                .value = 9999,
+            }};
+        }
+        //@compileLog(fields);
+        break :blk @Type(.{ .@"enum" = .{
+            .tag_type = usize,
+            .is_exhaustive = false,
+            .fields = fields,
+            .decls = &.{},
+        } });
+    };
 
 pub const functions =
     blk: {
-    const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
-    var array: [arraySize]ThreadedFn.Fn = undefined;
-    for (@typeInfo(Enum).@"enum".fields) |d| {
-        if (d.value < arraySize) {
-            if (d.value == arraySize - 1) {
-                array[d.value] = &execute.Code.end;
-            } else {
-                const ds = @field(structures, d.name);
-                array[d.value] = &@field(ds, "threadedFn");
+        const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
+        var array: [arraySize]ThreadedFn.Fn = undefined;
+        for (@typeInfo(Enum).@"enum".fields) |d| {
+            if (d.value < arraySize) {
+                if (d.value == arraySize - 1) {
+                    array[d.value] = &execute.Code.end;
+                } else {
+                    const ds = @field(structures, d.name);
+                    array[d.value] = &@field(ds, "threadedFn");
+                }
             }
         }
-    }
-    break :blk array;
-};
+        break :blk array;
+    };
 
 pub fn initialize() void {}
 pub fn threadedFn(key: Enum) ThreadedFn.Fn {

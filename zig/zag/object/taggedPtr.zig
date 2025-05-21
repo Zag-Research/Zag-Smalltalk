@@ -23,10 +23,10 @@ pub const TaggedPtrObject = packed struct(u64) {
         return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable};
+        _ = .{ o, unreachable };
     }
     pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable};
+        _ = .{ self, unreachable };
     }
     pub inline fn isImmediateClass(_: Object, _: ClassIndex.Compact) bool {
         return false;
@@ -196,7 +196,7 @@ pub const TaggedPtrObject = packed struct(u64) {
             return self.vtable.simple(self.ptr, obj);
         }
         fn noSimple(ctx: *anyopaque, obj: Object) void {
-            _ = .{ctx, obj};
+            _ = .{ ctx, obj };
         }
     };
     pub inline fn isSymbol(self: Object) bool {

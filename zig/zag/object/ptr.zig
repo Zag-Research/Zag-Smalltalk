@@ -7,7 +7,6 @@ const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
 const object = zag.object;
-const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
@@ -24,17 +23,17 @@ pub const PointedObject = struct {
         character: void,
     },
 };
-pub const PtrObject = packed struct(u64) {
+pub const Object = packed struct(u64) {
     ref: *PointedObject,
     const Self = @This();
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable};
+        _ = .{ o, unreachable };
     }
     pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable};
+        _ = .{ self, unreachable };
     }
     pub inline fn isImmediateClass(_: Object, _: ClassIndex.Compact) bool {
         return false;
@@ -201,7 +200,7 @@ pub const PtrObject = packed struct(u64) {
             return self.vtable.simple(self.ptr, obj);
         }
         fn noSimple(ctx: *anyopaque, obj: Object) void {
-            _ = .{ctx, obj};
+            _ = .{ ctx, obj };
         }
     };
     pub inline fn isSymbol(self: Object) bool {

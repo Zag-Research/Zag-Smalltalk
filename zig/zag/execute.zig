@@ -109,7 +109,7 @@ pub const Extra = union {
     signature: Signature,
     contextData: *Context.ContextData,
     pub fn encoded(self: Extra) Extra {
-        if (Object.from(self.method).thunkImmediate()) |obj| {
+        if (Object.from(self.method).tagMethod()) |obj| {
             return .{ .object = obj };
         } else {
             std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
@@ -117,11 +117,11 @@ pub const Extra = union {
         }
     }
     pub fn decoded(self: Extra) Extra {
-        return .{ .object = self.object.thunkImmediateValue() };
+        return .{ .object = self.object.tagMethodValue() };
     }
     pub fn isEncoded(self: Extra) bool {
         @setRuntimeSafety(false);
-        return self.object.isThunkImmediate();
+        return Object.from(self.method).isTaggedMethod();
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
@@ -393,7 +393,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn),undefined},
+            .code = .{ Code.primOf(methodFn), undefined },
         };
     }
     pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: ThreadedFn.Fn) Self {
@@ -403,7 +403,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.from(name, class),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{Code.primOf(methodFn),undefined}, //TODO: should be something like primitiveFailed
+            .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
         };
     }
     pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context) StackAndContext {
@@ -599,6 +599,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn resolve(self: *Self, literals: []const Object) !void {
             for (&self.code, &self.offsets) |*c, *isOffset| {
                 if (isOffset.*) {
+                    isOffset.* = false;
                     if (c.object.nativeI()) |i| {
                         c.* = Code.codePtrOf(c, i);
                     } else {
@@ -606,7 +607,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         if (index >= literals.len) return error.Unresolved;
                         c.object = literals[index];
                     }
-                    isOffset.* = false;
                 }
             }
         }
@@ -744,10 +744,12 @@ fn CompileTimeObject(comptime counts: usize) type {
     const codes = counts;
     return struct {
         objects: [codes]Object align(8),
+        offsets: [codes]bool align(8),
         const Self = @This();
         pub fn init(comptime tup: anytype, raw: bool) Self {
             var obj = Self{
                 .objects = undefined,
+                .offsets = [_]bool{false} ** codes,
             };
             const objects = obj.objects[0..];
             comptime var last = -1;
@@ -759,13 +761,11 @@ fn CompileTimeObject(comptime counts: usize) type {
                         n += 1;
                     },
                     comptime_int => {
-                        objects[n] = if (raw) @bitCast(@as(i64,field))
-                            else Object.from(field);
+                        objects[n] = if (raw) @bitCast(@as(i64, field)) else Object.from(field);
                         n += 1;
                     },
                     comptime_float => {
-                        objects[n] = if (raw) @bitCast(@as(f64,field))
-                            else Object.from(field);
+                        objects[n] = if (raw) @bitCast(@as(f64, field)) else Object.from(field);
                         n += 1;
                     },
                     ClassIndex => {
@@ -773,15 +773,18 @@ fn CompileTimeObject(comptime counts: usize) type {
                             objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1).o();
                         const header = HeapHeader.calc(field, 0, 0xffffff, Age.static, null, Object, false) catch unreachable;
                         objects[n] = header.o();
+                        obj.offsets[n] = true;
                         last = n;
                         n += 1;
                     },
                     else => {
                         if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                            objects[n] = Object.thunkImmediate(symbol.fromHash32(comptime intOf(field[0..]))).?;
+                            objects[n] = @bitCast(@as(i64, comptime intOf(field[0..]) << 1));
+                            obj.offsets[n] = true;
                             n += 1;
                         } else if (field[0] != ':') {
-                            objects[n] = Object.thunkImmediate(Object.from(lookupLabel(tup, field))).?;
+                            objects[n] = @bitCast(@as(i64, (lookupLabel(tup, field) << 1) + 1));
+                            obj.offsets[n] = true;
                             n += 1;
                         }
                     },
@@ -792,32 +795,31 @@ fn CompileTimeObject(comptime counts: usize) type {
             return obj;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
-            var includesPointer = false;
-            for (&self.objects) |*o| {
-                if (o.isThunkImmediate()) {
-                    const ob = o.thunkImmediateValue();
-                    if (ob.nativeU()) |u| {
-                        o.* = Object.from(&self.objects[u]);
-                        includesPointer = true;
-                    } else {
-                        const obj = replacements[ob.nativeU_noCheck()];
-                        if (obj.isMemoryAllocated()) includesPointer = true;
-                        o.* = obj;
-                    }
-                } else { // there is a miniscule chance of false-positive
-                    var header: HeapHeader = @bitCast(o.*);
-                    if (header.length < 1024 and
-                        header.hash == 0xffffff and
+            var lastHeader: ?*HeapHeader = null;
+            for (&self.objects, &self.offsets) |*o, *isOffset| {
+                if (isOffset.*) {
+                    isOffset.* = false;
+                    var header: *HeapHeader = @ptrCast(o);
+                    if (header.hash == 0xffffff and
+                        header.length < 1024 and
                         header.format == .notIndexable and
                         header.age == .static)
                     {
-                        if (@intFromEnum(header.classIndex) > @intFromEnum(ClassIndex.max))
+                        if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
-                        if (includesPointer)
-                            header.format = .notIndexableWithPointers;
+                        }
                         header.hash ^= @truncate(@intFromPtr(o) *% phi32);
-                        o.* = @bitCast(header);
-                        includesPointer = false;
+                        lastHeader = header;
+                    } else {
+                        const ob: u64 = @bitCast(o.*);
+                        if (ob & 1 != 0) {
+                            o.* = Object.from(&self.objects[ob >> 1]);
+                        } else {
+                            o.* = replacements[ob >> 1];
+                        }
+                        if (o.isMemoryAllocated()) {
+                            if (lastHeader) |h| h.format = .notIndexableWithPointers;
+                        }
                     }
                 }
             }
@@ -836,7 +838,7 @@ fn CompileTimeObject(comptime counts: usize) type {
 pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const objType = CompileTimeObject(countNonLabels(tup));
-    return objType.init(tup,false);
+    return objType.init(tup, false);
 }
 test "compileObject" {
     std.debug.print("Test: compileObject\n", .{});
@@ -850,6 +852,7 @@ test "compileObject" {
         42,
         "1mref", // reference to replacement Object #1
         "third", // pointer to third object
+        "0mref",
         ":second",
         c.replace0, // second HeapObject - runtime ClassIndex #0
         ":third",
@@ -861,38 +864,39 @@ test "compileObject" {
     const debugging = false;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.testU() });
     }
-    o.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
+    o.setLiterals(&[_]Object{ True, Nil }, &[_]ClassIndex{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.rawU() });
+            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.testU() });
     }
 
     try expect(o.asObject().isHeapObject());
-    try expect(o.objects[8].equals(o.asObject()));
+    try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(Object.from(42)));
-    try expect(o.objects[9].equals(Object.from(42.0)));
-    try expect(o.objects[3].equals(True));
+    try expect(o.objects[10].equals(Object.from(42.0)));
+    try expect(o.objects[3].equals(Nil));
+    try expect(o.objects[5].equals(True));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
-    try expectEqual(h1.header.length, 4);
+    try expectEqual(h1.header.length, 5);
     try expect(!h1.header.isIndexable());
     try expect(h1.header.isStatic());
     try expect(h1.header.isUnmoving());
-    const h2: HeapObjectConstPtr = @ptrCast(&o.objects[5]);
+    const h2: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
     try expectEqual(@intFromEnum(h2.header.classIndex), 0xdead);
     try expectEqual(h2.header.length, 0);
-    const h3: HeapObjectConstPtr = @ptrCast(&o.objects[6]);
+    const h3: HeapObjectConstPtr = @ptrCast(&o.objects[7]);
     try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
-    try expectEqual(h3.header.format, .notIndexable);
+    try expectEqual(h3.header.format, .notIndexableWithPointers);
 }
 pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const objType = CompileTimeObject(countNonLabels(tup));
-    return objType.init(tup,true);
+    return objType.init(tup, true);
 }
 test "compileRaw" {
     std.debug.print("Test: compileRaw\n", .{});
@@ -909,8 +913,8 @@ test "compileRaw" {
         for (&o.objects, 0..) |*ob, idx|
             std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
     }
-    try expectEqual(@as(i64,@bitCast(o.objects[1])),42);
-    try expectEqual(@as(f64,@bitCast(o.objects[2])),42.0);
+    try expectEqual(@as(i64, @bitCast(o.objects[1])), 42);
+    try expectEqual(@as(f64, @bitCast(o.objects[2])), 42.0);
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
     try expectEqual(h1.header.length, 2);
     try expect(!h1.header.isIndexable());

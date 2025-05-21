@@ -403,7 +403,7 @@ pub const threadedFunctions = struct {
             const selector = pc.object();
             context.setReturn(pc.next2());
             const receiver = sp.at(selector.numArgs());
-            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector,receiver.get_class()) } });
+            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector, receiver.get_class()) } });
         }
     };
     pub const tailCallMethod = struct {
@@ -425,7 +425,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const selector = pc.object();
             const receiver = sp.at(selector.numArgs());
-            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector,receiver.get_class()) } });
+            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector, receiver.get_class()) } });
         }
     };
 };
@@ -484,17 +484,14 @@ pub fn dispatchPIC(pc: PC, sp: SP, process: *Process, context: *Context, extra: 
     if (pic.isImmediate()) {
         if (pic.highPointer(*PICObject)) |picO| {
             if (picO.match(extra.signature)) |method|
-                return @call(tailCall, process.check(method.executeFn),
-                             .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
+                return @call(tailCall, process.check(method.executeFn), .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
             unreachable;
         }
-        return @call(tailCall, dispatchOrCompile,
-                     .{ undefined, sp, process, context, extra});
+        return @call(tailCall, dispatchOrCompile, .{ undefined, sp, process, context, extra });
     } else {
         if (pic.toUnchecked(?*CompiledMethod)) |method| {
             if (method.signature == extra.signature)
-                return @call(tailCall, process.check(method.executeFn),
-                             .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
+                return @call(tailCall, process.check(method.executeFn), .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
             unreachable;
         }
     }
@@ -564,8 +561,7 @@ const DispatchMethod = struct {
         if (self.method) |method| {
             if (method.signature == signature)
                 return self;
-        } else
-            return self;
+        } else return self;
         return null;
     }
     inline fn isNil(self: Self) bool {

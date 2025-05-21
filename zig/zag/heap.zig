@@ -23,8 +23,6 @@ const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
 const inversePhi24 = utilities.inversePhi(u24);
 const assert = std.debug.assert;
-//const compileObject = zag.execute.compileObject;
-//const Sym = zag.symbol.symbols;
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
@@ -194,7 +192,7 @@ const HeapOperations = struct {
     instVarWithPtr: Format = .free,
     inline fn set(ops: *[128]HeapOperations, format: Format, tuple: HeapOperations) void {
         const idx = @intFromEnum(format);
-        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx else idx + 8;
+        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx + 8 else idx;
         ops[idx].array = tuple.array;
         ops[idx].instVars = tuple.instVars;
         ops[idx].size = tuple.size;
@@ -321,6 +319,8 @@ pub const HeapObjectPtrIterator = struct {
 //     const ho1 = AllocationInfo.calc(0, 0, Object, false).heapHeader(ClassIndex.Object, .static, 0);
 //     try testing.expectEqual(ho1.makeIterator(), null);
 //     const c = ClassIndex;
+//     const compileObject = zag.execute.compileObject;
+//     const Sym = zag.symbol.symbols;
 //     var o1b = compileObject(.{
 //         True,
 //         Sym.i_0, // alternate reference to replacement Object #1
@@ -742,9 +742,6 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn isIndexable(self: HeapHeader) bool {
         return self.format.isIndexable();
     }
-    pub inline fn isIndexableWithPtrs(self: HeapHeader) bool {
-        return self.format.isIndexableWithPtrs();
-    }
     pub inline fn o(self: HeapHeader) Object {
         return @as(Object, @bitCast(self));
     }
@@ -800,7 +797,7 @@ pub const HeapObject = packed struct {
         if (head.forwardedTo()) |target| { // already forwarded
             reference.* = switch (config.objectEncoding) {
                 .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .tag => Nil,
+                .zag => Nil,
                 else => unreachable,
             };
             return hp;
@@ -812,7 +809,7 @@ pub const HeapObject = packed struct {
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
             .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .tag => Nil,
+            .zag => Nil,
             else => unreachable,
         };
         return newHp;

@@ -53,41 +53,48 @@ pub const threadedFns = struct {
     /// however, values that don't fit will allocate a 1 element array on the heap and return a ThunkInstance that references it
     pub const asThunk = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.top = encode(sp.top, sp, process, context);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+            switch (config.objectEncoding) {
+                .zag => {
+                    sp.top = encodeZag(sp.top, sp, process, context);
+                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+                },
+                else => unreachable,
+            }
         }
-        fn encode(obj: Object, sp: SP, process: *Process, context: *Context) Object {
+        inline fn encodeZag(obj: Object, sp: SP, process: *Process, context: *Context) Object {
             switch (obj.tag) {
-                .heap => return Compact.ThunkHeap.thunk16(obj.nativeU_noCheck(), 0),
+                .heap => return Object.makeThunk(.ThunkHeap, obj.to(heap.HeapObjectPtr), 0),
                 .immediates => {
-                    const original = obj.nativeI_noCheck();
-                    const signExtended = original << 8 >> 8;
+                    const original: i64 = @bitCast(obj);
+                    const signExtended: i56 = @truncate(original << 8 >> 8);
+                    std.debug.print("exncode: {x} {x}\n", .{ original, signExtended });
                     if (signExtended == original)
-                        return Compact.ThunkImmediate.thunk8(@bitCast(signExtended));
+                        return Object.makeThunkNoArg(.ThunkImmediate, @bitCast(signExtended));
                 },
                 else => { // float
-                    const raw = obj.nativeU_noCheck();
+                    const raw: u64 = @bitCast(obj);
                     if (raw & 0xff0 == 0)
-                        return Compact.ThunkFloat.thunk8(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf));
+                        return Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf)));
                 },
             }
             const ar = process.allocArray(&[_]Object{obj}, sp, context);
-            return Compact.ThunkInstance.thunk16(@intFromPtr(ar), 1);
+            return Object.makeThunk(.ThunkInstance, ar, 1);
         }
         test "asThunk int" {
             try Execution.runTest(
                 "asThunk int",
                 .{tf.asThunk},
                 &[_]Object{
-                    Object.from(42),
+                    Object.from(2),
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, Object.from(42).hash),
+                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2).testU())),
                 },
             );
         }
         test "asThunk ptr" {
             const obj = Object.from(&ThunkReturnSmallInteger.method);
+            std.debug.print("obj = {x} {*}\n", .{ obj.testU(), &ThunkReturnSmallInteger.method });
             try Execution.runTest(
                 "asThunk ptr",
                 .{tf.asThunk},
@@ -95,19 +102,19 @@ pub const threadedFns = struct {
                     obj,
                 },
                 &[_]Object{
-                    //Object.makeImmediate(.ThunkHeap, @truncate(obj.rawU() << 8)),
+                    Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8)),
                 },
             );
         }
         test "asThunk True" {
             try Execution.runTest(
-                "asThunk int",
+                "asThunk True",
                 .{tf.asThunk},
                 &[_]Object{
                     True,
                 },
                 &[_]Object{
-//                    Object.makeImmediate(.ThunkImmediate, @bitCast(True)),
+                    Object.makeImmediate(.ThunkImmediate, @truncate(True.testU())),
                 },
             );
         }
@@ -138,7 +145,7 @@ pub const threadedFns = struct {
 };
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const result: Object = @bitCast(sp.top.nativeI_noCheck() >> 8);
+        const result: Object = @bitCast(sp.top.extraValue());
         const newSp, const callerContext = context.popTargetContext(sp, context, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }
