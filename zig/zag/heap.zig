@@ -704,6 +704,15 @@ pub const HeapHeader = packed struct(u64) {
             .length = length,
         };
     }
+    pub inline fn withHash(self: HeapHeader, hash: u24) HeapHeader {
+        return .{
+            .classIndex = self.classIndex,
+            .hash = hash,
+            .format = self.format,
+            .age = self.age,
+            .length = self.length,
+        };
+    }
     pub inline fn isOnStack(self: HeapHeader) bool {
         return self.age.isOnStack();
     }

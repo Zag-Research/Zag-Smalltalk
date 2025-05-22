@@ -755,44 +755,42 @@ fn CompileTimeObject(comptime counts: usize) type {
             const objects = obj.objects[0..];
             comptime var last = -1;
             comptime var n = 0;
+            comptime var hash: u24 = 0;
             inline for (tup) |field| {
-                switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null) => {
-                        objects[n] = Object.from(field);
-                        n += 1;
+                const o: Object = switch (@TypeOf(field)) {
+                    Object, bool, @TypeOf(null) => Object.from(field),
+                    comptime_int => blk: {
+                        hash = field;
+                        break :blk if (raw) @as(Object,@bitCast(@as(i64, field))) else Object.from(field);
                     },
-                    comptime_int => {
-                        objects[n] = if (raw) @bitCast(@as(i64, field)) else Object.from(field);
-                        n += 1;
-                    },
-                    comptime_float => {
-                        objects[n] = if (raw) @bitCast(@as(f64, field)) else Object.from(field);
-                        n += 1;
-                    },
-                    ClassIndex => {
+                    comptime_float => if (raw) @as(Object,@bitCast(@as(f64, field))) else Object.from(field),
+                    ClassIndex => blk: {
                         if (last >= 0)
-                            objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1).o();
-                        const header = HeapHeader.calc(field, 0, 0xffffff, Age.static, null, Object, false) catch unreachable;
-                        objects[n] = header.o();
+                            objects[last] = @as(HeapHeader, @bitCast(objects[last])).
+                            withLength(n - last - 1).
+                            withHash(hash).o();
+                        const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch unreachable;
+                        hash = 0;
                         obj.offsets[n] = true;
                         last = n;
-                        n += 1;
+                        break :blk header.o();
                     },
-                    else => {
+                    else => blk: {
                         if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
-                            objects[n] = @bitCast(@as(i64, comptime intOf(field[0..]) << 1));
                             obj.offsets[n] = true;
-                            n += 1;
+                            break :blk @as(Object,@bitCast(@as(i64, comptime intOf(field[0..]) << 1)));
                         } else if (field[0] != ':') {
-                            objects[n] = @bitCast(@as(i64, (lookupLabel(tup, field) << 1) + 1));
                             obj.offsets[n] = true;
-                            n += 1;
-                        }
+                            break :blk @as(Object,@bitCast(@as(i64, (comptime lookupLabel(tup, field) << 1) + 1)));
+                        } else continue;
                     },
-                }
+                };
+                objects[n] = o;
+                n += 1;
             }
             if (last >= 0)
-                objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1).o();
+                objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1).
+                            withHash(hash).o();
             return obj;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
@@ -801,8 +799,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                 if (isOffset.*) {
                     isOffset.* = false;
                     var header: *HeapHeader = @ptrCast(o);
-                    if (header.hash == 0xffffff and
-                        header.length < 1024 and
+                    if (header.length < 1024 and
                         header.format == .notIndexable and
                         header.age == .static)
                     {
@@ -813,11 +810,8 @@ fn CompileTimeObject(comptime counts: usize) type {
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        if (ob & 1 != 0) {
-                            o.* = Object.from(&self.objects[ob >> 1]);
-                        } else {
-                            o.* = replacements[ob >> 1];
-                        }
+                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1])
+                            else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
@@ -881,7 +875,7 @@ test "compileObject" {
     try expect(o.objects[3].equals(Nil));
     try expect(o.objects[5].equals(True));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
-    try expectEqual(h1.header.length, 5);
+    try expectEqual(5, h1.header.length);
     try expect(!h1.header.isIndexable());
     try expect(h1.header.isStatic());
     try expect(h1.header.isUnmoving());
@@ -917,7 +911,8 @@ test "compileRaw" {
     try expectEqual(@as(i64, @bitCast(o.objects[1])), 42);
     try expectEqual(@as(f64, @bitCast(o.objects[2])), 42.0);
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
-    try expectEqual(h1.header.length, 2);
+    try expectEqual(2, h1.header.length);
+    try expectEqual(42, h1.header.hash);
     try expect(!h1.header.isIndexable());
     try expect(h1.header.isStatic());
     try expect(h1.header.isUnmoving());

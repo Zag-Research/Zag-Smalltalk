@@ -53,5 +53,5 @@ pub const SmallIntegerCache = compileRaw(.{
     si, 38,
     si, 39,
 });
-pub const SICacheMin = -5;
+const SICacheMin = -5;
 pub const SICacheMax = 39;

@@ -27,8 +27,8 @@ pub const PointedObject = struct {
 pub const Object = packed struct(u64) {
     ref: *PointedObject,
     const Self = @This();
-    pub const True = Object.from(inMemory.True);
     pub const False = Object.from(inMemory.False);
+    pub const True = Object.from(inMemory.True);
     pub const Nil = Object.from(inMemory.Nil);
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };

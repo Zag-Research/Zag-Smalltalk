@@ -30,6 +30,10 @@ pub const Object = packed struct(u64) {
         }
     };
     const Self = @This();
+    pub const ZERO = of(0);
+    pub const False = oImm(.False, 0);
+    pub const True = oImm(.True, 0);
+    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
     pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
@@ -177,10 +181,6 @@ pub const Object = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    pub const ZERO = of(0);
-    pub const False = oImm(.False, 0);
-    pub const True = oImm(.True, 0);
-    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
     pub inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
