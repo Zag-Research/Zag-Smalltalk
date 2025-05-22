@@ -98,8 +98,7 @@ pub const ClassIndex = enum(u16) {
     PrimitiveFailed,
     BlockClosureValue,
     testClass = config.max_classes - 1,
-    max = 0xffff - 8,
-    replace7,
+    replace7 = 0xffff - 7,
     replace6,
     replace5,
     replace4,
@@ -108,6 +107,7 @@ pub const ClassIndex = enum(u16) {
     replace1,
     replace0,
     _,
+    pub const ReplacementIndices = Self.replace7;
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
     pub const Compact = enum(u5) {
@@ -137,12 +137,6 @@ pub const ClassIndex = enum(u16) {
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
-        pub fn thunk16(self: Compact, addr: u64, tag: u8) Object {
-            return Object.oImm(self, @truncate((addr << 8) | tag));
-        }
-        pub fn thunk8(self: Compact, value: u64) Object {
-            return Object.oImm(self, @truncate(value));
-        }
     };
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
@@ -165,15 +159,17 @@ pub const MemoryFloat = struct {
 pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
     const u: u64 = @bitCast(v);
     const hash: u24 = @truncate(u ^ (u >> 24) ^ (u >> 48));
-    return .{ .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
+    return .{
+        .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
         .value = v,
     };
 }
 pub const Object = switch (config.objectEncoding) {
-    .tag => @import("object/tag.zig").TagObject,
-    .nan => @import("object/nan.zig").NanObject,
-    .ptr => @import("object/ptr.zig").PtrObject,
-    .taggedPtr => @import("object/taggedPtr.zig").TaggedPtrObject,
+    .zag => @import("object/zag.zig").Object,
+    .nan => @import("object/nan.zig").Object,
+    .spur => @import("object/spur.zig").Object,
+    .ptr => @import("object/ptr.zig").Object,
+    .taggedPtr => @import("object/taggedPtr.zig").Object,
 };
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
@@ -192,9 +188,6 @@ pub const ObjectFunctions = struct {
             if (c > 0) return @enumFromInt(c);
         }
         return null;
-    }
-    pub inline fn isThunkImmediate(self: Object) bool {
-        return self.isImmediateClass(.ThunkImmediate);
     }
     pub inline fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
@@ -333,18 +326,18 @@ pub const ObjectFunctions = struct {
         } else if (self == Nil) {
             try writer.print("nil", .{});
         } else {
-            try writer.print("{{?0x{x:0>16}}}", .{@as(u64,@bitCast(self))});
+            try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64,@bitCast(self))});
-//         try switch (self.immediate_class()) {
-//             .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
-//             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
-//             .Symbol => {
-// //                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
-//             },
-//             .Character => writer.print("${c}", .{self.to(u8)}),
-//             .Float => writer.print("{}", .{self.to(f64)}),
-//             .reservedForContext => writer.print("{}", .{ @as(heap.HeapHeader, @bitCast(self.rawU()))}),
+        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64, @bitCast(self))});
+        //         try switch (self.immediate_class()) {
+        //             .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
+        //             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
+        //             .Symbol => {
+        // //                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
+        //             },
+        //             .Character => writer.print("${c}", .{self.to(u8)}),
+        //             .Float => writer.print("{}", .{self.to(f64)}),
+        //             .reservedForContext => writer.print("{}", .{ @as(heap.HeapHeader, @bitCast(self.rawU()))}),
     }
     pub const alignment = @alignOf(u64);
     // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {

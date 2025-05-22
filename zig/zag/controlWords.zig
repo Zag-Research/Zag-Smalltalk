@@ -44,7 +44,7 @@ pub const module = struct {
             //     return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
             // } else |_| {}
             // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-            _ = .{pc,sp,process,context,extra,unreachable};
+            _ = .{ pc, sp, process, context, extra, unreachable };
         }
     };
 };
@@ -317,15 +317,14 @@ pub const pushClosure = struct {
         const size = stackedFields + 1 + includeContext;
         var tempBuffer: [10]Object = undefined;
         const temp = tempBuffer[0..stackedFields]; // ToDo: verify that fits
-        for (temp,sp.slice(stackedFields)) |*t,s|
+        for (temp, sp.slice(stackedFields)) |*t, s|
             t.* = s;
         const newSp = sp.reserve(3 + includeContext);
         const copySize = stackOffset - stackedFields;
-        for (newSp.unreserve(1).slice(copySize),
-             sp.unreserve(stackedFields).slice(copySize)) |*d,s|
+        for (newSp.unreserve(1).slice(copySize), sp.unreserve(stackedFields).slice(copySize)) |*d, s|
             d.* = s;
         const closure = newSp.unreserve(copySize + 1).slice(size + 1);
-        for(closure[2 + includeContext ..], temp) |*d,s|
+        for (closure[2 + includeContext ..], temp) |*d, s|
             d.* = s;
         closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
         closure[1] = pc.next().object();
@@ -333,8 +332,7 @@ pub const pushClosure = struct {
         newSp.top = Object.from(closure.ptr);
         return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, context, extra });
     }
-    const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{
-    });
+    const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
     test "pushClosure" {
         var exe = Execution.initTest("pushClosure", .{
             tf.pushLiteral,
@@ -346,25 +344,25 @@ pub const pushClosure = struct {
             tf.pushLiteral,
             1,
             tf.pushClosure,
-            comptime object14(.{3,4,0}),
+            comptime object14(.{ 3, 4, 0 }),
             "0block",
         });
-        try exe.resolve(&[_]Object{ Object.from(& testMethod) });
+        try exe.resolve(&[_]Object{Object.from(&testMethod)});
         try exe.execute(&[_]Object{
             Object.from(17),
         });
         const stack = exe.stack();
-        try expectEqual(Object.from(&stack[2]),stack[0]);
-        try expectEqual(Object.from(42),stack[1]);
+        try expectEqual(Object.from(&stack[2]), stack[0]);
+        try expectEqual(Object.from(42), stack[1]);
         const header: HeapHeader = @bitCast(stack[2]);
-        try expectEqual(.onStack,header.age);
-        try expectEqual(4,header.length);
-        try expectEqual(.BlockClosure,header.classIndex);
-        try expectEqual(Object.from(&testMethod),stack[3]);
-        try expectEqual(Object.from(1),stack[4]);
-        try expectEqual(Nil,stack[5]);
-        try expectEqual(True,stack[6]);
-        try expectEqual(Object.from(17),stack[7]);
+        try expectEqual(.onStack, header.age);
+        try expectEqual(4, header.length);
+        try expectEqual(.BlockClosure, header.classIndex);
+        try expectEqual(Object.from(&testMethod), stack[3]);
+        try expectEqual(Object.from(1), stack[4]);
+        try expectEqual(Nil, stack[5]);
+        try expectEqual(True, stack[6]);
+        try expectEqual(Object.from(17), stack[7]);
     }
 };
 pub const pushStack = struct {
