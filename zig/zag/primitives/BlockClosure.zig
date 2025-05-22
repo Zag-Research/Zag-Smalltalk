@@ -67,7 +67,6 @@ pub const threadedFns = struct {
                 .immediates => {
                     const original: i64 = @bitCast(obj);
                     const signExtended: i56 = @truncate(original << 8 >> 8);
-                    std.debug.print("exncode: {x} {x}\n", .{ original, signExtended });
                     if (signExtended == original)
                         return Object.makeThunkNoArg(.ThunkImmediate, @bitCast(signExtended));
                 },
@@ -94,7 +93,6 @@ pub const threadedFns = struct {
         }
         test "asThunk ptr" {
             const obj = Object.from(&ThunkReturnSmallInteger.method);
-            std.debug.print("obj = {x} {*}\n", .{ obj.testU(), &ThunkReturnSmallInteger.method });
             try Execution.runTest(
                 "asThunk ptr",
                 .{tf.asThunk},

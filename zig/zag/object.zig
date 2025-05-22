@@ -173,6 +173,10 @@ pub const Object = switch (config.objectEncoding) {
 };
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
+    pub fn FillType(usedBits: comptime_int) type {
+        return std.meta.Int(.unsigned, 64 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType) - usedBits);
+    }
+
     pub inline fn equals(self: Object, other: Object) bool {
         return self == other;
     }
@@ -345,11 +349,12 @@ pub const ObjectFunctions = struct {
     // }
 };
 pub const PackedObject = packed struct {
-    tag: Object.TagAndClassType,
+    tag: Object.LowTagType = Object.LowTagSmallInteger,
     f1: u14,
     f2: u14 = 0,
     f3: u14 = 0,
-    f4: u14 = 0,
+    f4: Object.FillType(42) = 0,
+    hightTag: Object.HighTagType = Object.HighTagSmallInteger,
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
     }

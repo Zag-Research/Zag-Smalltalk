@@ -12,6 +12,7 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const inMemory = @import("inMemory.zig");
 pub const PointedObject = struct {
     header: HeapHeader,
     data: union {
@@ -26,6 +27,9 @@ pub const PointedObject = struct {
 pub const Object = packed struct(u64) {
     ref: *PointedObject,
     const Self = @This();
+    pub const True = Object.from(inMemory.True);
+    pub const False = Object.from(inMemory.False);
+    pub const Nil = Object.from(inMemory.Nil);
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
@@ -47,7 +51,6 @@ pub const Object = packed struct(u64) {
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    const inMemory = @import("inMemory.zig");
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
@@ -128,7 +131,7 @@ pub const Object = packed struct(u64) {
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .One, .Many => {
+                    .one, .many => {
                         return @bitCast(@intFromPtr(value));
                     },
                     else => {},

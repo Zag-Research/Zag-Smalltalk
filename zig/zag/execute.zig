@@ -364,11 +364,12 @@ pub const Code = union {
     }
 };
 pub const StackStructure = packed struct {
-    tag: Object.TagAndClassType = Object.makeImmediate(.SmallInteger, 0).tagbits(),
+    tag: Object.LowTagType = Object.LowTagSmallInteger,
     locals: u8 = 0,
     selfOffset: u8 = 0,
     reserve: u11 = 0,
-    _filler: u24 = 0,
+    _filler: Object.FillType(27) = 0,
+    hightTag: Object.HighTagType = Object.HighTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil, Code.end);

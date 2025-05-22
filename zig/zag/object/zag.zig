@@ -31,7 +31,11 @@ pub const Object = packed struct(u64) {
     };
     const Self = @This();
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
-    pub const TagAndClassType = u8;
+    pub const LowTagType = TagAndClassType;
+    pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const HighTagType = void;
+    pub const HighTagSmallInteger = {};
+    const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
