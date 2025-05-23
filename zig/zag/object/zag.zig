@@ -111,10 +111,10 @@ pub const Object = packed struct(u64) {
     pub inline fn testI(self: object.Object) i64 {
         return @bitCast(self);
     }
-    inline fn rawU(self: object.Object) u64 { //TODO: shouldn't be pub
+    inline fn rawU(self: object.Object) u64 {
         return @bitCast(self);
     }
-    inline fn rawI(self: object.Object) i64 { //TODO: shouldn't be pub
+    inline fn rawI(self: object.Object) i64 {
         return @bitCast(self);
     }
     inline fn of(comptime v: u64) object.Object {
@@ -122,9 +122,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
         return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
-    }
-    pub inline fn makeThunkX(cls: ClassIndex.Compact, ptr: anytype, extra: u8) object.Object {
-        return oImm(cls, (@intFromPtr(ptr) << 8) + extra);
     }
     pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
         return .oImm(class, value);
@@ -142,9 +139,15 @@ pub const Object = packed struct(u64) {
     inline fn isThunkImmediate(self: object.Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
     }
-    pub const tagMethod = thunkImmediate;
-    pub const tagMethodValue = thunkImmediateValue;
-    pub const isTaggedMethod = isThunkImmediate;
+    pub inline fn tagMethod(o: object.Object) ?object.Object {
+        return @bitCast(@as(u64,@bitCast(o)) | 1);
+    }
+    pub inline fn tagMethodValue(self: Self) object.Object {
+        return @bitCast(@as(u64,@bitCast(self)) >> 1 << 1);
+    }
+    pub inline fn isTaggedMethod(self: object.Object) bool {
+        return (@as(u64,@bitCast(self)) & 1) != 0;
+    }
     pub inline fn extraI(self: object.Object) i8 {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
