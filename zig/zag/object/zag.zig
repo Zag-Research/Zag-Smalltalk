@@ -105,12 +105,8 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) i64 {
         return self.nativeI_noCheck() >> 8;
     }
-    pub inline fn testU(self: object.Object) u64 {
-        return @bitCast(self);
-    }
-    pub inline fn testI(self: object.Object) i64 {
-        return @bitCast(self);
-    }
+    pub const testU = rawU;
+    pub const testI = rawI;
     inline fn rawU(self: object.Object) u64 {
         return @bitCast(self);
     }
@@ -175,7 +171,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
-    inline fn oImm(c: ClassIndex.Compact, h: u56) Self { // TODO: shouldn't be public
+    inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
     inline fn immX(c: ClassIndex.Compact, h: u56) u64 {
