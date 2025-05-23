@@ -88,14 +88,14 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.nativeI_noCheck();
         return null;
     }
-    pub inline fn nativeI_noCheck(self: object.Object) i64 {
+    inline fn nativeI_noCheck(self: object.Object) i64 {
         return @as(i56, @bitCast(self.hash));
     }
     pub inline fn nativeU(self: object.Object) ?u64 {
         if (self.isInt()) return self.nativeU_noCheck();
         return null;
     }
-    pub inline fn nativeU_noCheck(self: object.Object) u64 { // TODO: shouldn't be pub
+    inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.hash;
     }
     pub inline fn symbolHash(self: object.Object) ?u56 {

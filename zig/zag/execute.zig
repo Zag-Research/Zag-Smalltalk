@@ -761,14 +761,14 @@ fn CompileTimeObject(comptime counts: usize) type {
                     Object, bool, @TypeOf(null) => Object.from(field),
                     comptime_int => blk: {
                         hash = field;
-                        break :blk if (raw) @as(Object,@bitCast(@as(i64, field))) else Object.from(field);
+                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field);
                     },
-                    comptime_float => if (raw) @as(Object,@bitCast(@as(f64, field))) else Object.from(field),
+                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field),
                     ClassIndex => blk: {
                         if (last >= 0)
-                            objects[last] = @as(HeapHeader, @bitCast(objects[last])).
-                            withLength(n - last - 1).
-                            withHash(hash).o();
+                            objects[last] = @as(HeapHeader, @bitCast(objects[last]))
+                                .withLength(n - last - 1)
+                                .withHash(hash).o();
                         const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch unreachable;
                         hash = 0;
                         obj.offsets[n] = true;
@@ -778,10 +778,10 @@ fn CompileTimeObject(comptime counts: usize) type {
                     else => blk: {
                         if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
                             obj.offsets[n] = true;
-                            break :blk @as(Object,@bitCast(@as(i64, comptime intOf(field[0..]) << 1)));
+                            break :blk @as(Object, @bitCast(@as(i64, comptime intOf(field[0..]) << 1)));
                         } else if (field[0] != ':') {
                             obj.offsets[n] = true;
-                            break :blk @as(Object,@bitCast(@as(i64, (comptime lookupLabel(tup, field) << 1) + 1)));
+                            break :blk @as(Object, @bitCast(@as(i64, (comptime lookupLabel(tup, field) << 1) + 1)));
                         } else continue;
                     },
                 };
@@ -789,8 +789,8 @@ fn CompileTimeObject(comptime counts: usize) type {
                 n += 1;
             }
             if (last >= 0)
-                objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1).
-                            withHash(hash).o();
+                objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1)
+                    .withHash(hash).o();
             return obj;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
@@ -810,8 +810,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1])
-                            else replacements[ob >> 1];
+                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1]) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
