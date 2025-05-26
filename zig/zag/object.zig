@@ -152,18 +152,6 @@ comptime {
         std.testing.expectEqual(ci, cci) catch unreachable;
     }
 }
-pub const MemoryFloat = struct {
-    header: HeapHeader,
-    value: f64,
-};
-pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
-    const u: u64 = @bitCast(v);
-    const hash: u24 = @truncate(u ^ (u >> 24) ^ (u >> 48));
-    return .{
-        .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
-        .value = v,
-    };
-}
 pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
     .nan => @import("object/nan.zig").Object,

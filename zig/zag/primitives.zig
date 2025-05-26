@@ -120,7 +120,7 @@ const testModule = if (config.is_test) struct {
     pub const primitive998 = struct {
         pub const number = 998;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.tagbits() != sp.top.tagbits()) {
+            if (sp.next.immediate_class() != sp.top.immediate_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top));
@@ -128,7 +128,7 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.tagbits() != sp.top.tagbits()) {
+            if (sp.next.immediate_class() != sp.top.immediate_class()) {
                 const newSp = sp.push(Sym.value);
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
             } else {

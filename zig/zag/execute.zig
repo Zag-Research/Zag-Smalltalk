@@ -604,7 +604,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     if (c.object.nativeI()) |i| {
                         c.* = Code.codePtrOf(c, i);
                     } else {
-                        const index = c.object.hash32();
+                        const index = c.object.hash24();
                         if (index >= literals.len) return error.Unresolved;
                         c.object = literals[index];
                     }
@@ -755,7 +755,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             const objects = obj.objects[0..];
             comptime var last = -1;
             comptime var n = 0;
-            comptime var hash: u24 = 0;
+            comptime var hash: i24 = 0;
             inline for (tup) |field| {
                 const o: Object = switch (@TypeOf(field)) {
                     Object, bool, @TypeOf(null) => Object.from(field),
@@ -767,8 +767,8 @@ fn CompileTimeObject(comptime counts: usize) type {
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
-                                .withLength(n - last - 1)
-                                .withHash(hash).o();
+                            .withLength(n - last - 1)
+                            .withHash(@bitCast(hash)).o();
                         const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch unreachable;
                         hash = 0;
                         obj.offsets[n] = true;
@@ -790,7 +790,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             }
             if (last >= 0)
                 objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1)
-                    .withHash(hash).o();
+                .withHash(@bitCast(hash)).o();
             return obj;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {

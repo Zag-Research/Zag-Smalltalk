@@ -12,6 +12,7 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
@@ -218,7 +219,7 @@ pub const Object = packed struct(u64) {
         return decode(self);
     }
     pub inline fn toDoubleFromMemory(self: object.Object) f64 {
-        return self.to(*object.MemoryFloat).*.value;
+        return self.to(*InMemory.MemoryFloat).*.value;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return oImm(cls, hash);
@@ -235,16 +236,13 @@ pub const Object = packed struct(u64) {
     pub inline fn hash56(self: object.Object) u56 {
         return self.hash;
     }
-    const nanMemObject = object.simpleFloat(math.nan(f64), .static);
-    const pInfMemObject = object.simpleFloat(math.inf(f64), .static);
-    const nInfMemObject = object.simpleFloat(-math.inf(f64), .static);
     inline fn encode(x: f64) object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;
         if (u & 6 != 0)
             return @bitCast(u);
-        if (math.isNan(x)) return object.Object.from(&nanMemObject);
-        if (math.inf(f64) == x) return object.Object.from(&pInfMemObject);
-        if (math.inf(f64) == -x) return object.Object.from(&nInfMemObject);
+        if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject);
+        if (math.inf(f64) == x) return object.Object.from(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -x) return object.Object.from(&InMemory.nInfMemObject);
         return object.Object.Nil;
     }
     inline fn decode(self: object.Object) f64 {
