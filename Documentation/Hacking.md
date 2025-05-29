@@ -29,6 +29,15 @@ In the `Zag-Smalltalk/zig/zag` directory:
 ```
 zig test -freference-trace primitives.zig
 ```
+The following error may occur
+```
+zag.zig:11:26: error: unable to load './libs\zig-llvm\src\llvm.zig': FileNotFound
+pub const llvm = @import("libs/zig-llvm/src/llvm.zig");
+```
+To fix run 
+```
+git submodule update --init --recursive
+```
 Edit the code in an editor of your choice. Run `zig fmt .` before committing zig code (not necessarily our favourite formatting, but it keeps it consistent, and `zig fmt` adjusts for `zig` syntax changes).
 
 ## Smalltalk
