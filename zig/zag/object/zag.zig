@@ -12,6 +12,7 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const Process = zag.Process;
 const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
     tag: Group,
@@ -49,14 +50,10 @@ pub const Object = packed struct(u64) {
     const extraMask = 0xff;
     const ExtraType = u8;
     pub inline fn tagbits(self: Self) TagAndClassType {
-        return @truncate(@as(u64, @bitCast(self)));
+        return @truncate(self.rawU());
     }
     fn enumBits(T: type) usize {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
-    }
-    pub inline fn untaggedI_native(self: object.Object) ?i64 {
-        if (self.isInt()) return @as(i64, @bitCast(self)) >> tagAndClassBits;
-        return null;
     }
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return untaggedI_noCheck(self);
@@ -90,7 +87,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @as(i56, @bitCast(self.hash));
+        return self.rawI() >> tagAndClassBits;
     }
     pub inline fn nativeU(self: object.Object) ?u64 {
         if (self.isInt()) return self.nativeU_noCheck();
@@ -151,11 +148,11 @@ pub const Object = packed struct(u64) {
     test "ThunkImmediate" {
         std.debug.print("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42))) |value|
-            try ee(object.Object.from(42), value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42))) |value|
-            try ee(object.Object.from(-42), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47)));
+        if (thunkImmediate(object.Object.from(42,null))) |value|
+            try ee(object.Object.from(42,null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.from(-42, null))) |value|
+            try ee(object.Object.from(-42, null), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
@@ -230,25 +227,21 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
     }
-    pub inline fn hash48(self: object.Object) u48 {
-        return @truncate(self.hash);
-    }
-    pub inline fn hash56(self: object.Object) u56 {
-        return self.hash;
-    }
     inline fn encode(x: f64) object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;
         if (u & 6 != 0)
             return @bitCast(u);
-        if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject);
+        if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject, null);
         if (math.inf(f64) == x) return object.Object.from(&InMemory.pInfMemObject);
         if (math.inf(f64) == -x) return object.Object.from(&InMemory.nInfMemObject);
-        return object.Object.Nil;
+        if (builtin.is_test)
+            return object.Object.Sentinel;
+        // need to allocate a MemoryFloat object
     }
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
-    pub inline fn from(value: anytype) object.Object {
+    pub inline fn from(value: anytype, _: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {

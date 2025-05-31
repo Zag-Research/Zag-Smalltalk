@@ -100,7 +100,7 @@ test "Stack" {
     const sp1 = sp0.push(False);
     try ee(True, stack[10]);
     try ee(False, stack[9]);
-    _ = sp1.drop().push(Object.from(42));
+    _ = sp1.drop().push(Object.from(42,null));
     try ee(stack[9].to(i64), 42);
 }
 pub const Extra = union {
@@ -109,7 +109,7 @@ pub const Extra = union {
     signature: Signature,
     contextData: *Context.ContextData,
     pub fn encoded(self: Extra) Extra {
-        if (Object.from(self.method).tagMethod()) |obj| {
+        if (Object.from(self.method,null).tagMethod()) |obj| {
             return .{ .object = obj };
         } else {
             std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
@@ -121,7 +121,7 @@ pub const Extra = union {
     }
     pub fn isEncoded(self: Extra) bool {
         @setRuntimeSafety(false);
-        return Object.from(self.method).isTaggedMethod();
+        return Object.from(self.method,null).isTaggedMethod();
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
@@ -317,7 +317,7 @@ pub const Code = union {
         return self.object;
     }
     pub inline fn objectOf(o: anytype) Code {
-        return Code{ .object = Object.from(o) };
+        return Code{ .object = Object.from(o,null) };
     }
     pub inline fn methodOf(method: *CompiledMethod) Code {
         return Code{ .method = method };
@@ -364,12 +364,12 @@ pub const Code = union {
     }
 };
 pub const StackStructure = packed struct {
-    tag: Object.LowTagType = Object.LowTagSmallInteger,
+    tag: object.Object.LowTagType = object.Object.LowTagSmallInteger,
     locals: u8 = 0,
     selfOffset: u8 = 0,
     reserve: u11 = 0,
-    _filler: Object.FillType(27) = 0,
-    hightTag: Object.HighTagType = Object.HighTagSmallInteger,
+    _filler: object.Object.FillType(27) = 0,
+    hightTag: object.Object.HighTagType = object.Object.HighTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil, Code.end);
@@ -511,7 +511,7 @@ test "countNonLabels" {
         &Code.noOp,
         "def",
         True,
-        comptime Object.from(42),
+        comptime Object.from(42,null),
         ":def",
         "abc",
         3,
@@ -637,7 +637,7 @@ test "CompileTimeMethod" {
         //        &p.setupSend,
         "def",
         True,
-        comptime Object.from(42),
+        comptime Object.from(42,null),
         ":def",
         "abc",
         "*",
@@ -694,7 +694,7 @@ test "LookupLabel" {
         ":abc",
         "def",
         True,
-        comptime Object.from(42),
+        comptime Object.from(42,null),
         ":def",
         "abc",
         3,
@@ -735,9 +735,9 @@ test "compiling method" {
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True);
-    try expectEqual(t[3].object, Object.from(42));
+    try expectEqual(t[3].object, Object.from(42,null));
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].object, Object.from(3));
+    try expectEqual(t[5].object, Object.from(3,null));
     try expectEqual(t[6].object, Nil);
 }
 
@@ -758,12 +758,12 @@ fn CompileTimeObject(comptime counts: usize) type {
             comptime var hash: i24 = 0;
             inline for (tup) |field| {
                 const o: Object = switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null) => Object.from(field),
+                    Object, bool, @TypeOf(null) => Object.from(field,null),
                     comptime_int => blk: {
                         hash = field;
-                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field);
+                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field,null);
                     },
-                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field),
+                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field,null),
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
@@ -810,7 +810,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1]) else replacements[ob >> 1];
+                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1],null) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
@@ -825,7 +825,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             return @ptrCast(self);
         }
         pub inline fn asObject(self: *Self) Object {
-            return Object.from(self.asHeapObjectPtr());
+            return Object.from(self.asHeapObjectPtr(),null);
         }
     };
 }
@@ -869,8 +869,8 @@ test "compileObject" {
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[2].equals(Object.from(42)));
-    try expect(o.objects[10].equals(Object.from(42.0)));
+    try expect(o.objects[2].equals(Object.from(42,null)));
+    try expect(o.objects[10].equals(Object.from(42.0, null)));
     try expect(o.objects[3].equals(Nil));
     try expect(o.objects[5].equals(True));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
@@ -1006,8 +1006,13 @@ pub const Execution = struct {
         }
         try exe.execute(source);
         const result = exe.stack();
-        trace("expected: {any}\n", .{expected});
-        trace("result: {any}\n", .{result});
+        trace(
+            \\run:
+                \\  source: {any}
+                \\  expected: {any}
+                \\  result: {any}
+                \\
+                , .{source, expected, result});
         try std.testing.expectEqualSlices(Object, expected, result);
         try std.testing.expect(exe.getContext() == &exe.ctxt);
     }

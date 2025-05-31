@@ -56,8 +56,6 @@ pub const ClassIndex = enum(u16) {
     ThunkReturnLocal,
     ThunkReturnInstance,
     ThunkReturnSmallInteger,
-    reservedForContext,
-    reservedForBlockClosure,
     ThunkReturnImmediate,
     ThunkReturnCharacter,
     ThunkReturnFloat,
@@ -115,8 +113,6 @@ pub const ClassIndex = enum(u16) {
         ThunkReturnLocal,
         ThunkReturnInstance,
         ThunkReturnSmallInteger,
-        reservedForContext,
-        reservedForBlockClosure,
         ThunkReturnImmediate,
         ThunkReturnCharacter,
         ThunkReturnFloat,
@@ -143,8 +139,6 @@ pub const ClassIndex = enum(u16) {
     }
 };
 comptime {
-    std.debug.assert(@intFromEnum(ClassIndex.Context) == @intFromEnum(ClassIndex.reservedForContext) * 8 + 1);
-    std.debug.assert(@intFromEnum(ClassIndex.BlockClosure) == @intFromEnum(ClassIndex.reservedForBlockClosure) * 8 + 1);
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     std.debug.assert(std.meta.hasUniqueRepresentation(Object));
@@ -156,11 +150,12 @@ pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
-    .ptr => @import("object/ptr.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,
+    .cachedPtr, .ptr => @import("object/ptr.zig").Object,
 };
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
+    pub const Sentinel = Object.from(@as(*Object,@ptrFromInt(8)), null);
     pub fn FillType(usedBits: comptime_int) type {
         return std.meta.Int(.unsigned, 64 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType) - usedBits);
     }
@@ -362,7 +357,7 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) Object {
-        return Object.from(combine(u14, tup));
+        return Object.from(combine(u14, tup),null);
     }
     pub fn combine24(tup: anytype) comptime_int {
         return combine(u24, tup);
@@ -371,7 +366,7 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(327697, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(294927, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
         try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
@@ -379,31 +374,31 @@ pub const PackedObject = packed struct {
 test "from conversion" {
     const ee = std.testing.expectEqual;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
-    try ee((Object.from(3.14)).immediate_class(), .Float);
-    try std.testing.expect((Object.from(3.14)).isDouble());
-    try ee((Object.from(3)).immediate_class(), .SmallInteger);
-    try std.testing.expect((Object.from(3)).isInt());
-    try std.testing.expect((Object.from(false)).isBool());
-    try ee((Object.from(false)).immediate_class(), .False);
-    try ee((Object.from(true)).immediate_class(), .True);
-    try std.testing.expect((Object.from(true)).isBool());
-    try ee((Object.from(null)).immediate_class(), .UndefinedObject);
-    try std.testing.expect((Object.from(null)).isNil());
+    try ee((Object.from(3.14,null)).immediate_class(), .Float);
+    try std.testing.expect((Object.from(3.14,null)).isDouble());
+    try ee((Object.from(3, null)).immediate_class(), .SmallInteger);
+    try std.testing.expect((Object.from(3, null)).isInt());
+    try std.testing.expect((Object.from(false, null)).isBool());
+    try ee((Object.from(false, null)).immediate_class(), .False);
+    try ee((Object.from(true, null)).immediate_class(), .True);
+    try std.testing.expect((Object.from(true, null)).isBool());
+    try ee((Object.from(null, null)).immediate_class(), .UndefinedObject);
+    try std.testing.expect((Object.from(null, null)).isNil());
 }
 test "to conversion" {
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14)).to(f64), 3.14);
-    try ee((Object.from(42)).to(u64), 42);
-    try std.testing.expect((Object.from(42)).isInt());
-    try ee((Object.from(true)).to(bool), true);
-    try ee((Object.from(-0x400000)).toUnchecked(i64), -0x400000);
+    try ee((Object.from(3.14,null)).to(f64), 3.14);
+    try ee((Object.from(42, null)).to(u64), 42);
+    try std.testing.expect((Object.from(42, null)).isInt());
+    try ee((Object.from(true, null)).to(bool), true);
+    try ee((Object.from(-0x400000, null)).toUnchecked(i64), -0x400000);
 }
 test "immediate_class" {
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14)).immediate_class(), .Float);
-    try ee((Object.from(42)).immediate_class(), .SmallInteger);
-    try ee((Object.from(true)).immediate_class(), .True);
-    try ee((Object.from(false)).immediate_class(), .False);
+    try ee((Object.from(3.14,null)).immediate_class(), .Float);
+    try ee((Object.from(42, null)).immediate_class(), .SmallInteger);
+    try ee((Object.from(true, null)).immediate_class(), .True);
+    try ee((Object.from(false, null)).immediate_class(), .False);
     try ee(Nil.immediate_class(), .UndefinedObject);
     try ee(True.immediate_class(), .True);
     try ee(False.immediate_class(), .False);
@@ -413,7 +408,7 @@ test "printing" {
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    try stream.print("{}\n", .{Object.from(42)});
+    try stream.print("{}\n", .{Object.from(42,null)});
     try stream.print("{}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
@@ -424,7 +419,7 @@ const Buf = blk: {
         obj: Object,
     };
 };
-const buf1: [1]Buf = .{Buf{ .obj = Object.from(42) }};
+const buf1: [1]Buf = .{Buf{ .obj = Object.from(42,null) }};
 fn slice1() []const Buf {
     return &buf1;
 }
@@ -432,10 +427,11 @@ test "order" {
     const ee = std.testing.expectEqual;
     const sl1 = slice1()[0].buf;
     try ee(42, sl1[1]);
-    try ee(137, sl1[0]);
+    try ee(121, sl1[0]);
     try ee(0, sl1[2]);
+    @setRuntimeSafety(false);
     const buf2 = (Buf{
-        .obj = Object.from(42.0),
+        .obj = Object.from(42.0,null),
     }).buf;
     try ee(buf2[0], 6);
     try ee(buf2[6], 80);

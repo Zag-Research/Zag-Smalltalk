@@ -83,7 +83,7 @@ pub const inlines = struct {
         return @as(u64, @intCast(if (x < 0) -x else x));
     }
     pub inline fn p9(self: Object, other: Object) !Object { // Multiply
-        if (other.untaggedI_native()) |untagged| {
+        if (other.nativeI()) |untagged| {
             const result, const overflow = @mulWithOverflow(self.untaggedI_noCheck(), untagged);
             if (overflow == 0) return Object.fromUntaggedI(result);
         }
@@ -93,26 +93,26 @@ pub const inlines = struct {
 
 test "inline primitives" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(Object.from(12), inlines.p9(Object.from(3), Object.from(4)));
-    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000), Object.from(0x100_0000)));
-    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000), Object.from(0x80_0000)));
-    try expectEqual(Object.from(-0x80_0000_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(-0x80_0000)));
-    try expectEqual(Object.from(0x20_0000_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(0x20_0000)));
-    try expectEqual(Object.from(0x3f_ffff_0000_0000), inlines.p9(Object.from(0x1_0000_0000), Object.from(0x3f_ffff)));
-    try expectEqual(Object.from(0), inlines.p_negated(Object.from(0)));
-    try expectEqual(Object.from(-42), inlines.p_negated(Object.from(42)));
-    try expectEqual(Object.from(0x7f_ffff_ffff_ffff), inlines.p_negated(Object.from(-0x7f_ffff_ffff_ffff)));
-    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff), inlines.p_negated(Object.from(0x7f_ffff_ffff_ffff)));
-    try expectEqual(error.primitiveError, inlines.p_negated(Object.from(-0x80_0000_0000_0000)));
-    try expectEqual(true, try inlines.p5(Object.from(0), Object.from(0)));
-    try expectEqual(true, try inlines.p5(Object.from(0), Object.from(1)));
-    try expectEqual(false, try inlines.p5(Object.from(1), Object.from(0)));
-    try expectEqual(true, inlines.p5N(Object.from(0), Object.from(0)));
-    try expectEqual(true, inlines.p5N(Object.from(0), Object.from(1)));
-    try expectEqual(false, inlines.p5N(Object.from(1), Object.from(0)));
-    try expectEqual(true, try inlines.p6(Object.from(0), Object.from(0)));
-    try expectEqual(false, try inlines.p6(Object.from(0), Object.from(1)));
-    try expectEqual(true, try inlines.p6(Object.from(1), Object.from(0)));
+    try expectEqual(Object.from(12,null), inlines.p9(Object.from(3,null), Object.from(4, null)));
+    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null)));
+    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null)));
+    try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null)));
+    try expectEqual(Object.from(0x20_0000_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x20_0000, null)));
+    try expectEqual(Object.from(0x3f_ffff_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x3f_ffff, null)));
+    try expectEqual(Object.from(0, null), inlines.p_negated(Object.from(0, null)));
+    try expectEqual(Object.from(-42, null), inlines.p_negated(Object.from(42, null)));
+    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, null), inlines.p_negated(Object.from(-0x7f_ffff_ffff_ffff, null)));
+    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, null), inlines.p_negated(Object.from(0x7f_ffff_ffff_ffff, null)));
+    try expectEqual(error.primitiveError, inlines.p_negated(Object.from(-0x80_0000_0000_0000, null)));
+    try expectEqual(true, try inlines.p5(Object.from(0, null), Object.from(0, null)));
+    try expectEqual(true, try inlines.p5(Object.from(0, null), Object.from(1, null)));
+    try expectEqual(false, try inlines.p5(Object.from(1, null), Object.from(0, null)));
+    try expectEqual(true, inlines.p5N(Object.from(0, null), Object.from(0, null)));
+    try expectEqual(true, inlines.p5N(Object.from(0, null), Object.from(1, null)));
+    try expectEqual(false, inlines.p5N(Object.from(1, null), Object.from(0, null)));
+    try expectEqual(true, try inlines.p6(Object.from(0, null), Object.from(0, null)));
+    try expectEqual(false, try inlines.p6(Object.from(0, null), Object.from(1, null)));
+    try expectEqual(true, try inlines.p6(Object.from(1, null), Object.from(0, null)));
 }
 pub const @"+" = struct {
     pub const number = 1;
@@ -126,11 +126,11 @@ pub const @"+" = struct {
             "simple add",
             .{ tf.primitive, 1 },
             &[_]Object{
-                Object.from(25),
-                Object.from(17),
+                Object.from(25,null),
+                Object.from(17, null),
             },
             &[_]Object{
-                Object.from(42),
+                Object.from(42, null),
             },
         );
     }
@@ -139,13 +139,13 @@ pub const @"+" = struct {
             "simple add with overflow",
             .{ tf.primitive, 1, tf.pushLiteral, 42 },
             &[_]Object{
-                Object.from(4),
-                Object.from(0x7f_ffff_ffff_ffff),
+                Object.from(4,null),
+                Object.from(0x7f_ffff_ffff_ffff, null),
             },
             &[_]Object{
-                Object.from(42),
-                Object.from(4),
-                Object.from(0x7f_ffff_ffff_ffff),
+                Object.from(42, null),
+                Object.from(4, null),
+                Object.from(0x7f_ffff_ffff_ffff, null),
             },
         );
     }
@@ -165,7 +165,7 @@ pub const @"<=" = struct {
     pub const number = 5;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra })));
+                                                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
         return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
     }
 };
@@ -173,7 +173,7 @@ pub const @"*" = struct {
     pub const number = 9;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.p9(sp.next, sp.top) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra })));
+                                                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
         return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
     }
 };

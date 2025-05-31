@@ -348,8 +348,8 @@ pub const threadedFunctions = struct {
                     tf.pushLiteral,
                     99,
                 },
-                &[_]Object{Object.from(42)},
-                &[_]Object{Object.from(42)},
+                &[_]Object{Object.from(42,null)},
+                &[_]Object{Object.from(42,null)},
             );
         }
     };
@@ -389,7 +389,7 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{True},
-                &[_]Object{Object.from(42)},
+                &[_]Object{Object.from(42,null)},
             );
         }
     };

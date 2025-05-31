@@ -1,5 +1,7 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
+const objectEncoding = zag.config.objectEncoding;
+const isTest = zag.config.isTest;
 const Process = zag.Process;
 const Object = zag.object.Object;
 const heap = zag.heap;
@@ -65,12 +67,17 @@ const SmallIntegerCache = compileRaw(.{
 });
 const SICacheMin = -5;
 const SICacheMax = 42;
-pub inline fn int(i: i64, maybeProcess: ?*Process) HeapObjectPtr {
+const SICache = switch (objectEncoding) {
+    .cachedPtr, .taggedPtr => 42,
+    else => isTest,
+};
+pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
-        return @ptrCast(@constCast(&SmallIntegerCache.objects[(i - SICacheMin) << 1]));
+        return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1]);
     if (maybeProcess) | process | {
         const allocReturn = process.alloc(.SmallInteger, 1, null, Object, false);
-        _ = .{allocReturn, unreachable};
+        allocReturn.allocation.array(i64)[1] = i;
+        return allocReturn.allocation.asObject();
     }
     unreachable;
 }
@@ -81,15 +88,40 @@ test "inMemory int()" {
 pub const MemoryFloat = struct {
     header: HeapHeader,
     value: f64,
+    fn static(v: f64) MemoryFloat {
+        var mf: MemoryFloat = undefined;
+        mf.init(v, .static);
+        return mf;
+    }
+    pub inline fn init(self: *MemoryFloat, v: f64, age: Age) void {
+        const u: u64 = @bitCast(v);
+        const hash: u24 = @truncate(u ^ (u >> 40));
+        self.header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 };
+        self.value = v;
+    }
 };
-pub inline fn simpleFloat(v: f64, age: Age) MemoryFloat {
-    const u: u64 = @bitCast(v);
-    const hash: u24 = @truncate(u ^ (u >> 24) ^ (u >> 48));
-    return .{
-        .header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 },
-        .value = v,
-    };
+const static = MemoryFloat.static;
+pub const nanMemObject = static(std.math.nan(f64));
+pub const pInfMemObject = static(std.math.inf(f64));
+pub const nInfMemObject = static(-std.math.inf(f64));
+pub const fZero = static(0.0);
+pub const fOne = static(1.0);
+
+const FCache = switch (objectEncoding) {
+    .cachedPtr, .taggedPtr => true,
+    else => false,
+};
+pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
+    if (FCache) {
+        if (v == 0.0)
+            return Object.from(&fZero);
+        if (v == 1.0)
+            return Object.from(&fOne);
+    }
+    if (maybeProcess) | process | {
+        const allocReturn = process.alloc(.Float, 1, null, Object, false);
+        allocReturn.allocation.array(f64)[1] = v;
+        return allocReturn.allocation.asObject();
+    }
+    unreachable;
 }
-pub const nanMemObject = simpleFloat(std.math.nan(f64), .static);
-pub const pInfMemObject = simpleFloat(std.math.inf(f64), .static);
-pub const nInfMemObject = simpleFloat(-std.math.inf(f64), .static);

@@ -11,9 +11,10 @@ pub const objectEncoding = Encoding.zag;
 const Encoding = enum {
     zag,
     nan,
-    ptr,
     spur,
     taggedPtr,
+    cachedPtr,
+    ptr,
 };
 
 pub const debugging = false;
@@ -22,3 +23,16 @@ const show_error_stack = debugging;
 const show_trace = debugging;
 pub const picSize = 0;
 pub const max_classes = 256;
+test "config" {
+    std.debug.print(
+        \\Config:
+            \\  objectEncoding = {}
+            \\  max_classes    = {}
+            \\  native_endian  = {}
+            \\
+            , .{
+                objectEncoding,
+                max_classes,
+                native_endian,
+    });
+}

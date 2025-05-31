@@ -68,14 +68,14 @@ pub const @"basicAt:" = struct {
 pub const @"==" = struct {
     pub const number = 110;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top)));
+        const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top), null));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
 pub const @"~~" = struct {
     pub const number = 169;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top)));
+        const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top), null));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
