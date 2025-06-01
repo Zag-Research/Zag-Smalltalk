@@ -803,9 +803,9 @@ pub const HeapObject = packed struct {
     }
     pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
-        if (head.forwardedTo()) |target| { // already forwarded
+        if (head.forwardedTo()) |_| { // already forwarded
             reference.* = switch (config.objectEncoding) {
-                .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
+                .nan => Nil, //@bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
                 .zag => Nil,
                 else => unreachable,
             };
@@ -817,7 +817,7 @@ pub const HeapObject = packed struct {
         self.setHeader(@bitCast((@as(u64, @bitCast(HeapHeader{ .forwarded = true })) << 48) + @intFromPtr(hp + 1)));
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
-            .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
+            .nan => Nil, //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
             .zag => Nil,
             else => unreachable,
         };
@@ -880,6 +880,7 @@ pub const HeapObject = packed struct {
         const head = self.header;
         const ivs = try self.instVars();
         if (index < 0 or index >= ivs.len) return error.indexOutOfRange;
+        trace("\nbefore\n", .{});
         if (obj.asMemoryObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;

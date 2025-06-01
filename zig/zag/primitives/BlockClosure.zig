@@ -33,7 +33,7 @@ pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
-        const result = Object.from(val.extraI(), null);
+        const result = Object.from(@as(i50,val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
@@ -145,7 +145,7 @@ pub const threadedFns = struct {
             const obj = Object.from(num,null);
             try exe.execute(&[_]Object{obj});
             const result = exe.stack()[0];
-            try expectEqual(.ThunkInstance, result.class);
+            try expectEqual(.ThunkInstance, result.which_class(false));
             const exeheap = exe.getHeap();
             try expectEqual(2, exeheap.len);
             try expectEqual(obj, exeheap[1].asObjectValue());
@@ -154,7 +154,7 @@ pub const threadedFns = struct {
 };
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const result: Object = @bitCast(sp.top.extraValue());
+        const result = sp.top.extraValue();
         const newSp, const callerContext = context.popTargetContext(sp, context, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }

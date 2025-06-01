@@ -73,7 +73,7 @@ const SICache = switch (objectEncoding) {
 };
 pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
-        return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1]);
+        return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
     if (maybeProcess) | process | {
         const allocReturn = process.alloc(.SmallInteger, 1, null, Object, false);
         allocReturn.allocation.array(i64)[1] = i;

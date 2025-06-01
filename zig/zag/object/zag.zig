@@ -100,8 +100,11 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return self.hash;
         return null;
     }
-    pub inline fn extraValue(self: object.Object) i64 {
-        return self.nativeI_noCheck() >> 8;
+    pub inline fn extraValue(self: object.Object) object.Object {
+        return @bitCast(self.nativeI_noCheck() >> 8);
+    }
+    pub inline fn isPIC(self: object.Object) bool {
+        return self.isImmediateClass(.PICPointer);
     }
     pub const testU = rawU;
     pub const testI = rawI;

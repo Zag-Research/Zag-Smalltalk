@@ -169,7 +169,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline fn classFromSymbolPlus(self: Object) ?ClassIndex {
+    pub inline fn classFromSymbolPlusX(self: Object) ?ClassIndex {
         if (self.symbolHash()) |h| {
             const c = h >> 32;
             if (c > 0) return @enumFromInt(c);
@@ -308,8 +308,8 @@ pub const ObjectFunctions = struct {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-            if (self.classFromSymbolPlus()) |c|
-                try writer.print("=>{}", .{c});
+            // if (self.classFromSymbolPlus()) |c|
+            //     try writer.print("=>{}", .{c});
         } else if (self == Nil) {
             try writer.print("nil", .{});
         } else {
@@ -424,16 +424,21 @@ fn slice1() []const Buf {
     return &buf1;
 }
 test "order" {
-    const ee = std.testing.expectEqual;
-    const sl1 = slice1()[0].buf;
-    try ee(42, sl1[1]);
-    try ee(121, sl1[0]);
-    try ee(0, sl1[2]);
-    @setRuntimeSafety(false);
-    const buf2 = (Buf{
-        .obj = Object.from(42.0,null),
-    }).buf;
-    try ee(buf2[0], 6);
-    try ee(buf2[6], 80);
-    try ee(buf2[7], 4);
+    switch (config.objectEncoding) {
+        .zag => {
+            const ee = std.testing.expectEqual;
+            const sl1 = slice1()[0].buf;
+            try ee(42, sl1[1]);
+            try ee(121, sl1[0]);
+            try ee(0, sl1[2]);
+            @setRuntimeSafety(false);
+            const buf2 = (Buf{
+                .obj = Object.from(42.0,null),
+            }).buf;
+            try ee(buf2[0], 6);
+            try ee(buf2[6], 80);
+            try ee(buf2[7], 4);
+        },
+        else => {},
+    }
 }

@@ -365,10 +365,10 @@ pub const Code = union {
 };
 pub const StackStructure = packed struct {
     tag: object.Object.LowTagType = object.Object.LowTagSmallInteger,
-    locals: u8 = 0,
-    selfOffset: u8 = 0,
+    locals: u11 = 0,
+    selfOffset: u11 = 0,
     reserve: u11 = 0,
-    _filler: object.Object.FillType(27) = 0,
+    _filler: object.Object.FillType(43) = 0,
     hightTag: object.Object.HighTagType = object.Object.HighTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
@@ -538,7 +538,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(comptime name: Object, comptime locals: u16, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
+        pub fn init(comptime name: Object, comptime locals: u11, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, name.hash24(), Age.static, null, Object, false) catch @compileError("method too big");
             const f = function orelse &Code.noOp;
             var method = Self{
@@ -598,13 +598,15 @@ fn CompileTimeMethod(comptime counts: usize) type {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
         pub fn resolve(self: *Self, literals: []const Object) !void {
-            for (&self.code, &self.offsets) |*c, *isOffset| {
+            for (&self.code, &self.offsets, 0..) |*c, *isOffset,n| {
                 if (isOffset.*) {
                     isOffset.* = false;
+                    trace("\nc[{}] = {}",.{n,c.object});
                     if (c.object.nativeI()) |i| {
                         c.* = Code.codePtrOf(c, i);
                     } else {
-                        const index = c.object.hash24();
+                        const index:u32 = @bitCast(c.object.hash32());
+                        trace(" index: {x}",.{index});
                         if (index >= literals.len) return error.Unresolved;
                         c.object = literals[index];
                     }
@@ -723,13 +725,13 @@ test "compiling method" {
         @setRuntimeSafety(false);
         trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
         for (t, 0..) |tv, idx|
-            trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.rawU() });
+            trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.testU() });
     }
     try m.resolve(Object.empty);
     if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
-            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
+            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.testU() });
     }
     //    try expectEqual(t.prim,controlPrimitives.noop);
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
@@ -996,13 +998,13 @@ pub const Execution = struct {
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |tv, idx|
-                trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.rawU() });
+                trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.testU() });
         }
         try exe.resolve(objects);
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
-                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.rawU() });
+                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.testU() });
         }
         try exe.execute(source);
         const result = exe.stack();
