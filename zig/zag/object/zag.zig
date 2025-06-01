@@ -242,13 +242,15 @@ pub const Object = packed struct(u64) {
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
-    pub inline fn from(value: anytype, _: ?*Process) object.Object {
+    pub inline fn from(value: anytype, possibleProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
-            .float => return encode(value) catch {unreachable;},
-            .comptime_float => return encode(@as(f64, value)) catch {unreachable;},
+            .float => return encode(value) catch {
+                unreachable;
+            },
+            .comptime_float => return from(@as(f64, value), possibleProcess),
             .bool => return if (value) object.Object.True else object.Object.False,
             .null => return object.Object.Nil,
             .pointer => |ptr_info| {

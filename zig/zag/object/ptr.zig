@@ -166,7 +166,7 @@ pub const Object = packed struct(u64) {
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
-                        return Object{ .ref= @alignCast(@constCast(@ptrCast(value)))};
+                        return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
                     },
                     else => {},
                 }
