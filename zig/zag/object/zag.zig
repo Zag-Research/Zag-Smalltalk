@@ -230,16 +230,14 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
     }
-    inline fn encode(x: f64) object.Object {
+    inline fn encode(x: f64) !object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;
         if (u & 6 != 0)
             return @bitCast(u);
         if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject, null);
         if (math.inf(f64) == x) return object.Object.from(&InMemory.pInfMemObject);
         if (math.inf(f64) == -x) return object.Object.from(&InMemory.nInfMemObject);
-        if (builtin.is_test)
-            return object.Object.Sentinel;
-        // need to allocate a MemoryFloat object
+        return error.Unencodable;
     }
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
@@ -249,8 +247,8 @@ pub const Object = packed struct(u64) {
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
-            .float => return encode(value),
-            .comptime_float => return encode(@as(f64, value)),
+            .float => return encode(value) catch {unreachable;},
+            .comptime_float => return encode(@as(f64, value)) catch {unreachable;},
             .bool => return if (value) object.Object.True else object.Object.False,
             .null => return object.Object.Nil,
             .pointer => |ptr_info| {

@@ -14,22 +14,22 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const InMemory = @import("inMemory.zig");
-pub const PointedObject = struct {
+pub const PointedObject = packed struct {
     header: HeapHeader,
-    data: union {
+    data: packed union {
         int: i64,
         unsigned: u64,
         float: f64,
-        symbol: [8]u8,
         boolean: void,
         nil: void,
         character: void,
-        object: object.Object,
+        object: ?[*]object.Object,
     },
 };
 pub const Object = packed struct(u64) {
     ref: *PointedObject,
     const Self = @This();
+    pub const ZERO = of(0);
     pub const False = Object.from(&InMemory.False, null);
     pub const True = Object.from(&InMemory.True, null);
     pub const Nil = Object.from(&InMemory.Nil, null);
@@ -40,6 +40,15 @@ pub const Object = packed struct(u64) {
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
+    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
+        return self.ref.data.int;
+    }
+    pub const taggedI = untaggedI;
+    pub const taggedI_noCheck = untaggedI_noCheck;
+    pub inline fn fromTaggedI(i: i64) object.Object {
+        _ = .{ i, unreachable };
+    }
+    pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(self: object.Object) u40 {
         return self.hash32();
     }
@@ -67,6 +76,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isTaggedMethod(self: object.Object) bool {
         return (@as(u64, @bitCast(self)) & 1) != 0;
     }
+    pub inline fn extraI(self: object.Object) i8 {
+        _ = .{ self, unreachable };
+    }
     pub const testU = rawU;
     pub const testI = rawI;
     inline fn rawU(self: object.Object) u64 {
@@ -74,6 +86,9 @@ pub const Object = packed struct(u64) {
     }
     inline fn rawI(self: object.Object) i64 {
         return self.ref.data.int;
+    }
+    inline fn of(comptime v: u64) object.Object {
+        return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable };
@@ -103,10 +118,10 @@ pub const Object = packed struct(u64) {
         return true;
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
-        return self.ref.object;
+        return @ptrCast(self.ref.data.object);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        return self.ref.object;
+        return @ptrCast(self.ref.data.object);
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == Object.True;
@@ -125,11 +140,11 @@ pub const Object = packed struct(u64) {
         return self.rawU() & 0xffff_ffff_fff8;
     }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return decode(self);
+        return self.ref.data.float;
     }
-    // pub inline fn makeImmediateX(cls: ClassIndex.Compact, hash: u56) Object {
-    //     return oImm(cls, hash);
-    // }
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+        _ = .{ cls, hash, unreachable };
+    }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
         _ = .{ cls, ptr, extra, unreachable };
     }
@@ -139,31 +154,19 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return self.ref.header.hash;
     }
-    inline fn encode(x: f64, maybeProcess: ?*Process) Object {
-        const u = math.rotl(u64, @bitCast(x), 4) + 2;
-        if (u & 6 != 0)
-            return @bitCast(u);
-        if (math.isNan(x)) return Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == x) return Object.from(&InMemory.pInfMemObject, null);
-        if (math.inf(f64) == -x) return Object.from(&InMemory.nInfMemObject, null);
-        return InMemory.float(x, maybeProcess);
-    }
-    inline fn decode(self: Object) f64 {
-        return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
-    }
     pub inline fn from(value: anytype, maybeProcess: ?*Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return InMemory.int(value, maybeProcess),
-            .float => return encode(value, maybeProcess),
-            .comptime_float => return encode(@as(f64, value), maybeProcess),
+            .float => return InMemory.float(value, maybeProcess),
+            .comptime_float => return from(@as(f64, value), maybeProcess),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
-                        return @bitCast(@intFromPtr(value));
+                        return Object{ .ref= @alignCast(@constCast(@ptrCast(value)))};
                     },
                     else => {},
                 }
