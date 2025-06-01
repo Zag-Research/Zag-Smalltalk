@@ -1,15 +1,12 @@
-const zag = @import("../zag.zig");
-const object = zag.object;
-const Object = object.Object;
-const ClassIndex = object.ClassIndex;
+const std = @import("std");
 
-pub const SpurObject = packed struct(u64) {
+pub const Object = packed struct(u64) {
     raw: u64,
 
-    pub const SmallIntegerTag = 0b1;
-    pub const PointerTag = 0b0;
-    pub const CharacterTag = 0b11;
-    pub const FloatTag = 0b101;
+    pub const PointerTag = 0b000;
+    pub const SmallIntegerTag = 0b001;
+    pub const CharacterTag = 0b010;
+    pub const FloatTag = 0b100;
     pub const TagMask = 0b111;
 
     const Self = @This();
@@ -88,6 +85,34 @@ pub const SpurObject = packed struct(u64) {
     pub inline fn isDouble(self: Object) bool {
         return self.isImmediateFloat(); // Spur also supports heap floats, not implemented here
     }
+    
+    pub const FloatExponentBias = 0x7000000000000000; 
+    
+    // TODO: Specials Heap Allocation Remaning
+    pub fn encode(value: f64) Object {
+        var bits: u64 = @bitCast(value);
+        std.debug.print("{b:0>64}\n", .{bits});
+        bits = (bits << 1) | (bits >> 63); // TODO: improve: can use math.rotl
+        
+        if (bits > 1) {
+            bits -= FloatExponentBias;
+        }
+        
+        bits <<= 3;
+        return @bitCast(bits + 4);
+    }
+    
+    pub fn decode(self: Object) f64 {
+        const bits: u64 = @bitCast(self);
+        var value: u64 = bits >> 3;
+        if (value > 1) value += FloatExponentBias;
+        value = (value >> 1) | (value << 63);    // TODO: same here improve: can use math pkg for rotations
+        return @bitCast(value);
+    }    
+    
+    pub inline fn isFloat(self: Object) bool {
+        return (self.rawU() & TagMask) == FloatTag;
+    }
 
     // TODO: Encoding and Decoding Float Values are missing
     // TODO: Heap support for Float is missing as well
@@ -138,6 +163,8 @@ pub const SpurObject = packed struct(u64) {
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
+            .float => return encode(value),
+            .comptime_float => return encode(@as(f64, value)),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
             .pointer => |ptr_info| {
@@ -168,18 +195,19 @@ pub const SpurObject = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
 
-    // Class detection (stub)
-    pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) return .SmallInteger;
-        if (self.isHeap()) return .Object; // Could be improved
-        return .Object;
-    }
-
-    // TODO: Constants
+    // // TODO: Constants
     // pub const ZERO = Self.fromSmallInteger(0);
-    // pub const True = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFF));
-    // pub const False = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFE));
-    // pub const Nil = @bitCast(@as(u64, 0));
+    // pub const True: u64 = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFF));
+    // pub const False:u64 = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFE));
+    // pub const Nil: u64 = @bitCast(@as(u64, 0));
 
-    pub usingnamespace object.ObjectFunctions;
+    // pub usingnamespace object.ObjectFunctions;
 };
+
+test "simple float test" {
+    std.debug.print("Converting the spur float\n", .{});
+    const flo = Object.from(1.23e-40);
+    const flo64: u64 = @bitCast(flo);
+    std.debug.print("{b:0>64}\n", .{flo64});
+    std.debug.print("{d}\n", .{Object.decode(flo)});
+}
