@@ -100,7 +100,7 @@ test "Stack" {
     const sp1 = sp0.push(False);
     try ee(True, stack[10]);
     try ee(False, stack[9]);
-    _ = sp1.drop().push(Object.from(42,null));
+    _ = sp1.drop().push(Object.from(42, null));
     try ee(stack[9].to(i64), 42);
 }
 pub const Extra = union {
@@ -109,7 +109,7 @@ pub const Extra = union {
     signature: Signature,
     contextData: *Context.ContextData,
     pub fn encoded(self: Extra) Extra {
-        if (Object.from(self.method,null).tagMethod()) |obj| {
+        if (Object.from(self.method, null).tagMethod()) |obj| {
             return .{ .object = obj };
         } else {
             std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
@@ -121,7 +121,7 @@ pub const Extra = union {
     }
     pub fn isEncoded(self: Extra) bool {
         @setRuntimeSafety(false);
-        return Object.from(self.method,null).isTaggedMethod();
+        return Object.from(self.method, null).isTaggedMethod();
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
@@ -317,7 +317,7 @@ pub const Code = union {
         return self.object;
     }
     pub inline fn objectOf(o: anytype) Code {
-        return Code{ .object = Object.from(o,null) };
+        return Code{ .object = Object.from(o, null) };
     }
     pub inline fn methodOf(method: *CompiledMethod) Code {
         return Code{ .method = method };
@@ -511,7 +511,7 @@ test "countNonLabels" {
         &Code.noOp,
         "def",
         True,
-        comptime Object.from(42,null),
+        comptime Object.from(42, null),
         ":def",
         "abc",
         3,
@@ -598,15 +598,15 @@ fn CompileTimeMethod(comptime counts: usize) type {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
         pub fn resolve(self: *Self, literals: []const Object) !void {
-            for (&self.code, &self.offsets, 0..) |*c, *isOffset,n| {
+            for (&self.code, &self.offsets, 0..) |*c, *isOffset, n| {
                 if (isOffset.*) {
                     isOffset.* = false;
-                    trace("\nc[{}] = {}",.{n,c.object});
+                    trace("\nc[{}] = {}", .{ n, c.object });
                     if (c.object.nativeI()) |i| {
                         c.* = Code.codePtrOf(c, i);
                     } else {
-                        const index:u32 = @bitCast(c.object.hash32());
-                        trace(" index: {x}",.{index});
+                        const index: u32 = @bitCast(c.object.hash32());
+                        trace(" index: {x}", .{index});
                         if (index >= literals.len) return error.Unresolved;
                         c.object = literals[index];
                     }
@@ -639,7 +639,7 @@ test "CompileTimeMethod" {
         //        &p.setupSend,
         "def",
         True,
-        comptime Object.from(42,null),
+        comptime Object.from(42, null),
         ":def",
         "abc",
         "*",
@@ -696,7 +696,7 @@ test "LookupLabel" {
         ":abc",
         "def",
         True,
-        comptime Object.from(42,null),
+        comptime Object.from(42, null),
         ":def",
         "abc",
         3,
@@ -737,9 +737,9 @@ test "compiling method" {
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True);
-    try expectEqual(t[3].object, Object.from(42,null));
+    try expectEqual(t[3].object, Object.from(42, null));
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].object, Object.from(3,null));
+    try expectEqual(t[5].object, Object.from(3, null));
     try expectEqual(t[6].object, Nil);
 }
 
@@ -760,17 +760,17 @@ fn CompileTimeObject(comptime counts: usize) type {
             comptime var hash: i24 = 0;
             inline for (tup) |field| {
                 const o: Object = switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null) => Object.from(field,null),
+                    Object, bool, @TypeOf(null) => Object.from(field, null),
                     comptime_int => blk: {
                         hash = field;
-                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field,null);
+                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field, null);
                     },
-                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field,null),
+                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field, null),
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
-                            .withLength(n - last - 1)
-                            .withHash(@bitCast(hash)).o();
+                                .withLength(n - last - 1)
+                                .withHash(@bitCast(hash)).o();
                         const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch unreachable;
                         hash = 0;
                         obj.offsets[n] = true;
@@ -792,7 +792,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             }
             if (last >= 0)
                 objects[last] = @as(HeapHeader, @bitCast(objects[last])).withLength(n - last - 1)
-                .withHash(@bitCast(hash)).o();
+                    .withHash(@bitCast(hash)).o();
             return obj;
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, classes: []const ClassIndex) void {
@@ -812,7 +812,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1],null) else replacements[ob >> 1];
+                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1], null) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
@@ -827,7 +827,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             return @ptrCast(self);
         }
         pub inline fn asObject(self: *Self) Object {
-            return Object.from(self.asHeapObjectPtr(),null);
+            return Object.from(self.asHeapObjectPtr(), null);
         }
     };
 }
@@ -871,7 +871,7 @@ test "compileObject" {
     try expect(o.asObject().isHeapObject());
     try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[2].equals(Object.from(42,null)));
+    try expect(o.objects[2].equals(Object.from(42, null)));
     try expect(o.objects[10].equals(Object.from(42.0, null)));
     try expect(o.objects[3].equals(Nil));
     try expect(o.objects[5].equals(True));
@@ -1010,11 +1010,11 @@ pub const Execution = struct {
         const result = exe.stack();
         trace(
             \\run:
-                \\  source: {any}
-                \\  expected: {any}
-                \\  result: {any}
-                \\
-                , .{source, expected, result});
+            \\  source: {any}
+            \\  expected: {any}
+            \\  result: {any}
+            \\
+        , .{ source, expected, result });
         try std.testing.expectEqualSlices(Object, expected, result);
         try std.testing.expect(exe.getContext() == &exe.ctxt);
     }

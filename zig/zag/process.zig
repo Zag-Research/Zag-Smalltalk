@@ -325,7 +325,7 @@ test "nursery allocation" {
     const o2 = ar.initAll();
     trace("\nar = {}\n", .{ar});
     try ee(pr.freeNursery(), emptySize - 18);
-    trace("\no1 = {} {x}\n", .{o1, o1.asObject().testU()});
+    trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
     try o1.instVarPut(0, o2.asObject());
     trace("\npoint\n", .{});
     sp = sp.push(o1.asObject());

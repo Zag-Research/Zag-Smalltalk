@@ -182,8 +182,8 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    Object.from(42,null),
-                    Object.from(17,null),
+                    Object.from(42, null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
                     False,
@@ -201,10 +201,10 @@ pub const threadedFunctions = struct {
                 },
                 &[_]Object{
                     True,
-                    Object.from(17,null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
-                    Object.from(99,null),
+                    Object.from(99, null),
                     True,
                     Object.from(17, null),
                 },
@@ -220,8 +220,8 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    Object.from(42,null),
-                    Object.from(17,null),
+                    Object.from(42, null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
                     Object.from(99, null),
@@ -262,8 +262,8 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    Object.from(42,null),
-                    Object.from(17,null),
+                    Object.from(42, null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
                     False,
@@ -281,10 +281,10 @@ pub const threadedFunctions = struct {
                 },
                 &[_]Object{
                     True,
-                    Object.from(17,null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
-                    Object.from(99,null),
+                    Object.from(99, null),
                     Sym.value,
                     True,
                     Object.from(17, null),
@@ -301,8 +301,8 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    Object.from(42,null),
-                    Object.from(17,null),
+                    Object.from(42, null),
+                    Object.from(17, null),
                 },
                 &[_]Object{
                     Object.from(99, null),
@@ -349,7 +349,7 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                Object.from(42,null),
+                Object.from(42, null),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
@@ -367,7 +367,7 @@ pub const threadedFunctions = struct {
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
                 True,
-                Object.from(17,null),
+                Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
@@ -385,7 +385,7 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                Object.from(42,null),
+                Object.from(42, null),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
@@ -431,7 +431,7 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                Object.from(42,null),
+                Object.from(42, null),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
@@ -449,7 +449,7 @@ pub const threadedFunctions = struct {
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
                 True,
-                Object.from(17,null),
+                Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
@@ -468,7 +468,7 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                Object.from(42,null),
+                Object.from(42, null),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{

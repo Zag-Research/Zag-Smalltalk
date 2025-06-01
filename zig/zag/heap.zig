@@ -929,7 +929,7 @@ pub const HeapObject = packed struct {
         return self.format.isRaw();
     }
     pub inline fn asObject(self: HeapObjectConstPtr) Object {
-        return Object.from(self,null);
+        return Object.from(self, null);
     }
     pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {
         return @bitCast(self.*);
@@ -1032,7 +1032,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, try Object.from(abcde,null).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, try Object.from(abcde, null).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));

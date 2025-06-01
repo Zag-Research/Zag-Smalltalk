@@ -137,13 +137,13 @@ pub const Object = packed struct(u64) {
         return self.isImmediateClass(.ThunkImmediate);
     }
     pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64,@bitCast(o)) | 1);
+        return @bitCast(@as(u64, @bitCast(o)) | 1);
     }
     pub inline fn tagMethodValue(self: Self) object.Object {
-        return @bitCast(@as(u64,@bitCast(self)) >> 1 << 1);
+        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
     }
     pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64,@bitCast(self)) & 1) != 0;
+        return (@as(u64, @bitCast(self)) & 1) != 0;
     }
     pub inline fn extraI(self: object.Object) i8 {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
@@ -151,8 +151,8 @@ pub const Object = packed struct(u64) {
     test "ThunkImmediate" {
         std.debug.print("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42,null))) |value|
-            try ee(object.Object.from(42,null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.from(42, null))) |value|
+            try ee(object.Object.from(42, null), value.thunkImmediateValue());
         if (thunkImmediate(object.Object.from(-42, null))) |value|
             try ee(object.Object.from(-42, null), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));

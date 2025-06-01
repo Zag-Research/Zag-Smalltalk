@@ -18,7 +18,7 @@ pub const Object = packed struct(u64) {
     classIndex: ClassIndex,
     tag: Group,
     pub const Group = enum(u16) {
-        heap= 0xfff0,
+        heap = 0xfff0,
         thunkReturnLocal,
         thunkReturnInstance,
         thunkReturnSmallInteger,
@@ -72,13 +72,13 @@ pub const Object = packed struct(u64) {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
     }
     pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64,@bitCast(o)) | 1);
+        return @bitCast(@as(u64, @bitCast(o)) | 1);
     }
     pub inline fn tagMethodValue(self: object.Object) object.Object {
-        return @bitCast(@as(u64,@bitCast(self)) >> 1 << 1);
+        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
     }
     pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64,@bitCast(self)) & 1) != 0;
+        return (@as(u64, @bitCast(self)) & 1) != 0;
     }
     pub inline fn extraI(self: object.Object) i3 {
         return @bitCast(@as(u3, @truncate(self.rawU())));
@@ -107,7 +107,7 @@ pub const Object = packed struct(u64) {
         return self.tagbits() == comptime object.Object.makeImmediate(.Symbol, 0).tagbits();
     }
     const nonIndexSymbol = 0xffffffff800000ff;
-     inline fn indexNumber(self: object.Object) u24 {
+    inline fn indexNumber(self: object.Object) u24 {
         return @truncate(self.rawU() & nonIndexSymbol >> 8);
     }
     pub const invalidHeapPointer = of(Start_of_Heap_Objects);
@@ -210,7 +210,7 @@ pub const Object = packed struct(u64) {
         return @intFromEnum(self.tag) >= @intFromEnum(Group.smallInteger);
     }
     pub inline fn isNat(self: object.Object) bool {
-        if (self.untaggedI()) |value|return value >= 0;
+        if (self.untaggedI()) |value| return value >= 0;
         return false;
     }
     inline fn isImmediateDouble(self: object.Object) bool {
@@ -222,14 +222,7 @@ pub const Object = packed struct(u64) {
     pub inline fn pointer(self: object.Object, T: type) ?T {
         switch (self.tag) {
             .heap => return self.highPointer(T),
-            .thunkReturnLocal,
-            .thunkReturnInstance,
-            .thunkReturnSmallInteger,
-            .thunkReturnImmediate,
-            .thunkLocal,
-            .thunkInstance,
-            .picPointer,
-            .thunkHeap => return self.highPointer(T),
+            .thunkReturnLocal, .thunkReturnInstance, .thunkReturnSmallInteger, .thunkReturnImmediate, .thunkLocal, .thunkInstance, .picPointer, .thunkHeap => return self.highPointer(T),
             else => {},
         }
         return null;
@@ -246,15 +239,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return switch (self.tag) {
-            .heap,
-            .thunkReturnLocal,
-            .thunkReturnInstance,
-            .thunkReturnSmallInteger,
-            .thunkReturnImmediate,
-            .thunkLocal,
-            .thunkInstance,
-            .picPointer,
-            .thunkHeap => true,
+            .heap, .thunkReturnLocal, .thunkReturnInstance, .thunkReturnSmallInteger, .thunkReturnImmediate, .thunkLocal, .thunkInstance, .picPointer, .thunkHeap => true,
             else => false,
         };
     }

@@ -1,22 +1,44 @@
 const zag = @import("../zag.zig");
 const object = zag.object;
-const Object = object.Object;
 const ClassIndex = object.ClassIndex;
+const heap = zag.heap;
+const HeapHeader = heap.HeapHeader;
+const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 
-pub const SpurObject = packed struct(u64) {
-    raw: u64,
+pub const Object = packed struct(u64) {
+    tag: Group,
+    hash: u61,
+    const Group = enum(LowTagType) {
+        pointer = 0,
+        smallInteger = 0b001,
+        character = 0b010,
+        float = 0b100,
+        _,
+        inline fn u(cg: Group) u3 {
+            return @intFromEnum(cg);
+        }
+    };
 
-    pub const SmallIntegerTag = 0b1;
-    pub const PointerTag = 0b0;
-    pub const CharacterTag = 0b11;
-    pub const FloatTag = 0b101;
-    pub const TagMask = 0b111;
+    const PointerTag = Group.u(.pointer);
+    const SmallIntegerTag = Group.u(.smallInteger);
+    const CharacterTag = Group.u(.character);
+    const FloatTag = Group.u(.float);
+    const TagMask = SmallIntegerTag | CharacterTag | FloatTag;
 
     const Self = @This();
+    pub const LowTagType = TagAndClassType;
+    pub const LowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
+    pub const HighTagType = void;
+    pub const HighTagSmallInteger = {};
+    const TagAndClassType = u3;
 
+    pub inline fn tagbits(self: Self) TagAndClassType {
+        return @truncate(self.rawU());
+    }
     // Spur SmallInteger
     pub inline fn isInt(self: Object) bool {
-        return (self.rawU() & SmallIntegerTag) == SmallIntegerTag;
+        return (self.rawU() & SmallIntegerTag) != 0;
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.nativeI_noCheck() >= 0;
@@ -26,7 +48,7 @@ pub const SpurObject = packed struct(u64) {
         return null;
     }
     pub inline fn nativeI_noCheck(self: Object) i64 {
-        return @as(i64, self.rawU()) >> 1;
+        return @as(i64, self.rawI()) >> 1;
     }
     pub inline fn nativeU(self: Object) ?u64 {
         if (self.isNat()) return self.nativeU_noCheck();
@@ -58,13 +80,19 @@ pub const SpurObject = packed struct(u64) {
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
     }
+    pub inline fn isImmediateClass(self: object.Object, class: ClassIndex) bool {
+        if (self.isHeap()) return false;
+        if (self.isInt()) return class == .SmallInteger;
+        if (self.isFloat()) return class == .Float;
+        return class == .Character;
+    }
 
     // Character (not fully implemented)
     /// Maximum codepoint for immediate Character
     pub const MaxImmediateCharacter = 0x10FFFF; // Unicode scalar value range
 
     pub inline fn isCharacter(self: Object) bool {
-        return (self.rawU() & TagMask) == CharacterTag;
+        return (self.rawU() & CharacterTag) != 0;
     }
 
     // TODO: immediates only
@@ -83,7 +111,7 @@ pub const SpurObject = packed struct(u64) {
 
     // TODO: Float
     pub inline fn isImmediateFloat(self: Object) bool {
-        return (self.rawU() & TagMask) == FloatTag;
+        return (self.rawU() & FloatTag) != 0;
     }
     pub inline fn isDouble(self: Object) bool {
         return self.isImmediateFloat(); // Spur also supports heap floats, not implemented here
@@ -106,7 +134,12 @@ pub const SpurObject = packed struct(u64) {
     pub inline fn isNil(self: Object) bool {
         return self.rawU() == Object.Nil.rawU();
     }
-
+    inline fn oImm(c: Group, h: u61) Self {
+        return Self{ .tag = c, .hash = h };
+    }
+    pub inline fn makeImmediate(cls: Group, hash: u61) object.Object {
+        return oImm(cls, hash);
+    }
     // Hash helpers (stubbed)
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.rawU());
@@ -133,7 +166,7 @@ pub const SpurObject = packed struct(u64) {
     }
 
     // Conversion from Zig types
-    pub inline fn from(value: anytype) Object {
+    pub inline fn from(value: anytype, _: ?zag.Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -169,14 +202,17 @@ pub const SpurObject = packed struct(u64) {
     }
 
     // Class detection (stub)
-    pub inline fn which_class(self: Object) ClassIndex {
+    pub inline fn which_class(self: Object, comptime full: bool) ClassIndex {
         if (self.isInt()) return .SmallInteger;
-        if (self.isHeap()) return .Object; // Could be improved
+        if (self.isCharacter()) return .Character;
+        if (self.isFloat()) return .Float;
+        if (full) self.to(HeapObjectPtr).*.getClass();
         return .Object;
     }
 
     // TODO: Constants
     // pub const ZERO = Self.fromSmallInteger(0);
+    // these have to point to valid headers... see ptr.zag (although it's not right at the moment)
     // pub const True = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFF));
     // pub const False = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFE));
     // pub const Nil = @bitCast(@as(u64, 0));

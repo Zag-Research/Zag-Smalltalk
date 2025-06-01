@@ -93,7 +93,7 @@ pub const inlines = struct {
 
 test "inline primitives" {
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(Object.from(12,null), inlines.p9(Object.from(3,null), Object.from(4, null)));
+    try expectEqual(Object.from(12, null), inlines.p9(Object.from(3, null), Object.from(4, null)));
     try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null)));
     try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null)));
     try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null)));
@@ -126,7 +126,7 @@ pub const @"+" = struct {
             "simple add",
             .{ tf.primitive, 1 },
             &[_]Object{
-                Object.from(25,null),
+                Object.from(25, null),
                 Object.from(17, null),
             },
             &[_]Object{
@@ -139,7 +139,7 @@ pub const @"+" = struct {
             "simple add with overflow",
             .{ tf.primitive, 1, tf.pushLiteral, 42 },
             &[_]Object{
-                Object.from(4,null),
+                Object.from(4, null),
                 Object.from(0x7f_ffff_ffff_ffff, null),
             },
             &[_]Object{
@@ -165,7 +165,7 @@ pub const @"<=" = struct {
     pub const number = 5;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
-                                                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
         return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
     }
 };
@@ -173,7 +173,7 @@ pub const @"*" = struct {
     pub const number = 9;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.p9(sp.next, sp.top) catch
-                                                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
         return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
     }
 };

@@ -59,13 +59,13 @@ pub const Object = packed struct(u64) {
         return self.isImmediateClass(.PICPointer);
     }
     pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64,@bitCast(o)) | 1);
+        return @bitCast(@as(u64, @bitCast(o)) | 1);
     }
     pub inline fn tagMethodValue(self: Self) object.Object {
-        return @bitCast(@as(u64,@bitCast(self)) >> 1 << 1);
+        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
     }
     pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64,@bitCast(self)) & 1) != 0;
+        return (@as(u64, @bitCast(self)) & 1) != 0;
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -131,7 +131,7 @@ pub const Object = packed struct(u64) {
     //     return oImm(cls, hash);
     // }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
-        _ = .{cls, ptr, extra, unreachable};
+        _ = .{ cls, ptr, extra, unreachable };
     }
     pub inline fn hash24(self: Object) u24 {
         return self.ref.header.hash;

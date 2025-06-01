@@ -74,7 +74,7 @@ const SICache = switch (objectEncoding) {
 pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
-    if (maybeProcess) | process | {
+    if (maybeProcess) |process| {
         const allocReturn = process.alloc(.SmallInteger, 1, null, Object, false);
         allocReturn.allocation.array(i64)[1] = i;
         return allocReturn.allocation.asObject();
@@ -82,7 +82,7 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     unreachable;
 }
 test "inMemory int()" {
-    std.debug.print("inMemory int()\n",.{});
+    std.debug.print("inMemory int()\n", .{});
 }
 
 pub const MemoryFloat = struct {
@@ -118,7 +118,7 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
         if (v == 1.0)
             return Object.from(&fOne);
     }
-    if (maybeProcess) | process | {
+    if (maybeProcess) |process| {
         const allocReturn = process.alloc(.Float, 1, null, Object, false);
         allocReturn.allocation.array(f64)[1] = v;
         return allocReturn.allocation.asObject();

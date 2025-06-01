@@ -33,7 +33,7 @@ pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
-        const result = Object.from(@as(i50,val.extraI()), null);
+        const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
@@ -74,13 +74,13 @@ pub const threadedFns = struct {
                     const raw: u64 = @bitCast(obj);
                     trace(
                         \\float: raw = 0x{x}
-                            \\   encoded = 0x{x}
-                            \\   thunk   = 0x{x}
-                            \\
-                            ,.{
-                                raw,
-                                ((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf),
-                                Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf))).testU(),
+                        \\   encoded = 0x{x}
+                        \\   thunk   = 0x{x}
+                        \\
+                    , .{
+                        raw,
+                        ((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf),
+                        Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf))).testU(),
                     });
                     if (raw & 0xff0 == 0)
                         return Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf)));
@@ -95,10 +95,10 @@ pub const threadedFns = struct {
                 "asThunk int",
                 .{tf.asThunk},
                 &[_]Object{
-                    Object.from(2,null),
+                    Object.from(2, null),
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2,null).testU())),
+                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU())),
                 },
             );
         }
@@ -142,7 +142,7 @@ pub const threadedFns = struct {
         test "asThunk doesn't fit" {
             var exe = zag.execute.Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
             const num: f64 = 1.0 / 5.0;
-            const obj = Object.from(num,null);
+            const obj = Object.from(num, null);
             try exe.execute(&[_]Object{obj});
             const result = exe.stack()[0];
             try expectEqual(.ThunkInstance, result.which_class(false));

@@ -155,7 +155,7 @@ pub const Object = switch (config.objectEncoding) {
 };
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
-    pub const Sentinel = Object.from(@as(*Object,@ptrFromInt(8)), null);
+    pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
     pub fn FillType(usedBits: comptime_int) type {
         return std.meta.Int(.unsigned, 64 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType) - usedBits);
     }
@@ -302,9 +302,9 @@ pub const ObjectFunctions = struct {
         _ = options;
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
-        } else if (self.isImmediateClass(.False)) {
+        } else if (self == False) {
             try writer.print("false", .{});
-        } else if (self.isImmediateClass(.True)) {
+        } else if (self == True) {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
@@ -357,7 +357,7 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) Object {
-        return Object.from(combine(u14, tup),null);
+        return Object.from(combine(u14, tup), null);
     }
     pub fn combine24(tup: anytype) comptime_int {
         return combine(u24, tup);
@@ -374,8 +374,8 @@ pub const PackedObject = packed struct {
 test "from conversion" {
     const ee = std.testing.expectEqual;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
-    try ee((Object.from(3.14,null)).immediate_class(), .Float);
-    try std.testing.expect((Object.from(3.14,null)).isDouble());
+    try ee((Object.from(3.14, null)).immediate_class(), .Float);
+    try std.testing.expect((Object.from(3.14, null)).isDouble());
     try ee((Object.from(3, null)).immediate_class(), .SmallInteger);
     try std.testing.expect((Object.from(3, null)).isInt());
     try std.testing.expect((Object.from(false, null)).isBool());
@@ -387,7 +387,7 @@ test "from conversion" {
 }
 test "to conversion" {
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14,null)).to(f64), 3.14);
+    try ee((Object.from(3.14, null)).to(f64), 3.14);
     try ee((Object.from(42, null)).to(u64), 42);
     try std.testing.expect((Object.from(42, null)).isInt());
     try ee((Object.from(true, null)).to(bool), true);
@@ -395,7 +395,7 @@ test "to conversion" {
 }
 test "immediate_class" {
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14,null)).immediate_class(), .Float);
+    try ee((Object.from(3.14, null)).immediate_class(), .Float);
     try ee((Object.from(42, null)).immediate_class(), .SmallInteger);
     try ee((Object.from(true, null)).immediate_class(), .True);
     try ee((Object.from(false, null)).immediate_class(), .False);
@@ -408,7 +408,7 @@ test "printing" {
     var buf: [255]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    try stream.print("{}\n", .{Object.from(42,null)});
+    try stream.print("{}\n", .{Object.from(42, null)});
     try stream.print("{}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
@@ -419,7 +419,7 @@ const Buf = blk: {
         obj: Object,
     };
 };
-const buf1: [1]Buf = .{Buf{ .obj = Object.from(42,null) }};
+const buf1: [1]Buf = .{Buf{ .obj = Object.from(42, null) }};
 fn slice1() []const Buf {
     return &buf1;
 }
@@ -433,7 +433,7 @@ test "order" {
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{
-                .obj = Object.from(42.0,null),
+                .obj = Object.from(42.0, null),
             }).buf;
             try ee(buf2[0], 6);
             try ee(buf2[6], 80);
