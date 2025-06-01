@@ -33,7 +33,7 @@ pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
-        const result = Object.from(val.extraI());
+        const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
@@ -67,16 +67,26 @@ pub const threadedFns = struct {
                 .immediates => {
                     const original: i64 = @bitCast(obj);
                     const signExtended: i56 = @truncate(original << 8 >> 8);
-                    std.debug.print("exncode: {x} {x}\n", .{ original, signExtended });
                     if (signExtended == original)
                         return Object.makeThunkNoArg(.ThunkImmediate, @bitCast(signExtended));
                 },
                 else => { // float
                     const raw: u64 = @bitCast(obj);
+                    trace(
+                        \\float: raw = 0x{x}
+                        \\   encoded = 0x{x}
+                        \\   thunk   = 0x{x}
+                        \\
+                    , .{
+                        raw,
+                        ((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf),
+                        Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf))).testU(),
+                    });
                     if (raw & 0xff0 == 0)
                         return Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf)));
                 },
             }
+            // _ = .{process,sp,context,unreachable};
             const ar = process.allocArray(&[_]Object{obj}, sp, context);
             return Object.makeThunk(.ThunkInstance, ar, 1);
         }
@@ -85,16 +95,15 @@ pub const threadedFns = struct {
                 "asThunk int",
                 .{tf.asThunk},
                 &[_]Object{
-                    Object.from(2),
+                    Object.from(2, null),
                 },
                 &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2).testU())),
+                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU())),
                 },
             );
         }
         test "asThunk ptr" {
-            const obj = Object.from(&ThunkReturnSmallInteger.method);
-            std.debug.print("obj = {x} {*}\n", .{ obj.testU(), &ThunkReturnSmallInteger.method });
+            const obj = Object.from(&ThunkReturnSmallInteger.method, null);
             try Execution.runTest(
                 "asThunk ptr",
                 .{tf.asThunk},
@@ -123,20 +132,20 @@ pub const threadedFns = struct {
                 "asThunk float",
                 .{tf.asThunk},
                 &[_]Object{
-                    Object.from(-32767.75),
+                    Object.from(-32767.75, null),
                 },
                 &[_]Object{
-                    @bitCast(@as(u64, 0x0dffff0000000e81)),
+                    @bitCast(@as(u64, 0x0dffff0000000e71)),
                 },
             );
         }
         test "asThunk doesn't fit" {
             var exe = zag.execute.Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
             const num: f64 = 1.0 / 5.0;
-            const obj = Object.from(num);
+            const obj = Object.from(num, null);
             try exe.execute(&[_]Object{obj});
             const result = exe.stack()[0];
-            try expectEqual(.ThunkInstance, result.class);
+            try expectEqual(.ThunkInstance, result.which_class(false));
             const exeheap = exe.getHeap();
             try expectEqual(2, exeheap.len);
             try expectEqual(obj, exeheap[1].asObjectValue());
@@ -145,7 +154,7 @@ pub const threadedFns = struct {
 };
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const result: Object = @bitCast(sp.top.extraValue());
+        const result = sp.top.extraValue();
         const newSp, const callerContext = context.popTargetContext(sp, context, process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }
@@ -332,11 +341,11 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, _: 
     const newSp = inlines.generalClosure(sp.drop(), process, sp.top);
     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
 }
-pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const block = pc.object();
-    const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.nativeU_noCheck()), context, extra);
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
-}
+// pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+//     const block = pc.object();
+//     const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.nativeU_noCheck()), context, extra);
+//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+// }
 // pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
 //     const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
 //     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });

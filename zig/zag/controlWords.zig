@@ -107,7 +107,7 @@ pub const classCase = struct {
                 ":end",
             },
             &[_]Object{True},
-            &[_]Object{Object.from(42)},
+            &[_]Object{Object.from(42, null)},
         );
     }
     test "classCase no match" {
@@ -127,7 +127,7 @@ pub const classCase = struct {
                 ":end",
             },
             &[_]Object{False},
-            &[_]Object{Object.from(42)},
+            &[_]Object{Object.from(42, null)},
         );
     }
     test "classCase no match - leave" {
@@ -159,11 +159,11 @@ pub const drop = struct {
             "drop",
             .{tf.drop},
             &[_]Object{
-                Object.from(17),
-                Object.from(42),
+                Object.from(17, null),
+                Object.from(42, null),
             },
             &[_]Object{
-                Object.from(42),
+                Object.from(42, null),
             },
         );
     }
@@ -178,11 +178,11 @@ pub const dropNext = struct {
             "dropNext",
             .{tf.dropNext},
             &[_]Object{
-                Object.from(42),
-                Object.from(17),
+                Object.from(42, null),
+                Object.from(17, null),
             },
             &[_]Object{
-                Object.from(42),
+                Object.from(42, null),
             },
         );
     }
@@ -197,13 +197,13 @@ pub const dup = struct {
             "dup",
             .{tf.dup},
             &[_]Object{
-                Object.from(42),
-                Object.from(17),
+                Object.from(42, null),
+                Object.from(17, null),
             },
             &[_]Object{
-                Object.from(42),
-                Object.from(42),
-                Object.from(17),
+                Object.from(42, null),
+                Object.from(42, null),
+                Object.from(17, null),
             },
         );
     }
@@ -218,13 +218,13 @@ pub const over = struct {
             "over",
             .{tf.over},
             &[_]Object{
-                Object.from(17),
-                Object.from(42),
+                Object.from(17, null),
+                Object.from(42, null),
             },
             &[_]Object{
-                Object.from(42),
-                Object.from(17),
-                Object.from(42),
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(42, null),
             },
         );
     }
@@ -251,11 +251,11 @@ pub const popAssociationValue = struct {
                 association.asObject(),
             },
             &[_]Object{
-                Object.from(42),
+                Object.from(42, null),
             },
             &[_]Object{},
         );
-        try expectEqual(Object.from(42), association.objects[2]);
+        try expectEqual(Object.from(42, null), association.objects[2]);
     }
 };
 pub const pushAssociationValue = struct {
@@ -281,7 +281,7 @@ pub const pushAssociationValue = struct {
             },
             &[_]Object{},
             &[_]Object{
-                Object.from(42),
+                Object.from(42, null),
             },
         );
     }
@@ -302,7 +302,7 @@ pub const pushLiteral = struct {
                 42,
             },
             &[_]Object{},
-            &[_]Object{ Object.from(42), Object.from(17) },
+            &[_]Object{ Object.from(42, null), Object.from(17, null) },
         );
     }
 };
@@ -328,8 +328,8 @@ pub const pushClosure = struct {
             d.* = s;
         closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
         closure[1] = pc.next().object();
-        if (includeContext != 0) closure[2] = Object.from(context);
-        newSp.top = Object.from(closure.ptr);
+        if (includeContext != 0) closure[2] = Object.from(context, null);
+        newSp.top = Object.from(closure.ptr, null);
         return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, context, extra });
     }
     const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
@@ -347,22 +347,22 @@ pub const pushClosure = struct {
             comptime object14(.{ 3, 4, 0 }),
             "0block",
         });
-        try exe.resolve(&[_]Object{Object.from(&testMethod)});
+        try exe.resolve(&[_]Object{Object.from(&testMethod, null)});
         try exe.execute(&[_]Object{
-            Object.from(17),
+            Object.from(17, null),
         });
         const stack = exe.stack();
-        try expectEqual(Object.from(&stack[2]), stack[0]);
-        try expectEqual(Object.from(42), stack[1]);
+        try expectEqual(Object.from(&stack[2], null), stack[0]);
+        try expectEqual(Object.from(42, null), stack[1]);
         const header: HeapHeader = @bitCast(stack[2]);
         try expectEqual(.onStack, header.age);
         try expectEqual(4, header.length);
         try expectEqual(.BlockClosure, header.classIndex);
-        try expectEqual(Object.from(&testMethod), stack[3]);
-        try expectEqual(Object.from(1), stack[4]);
+        try expectEqual(Object.from(&testMethod, null), stack[3]);
+        try expectEqual(Object.from(1, null), stack[4]);
         try expectEqual(Nil, stack[5]);
         try expectEqual(True, stack[6]);
-        try expectEqual(Object.from(17), stack[7]);
+        try expectEqual(Object.from(17, null), stack[7]);
     }
 };
 pub const pushStack = struct {
@@ -377,18 +377,18 @@ pub const pushStack = struct {
             "pushStack",
             .{ tf.pushStack, 1, tf.pushStack, 4 },
             &[_]Object{
-                Object.from(42),
-                Object.from(17),
-                Object.from(2),
-                Object.from(3),
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(2, null),
+                Object.from(3, null),
             },
             &[_]Object{
-                Object.from(3),
-                Object.from(17),
-                Object.from(42),
-                Object.from(17),
-                Object.from(2),
-                Object.from(3),
+                Object.from(3, null),
+                Object.from(17, null),
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(2, null),
+                Object.from(3, null),
             },
         );
     }
@@ -405,12 +405,12 @@ pub const swap = struct {
             "swap",
             .{tf.swap},
             &[_]Object{
-                Object.from(17),
-                Object.from(42),
+                Object.from(17, null),
+                Object.from(42, null),
             },
             &[_]Object{
-                Object.from(42),
-                Object.from(17),
+                Object.from(42, null),
+                Object.from(17, null),
             },
         );
     }

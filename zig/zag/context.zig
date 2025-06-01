@@ -279,8 +279,8 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 42,
             });
-            try exe.execute(&[_]Object{Object.from(17)});
-            try exe.matchStack(&[_]Object{Object.from(42)});
+            try exe.execute(&[_]Object{Object.from(17, null)});
+            try exe.matchStack(&[_]Object{Object.from(42, null)});
             try expect(exe.getContext() != &exe.ctxt);
         }
         // test "init context" {
@@ -321,7 +321,7 @@ pub const threadedFunctions = struct {
     };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const newSp = sp.push(Object.from(context));
+            const newSp = sp.push(Object.from(context, null));
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         }
     };

@@ -15,8 +15,7 @@ Class {
 		'lastClass',
 		'inlineDepth',
 		'executing',
-		'basicBlocks',
-		'blockValueSymbols'
+		'basicBlocks'
 	],
 	#pools : [
 		'ZagConstants'
@@ -220,13 +219,6 @@ ASemanticInterpreter >> reset [
 	basicBlocks := OrderedCollection new.
 	classes := IdentityDictionary new.
 	lastClass := 0.
-	blockValueSymbols := { 
-		#value.
-		#value:.
-		#value:value:.
-		#value:value:value:.
-		#value:value:value:value:
-	 }.
 	self addClasses: {
 			#ThunkHeap.
 			#ThunkReturnLocal.
@@ -241,7 +233,20 @@ ASemanticInterpreter >> reset [
 			Symbol.
 			Character.
 			#ShortString.
-			nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil . nil .
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
+			nil.
 			UndefinedObject.
 			Float.
 			ProtoObject.

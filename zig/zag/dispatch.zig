@@ -348,8 +348,8 @@ pub const threadedFunctions = struct {
                     tf.pushLiteral,
                     99,
                 },
-                &[_]Object{Object.from(42)},
-                &[_]Object{Object.from(42)},
+                &[_]Object{Object.from(42, null)},
+                &[_]Object{Object.from(42, null)},
             );
         }
     };
@@ -389,7 +389,7 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{True},
-                &[_]Object{Object.from(42)},
+                &[_]Object{Object.from(42, null)},
             );
         }
     };
@@ -481,7 +481,7 @@ fn dispatchOrCompile(pc: PC, sp: SP, process: *Process, context: *Context, extra
 }
 pub fn dispatchPIC(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const pic = pc.object();
-    if (pic.isImmediate()) {
+    if (pic.isPIC()) {
         if (pic.highPointer(*PICObject)) |picO| {
             if (picO.match(extra.signature)) |method|
                 return @call(tailCall, process.check(method.executeFn), .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });

@@ -314,21 +314,29 @@ test "nursery allocation" {
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
+    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
+    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
+    trace("\nar = {}\n", .{ar});
     try ee(pr.freeNursery(), emptySize - 18);
+    trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
     try o1.instVarPut(0, o2.asObject());
+    trace("\npoint\n", .{});
     sp = sp.push(o1.asObject());
+    trace("\npoint\n", .{});
     const news = pr.spillStack(sp, &initialContext);
     try ee(sp, news.sp);
     try ee(&initialContext, news.context);
+    trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
     try ee(pr.freeNursery(), emptySize - 12);
+    trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1

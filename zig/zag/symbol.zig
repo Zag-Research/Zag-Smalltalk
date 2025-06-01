@@ -20,10 +20,10 @@ inline fn symbol_of(index: u24, arity: u4) object.Object {
     return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return @as(u24, @truncate(obj.hash56())) *% undoPhi24;
+    return @as(u24, @truncate(obj.hash24())) *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate(obj.hash56() >> 24);
+    return @truncate(obj.hash32() >> 24);
 }
 
 pub inline fn symbol0(index: u32) object.Object {
@@ -237,8 +237,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(symbolArity(symbols.Object), 0);
     switch (config.objectEncoding) {
         .zag => {
-            try expectEqual(3246132641, symbols.Object.testU());
-            try expectEqual(12406198433, symbols.@"value:value:".testU());
+            try expectEqual(3246132625, symbols.Object.testU());
+            try expectEqual(12406198417, symbols.@"value:value:".testU());
         },
         else => {},
     }

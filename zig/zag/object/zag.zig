@@ -12,6 +12,8 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const Process = zag.Process;
+const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
@@ -30,8 +32,16 @@ pub const Object = packed struct(u64) {
         }
     };
     const Self = @This();
+    pub const ZERO = of(0);
+    pub const False = oImm(.False, 0);
+    pub const True = oImm(.True, 0);
+    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
-    pub const TagAndClassType = u8;
+    pub const LowTagType = TagAndClassType;
+    pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const HighTagType = void;
+    pub const HighTagSmallInteger = {};
+    const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
@@ -40,14 +50,10 @@ pub const Object = packed struct(u64) {
     const extraMask = 0xff;
     const ExtraType = u8;
     pub inline fn tagbits(self: Self) TagAndClassType {
-        return @truncate(@as(u64, @bitCast(self)));
+        return @truncate(self.rawU());
     }
     fn enumBits(T: type) usize {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
-    }
-    pub inline fn untaggedI_native(self: object.Object) ?i64 {
-        if (self.isInt()) return @as(i64, @bitCast(self)) >> tagAndClassBits;
-        return null;
     }
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return untaggedI_noCheck(self);
@@ -80,33 +86,32 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.nativeI_noCheck();
         return null;
     }
-    pub inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @as(i56, @bitCast(self.hash));
+    inline fn nativeI_noCheck(self: object.Object) i64 {
+        return self.rawI() >> tagAndClassBits;
     }
     pub inline fn nativeU(self: object.Object) ?u64 {
         if (self.isInt()) return self.nativeU_noCheck();
         return null;
     }
-    pub inline fn nativeU_noCheck(self: object.Object) u64 { // TODO: shouldn't be pub
+    inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.hash;
     }
     pub inline fn symbolHash(self: object.Object) ?u56 {
         if (self.isImmediateClass(.Symbol)) return self.hash;
         return null;
     }
-    pub inline fn extraValue(self: object.Object) i64 {
-        return self.nativeI_noCheck() >> 8;
+    pub inline fn extraValue(self: object.Object) object.Object {
+        return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn testU(self: object.Object) u64 {
+    pub inline fn isPIC(self: object.Object) bool {
+        return self.isImmediateClass(.PICPointer);
+    }
+    pub const testU = rawU;
+    pub const testI = rawI;
+    inline fn rawU(self: object.Object) u64 {
         return @bitCast(self);
     }
-    pub inline fn testI(self: object.Object) i64 {
-        return @bitCast(self);
-    }
-    inline fn rawU(self: object.Object) u64 { //TODO: shouldn't be pub
-        return @bitCast(self);
-    }
-    inline fn rawI(self: object.Object) i64 { //TODO: shouldn't be pub
+    inline fn rawI(self: object.Object) i64 {
         return @bitCast(self);
     }
     inline fn of(comptime v: u64) object.Object {
@@ -114,9 +119,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
         return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
-    }
-    pub inline fn makeThunkX(cls: ClassIndex.Compact, ptr: anytype, extra: u8) object.Object {
-        return oImm(cls, (@intFromPtr(ptr) << 8) + extra);
     }
     pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
         return .oImm(class, value);
@@ -134,20 +136,26 @@ pub const Object = packed struct(u64) {
     inline fn isThunkImmediate(self: object.Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
     }
-    pub const tagMethod = thunkImmediate;
-    pub const tagMethodValue = thunkImmediateValue;
-    pub const isTaggedMethod = isThunkImmediate;
+    pub inline fn tagMethod(o: object.Object) ?object.Object {
+        return @bitCast(@as(u64, @bitCast(o)) | 1);
+    }
+    pub inline fn tagMethodValue(self: Self) object.Object {
+        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
+    }
+    pub inline fn isTaggedMethod(self: object.Object) bool {
+        return (@as(u64, @bitCast(self)) & 1) != 0;
+    }
     pub inline fn extraI(self: object.Object) i8 {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
         std.debug.print("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42))) |value|
-            try ee(object.Object.from(42), value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42))) |value|
-            try ee(object.Object.from(-42), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47)));
+        if (thunkImmediate(object.Object.from(42, null))) |value|
+            try ee(object.Object.from(42, null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.from(-42, null))) |value|
+            try ee(object.Object.from(-42, null), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
@@ -164,7 +172,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
-    inline fn oImm(c: ClassIndex.Compact, h: u56) Self { // TODO: shouldn't be public
+    inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
     inline fn immX(c: ClassIndex.Compact, h: u56) u64 {
@@ -173,10 +181,6 @@ pub const Object = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    pub const ZERO = of(0);
-    pub const False = oImm(.False, 0);
-    pub const True = oImm(.True, 0);
-    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
     pub inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
@@ -215,7 +219,7 @@ pub const Object = packed struct(u64) {
         return decode(self);
     }
     pub inline fn toDoubleFromMemory(self: object.Object) f64 {
-        return self.to(*object.MemoryFloat).*.value;
+        return self.to(*InMemory.MemoryFloat).*.value;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return oImm(cls, hash);
@@ -226,28 +230,21 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
     }
-    pub inline fn hash48(self: object.Object) u48 {
-        return @truncate(self.hash);
-    }
-    pub inline fn hash56(self: object.Object) u56 {
-        return self.hash;
-    }
-    const nanMemObject = object.simpleFloat(math.nan(f64), .static);
-    const pInfMemObject = object.simpleFloat(math.inf(f64), .static);
-    const nInfMemObject = object.simpleFloat(-math.inf(f64), .static);
     inline fn encode(x: f64) object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;
         if (u & 6 != 0)
             return @bitCast(u);
-        if (math.isNan(x)) return object.Object.from(&nanMemObject);
-        if (math.inf(f64) == x) return object.Object.from(&pInfMemObject);
-        if (math.inf(f64) == -x) return object.Object.from(&nInfMemObject);
-        return object.Object.Nil;
+        if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject, null);
+        if (math.inf(f64) == x) return object.Object.from(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -x) return object.Object.from(&InMemory.nInfMemObject);
+        if (builtin.is_test)
+            return object.Object.Sentinel;
+        // need to allocate a MemoryFloat object
     }
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
-    pub inline fn from(value: anytype) object.Object {
+    pub inline fn from(value: anytype, _: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
