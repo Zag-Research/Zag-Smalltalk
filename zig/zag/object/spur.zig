@@ -322,11 +322,6 @@ test "float conversions" {
     for (cases) |case| {
         std.debug.print("Testing value: {d}\n", .{case.value});
         const result = Object.encode(case.value);
-        if (result) |r| {
-            std.debug.print("{b:0>64}\n", .{r.rawU()});
-        } else |err| {
-            std.debug.print("Result error: {}\n", .{err});
-        }
 
         if (case.expectHeap) {
             try testing.expect(result == error.NonFiniteValue or
