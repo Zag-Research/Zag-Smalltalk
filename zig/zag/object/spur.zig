@@ -1,5 +1,7 @@
+const std = @import("std");
 const zag = @import("../zag.zig");
 const object = zag.object;
+const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
@@ -80,6 +82,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
     }
+
     pub inline fn isImmediateClass(self: object.Object, class: ClassIndex) bool {
         if (self.isHeap()) return false;
         if (self.isInt()) return class == .SmallInteger;
@@ -109,7 +112,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    // TODO: Float
+    // Floats
     pub inline fn isImmediateFloat(self: Object) bool {
         return (self.rawU() & FloatTag) != 0;
     }
@@ -117,8 +120,70 @@ pub const Object = packed struct(u64) {
         return self.isImmediateFloat(); // Spur also supports heap floats, not implemented here
     }
 
-    // TODO: Encoding and Decoding Float Values are missing
-    // TODO: Heap support for Float is missing as well
+    const SIGN_MASK: u64 = 0x8000000000000000;
+    const EXPONENT_MASK: u64 = 0x7FF0000000000000;
+    const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
+    const EXPONENT_BIAS = 896;
+    const MAX_EXPONENT = EXPONENT_BIAS + 0xFF;
+
+    pub const FloatError = error{
+        NonFiniteValue,
+        Underflow,
+        Overflow,
+    };
+
+    pub fn encode(value: f64) FloatError!Object {
+        const bits: u64 = @bitCast(value);
+        const sign = (bits & SIGN_MASK) >> 63;
+        const exponent = (bits & EXPONENT_MASK) >> 52;
+        const mantissa = bits & MANTISSA_MASK;
+
+        if (exponent == 0) {
+            if (mantissa == 0) {
+                // Positive or negative zero - encode as special zero
+                return Object.makeImmediate(.float, 0);
+            } else {
+                // Subnormal numbers require heap allocation
+                return FloatError.Underflow;
+            }
+        }
+
+        if (exponent == 0x7FF) {
+            // Infinity or NaN - both require heap allocation
+            return FloatError.NonFiniteValue;
+        }
+
+        if (exponent <= EXPONENT_BIAS) {
+            return FloatError.Underflow;
+        }
+        if (exponent >= MAX_EXPONENT) {
+            return FloatError.Overflow;
+        }
+
+        // immediate float: [exponent(8)][mantissa(52)][sign(1)][tag(3)]
+        const adjusted_exponent = exponent - EXPONENT_BIAS;
+        return Object.makeImmediate(.float, @truncate((adjusted_exponent << 53) | (mantissa << 1) | sign));
+    }
+
+    pub fn decode(self: Object) f64 {
+        if (!self.isFloat()) {
+            @panic("Attempting to decode non-float object as float");
+        }
+    
+        const hash = self.hash;
+        if (hash == 0) return 0.0;
+        
+        const sign: u64 = hash & 1;
+        const mantissa: u64 = (hash >> 1) & MANTISSA_MASK;
+        const adjusted_exponent: u64 = hash >> 53;
+        
+        const exponent = adjusted_exponent + EXPONENT_BIAS;
+        return @bitCast((sign << 63) | (exponent << 52) | mantissa);
+    }
+
+    pub inline fn isFloat(self: Object) bool {
+        return (self.rawU() & TagMask) == FloatTag;
+    }
 
     // Boolean, Nil, Symbol (stubs)
     pub inline fn isBool(self: Object) bool {
@@ -134,12 +199,14 @@ pub const Object = packed struct(u64) {
     pub inline fn isNil(self: Object) bool {
         return self.rawU() == Object.Nil.rawU();
     }
+
     inline fn oImm(c: Group, h: u61) Self {
         return Self{ .tag = c, .hash = h };
     }
     pub inline fn makeImmediate(cls: Group, hash: u61) object.Object {
         return oImm(cls, hash);
     }
+    
     // Hash helpers (stubbed)
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.rawU());
@@ -171,6 +238,8 @@ pub const Object = packed struct(u64) {
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
+            .float => return encode(value),
+            .comptime_float => return encode(@as(f64, value)),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
             .pointer => |ptr_info| {
@@ -219,3 +288,56 @@ pub const Object = packed struct(u64) {
 
     pub usingnamespace object.ObjectFunctions;
 };
+
+test "float conversions" {
+    const cases = [_]struct {
+        value: f64,
+        expectHeap: bool,
+    }{
+        // Normal numbers
+        .{ .value = 5.5, .expectHeap = false },
+        .{ .value = 1.0, .expectHeap = false },
+        .{ .value = -1.0, .expectHeap = false },
+        .{ .value = 3.14159, .expectHeap = false },
+
+        // Zeros
+        .{ .value = 0.0, .expectHeap = false },
+        .{ .value = -0.0, .expectHeap = false },
+
+        // Edge Cases
+        .{ .value = std.math.floatMin(f64), .expectHeap = true },
+        .{ .value = -std.math.floatMin(f64), .expectHeap = true },
+        .{ .value = std.math.floatMax(f64), .expectHeap = true },
+        .{ .value = -std.math.floatMax(f64), .expectHeap = true },
+
+        // Infinities
+        .{ .value = std.math.inf(f64), .expectHeap = true },
+        .{ .value = -std.math.inf(f64), .expectHeap = true },
+
+        // NaNs
+        .{ .value = std.math.nan(f64), .expectHeap = true },
+        .{ .value = -std.math.nan(f64), .expectHeap = true },
+    };
+
+    for (cases) |case| {
+        std.debug.print("Testing value: {d}\n", .{case.value});
+        const result = Object.encode(case.value);
+
+        if (case.expectHeap) {
+            try testing.expect(result == error.NonFiniteValue or
+                result == error.Underflow or
+                result == error.Overflow);
+        } else {
+            if (result) |encoded| {
+                const decoded = encoded.decode();
+                if (std.math.isNan(case.value)) {
+                    try testing.expect(std.math.isNan(decoded));
+                } else {
+                    try testing.expectEqual(case.value, decoded);
+                }
+            } else |_| {
+                try testing.expect(false); // Should not error for non-heap cases
+            }
+        }
+    }
+}
