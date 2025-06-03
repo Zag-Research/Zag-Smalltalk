@@ -134,7 +134,7 @@ pub const Object = packed struct(u64) {
         return self.ref.data.float;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
-        @compileLog(cls,hash);
+        @compileLog(cls, hash);
         _ = .{ cls, hash, unreachable };
     }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {

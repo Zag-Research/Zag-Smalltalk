@@ -171,14 +171,14 @@ pub const Object = packed struct(u64) {
         if (!self.isFloat()) {
             @panic("Attempting to decode non-float object as float");
         }
-    
+
         const hash = self.hash;
         if (hash == 0) return 0.0;
-        
+
         const sign: u64 = hash & 1;
         const mantissa: u64 = (hash >> 1) & MANTISSA_MASK;
         const adjusted_exponent: u64 = hash >> 53;
-        
+
         const exponent = adjusted_exponent + EXPONENT_BIAS;
         return @bitCast((sign << 63) | (exponent << 52) | mantissa);
     }
@@ -208,7 +208,7 @@ pub const Object = packed struct(u64) {
     pub inline fn makeImmediate(cls: Group, hash: u61) object.Object {
         return oImm(cls, hash);
     }
-    
+
     // Hash helpers (stubbed)
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.rawU());

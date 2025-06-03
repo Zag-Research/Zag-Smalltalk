@@ -143,11 +143,11 @@ pub const PointedObject = packed struct {
     },
     const staticCacheSize = 20;
     var staticCacheUsed: usize = 0;
-    var staticCache = [_]PointedObject{.{.header = .{}, .data = undefined}} ** staticCacheSize;
+    var staticCache = [_]PointedObject{.{ .header = .{}, .data = undefined }} ** staticCacheSize;
     fn cached(self: PointedObject) ?*PointedObject {
-        for (staticCache[0 .. ]) |*p| {
+        for (staticCache[0..]) |*p| {
             if (p.header.classIndex == self.header.classIndex and
-                    p.data.unsigned == self.data.unsigned)
+                p.data.unsigned == self.data.unsigned)
                 return p;
         }
         if (staticCacheUsed < staticCacheSize) {
@@ -177,7 +177,7 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if ((PointedObject{
         .header = .{ .classIndex = .SmallInteger },
         .data = .{ .int = i },
-        }).cached()) |obj| return Object.from(obj, null);
+    }).cached()) |obj| return Object.from(obj, null);
     @compileLog(i);
     unreachable;
 }
