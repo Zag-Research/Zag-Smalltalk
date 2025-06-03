@@ -52,6 +52,8 @@ pub const Object = packed struct(u64) {
     pub const LowTagSmallInteger = {};
     pub const HighTagType = u14;
     pub const HighTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
+    pub const PackedTagType = u3;
+    pub const PackedTagSmallInteger = 1;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {

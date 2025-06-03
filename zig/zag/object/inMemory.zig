@@ -3,7 +3,8 @@ const zag = @import("../zag.zig");
 const objectEncoding = zag.config.objectEncoding;
 const isTest = zag.config.isTest;
 const Process = zag.Process;
-const Object = zag.object.Object;
+const object = zag.object;
+const Object = object.Object;
 const heap = zag.heap;
 const Age = heap.Age;
 const HeapHeader = heap.HeapHeader;
@@ -129,6 +130,42 @@ const SICache = switch (objectEncoding) {
     .cachedPtr, .taggedPtr => true,
     else => isTest,
 };
+pub const PointedObject = packed struct {
+    header: HeapHeader,
+    data: packed union {
+        int: i64,
+        unsigned: u64,
+        float: f64,
+        boolean: void,
+        nil: void,
+        character: void,
+        object: ?[*]Object,
+    },
+    const staticCacheSize = 20;
+    var staticCacheUsed: usize = 0;
+    var staticCache = [_]PointedObject{.{.header = .{}, .data = undefined}} ** staticCacheSize;
+    fn cached(self: PointedObject) ?*PointedObject {
+        for (staticCache[0 .. ]) |*p| {
+            if (p.header.classIndex == self.header.classIndex and
+                    p.data.unsigned == self.data.unsigned)
+                return p;
+        }
+        if (staticCacheUsed < staticCacheSize) {
+            const p = &staticCache[staticCacheUsed];
+            staticCacheUsed += 1;
+            p.header = .{
+                .classIndex = self.header.classIndex,
+                .hash = self.header.hash,
+                .format = .notIndexable,
+                .age = .static,
+                .length = 1,
+            };
+            p.data = self.data;
+            return p;
+        }
+        return null;
+    }
+};
 pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
@@ -137,6 +174,11 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
         allocReturn.allocation.array(i64)[1] = i;
         return allocReturn.allocation.asObject();
     }
+    if ((PointedObject{
+        .header = .{ .classIndex = .SmallInteger },
+        .data = .{ .int = i },
+        }).cached()) |obj| return Object.from(obj, null);
+    @compileLog(i);
     unreachable;
 }
 test "inMemory int()" {
@@ -181,5 +223,6 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
         allocReturn.allocation.array(f64)[1] = v;
         return allocReturn.allocation.asObject();
     }
+    @compileLog(v);
     unreachable;
 }

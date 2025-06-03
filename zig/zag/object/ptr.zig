@@ -14,29 +14,20 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const InMemory = @import("inMemory.zig");
-pub const PointedObject = packed struct {
-    header: HeapHeader,
-    data: packed union {
-        int: i64,
-        unsigned: u64,
-        float: f64,
-        boolean: void,
-        nil: void,
-        character: void,
-        object: ?[*]object.Object,
-    },
-};
 pub const Object = packed struct(u64) {
-    ref: *PointedObject,
+    ref: *InMemory.PointedObject,
     const Self = @This();
     pub const ZERO = of(0);
     pub const False = Object.from(&InMemory.False, null);
     pub const True = Object.from(&InMemory.True, null);
     pub const Nil = Object.from(&InMemory.Nil, null);
+    pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const LowTagSmallInteger = {};
     pub const HighTagType = void;
     pub const HighTagSmallInteger = {};
+    pub const PackedTagType = u3;
+    pub const PackedTagSmallInteger = 1;
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
@@ -143,6 +134,7 @@ pub const Object = packed struct(u64) {
         return self.ref.data.float;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+        @compileLog(cls,hash);
         _ = .{ cls, hash, unreachable };
     }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {

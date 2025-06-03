@@ -368,7 +368,7 @@ pub const StackStructure = packed struct {
     locals: u11 = 0,
     selfOffset: u11 = 0,
     reserve: u11 = 0,
-    _filler: object.Object.FillType(43) = 0,
+    _filler: std.meta.Int(.unsigned, 64 - 33 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
     hightTag: object.Object.HighTagType = object.Object.HighTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
@@ -745,7 +745,7 @@ test "compiling method" {
 
 fn CompileTimeObject(comptime counts: usize) type {
     const codes = counts;
-    return struct {
+    return extern struct {
         objects: [codes]Object align(8),
         offsets: [codes]bool align(8),
         const Self = @This();

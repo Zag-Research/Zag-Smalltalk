@@ -156,10 +156,6 @@ pub const Object = switch (config.objectEncoding) {
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
-    pub fn FillType(usedBits: comptime_int) type {
-        return std.meta.Int(.unsigned, 64 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType) - usedBits);
-    }
-
     pub inline fn equals(self: Object, other: Object) bool {
         return self == other;
     }
@@ -330,16 +326,19 @@ pub const ObjectFunctions = struct {
     // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {
     //     return @bitCast(PackedObject.from3(f1,f2,f3));
     // }
+    pub const intFromPackedObject = PackedObject.intFromPackedObject;
 };
 pub const PackedObject = packed struct {
-    tag: Object.LowTagType = Object.LowTagSmallInteger,
+    tag: Object.PackedTagType = Object.PackedTagSmallInteger,
     f1: u14,
     f2: u14 = 0,
     f3: u14 = 0,
-    f4: Object.FillType(42) = 0,
-    hightTag: Object.HighTagType = Object.HighTagSmallInteger,
+    f4: std.meta.Int(.unsigned, 64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
+    }
+    fn intFromPackedObject(self: Object) u64 {
+        return @as(u64,@bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
     fn combine(size: type, tup: anytype) comptime_int {
         comptime var n: u56 = 0;
@@ -357,17 +356,13 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) Object {
-        return Object.from(combine(u14, tup), null);
-    }
-    pub fn combine24(tup: anytype) comptime_int {
-        return combine(u24, tup);
+        return @bitCast((@as(u64,combine(u14, tup)) << @bitSizeOf(Object.PackedTagType))+Object.PackedTagSmallInteger);
     }
     test "combiners" {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
         try expectEqual(294927, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
-        try expectEqual(16777216 + 2, combine24(.{ 2, 1 }));
     }
 };
 

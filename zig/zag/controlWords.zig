@@ -73,7 +73,7 @@ pub const classCase = struct {
         const match = @intFromEnum(top.get_class());
         const newSp = sp.drop();
         while (true) {
-            var classes = pc.object().to(u64);
+            var classes = pc.object().intFromPackedObject();
             newPc = newPc.next();
             for (0..4) |_| {
                 const currentClass: u14 = @truncate(classes);

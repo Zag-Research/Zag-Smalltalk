@@ -33,6 +33,8 @@ pub const Object = packed struct(u64) {
     pub const LowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
     pub const HighTagType = void;
     pub const HighTagSmallInteger = {};
+    pub const PackedTagType = Group;
+    pub const PackedTagSmallInteger = Group.smallInteger;
     const TagAndClassType = u3;
 
     pub inline fn tagbits(self: Self) TagAndClassType {

@@ -13,11 +13,15 @@ const Treap = zag.utilities.Treap;
 const inversePhi24 = zag.utilities.inversePhi(u24);
 const undoPhi24 = zag.utilities.undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
-pub inline fn fromHash32(hash: u32) object.Object {
+pub //inline
+    fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
+inline fn hash_of(index: u24, arity: u4) u32 {
+    return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
+}
 inline fn symbol_of(index: u24, arity: u4) object.Object {
-    return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
+    return fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return @as(u24, @truncate(obj.hash24())) *% undoPhi24;
@@ -26,7 +30,8 @@ pub inline fn symbolArity(obj: object.Object) u4 {
     return @truncate(obj.hash32() >> 24);
 }
 
-pub inline fn symbol0(index: u32) object.Object {
+ //inline
+    fn symbol0(index: u32) object.Object {
     return symbol_of(index, 0);
 }
 pub inline fn symbol1(index: u32) object.Object {

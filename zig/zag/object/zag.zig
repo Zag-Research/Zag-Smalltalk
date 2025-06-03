@@ -41,6 +41,8 @@ pub const Object = packed struct(u64) {
     pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
     pub const HighTagType = void;
     pub const HighTagSmallInteger = {};
+    pub const PackedTagType = u8;
+    pub const PackedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
     const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
@@ -242,7 +244,7 @@ pub const Object = packed struct(u64) {
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
-    pub inline fn from(value: anytype, possibleProcess: ?*Process) object.Object {
+    pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
@@ -250,7 +252,7 @@ pub const Object = packed struct(u64) {
             .float => return encode(value) catch {
                 unreachable;
             },
-            .comptime_float => return from(@as(f64, value), possibleProcess),
+            .comptime_float => return from(@as(f64, value), maybeProcess),
             .bool => return if (value) object.Object.True else object.Object.False,
             .null => return object.Object.Nil,
             .pointer => |ptr_info| {
