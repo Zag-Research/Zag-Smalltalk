@@ -304,7 +304,7 @@ pub const Code = union {
     threadedFn: ThreadedFn.Fn,
     method: *CompiledMethod,
     codePtr: *Code,
-    //    int: u64,
+    offset: i64,
     structure: StackStructure,
     pub inline fn primOf(pp: ThreadedFn.Fn) Code {
         //@compileLog(pp);
@@ -578,10 +578,11 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     else => {
                         if (field[0] != ':') {
-                            code[n] = Code.objectOf(if (field[0] >= '0' and field[0] <= '9')
-                                symbol.fromHash32(comptime intOf(field[0..]))
-                            else
-                                lookupLabel(tup, field) - n - 1);
+                            code[n] = Code{ .offset =
+                                               if (field[0] >= '0' and field[0] <= '9')
+                                               comptime intOf(field[0..]) << 1
+                                           else
+                                               ((lookupLabel(tup, field) - n - 1) << 1) + 1};
                             method.offsets[n] = true;
                             n = n + 1;
                         }
@@ -601,14 +602,15 @@ fn CompileTimeMethod(comptime counts: usize) type {
             for (&self.code, &self.offsets, 0..) |*c, *isOffset, n| {
                 if (isOffset.*) {
                     isOffset.* = false;
-                    trace("\nc[{}] = {}", .{ n, c.object });
-                    if (c.object.nativeI()) |i| {
-                        c.* = Code.codePtrOf(c, i);
+                    const i = c.offset;
+                    trace("\nc[{}] = {}", .{ n, i });
+                    if (i & 1 != 0) {
+                        c.* = Code.codePtrOf(c, i >> 1);
                     } else {
-                        const index: u32 = @bitCast(c.object.hash32());
+                        const index: usize = @bitCast(i >> 1);
                         trace(" index: {x}", .{index});
                         if (index >= literals.len) return error.Unresolved;
-                        c.object = literals[index];
+                        c.* = Code.objectOf(literals[index]);
                     }
                 }
             }

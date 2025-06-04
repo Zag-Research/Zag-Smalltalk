@@ -2,9 +2,11 @@ const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
 const math = std.math;
-const config = @import("config.zig");
+const zag = @import("zag.zig");
+const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
+pub const inMemory = @import("object/inMemory.zig");
 const symbol = if (debugError) struct {
     const inversePhi24 = @import("utilities.zig").inversePhi(u24);
     const undoPhi24 = @import("utilities.zig").undoPhi(u24);
@@ -344,10 +346,11 @@ pub const PackedObject = packed struct {
         comptime var n: u56 = 0;
         comptime var shift = 0;
         inline for (tup) |field| {
-            n |= switch (@TypeOf(field)) {
-                comptime_int => @as(u56, @as(size, field)) << shift,
-                else => @as(u56, @as(size, @intFromEnum(field))) << shift,
-            };
+            n |= @as(u56,
+                     switch (@TypeOf(field)) {
+                         comptime_int => @as(size, field),
+                         else => @intFromEnum(field),
+                }) << shift;
             shift += @typeInfo(size).int.bits;
         }
         return n;

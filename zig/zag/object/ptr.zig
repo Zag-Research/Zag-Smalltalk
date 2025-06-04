@@ -17,6 +17,7 @@ const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
     ref: *InMemory.PointedObject,
     const Self = @This();
+    pub const inMemorySymbols = true;
     pub const ZERO = of(0);
     pub const False = Object.from(&InMemory.False, null);
     pub const True = Object.from(&InMemory.True, null);

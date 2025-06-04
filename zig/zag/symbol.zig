@@ -13,6 +13,20 @@ const Treap = zag.utilities.Treap;
 const inversePhi24 = zag.utilities.inversePhi(u24);
 const undoPhi24 = zag.utilities.undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
+const staticSymbols = if (Object.inMemorySymbols) blk: {
+    var symbolArray = [_]object.inMemory.PointedObject{undefined} ** lastPredefinedSymbol;
+    const arities = .{
+        1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 1, 1, 1, 2, 0, 0, 0, 3, 4,
+        1, 2, 3, 4, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2,
+        1, 2, 1, 2, 1, 2, 3, 4, 2, 3, 0,
+    };
+    for (symbolArray[0..], arities[0..], 1..) |*sym, arity, i| {
+        const hash = hash_of(i,arity);
+        sym.data.unsigned = (hash << 8) + 1;
+    }
+    break :blk symbolArray;
+} else
+    {};
 pub //inline
     fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
@@ -21,29 +35,38 @@ inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
-    return fromHash32(hash_of(index, arity));
+    if (Object.inMemorySymbols) {
+        unreachable;
+    } else
+        return fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return @as(u24, @truncate(obj.hash24())) *% undoPhi24;
+    if (Object.inMemorySymbols) {
+        unreachable;
+    } else
+        return @as(u24, @truncate(obj.hash24())) *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate(obj.hash32() >> 24);
+    if (Object.inMemorySymbols) {
+        unreachable;
+    } else
+        return @truncate(obj.hash32() >> 24);
 }
 
- //inline
-    fn symbol0(index: u32) object.Object {
+//inline
+fn symbol0(index: u32) object.Object {
     return symbol_of(index, 0);
 }
-pub inline fn symbol1(index: u32) object.Object {
+inline fn symbol1(index: u32) object.Object {
     return symbol_of(index, 1);
 }
-pub inline fn symbol2(index: u32) object.Object {
+inline fn symbol2(index: u32) object.Object {
     return symbol_of(index, 2);
 }
-pub inline fn symbol3(index: u32) object.Object {
+inline fn symbol3(index: u32) object.Object {
     return symbol_of(index, 3);
 }
-pub inline fn symbol4(index: u32) object.Object {
+inline fn symbol4(index: u32) object.Object {
     return symbol_of(index, 4);
 }
 pub const symbols = struct {
@@ -100,9 +123,12 @@ pub const symbols = struct {
     pub const @"perform:withArguments:" = symbol2(51);
     pub const @"perform:withArguments:inSuperclass:" = symbol3(52);
     // define any new symbols here
-    pub const Object = symbol0(53); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
 };
-pub const predefinedSymbols = 47;
+const lastPredefinedSymbol = 53;
+comptime{
+    std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
+}
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
     "=",                                   "value",                   "value:",
     "cull:",                               "yourself",                "doesNotUnderstand:",
