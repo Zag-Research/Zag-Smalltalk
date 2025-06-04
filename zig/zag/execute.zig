@@ -389,7 +389,8 @@ pub const CompiledMethod = struct {
     const codeOffsetInObjects = codeOffset / 8;
     pub fn init(name: Object, methodFn: ThreadedFn.Fn) Self {
         return Self{
-            .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), .static, null, Object, false) catch unreachable,
+            .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
+                , .static, null, Object, false) catch unreachable,
             .stackStructure = StackStructure{},
             .signature = Signature.from(name, .testClass),
             .executeFn = methodFn,
@@ -578,11 +579,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     else => {
                         if (field[0] != ':') {
-                            code[n] = Code{ .offset =
-                                               if (field[0] >= '0' and field[0] <= '9')
-                                               comptime intOf(field[0..]) << 1
-                                           else
-                                               ((lookupLabel(tup, field) - n - 1) << 1) + 1};
+                            code[n] = Code{ .offset = if (field[0] >= '0' and field[0] <= '9')
+                                comptime intOf(field[0..]) << 1
+                            else
+                                ((lookupLabel(tup, field) - n - 1) << 1) + 1 };
                             method.offsets[n] = true;
                             n = n + 1;
                         }

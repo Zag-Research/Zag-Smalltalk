@@ -184,6 +184,12 @@ pub const Object = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
+    pub inline fn isNil(self: Object) bool {
+        return self == Object.Nil;
+    }
+    pub inline fn isBool(self: Object) bool {
+        return self == Object.False or self == Object.True;
+    }
     pub inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
@@ -245,6 +251,7 @@ pub const Object = packed struct(u64) {
     inline fn decode(self: object.Object) f64 {
         return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
     }
+
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;

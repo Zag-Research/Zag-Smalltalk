@@ -36,3 +36,6 @@ test "config" {
         native_endian,
     });
 }
+comptime {
+    @setEvalBranchQuota(100000);
+}

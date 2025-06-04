@@ -44,7 +44,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn @"=="(self: Object, other: Object) bool { // Identical - can't fail
-        return self == other;
+        return self.equals(other);
     }
     pub inline fn @"atAllPut:"(self: Object, other: Object) !Object {
         _ = self;

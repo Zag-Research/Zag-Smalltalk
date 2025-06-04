@@ -123,7 +123,7 @@ const testModule = if (config.is_test) struct {
             if (sp.next.immediate_class() != sp.top.immediate_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), null));
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }

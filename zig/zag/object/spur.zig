@@ -7,10 +7,14 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const InMemory = @import("inMemory.zig");
 
-pub const Object = packed struct(u64) {
-    tag: Group,
-    hash: u61,
+pub const Object = packed union {
+    ref: *InMemory.PointedObject,
+    immediate: packed struct(u64) {
+        tag: Group,
+        hash: u61,
+    },
     const Group = enum(LowTagType) {
         pointer = 0,
         smallInteger = 0b001,
@@ -29,12 +33,17 @@ pub const Object = packed struct(u64) {
     const TagMask = SmallIntegerTag | CharacterTag | FloatTag;
 
     const Self = @This();
+    pub const inMemorySymbols = true;
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
+    pub const False = Object.from(&InMemory.False, null);
+    pub const True = Object.from(&InMemory.True, null);
+    pub const Nil = Object.from(&InMemory.Nil, null);
     pub const LowTagType = TagAndClassType;
     pub const LowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
     pub const HighTagType = void;
     pub const HighTagSmallInteger = {};
-    pub const PackedTagType = Group;
-    pub const PackedTagSmallInteger = Group.smallInteger;
+    pub const PackedTagType = u3;
+    pub const PackedTagSmallInteger = @intFromEnum(Group.smallInteger);
     const TagAndClassType = u3;
 
     pub inline fn tagbits(self: Self) TagAndClassType {
@@ -62,7 +71,7 @@ pub const Object = packed struct(u64) {
         return @as(u64, self.rawU()) >> 1;
     }
     pub inline fn fromSmallInteger(i: i64) Object {
-        return @bitCast((@as(u64, i) << 1) | SmallIntegerTag);
+        return @bitCast((@as(u64, @bitCast(i)) << 1) | SmallIntegerTag);
     }
 
     // Spur Pointer
@@ -76,8 +85,10 @@ pub const Object = packed struct(u64) {
         if (self.isHeap()) return @ptrFromInt(self.rawU());
         return null;
     }
-    pub inline fn fromPointer(ptr: usize) Object {
-        return @bitCast(ptr & ~TagMask);
+    pub inline fn fromPointer(ptr: anytype) Object {
+        const Foo = packed struct { ref: *u64 };
+        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
+        return @bitCast(foo);
     }
 
     // Immediate checks
@@ -172,7 +183,7 @@ pub const Object = packed struct(u64) {
             @panic("Attempting to decode non-float object as float");
         }
 
-        const hash = self.hash;
+        const hash = self.immediate.hash;
         if (hash == 0) return 0.0;
 
         const sign: u64 = hash & 1;
@@ -203,7 +214,7 @@ pub const Object = packed struct(u64) {
     }
 
     inline fn oImm(c: Group, h: u61) Self {
-        return Self{ .tag = c, .hash = h };
+        return Self{ .immediate = .{ .tag = c, .hash = h } };
     }
     pub inline fn makeImmediate(cls: Group, hash: u61) object.Object {
         return oImm(cls, hash);
@@ -224,29 +235,31 @@ pub const Object = packed struct(u64) {
     }
 
     // Raw access
-    pub inline fn rawU(self: Object) u64 {
-        return @bitCast(self);
+    pub const testU = rawU;
+    pub const testI = rawI;
+    inline fn rawU(self: Object) u64 {
+        return @intFromPtr(self.ref);
     }
-    pub inline fn rawI(self: Object) i64 {
-        return @bitCast(self);
+    inline fn rawI(self: Object) i64 {
+        return @bitCast(self.rawU());
     }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & ~TagMask;
     }
 
     // Conversion from Zig types
-    pub inline fn from(value: anytype, _: ?zag.Process) Object {
+    pub inline fn from(value: anytype, maybeProcess: ?*zag.Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return encode(value),
-            .comptime_float => return encode(@as(f64, value)),
+            .float => return encode(value) catch InMemory.float(value, maybeProcess),
+            .comptime_float => return from(@as(f64, value), maybeProcess),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .one, .many => return Self.fromPointer(@intFromPtr(value)),
+                    .one, .many => return Self.fromPointer(value),
                     else => {},
                 }
             },
@@ -277,22 +290,22 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return .SmallInteger;
         if (self.isCharacter()) return .Character;
         if (self.isFloat()) return .Float;
-        if (full) self.to(HeapObjectPtr).*.getClass();
+        if (full) return self.to(HeapObjectPtr).*.getClass();
         return .Object;
     }
-    
+
     pub inline fn tagMethod(o: object.Object) ?Object {
         return @bitCast(@as(u64, @bitCast(o)) | 1);
     }
-    
+
     pub inline fn tagMethodValue(self: Self) Object {
         return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
     }
-    
+
     pub inline fn isTaggedMethod(self: object.Object) bool {
         return (@as(u64, @bitCast(self)) & 1) != 0;
     }
-    
+
     pub inline fn isMemoryAllocated(self: Object) bool {
         return if (self.isHeap()) true else false;
     }

@@ -143,7 +143,7 @@ pub const ClassIndex = enum(u16) {
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
-    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
+    //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
         std.testing.expectEqual(ci, cci) catch unreachable;
     }
@@ -159,7 +159,7 @@ pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
     pub inline fn equals(self: Object, other: Object) bool {
-        return self == other;
+        return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
     }
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
@@ -184,12 +184,6 @@ pub const ObjectFunctions = struct {
     }
     pub inline fn isString(self: Object) bool {
         return self.which_class(true) == .String;
-    }
-    pub inline fn isBool(self: Object) bool {
-        return self == Object.False or self == Object.True;
-    }
-    pub inline fn isNil(self: Object) bool {
-        return self == Object.Nil;
     }
     pub inline fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
@@ -300,9 +294,9 @@ pub const ObjectFunctions = struct {
         _ = options;
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
-        } else if (self == False) {
+        } else if (self.equals(False)) {
             try writer.print("false", .{});
-        } else if (self == True) {
+        } else if (self.equals(True)) {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
@@ -340,17 +334,16 @@ pub const PackedObject = packed struct {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
     }
     fn intFromPackedObject(self: Object) u64 {
-        return @as(u64,@bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
+        return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
     fn combine(size: type, tup: anytype) comptime_int {
         comptime var n: u56 = 0;
         comptime var shift = 0;
         inline for (tup) |field| {
-            n |= @as(u56,
-                     switch (@TypeOf(field)) {
-                         comptime_int => @as(size, field),
-                         else => @intFromEnum(field),
-                }) << shift;
+            n |= @as(u56, switch (@TypeOf(field)) {
+                comptime_int => @as(size, field),
+                else => @intFromEnum(field),
+            }) << shift;
             shift += @typeInfo(size).int.bits;
         }
         return n;
@@ -359,7 +352,7 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) Object {
-        return @bitCast((@as(u64,combine(u14, tup)) << @bitSizeOf(Object.PackedTagType))+Object.PackedTagSmallInteger);
+        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.PackedTagSmallInteger);
     }
     test "combiners" {
         std.debug.print("Test: combiners\n", .{});

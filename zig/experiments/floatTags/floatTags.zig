@@ -71,7 +71,7 @@ pub const Object = packed struct {
             .null => return Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .One => {
+                    .one => {
                         switch (@typeInfo(ptr_info.child)) {
                             .array => |array_info| {
                                 if (array_info.child == u8)
