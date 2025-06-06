@@ -7,6 +7,7 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const InMemory = @import("inMemory.zig");
 
 pub const Object = packed struct(u64) {
     tag: Group,
@@ -21,6 +22,10 @@ pub const Object = packed struct(u64) {
             return @intFromEnum(cg);
         }
     };
+
+    pub const False = Object.From(&InMemory.False, null);
+    pub const True = Object.From(&InMemory.True, null);
+    pub const Nil = Object.From(&InMemory.Nil, null);
 
     const PointerTag = Group.u(.pointer);
     const SmallIntegerTag = Group.u(.smallInteger);
@@ -40,6 +45,33 @@ pub const Object = packed struct(u64) {
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
+
+    pub inline fn untaggedI(self: object.Object) ?i64 {
+        if (self.isInt()) return untaggedI_noCheck(self);
+        return null;
+    }
+
+    pub inline fn untaggedI_noCheck(self: Object) i64 {
+        return @bitCast(self.rawU() & ~TagMask);
+    }
+
+    pub inline fn taggedI(self: Object) ?i64 {
+        if (self.isInt()) return taggedI_noCheck(self);
+        return null;
+    }
+
+    pub inline fn taggedI_noCheck(self: Object) i64 {
+        return @bitCast(self);
+    }
+
+    pub inline fn fromTaggedI(i: i64) Object {
+        return @bitCast(i);
+    }
+
+    pub inline fn fromUntaggedI(i: i64) Object {
+        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
+    }
+
     // Spur SmallInteger
     pub inline fn isInt(self: Object) bool {
         return (self.rawU() & SmallIntegerTag) != 0;
@@ -65,7 +97,6 @@ pub const Object = packed struct(u64) {
         return @bitCast((@as(u64, i) << 1) | SmallIntegerTag);
     }
 
-    // Spur Pointer
     pub inline fn isHeap(self: Object) bool {
         return (self.rawU() & TagMask) == PointerTag;
     }
@@ -80,7 +111,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(ptr & ~TagMask);
     }
 
-    // Immediate checks
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
     }
@@ -92,34 +122,29 @@ pub const Object = packed struct(u64) {
         return class == .Character;
     }
 
-    // Character (not fully implemented)
-    /// Maximum codepoint for immediate Character
-    pub const MaxImmediateCharacter = 0x10FFFF; // Unicode scalar value range
+    pub const MaxImmediateCharacter = 0x10FFFF;
 
     pub inline fn isCharacter(self: Object) bool {
         return (self.rawU() & CharacterTag) != 0;
     }
 
-    // TODO: immediates only
     pub inline fn fromCharacter(codepoint: u32) Self {
         if (codepoint > MaxImmediateCharacter)
             @panic("Codepoint out of immediate Character range");
         return Self{ .raw = (@as(u64, codepoint) << 3) | CharacterTag };
     }
 
-    // TODO: heap character check is missing
     pub inline fn characterValue(self: Self) ?u32 {
         if (self.isCharacter())
             return @intCast(self.raw >> 3);
         return null;
     }
 
-    // Floats
     pub inline fn isImmediateFloat(self: Object) bool {
         return (self.rawU() & FloatTag) != 0;
     }
     pub inline fn isDouble(self: Object) bool {
-        return self.isImmediateFloat(); // Spur also supports heap floats, not implemented here
+        return self.isImmediateFloat();
     }
 
     const SIGN_MASK: u64 = 0x8000000000000000;
@@ -128,41 +153,21 @@ pub const Object = packed struct(u64) {
     const EXPONENT_BIAS = 896;
     const MAX_EXPONENT = EXPONENT_BIAS + 0xFF;
 
-    pub const FloatError = error{
-        NonFiniteValue,
-        Underflow,
-        Overflow,
-    };
-
-    pub fn encode(value: f64) FloatError!Object {
+    // immediate float: [exponent(8)][mantissa(52)][sign(1)][tag(3)]
+    pub fn encode(value: f64) !Object {
         const bits: u64 = @bitCast(value);
         const sign = (bits & SIGN_MASK) >> 63;
         const exponent = (bits & EXPONENT_MASK) >> 52;
         const mantissa = bits & MANTISSA_MASK;
 
         if (exponent == 0) {
-            if (mantissa == 0) {
-                // Positive or negative zero - encode as special zero
-                return Object.makeImmediate(.float, 0);
-            } else {
-                // Subnormal numbers require heap allocation
-                return FloatError.Underflow;
-            }
+            return if (mantissa == 0) Object.makeImmediate(.float, 0) else error.Unencodable;
         }
 
-        if (exponent == 0x7FF) {
-            // Infinity or NaN - both require heap allocation
-            return FloatError.NonFiniteValue;
+        if (exponent == 0x7FF or exponent <= EXPONENT_BIAS or exponent >= MAX_EXPONENT) {
+            return error.Unencodable;
         }
 
-        if (exponent <= EXPONENT_BIAS) {
-            return FloatError.Underflow;
-        }
-        if (exponent >= MAX_EXPONENT) {
-            return FloatError.Overflow;
-        }
-
-        // immediate float: [exponent(8)][mantissa(52)][sign(1)][tag(3)]
         const adjusted_exponent = exponent - EXPONENT_BIAS;
         return Object.makeImmediate(.float, @truncate((adjusted_exponent << 53) | (mantissa << 1) | sign));
     }
@@ -187,7 +192,6 @@ pub const Object = packed struct(u64) {
         return (self.rawU() & TagMask) == FloatTag;
     }
 
-    // Boolean, Nil, Symbol (stubs)
     pub inline fn isBool(self: Object) bool {
         return self.rawU() == Object.True.rawU() or self.rawU() == Object.False.rawU();
     }
@@ -209,7 +213,7 @@ pub const Object = packed struct(u64) {
         return oImm(cls, hash);
     }
 
-    // Hash helpers (stubbed)
+    // Hash helpers
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.rawU());
     }
@@ -240,8 +244,8 @@ pub const Object = packed struct(u64) {
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return encode(value),
-            .comptime_float => return encode(@as(f64, value)),
+            .float => return encode(value) catch @panic("Failed to encode float"),
+            .comptime_float => return encode(@as(f64, value)) catch @panic("Failed to encode comptime float"),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
             .pointer => |ptr_info| {
@@ -280,29 +284,22 @@ pub const Object = packed struct(u64) {
         if (full) self.to(HeapObjectPtr).*.getClass();
         return .Object;
     }
-    
+
     pub inline fn tagMethod(o: object.Object) ?Object {
         return @bitCast(@as(u64, @bitCast(o)) | 1);
     }
-    
+
     pub inline fn tagMethodValue(self: Self) Object {
         return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
     }
-    
+
     pub inline fn isTaggedMethod(self: object.Object) bool {
         return (@as(u64, @bitCast(self)) & 1) != 0;
     }
-    
+
     pub inline fn isMemoryAllocated(self: Object) bool {
         return if (self.isHeap()) true else false;
     }
-
-    // TODO: Constants
-    // pub const ZERO = Self.fromSmallInteger(0);
-    // these have to point to valid headers... see ptr.zag (although it's not right at the moment)
-    // pub const True = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFF));
-    // pub const False = @bitCast(@as(u64, 0xFFFFFFFFFFFFFFFE));
-    // pub const Nil = @bitCast(@as(u64, 0));
 
     pub usingnamespace object.ObjectFunctions;
 };
