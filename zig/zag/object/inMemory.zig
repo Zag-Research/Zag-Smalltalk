@@ -170,15 +170,16 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
     if (maybeProcess) |process| {
-        const allocReturn = process.alloc(.SmallInteger, 1, null, Object, false);
-        allocReturn.allocation.array(i64)[1] = i;
-        return allocReturn.allocation.asObject();
+        if (process.alloc(.SmallInteger, 1, null, Object, false)) | allocReturn | {
+            allocReturn.allocated.array(i64)[1] = i;
+            return allocReturn.allocated.asObject();
+        } else |_| {}
     }
     if ((PointedObject{
         .header = .{ .classIndex = .SmallInteger },
         .data = .{ .int = i },
-    }).cached()) |obj| return Object.from(obj, null);
-    @compileLog(i);
+        }).cached()) |obj| return Object.from(obj, null);
+    //@compileLog(i,"uncachable");
     unreachable;
 }
 test "inMemory int()" {
@@ -219,10 +220,11 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
             return Object.from(&fOne);
     }
     if (maybeProcess) |process| {
-        const allocReturn = process.alloc(.Float, 1, null, Object, false);
-        allocReturn.allocation.array(f64)[1] = v;
-        return allocReturn.allocation.asObject();
+        if (process.alloc(.Float, 1, null, Object, false)) | allocReturn | {
+            allocReturn.allocated.array(f64)[1] = v;
+            return allocReturn.allocated.asObject();
+        } else |_| {}
     }
-    @compileLog(v);
+    //@compileLog(v);
     unreachable;
 }

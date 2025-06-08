@@ -56,6 +56,9 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
         return null;
     }
+    pub inline fn extraValue(self: object.Object) object.Object {
+        return @bitCast(self.rawU() >> 8);
+    }
     pub inline fn isPIC(self: object.Object) bool {
         return self.isImmediateClass(.PICPointer);
     }
@@ -94,8 +97,17 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
+    pub inline fn isNil(self: Object) bool {
+        return self == Object.Nil;
+    }
+    pub inline fn isBool(self: Object) bool {
+        return self == Object.False or self == Object.True;
+    }
     pub inline fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
+    }
+    pub inline fn isNat(self: Object) bool {
+        return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn isDouble(self: Object) bool {
         return self.ref.header.classIndex == .Float;
@@ -103,9 +115,6 @@ pub const Object = packed struct(u64) {
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn hasPointer(_: Object) bool {
         return true;
     }
@@ -135,7 +144,7 @@ pub const Object = packed struct(u64) {
         return self.ref.data.float;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
-        @compileLog(cls, hash);
+        //@compileLog(cls, hash);
         _ = .{ cls, hash, unreachable };
     }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
@@ -147,7 +156,8 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return self.ref.header.hash;
     }
-    pub inline fn from(value: anytype, maybeProcess: ?*Process) Object {
+    pub //inline
+        fn from(value: anytype, maybeProcess: ?*Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -159,7 +169,9 @@ pub const Object = packed struct(u64) {
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
+                        if (! @isCompileTime()) std.debug.print("\nfrom: {*}",.{value});
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
+
                     },
                     else => {},
                 }
