@@ -12,10 +12,22 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const c = zag.object.ClassIndex;
 const compileRaw = zag.execute.compileRaw;
 const si = c.SmallInteger;
-pub const ZERO = compileRaw(.{ si, 0 });
-pub const False = compileRaw(.{c.False});
-pub const True = compileRaw(.{c.True});
-pub const Nil = compileRaw(.{c.UndefinedObject});
+pub const ZERO = PointedObject{
+    .header = .{ .classIndex = si},
+    .data = .{ .int = 0 },
+};
+pub const False = PointedObject{
+    .header = .{ .classIndex = .False},
+    .data = .{ .int = 0 },
+};
+pub const True = PointedObject{
+    .header = .{ .classIndex = .True},
+    .data = .{ .int = 1 },
+};
+pub const Nil = PointedObject{
+    .header = .{ .classIndex = .UndefinedObject},
+    .data = .{ .int = 0 },
+};
 const SmallIntegerCache = compileRaw(.{
     si, -5,
     si, -4,

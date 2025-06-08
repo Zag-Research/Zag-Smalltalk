@@ -97,12 +97,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
-    pub inline fn isNil(self: Object) bool {
-        return self == Object.Nil;
-    }
-    pub inline fn isBool(self: Object) bool {
-        return self == Object.False or self == Object.True;
-    }
     pub inline fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
@@ -169,7 +163,7 @@ pub const Object = packed struct(u64) {
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
-                        if (! @isCompileTime()) std.debug.print("\nfrom: {*}",.{value});
+                        //@compileLog("from: ",value);
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
 
                     },

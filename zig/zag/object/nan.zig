@@ -43,6 +43,7 @@ pub const Object = packed struct(u64) {
             return @intFromEnum(cg);
         }
     };
+    pub const inMemorySymbols = false;
     pub const ZERO = of(0);
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);

@@ -20,15 +20,19 @@ const staticSymbols = if (Object.inMemorySymbols) blk: {
         1, 2, 3, 4, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2,
         1, 2, 1, 2, 1, 2, 3, 4, 2, 3, 0,
     };
-    for (symbolArray[0..], arities[0..], 1..) |*sym, arity, i| {
-        const hash = hash_of(i,arity);
-        sym.data.unsigned = (hash << 8) + 1;
-    }
+    for (symbolArray[0..], arities, 1..) |*sym, arity, i|
+        initSymbol(sym, i, arity);
     break :blk symbolArray;
 } else
     {};
-pub //inline
-    fn fromHash32(hash: u32) object.Object {
+fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber:  u24, arity: u4) void {
+    const hash = hash_of(symbolNumber, arity);
+    sym.header = .{ .classIndex = .Symbol, .hash = hash >> 8, .format = .notIndexable, .age = .static, .length = 1 };    
+    sym.data.unsigned = (hash << 8) + 1;
+}
+
+//inline
+fn fromHash32(hash: u32) object.Object {
     return object.Object.makeImmediate(.Symbol, hash);
 }
 inline fn hash_of(index: u24, arity: u4) u32 {
@@ -36,21 +40,24 @@ inline fn hash_of(index: u24, arity: u4) u32 {
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
     if (Object.inMemorySymbols) {
-        unreachable;
+        const obj = Object.Nil;
+        // const obj = Object{ .ref = @alignCast(@constCast(@ptrCast(&staticSymbols[index - 1]))) };
+        // unreachable;
+        return obj;
     } else
         return fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    if (Object.inMemorySymbols) {
-        unreachable;
-    } else
-        return @as(u24, @truncate(obj.hash24())) *% undoPhi24;
+    return @as(u24, @truncate(
+        if (Object.inMemorySymbols) obj.ref.data.unsigned
+        else obj.hash24()
+    )) *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    if (Object.inMemorySymbols) {
-        unreachable;
-    } else
-        return @truncate(obj.hash32() >> 24);
+    return @truncate((
+        if (Object.inMemorySymbols) obj.ref.data.unsigned
+        else obj.hash32()
+        ) >> 24);
 }
 
 //inline

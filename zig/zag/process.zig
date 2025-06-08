@@ -199,7 +199,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
-        const result = self.header().currHp;
+        const result = HeapObject.fillToBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {
             self.header().currHp = newHp;
@@ -324,8 +324,10 @@ test "nursery allocation" {
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
     trace("\nar = {}\n", .{ar});
-    try ee(pr.freeNursery(), emptySize - 18);
+    try ee(emptySize - 19, pr.freeNursery());
     trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
+    trace("\no2 = {*} {} \n", .{ o2, o2 });
+    trace(" {x}\n", .{ o2.asObject().testU() });
     try o1.instVarPut(0, o2.asObject());
     trace("\npoint\n", .{});
     sp = sp.push(o1.asObject());
@@ -335,7 +337,10 @@ test "nursery allocation" {
     try ee(&initialContext, news.context);
     trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
-    try ee(pr.freeNursery(), emptySize - 12);
+    try ee(emptySize - switch (config.objectEncoding) {
+        .zag => 12,
+        else => 7,
+        }, pr.freeNursery());
     trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2

@@ -184,12 +184,6 @@ pub const Object = packed struct(u64) {
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
-    pub inline fn isNil(self: Object) bool {
-        return self == Object.Nil;
-    }
-    pub inline fn isBool(self: Object) bool {
-        return self == Object.False or self == Object.True;
-    }
     pub inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }

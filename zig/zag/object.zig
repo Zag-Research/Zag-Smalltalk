@@ -182,6 +182,12 @@ pub const ObjectFunctions = struct {
             return ptr[field];
         return Nil;
     }
+    pub inline fn isNil(self: Object) bool {
+        return self == Object.Nil;
+    }
+    pub inline fn isBool(self: Object) bool {
+        return self == Object.False or self == Object.True;
+    }
     pub inline fn isString(self: Object) bool {
         return self.which_class(true) == .String;
     }

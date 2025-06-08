@@ -761,6 +761,12 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
+    pub inline fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
+        if (@intFromPtr(self) & 8 == 0)
+            return self;
+        self[0].header = HeapHeader.freeHeader(0);
+        return self + 1;
+    }
     pub inline fn headerPtr(self: *const HeapObject) *HeapHeader {
         return @constCast(&self.header);
     }
@@ -819,6 +825,7 @@ pub const HeapObject = packed struct {
         reference.* = switch (config.objectEncoding) {
             .nan => Nil, //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
             .zag => Nil,
+            .ptr => Nil,
             else => unreachable,
         };
         return newHp;
@@ -928,7 +935,8 @@ pub const HeapObject = packed struct {
     pub inline fn isRaw(self: HeapObjectConstPtr) bool {
         return self.format.isRaw();
     }
-    pub inline fn asObject(self: HeapObjectConstPtr) Object {
+    pub //inline
+        fn asObject(self: HeapObjectConstPtr) Object {
         return Object.from(self, null);
     }
     pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {
