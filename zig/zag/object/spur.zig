@@ -26,10 +26,6 @@ pub const Object = packed union {
         }
     };
 
-    pub const False = Object.From(&InMemory.False, null);
-    pub const True = Object.From(&InMemory.True, null);
-    pub const Nil = Object.From(&InMemory.Nil, null);
-
     const PointerTag = Group.u(.pointer);
     const SmallIntegerTag = Group.u(.smallInteger);
     const CharacterTag = Group.u(.character);
