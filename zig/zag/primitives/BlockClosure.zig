@@ -1,6 +1,7 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
 const config = zag.config;
+const objectEncoding = config.objectEncoding;
 const tailCall = config.tailCall;
 const trace = config.trace;
 const execute = zag.execute;
@@ -55,7 +56,7 @@ pub const threadedFns = struct {
     pub const asThunk = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const result = blk: {
-                if (switch (config.objectEncoding) {
+                if (switch (objectEncoding) {
                     .zag => encodeZag(sp.top),
                     .nan => encodeNan(sp.top),
                     else => unreachable,
@@ -145,17 +146,29 @@ pub const threadedFns = struct {
             );
         }
         test "asThunk float" {
-            try Execution.runTest(
+            try Execution.runTestWithValidator(
                 "asThunk float",
                 .{tf.asThunk},
+                &validateFloatThunk,
+                Object.empty,
                 &[_]Object{
                     Object.from(-32767.75, null),
                 },
-                &[_]Object{
-                    @bitCast(@as(u64, 0x0dffff0000000e71)),
-                },
+                Object.empty,
             );
         }
+        fn validateFloatThunk(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+            switch (objectEncoding) {
+                .zag =>
+                    try std.testing.expectEqualSlices(Object,
+                                                      &[_]Object{
+                                                          @bitCast(@as(u64, 0x0dffff0000000e71))},
+                                                      exe.stack()
+                                                      ),
+                else => return failed,
+            }
+        }
+
         test "asThunk doesn't fit" {
             var exe = zag.execute.Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
             const num: f64 = 1.0 / 5.0;

@@ -995,6 +995,13 @@ pub const Execution = struct {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
     }
     pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
+        try runTestWithValidator(title, tup, &validate, objects, source, expected);
+    }
+    pub const ValidateErrors = error{
+        TestAborted,
+        TestExpectedEqual,
+    };
+    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil);
@@ -1011,17 +1018,19 @@ pub const Execution = struct {
                 trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.testU() });
         }
         try exe.execute(source);
+        try std.testing.expect(exe.getContext() == &exe.ctxt);
+        try validator(&exe,expected);
+    }
+    fn validate(exe: anytype, expected: []const Object) ValidateErrors!void {
         const result = exe.stack();
         if (result.len > 0 and result[0] == failed) return error.TestAborted;
         trace(
             \\run:
-            \\  source: {any}
             \\  expected: {any}
             \\  result: {any}
             \\
-        , .{ source, expected, result });
+        , .{ expected, result });
         try std.testing.expectEqualSlices(Object, expected, result);
-        try std.testing.expect(exe.getContext() == &exe.ctxt);
     }
 
     // fn mainSendTo(selector: Object, target: Object) !void {
