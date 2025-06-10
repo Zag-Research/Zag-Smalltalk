@@ -12,6 +12,7 @@ const CompiledMethod = execute.CompiledMethod;
 const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
+const failed = Execution.failed;
 const Process = zag.Process;
 const Context = zag.Context;
 const object = zag.object;
@@ -53,15 +54,22 @@ pub const threadedFns = struct {
     /// however, values that don't fit will allocate a 1 element array on the heap and return a ThunkInstance that references it
     pub const asThunk = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            switch (config.objectEncoding) {
-                .zag => {
-                    sp.top = encodeZag(sp.top, sp, process, context);
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
-                },
-                else => unreachable,
-            }
+            const result = blk: {
+                if (switch (config.objectEncoding) {
+                    .zag => encodeZag(sp.top),
+                    .nan => encodeNan(sp.top),
+                    else => unreachable,
+                }) |encoded| {
+                    break :blk encoded;
+                } else {
+                    const ar = process.allocArray(&[_]Object{sp.top}, sp, context);
+                    break :blk Object.makeThunk(.ThunkInstance, ar, 1);
+                }
+            };
+            sp.top = result;
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
-        inline fn encodeZag(obj: Object, sp: SP, process: *Process, context: *Context) Object {
+        inline fn encodeZag(obj: Object) ?Object {
             switch (obj.tag) {
                 .heap => return Object.makeThunk(.ThunkHeap, obj.to(heap.HeapObjectPtr), 0),
                 .immediates => {
@@ -86,9 +94,17 @@ pub const threadedFns = struct {
                         return Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf)));
                 },
             }
-            // _ = .{process,sp,context,unreachable};
-            const ar = process.allocArray(&[_]Object{obj}, sp, context);
-            return Object.makeThunk(.ThunkInstance, ar, 1);
+            return null;
+        }
+        inline fn encodeNan(obj: Object) ?Object {
+            _ = obj;
+            return failed;
+            // switch (obj.tag) {
+            //     .heap => _ = unreachable,
+            //     .immediates => unreachable,
+            //     else => unreachable,
+            // }
+            // return null;
         }
         test "asThunk int" {
             if (true) return error.SkipZigTest;

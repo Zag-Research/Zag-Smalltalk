@@ -922,6 +922,8 @@ test "compileRaw" {
 }
 
 pub const Execution = struct {
+    const failedObject: packed struct { x: u64 } = .{ .x = undefined };
+    pub const failed: Object = @bitCast(failedObject);
     fn Executer(size: comptime_int) type {
         return struct {
             process: Process align(Process.alignment),
@@ -1010,6 +1012,7 @@ pub const Execution = struct {
         }
         try exe.execute(source);
         const result = exe.stack();
+        if (result.len > 0 and result[0] == failed) return error.TestAborted;
         trace(
             \\run:
             \\  source: {any}

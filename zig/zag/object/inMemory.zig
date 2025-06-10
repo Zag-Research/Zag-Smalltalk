@@ -13,19 +13,19 @@ const c = zag.object.ClassIndex;
 const compileRaw = zag.execute.compileRaw;
 const si = c.SmallInteger;
 pub const ZERO = PointedObject{
-    .header = .{ .classIndex = si},
+    .header = .{ .classIndex = si },
     .data = .{ .int = 0 },
 };
 pub const False = PointedObject{
-    .header = .{ .classIndex = .False},
+    .header = .{ .classIndex = .False },
     .data = .{ .int = 0 },
 };
 pub const True = PointedObject{
-    .header = .{ .classIndex = .True},
+    .header = .{ .classIndex = .True },
     .data = .{ .int = 1 },
 };
 pub const Nil = PointedObject{
-    .header = .{ .classIndex = .UndefinedObject},
+    .header = .{ .classIndex = .UndefinedObject },
     .data = .{ .int = 0 },
 };
 const SmallIntegerCache = compileRaw(.{
@@ -182,7 +182,7 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
     if (maybeProcess) |process| {
-        if (process.alloc(.SmallInteger, 1, null, Object, false)) | allocReturn | {
+        if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocReturn| {
             allocReturn.allocated.array(i64)[1] = i;
             return allocReturn.allocated.asObject();
         } else |_| {}
@@ -190,7 +190,7 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if ((PointedObject{
         .header = .{ .classIndex = .SmallInteger },
         .data = .{ .int = i },
-        }).cached()) |obj| return Object.from(obj, null);
+    }).cached()) |obj| return Object.from(obj, null);
     //@compileLog(i,"uncachable");
     unreachable;
 }
@@ -232,7 +232,7 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
             return Object.from(&fOne);
     }
     if (maybeProcess) |process| {
-        if (process.alloc(.Float, 1, null, Object, false)) | allocReturn | {
+        if (process.alloc(.Float, 1, null, Object, false)) |allocReturn| {
             allocReturn.allocated.array(f64)[1] = v;
             return allocReturn.allocated.asObject();
         } else |_| {}

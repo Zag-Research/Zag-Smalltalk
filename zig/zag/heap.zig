@@ -792,7 +792,8 @@ pub const HeapObject = packed struct {
     pub inline fn isIndexable(self: HeapObjectConstPtr) bool {
         return self.header.isIndexable();
     }
-    pub inline fn isUnmoving(self: HeapObjectConstPtr) bool {
+    pub //inline
+    fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
     pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
@@ -936,7 +937,7 @@ pub const HeapObject = packed struct {
         return self.format.isRaw();
     }
     pub //inline
-        fn asObject(self: HeapObjectConstPtr) Object {
+    fn asObject(self: HeapObjectConstPtr) Object {
         return Object.from(self, null);
     }
     pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {

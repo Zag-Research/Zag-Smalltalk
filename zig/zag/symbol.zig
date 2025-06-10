@@ -23,11 +23,10 @@ const staticSymbols = if (Object.inMemorySymbols) blk: {
     for (symbolArray[0..], arities, 1..) |*sym, arity, i|
         initSymbol(sym, i, arity);
     break :blk symbolArray;
-} else
-    {};
-fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber:  u24, arity: u4) void {
+} else {};
+fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber: u24, arity: u4) void {
     const hash = hash_of(symbolNumber, arity);
-    sym.header = .{ .classIndex = .Symbol, .hash = hash >> 8, .format = .notIndexable, .age = .static, .length = 1 };    
+    sym.header = .{ .classIndex = .Symbol, .hash = hash >> 8, .format = .notIndexable, .age = .static, .length = 1 };
     sym.data.unsigned = (hash << 8) + 1;
 }
 
@@ -44,20 +43,13 @@ inline fn symbol_of(index: u24, arity: u4) object.Object {
         // const obj = Object{ .ref = @alignCast(@constCast(@ptrCast(&staticSymbols[index - 1]))) };
         // unreachable;
         return obj;
-    } else
-        return fromHash32(hash_of(index, arity));
+    } else return fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return @as(u24, @truncate(
-        if (Object.inMemorySymbols) obj.ref.data.unsigned
-        else obj.hash24()
-    )) *% undoPhi24;
+    return @as(u24, @truncate(if (Object.inMemorySymbols) obj.ref.data.unsigned else obj.hash24())) *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate((
-        if (Object.inMemorySymbols) obj.ref.data.unsigned
-        else obj.hash32()
-        ) >> 24);
+    return @truncate((if (Object.inMemorySymbols) obj.ref.data.unsigned else obj.hash32()) >> 24);
 }
 
 //inline
@@ -133,7 +125,7 @@ pub const symbols = struct {
     pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
 };
 const lastPredefinedSymbol = 53;
-comptime{
+comptime {
     std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
 }
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
@@ -300,6 +292,7 @@ pub const QuickSelectors = [_]object.Object{ symbols.@"=", symbols.value, symbol
 pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 test "find key value for quick selectors" {
+    if (config.objectEncoding != .zag) return error.SkipZigTest;
     const printing = false;
     var mask: u64 = 0;
     var match: u64 = 0;

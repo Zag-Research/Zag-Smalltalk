@@ -327,7 +327,7 @@ test "nursery allocation" {
     try ee(emptySize - 19, pr.freeNursery());
     trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
     trace("\no2 = {*} {} \n", .{ o2, o2 });
-    trace(" {x}\n", .{ o2.asObject().testU() });
+    trace(" {x}\n", .{o2.asObject().testU()});
     try o1.instVarPut(0, o2.asObject());
     trace("\npoint\n", .{});
     sp = sp.push(o1.asObject());
@@ -338,9 +338,9 @@ test "nursery allocation" {
     trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
-        .zag => 12,
+        .zag, .nan => 12,
         else => 7,
-        }, pr.freeNursery());
+    }, pr.freeNursery());
     trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2

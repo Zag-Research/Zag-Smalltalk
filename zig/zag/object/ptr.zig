@@ -151,7 +151,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.hash;
     }
     pub //inline
-        fn from(value: anytype, maybeProcess: ?*Process) Object {
+    fn from(value: anytype, maybeProcess: ?*Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -165,7 +165,6 @@ pub const Object = packed struct(u64) {
                     .one, .many => {
                         //@compileLog("from: ",value);
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
-
                     },
                     else => {},
                 }

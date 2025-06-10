@@ -308,7 +308,7 @@ pub const pushLiteral = struct {
 };
 pub const pushClosure = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const structure = pc.object().to(PackedObject);
+        const structure: PackedObject = @bitCast(pc.object());
         const stackedFields = structure.f1;
         const stackOffset = structure.f2;
         const stackReserve = structure.f3;

@@ -31,6 +31,9 @@ pub const Object = packed struct(u64) {
         _reserved,
         immediates,
         smallInteger,
+        smallInteger_1,
+        smallInteger_2,
+        smallInteger_3,
         _,
         const Self = @This();
         inline fn base(cg: Self) u64 {
@@ -289,7 +292,7 @@ pub const Object = packed struct(u64) {
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
-    pub fn toWithCheck(self: object.Object, comptime T: type, comptime check: bool) T {
+    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
                 if (!check or self.isImmediateDouble()) return self.toDoubleNoCheck();
@@ -316,9 +319,9 @@ pub const Object = packed struct(u64) {
                             .@"struct" => {
                                 if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                        return @as(T, @ptrFromInt(self.nanPointerAsInt()));
                                     } else {
-                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + self.nanPointerAsInt()));
                                     }
                                 }
                             },
@@ -330,6 +333,9 @@ pub const Object = packed struct(u64) {
             },
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
+    }
+    inline fn nanPointerAsInt(self: Object) usize {
+        return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
         return switch (self.tag) {

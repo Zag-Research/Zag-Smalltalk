@@ -92,6 +92,7 @@ pub const inlines = struct {
 };
 
 test "inline primitives" {
+    if (config.objectEncoding != .zag) return error.SkipZigTest;
     const expectEqual = std.testing.expectEqual;
     try expectEqual(Object.from(12, null), inlines.p9(Object.from(3, null), Object.from(4, null)));
     try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null)));
