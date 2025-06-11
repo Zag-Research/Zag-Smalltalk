@@ -119,14 +119,8 @@ pub const threadedFns = struct {
         }
         fn validateInt(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag =>
-                    try std.testing.expectEqualSlices
-                    (Object,
-                     &[_]Object{
-                         Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU()))},
-                     exe.stack()
-                     ),
-                else => return failed,
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU()))}, exe.stack()),
+                else => return error.TestAborted,
             }
         }
 
@@ -143,16 +137,11 @@ pub const threadedFns = struct {
         fn validatePtr(exe: anytype, expected: []const Object) Execution.ValidateErrors!void {
             const obj = expected[0];
             switch (objectEncoding) {
-                .zag =>
-                    try std.testing.expectEqualSlices(Object,
-                                                      &[_]Object{
-                                                          Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))},
-                                                      exe.stack()
-                                                      ),
-                else => return failed,
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))}, exe.stack()),
+                else => return error.TestAborted,
             }
         }
-        
+
         test "asThunk True" {
             try Execution.runTestWithValidator(
                 "asThunk True",
@@ -164,13 +153,8 @@ pub const threadedFns = struct {
         }
         fn validateTrue(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag =>
-                    try std.testing.expectEqualSlices(Object,
-                                                      &[_]Object{
-                                                          Object.makeImmediate(.ThunkImmediate, @truncate(True.testU()))},
-                                                      exe.stack()
-                                                      ),
-                else => return failed,
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True.testU()))}, exe.stack()),
+                else => return error.TestAborted,
             }
         }
 
@@ -185,12 +169,8 @@ pub const threadedFns = struct {
         }
         fn validateFloat(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag =>
-                    try std.testing.expectEqualSlices(Object,
-                                                      &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e71))},
-                                                      exe.stack()
-                                                      ),
-                else => return failed,
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e71))}, exe.stack()),
+                else => return error.TestAborted,
             }
         }
 
@@ -214,7 +194,7 @@ pub const threadedFns = struct {
                     try expectEqual(2, exeheap.len);
                     try expectEqual(obj, exeheap[1].asObjectValue());
                 },
-                else => return failed,
+                else => return error.TestAborted,
             }
         }
     };

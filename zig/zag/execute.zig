@@ -1001,10 +1001,10 @@ pub const Execution = struct {
         TestAborted,
         TestExpectedEqual,
     };
-    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
+    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
         return runWithValidator(title, tup, validator, Object.empty, source, expected);
     }
-    fn runWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+    fn runWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil);
@@ -1022,7 +1022,7 @@ pub const Execution = struct {
         }
         try exe.execute(source);
         try std.testing.expect(exe.getContext() == &exe.ctxt);
-        try validator(&exe,expected);
+        try validator(&exe, expected);
     }
     fn validate(exe: anytype, expected: []const Object) ValidateErrors!void {
         const result = exe.stack();
