@@ -1,1 +1,2 @@
-*.st text linguist-language=Smalltalk
+# force LF line endings
+*.st text eol=lf linguist-language=Smalltalk
