@@ -108,61 +108,86 @@ pub const threadedFns = struct {
             // return null;
         }
         test "asThunk int" {
-            if (true) return error.SkipZigTest;
-            try Execution.runTest(
+            if (false) return error.SkipZigTest;
+            try Execution.runTestWithValidator(
                 "asThunk int",
                 .{tf.asThunk},
-                &[_]Object{
-                    Object.from(2, null),
-                },
-                &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU())),
-                },
+                &validateInt,
+                &[_]Object{Object.from(2, null)},
+                Object.empty,
             );
         }
+        fn validateInt(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+            switch (objectEncoding) {
+                .zag =>
+                    try std.testing.expectEqualSlices
+                    (Object,
+                     &[_]Object{
+                         Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU()))},
+                     exe.stack()
+                     ),
+                else => return failed,
+            }
+        }
+
         test "asThunk ptr" {
             const obj = Object.from(&ThunkReturnSmallInteger.method, null);
-            try Execution.runTest(
+            try Execution.runTestWithValidator(
                 "asThunk ptr",
                 .{tf.asThunk},
-                &[_]Object{
-                    obj,
-                },
-                &[_]Object{
-                    Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8)),
-                },
+                &validatePtr,
+                &[_]Object{obj},
+                &[_]Object{obj},
             );
         }
-        test "asThunk True" {
-            try Execution.runTest(
-                "asThunk True",
-                .{tf.asThunk},
-                &[_]Object{
-                    True,
-                },
-                &[_]Object{
-                    Object.makeImmediate(.ThunkImmediate, @truncate(True.testU())),
-                },
-            );
-        }
-        test "asThunk float" {
-            try Execution.runTestWithValidator(
-                "asThunk float",
-                .{tf.asThunk},
-                &validateFloatThunk,
-                Object.empty,
-                &[_]Object{
-                    Object.from(-32767.75, null),
-                },
-                Object.empty,
-            );
-        }
-        fn validateFloatThunk(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+        fn validatePtr(exe: anytype, expected: []const Object) Execution.ValidateErrors!void {
+            const obj = expected[0];
             switch (objectEncoding) {
                 .zag =>
                     try std.testing.expectEqualSlices(Object,
                                                       &[_]Object{
-                                                          @bitCast(@as(u64, 0x0dffff0000000e71))},
+                                                          Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))},
+                                                      exe.stack()
+                                                      ),
+                else => return failed,
+            }
+        }
+        
+        test "asThunk True" {
+            try Execution.runTestWithValidator(
+                "asThunk True",
+                .{tf.asThunk},
+                &validateTrue,
+                &[_]Object{True},
+                Object.empty,
+            );
+        }
+        fn validateTrue(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+            switch (objectEncoding) {
+                .zag =>
+                    try std.testing.expectEqualSlices(Object,
+                                                      &[_]Object{
+                                                          Object.makeImmediate(.ThunkImmediate, @truncate(True.testU()))},
+                                                      exe.stack()
+                                                      ),
+                else => return failed,
+            }
+        }
+
+        test "asThunk float" {
+            try Execution.runTestWithValidator(
+                "asThunk float",
+                .{tf.asThunk},
+                &validateFloat,
+                &[_]Object{Object.from(-32767.75, null)},
+                Object.empty,
+            );
+        }
+        fn validateFloat(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+            switch (objectEncoding) {
+                .zag =>
+                    try std.testing.expectEqualSlices(Object,
+                                                      &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e71))},
                                                       exe.stack()
                                                       ),
                 else => return failed,
@@ -170,15 +195,27 @@ pub const threadedFns = struct {
         }
 
         test "asThunk doesn't fit" {
-            var exe = zag.execute.Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
-            const num: f64 = 1.0 / 5.0;
-            const obj = Object.from(num, null);
-            try exe.execute(&[_]Object{obj});
+            const obj = Object.from(1.0 / 5.0, null);
+            try Execution.runTestWithValidator(
+                "asThunk doesn't fit",
+                .{tf.asThunk},
+                &validateNone,
+                &[_]Object{obj},
+                &[_]Object{obj},
+            );
+        }
+        fn validateNone(exe: anytype, expected: []const Object) Execution.ValidateErrors!void {
+            const obj = expected[0];
             const result = exe.stack()[0];
-            try expectEqual(.ThunkInstance, result.which_class(false));
             const exeheap = exe.getHeap();
-            try expectEqual(2, exeheap.len);
-            try expectEqual(obj, exeheap[1].asObjectValue());
+            switch (objectEncoding) {
+                .zag => {
+                    try expectEqual(.ThunkInstance, result.which_class(false));
+                    try expectEqual(2, exeheap.len);
+                    try expectEqual(obj, exeheap[1].asObjectValue());
+                },
+                else => return failed,
+            }
         }
     };
 };

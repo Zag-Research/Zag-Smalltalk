@@ -995,13 +995,16 @@ pub const Execution = struct {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
     }
     pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        try runTestWithValidator(title, tup, &validate, objects, source, expected);
+        try runWithValidator(title, tup, &validate, objects, source, expected);
     }
     pub const ValidateErrors = error{
         TestAborted,
         TestExpectedEqual,
     };
-    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
+        return runWithValidator(title, tup, validator, Object.empty, source, expected);
+    }
+    fn runWithValidator(title: []const u8, tup: anytype, validator: *const fn(anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil);
