@@ -83,6 +83,9 @@ pub const Object = packed union {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.nativeI_noCheck() >= 0;
     }
+    pub inline fn symbol40(self: object.Object) u40 {
+        return @truncate(self.ref.data.unsigned);
+    }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
         return null;
@@ -221,10 +224,10 @@ pub const Object = packed union {
 
     // Hash helpers
     pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.rawU());
+        return self.ref.header.hash;
     }
     pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.rawU());
+        return @truncate(self.ref.data.unsigned >> 8);
     }
     pub inline fn hash48(self: Object) u48 {
         return @truncate(self.rawU());

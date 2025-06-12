@@ -9,6 +9,7 @@ const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
 const heap = zag.heap;
+const HeapHeader = heap.HeapHeader;
 const Treap = zag.utilities.Treap;
 const inversePhi24 = zag.utilities.inversePhi(u24);
 const undoPhi24 = zag.utilities.undoPhi(u24);
@@ -21,12 +22,13 @@ const staticSymbols = if (Object.inMemorySymbols) blk: {
         1, 2, 1, 2, 1, 2, 3, 4, 2, 3, 0,
     };
     for (symbolArray[0..], arities, 1..) |*sym, arity, i|
-        initSymbol(sym, i, arity);
+         initSymbol(sym, i, arity);
     break :blk symbolArray;
 } else {};
 fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber: u24, arity: u4) void {
     const hash = hash_of(symbolNumber, arity);
-    sym.header = .{ .classIndex = .Symbol, .hash = hash >> 8, .format = .notIndexable, .age = .static, .length = 1 };
+    sym.header = HeapHeader{
+        .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
     sym.data.unsigned = (hash << 8) + 1;
 }
 
@@ -39,17 +41,18 @@ inline fn hash_of(index: u24, arity: u4) u32 {
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
     if (Object.inMemorySymbols) {
-        const obj = Object.Nil;
-        // const obj = Object{ .ref = @alignCast(@constCast(@ptrCast(&staticSymbols[index - 1]))) };
+        const obj = if (false) Object.Nil
+            else //Object.from(&staticSymbols[index - 1], null);
+        Object{ .ref = @alignCast(@constCast(@ptrCast(&staticSymbols[index - 1]))) };
         // unreachable;
         return obj;
     } else return fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return @as(u24, @truncate(if (Object.inMemorySymbols) obj.ref.data.unsigned else obj.hash24())) *% undoPhi24;
+    return obj.hash24() *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate((if (Object.inMemorySymbols) obj.ref.data.unsigned else obj.hash32()) >> 24);
+    return @truncate(obj.hash32() >> 24);
 }
 
 //inline
@@ -259,12 +262,12 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    try expectEqual(symbolIndex(symbols.@"="), 1);
-    try expectEqual(symbolArity(symbols.@"="), 1);
-    try expectEqual(symbolIndex(symbols.value), 2);
-    try expectEqual(symbolArity(symbols.value), 0);
-    try expectEqual(symbolIndex(symbols.Object), 53);
-    try expectEqual(symbolArity(symbols.Object), 0);
+    try expectEqual(1, symbolIndex(symbols.@"="));
+    try expectEqual(1, symbolArity(symbols.@"="));
+    try expectEqual(2, symbolIndex(symbols.value));
+    try expectEqual(0, symbolArity(symbols.value));
+    try expectEqual(lastPredefinedSymbol, symbolIndex(symbols.Object));
+    try expectEqual(0, symbolArity(symbols.Object));
     switch (config.objectEncoding) {
         .zag => {
             try expectEqual(3246132625, symbols.Object.testU());

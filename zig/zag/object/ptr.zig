@@ -42,7 +42,7 @@ pub const Object = packed struct(u64) {
     }
     pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(self: object.Object) u40 {
-        return self.hash32();
+        return @truncate(self.ref.data.unsigned);
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
@@ -148,7 +148,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.hash;
     }
     pub inline fn hash32(self: Object) u32 {
-        return self.ref.header.hash;
+        return @truncate(self.ref.data.unsigned >> 8);
     }
     pub //inline
     fn from(value: anytype, maybeProcess: ?*Process) Object {
@@ -164,6 +164,7 @@ pub const Object = packed struct(u64) {
                 switch (ptr_info.size) {
                     .one, .many => {
                         //@compileLog("from: ",value);
+                        @setRuntimeSafety(false);
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
                     },
                     else => {},

@@ -6,6 +6,7 @@ const zag = @import("zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
+const Process = zag.Process;
 pub const inMemory = @import("object/inMemory.zig");
 const symbol = if (debugError) struct {
     const inversePhi24 = @import("utilities.zig").inversePhi(u24);
@@ -370,9 +371,12 @@ pub const PackedObject = packed struct {
 
 test "from conversion" {
     const ee = std.testing.expectEqual;
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil);
+    const p = &process;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
-    try ee((Object.from(3.14, null)).immediate_class(), .Float);
-    try std.testing.expect((Object.from(3.14, null)).isDouble());
+    try ee((Object.from(3.14, p)).immediate_class(), .Float);
+    try std.testing.expect((Object.from(3.14, p)).isDouble());
     try ee((Object.from(3, null)).immediate_class(), .SmallInteger);
     try std.testing.expect((Object.from(3, null)).isInt());
     try std.testing.expect((Object.from(false, null)).isBool());
@@ -383,12 +387,15 @@ test "from conversion" {
     try std.testing.expect((Object.from(null, null)).isNil());
 }
 test "to conversion" {
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil);
+    const p = &process;
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14, null)).to(f64), 3.14);
-    try ee((Object.from(42, null)).to(u64), 42);
-    try std.testing.expect((Object.from(42, null)).isInt());
-    try ee((Object.from(true, null)).to(bool), true);
-    try ee((Object.from(-0x400000, null)).toUnchecked(i64), -0x400000);
+    try ee((Object.from(3.14, p)).to(f64), 3.14);
+    try ee((Object.from(42, p)).to(u64), 42);
+    try std.testing.expect((Object.from(42, p)).isInt());
+    try ee((Object.from(true, p)).to(bool), true);
+    try ee((Object.from(-0x400000, p)).toUnchecked(i64), -0x400000);
 }
 test "immediate_class" {
     const ee = std.testing.expectEqual;

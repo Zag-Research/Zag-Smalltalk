@@ -169,7 +169,7 @@ pub const Object = packed struct(u64) {
     //     return @bitCast(v);
     // }
     pub inline fn symbol40(self: object.Object) u40 {
-        return @truncate(self.rawU());
+        return @as(u40,self.hash32()) << 8 | 1;
     }
     pub inline fn untaggedInt(self: object.Object) u64 {
         return self.toNatNoCheck();
