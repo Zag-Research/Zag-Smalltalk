@@ -20,8 +20,8 @@ const p = @import("zag/primitives.zig").primitives;
 var benchCompM = compileMethod(sym.value, 0, 0, .{&benchComp});
 const benchCompT = @as([*]Code, @ptrCast(&benchCompM.code[0]));
 // benchonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) benchonacci + (self - 2) benchonacci
+//    self <= 2 ifTrue: [ ^ 1 ].
+//    ^ (self - 1) benchonacci + (self - 2) benchonacci
 pub fn benchNative(self: i64) i64 {
     if (self <= 2) return 1;
     return benchNative(self - 1) + benchNative(self - 2);
@@ -78,104 +78,104 @@ fn timeObject(n: i64) void {
 }
 var benchThread =
     compileMethod(sym.value, 0, 2, .{
-    // i:0 iter:1 size:2 flags:3 prime:4 k:5 count:6
-    ":label1",
-    &e.pushLiteral,
-    8190,
-    &e.popIntoTemp,  2, // size
-    &e.pushLiteral1,
-    &e.popIntoTemp, 1, // iter
-    &e.branch,      "label2",
+        // i:0 iter:1 size:2 flags:3 prime:4 k:5 count:6
+        ":label1",
+        &e.pushLiteral,
+        8190,
+        &e.popIntoTemp,  2, // size
+        &e.pushLiteral1,
+        &e.popIntoTemp, 1, // iter
+        &e.branch,      "label2",
 
-    ":label2",
-    &e.pushTemp, 1, // iter
-    &e.pushSelf,
-    &e.p5, // #'<='
-    &e.ifFalse,
-    "label12",
+        ":label2",
+        &e.pushTemp, 1, // iter
+        &e.pushSelf,
+        &e.p5, // #'<='
+        &e.ifFalse,
+        "label12",
 
-    ":label3",
-    &e.pushLiteral0,
-    &e.popIntoTemp,         6, // count
-    &e.pushLiteralIndirect, "0Array",
-    &e.pushTemp, 2, // size
-    &e.p71, // #new:
-    &e.pushLiteralTrue,
-    &e.p145, // #atAllPut:
-    &e.popIntoTemp,  3, // flags
-    &e.pushLiteral1,
-    &e.popIntoTemp0, // i
-    &e.branch,
-    "label4",
+        ":label3",
+        &e.pushLiteral0,
+        &e.popIntoTemp,         6, // count
+        &e.pushLiteralIndirect, "0Array",
+        &e.pushTemp, 2, // size
+        &e.p71, // #new:
+        &e.pushLiteralTrue,
+        &e.p145, // #atAllPut:
+        &e.popIntoTemp,  3, // flags
+        &e.pushLiteral1,
+        &e.popIntoTemp0, // i
+        &e.branch,
+        "label4",
 
-    ":label4",
-    &e.pushTemp0, // i
-    &e.pushTemp, 2, // size
-    &e.p5, // #'<='
-    &e.ifFalse,
-    "label11",
+        ":label4",
+        &e.pushTemp0, // i
+        &e.pushTemp, 2, // size
+        &e.p5, // #'<='
+        &e.ifFalse,
+        "label11",
 
-    ":label5",
-    &e.pushTemp, 3, // flags
-    &e.pushTemp0, // i
-    &e.p60, // #at:
-    &e.ifFalse,
-    "label10",
+        ":label5",
+        &e.pushTemp, 3, // flags
+        &e.pushTemp0, // i
+        &e.p60, // #at:
+        &e.ifFalse,
+        "label10",
 
-    ":label6",
-    &e.pushTemp0, // i
-    &e.pushLiteral1,
-    &e.p1,
-    &e.popIntoTemp, 4, // prime
-    &e.pushTemp0, // i
-    &e.pushTemp, 4, // prime
-    &e.p1,
-    &e.popIntoTemp, 5, // k
-    &e.branch,      "label7",
+        ":label6",
+        &e.pushTemp0, // i
+        &e.pushLiteral1,
+        &e.p1,
+        &e.popIntoTemp, 4, // prime
+        &e.pushTemp0, // i
+        &e.pushTemp, 4, // prime
+        &e.p1,
+        &e.popIntoTemp, 5, // k
+        &e.branch,      "label7",
 
-    ":label7",
-    &e.pushTemp, 5, // k
-    &e.pushTemp, 2, // size
-    &e.p5, // #'<='
-    &e.ifFalse,
-    "label9",
+        ":label7",
+        &e.pushTemp, 5, // k
+        &e.pushTemp, 2, // size
+        &e.p5, // #'<='
+        &e.ifFalse,
+        "label9",
 
-    ":label8",
-    &e.pushTemp, 3, // flags
-    &e.pushTemp,         5, // k
-    &e.pushLiteralFalse,
-    &e.p61, // #at:put:
-    &e.drop,
-    &e.pushTemp, 5, // k
-    &e.pushTemp, 4, // prime
-    &e.p1,
-    &e.popIntoTemp, 5, // k
-    &e.branch,      "label7",
+        ":label8",
+        &e.pushTemp, 3, // flags
+        &e.pushTemp,         5, // k
+        &e.pushLiteralFalse,
+        &e.p61, // #at:put:
+        &e.drop,
+        &e.pushTemp, 5, // k
+        &e.pushTemp, 4, // prime
+        &e.p1,
+        &e.popIntoTemp, 5, // k
+        &e.branch,      "label7",
 
-    ":label9",
-    &e.pushTemp,     6, // count
-    &e.pushLiteral1, &e.p1,
-    &e.popIntoTemp, 6, // count
-    &e.branch,      "label10",
+        ":label9",
+        &e.pushTemp,     6, // count
+        &e.pushLiteral1, &e.p1,
+        &e.popIntoTemp, 6, // count
+        &e.branch,      "label10",
 
-    ":label10",
-    &e.pushTemp0, // i
-    &e.pushLiteral1,
-    &e.p1,
-    &e.popIntoTemp0, // i
-    &e.branch,
-    "label4",
+        ":label10",
+        &e.pushTemp0, // i
+        &e.pushLiteral1,
+        &e.p1,
+        &e.popIntoTemp0, // i
+        &e.branch,
+        "label4",
 
-    ":label11",
-    &e.pushTemp,     1, // iter
-    &e.pushLiteral1, &e.p1,
-    &e.popIntoTemp, 1, // iter
-    &e.branch,      "label2",
+        ":label11",
+        &e.pushTemp,     1, // iter
+        &e.pushLiteral1, &e.p1,
+        &e.popIntoTemp, 1, // iter
+        &e.branch,      "label2",
 
-    ":label12",
-    &e.pushTemp,  6, // count
-    &e.returnTop,
-});
+        ":label12",
+        &e.pushTemp,  6, // count
+        &e.returnTop,
+    });
 test "benchThread" {
     const method = benchThread.asCompiledMethodPtr();
     //    benchThread.update(benchThreadRef,method);

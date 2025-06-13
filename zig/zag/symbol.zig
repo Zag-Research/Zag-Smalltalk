@@ -16,19 +16,18 @@ const undoPhi24 = zag.utilities.undoPhi(u24);
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 const staticSymbols = if (Object.inMemorySymbols) blk: {
     var symbolArray = [_]object.inMemory.PointedObject{undefined} ** lastPredefinedSymbol;
-    const arities = .{
+    const arities = [_]u4{
         1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 1, 1, 1, 2, 0, 0, 0, 3, 4,
         1, 2, 3, 4, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2,
         1, 2, 1, 2, 1, 2, 3, 4, 2, 3, 0,
     };
     for (symbolArray[0..], arities, 1..) |*sym, arity, i|
-         initSymbol(sym, i, arity);
+        initSymbol(sym, i, arity);
     break :blk symbolArray;
 } else {};
 fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber: u24, arity: u4) void {
     const hash = hash_of(symbolNumber, arity);
-    sym.header = HeapHeader{
-        .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
+    sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
     sym.data.unsigned = (hash << 8) + 1;
 }
 
@@ -40,15 +39,13 @@ inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
-    if (Object.inMemorySymbols) {
-        const obj = if (false) Object.Nil
-            else //Object.from(&staticSymbols[index - 1], null);
-        Object{ .ref = @alignCast(@constCast(@ptrCast(&staticSymbols[index - 1]))) };
-        // unreachable;
-        return obj;
-    } else return fromHash32(hash_of(index, arity));
+    return if (Object.inMemorySymbols)
+        Object{ .ref = @ptrCast(&staticSymbols[index - 1]) }
+    else
+        fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
+    std.debug.print("\nsymbolIndex {x}", .{@as(u64, @bitCast(obj))});
     return obj.hash24() *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
@@ -56,19 +53,20 @@ pub inline fn symbolArity(obj: object.Object) u4 {
 }
 
 //inline
-fn symbol0(index: u32) object.Object {
+fn symbol0(index: u24) object.Object {
     return symbol_of(index, 0);
 }
-inline fn symbol1(index: u32) object.Object {
+//inline
+fn symbol1(index: u24) object.Object {
     return symbol_of(index, 1);
 }
-inline fn symbol2(index: u32) object.Object {
+inline fn symbol2(index: u24) object.Object {
     return symbol_of(index, 2);
 }
-inline fn symbol3(index: u32) object.Object {
+inline fn symbol3(index: u24) object.Object {
     return symbol_of(index, 3);
 }
-inline fn symbol4(index: u32) object.Object {
+inline fn symbol4(index: u24) object.Object {
     return symbol_of(index, 4);
 }
 pub const symbols = struct {
@@ -154,7 +152,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     // add any new values here
     "Object",
 });
-pub var symbolTable = SymbolTable.init(&globalAllocator);
+var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: object.Object) object.Object {
     return symbolTable.asString(string);
 }
@@ -262,6 +260,13 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
+    const f: u64 = @bitCast(symbols.value);
+    const eq: u64 = @bitCast(symbol0(2));
+    const bar: u64 = @bitCast(Object{ .ref = @ptrCast(&staticSymbols[1]) });
+    std.debug.print("\nsymbols.@\"=\" {x} {x} {x} {?} {}", .{ bar, eq, f, @as(?*object.inMemory.PointedObject, @ptrFromInt(f)), &staticSymbols[0] });
+    for (&staticSymbols, 0..) |ss, i| {
+        std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
+    }
     try expectEqual(1, symbolIndex(symbols.@"="));
     try expectEqual(1, symbolArity(symbols.@"="));
     try expectEqual(2, symbolIndex(symbols.value));

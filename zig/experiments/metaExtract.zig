@@ -2,9 +2,9 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 fn Extract(funcName: [:0]const u8, M: type) type {
-    var fields = @typeInfo(struct{}).@"struct".fields;
+    var fields = @typeInfo(struct {}).@"struct".fields;
     for (@typeInfo(M).@"struct".decls) |d| {
-        const func = @field(@field(M, d.name),funcName);
+        const func = @field(@field(M, d.name), funcName);
         const F = @TypeOf(func);
         fields = fields ++ [_]std.builtin.Type.StructField{.{
             .name = d.name,
@@ -35,7 +35,7 @@ const combined = struct {
     };
 };
 
-const Foo = Extract("func",combined){};
+const Foo = Extract("func", combined){};
 
 pub fn main() !void {
     Foo.struct1();

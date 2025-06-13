@@ -15,7 +15,7 @@ const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
-    ref: *InMemory.PointedObject,
+    ref: *const InMemory.PointedObject,
     const Self = @This();
     pub const inMemorySymbols = true;
     pub const ZERO = of(0);

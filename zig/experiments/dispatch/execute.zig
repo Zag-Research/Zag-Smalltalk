@@ -44,7 +44,7 @@ pub const CompiledMethod = struct {
     }
     fn fill(self: *Self, tup: anytype) void {
         var free = 0;
-        inline for (tup,0..) |field,index| {
+        inline for (tup, 0..) |field, index| {
             self.code[index] = field;
             free = index + 1;
         }

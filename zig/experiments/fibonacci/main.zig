@@ -42,7 +42,7 @@ const fullIncluded = false;
 const notIncluded = struct {
     const included = false;
     inline fn doTest() !void {
-        std.debug.print(" not run, so vacuously ",.{});
+        std.debug.print(" not run, so vacuously ", .{});
     }
     fn runIt(_: usize) void {}
 };
@@ -66,13 +66,12 @@ const testReps = 7;
 const debugPrint = false;
 
 // fibonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) fibonacci + (self - 2) fibonacci
+//    self <= 2 ifTrue: [ ^ 1 ].
+//    ^ (self - 1) fibonacci + (self - 2) fibonacci
 
 const fibNative = if (nativeIncluded) struct {
     const included = true;
-    inline fn doTest() bool {
-    }
+    inline fn doTest() bool {}
     const callsToFib40 = 204_668_309;
     pub fn fib(self: i64) i64 {
         // count += 1;
@@ -109,9 +108,11 @@ const fibObject = if (objectIncluded) struct {
         _ = fib(Object.from(runs)); // convert int 40 to a Zag object first
     }
 } else notIncluded;
-test "fibObject" { try fibObject.doTest();}
+test "fibObject" {
+    try fibObject.doTest();
+}
 
-const fibCPS  = if (cpsIncluded) struct {
+const fibCPS = if (cpsIncluded) struct {
     const included = true;
     inline fn doTest() !void {
         fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty);
@@ -169,9 +170,11 @@ const fibCPS  = if (cpsIncluded) struct {
         _ = te.run(objs[0..], method);
     }
 } else notIncluded;
-test "fibCPS" { try fibCPS.doTest();}
+test "fibCPS" {
+    try fibCPS.doTest();
+}
 
-const fibCPSSend  = if (cpsSendIncluded) struct {
+const fibCPSSend = if (cpsSendIncluded) struct {
     const included = true;
     inline fn doTest() !void {
         const start = fibCPSSend.setup();
@@ -225,7 +228,7 @@ const fibCPSSend  = if (cpsSendIncluded) struct {
             &e.send0,
             Sym.i_0,
             &e.returnTop,
-    });
+        });
     fn setup() CompiledMethodPtr {
         sym = Sym.init();
         execute.initClass(.SmallInteger);
@@ -247,9 +250,11 @@ const fibCPSSend  = if (cpsSendIncluded) struct {
         _ = te.run(objs[0..], method);
     }
 } else notIncluded;
-test "fibCPSSend" { try fibCPSSend.doTest();}
+test "fibCPSSend" {
+    try fibCPSSend.doTest();
+}
 
-const fibThread  = if (threadIncluded) struct {
+const fibThread = if (threadIncluded) struct {
     const included = true;
     inline fn doTest() !void {
         fibThreadMethod = @ptrCast(&fibThread);
@@ -288,7 +293,7 @@ const fibThread  = if (threadIncluded) struct {
             "recurse",
             &e.SmallInteger.@"+", // +
             &e.returnTop,
-    });
+        });
     var fibThreadMethod: CompiledMethodPtr = undefined;
     fn runIt(_: usize) void {
         fibThreadMethod = fib.asCompiledMethodPtr();
@@ -299,9 +304,11 @@ const fibThread  = if (threadIncluded) struct {
         _ = te.run(objs[0..], fibThreadMethod);
     }
 } else notIncluded;
-test "fibThread" { try fibThread.doTest();}
+test "fibThread" {
+    try fibThread.doTest();
+}
 
-const fibDispatch  = if (dispatchIncluded) struct {
+const fibDispatch = if (dispatchIncluded) struct {
     const included = true;
     inline fn doTest() !void {
         const start = setup();
@@ -339,7 +346,7 @@ const fibDispatch  = if (dispatchIncluded) struct {
             Sym.i_0,
             &e.SmallInteger.@"+", // +
             &e.returnTop,
-    });
+        });
     var fibDispatchStart =
         compileMethod(Sym.value, 0, 2, .{
             &e.pushContext,
@@ -348,7 +355,7 @@ const fibDispatch  = if (dispatchIncluded) struct {
             &e.send0,
             Sym.i_0,
             &e.returnTop,
-    });
+        });
     fn setup() CompiledMethodPtr {
         sym = Sym.init();
         execute.initClass(.SmallInteger);
@@ -368,9 +375,11 @@ const fibDispatch  = if (dispatchIncluded) struct {
         _ = te.run(objs[0..], method);
     }
 } else notIncluded;
-test "fibDispatch" { try fibDispatch.doTest();}
+test "fibDispatch" {
+    try fibDispatch.doTest();
+}
 
-const fibByte  = if (byteIncluded) struct {
+const fibByte = if (byteIncluded) struct {
     const included = true;
     inline fn doTest() !void {
         sym = Sym.init();
@@ -413,7 +422,7 @@ const fibByte  = if (byteIncluded) struct {
             "recurse",
             b.p1,
             b.returnTop,
-    });
+        });
     fn runIt(_: usize) void {
         sym = Sym.init();
         const method = fib.setLiterals(&[_]Object{sym.fibonacci}, empty);
@@ -423,7 +432,9 @@ const fibByte  = if (byteIncluded) struct {
         _ = te.run(objs[0..], method);
     }
 } else notIncluded;
-test "fibByte" { try fibByte.doTest();}
+test "fibByte" {
+    try fibByte.doTest();
+}
 
 const fibFull = if (fullIncluded) struct {
     const included = true;
@@ -444,23 +455,23 @@ const fibFull = if (fullIncluded) struct {
         compileMethod(Sym.@"+", 0, 0, .{
             &p.p1,
             &e.primitiveFailed,
-    });
+        });
     var @"Integer>>-" =
         compileMethod(Sym.@"-", 0, 0, .{
             &p.p2,
             &e.primitiveFailed,
-    });
+        });
     var @"Integer>><=" =
         compileMethod(Sym.@"<=", 0, 0, .{
             &p.p5,
             &e.primitiveFailed,
-    });
+        });
     var @"True>>ifTrue:" =
         compileMethod(Sym.@"ifTrue:", 0, 0, .{
             &e.dropNext,
             &e.BlockClosure.value,
             &e.returnNoContext,
-    });
+        });
     var @"False>>ifTrue:" =
         compileMethod(Sym.@"ifTrue:", 0, 0, .{ &e.drop, &e.returnNoContext });
     var fib =
@@ -484,7 +495,7 @@ const fibFull = if (fullIncluded) struct {
             &e.send0,       Sym.i_0,
             &e.send1,       Sym.@"+",
             &e.returnTop,
-    });
+        });
     var fibFullStart =
         compileMethod(Sym.value, 0, 2, .{
             &e.pushContext,
@@ -493,7 +504,7 @@ const fibFull = if (fullIncluded) struct {
             &e.send0,
             Sym.i_0,
             &e.returnTop,
-    });
+        });
     fn setup() CompiledMethodPtr {
         execute.init();
         execute.initClass(.SmallInteger);
@@ -512,19 +523,19 @@ const fibFull = if (fullIncluded) struct {
         fibFull.asCompiledMethodPtr().forDispatch(.SmallInteger);
 
         trace("\nfibFullSetup: code pointers" ++
-                  \\  @Integer>>+={x}
-                  \\  @Integer>>-={x}
-                  \\  @Integer>><=={x}
-                  \\  @True>>ifTrue:={x}
-                  \\  @False>>ifTrue:={x}
-                  \\  fibFull={x}
-                  ,.{
-                      @intFromPtr(@"Integer>>+".asCompiledMethodPtr().codePtr()),
-                      @intFromPtr(@"Integer>>-".asCompiledMethodPtr().codePtr()),
-                      @intFromPtr(@"Integer>><=".asCompiledMethodPtr().codePtr()),
-                      @intFromPtr(@"True>>ifTrue:".asCompiledMethodPtr().codePtr()),
-                      @intFromPtr(@"False>>ifTrue:".asCompiledMethodPtr().codePtr()),
-                      @intFromPtr(fibFull.asCompiledMethodPtr().codePtr()),
+            \\  @Integer>>+={x}
+            \\  @Integer>>-={x}
+            \\  @Integer>><=={x}
+            \\  @True>>ifTrue:={x}
+            \\  @False>>ifTrue:={x}
+            \\  fibFull={x}
+        , .{
+            @intFromPtr(@"Integer>>+".asCompiledMethodPtr().codePtr()),
+            @intFromPtr(@"Integer>>-".asCompiledMethodPtr().codePtr()),
+            @intFromPtr(@"Integer>><=".asCompiledMethodPtr().codePtr()),
+            @intFromPtr(@"True>>ifTrue:".asCompiledMethodPtr().codePtr()),
+            @intFromPtr(@"False>>ifTrue:".asCompiledMethodPtr().codePtr()),
+            @intFromPtr(fibFull.asCompiledMethodPtr().codePtr()),
         });
         execute.dump(.SmallInteger);
         return @ptrCast(&fibFullStart);
@@ -537,7 +548,9 @@ const fibFull = if (fullIncluded) struct {
         _ = te.run(objs[0..], method);
     }
 } else notIncluded;
-test "fibFull" { try fibFull.doTest();}
+test "fibFull" {
+    try fibFull.doTest();
+}
 
 const ts = std.time.nanoTimestamp;
 fn tstart() i128 {
@@ -552,11 +565,11 @@ pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(usize, nRuns,.milliseconds).init();
+    var stat = Stats(usize, nRuns, .milliseconds).init();
     const cached = "";
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
-            print("Config {s}dispatch cache\n",.{"no "});
+            print("Config {s}dispatch cache\n", .{"no "});
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{runs});
             print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
@@ -616,6 +629,6 @@ pub fn main() !void {
     }
     const args = try std.process.argsAlloc(allocator);
     const default = args.len <= 1;
-    try timing(if (default) @constCast(do_all[0..]) else args[1..],default);
+    try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const runs: u6 = 40;
