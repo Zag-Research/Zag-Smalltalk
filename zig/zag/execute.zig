@@ -922,7 +922,7 @@ test "compileRaw" {
 }
 
 pub const Execution = struct {
-    const failedObject: packed struct { x: u64 } = .{ .x = undefined };
+    const failedObject: packed struct { x: u64 } = .{ .x = 0xdeadc0de };
     pub const failed: Object = @bitCast(failedObject);
     fn Executer(size: comptime_int) type {
         return struct {
@@ -979,7 +979,8 @@ pub const Execution = struct {
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
-                try std.testing.expectEqualSlices(Object, expected, result);
+                for (expected, result) |e, r|
+                    if (!e.equals(r)) return error.TestEqual;
             }
         };
     }
