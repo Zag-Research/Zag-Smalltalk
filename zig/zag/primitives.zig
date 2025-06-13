@@ -132,7 +132,7 @@ const testModule = if (config.is_test) struct {
                 const newSp = sp.push(Sym.value);
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), null));
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }

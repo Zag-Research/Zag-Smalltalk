@@ -184,10 +184,10 @@ pub const ObjectFunctions = struct {
         return Nil;
     }
     pub inline fn isNil(self: Object) bool {
-        return self == Object.Nil;
+        return self.equals(Object.Nil);
     }
     pub inline fn isBool(self: Object) bool {
-        return self == Object.False or self == Object.True;
+        return self.equals(Object.False) or self.equals(Object.True);
     }
     pub inline fn isString(self: Object) bool {
         return self.which_class(true) == .String;
@@ -309,7 +309,7 @@ pub const ObjectFunctions = struct {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
             // if (self.classFromSymbolPlus()) |c|
             //     try writer.print("=>{}", .{c});
-        } else if (self == Nil) {
+        } else if (self.equals(Nil)) {
             try writer.print("nil", .{});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});

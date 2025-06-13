@@ -1026,7 +1026,7 @@ pub const Execution = struct {
     }
     fn validate(exe: anytype, expected: []const Object) ValidateErrors!void {
         const result = exe.stack();
-        if (result.len > 0 and result[0] == failed) return error.TestAborted;
+        if (result.len > 0 and result[0].equals(failed)) return error.TestAborted;
         trace(
             \\run:
             \\  expected: {any}

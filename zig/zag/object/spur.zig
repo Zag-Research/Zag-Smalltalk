@@ -73,7 +73,7 @@ pub const Object = packed union {
     }
 
     pub inline fn fromUntaggedI(i: i64) Object {
-        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
+        return @bitCast(i + oImm(.smallInteger, 0).tagbits());
     }
 
     // Spur SmallInteger
@@ -122,6 +122,27 @@ pub const Object = packed union {
 
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
+    }
+
+    pub inline fn isPIC(self: object.Object) bool {
+        return self.isImmediateClass(.PICPointer);
+    }
+
+    pub inline fn highPointer(self: Object, T: type) ?T {
+        return @ptrCast(self.ref.data.object);
+    }
+
+    pub inline fn symbolHash(self: object.Object) ?u56 {
+        if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
+        return null;
+    }
+
+    pub inline fn extraValue(self: object.Object) object.Object {
+        return @bitCast(self.rawU() >> 8);
+    }
+
+    pub inline fn extraI(self: object.Object) i8 {
+        _ = .{ self, unreachable };
     }
 
     pub inline fn isImmediateClass(self: object.Object, class: ClassIndex) bool {
@@ -201,18 +222,12 @@ pub const Object = packed union {
         return (self.rawU() & TagMask) == FloatTag;
     }
 
-    pub inline fn isBool(self: Object) bool {
-        return self.rawU() == Object.True.rawU() or self.rawU() == Object.False.rawU();
-    }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.rawU() == Object.True.rawU();
     }
-    pub inline fn isSymbol() bool {
+    pub fn isSymbol(_: Object) bool {
         // Spur-encoded symbols are heap objects; this is a stub
         return false;
-    }
-    pub inline fn isNil(self: Object) bool {
-        return self.rawU() == Object.Nil.rawU();
     }
 
     inline fn oImm(c: Group, h: u61) Self {
