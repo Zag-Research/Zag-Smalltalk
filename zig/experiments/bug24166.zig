@@ -27,6 +27,8 @@ test "make it run" {
     std.debug.print("the compile-time value:     {}\n", .{symbols.value.raw()});
     std.debug.print("the run-time value:         {}\n", .{symbol0(2).raw()});
     std.debug.print("not inlined run-time value: {}\n", .{symbolX(2).raw()});
+    try std.testing.expectEqual(symbol0(2).raw(),symbols.value.raw());
+    try std.testing.expectEqual(symbol0(2).raw(),symbolX(2).raw());
 }
 const Object = packed struct {
     ref: *const u64,

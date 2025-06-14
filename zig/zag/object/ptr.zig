@@ -162,7 +162,7 @@ pub const Object = packed struct(u64) {
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .one, .many => {
+                    .One, .Many => {
                         //@compileLog("from: ",value);
                         @setRuntimeSafety(false);
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };

@@ -45,19 +45,19 @@ inline fn symbol_of(index: u24, arity: u4) object.Object {
         fromHash32(hash_of(index, arity));
 }
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    std.debug.print("\nsymbolIndex {x}", .{@as(u64, @bitCast(obj))});
     return obj.hash24() *% undoPhi24;
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
     return @truncate(obj.hash32() >> 24);
 }
 
-//inline
-fn symbol0(index: u24) object.Object {
+fn symbolNoInline(index: u24) object.Object {
     return symbol_of(index, 0);
 }
-//inline
-fn symbol1(index: u24) object.Object {
+inline fn symbol0(index: u24) object.Object {
+    return symbol_of(index, 0);
+}
+inline fn symbol1(index: u24) object.Object {
     return symbol_of(index, 1);
 }
 inline fn symbol2(index: u24) object.Object {
@@ -260,13 +260,11 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    const f: u64 = @bitCast(symbols.value);
-    const eq: u64 = @bitCast(symbol0(2));
-    const bar: u64 = @bitCast(Object{ .ref = @ptrCast(&staticSymbols[1]) });
-    std.debug.print("\nsymbols.@\"=\" {x} {x} {x} {?} {}", .{ bar, eq, f, @as(?*object.inMemory.PointedObject, @ptrFromInt(f)), &staticSymbols[0] });
-    for (&staticSymbols, 0..) |ss, i| {
-        std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
-    }
+    // for (&staticSymbols, 0..) |ss, i| {
+    //     std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
+    // }
+    try expectEqual(symbolNoInline(2),symbols.value);
+    try expectEqual(symbolNoInline(2),symbol0(2));
     try expectEqual(1, symbolIndex(symbols.@"="));
     try expectEqual(1, symbolArity(symbols.@"="));
     try expectEqual(2, symbolIndex(symbols.value));
