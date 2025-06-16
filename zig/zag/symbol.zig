@@ -39,8 +39,9 @@ inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
 inline fn symbol_of(index: u24, arity: u4) object.Object {
+    const O = packed struct { sym: *const object.inMemory.PointedObject};
     return if (Object.inMemorySymbols)
-        Object{ .ref = @ptrCast(&staticSymbols[index - 1]) }
+        @bitCast(O{ .sym = &staticSymbols[index - 1]})
     else
         fromHash32(hash_of(index, arity));
 }

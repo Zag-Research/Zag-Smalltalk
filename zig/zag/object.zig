@@ -281,7 +281,8 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline fn immediate_class(self: Object) ClassIndex {
+    pub //inline
+        fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
     pub inline fn get_class(self: Object) ClassIndex {

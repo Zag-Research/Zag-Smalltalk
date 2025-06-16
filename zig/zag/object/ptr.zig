@@ -6,6 +6,7 @@ const zag = @import("../zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
+const InMemory = @import("inMemory.zig");
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -13,7 +14,6 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
-const InMemory = @import("inMemory.zig");
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
@@ -162,7 +162,7 @@ pub const Object = packed struct(u64) {
             .null => return Object.Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .One, .Many => {
+                    .one, .many => {
                         //@compileLog("from: ",value);
                         @setRuntimeSafety(false);
                         return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
@@ -216,7 +216,8 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: Object, _: bool) ClassIndex {
+    pub //inline
+        fn which_class(self: Object, _: bool) ClassIndex {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -243,3 +244,4 @@ pub const Object = packed struct(u64) {
     }
     pub usingnamespace object.ObjectFunctions;
 };
+test "ping2" { _ = InMemory;}

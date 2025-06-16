@@ -92,6 +92,7 @@ const Stack = struct {
 };
 test "Stack" {
     std.debug.print("Test: Stack\n", .{});
+    var process = Process.new();
     const ee = std.testing.expectEqual;
     var stack: [11]Object = undefined;
     const sp0 = @as(SP, @ptrCast(&stack[10]));
@@ -100,7 +101,8 @@ test "Stack" {
     const sp1 = sp0.push(False);
     try ee(True, stack[10]);
     try ee(False, stack[9]);
-    _ = sp1.drop().push(Object.from(42, null));
+    _ = sp1.drop().push(Object.from(42, &process));
+    try ee(Object.from(42, &process).to(i64), 42);
     try ee(stack[9].to(i64), 42);
 }
 pub const Extra = union {
@@ -164,6 +166,9 @@ pub const Signature = packed struct {
     }
     pub fn from(selector: Object, class: ClassIndex) Signature {
         return .{ .int = @bitCast(Internal{ .selector = selector.symbol40(), .class = class }) };
+    }
+    pub fn fromClass(class: ClassIndex) Signature {
+        return .{ .int = @bitCast(Internal{ .selector = 0, .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -512,7 +517,7 @@ test "countNonLabels" {
         &Code.noOp,
         "def",
         True,
-        comptime Object.from(42, null),
+//        comptime Object.from(42, null),
         ":def",
         "abc",
         3,
@@ -539,13 +544,13 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(comptime name: Object, comptime locals: u11, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
-            const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, name.hash24(), Age.static, null, Object, false) catch @compileError("method too big");
+        pub fn init(comptime numArgs: u4, comptime locals: u11, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
+            const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
             const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
-                .signature = Signature.from(name, class),
-                .stackStructure = .{ .locals = locals, .reserve = maxStack, .selfOffset = locals + name.numArgs() },
+                .signature = Signature.fromClass(class),
+                .stackStructure = .{ .locals = locals, .reserve = maxStack, .selfOffset = locals + numArgs },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,
@@ -641,7 +646,7 @@ test "CompileTimeMethod" {
         //        &p.setupSend,
         "def",
         True,
-        comptime Object.from(42, null),
+//        comptime Object.from(42, null),
         ":def",
         "abc",
         "*",
@@ -649,20 +654,20 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, null, .testClass, .{});
+    var r1 = c1.init(0, 2, 3, null, .testClass, .{});
     //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
     try expectEqual(9, r1.getCodeSize());
 }
 fn compiledMethodType(comptime codeSize: comptime_int) type {
     return CompileTimeMethod(.{ .codes = codeSize });
 }
-pub fn compileMethod(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    return compileMethodWith(name, locals, maxStack, class, null, tup);
+pub fn compileMethod(comptime numArgs: u4, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+    return compileMethodWith(numArgs, locals, maxStack, class, null, tup);
 }
-fn compileMethodWith(comptime name: Object, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+fn compileMethodWith(comptime numArgs: u4, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const MethodType = CompileTimeMethod(countNonLabels(tup));
-    return MethodType.init(name, locals, maxStack, verifier, class, tup);
+    return MethodType.init(numArgs, locals, maxStack, verifier, class, tup);
 }
 fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     comptime var lp = 0;
@@ -698,7 +703,7 @@ test "LookupLabel" {
         ":abc",
         "def",
         True,
-        comptime Object.from(42, null),
+//        comptime Object.from(42, null),
         ":def",
         "abc",
         3,
@@ -713,7 +718,7 @@ test "compiling method" {
     std.debug.print("Test: compiling method\n", .{});
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
-    var m = compileMethod(Sym.yourself, 0, 0, .testClass, .{
+    var m = compileMethod(0, 0, 0, .testClass, .{
         ":abc", p.branch,
         "def",  True,
         42,     ":def",
@@ -989,7 +994,7 @@ pub const Execution = struct {
     }
     fn init(tup: anytype) Executer(countNonLabels(tup)) {
         const ExeType = Executer(countNonLabels(tup));
-        return ExeType.new(compileMethod(Sym.yourself, 0, 0, .testClass, tup));
+        return ExeType.new(compileMethod(0, 0, 0, .testClass, tup));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
         return runTestWithObjects(title, tup, Object.empty, source, expected);

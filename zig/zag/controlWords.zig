@@ -332,7 +332,7 @@ pub const pushClosure = struct {
         newSp.top = Object.from(closure.ptr, null);
         return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, context, extra });
     }
-    const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
+    const testMethod = compileMethod(0, 0, 0, .BlockClosure, .{});
     test "pushClosure" {
         var exe = Execution.initTest("pushClosure", .{
             tf.pushLiteral,

@@ -1,7 +1,6 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
 const objectEncoding = zag.config.objectEncoding;
-const isTest = zag.config.isTest;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
@@ -140,7 +139,7 @@ const SICacheMin = -5;
 const SICacheMax = 100;
 const SICache = switch (objectEncoding) {
     .cachedPtr, .taggedPtr => true,
-    else => isTest,
+    else => false,
 };
 pub const PointedObject = packed struct {
     header: HeapHeader,
@@ -178,8 +177,11 @@ pub const PointedObject = packed struct {
         return null;
     }
 };
+pub const PointedObjectRef = packed struct {
+    ref: *PointedObject,
+};
 pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
-    if (SICacheMin <= i and i <= SICacheMax)
+    if (SICache and SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
     if (maybeProcess) |process| {
         if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocReturn| {
@@ -195,7 +197,13 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     unreachable;
 }
 test "inMemory int()" {
+    const ee = std.testing.expectEqual;
     std.debug.print("inMemory int()\n", .{});
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Object.Nil);
+    const one:PointedObjectRef = @bitCast(int(1, &process));
+    try ee(.SmallInteger,one.ref.header.classIndex);
+    try ee(1,one.ref.data.int);
 }
 
 pub const MemoryFloat = struct {
