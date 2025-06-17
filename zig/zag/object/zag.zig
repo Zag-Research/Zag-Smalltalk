@@ -99,8 +99,8 @@ pub const Object = packed struct(u64) {
     inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.hash;
     }
-    pub inline fn symbolHash(self: object.Object) ?u56 {
-        if (self.isImmediateClass(.Symbol)) return self.hash;
+    pub inline fn symbolHash(self: object.Object) ?u40 {
+        if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
