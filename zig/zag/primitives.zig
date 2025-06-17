@@ -129,7 +129,7 @@ const testModule = if (config.is_test) struct {
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.immediate_class() != sp.top.immediate_class()) {
-                const newSp = sp.push(Sym.value);
+                const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
@@ -285,7 +285,7 @@ pub const threadedFunctions = struct {
                 },
                 &[_]Object{
                     Object.from(99, null),
-                    Sym.value,
+                    Sym.value.asObject(),
                     True,
                     Object.from(17, null),
                 },
@@ -453,7 +453,7 @@ pub const threadedFunctions = struct {
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
-                Sym.value,
+                Sym.value.asObject(),
                 True,
                 Object.from(17, null),
             }, exe.stack());

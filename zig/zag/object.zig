@@ -17,9 +17,6 @@ const symbol = if (debugError) struct {
     inline fn symbol_of(index: u24, arity: u4) Object {
         return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
     }
-    pub inline fn symbolIndex(obj: Object) u24 {
-        return @as(u24, @truncate(obj.hash56())) *% undoPhi24;
-    }
     pub inline fn symbolArity(obj: Object) u4 {
         return @truncate(obj.hash56() >> 24);
     }
@@ -168,13 +165,6 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline fn classFromSymbolPlusX(self: Object) ?ClassIndex {
-        if (self.symbolHash()) |h| {
-            const c = h >> 32;
-            if (c > 0) return @enumFromInt(c);
-        }
-        return null;
-    }
     pub inline fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -316,20 +306,8 @@ pub const ObjectFunctions = struct {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64, @bitCast(self))});
-        //         try switch (self.immediate_class()) {
-        //             .Object => writer.print("object:0x{x:0>16}=>{}", .{ self.rawU(), @as(*heap.HeapHeader, @ptrFromInt(self.rawU())).* }),
-        //             .BlockClosure => writer.print("block:0x{x:>16}", .{self.rawU()}), //,as_pointer(x));
-        //             .Symbol => {
-        // //                try writer.print("symbol:0x{x:>16}", .{self.rawU()});
-        //             },
-        //             .Character => writer.print("${c}", .{self.to(u8)}),
-        //             .Float => writer.print("{}", .{self.to(f64)}),
-        //             .reservedForContext => writer.print("{}", .{ @as(heap.HeapHeader, @bitCast(self.rawU()))}),
     }
     pub const alignment = @alignOf(u64);
-    // pub fn packedInt(f1: u14, f2: u14, f3: u14) Object {
-    //     return @bitCast(PackedObject.from3(f1,f2,f3));
-    // }
     pub const intFromPackedObject = PackedObject.intFromPackedObject;
 };
 pub const PackedObject = packed struct {

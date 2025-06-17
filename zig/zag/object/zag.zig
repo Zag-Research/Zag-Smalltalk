@@ -52,6 +52,9 @@ pub const Object = packed struct(u64) {
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
     const ExtraType = u8;
+    pub inline fn asObject(self: Self) Self {
+        return self;
+    }
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }

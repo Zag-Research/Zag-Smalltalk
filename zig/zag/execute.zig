@@ -168,7 +168,7 @@ pub const Signature = packed struct {
         return .{ .int = @bitCast(Internal{ .selector = selector.symbol40(), .class = class }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{ .selector = @as(u40,name.numArgs()) << 32 | name.symbolHash().? << 8 | 10 << 3 | 1, .class = class }) };
+        return .{ .int = @bitCast(Internal{ .selector = @as(u40,name.numArgs()) << 32 | @as(u40,@truncate(name.symbolHash().?)) << 8 | 10 << 3 | 1, .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
