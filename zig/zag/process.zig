@@ -199,7 +199,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
-        std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
+        //std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
         const result = HeapObject.fillToBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {

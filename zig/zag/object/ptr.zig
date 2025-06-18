@@ -19,9 +19,15 @@ pub const Object = packed struct(u64) {
     const Self = @This();
     pub const inMemorySymbols = true;
     pub const ZERO = of(0);
-    pub fn False() Object { return Object.from(&InMemory.False, null);}
-    pub fn True() Object { return Object.from(&InMemory.True, null);}
-    pub fn Nil() Object { return Object.from(&InMemory.Nil, null);}
+    pub fn False() Object {
+        return Object.from(&InMemory.False, null);
+    }
+    pub fn True() Object {
+        return Object.from(&InMemory.True, null);
+    }
+    pub fn Nil() Object {
+        return Object.from(&InMemory.Nil, null);
+    }
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const LowTagSmallInteger = {};
@@ -218,7 +224,7 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub //inline
-        fn which_class(self: Object, _: bool) ClassIndex {
+    fn which_class(self: Object, _: bool) ClassIndex {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -245,4 +251,6 @@ pub const Object = packed struct(u64) {
     }
     pub usingnamespace object.ObjectFunctions;
 };
-test "ping2" { _ = InMemory;}
+test "ping2" {
+    _ = InMemory;
+}

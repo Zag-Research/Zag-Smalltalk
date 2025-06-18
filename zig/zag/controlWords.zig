@@ -241,7 +241,7 @@ pub const popAssociationValue = struct {
             "0Nil",
             0,
         });
-        association.setLiterals( &.{ Nil() }, &.{});
+        association.setLiterals(&.{Nil()}, &.{});
         try Execution.runTestWithObjects(
             "popAssociationValue",
             .{
@@ -348,7 +348,7 @@ pub const pushClosure = struct {
             comptime object14(.{ 3, 4, 0 }),
             "0block",
         });
-        try exe.resolve(&[_]Object{Object.from(&testMethod, null), True(), Nil()});
+        try exe.resolve(&[_]Object{ Object.from(&testMethod, null), True(), Nil() });
         try exe.execute(&[_]Object{
             Object.from(17, null),
         });

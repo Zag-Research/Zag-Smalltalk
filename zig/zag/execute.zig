@@ -169,7 +169,7 @@ pub const Signature = packed struct {
         return .{ .int = @bitCast(Internal{ .selector = selector.symbol40(), .class = class }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{ .selector = @as(u40,name.numArgs()) << 32 | @as(u40,@truncate(name.symbolHash().?)) << 8 | 10 << 3 | 1, .class = class }) };
+        return .{ .int = @bitCast(Internal{ .selector = @as(u40, name.numArgs()) << 32 | @as(u40, @truncate(name.symbolHash().?)) << 8 | 10 << 3 | 1, .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -549,7 +549,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
-                .signature = Signature.fromNameClass(name,class),
+                .signature = Signature.fromNameClass(name, class),
                 .stackStructure = .{ .locals = locals, .reserve = maxStack, .selfOffset = locals + name.numArgs() },
                 .executeFn = f,
                 .jitted = f,
@@ -734,7 +734,7 @@ test "compiling method" {
         for (t, 0..) |tv, idx|
             trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.testU() });
     }
-    try m.resolve(&.{ True() });
+    try m.resolve(&.{True()});
     if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
@@ -770,9 +770,9 @@ fn CompileTimeObject(comptime counts: usize) type {
                     Object, bool, @TypeOf(null) => Object.from(field, null),
                     comptime_int => blk: {
                         hash = field;
-                        break :blk if (raw) @as(Object, @bitCast(@as(i64, field))) else Object.from(field, null);
+                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else Object.from(field, null);
                     },
-                    comptime_float => if (raw) @as(Object, @bitCast(@as(f64, field))) else Object.from(field, null),
+                    comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else Object.from(field, null),
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
@@ -787,10 +787,10 @@ fn CompileTimeObject(comptime counts: usize) type {
                     else => blk: {
                         if (field.len >= 1 and field[0] >= '0' and field[0] <= '9') {
                             obj.offsets[n] = true;
-                            break :blk @as(Object, @bitCast(@as(i64, comptime intOf(field[0..]) << 1)));
+                            break :blk Object.rawFromU(comptime intOf(field[0..]) << 1);
                         } else if (field[0] != ':') {
                             obj.offsets[n] = true;
-                            break :blk @as(Object, @bitCast(@as(i64, (comptime lookupLabel(tup, field) << 1) + 1)));
+                            break :blk Object.rawFromU((comptime lookupLabel(tup, field) << 1) + 1);
                         } else continue;
                     },
                 };
@@ -866,23 +866,23 @@ test "compileObject" {
         "def",
         "3float",
     });
-    const debugging = true;
+    const debugging = false;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64,@bitCast(ob.*)) });
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, &process) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob),  @as(u64,@bitCast(ob.*)) });
-        std.debug.print("\nTrue=0x{x:0>8}", .{ @as(u64,@bitCast(True())) });
+            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
+        std.debug.print("\nTrue=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
     }
 
     try expect(o.asObject().isHeapObject());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(Object.from(42, null)));
-    try expectEqual(o.objects[10].to(f64),Object.from(42.0, &process).to(f64));
+    try expectEqual(o.objects[10].to(f64), Object.from(42.0, &process).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
@@ -914,7 +914,7 @@ test "compileRaw" {
         42,
         42.0,
     });
-    const debugging = true;
+    const debugging = false;
     if (debugging) {
         @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|

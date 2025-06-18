@@ -84,16 +84,17 @@ const SymbolsEnum = enum(u16) {
     const staticSymbols = blk: {
         var symbolArray = [_]object.inMemory.PointedObject{undefined} ** lastPredefinedSymbol;
         const arities = [_]u4{
-            1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 1, 1, 1, 2, 0, 0, 0, 3, 4,
-            1, 2, 3, 4, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2,
-            1, 2, 1, 2, 1, 2, 3, 4, 2, 3, 0,
+            1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         };
         for (symbolArray[0..], arities, 1..) |*sym, arity, i|
             initSymbol(sym, i, arity);
         break :blk symbolArray;
     };
     fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber: u24, arity: u4) void {
-        const hash = hash_of(symbolNumber, arity);
+        const hash: u64 = hash_of(symbolNumber, arity);
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
         sym.data.unsigned = (hash << 8) + 1;
     }
@@ -101,19 +102,18 @@ const SymbolsEnum = enum(u16) {
         return @truncate(@intFromEnum(self) >> 8);
     }
     pub inline fn symbolHash(self: SymbolsEnum) ?u56 {
-        return @as(u24,@as(u8,@truncate(@intFromEnum(self)))) *% inversePhi24;
+        return @as(u24, @as(u8, @truncate(@intFromEnum(self)))) *% inversePhi24;
     }
     pub inline fn immediate_class(_: SymbolsEnum) object.ClassIndex {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
-        const O = packed struct { sym: *const object.inMemory.PointedObject};
-        return @bitCast(O{ .sym = &staticSymbols[@as(u8,@truncate(@intFromEnum(self))) - 1]});
+        const O = packed struct { sym: *const object.inMemory.PointedObject };
+        return @bitCast(O{ .sym = &staticSymbols[@as(u8, @truncate(@intFromEnum(self))) - 1] });
     }
     inline fn symbol_of(index: u24, _: u4) Object {
-        return @as(SymbolsEnum,@enumFromInt(index)).asObject();
+        return @as(SymbolsEnum, @enumFromInt(index)).asObject();
     }
-
 };
 const SymbolsStruct = struct {
     pub const @"=" = symbol1(1);
@@ -196,20 +196,17 @@ comptime {
     std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
 }
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "=", "value", "value:", "cull:", "yourself", "doesNotUnderstand:",
-    "at:", "new:", "valueWithArguments:", "ifTrue:", "ifFalse:",
-    "ifNil:", "ifNotNil:", "perform:", "+", "-", "*", "~=", "==",
-    "~~", "<", "<=", ",>=", ">", "at:put:", "value:value:",
-    "cull:cull:", "ifTrue:ifFalse", "ifFalse:ifTrue:",
-    "ifNil:ifNotNil", "ifNotNil:ifNil:", "perform:with:",
-    "perform:withArguments:", "value:value:value:", "cull:cull:cull:",
-    "perform:with:with:", "perform:withArguments:inSuperclass:",
-    "value:value:value:value:", "cull:cull:cull:cull:",
-    "perform:with:with:with:", "size", "negated", "new", "self",
-    "name", "class", "Class", "Behavior", "ClassDescription",
-    "Metaclass", "SmallInteger", "noFallback",
+    "=",                                   "value",                    "value:",                 "cull:",                   "yourself",        "doesNotUnderstand:",
+    "at:",                                 "new:",                     "valueWithArguments:",    "ifTrue:",                 "ifFalse:",        "ifNil:",
+    "ifNotNil:",                           "perform:",                 "+",                      "-",                       "*",               "~=",
+    "==",                                  "~~",                       "<",                      "<=",                      ",>=",             ">",
+    "at:put:",                             "value:value:",             "cull:cull:",             "ifTrue:ifFalse",          "ifFalse:ifTrue:", "ifNil:ifNotNil",
+    "ifNotNil:ifNil:",                     "perform:with:",            "perform:withArguments:", "value:value:value:",      "cull:cull:cull:", "perform:with:with:",
+    "perform:withArguments:inSuperclass:", "value:value:value:value:", "cull:cull:cull:cull:",   "perform:with:with:with:", "size",            "negated",
+    "new",                                 "self",                     "name",                   "class",                   "Class",           "Behavior",
+    "ClassDescription",                    "Metaclass",                "SmallInteger",           "noFallback",
     // add any new values here
-    "Object",
+                 "Object",
 });
 var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: Object) Object {
@@ -224,7 +221,7 @@ pub inline fn lookup(string: Object) Object {
 pub inline fn intern(string: Object) Object {
     return symbolTable.intern(string);
 }
-const ObjectTreap = Treap(Object, u32, u0);
+const SymbolTreap = if (Object.inMemorySymbols) Treap(Object, u32, Object) else Treap(Object, u32, u0);
 fn numArgs(obj: Object) u4 {
     const string = obj.arrayAsSlice(u8) catch return 0;
     if (string.len == 0) return 0;
@@ -237,28 +234,28 @@ fn numArgs(obj: Object) u4 {
     return count;
 }
 pub const SymbolTable = struct {
-    mem: []ObjectTreap.Element,
-    treap: ObjectTreap,
+    mem: []SymbolTreap.Element,
+    treap: SymbolTreap,
     allocator: *Allocator,
     const Self = @This();
     const initialSymbolTableSize = 50;
     pub fn init(allocator: *Allocator) Self {
         return SymbolTable{
-            .mem = &[0]ObjectTreap.Element{},
-            .treap = ObjectTreap.initEmpty(object.compareObject, Nil()),
+            .mem = &[0]SymbolTreap.Element{},
+            .treap = SymbolTreap.initEmpty(object.compareObject, Nil()),
             .allocator = allocator,
         };
     }
-    inline fn theTreap(self: *Self, adding: usize) *ObjectTreap {
+    inline fn theTreap(self: *Self, adding: usize) *SymbolTreap {
         if (self.treap.hasRoom(adding))
             return &self.treap;
         return self.allocTreap(adding);
     }
-    fn allocTreap(self: *Self, _: usize) *ObjectTreap {
+    fn allocTreap(self: *Self, _: usize) *SymbolTreap {
         {
             // ToDo: add locking
-            const size = heap.growSize(self.mem, ObjectTreap.Element) catch initialSymbolTableSize * ObjectTreap.elementSize;
-            const memory = self.allocator.alloc(ObjectTreap.Element, size) catch @panic("can't alloc");
+            const size = heap.growSize(self.mem, SymbolTreap.Element) catch initialSymbolTableSize * SymbolTreap.elementSize;
+            const memory = self.allocator.alloc(SymbolTreap.Element, size) catch @panic("can't alloc");
             self.treap.resize(memory);
             self.allocator.free(self.mem);
             self.mem = memory;
@@ -276,7 +273,7 @@ pub const SymbolTable = struct {
     pub fn lookup(self: *Self, string: Object) Object {
         return lookupDirect(self.theTreap(0), string);
     }
-    fn lookupDirect(trp: *ObjectTreap, string: Object) Object {
+    fn lookupDirect(trp: *SymbolTreap, string: Object) Object {
         const index = trp.lookup(string);
         if (index > 0) {
             const nArgs = numArgs(string);
@@ -295,13 +292,16 @@ pub const SymbolTable = struct {
         }
         unreachable;
     }
-    fn internDirect(trp: *ObjectTreap, string: Object) Object {
+    fn internDirect(trp: *SymbolTreap, string: Object) Object {
         const result = lookupDirect(trp, string);
         if (!result.isNil()) return result;
         const str = string.promoteTo() catch return Nil();
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
-        return symbols.symbol_of(@truncate(index), nArgs);
+        return symbols.symbol_of(
+            @truncate(index),
+            nArgs,
+        );
     }
     fn loadSymbols(self: *Self, strings: []const heap.HeapObjectConstPtr) void {
         const trp = self.theTreap(strings.len);
@@ -321,13 +321,18 @@ test "symbols match initialized symbol table" {
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    // for (&staticSymbols, 0..) |ss, i| {
-    //     std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
-    // }
+    const debugging = false;
+    if (debugging) {
+        for (&symbols.staticSymbols, 0..) |ss, i|
+            std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
+    }
     try expectEqual(1, symbolIndex(symbols.@"=".asObject()));
     try expectEqual(1, symbolArity(symbols.@"=".asObject()));
     try expectEqual(2, symbolIndex(symbols.value.asObject()));
     try expectEqual(0, symbolArity(symbols.value.asObject()));
+    try expectEqual(0, symbolArity(symbols.Object.asObject()));
+    try expectEqual(2, symbolArity(symbols.@"at:put:".asObject()));
+    try expectEqual(1, symbolArity(symbols.@"<=".asObject()));
     try expectEqual(lastPredefinedSymbol, symbolIndex(symbols.Object.asObject()));
     try expectEqual(0, symbolArity(symbols.Object.asObject()));
     switch (config.objectEncoding) {
@@ -394,7 +399,7 @@ test "force second allocation of symbol treap" {
     //    const expect = std.testing.expect;
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
-    symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
-    symbol.loadSymbols(moreSymbolStrings[0 .. moreSymbolStrings.len - 1]);
+    symbol.loadSymbols(&initialSymbolStrings);
+    symbol.loadSymbols(&moreSymbolStrings);
     //_ = symbol.allocator.allocArray(49,480,u8);
 }

@@ -762,7 +762,7 @@ pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
     pub //inline
-        fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
+    fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
         self[0].header = HeapHeader.freeHeader(0);

@@ -200,7 +200,9 @@ pub const ObjectFunctions = struct {
         if (self.isDouble()) return self.toDoubleNoCheck();
         return error.wrongType;
     }
-
+    pub fn rawFromU(u: u64) Object {
+        return @bitCast(u);
+    }
     pub fn to(self: Object, comptime T: type) T {
         return self.toWithCheck(T, true);
     }
@@ -272,7 +274,7 @@ pub const ObjectFunctions = struct {
         return ord.eq;
     }
     pub //inline
-        fn immediate_class(self: Object) ClassIndex {
+    fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
     pub inline fn get_class(self: Object) ClassIndex {

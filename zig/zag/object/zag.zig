@@ -34,9 +34,15 @@ pub const Object = packed struct(u64) {
     const Self = @This();
     pub const inMemorySymbols = false;
     pub const ZERO = of(0);
-    pub inline fn False() Object { return oImm(.False, 0);}
-    pub inline fn True() Object { return oImm(.True, 0);}
-    pub inline fn Nil() Object { return Self{ .tag = .heap, .class = .none, .hash = 0 };}
+    pub inline fn False() Object {
+        return oImm(.False, 0);
+    }
+    pub inline fn True() Object {
+        return oImm(.True, 0);
+    }
+    pub inline fn Nil() Object {
+        return Self{ .tag = .heap, .class = .none, .hash = 0 };
+    }
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
     pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
