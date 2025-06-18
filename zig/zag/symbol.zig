@@ -100,14 +100,13 @@ const SymbolsEnum = enum(u16) {
     pub inline fn numArgs(self: SymbolsEnum) u4 {
         return @truncate(@intFromEnum(self) >> 8);
     }
-    const symbolArity = SymbolsEnum.numArgs;
     pub inline fn symbolHash(self: SymbolsEnum) ?u56 {
         return @as(u24,@as(u8,@truncate(@intFromEnum(self)))) *% inversePhi24;
     }
     pub inline fn immediate_class(_: SymbolsEnum) object.ClassIndex {
         return .Symbol;
     }
-    pub inline fn asObject(self: SymbolsEnum) Object {
+    pub fn asObject(self: SymbolsEnum) Object {
         const O = packed struct { sym: *const object.inMemory.PointedObject};
         return @bitCast(O{ .sym = &staticSymbols[@as(u8,@truncate(@intFromEnum(self))) - 1]});
     }
@@ -246,7 +245,7 @@ pub const SymbolTable = struct {
     pub fn init(allocator: *Allocator) Self {
         return SymbolTable{
             .mem = &[0]ObjectTreap.Element{},
-            .treap = ObjectTreap.initEmpty(object.compareObject, Nil),
+            .treap = ObjectTreap.initEmpty(object.compareObject, Nil()),
             .allocator = allocator,
         };
     }
@@ -283,7 +282,7 @@ pub const SymbolTable = struct {
             const nArgs = numArgs(string);
             return symbols.symbol_of(@truncate(index), nArgs);
         }
-        return Nil;
+        return Nil();
     }
     fn intern(self: *Self, string: Object) Object {
         const trp = self.theTreap(1);
@@ -299,7 +298,7 @@ pub const SymbolTable = struct {
     fn internDirect(trp: *ObjectTreap, string: Object) Object {
         const result = lookupDirect(trp, string);
         if (!result.isNil()) return result;
-        const str = string.promoteTo() catch return Nil;
+        const str = string.promoteTo() catch return Nil();
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
         return symbols.symbol_of(@truncate(index), nArgs);

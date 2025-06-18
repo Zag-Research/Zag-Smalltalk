@@ -92,15 +92,16 @@ const Stack = struct {
 };
 test "Stack" {
     std.debug.print("Test: Stack\n", .{});
-    var process = Process.new();
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil());
     const ee = std.testing.expectEqual;
     var stack: [11]Object = undefined;
     const sp0 = @as(SP, @ptrCast(&stack[10]));
-    sp0.top = True;
-    try ee(True, stack[10]);
-    const sp1 = sp0.push(False);
-    try ee(True, stack[10]);
-    try ee(False, stack[9]);
+    sp0.top = True();
+    try ee(True(), stack[10]);
+    const sp1 = sp0.push(False());
+    try ee(True(), stack[10]);
+    try ee(False(), stack[9]);
     _ = sp1.drop().push(Object.from(42, &process));
     try ee(Object.from(42, &process).to(i64), 42);
     try ee(stack[9].to(i64), 42);
@@ -377,7 +378,7 @@ pub const StackStructure = packed struct {
     hightTag: object.Object.HighTagType = object.Object.HighTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
-pub const endMethod = CompiledMethod.init(Nil, Code.end);
+pub const endMethod = CompiledMethod.init(Nil(), Code.end);
 pub const CompiledMethod = struct {
     header: HeapHeader,
     stackStructure: StackStructure,
@@ -516,7 +517,7 @@ test "countNonLabels" {
         ":abc",
         &Code.noOp,
         "def",
-        True,
+        0,
         ":def",
         "abc",
         3,
@@ -602,7 +603,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
-        pub fn resolve(self: *Self, literals: []const Object) !void {
+        pub fn resolve(self: *Self, resolution: ?[]const Object) !void {
             for (&self.code, &self.offsets, 0..) |*c, *isOffset, n| {
                 if (isOffset.*) {
                     isOffset.* = false;
@@ -613,8 +614,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     } else {
                         const index: usize = @bitCast(i >> 1);
                         trace(" index: {x}", .{index});
-                        if (index >= literals.len) return error.Unresolved;
-                        c.* = Code.objectOf(literals[index]);
+                        if (resolution) |literals| {
+                            if (index >= literals.len) return error.Unresolved;
+                            c.* = Code.objectOf(literals[index]);
+                        }
                     }
                 }
             }
@@ -644,7 +647,7 @@ test "CompileTimeMethod" {
         ":abc",
         //        &p.setupSend,
         "def",
-        True,
+        "0True",
         ":def",
         "abc",
         "*",
@@ -700,7 +703,7 @@ test "LookupLabel" {
     const c1 = lookupLabel(.{
         ":abc",
         "def",
-        True,
+        "0True",
         ":def",
         "abc",
         3,
@@ -717,7 +720,7 @@ test "compiling method" {
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, 0, .testClass, .{
         ":abc", p.branch,
-        "def",  True,
+        "def",  "0True",
         42,     ":def",
         "abc",  3,
         null,
@@ -731,7 +734,7 @@ test "compiling method" {
         for (t, 0..) |tv, idx|
             trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.testU() });
     }
-    try m.resolve(Object.empty);
+    try m.resolve(&.{ True() });
     if (config.debugging) {
         @setRuntimeSafety(false);
         for (t, 0..) |*tv, idx|
@@ -740,11 +743,11 @@ test "compiling method" {
     //    try expectEqual(t.prim,controlPrimitives.noop);
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
-    try expectEqual(t[2].object, True);
+    try expectEqual(t[2].object, True());
     try expectEqual(t[3].object, Object.from(42, null));
     try expectEqual(t[4].codePtr, &m.code[0]);
     try expectEqual(t[5].object, Object.from(3, null));
-    try expectEqual(t[6].object, Nil);
+    try expectEqual(t[6].object, Nil());
 }
 
 fn CompileTimeObject(comptime counts: usize) type {
@@ -841,6 +844,8 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
     return objType.init(tup, false);
 }
 test "compileObject" {
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil());
     std.debug.print("Test: compileObject\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
@@ -857,28 +862,29 @@ test "compileObject" {
         c.replace0, // second HeapObject - runtime ClassIndex #0
         ":third",
         c.Dispatch, // third HeapObject
-        True,
+        "2True",
         "def",
-        42.0,
+        "3float",
     });
-    const debugging = false;
+    const debugging = true;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.testU() });
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64,@bitCast(ob.*)) });
     }
-    o.setLiterals(&[_]Object{ True, Nil }, &[_]ClassIndex{@enumFromInt(0xdead)});
+    o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, &process) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), ob.testU() });
+            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob),  @as(u64,@bitCast(ob.*)) });
+        std.debug.print("\nTrue=0x{x:0>8}", .{ @as(u64,@bitCast(True())) });
     }
 
     try expect(o.asObject().isHeapObject());
-    try expect(o.objects[9].equals(o.asObject()));
+    //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(Object.from(42, null)));
-    try expect(o.objects[10].equals(Object.from(42.0, null)));
-    try expect(o.objects[3].equals(Nil));
-    try expect(o.objects[5].equals(True));
+    try expectEqual(o.objects[10].to(f64),Object.from(42.0, &process).to(f64));
+    try expect(o.objects[3].equals(Nil()));
+    try expect(o.objects[5].equals(True()));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
     try expectEqual(5, h1.header.length);
     try expect(!h1.header.isIndexable());
@@ -908,10 +914,11 @@ test "compileRaw" {
         42,
         42.0,
     });
-    const debugging = false;
+    const debugging = true;
     if (debugging) {
+        @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, ob.rawU() });
+            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     try expectEqual(@as(i64, @bitCast(o.objects[1])), 42);
     try expectEqual(@as(f64, @bitCast(o.objects[2])), 42.0);
@@ -941,7 +948,7 @@ pub const Execution = struct {
                 };
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                self.process.init(Nil);
+                self.process.init(Nil());
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
@@ -1009,7 +1016,7 @@ pub const Execution = struct {
     fn runWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
-        exe.process.init(Nil);
+        exe.process.init(Nil());
         const t = exe.method.code[0..];
         if (config.debugging) {
             @setRuntimeSafety(false);

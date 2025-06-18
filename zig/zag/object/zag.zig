@@ -34,9 +34,9 @@ pub const Object = packed struct(u64) {
     const Self = @This();
     pub const inMemorySymbols = false;
     pub const ZERO = of(0);
-    pub const False = oImm(.False, 0);
-    pub const True = oImm(.True, 0);
-    pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
+    pub inline fn False() Object { return oImm(.False, 0);}
+    pub inline fn True() Object { return oImm(.True, 0);}
+    pub inline fn Nil() Object { return Self{ .tag = .heap, .class = .none, .hash = 0 };}
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
     pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
@@ -212,7 +212,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn toBoolNoCheck(self: object.Object) bool {
-        return self.rawU() == object.Object.True.rawU();
+        return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
         if (!self.isSymbol()) @panic("not a Symbol");
@@ -258,8 +258,8 @@ pub const Object = packed struct(u64) {
                 unreachable;
             },
             .comptime_float => return from(@as(f64, value), maybeProcess),
-            .bool => return if (value) object.Object.True else object.Object.False,
-            .null => return object.Object.Nil,
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            .null => return object.Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
@@ -323,7 +323,7 @@ pub const Object = packed struct(u64) {
         };
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
-        return if (self.isHeap()) self != object.Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
         imm: TagAndClassType,

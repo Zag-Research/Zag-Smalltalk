@@ -147,13 +147,13 @@ pub const threadedFns = struct {
                 "asThunk True",
                 .{tf.asThunk},
                 &validateTrue,
-                &[_]Object{True},
+                &[_]Object{True()},
                 Object.empty,
             );
         }
         fn validateTrue(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True.testU()))}, exe.stack()),
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True().testU()))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }

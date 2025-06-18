@@ -424,12 +424,12 @@ pub const AllocationInfo = struct {
     pub inline fn initContents(self: Self, theHeapObject: HeapObjectPtr) void {
         const start = theHeapObject.asObjectArray();
         for (start[0..self.nInstVars]) |*obj|
-            obj.* = Nil;
+            obj.* = Nil();
         if (self.nIndexed > 0) {
             const slice = start[self.nInstVars .. self.nInstVars + self.nIndexed];
             if (self.isObject) {
                 for (slice) |*obj|
-                    obj.* = Nil;
+                    obj.* = Nil();
             } else {
                 for (slice) |*obj|
                     obj.* = Object.ZERO;
@@ -654,7 +654,7 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn headerOnStack(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
         return .{ .classIndex = class, .hash = hash, .format = .special, .age = .onStack, .length = length };
     }
-    pub inline fn freeHeader(length: u12) HeapHeader {
+    pub fn freeHeader(length: u11) HeapHeader {
         return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
     }
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
@@ -761,7 +761,8 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
-    pub inline fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
+    pub //inline
+        fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
         self[0].header = HeapHeader.freeHeader(0);
@@ -812,8 +813,8 @@ pub const HeapObject = packed struct {
         const head = self.header;
         if (head.forwardedTo()) |_| { // already forwarded
             reference.* = switch (config.objectEncoding) {
-                .nan => Nil, //@bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .zag => Nil,
+                .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
+                .zag => Nil(),
                 else => unreachable,
             };
             return hp;
@@ -824,9 +825,9 @@ pub const HeapObject = packed struct {
         self.setHeader(@bitCast((@as(u64, @bitCast(HeapHeader{ .forwarded = true })) << 48) + @intFromPtr(hp + 1)));
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
-            .nan => Nil, //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .zag => Nil,
-            .ptr => Nil,
+            .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
+            .zag => Nil(),
+            .ptr => Nil(),
             else => unreachable,
         };
         return newHp;

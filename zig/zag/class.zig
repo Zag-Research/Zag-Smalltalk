@@ -209,7 +209,7 @@ fn setUpClassTable(st: *symbol.SymbolTable) ClassTable {
     return ct;
 }
 test "classes match initialized class table" {
-    var thr = process.Process.new();
+    var thr: Process align(Process.alignment) = Process.new();
     thr.init();
     var st = symbol.symbolTable;
     var ct = setUpClassTable(&st);

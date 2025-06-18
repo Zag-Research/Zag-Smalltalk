@@ -199,6 +199,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
+        std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
         const result = HeapObject.fillToBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {
@@ -306,7 +307,7 @@ test "nursery allocation" {
     const ee = std.testing.expectEqual;
     var process align(alignment) = new();
     var pr = &process;
-    pr.init(Nil);
+    pr.init(Nil());
     const emptySize = Process.nursery_size;
     trace("\nemptySize = {}\n", .{emptySize});
     try ee(Process.stack_size, 27);
@@ -350,7 +351,7 @@ test "nursery allocation" {
 test "check flag" {
     const testing = std.testing;
     var process: struct { f: [alignment]u8 align(alignment) = undefined, p: Self } = .{ .p = new() };
-    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil);
+    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil());
     var pr align(1) = &process.p;
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();

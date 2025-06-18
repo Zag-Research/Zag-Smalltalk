@@ -171,13 +171,13 @@ pub const ObjectFunctions = struct {
     pub inline fn getField(self: Object, field: usize) Object {
         if (self.asObjectArray()) |ptr|
             return ptr[field];
-        return Nil;
+        return Nil();
     }
     pub inline fn isNil(self: Object) bool {
-        return self == Object.Nil;
+        return self == Object.Nil();
     }
     pub inline fn isBool(self: Object) bool {
-        return self == Object.False or self == Object.True;
+        return self == Object.False() or self == Object.True();
     }
     pub inline fn isString(self: Object) bool {
         return self.which_class(true) == .String;
@@ -292,15 +292,15 @@ pub const ObjectFunctions = struct {
         _ = options;
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
-        } else if (self.equals(False)) {
+        } else if (self.equals(False())) {
             try writer.print("false", .{});
-        } else if (self.equals(True)) {
+        } else if (self.equals(True())) {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
             // if (self.classFromSymbolPlus()) |c|
             //     try writer.print("=>{}", .{c});
-        } else if (self == Nil) {
+        } else if (self == Nil()) {
             try writer.print("nil", .{});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
@@ -351,7 +351,7 @@ pub const PackedObject = packed struct {
 test "from conversion" {
     const ee = std.testing.expectEqual;
     var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil);
+    process.init(Nil());
     const p = &process;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
     try ee((Object.from(3.14, p)).immediate_class(), .Float);
@@ -367,7 +367,7 @@ test "from conversion" {
 }
 test "to conversion" {
     var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil);
+    process.init(Nil());
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).to(f64), 3.14);
@@ -377,14 +377,17 @@ test "to conversion" {
     try ee((Object.from(-0x400000, p)).toUnchecked(i64), -0x400000);
 }
 test "immediate_class" {
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil());
+    const p = &process;
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14, null)).immediate_class(), .Float);
-    try ee((Object.from(42, null)).immediate_class(), .SmallInteger);
+    try ee((Object.from(3.14, p)).immediate_class(), .Float);
+    try ee((Object.from(42, p)).immediate_class(), .SmallInteger);
     try ee((Object.from(true, null)).immediate_class(), .True);
     try ee((Object.from(false, null)).immediate_class(), .False);
-    try ee(Nil.immediate_class(), .UndefinedObject);
-    try ee(True.immediate_class(), .True);
-    try ee(False.immediate_class(), .False);
+    try ee(Nil().immediate_class(), .UndefinedObject);
+    try ee(True().immediate_class(), .True);
+    try ee(False().immediate_class(), .False);
     try ee(symbol.symbols.yourself.immediate_class(), .Symbol);
 }
 test "printing" {
@@ -392,7 +395,7 @@ test "printing" {
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
     try stream.print("{}\n", .{Object.from(42, null)});
-    try stream.print("{}\n", .{symbol.symbols.yourself});
+    try stream.print("{}\n", .{symbol.symbols.yourself.asObject()});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
 const Buf = blk: {

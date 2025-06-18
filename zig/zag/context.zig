@@ -47,7 +47,7 @@ pub const ContextData = struct {
         self.header = HeapHeader.headerOnStack(.ContextData, selfOffset, length);
         @setRuntimeSafety(false);
         for (self.contextData[0..locals]) |*local| {
-            local.* = Nil;
+            local.* = Nil();
         }
     }
     fn objects(self: *ContextData) [*]Object {

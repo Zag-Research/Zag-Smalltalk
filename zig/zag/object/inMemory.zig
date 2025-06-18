@@ -200,7 +200,7 @@ test "inMemory int()" {
     const ee = std.testing.expectEqual;
     std.debug.print("inMemory int()\n", .{});
     var process: Process align(Process.alignment) = Process.new();
-    process.init(Object.Nil);
+    process.init(Object.Nil());
     const one:PointedObjectRef = @bitCast(int(1, &process));
     try ee(.SmallInteger,one.ref.header.classIndex);
     try ee(1,one.ref.data.int);

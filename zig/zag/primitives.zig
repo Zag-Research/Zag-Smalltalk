@@ -147,7 +147,7 @@ fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Re
     // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const newSp = sp.push(Nil);
+    const newSp = sp.push(Nil());
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
 
@@ -186,7 +186,7 @@ pub const threadedFunctions = struct {
                     Object.from(17, null),
                 },
                 &[_]Object{
-                    False,
+                    False(),
                 },
             );
         }
@@ -200,12 +200,12 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    True,
+                    True(),
                     Object.from(17, null),
                 },
                 &[_]Object{
                     Object.from(99, null),
-                    True,
+                    True(),
                     Object.from(17, null),
                 },
             );
@@ -266,7 +266,7 @@ pub const threadedFunctions = struct {
                     Object.from(17, null),
                 },
                 &[_]Object{
-                    False,
+                    False(),
                 },
             );
         }
@@ -280,13 +280,13 @@ pub const threadedFunctions = struct {
                     99,
                 },
                 &[_]Object{
-                    True,
+                    True(),
                     Object.from(17, null),
                 },
                 &[_]Object{
                     Object.from(99, null),
                     Sym.value.asObject(),
-                    True,
+                    True(),
                     Object.from(17, null),
                 },
             );
@@ -306,7 +306,7 @@ pub const threadedFunctions = struct {
                 },
                 &[_]Object{
                     Object.from(99, null),
-                    Nil,
+                    Nil(),
                     Object.from(42, null),
                     Object.from(17, null),
                 },
@@ -353,7 +353,7 @@ pub const threadedFunctions = struct {
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
-                False,
+                False(),
             }, exe.stack());
         }
         test "primitive:module: with error" {
@@ -366,12 +366,12 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                True,
+                True(),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
-                True,
+                True(),
                 Object.from(17, null),
             }, exe.stack());
         }
@@ -435,7 +435,7 @@ pub const threadedFunctions = struct {
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
-                False,
+                False(),
             }, exe.stack());
         }
         test "primitive:module:error: with error" {
@@ -448,13 +448,13 @@ pub const threadedFunctions = struct {
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             try exe.execute(&[_]Object{
-                True,
+                True(),
                 Object.from(17, null),
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
                 Sym.value.asObject(),
-                True,
+                True(),
                 Object.from(17, null),
             }, exe.stack());
         }
@@ -473,7 +473,7 @@ pub const threadedFunctions = struct {
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.from(99, null),
-                Nil,
+                Nil(),
                 Object.from(42, null),
                 Object.from(17, null),
             }, exe.stack());

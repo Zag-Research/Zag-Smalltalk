@@ -106,7 +106,7 @@ pub const classCase = struct {
                 42,
                 ":end",
             },
-            &[_]Object{True},
+            &[_]Object{True()},
             &[_]Object{Object.from(42, null)},
         );
     }
@@ -126,7 +126,7 @@ pub const classCase = struct {
                 17,
                 ":end",
             },
-            &[_]Object{False},
+            &[_]Object{False()},
             &[_]Object{Object.from(42, null)},
         );
     }
@@ -144,8 +144,8 @@ pub const classCase = struct {
                 17,
                 ":end",
             },
-            &[_]Object{False},
-            &[_]Object{False},
+            &[_]Object{False()},
+            &[_]Object{False()},
         );
     }
 };
@@ -238,9 +238,10 @@ pub const popAssociationValue = struct {
         var association = compileObject(.{
             ":def",
             c.Association,
-            Nil,
+            "0Nil",
             0,
         });
+        association.setLiterals( &.{ Nil() }, &.{});
         try Execution.runTestWithObjects(
             "popAssociationValue",
             .{
@@ -267,7 +268,7 @@ pub const pushAssociationValue = struct {
         var association = compileObject(.{
             ":def",
             c.Association,
-            Nil,
+            "0Nil",
             42,
         });
         try Execution.runTestWithObjects(
@@ -338,16 +339,16 @@ pub const pushClosure = struct {
             tf.pushLiteral,
             42,
             tf.pushLiteral,
-            True,
+            "1True",
             tf.pushLiteral,
-            Nil,
+            "2Nil",
             tf.pushLiteral,
             1,
             tf.pushClosure,
             comptime object14(.{ 3, 4, 0 }),
             "0block",
         });
-        try exe.resolve(&[_]Object{Object.from(&testMethod, null)});
+        try exe.resolve(&[_]Object{Object.from(&testMethod, null), True(), Nil()});
         try exe.execute(&[_]Object{
             Object.from(17, null),
         });
@@ -360,8 +361,8 @@ pub const pushClosure = struct {
         try expectEqual(.BlockClosure, header.classIndex);
         try expectEqual(Object.from(&testMethod, null), stack[3]);
         try expectEqual(Object.from(1, null), stack[4]);
-        try expectEqual(Nil, stack[5]);
-        try expectEqual(True, stack[6]);
+        try expectEqual(Nil(), stack[5]);
+        try expectEqual(True(), stack[6]);
         try expectEqual(Object.from(17, null), stack[7]);
     }
 };

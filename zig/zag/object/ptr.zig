@@ -19,9 +19,9 @@ pub const Object = packed struct(u64) {
     const Self = @This();
     pub const inMemorySymbols = true;
     pub const ZERO = of(0);
-    pub const False = Object.from(&InMemory.False, null);
-    pub const True = Object.from(&InMemory.True, null);
-    pub const Nil = Object.from(&InMemory.Nil, null);
+    pub fn False() Object { return Object.from(&InMemory.False, null);}
+    pub fn True() Object { return Object.from(&InMemory.True, null);}
+    pub fn Nil() Object { return Object.from(&InMemory.Nil, null);}
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const LowTagSmallInteger = {};
@@ -76,7 +76,8 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: object.Object) u64 {
+    //inline
+    fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
     inline fn rawI(self: object.Object) i64 {
@@ -119,7 +120,7 @@ pub const Object = packed struct(u64) {
         return @ptrCast(self.ref.data.object);
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == Object.True;
+        return self == Object.True();
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
         return self.ref.data.int;
@@ -158,8 +159,8 @@ pub const Object = packed struct(u64) {
             .int, .comptime_int => return InMemory.int(value, maybeProcess),
             .float => return InMemory.float(value, maybeProcess),
             .comptime_float => return from(@as(f64, value), maybeProcess),
-            .bool => return if (value) Object.True else Object.False,
-            .null => return Object.Nil,
+            .bool => return if (value) Object.True() else Object.False(),
+            .null => return Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
@@ -221,7 +222,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeap()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Scanner = struct {
         ptr: *anyopaque,
