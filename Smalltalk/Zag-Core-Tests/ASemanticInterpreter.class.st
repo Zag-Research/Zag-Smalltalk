@@ -98,7 +98,6 @@ ASemanticInterpreter >> createContext: aCompiledMethodOrBlock [
 	locals := aCompiledMethodOrBlock locals.
 	contextPtr := stackPointer - locals - 1.
 	size := aCompiledMethodOrBlock arguments + locals + 1.
-	self halt.
 	context := ASIContext new
 		           array: stackArray offset: contextPtr size: size;
 		           sendingContext: context.
@@ -151,7 +150,6 @@ ASemanticInterpreter >> getClass: aClass [
 { #category : 'adding' }
 ASemanticInterpreter >> getMethod: aSymbol for: anObject [
 
-	self halt.
 	^ anObject getMethodFor: aSymbol else: [ :aClass |
 		  | classIndex |
 		  classIndex := self getClass: aClass.
@@ -188,6 +186,13 @@ ASemanticInterpreter >> pop [
 
 	stackPointer := stackPointer + 1.
 	^ stackArray at: stackPointer - 1
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> pop: anObject into: offset [
+
+	stackPointer := stackPointer - 1. "remove the value on the top of the stack"
+	^ stackArray at: stackPointer put: anObject
 ]
 
 { #category : 'primitive execution' }
@@ -361,7 +366,6 @@ ASemanticInterpreter >> send: aSymbol to: anObject [
 { #category : 'private - testing' }
 ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 
-	self halt.
 	self reset.
 	self push: anObject.
 	arguments do: [ :arg | self push: arg ].

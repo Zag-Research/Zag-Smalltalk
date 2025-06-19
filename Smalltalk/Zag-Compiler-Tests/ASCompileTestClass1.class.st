@@ -142,6 +142,12 @@ ASCompileTestClass1 >> blockValueWithBlock [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockWithAdd [
+
+	^ [ 5 +10 ] value
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> bracketSend [ 
 
 	5 + (self fib: 2)
