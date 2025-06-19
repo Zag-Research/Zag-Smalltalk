@@ -28,7 +28,6 @@ const CompiledMethod = execute.CompiledMethod;
 const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
 const llvm = @import("llvm");
-const core = llvm.core;
 const LLVMtype = llvm.types;
 
 const LLVMAttributeRef = LLVMtype.LLVMAttributeRef;
@@ -128,11 +127,12 @@ pub const llvmString = stringOf("llvm").init().obj();
 pub const makeBuilder = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const builder: LLVMBuilderRef = null; // should be calling the LLVM creator function
+        const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
         if (builder == null) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         sp.top = BuilderRef.asObject(builder);
         return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
     }
+    // TODO: Refactor. The builder cannot be created in isolation without a module and context
     test "makeBuilder" {
         if (noLLVM) return error.SkipZigTest;
         const name = stringOf("makeBuilder").init().asObject();
@@ -154,9 +154,9 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
     // singleIndex - for pointer and integer offsets
     const offset_bits: u64 = @bitCast(offset);
     const signExtend = offset < 0;
-    const idx = [_]LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
+    const idx = [_]LLVMValueRef{llvm.core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
     const idx_ptr: [*c]LLVMValueRef = @constCast(@ptrCast(&idx[0]));
-    return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
+    return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }
 
 pub const @"register:plus:asName:" = struct {
@@ -171,7 +171,7 @@ pub const @"register:plus:asName:" = struct {
         const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const newSp = sp.unreserve(3);
         const module = ModuleRef.asLLVM(instVars[1]) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const tagObjectTy = core.LLVMGetTypeByName(module, "TagObject");
+        const tagObjectTy = llvm.core.LLVMGetTypeByName(module, "TagObject");
         sp.top = ValueRef.asObject(singleIndexGEP(@ptrCast(builder), tagObjectTy, registerToModify, offset, name));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
