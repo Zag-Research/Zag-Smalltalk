@@ -547,14 +547,11 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	"plus1: aNumber
 	^ aNumber + 1"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #inlinePlus1.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self
+		assertEquivalentSending: #inlinePlus1
+		arguments: {  }
+		to: ASCompileTestClass1 new
+		inlineDepth: 1000
 ]
 
 { #category : 'tests' }
@@ -570,18 +567,8 @@ ASCompilerInlineTest >> testInsertionSort [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testNegatedInlined [
-	"inlinePlus1
-	^ self plus1: 30"
 
-	"plus1: aNumber
-	^ aNumber + 1"
-
-	| cg |
-	cg := ASCodeGenerator targetClass: SmallInteger selector: #negated.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self assertEquivalentSending: #negated arguments: #(  ) to: 6
 ]
 
 { #category : 'tests' }
