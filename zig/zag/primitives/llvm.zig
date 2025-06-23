@@ -29,6 +29,10 @@ const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
 const llvm = @import("llvm");
 const LLVMtype = llvm.types;
+const builtin = @import("builtin");
+pub const isTestMode = builtin.is_test;
+pub const moduleName = "llvm";
+pub const llvmString = stringOf("llvm").init().obj();
 
 const LLVMAttributeRef = LLVMtype.LLVMAttributeRef;
 const LLVMBasicBlockRef = LLVMtype.LLVMBasicBlockRef;
@@ -51,8 +55,6 @@ const LLVMTypeRef = LLVMtype.LLVMTypeRef;
 const LLVMUseRef = LLVMtype.LLVMUseRef;
 const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
 const LLVMValueRef = LLVMtype.LLVMValueRef;
-
-pub const moduleName = "llvm";
 
 // Compiling: zig build -Dllvm-path='./zag/primitives/llvm.zig'
 
@@ -120,13 +122,9 @@ const UseRef = Converter(LLVMUseRef);
 const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
 const ValueRef = Converter(LLVMValueRef);
 
-const noLLVM = true;
-
-pub const llvmString = stringOf("llvm").init().obj();
-
 pub const makeBuilder = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
         if (builder == null) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         sp.top = BuilderRef.asObject(builder);
@@ -134,7 +132,7 @@ pub const makeBuilder = struct {
     }
     // TODO: Refactor. The builder cannot be created in isolation without a module and context
     test "makeBuilder" {
-        if (noLLVM) return error.SkipZigTest;
+        if (isTestMode) return error.SkipZigTest;
         const name = stringOf("makeBuilder").init().asObject();
         var exe = Execution.initTest("llvm makeBuilder", .{
             tf.@"primitive:module:",
@@ -161,7 +159,7 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
 
 pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
         const instVars = self.instVars();
         //get builder instance from module?
@@ -176,22 +174,25 @@ pub const @"register:plus:asName:" = struct {
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
+
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
+
 pub const @"literalToRegister:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const valueToPush = sp.top;
-        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
+
 pub const @"add:to:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (noLLVM) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
