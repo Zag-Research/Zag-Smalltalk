@@ -1,129 +1,128 @@
 "
 I encode the API needed from the LLVM generator interface.
 "
-Class {
-	#name : 'ZagLLVMGeneratorAPI',
-	#superclass : 'Object',
+Trait {
+	#name : 'JITDispatcherTrait',
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> add: aNumber to: selfValue [
+JITDispatcherTrait >> add: aNumber to: selfValue [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> and: valueRef1 with: valueRef2 [
+JITDispatcherTrait >> and: valueRef1 with: valueRef2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> compare: valueRef1 is: comparison to: valueRef2 [
+JITDispatcherTrait >> compare: valueRef1 is: comparison to: valueRef2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> defineLabel: aLabel [
+JITDispatcherTrait >> defineLabel: aLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> getContextRegister [
+JITDispatcherTrait >> getContextRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> getExtraRegister [
+JITDispatcherTrait >> getExtraRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> getPCRegister [
+JITDispatcherTrait >> getPCRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> getProcessRegister [
+JITDispatcherTrait >> getProcessRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> getSPRegister [
+JITDispatcherTrait >> getSPRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
+JITDispatcherTrait >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> newLabel [
+JITDispatcherTrait >> newLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> newRegister [
+JITDispatcherTrait >> newRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> or: int1 with: int2 [
+JITDispatcherTrait >> or: int1 with: int2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> register: register plus: offset [
+JITDispatcherTrait >> register: register plus: offset [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> returnWith: addressOfValue [
+JITDispatcherTrait >> returnWith: addressOfValue [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> shiftLeftArithmeticly: num1 by: num2 [
+JITDispatcherTrait >> shiftLeftArithmeticly: num1 by: num2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> shiftRightArithmeticly: num1 by: num2 [
+JITDispatcherTrait >> shiftRightArithmeticly: num1 by: num2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> store: result at: addressOfSelf [
+JITDispatcherTrait >> store: result at: addressOfSelf [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> tagSmallInteger: untaggedInt [
+JITDispatcherTrait >> tagSmallInteger: untaggedInt [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-ZagLLVMGeneratorAPI >> valueAt: aString [
+JITDispatcherTrait >> valueAt: aString [
 
 	^ self subclassResponsibility
 ]

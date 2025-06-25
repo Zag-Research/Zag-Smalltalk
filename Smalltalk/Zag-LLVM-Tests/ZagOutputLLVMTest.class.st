@@ -55,10 +55,10 @@ ZagOutputLLVMTest class >> returnAdd42Tail [
 ZagOutputLLVMTest >> setUp [
 
 	super setUp.
-	textOut := ZagLLVMGenerator new.
+	textOut := JITPrimitiveGenerator new.
 	output := ZagOutputLLVMFromTestArray new
 		          methodAddress: 16r10000;
-		          codeGen: (ZagOutputLLVM new generator: textOut)
+		          codeGen: (JITDispatcher new generator: textOut)
 ]
 
 { #category : 'tests' }
