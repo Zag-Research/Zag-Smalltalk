@@ -50,7 +50,7 @@ zig/*/*/zig-cache/*
 pharo-local
 log1.txt
 zig/zag/execute
-zig/fibonacci 
+zig/fibonacci
 zig/fullfib
 zig/sieve
 *.a
@@ -62,3 +62,4 @@ zig/sieve
 zig-cache/
 zig-out/
 *.ll
+.zed/tasks.json

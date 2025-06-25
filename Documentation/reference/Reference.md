@@ -37,6 +37,8 @@ $ make install
 - [on github](https://github.com/microsoft/mimalloc)
 - has some interesting ideas similar to those I was thinking about
 - [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
+#### Mesh
+- [Mesh](https://github.com/plasma-umass/Mesh) is a high performance malloc
 #### Mist
 - [MistDesign](MistDesign.md) also has some ideas we modify
 #### Garbage Collectors
