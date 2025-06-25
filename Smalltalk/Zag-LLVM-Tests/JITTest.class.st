@@ -2,11 +2,11 @@
 A ZagOutputLLVMTest is a test class for testing the behavior of ZagOutputLLVM
 "
 Class {
-	#name : 'ZagOutputLLVMTest',
+	#name : 'JITTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'output',
-		'textOut'
+		'driver',
+		'generator'
 	],
 	#category : 'Zag-LLVM-Tests-Tests',
 	#package : 'Zag-LLVM-Tests',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : 'tests' }
-ZagOutputLLVMTest class >> fibWithPIC [
+JITTest class >> fibWithPIC [
 
 	^ #( pushContext 16r0 pushLocal 0 pushLiteral 2 sendPIC2 #'<=' nil
 	     nil nil nil pushThisContext makeImmediateClosure
@@ -25,7 +25,7 @@ ZagOutputLLVMTest class >> fibWithPIC [
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest class >> fibWithoutPIC [
+JITTest class >> fibWithoutPIC [
 
 	^ #( pushContext #( method ) pushLocal 0 pushLiteral 2 send #'<='
 	     pushThisContext makeImmediateClosure 16r119 send ifTrue:
@@ -34,49 +34,50 @@ ZagOutputLLVMTest class >> fibWithoutPIC [
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest class >> return42 [
+JITTest class >> return42 [
 
 	^ #( pushLiteral 42 returnTop )
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest class >> returnAdd42 [
+JITTest class >> returnAdd42 [
 
 	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send #+ returnTop )
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest class >> returnAdd42Tail [
+JITTest class >> returnAdd42Tail [
 
 	^ #( pushLiteral 25 pushLiteral 7 tailSend #+ )
 ]
 
 { #category : 'running' }
-ZagOutputLLVMTest >> setUp [
+JITTest >> setUp [
 
 	super setUp.
-	textOut := JITPrimitiveGenerator new.
-	output := ZagOutputLLVMFromTestArray new
-		          methodAddress: 16r10000;
-		          codeGen: (JITDispatcher new generator: textOut)
+	generator := JITPrimitiveGenerator new.
+	driver := JITDriver new
+		          methodAddress: 16r10000; "address of the compiledMethod"
+		          dispatcher: (JITDispatcher new generator: generator).
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest >> testAdd [
+JITTest >> testAdd [
 
-	output primitiveSmallIntegerPlus.
-	textOut contents inspect
+	driver primitiveSmallIntegerPlus.
+	generator contents inspect
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest >> testFibFromArray [
+JITTest >> testFibFromArray [
 
-	output genFrom: self class fibWithoutPIC
+	driver genFrom: self class fibWithoutPIC
 ]
 
 { #category : 'tests' }
-ZagOutputLLVMTest >> testFromArray [
+JITTest >> testFromArray [
 
-	output halt; genFrom: self class return42.
-	textOut contents inspect
+   "JIT compile the #return42 compiledMethod"
+	driver genFrom: self class return42.
+	generator inspect
 ]

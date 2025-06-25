@@ -15,13 +15,6 @@ Class {
 	#package : 'Zag-LLVM'
 }
 
-{ #category : 'instance creation' }
-JITPrimitiveGenerator class >> new [
-
-	<primitive: 'createBuilderObject' module: 'llvm'>
-	Transcript show: 'BuilderInit'; cr.
-]
-
 { #category : 'API' }
 JITPrimitiveGenerator >> add: aNumber to: selfValue [
 
@@ -103,7 +96,8 @@ JITPrimitiveGenerator >> register: oldReg plus: offset asName: newName [
 	<primitive: 'register:plus:asName:' module: 'llvm'>
 	"Different than add:to: because we want to move the register by 
 	the size of the input it currently points to (e.g. a TagObject)"
-	Transcript show: 'LLVMBuildGEP2, ('
+	Transcript
+	<< 'LLVMBuildGEP2, ('
 	<< 'oldReg: ' <<  oldReg << ' , ' 
 	<< 'plus: ' << offset << ' , ' 
 	<< 'newName: ' << newName << ')'; cr.
@@ -142,7 +136,8 @@ JITPrimitiveGenerator >> shiftRightArithmeticly: num1 by: num2 [
 JITPrimitiveGenerator >> store: result at: addressOfSelf [ 
 
 	<primitive: 'store:at:' module: 'llvm'>
-	Transcript show: 'LLVMBuildStore, ('
+	Transcript 
+	<< 'LLVMBuildStore, ('
 	<< 'result: ' << result << ' , '
 	<< 'addressOfSelf: ' << addressOfSelf << ')'; cr. 
 ]

@@ -26,9 +26,9 @@ JITDispatcher >> driver [
 ]
 
 { #category : 'accessing' }
-JITDispatcher >> driver: anObject [
-
-	driver := anObject
+JITDispatcher >> driver: driverSource [ 
+	
+	driver := driverSource.
 ]
 
 { #category : 'private - processing' }
@@ -40,7 +40,7 @@ JITDispatcher >> generateLabel [
 { #category : 'accessing' }
 JITDispatcher >> generator: aGenerator [
 
-	gen := aGenerator new.
+	gen := aGenerator.
 ]
 
 { #category : 'testing' }
@@ -168,9 +168,10 @@ JITDispatcher >> pushContext [
 { #category : 'threaded words' }
 JITDispatcher >> pushLiteral [
 
-	| literal |
+	| literal name |
 	literal := driver nextObject.
-	sp := gen register: sp plus: -8.
+	name := #randomName.
+	sp := gen register: sp plus: -8 asName: name.
 	gen store: literal at: sp
 ]
 
@@ -197,12 +198,6 @@ JITDispatcher >> send [
 	"need code to extend selector with the class of the target of the send"
 	threadedReturnPoint := driver offset: 0
 	" we need to save this and the address of our return point in the context"
-]
-
-{ #category : 'accessing' }
-JITDispatcher >> source: builderSource [ 
-	
-	gen := builderSource.
 ]
 
 { #category : 'converting' }
