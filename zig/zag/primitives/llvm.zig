@@ -82,6 +82,7 @@ fn Converter(T: type) type {
         LLVMUseRef => 19,
         LLVMValueMetadataEntry => 20,
         LLVMValueRef => 21,
+        JitDispatcherRef => 255,
         else => @compileError("Converter needs extansion for type: " ++ @typeName(T)),
     };
     const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
@@ -121,8 +122,42 @@ const TypeRef = Converter(LLVMTypeRef);
 const UseRef = Converter(LLVMUseRef);
 const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
 const ValueRef = Converter(LLVMValueRef);
+const PrimitiveGeneratorRef = Converter(JitPrimitiveGeneratorRef);
 
+comptime {
+    std.debug.assert(config.objectEncoding == .zag);
+}
+const JitPrimitiveGeneratorRef = *JitPrimitiveGenerator;
+const JitPrimitiveGenerator = struct {
+    module: LLVMModuleRef,
+    context: LLVMContextRef,
+    builder: LLVMBuilderRef,
+};
+pub const makeJITPrimitiveGenerator = struct {
+    pub const number = 900;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const jitPrimitiveGenerate: JitPrimitiveGeneratorRef = @ptrCast(allocator.alloc(JitPrimitiveGenerator,1));
+        jitPrimitiveGenerate.module = 42;
+        jitPrimitiveGenerate.context = 42;
+        const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
+        jitPrimitiveGenerate.builder = builder;
+        return PrimitiveGeneratorRef.asObject(jitPrimitiveGenerate);
+    }
+    test "foo" {
+        var exe = Execution.initTest("llvm foo", .{
+            tf.inlinePrimitive, 900,
+            tf.inlinePrimitive, 905,
+            tf.inlinePrimitive, 902,
+            tf.inlinePrimitive, 901,
+        });
+        //try exe.resolve(&[_]Object{ name, llvmString.asObject() });
+        try exe.execute(&[_]Object{});
+        const result = exe.stack()[0];
+        try expectEqual(Object.from(42), result);
+    }
+};
 pub const makeBuilder = struct {
+    pub const number = 901;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
@@ -161,9 +196,8 @@ pub const @"register:plus:asName:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
-        const instVars = self.instVars();
-        //get builder instance from module?
-        const builder = BuilderRef.asLLVM(instVars[0]) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const jitPrimitiveGenerate: JitPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(self);
+        const builder = BuilderRef.asLLVM(jitPrimitiveGenerate.module) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(i64);
         const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
