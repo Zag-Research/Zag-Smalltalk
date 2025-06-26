@@ -6,45 +6,45 @@ I call methods in an LLVM generator object stored in the instance variabe `gen`.
 My subclasses simply set `gen` to an appropriate value.
 "
 Class {
-	#name : 'ZagOutputLLVM',
+	#name : 'ZagJITDispatcher',
 	#superclass : 'Object',
-	#traits : 'ZagImageOutputAPI',
-	#classTraits : 'ZagImageOutputAPI classTrait',
+	#traits : 'ZagJITDispatcherTrait',
+	#classTraits : 'ZagJITDispatcherTrait classTrait',
 	#instVars : [
 		'sp',
-		'gen',
-		'driver'
+		'driver',
+		'gen'
 	],
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'accessing' }
-ZagOutputLLVM >> driver [
+ZagJITDispatcher >> driver [
 
 	^ driver
 ]
 
 { #category : 'accessing' }
-ZagOutputLLVM >> driver: anObject [
-
-	driver := anObject
+ZagJITDispatcher >> driver: driverSource [ 
+	
+	driver := driverSource.
 ]
 
 { #category : 'private - processing' }
-ZagOutputLLVM >> generateLabel [
+ZagJITDispatcher >> generateLabel [
 
 	^ gen newLabel
 ]
 
 { #category : 'accessing' }
-ZagOutputLLVM >> generator: aGenerator [
+ZagJITDispatcher >> generator: aGenerator [
 
-	gen := aGenerator new.
+	gen := aGenerator.
 ]
 
 { #category : 'testing' }
-ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
+ZagJITDispatcher >> if: condition isFalseThen: falseLabel [
 
 	| otherewise |
 	otherewise :=  self generateLabel.
@@ -54,13 +54,13 @@ ZagOutputLLVM >> if: condition isFalseThen: falseLabel [
 ]
 
 { #category : 'testing' }
-ZagOutputLLVM >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
+ZagJITDispatcher >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
 	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
 ]
 
 { #category : 'testing' }
-ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
+ZagJITDispatcher >> if: condition isTrueThen: trueLabel [
 
 	| otherewise |
 	otherewise :=  self generateLabel.
@@ -70,7 +70,7 @@ ZagOutputLLVM >> if: condition isTrueThen: trueLabel [
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> label [
+ZagJITDispatcher >> label [
 
 	| address |
 	address := driver thatAddress.
@@ -78,7 +78,7 @@ ZagOutputLLVM >> label [
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> makeImmediateClosure [
+ZagJITDispatcher >> makeImmediateClosure [
 
 	| value |
 	value := driver nextObject
@@ -86,7 +86,7 @@ ZagOutputLLVM >> makeImmediateClosure [
 ]
 
 { #category : 'primitives' }
-ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
+ZagJITDispatcher >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	"add code to set up builder, main function, entry label"
@@ -115,21 +115,21 @@ ZagOutputLLVM >> primitiveSmallIntegerBinaryOp: aBlock [
 ]
 
 { #category : 'primitives' }
-ZagOutputLLVM >> primitiveSmallIntegerMinus [
+ZagJITDispatcher >> primitiveSmallIntegerMinus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen subtract: aNumber from: selfValue ]
 ]
 
 { #category : 'primitives' }
-ZagOutputLLVM >> primitiveSmallIntegerPlus [
+ZagJITDispatcher >> primitiveSmallIntegerPlus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen add: aNumber to: selfValue ]
 ]
 
 { #category : 'primitives' }
-ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
+ZagJITDispatcher >> primitiveSmallIntegerPlusOld [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	aNumber := gen valueAt: #sp.
@@ -151,7 +151,7 @@ ZagOutputLLVM >> primitiveSmallIntegerPlusOld [
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> pushBlockNonlocalReturning [
+ZagJITDispatcher >> pushBlockNonlocalReturning [
 
 	| value |
 	value := driver nextObject.
@@ -159,23 +159,24 @@ ZagOutputLLVM >> pushBlockNonlocalReturning [
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> pushContext [
+ZagJITDispatcher >> pushContext [
 
 	driver nextObject. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
 
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> pushLiteral [
+ZagJITDispatcher >> pushLiteral [
 
-	| literal |
+	| literal name |
 	literal := driver nextObject.
-	sp := gen register: sp plus: -8.
+	name := #randomName.
+	sp := gen register: sp plus: -8 asName: name.
 	gen store: literal at: sp
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> pushLocal [
+ZagJITDispatcher >> pushLocal [
 
 	| localNumber |
 	localNumber := driver nextObject.
@@ -183,13 +184,13 @@ ZagOutputLLVM >> pushLocal [
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> returnTop [
+ZagJITDispatcher >> returnTop [
 
 	"generate the code to return TOS"
 ]
 
 { #category : 'threaded words' }
-ZagOutputLLVM >> send [
+ZagJITDispatcher >> send [
 	" the same as send0 and send1 except it uses the arity of the selector to find the target"
 
 	| selector threadedReturnPoint |
@@ -199,21 +200,15 @@ ZagOutputLLVM >> send [
 	" we need to save this and the address of our return point in the context"
 ]
 
-{ #category : 'accessing' }
-ZagOutputLLVM >> source: builderSource [ 
-	
-	gen := builderSource.
-]
-
 { #category : 'converting' }
-ZagOutputLLVM >> tagSmallInteger: untaggedInt [
+ZagJITDispatcher >> tagSmallInteger: untaggedInt [
 
 	^ gen tagSmallInteger: untaggedInt.
 	
 ]
 
 { #category : 'converting' }
-ZagOutputLLVM >> validSmallInteger: nativeInt [ 
+ZagJITDispatcher >> validSmallInteger: nativeInt [ 
 	
 	| temp res1 res2 |
 	temp := nativeInt.
@@ -223,7 +218,7 @@ ZagOutputLLVM >> validSmallInteger: nativeInt [
 ]
 
 { #category : 'private - processing' }
-ZagOutputLLVM >> verifySmallInteger: valueRef [
+ZagJITDispatcher >> verifySmallInteger: valueRef [
 	
 	"valueRef is a Zag smallInteger"
 	| andResult |
@@ -232,7 +227,7 @@ ZagOutputLLVM >> verifySmallInteger: valueRef [
 ]
 
 { #category : 'instance creation' }
-ZagOutputLLVM >> with: aZagOutputLLVMAPI [
+ZagJITDispatcher >> with: aZagOutputLLVMAPI [
 
 	gen := aZagOutputLLVMAPI
 ]

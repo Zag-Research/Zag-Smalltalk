@@ -7,13 +7,13 @@ That is, I send messages to the generator for each of the threaded codes in the 
 I also implement several helper functions required by such a generator.
 "
 Class {
-	#name : 'ZagOutputLLVMFromTestArray',
+	#name : 'ZagJITDriver',
 	#superclass : 'ZagOutputSourceAPI',
 	#instVars : [
 		'index',
 		'array',
 		'address',
-		'codeGen'
+		'dispatcher'
 	],
 	#classVars : [
 		'HeaderSize'
@@ -24,19 +24,19 @@ Class {
 }
 
 { #category : 'class initialization' }
-ZagOutputLLVMFromTestArray class >> initialize [
+ZagJITDriver class >> initialize [
 
 	HeaderSize := 40
 ]
 
 { #category : 'private' }
-ZagOutputLLVMFromTestArray >> addressOf: offset [
+ZagJITDriver >> addressOf: offset [
 
 	^ address + HeaderSize + (offset - 1 * 8)
 ]
 
 { #category : 'private' }
-ZagOutputLLVMFromTestArray >> addressOfLabel: anInteger [
+ZagJITDriver >> addressOfLabel: anInteger [
 
 	| target offset element |
 	offset := anInteger.
@@ -51,14 +51,21 @@ ZagOutputLLVMFromTestArray >> addressOfLabel: anInteger [
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> codeGen: anObject [
+ZagJITDriver >> codeGen: anObject [
 
-	codeGen := anObject.
+	dispatcher := anObject.
 	anObject source: self
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> genFrom: collection [
+ZagJITDriver >> dispatcher: anObject [
+
+	dispatcher := anObject.
+	anObject driver: self
+]
+
+{ #category : 'API' }
+ZagJITDriver >> genFrom: collection [
 
 	index := 1.
 	array := collection.
@@ -66,24 +73,24 @@ ZagOutputLLVMFromTestArray >> genFrom: collection [
 ]
 
 { #category : 'private' }
-ZagOutputLLVMFromTestArray >> iterate [
+ZagJITDriver >> iterate [
 
 	| selector |
 	index > array size ifTrue: [ ^ nil ].
 	selector := self valueOf.
 	index := index + 1.
-	codeGen perform: selector.
+	dispatcher perform: selector.
 	^ self iterate
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> methodAddress: anObject [
+ZagJITDriver >> methodAddress: anObject [
 
 	address := anObject
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> nextAddress [
+ZagJITDriver >> nextAddress [
 " returns the next word as a Code address "
 
 	| object |
@@ -93,7 +100,7 @@ ZagOutputLLVMFromTestArray >> nextAddress [
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> nextObject [
+ZagJITDriver >> nextObject [
 
 	| object |
 	object := self valueOf.
@@ -102,13 +109,13 @@ ZagOutputLLVMFromTestArray >> nextObject [
 ]
 
 { #category : 'API' }
-ZagOutputLLVMFromTestArray >> thatAddress [
+ZagJITDriver >> thatAddress [
 
 	^ self addressOf: index - 1
 ]
 
 { #category : 'private' }
-ZagOutputLLVMFromTestArray >> valueOf [
+ZagJITDriver >> valueOf [
 
 	| object |
 	object := array at: index.

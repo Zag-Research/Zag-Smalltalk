@@ -1,12 +1,12 @@
 Class {
-	#name : 'ZagLLVMModule',
+	#name : 'ZagJITContext',
 	#superclass : 'Object',
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'instance creation' }
-ZagLLVMModule class >> new [
+ZagJITContext class >> new [
 
-	<primitive: 'createModuleObject' module: 'llvm'>
+	<primitive: 'createContextObject' module: 'llvm'>
 ]
